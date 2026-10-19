@@ -255,11 +255,12 @@ describe("rvn-character-sprite-selector sprite group names", () => {
       );
     });
 
-    expect(
-      selectorStore.selectViewData({ state, i18n: PT_I18N }).groupTabs,
-    ).toEqual([
+    const viewData = selectorStore.selectViewData({ state, i18n: PT_I18N });
+    expect(viewData.groupTabs).toEqual([
       { id: "face", label: "Face" },
       { id: "body", label: "Grupo 1" },
     ]);
+    // Screen readers name the tab group in the active locale too.
+    expect(viewData.groupTabsLabel).toBe("Grupos de sprites");
   });
 });

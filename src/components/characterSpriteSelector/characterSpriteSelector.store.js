@@ -201,6 +201,7 @@ export const selectViewData = ({ state, i18n }) => {
     characterName: character?.name ?? "",
     charactersLabel: copy.charactersLabel,
     showGroupTabs: hasSpriteGroups && character.spriteGroups.length > 1,
+    groupTabsLabel: i18n.charactersPage.spriteGroupsLabel,
     groupTabs: orderSpriteSelectionGroupsTopFirst(
       selectSpriteGroups(state, i18n.charactersPage.spriteGroupLabel),
     ).map((group) => ({

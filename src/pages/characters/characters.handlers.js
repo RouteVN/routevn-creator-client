@@ -208,7 +208,6 @@ const uploadAvatarFile = async ({ deps, file, target, copy } = {}) => {
   if (!result?.fileId) {
     showResourcePageError({
       appService,
-      errorOrResult: copy.failedUploadAvatarImage,
       fallbackMessage: copy.failedUploadAvatarImage,
     });
     return false;

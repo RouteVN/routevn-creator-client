@@ -68,6 +68,7 @@ const createLayoutForm = (copy = {}) => ({
       type: "select",
       label: copy.layoutTypeLabel ?? "Layout Type",
       required: true,
+      placeholder: copy.selectOptionPlaceholder ?? "Select an option",
       options: createLayoutTypeOptions(copy),
       tooltip: {
         content:

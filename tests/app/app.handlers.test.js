@@ -21,7 +21,7 @@ import {
   setCurrentRoute,
   setUiConfig,
 } from "../../src/pages/app/app.store.js";
-import { EN_I18N, PT_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, PT_I18N } from "../support/i18n.js";
 
 describe("app help button", () => {
   const openedDocsUrl = (uiConfig) => {
@@ -584,7 +584,7 @@ describe("app route transitions", () => {
     },
   );
 
-  const openProjectWithFailure = async (error) => {
+  const openProjectWithFailure = async (error, i18n = EN_I18N) => {
     const appService = {
       prepareNavigation: vi.fn(async () => {}),
       redirect: vi.fn(),
@@ -612,7 +612,7 @@ describe("app route transitions", () => {
         setRepositoryLoadingProgress: vi.fn(),
       },
       render: vi.fn(),
-      i18n: {},
+      i18n,
     };
 
     await createRouteTransitionRunner(deps)({
@@ -635,12 +635,21 @@ describe("app route transitions", () => {
     });
     expect(appService.showAlert).toHaveBeenCalledWith({
       message:
-        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: state.story.initialSceneId must reference an existing scene",
+        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nMake sure you're using the latest version of RouteVN Creator. If the problem continues, contact RouteVN for support.\n\nDetails:\nstate.story.initialSceneId must reference an existing scene",
     });
     expect(appService.redirect).toHaveBeenCalledWith("/projects");
     expect(store.setCurrentRoute).toHaveBeenCalledWith({
       route: "/projects",
       payload: {},
+    });
+  });
+
+  it("explains a failed project open in the app language", async () => {
+    const error = new Error("Cannot read properties of undefined");
+    const { appService } = await openProjectWithFailure(error, FR_I18N);
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: `${FR_I18N.appPage.projectOpenFailed}\n${FR_I18N.appPage.latestCreatorVersionHint}\n\n${FR_I18N.appPage.errorDetailsLabel}\nCannot read properties of undefined`,
     });
   });
 

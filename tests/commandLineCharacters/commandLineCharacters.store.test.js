@@ -26,7 +26,7 @@ import {
   updateCharacterShaderAdjustment,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
 import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
-import { EN_I18N, PT_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, PT_I18N } from "../support/i18n.js";
 
 const createSpriteSelectState = () => {
   const state = createInitialState();
@@ -924,6 +924,14 @@ describe("commandLineCharacters.store custom transforms", () => {
         { label: "Scale", value: "1.25 x 1.25" },
       ]),
     });
+    expect(
+      selectViewData({
+        state,
+        i18n: FR_I18N,
+      }).defaultValues.characters[0].customTransformDetails.map(
+        (item) => item.value,
+      ),
+    ).toEqual(["980\u202f; 560", "1,25\u00a0×\u00a01,25"]);
   });
 });
 

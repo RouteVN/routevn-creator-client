@@ -71,7 +71,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     showTargetPanel: !state.isTouchMode,
     showRightPanel,
     showCanvasZoomControls: showRightPanel,
-    ...buildEditorCanvasZoomViewData(showRightPanel ? state.canvasZoom : 1),
+    ...buildEditorCanvasZoomViewData(
+      showRightPanel ? state.canvasZoom : 1,
+      i18n.dateTime,
+    ),
     canvasZoomInLabel: copy.canvasZoomInLabel ?? "Zoom in",
     canvasZoomOutLabel: copy.canvasZoomOutLabel ?? "Zoom out",
     canvasZoomFitLabel: copy.canvasZoomFitLabel ?? "Fit to view",

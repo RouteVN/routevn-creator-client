@@ -15,7 +15,7 @@ import {
   handleSectionActionClick,
   handleSpriteBlurFormAction,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
@@ -159,6 +159,35 @@ describe("layoutEditPanel sprite blur section", () => {
       id: "submit",
       label: "Save Blur",
     });
+  });
+
+  it("writes the blur summary from the catalog with the locale's numbers", () => {
+    const state = createInitialState();
+    setValues(
+      { state },
+      {
+        values: {
+          type: "sprite",
+          name: "Sprite",
+          blur: { x: 2.5, y: 4, quality: 3, kernelSize: 5 },
+        },
+      },
+    );
+    const summary = (i18n) =>
+      selectViewData({
+        state,
+        props: createProps("sprite"),
+        constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+        i18n,
+      }).config.sections.find((section) => section.id === "blur").items[0]
+        .value;
+
+    expect(summary(EN_I18N)).toBe(
+      "X 2.5, Y 4, quality 3, kernel 5, repeat edge",
+    );
+    expect(summary(FR_I18N)).toBe(
+      "X 2,5, Y 4, qualité 3, noyau 5, répétition des bords",
+    );
   });
 
   it("opens the blur dialog from the section action and item click", async () => {

@@ -35,7 +35,7 @@ import {
   showAddSectionDropdownMenu,
   showSectionDropdownMenu,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 describe("sceneEditorLexical.store", () => {
   it("shows the loading stage and asset name separately, then clears stale details for another scene", () => {
@@ -572,6 +572,36 @@ describe("sceneEditorLexical.store", () => {
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.sceneTextStatsLabel).toBe("1 line 6 characters");
+  });
+
+  it("asks for the scene to move a section to in the app's language", () => {
+    const state = createInitialState();
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: { items: {}, tree: [] },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+
+    const sceneField = selectViewData({
+      state,
+      i18n: FR_I18N,
+    }).sectionMoveSceneForm.fields.find((field) => field.name === "sceneId");
+
+    expect(sceneField.placeholder).toBe("Choisissez une scène");
   });
 
   it("presents text size as a select with full labels", () => {

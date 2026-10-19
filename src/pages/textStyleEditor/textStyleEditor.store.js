@@ -481,6 +481,7 @@ export const selectViewData = ({ state, i18n }) => {
       { id: "edit", label: copy.editModeLabel },
       { id: "preview", label: copy.previewTitle },
     ],
+    editorPanelsLabel: copy.editorPanelsLabel,
     // Both bodies stay mounted, so scroll positions survive a switch.
     rightPanelEditStyle:
       state.rightPanelMode === "edit" ? "" : "display: none;",
@@ -501,7 +502,11 @@ export const selectViewData = ({ state, i18n }) => {
     }),
     textStyleFormKey: buildFormKey(state),
     formValues,
-    sliderValueFields: buildTextStyleSliderValueFields({ formValues, copy }),
+    sliderValueFields: buildTextStyleSliderValueFields({
+      formValues,
+      copy,
+      dateTime: i18n.dateTime,
+    }),
     fontOptions: buildFontOptions(state.fontsData),
     selectedFontId: primaryFontId,
     addFontOption: { label: copy.addNewFontOption },

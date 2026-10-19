@@ -89,6 +89,7 @@ export const editInitialValueForm = {
       name: "valueSource",
       type: "select",
       label: "Value Source",
+      placeholder: "Select an option",
       options: [
         { label: "Use Default Value", value: "default" },
         { label: "Custom Value", value: "custom" },

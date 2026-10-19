@@ -14,7 +14,7 @@ const getPayloadEventType = (payload) => {
   return payload?._event?.type ?? payload?.type;
 };
 
-const createFuriganaForm = (textStyleOptions = [], copy = {}) => ({
+const createFuriganaForm = (textStyleOptions = [], copy = {}, submitLabel) => ({
   title: copy.furiganaTitle ?? "Add/edit ruby text",
   fields: [
     {
@@ -22,7 +22,7 @@ const createFuriganaForm = (textStyleOptions = [], copy = {}) => ({
       type: "select",
       label: copy.textStyleLabel ?? "Text Style",
       required: true,
-      noClear: true,
+      clearable: false,
       options: textStyleOptions,
     },
     {
@@ -44,7 +44,7 @@ const createFuriganaForm = (textStyleOptions = [], copy = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: copy.submitButton ?? "Submit",
+        label: submitLabel,
         validate: true,
       },
     ],
@@ -114,7 +114,12 @@ export const handleFuriganaDialogRequest = async (deps, payload) => {
 
   const dialogResult = await appService.showFormDialog({
     size: "md",
-    form: createFuriganaForm(textStyleOptions, copy),
+    // Submit as the line actions' dialogs name it.
+    form: createFuriganaForm(
+      textStyleOptions,
+      copy,
+      i18n.commandLinePage.Submit,
+    ),
     defaultValues: {
       textStyleId:
         detail.furigana?.textStyleId ??

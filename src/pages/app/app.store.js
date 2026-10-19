@@ -1,4 +1,6 @@
+import { formatPercent } from "../../internal/dates.js";
 import { isTouchLandscape } from "../../internal/touchLayout.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 
 export const createInitialState = () => ({
   platform: "web",
@@ -327,7 +329,7 @@ const selectRepositoryLoadingProgressPercent = ({ state }) => {
   return Math.min(100, Math.max(0, Math.round((current / total) * 100)));
 };
 
-export const selectViewData = ({ state, i18n }) => {
+export const selectViewData = ({ state, i18n = {} }) => {
   const copy = selectAppCopy(i18n);
   const currentRoutePattern = selectCurrentRoutePattern({ state });
   const showSidebar = selectShowSidebar({ state });
@@ -395,7 +397,15 @@ export const selectViewData = ({ state, i18n }) => {
     repositoryLoadingProgressWidth: `${repositoryLoadingProgressPercent}%`,
     hasRepositoryLoadingProgress,
     repositoryLoadingStatusText: hasRepositoryLoadingProgress
-      ? `${repositoryLoadingBaseText} ${repositoryLoadingProgressPercent}%`
+      ? formatI18nCopy(
+          copy.loadingProjectProgress ?? "Loading project... {percent}",
+          {
+            percent: formatPercent(
+              repositoryLoadingProgressPercent,
+              i18n.dateTime,
+            ),
+          },
+        )
       : repositoryLoadingBaseText,
   };
 };

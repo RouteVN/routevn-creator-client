@@ -1,4 +1,9 @@
 import {
+  formatNumber,
+  formatNumberWithUnit,
+  formatPercent,
+} from "../../../internal/dates.js";
+import {
   MAX_PARTICLE_COUNT,
   MAX_PARTICLE_RATE,
   isBuiltinParticleTextureName,
@@ -759,26 +764,6 @@ const createParticleFieldsBySection = ({ copy = {} } = {}) => {
 // The slots of the fields edited with a slider popover.
 const PARTICLE_SLIDER_SLOT_PREFIX = "particle-slider-";
 
-const toPixelPresets = (values) =>
-  values.map((value) => ({ label: `${value} px`, value }));
-
-const toSecondPresets = (values) =>
-  values.map((value) => ({ label: `${value} s`, value }));
-
-const toDegreePresets = (values) =>
-  values.map((value) => ({ label: `${value}°`, value }));
-
-const toNumberPresets = (values) =>
-  values.map((value) => ({ label: `${value}`, value }));
-
-// Opacity reads as a percentage, with its value beside it.
-const toOpacityPresets = (values) =>
-  values.map((value) => ({
-    label: `${Math.round(value * 100)}%`,
-    value,
-    suffixText: `${value}`,
-  }));
-
 const CANVAS_SHARES = [
   { label: "0", ratio: 0 },
   { label: "1/4", ratio: 1 / 4 },
@@ -787,14 +772,42 @@ const CANVAS_SHARES = [
   { label: "1", ratio: 1 },
 ];
 
-// Shares of a canvas length, with their pixels beside them.
-const toCanvasSharePresets = (length, { leaveOutZero = false } = {}) =>
-  CANVAS_SHARES.filter((share) => !leaveOutZero || share.ratio > 0).map(
-    (share) => {
-      const value = Math.round(length * share.ratio);
-      return { label: share.label, value, suffixText: `${value} px` };
-    },
-  );
+// The presets' builders, which show the numbers as `dateTime`, the active
+// locale's catalog, writes them.
+const createPresetBuilders = (dateTime) => {
+  const toUnitPresets = (unit) => (values) =>
+    values.map((value) => ({
+      label: formatNumberWithUnit(value, unit, dateTime),
+      value,
+    }));
+
+  return {
+    toPixelPresets: toUnitPresets("pixels"),
+    toSecondPresets: toUnitPresets("seconds"),
+    toDegreePresets: toUnitPresets("degrees"),
+    toNumberPresets: (values) =>
+      values.map((value) => ({ label: formatNumber(value, dateTime), value })),
+    // Opacity reads as a percentage, with its value beside it.
+    toOpacityPresets: (values) =>
+      values.map((value) => ({
+        label: formatPercent(Math.round(value * 100), dateTime),
+        value,
+        suffixText: formatNumber(value, dateTime),
+      })),
+    // Shares of a canvas length, with their pixels beside them.
+    toCanvasSharePresets: (length, { leaveOutZero = false } = {}) =>
+      CANVAS_SHARES.filter((share) => !leaveOutZero || share.ratio > 0).map(
+        (share) => {
+          const value = Math.round(length * share.ratio);
+          return {
+            label: share.label,
+            value,
+            suffixText: formatNumberWithUnit(value, "pixels", dateTime),
+          };
+        },
+      ),
+  };
+};
 
 // A typed position or size of the source reaches this many times the
 // particle's canvas.
@@ -805,7 +818,15 @@ const CANVAS_BOUND_MULTIPLE = 4;
 // `fastStep`, `range` is where the slider runs, and `min` and `max` bound a
 // typed value. The source's position and size go with the particle's own
 // canvas, `width` by `height`.
-const createParticleSliderFields = ({ copy = {}, width, height }) => {
+const createParticleSliderFields = ({ copy = {}, dateTime, width, height }) => {
+  const {
+    toPixelPresets,
+    toSecondPresets,
+    toDegreePresets,
+    toNumberPresets,
+    toOpacityPresets,
+    toCanvasSharePresets,
+  } = createPresetBuilders(dateTime);
   const bound = (length) => Math.round(length * CANVAS_BOUND_MULTIPLE);
   const radius = Math.round(Math.min(width, height) / 2);
   const position = (length) => ({
@@ -814,7 +835,7 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     min: -bound(length),
     max: bound(length),
     range: { min: 0, max: length },
-    unit: "px",
+    unit: "pixels",
     presets: toCanvasSharePresets(length),
   });
   // A source's width, height and radius save only above 0, so they start at
@@ -825,7 +846,7 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     min: 1,
     max: bound(length),
     range: { min: 1, max: length },
-    unit: "px",
+    unit: "pixels",
     presets: toCanvasSharePresets(length, { leaveOutZero: true }),
   });
   const radiusField = ({ min }) => ({
@@ -834,7 +855,7 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     min,
     max: bound(Math.max(width, height)),
     range: { min, max: radius },
-    unit: "px",
+    unit: "pixels",
     presets: toCanvasSharePresets(radius, { leaveOutZero: min > 0 }),
   });
   const scale = {
@@ -853,7 +874,7 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     min: 0,
     max: 100,
     presets: [0, 10, 20, 30, 50].map((value) => ({
-      label: `${value}%`,
+      label: formatPercent(value, dateTime),
       value,
     })),
   };
@@ -863,7 +884,7 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
     min: 0,
     max: 600,
     range: { min: 0, max: 10 },
-    unit: "s",
+    unit: "seconds",
     presets: toSecondPresets([0.25, 0.5, 1, 2, 3, 5, 10]),
   };
   const speed = {
@@ -902,7 +923,7 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
       min: 1,
       max: 7680,
       range: { min: 1, max: 1920 },
-      unit: "px",
+      unit: "pixels",
       presets: toPixelPresets([256, 512, 640, 960, 1280, 1920]),
     },
     height: {
@@ -912,7 +933,7 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
       min: 1,
       max: 4320,
       range: { min: 1, max: 1080 },
-      unit: "px",
+      unit: "pixels",
       presets: toPixelPresets([256, 360, 480, 540, 720, 1080]),
     },
     // An unset seed plays differently each time; the Random preset unsets
@@ -1009,11 +1030,16 @@ const createParticleSliderFields = ({ copy = {}, width, height }) => {
 // The slider value fields the page puts in the form's slots, with the
 // form's values. A field the form hides, such as Burst Count while emission
 // is continuous, has no slot to show in.
-export const buildParticleSliderValueFields = ({ formValues, copy = {} }) => {
+export const buildParticleSliderValueFields = ({
+  formValues,
+  copy = {},
+  dateTime,
+}) => {
   const width = Number(formValues.width);
   const height = Number(formValues.height);
   const sliderFields = createParticleSliderFields({
     copy,
+    dateTime,
     width: width > 0 ? width : 1280,
     height: height > 0 ? height : 720,
   });

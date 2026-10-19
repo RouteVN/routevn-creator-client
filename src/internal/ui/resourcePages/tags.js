@@ -371,7 +371,7 @@ export const createResourcePageTagHandlers = ({
   getSelectedItemTagIds = ({ deps }) =>
     deps.store.selectSelectedItem?.()?.tagIds ?? [],
   appendCreatedTagByMode,
-  createTagFallbackMessage = "Failed to create tag.",
+  createTagFallbackMessage,
   updateItemTagFallbackMessage = "Failed to update tags.",
   copy,
 } = {}) => {
@@ -605,7 +605,9 @@ export const createResourcePageTagHandlers = ({
       fallbackMessage:
         typeof createTagFallbackMessage === "function"
           ? createTagFallbackMessage({ deps, itemId, mode })
-          : createTagFallbackMessage,
+          : (createTagFallbackMessage ??
+            resolvedCopy.failedCreateTag ??
+            "Failed to create tag."),
       action: () =>
         projectService.createTag({
           scopeKey,

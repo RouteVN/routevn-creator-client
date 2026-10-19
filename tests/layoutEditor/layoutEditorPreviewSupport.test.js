@@ -245,14 +245,14 @@ describe("layoutEditorPreviewSupport", () => {
     };
 
     setHistoryDefaultValue(
-      { state },
+      { state, i18n: EN_I18N },
       {
         name: "linesNum",
         fieldValue: 3,
       },
     );
     setHistoryDefaultValue(
-      { state },
+      { state, i18n: EN_I18N },
       {
         name: "text2",
         fieldValue: "Line 3",

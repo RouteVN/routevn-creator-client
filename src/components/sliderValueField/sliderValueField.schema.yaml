@@ -16,9 +16,9 @@ propsSchema:
         The slider popover's field: step and fastStep, the slider's range, the
         min and max that bound the value, defaultValue, emptyText for an
         unset value, the presets ({ label, value, suffixText }; an empty value
-        unsets the number), the unit shown after the value, and
-        stepsAsPercent to show the steps as percentages. See
-        src/internal/ui/sliderPopover.js.
+        unsets the number), the unit shown after the value as its
+        dateTime catalog template (pixels or seconds), and stepsAsPercent to
+        show the steps as percentages. See src/internal/ui/sliderPopover.js.
 events:
   value-input:
     type: object

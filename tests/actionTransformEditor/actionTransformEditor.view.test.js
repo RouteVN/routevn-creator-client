@@ -7,6 +7,7 @@ import {
   createInitialState,
   selectViewData,
 } from "../../src/components/actionTransformEditor/actionTransformEditor.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const DESKTOP = { isTouchMode: false, isTouchLandscape: false };
 const TOUCH_PORTRAIT = { isTouchMode: true, isTouchLandscape: false };
@@ -28,6 +29,7 @@ const renderTemplate = (layoutState) => {
   const viewData = selectViewData({
     state: { ...createInitialState(), ...layoutState },
     props: {},
+    i18n: EN_I18N,
   });
 
   return parseAndRender(view.template, viewData);

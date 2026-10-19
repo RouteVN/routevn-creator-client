@@ -1,4 +1,5 @@
 import { generateId } from "../id.js";
+import { getResourcePageErrorMessage } from "./resourcePages/resourcePageErrors.js";
 import {
   getFirstTextStyleId,
   getTextStyleCount,
@@ -22,13 +23,9 @@ const isTextElementType = (type) =>
     "text-ref-dialogue-line-content",
   ].includes(type);
 
-const getResultErrorMessage = (result, fallbackMessage) => {
-  return (
-    result?.error?.message ||
-    result?.error?.creatorModelError?.message ||
-    fallbackMessage
-  );
-};
+// The localized message leads; the failure's own text follows as details.
+const getResultErrorMessage = (appService, errorOrResult, fallbackMessage) =>
+  getResourcePageErrorMessage({ appService, errorOrResult, fallbackMessage });
 
 const resolveMenuItem = (detail = {}) => detail.item || detail;
 
@@ -597,6 +594,7 @@ export const createResourceFileExplorerHandlers = ({
         if (duplicateItemId?.valid === false) {
           appService.showAlert({
             message: getResultErrorMessage(
+              appService,
               duplicateItemId,
               resolvedCopy.failedDuplicateResource ??
                 "Failed to duplicate resource.",
@@ -755,6 +753,7 @@ export const createLayoutsFileExplorerHandlers = ({
         if (duplicateLayoutId?.valid === false) {
           appService.showAlert({
             message: getResultErrorMessage(
+              appService,
               duplicateLayoutId,
               resolvedCopy.failedDuplicateLayout ??
                 "Failed to duplicate layout.",
@@ -1039,6 +1038,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         if (createResult?.valid === false) {
           appService.showAlert({
             message: getResultErrorMessage(
+              appService,
               createResult,
               resolvedCopy.failedCreateLayoutItem ??
                 "Failed to create layout item.",
@@ -1137,6 +1137,7 @@ export const createScenesFileExplorerHandlers = ({
         if (createResult?.valid === false) {
           appService.showAlert({
             message: getResultErrorMessage(
+              appService,
               createResult,
               resolvedCopy.failedCreateFolder ?? "Failed to create folder.",
             ),
@@ -1160,6 +1161,7 @@ export const createScenesFileExplorerHandlers = ({
         if (createResult?.valid === false) {
           appService.showAlert({
             message: getResultErrorMessage(
+              appService,
               createResult,
               resolvedCopy.failedCreateFolder ?? "Failed to create folder.",
             ),
@@ -1398,6 +1400,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           console.error("Failed to move character sprite", moveResult);
           appService.showAlert({
             message: getResultErrorMessage(
+              appService,
               moveResult,
               resolvedCopy.failedMoveSprite ??
                 "Failed to move character sprite.",
@@ -1410,6 +1413,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         console.error("Failed to move character sprite", error);
         appService.showAlert({
           message: getResultErrorMessage(
+            appService,
             error,
             resolvedCopy.failedMoveSprite ?? "Failed to move character sprite.",
           ),

@@ -97,6 +97,19 @@ export const formatMilliseconds = (
 ) => formatUnitValue(durationMilliseconds, Number(value) || 0, intlLocale);
 
 /**
+ * Format a percentage with the percent sign, such as "42%".
+ * @param {number} value - Percentage, such as 42 for 42%
+ * @param {Object} [options] - The `dateTime` catalog of the active locale
+ * @param {string} [options.intlLocale] - BCP 47 tag used for number formatting
+ * @param {string} [options.percent] - Template with `{value}`
+ * @returns {string} Formatted percentage
+ */
+export const formatPercent = (
+  value,
+  { intlLocale = "en-US", percent = "{value}%" } = {},
+) => formatUnitValue(percent, Number(value) || 0, intlLocale);
+
+/**
  * Format a duration in milliseconds below one second, then in seconds with
  * one decimal below ten seconds and two from there, such as "1.5s".
  * @param {number} durationMs - Duration in milliseconds
@@ -140,3 +153,65 @@ export const formatElapsedSeconds = (
     .replaceAll("{minutes}", () => String(Math.floor(elapsedSeconds / 60)))
     .replaceAll("{seconds}", () => String(elapsedSeconds % 60));
 };
+
+// One formatter per locale, as the editors format many numbers a render.
+const numberFormats = new Map();
+
+/**
+ * Format a number as `String` does, with every decimal it has, but with the
+ * locale's decimal separator, such as "1.5", or "1,5" in French.
+ * @param {number|string} value - The number
+ * @param {Object} [options] - The `dateTime` catalog of the active locale
+ * @param {string} [options.intlLocale] - BCP 47 tag used for number formatting
+ * @returns {string} Formatted number, or an empty string for an unset value
+ */
+export const formatNumber = (value, { intlLocale = "en-US" } = {}) => {
+  if (value === undefined || value === null || value === "") {
+    return "";
+  }
+  if (!numberFormats.has(intlLocale)) {
+    numberFormats.set(
+      intlLocale,
+      new Intl.NumberFormat(intlLocale, {
+        maximumFractionDigits: 20,
+        useGrouping: false,
+      }),
+    );
+  }
+  // Intl writes -0 as "-0", where String writes "0".
+  return numberFormats.get(intlLocale).format(value === 0 ? 0 : value);
+};
+
+// The English unit templates. Seconds keep the space here that the compact
+// `durationSeconds` of timeline labels leaves out.
+const UNIT_TEMPLATES = {
+  pixels: "{value} px",
+  seconds: "{value} s",
+  degrees: "{value}°",
+};
+
+/**
+ * Format a number with a unit, such as "12 px", "45°", or "1,5 s" in French.
+ * @param {number|string} value - The number
+ * @param {"pixels"|"seconds"|"degrees"} unit - The unit's template in the
+ *   `dateTime` catalog
+ * @param {Object} [dateTime] - The `dateTime` catalog of the active locale
+ * @returns {string} Formatted number with its unit
+ */
+export const formatNumberWithUnit = (value, unit, dateTime = {}) =>
+  (dateTime[unit] ?? UNIT_TEMPLATES[unit]).replaceAll("{value}", () =>
+    formatNumber(value, dateTime),
+  );
+
+/**
+ * Format a width and height, such as "1920 × 1080".
+ * @param {number} width - Width
+ * @param {number} height - Height
+ * @param {Object} [dateTime] - The `dateTime` catalog of the active locale,
+ *   with `intlLocale` for the numbers and the `dimensions` template
+ * @returns {string} Formatted dimensions
+ */
+export const formatDimensions = (width, height, dateTime = {}) =>
+  (dateTime.dimensions ?? "{width} × {height}")
+    .replaceAll("{width}", () => formatNumber(width, dateTime))
+    .replaceAll("{height}", () => formatNumber(height, dateTime));

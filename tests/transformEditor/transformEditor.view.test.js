@@ -54,7 +54,7 @@ describe("transform editor view", () => {
     // own, so there is no Save Preview.
     expect(
       view.match(
-        /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
+        /rtgl-tabs#rightPanelModeTabs s=sm aria-label="\$\{editorPanelsLabel\}" selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}': null/g,
       ),
     ).toHaveLength(3);
     expect(view).not.toContain("savePreview");

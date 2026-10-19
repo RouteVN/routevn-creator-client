@@ -772,7 +772,7 @@ describe("scenes.handlers config keys", () => {
     expect(deps.projectService.createSectionItem).not.toHaveBeenCalled();
     expect(deps.projectService.createLineItem).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "cannot create scene",
+      message: "Failed to create scene.\n\nDetails:\ncannot create scene",
     });
     expect(deps.store.addWhiteboardItem).not.toHaveBeenCalled();
     expect(deps.appService.setUserConfig).not.toHaveBeenCalledWith(

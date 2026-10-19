@@ -262,7 +262,7 @@ describe("commandLineScreen.store", () => {
       name: "blurKernelSize",
       label: "Kernel Size",
       type: "select",
-      noClear: true,
+      clearable: false,
       required: true,
       options: [
         { value: 5, label: "5" },

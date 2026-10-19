@@ -2475,6 +2475,8 @@ export const selectViewData = ({ state, i18n }) => {
         type: "select",
         label: "Scene",
         required: true,
+        // The scene pickers in the line actions ask for a scene the same way.
+        placeholder: i18n.commandLinePage["Choose a scene"],
         options: moveSectionSceneOptions,
       },
     ],

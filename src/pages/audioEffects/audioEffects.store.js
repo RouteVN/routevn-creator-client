@@ -119,7 +119,7 @@ const createAddForm = (copy = {}) => ({
       name: "dialogType",
       type: "segmented-control",
       label: copy.typeLabel ?? "Type",
-      noClear: true,
+      clearable: false,
       required: true,
       options: [
         { label: copy.updateType ?? "Update", value: "update" },

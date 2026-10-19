@@ -42,12 +42,14 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
           name: "sceneId",
           type: "select",
           label: "Scene",
+          placeholder: "Choose a scene",
           options: "${scenes}",
         },
         {
           name: "sectionId",
           type: "select",
           label: "Section",
+          placeholder: "Choose a section",
           options: "${sections}",
         },
       ],
@@ -443,6 +445,7 @@ const form = {
       label: "Choices Layout",
       required: false,
       clearable: false,
+      placeholder: "Choose a layout...",
       options: "${resourceOptions}",
     },
     {

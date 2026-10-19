@@ -51,7 +51,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const sourceGroups = prependRootItemsGroup({
     data: sounds,
     groups: toFlatGroups(sounds),
-    label: "Sounds",
+    label: i18n.resourceTypes.sounds,
   });
 
   const groups = sourceGroups

@@ -1,3 +1,4 @@
+import { formatPercent } from "../../internal/dates.js";
 import { drawArrowBetweenScenes } from "../../internal/whiteboard/arrowUtils.js";
 import {
   SCENE_BOX_HEIGHT,
@@ -910,7 +911,10 @@ export const selectViewData = ({ state, props, i18n = {} }) => {
     panX: state.panX,
     panY: state.panY,
     zoomLevel: state.zoomLevel,
-    zoomLevelPercent: Math.round(state.zoomLevel * 100),
+    zoomLevelLabel: formatPercent(
+      Math.round(state.zoomLevel * 100),
+      i18n.dateTime,
+    ),
     containerCursor,
     itemCursor,
     minimapViewportCursor,

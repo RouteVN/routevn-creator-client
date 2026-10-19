@@ -159,6 +159,10 @@ const localizeSliderCreateForm = (form = {}, i18n = {}) => {
         ...field,
         label: fieldLabels[field.name ?? field.slot] ?? field.label,
       };
+      if (field.type === "select") {
+        localizedField.placeholder =
+          i18n.resourcePages?.selectOptionPlaceholder;
+      }
       if (Array.isArray(field.options)) {
         localizedField.options = field.options.map((option) => ({
           ...option,

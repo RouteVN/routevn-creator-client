@@ -190,14 +190,14 @@ const navigateToProjectRoute = async (
     if (isIncompatibleProjectOpenError(error)) {
       await appService.showAlert({
         title: copy.incompatibleProjectTitle,
-        message: getIncompatibleProjectOpenMessage(error),
+        message: getIncompatibleProjectOpenMessage(error, i18n.appPage),
         status: "error",
       });
       return;
     }
 
     appService.showAlert({
-      message: getProjectOpenErrorMessage(error),
+      message: getProjectOpenErrorMessage(error, i18n.appPage),
     });
     return;
   }

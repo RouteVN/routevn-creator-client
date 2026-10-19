@@ -191,6 +191,7 @@ export const selectViewData = ({ state, i18n }) => {
     detailFillHeight: false,
     emptyPlatformsMessage: copy.emptyPlatformsMessage,
     hasPlatformDetails: Boolean(selectedPlatformInfo),
+    platformTabsLabel: copy.platformTabsLabel,
     platformTabs: createdPlatforms.map((platform) => ({
       id: platform,
       label: getPlatformTabLabel(platform, copy),

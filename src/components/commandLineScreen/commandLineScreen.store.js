@@ -466,7 +466,7 @@ export const selectViewData = ({ state, props, i18n }) => {
               name: "blurKernelSize",
               label: "Kernel Size",
               type: "select",
-              noClear: true,
+              clearable: false,
               required: true,
               options: SCREEN_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
                 value,
@@ -479,7 +479,7 @@ export const selectViewData = ({ state, props, i18n }) => {
           name: "blurRepeatEdgePixels",
           label: "Repeat Edge Pixels",
           type: "segmented-control",
-          noClear: true,
+          clearable: false,
           options: [
             { value: false, label: "No" },
             { value: true, label: "Yes" },

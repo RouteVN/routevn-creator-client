@@ -1,28 +1,19 @@
+import { withErrorDetails } from "./errorDetails.js";
 import { isStorageFullError } from "./storageFullError.js";
 
+// The technical message of the error thrown for an unsupported store. Alerts
+// explain it with the `appPage` catalog instead.
 export const UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE =
   "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.";
 
-const LATEST_CREATOR_VERSION_HINT =
-  "Make sure you're using the latest version of RouteVN Creator.";
+// The messages below take `copy`, the `appPage` catalog, which both the
+// Projects page and the app's project routes can read.
+const withLatestCreatorVersionHint = (message, copy) =>
+  `${message}\n${copy.latestCreatorVersionHint}`;
 
-const hasLatestCreatorVersionHint = (message) => {
-  const normalizedMessage = message.toLowerCase();
-  return (
-    normalizedMessage.includes("latest version of routevn creator") ||
-    normalizedMessage.includes("update routevn creator")
-  );
-};
-
-const withLatestCreatorVersionHint = (message) => {
-  const detail = message.trim();
-  if (hasLatestCreatorVersionHint(detail)) {
-    return detail;
-  }
-
-  const separator = /[.!?]$/.test(detail) ? "\n" : ".\n";
-  return `${detail}${separator}${LATEST_CREATOR_VERSION_HINT}`;
-};
+// An error without any text has nothing to show under the details label.
+const getErrorWithDetails = (error) =>
+  String(error?.message ?? error ?? "").trim() ? error : undefined;
 
 export const isIncompatibleProjectOpenError = (error) => {
   if (
@@ -40,22 +31,27 @@ export const isIncompatibleProjectOpenError = (error) => {
   );
 };
 
-export const getIncompatibleProjectOpenMessage = (error) => {
+export const getIncompatibleProjectOpenMessage = (error, copy) => {
   if (error?.code === "project_store_format_unsupported") {
     return withLatestCreatorVersionHint(
-      UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE,
+      copy.projectOpenUnsupportedStoreFormat,
+      copy,
     );
   }
 
-  const message =
-    typeof error?.message === "string" ? error.message.trim() : "";
+  const message = typeof error?.message === "string" ? error.message : "";
   if (message.includes("requires reset for schema version")) {
     return withLatestCreatorVersionHint(
-      "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.",
+      copy.projectOpenUnsupportedVersion,
+      copy,
     );
   }
 
-  return withLatestCreatorVersionHint(message || "Incompatible project.");
+  return withErrorDetails(
+    withLatestCreatorVersionHint(copy.projectOpenIncompatible, copy),
+    getErrorWithDetails(error),
+    copy.errorDetailsLabel,
+  );
 };
 
 const isMissingProjectResolutionError = (error) => {
@@ -107,23 +103,15 @@ const isProjectHistoryIntegrityError = (error) => {
   return message.includes("committed event invariant violation");
 };
 
-const getProjectIntegrityErrorMessage = (error) => {
-  const detail =
-    typeof error?.message === "string" && error.message.trim()
-      ? error.message.trim()
-      : "";
-  const technicalDetail = detail ? `\n\nTechnical details: ${detail}` : "";
-  return `RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.${technicalDetail}`;
-};
-
-export const getProjectOpenErrorMessage = (error) => {
+export const getProjectOpenErrorMessage = (error, copy) => {
   if (isIncompatibleProjectOpenError(error)) {
-    return getIncompatibleProjectOpenMessage(error);
+    return getIncompatibleProjectOpenMessage(error, copy);
   }
 
   if (isMissingProjectResolutionError(error)) {
     return withLatestCreatorVersionHint(
-      "Project is missing required resolution settings.",
+      copy.projectOpenMissingResolution,
+      copy,
     );
   }
 
@@ -131,23 +119,20 @@ export const getProjectOpenErrorMessage = (error) => {
     isProjectDataStructureValidationError(error) ||
     isProjectHistoryIntegrityError(error)
   ) {
-    return getProjectIntegrityErrorMessage(error);
-  }
-
-  if (isProjectDatabaseOpenError(error)) {
-    return "Failed to open the project database. Make sure the project folder still exists and RouteVN can access it.";
-  }
-
-  const detail = typeof error?.message === "string" ? error.message.trim() : "";
-  if (!detail || detail === "Failed to open project.") {
-    return withLatestCreatorVersionHint(
-      "Failed to open project. An unexpected error occurred while preparing the project.",
+    return withErrorDetails(
+      copy.projectOpenHistoryInconsistent,
+      getErrorWithDetails(error),
+      copy.errorDetailsLabel,
     );
   }
 
-  if (detail.toLowerCase().startsWith("failed to open project")) {
-    return withLatestCreatorVersionHint(detail);
+  if (isProjectDatabaseOpenError(error)) {
+    return copy.projectOpenDatabaseUnavailable;
   }
 
-  return withLatestCreatorVersionHint(`Failed to open project. ${detail}`);
+  return withErrorDetails(
+    withLatestCreatorVersionHint(copy.projectOpenFailed, copy),
+    getErrorWithDetails(error),
+    copy.errorDetailsLabel,
+  );
 };

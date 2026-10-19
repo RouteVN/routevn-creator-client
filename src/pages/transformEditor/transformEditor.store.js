@@ -556,7 +556,7 @@ export const selectViewData = ({ state, i18n }) => {
     undoLabel: editHistoryCopy.undoLabel,
     redoLabel: editHistoryCopy.redoLabel,
     showCanvasZoomControls: showRightPanel,
-    ...buildEditorCanvasZoomViewData(state.canvasZoom),
+    ...buildEditorCanvasZoomViewData(state.canvasZoom, i18n.dateTime),
     canvasBackgroundStyle,
     canvasWrapperStyle,
     canvasZoomInLabel: copy.canvasZoomInLabel,
@@ -570,6 +570,7 @@ export const selectViewData = ({ state, i18n }) => {
       { id: "edit", label: copy.editModeLabel },
       { id: "preview", label: copy.previewTitle },
     ],
+    editorPanelsLabel: copy.editorPanelsLabel,
     // Both bodies stay mounted, so scroll positions survive a switch.
     rightPanelEditStyle:
       state.rightPanelMode === "edit" ? "" : "display: none;",

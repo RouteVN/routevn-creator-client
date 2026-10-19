@@ -46,7 +46,7 @@ import {
   togglePreviewLoop,
   updateKeyframeTiming,
 } from "../../src/pages/audioEffectsEditor/audioEffectsEditor.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 describe("audioEffectsEditor.store", () => {
   it("keeps the playback indicator aligned with timeline zoom", () => {
@@ -1368,5 +1368,53 @@ describe("audioEffectsEditor.store", () => {
     expect(
       selectViewData({ state, i18n: EN_I18N }).timelineZoomPopover.open,
     ).toBe(false);
+  });
+
+  it("names Linear in the app's language and keeps the curve names in English", () => {
+    const state = createInitialState();
+    loadAudioEffect(
+      { state },
+      {
+        item: {
+          id: "fade",
+          name: "Fade",
+          audioEffect: {
+            type: "update",
+            tween: {
+              volume: {
+                keyframes: [{ value: 50, duration: 250, easing: "linear" }],
+              },
+            },
+          },
+        },
+      },
+    );
+    setSelectedKeyframe(
+      { state },
+      { side: "update", property: "volume", index: 0 },
+    );
+    openKeyframeDialog(
+      { state },
+      { side: "update", property: "volume", index: 0 },
+    );
+
+    const viewData = selectViewData({ state, i18n: FR_I18N });
+    const easingLabels = Object.fromEntries(
+      viewData.selectedKeyframeEditor.easingOptions.map(({ value, label }) => [
+        value,
+        label,
+      ]),
+    );
+    const easingField = viewData.keyframeForm.fields.find(
+      (field) => field.name === "easing",
+    );
+
+    expect(easingLabels.linear).toBe("Linéaire");
+    expect(easingLabels.easeInOutSine).toBe("Ease In Out Sine");
+    expect(easingField.options).toEqual(
+      viewData.selectedKeyframeEditor.easingOptions,
+    );
+    expect(easingField.placeholder).toBe("Sélectionnez une option");
+    expect(viewData.properties[0].keyframes[0].easingLabel).toBe("Linéaire");
   });
 });

@@ -274,6 +274,7 @@ const STATIC_LABEL_COPY_KEYS = Object.freeze({
   Relative: "relativeValueType",
   Remove: "removeMenuItem",
   Save: "saveButton",
+  "Select an option": "selectOptionPlaceholder",
   Single: "singleMaskKind",
   Softness: "softnessLabel",
   Step: "stepSampleLabel",
@@ -788,6 +789,7 @@ const createAutoTweenFields = (copy = {}) => {
       name: "easing",
       type: "select",
       label: "Easing",
+      placeholder: "Select an option",
       options: createEasingOptions(copy),
       required: true,
       defaultValue: AUTO_TWEEN_DEFAULT_EASING,
@@ -885,6 +887,7 @@ const createAddKeyframeForm = (
       name: "easing",
       type: "select",
       label: "Easing",
+      placeholder: "Select an option",
       options: createEasingOptions(copy),
       required: true,
     },
@@ -976,7 +979,7 @@ const createAddPropertyForm = (
     name: "initialValueType",
     type: "segmented-control",
     label: "Initial value type",
-    noClear: true,
+    clearable: false,
     tooltip: {
       content:
         "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
@@ -997,7 +1000,7 @@ const createAddPropertyForm = (
       name: "side",
       type: "segmented-control",
       label: "Timeline",
-      noClear: true,
+      clearable: false,
       options: sideOptions,
       required: true,
     });
@@ -1007,6 +1010,7 @@ const createAddPropertyForm = (
     name: "property",
     type: "select",
     label: "Property",
+    placeholder: "Select an option",
     options: availableProperties,
     required: true,
   });
@@ -1016,7 +1020,7 @@ const createAddPropertyForm = (
       name: "tweenMode",
       type: "segmented-control",
       label: "Tween Mode",
-      noClear: true,
+      clearable: false,
       options: localizeOptions(TWEEN_MODE_OPTIONS, copy),
       required: true,
     });
@@ -1124,7 +1128,6 @@ const createEmptyMaskPanelData = (copy = {}) => ({
   softness: 0.08,
   progressInitialValue: 0,
   progressDuration: 900,
-  progressDurationLabel: "900 ms",
   progressEasing: "linear",
   progressEasingLabel: copy.linearEasingLabel ?? "Linear",
   singleImage: undefined,
@@ -3670,7 +3673,6 @@ const buildTransitionMaskPanelDataForMask = (
     softness: transitionMask.softness ?? 0.08,
     progressInitialValue,
     progressDuration,
-    progressDurationLabel: `${progressDuration} ms`,
     progressEasing,
     progressEasingLabel: getOptionLabel(
       createEasingOptions(copy),
@@ -3729,6 +3731,7 @@ const buildSelectedKeyframePanelData = (
   state,
   propertyFieldConfig,
   copy = {},
+  dateTime,
 ) => {
   const selectedKeyframe = state.selectedKeyframe;
   if (!selectedKeyframe) {
@@ -3818,15 +3821,15 @@ const buildSelectedKeyframePanelData = (
       camera: property === "camera",
       cameraInitialLabel:
         property === "camera"
-          ? formatCameraPoseLabel(propertyConfig.initialValue)
+          ? formatCameraPoseLabel(propertyConfig.initialValue, dateTime)
           : undefined,
       cameraStartLabel:
         property === "camera"
-          ? formatCameraPoseLabel(keyframe.startValue)
+          ? formatCameraPoseLabel(keyframe.startValue, dateTime)
           : undefined,
       cameraValueLabel:
         property === "camera"
-          ? formatCameraPoseLabel(keyframe.value)
+          ? formatCameraPoseLabel(keyframe.value, dateTime)
           : undefined,
       hasInitialValue,
       delay: keyframe.delay ?? 0,
@@ -3857,6 +3860,7 @@ const buildSelectedPropertyPanelData = (
   state,
   propertyFieldConfig,
   copy = {},
+  dateTime,
 ) => {
   const selectedProperty = state.selectedProperty;
   if (!selectedProperty) {
@@ -3944,7 +3948,7 @@ const buildSelectedPropertyPanelData = (
           camera: property === "camera",
           cameraInitialLabel:
             property === "camera"
-              ? formatCameraPoseLabel(propertyConfig.initialValue)
+              ? formatCameraPoseLabel(propertyConfig.initialValue, dateTime)
               : undefined,
           hasInitialValue,
           initialValue,
@@ -4079,14 +4083,17 @@ export const selectViewData = ({ state, i18n }) => {
   const updateProperties = cameraTimelineProperties(
     getSectionProperties(state, "update"),
     cameraLabel,
+    i18n.dateTime,
   );
   const previousProperties = cameraTimelineProperties(
     getSectionProperties(state, "prev"),
     cameraLabel,
+    i18n.dateTime,
   );
   const nextProperties = cameraTimelineProperties(
     getSectionProperties(state, "next"),
     cameraLabel,
+    i18n.dateTime,
   );
   const cameraImageId =
     state.cameraEditor?.side === "update"
@@ -4232,11 +4239,13 @@ export const selectViewData = ({ state, i18n }) => {
     state,
     propertyFieldConfig,
     copy,
+    i18n.dateTime,
   );
   const selectedPropertyPanel = buildSelectedPropertyPanelData(
     state,
     propertyFieldConfig,
     copy,
+    i18n.dateTime,
   );
   const selectedKeyframeAddMenuItems =
     selectedKeyframePanel?.editor && !selectedKeyframePanel.editor.hasStartValue

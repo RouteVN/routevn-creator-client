@@ -1,3 +1,4 @@
+import { formatDimensions } from "../../../internal/dates.js";
 import { resolveParticleTextureImageItem } from "../../../internal/particles.js";
 
 const toTextValue = (value) => {
@@ -8,8 +9,8 @@ const toTextValue = (value) => {
   return String(value);
 };
 
-const formatDimensionLabel = (width, height) => {
-  return `${Math.round(width)} × ${Math.round(height)}`;
+const formatDimensionLabel = (width, height, dateTime) => {
+  return formatDimensions(Math.round(width), Math.round(height), dateTime);
 };
 
 const getSourceKindLabel = (kind, copy = {}) => {
@@ -63,6 +64,7 @@ export const buildParticleDetailFields = (input) => {
   const item = input?.item ?? input;
   const imagesData = input?.imagesData;
   const copy = input?.copy ?? {};
+  const dateTime = input?.dateTime;
   if (!item) {
     return [];
   }
@@ -102,7 +104,7 @@ export const buildParticleDetailFields = (input) => {
     {
       type: "text",
       label: copy.canvasSizeLabel ?? "Canvas Size",
-      value: formatDimensionLabel(item.width ?? 0, item.height ?? 0),
+      value: formatDimensionLabel(item.width ?? 0, item.height ?? 0, dateTime),
     },
     {
       type: "text",

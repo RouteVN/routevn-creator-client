@@ -1,3 +1,4 @@
+import { formatNumber, formatNumberWithUnit } from "../../internal/dates.js";
 import {
   getSliderRange,
   getSliderStepButtons,
@@ -37,11 +38,14 @@ export const selectPopoverValue = ({ state }) => state.popover.value;
 
 export const selectViewData = ({ state, props, i18n }) => {
   const copy = i18n.sliderValueField;
+  const { dateTime } = i18n;
   const { field } = props;
   const unset = isSliderValueUnset(props.value);
   const value = unset ? field.defaultValue : props.value;
   const range = getSliderRange({ field });
-  let valueText = field.unit ? `${value} ${field.unit}` : `${value}`;
+  let valueText = field.unit
+    ? formatNumberWithUnit(value, field.unit, dateTime)
+    : formatNumber(value, dateTime);
   if (unset && field.emptyText) {
     valueText = field.emptyText;
   }
@@ -69,6 +73,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     popoverDefaultValues: { value: state.popover.value },
     presetsLabel: copy.presetsLabel,
     submitLabel: copy.submitLabel,
-    stepButtons: getSliderStepButtons({ field, copy }),
+    stepButtons: getSliderStepButtons({
+      field,
+      copy,
+      dateTime: i18n.dateTime,
+    }),
   };
 };

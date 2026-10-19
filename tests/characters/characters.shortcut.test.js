@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 import * as characters from "../../src/pages/characters/characters.store.js";
 import { handleEditFormAction } from "../../src/pages/characters/characters.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 it.each([
   { mode: "touch", shortcut: undefined },
@@ -92,3 +92,27 @@ it.each([
     }
   },
 );
+
+it("shows a character without a shortcut in the app's language", () => {
+  const state = characters.createInitialState();
+  const context = { state, i18n: FR_I18N };
+  const item = {
+    id: "character-one",
+    type: "character",
+    name: "Character One",
+    tagIds: [],
+    spriteGroups: [],
+  };
+  characters.setItems(context, {
+    charactersData: { items: { [item.id]: item }, tree: [{ id: item.id }] },
+  });
+  characters.setUiConfig(context, { uiConfig: { inputMode: "mouse" } });
+  characters.openEditDialog(context, { itemId: item.id, spriteGroups: [] });
+  const view = characters.selectViewData(context);
+
+  for (const form of [view.dialogForm, view.editForm]) {
+    expect(
+      form.fields.find((field) => field.name === "shortcut").placeholder,
+    ).toBe("Aucun raccourci");
+  }
+});

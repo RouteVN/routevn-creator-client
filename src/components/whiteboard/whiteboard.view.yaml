@@ -92,5 +92,5 @@ template:
                   - rtgl-button#panBtn sq pre=hand v=${panModeV}: null
                   - rtgl-button#zoomOutBtn v=se s=md sq: '-'
                   - rtgl-view bgc=co p=sm br=full w=50 ah=c av=c:
-                      - rtgl-text s=sm: ${zoomLevelPercent}%
+                      - rtgl-text s=sm: ${zoomLevelLabel}
                   - rtgl-button#zoomInBtn v=se s=md sq: +

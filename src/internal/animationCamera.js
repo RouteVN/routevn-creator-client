@@ -1,3 +1,5 @@
+import { formatNumber, formatPercent } from "./dates.js";
+
 export const CAMERA_PROPERTIES = ["x", "y", "scaleX", "scaleY"];
 
 const roundCameraValue = (value, property) => {
@@ -85,15 +87,21 @@ export const expandCameraTrack = (properties) => {
   return expanded;
 };
 
-const formatCameraZoom = (pose) =>
-  pose === undefined ? undefined : `${Math.round(pose.scaleX * 100)}%`;
+// The zoom reads as a percentage, formatted for `dateTime`, the active
+// locale's catalog.
+const formatCameraZoom = (pose, dateTime) =>
+  pose === undefined
+    ? undefined
+    : formatPercent(Math.round(pose.scaleX * 100), dateTime);
 
-export const formatCameraPoseLabel = (pose) => {
+export const formatCameraPoseLabel = (pose, dateTime) => {
   if (pose === undefined) return undefined;
-  return `${formatCameraZoom(pose)} · X ${Number(pose.x.toFixed(2))} · Y ${Number(pose.y.toFixed(2))}`;
+  const x = formatNumber(Number(pose.x.toFixed(2)), dateTime);
+  const y = formatNumber(Number(pose.y.toFixed(2)), dateTime);
+  return `${formatCameraZoom(pose, dateTime)} · X ${x} · Y ${y}`;
 };
 
-export const cameraTimelineProperties = (properties, label) => {
+export const cameraTimelineProperties = (properties, label, dateTime) => {
   const { camera } = properties;
   if (!camera) return properties;
   return {
@@ -109,8 +117,9 @@ export const cameraTimelineProperties = (properties, label) => {
           frame.startValue ??
             camera.keyframes[index - 1]?.value ??
             camera.initialValue,
+          dateTime,
         ),
-        valueLabel: formatCameraZoom(frame.value),
+        valueLabel: formatCameraZoom(frame.value, dateTime),
       })),
     },
   };

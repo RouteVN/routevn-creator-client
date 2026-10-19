@@ -12,6 +12,7 @@ import {
   setLayoutState,
   setRepositoryState,
 } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const EMPTY_COLLECTION = {
   items: {},
@@ -85,7 +86,7 @@ describe("layoutEditor preview persistence", () => {
     );
 
     hydratePreviewState(
-      { state },
+      { state, i18n: EN_I18N },
       {
         previewData: persistedPreviewData,
       },
@@ -104,7 +105,7 @@ describe("layoutEditor preview persistence", () => {
       name: "Ada",
       code: "B42",
     });
-    expect(selectPreviewData({ state })).toMatchObject({
+    expect(selectPreviewData({ state, i18n: EN_I18N })).toMatchObject({
       backgroundImageId: "image-preview",
       runtime: {
         dialogueTextSpeed: 25,
@@ -145,7 +146,7 @@ describe("layoutEditor preview persistence", () => {
       },
     );
     hydratePreviewState(
-      { state },
+      { state, i18n: EN_I18N },
       {
         previewData: {
           runtime: {
@@ -166,14 +167,16 @@ describe("layoutEditor preview persistence", () => {
       },
     );
 
-    expect(selectPreviewData({ state }).runtime.skipMode).toBe(true);
+    expect(selectPreviewData({ state, i18n: EN_I18N }).runtime.skipMode).toBe(
+      true,
+    );
   });
 
   it("keeps runtime overrides for previews without dialogue data", () => {
     const state = createPreviewComponentState();
 
     hydratePreviewState(
-      { state },
+      { state, i18n: EN_I18N },
       {
         previewData: {
           runtime: {

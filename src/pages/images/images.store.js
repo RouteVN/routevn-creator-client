@@ -1,3 +1,4 @@
+import { formatDimensions } from "../../internal/dates.js";
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
@@ -69,7 +70,10 @@ const buildDetailFields = (item, { copy, dateTime } = {}) => {
     {
       type: "text",
       label: copy.dimensionsLabel,
-      value: item.width && item.height ? `${item.width} × ${item.height}` : "",
+      value:
+        item.width && item.height
+          ? formatDimensions(item.width, item.height, dateTime)
+          : "",
     },
   ];
 };

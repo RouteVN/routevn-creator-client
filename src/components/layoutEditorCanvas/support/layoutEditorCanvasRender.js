@@ -763,6 +763,7 @@ const createLayoutEditorResolvedElements = ({
   repositoryState,
   previewData,
   resolution,
+  sampleText,
 } = {}) => {
   const { elements, backgroundElement, characterSprite } =
     createLayoutPreviewElements({
@@ -770,6 +771,7 @@ const createLayoutEditorResolvedElements = ({
       repositoryState,
       previewData,
       resolution,
+      sampleText,
       mapElement: createLayoutEditorSelectionElementMapper({
         layoutId: layoutState?.id,
       }),
@@ -795,12 +797,14 @@ export const createLayoutEditorAssetReferences = ({
   repositoryState,
   previewData,
   resolution,
+  sampleText,
 } = {}) => {
   const { renderedElements } = createLayoutEditorResolvedElements({
     layoutState,
     repositoryState,
     previewData,
     resolution,
+    sampleText,
   });
   const fileReferences = extractFileIdsFromRenderState(renderedElements);
 
@@ -820,6 +824,7 @@ export const createLayoutEditorRenderedElements = ({
   disableMoveDrag,
   canvasUnitsPerCssPixel,
   graphicsService,
+  sampleText,
 } = {}) => {
   const { renderedElements, occurrencesById, occurrenceIdsByOwner } =
     createLayoutEditorResolvedElements({
@@ -827,6 +832,7 @@ export const createLayoutEditorRenderedElements = ({
       repositoryState,
       previewData,
       resolution,
+      sampleText,
     });
   const parsedState = graphicsService.parse({
     elements: renderedElements,

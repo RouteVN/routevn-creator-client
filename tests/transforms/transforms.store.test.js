@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 import {
   closeEditDialog,
   createInitialState,
@@ -154,5 +154,19 @@ describe("transforms.store", () => {
       ["Anchor Y", "1"],
       ["Rotation", "30"],
     ]);
+  });
+
+  it("writes the detail panel's decimals as the locale does", () => {
+    const state = createInitialState();
+    setItems({ state }, { data: transformsData });
+    setSelectedItemId({ state }, { itemId: "transform-1" });
+
+    const fields = selectViewData({ state, i18n: FR_I18N }).detailFields;
+
+    expect(
+      fields
+        .filter((field) => field.type === "text")
+        .map((field) => field.value),
+    ).toEqual(["960", "540", "1,5", "1,5", "0,5", "1", "30"]);
   });
 });

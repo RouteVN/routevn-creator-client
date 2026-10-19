@@ -43,13 +43,6 @@ export const createAppServiceCore = ({
     platformAdapter,
   });
 
-  const fileSelectionService = createFileSelectionService({
-    globalUI,
-    filePicker,
-    projectService,
-    platformAdapter,
-  });
-
   const appShellService = createAppShellService({
     router,
     subject,
@@ -63,6 +56,14 @@ export const createAppServiceCore = ({
     updater,
     audioService,
     triggerTestCrash,
+  });
+
+  const fileSelectionService = createFileSelectionService({
+    globalUI,
+    filePicker,
+    projectService,
+    platformAdapter,
+    getAppCopy: appShellService.getAppCopy,
   });
 
   const userConfigService = createUserConfigService({

@@ -47,7 +47,7 @@ describe("particle editor view", () => {
     // phones show the tabs in the navbar.
     expect(
       count(
-        /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
+        /rtgl-tabs#rightPanelModeTabs s=sm aria-label="\$\{editorPanelsLabel\}" selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}': null/g,
       ),
     ).toBe(3);
     // The preview background saves on its own, so there is no Save Preview.

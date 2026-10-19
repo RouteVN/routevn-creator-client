@@ -30,7 +30,7 @@ describe("commandLineBackground view", () => {
       'rtgl-view w=1fg sh style="min-width: 0; overscroll-behavior-x: contain;"',
     );
     expect(view).toContain(
-      'rtgl-tabs#tabs selected-tab=${tab} :items=${tabs} style="display: block; min-width: max-content;"',
+      'rtgl-tabs#tabs aria-label="${tabsLabel}" selected-tab=${tab} :items=${tabs} style="display: block; min-width: max-content;"',
     );
     expect(view).toContain("$if showInlineSearch:");
     expect(view).toContain("$if showSearchButton:");

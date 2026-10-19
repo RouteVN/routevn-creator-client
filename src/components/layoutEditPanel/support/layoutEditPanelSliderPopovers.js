@@ -2,7 +2,11 @@ import {
   getMinLayoutEditorItemSize,
   MIN_LAYOUT_EDITOR_ITEM_SIZE,
 } from "../../../internal/layoutEditorElementRegistry.js";
-import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
+import {
+  formatNumber,
+  formatNumberWithUnit,
+  formatPercent,
+} from "../../../internal/dates.js";
 import {
   clampSliderValue,
   getSliderRange,
@@ -77,11 +81,12 @@ const OPACITY_PRESETS = [0, 0.25, 0.5, 0.75, 1];
 
 const SCALE_PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 
-// A share as a percentage, with its value beside it.
-const toPercentPreset = (value) => ({
-  label: `${Math.round(value * 100)}%`,
+// A share as a percentage formatted for `dateTime`, the active locale's
+// catalog, with its value beside it.
+const toPercentPreset = (value, dateTime) => ({
+  label: formatPercent(Math.round(value * 100), dateTime),
   value,
-  suffixText: `${value}`,
+  suffixText: formatNumber(value, dateTime),
 });
 
 const isPositionField = (name) => name === "x" || name === "y";
@@ -162,7 +167,7 @@ export const getSliderPopoverRange = ({
 export const getSliderPopoverPresets = ({
   name,
   projectResolution,
-  copy = {},
+  dateTime,
 } = {}) => {
   if (isPositionField(name) || isSizeField(name)) {
     const dimension = getProjectDimension({ name, projectResolution });
@@ -177,32 +182,37 @@ export const getSliderPopoverPresets = ({
       return {
         label: preset.label,
         value,
-        suffixText: formatI18nCopy(copy.presetPixelsLabel ?? "{value} px", {
-          value,
-        }),
+        suffixText: formatNumberWithUnit(value, "pixels", dateTime),
       };
     });
   }
 
   if (name === "rotation") {
-    return ROTATION_PRESETS.map((value) => ({ label: `${value}°`, value }));
+    return ROTATION_PRESETS.map((value) => ({
+      label: formatNumberWithUnit(value, "degrees", dateTime),
+      value,
+    }));
   }
 
   if (name === "scaleX" || name === "scaleY") {
-    return SCALE_PRESETS.map(toPercentPreset);
+    return SCALE_PRESETS.map((value) => toPercentPreset(value, dateTime));
   }
 
   if (name === "opacity") {
-    return OPACITY_PRESETS.map(toPercentPreset);
+    return OPACITY_PRESETS.map((value) => toPercentPreset(value, dateTime));
   }
 
   return [];
 };
 
 // The step buttons move by the field's steps.
-export const getSliderPopoverStepButtons = ({ name, copy = {} } = {}) => {
+export const getSliderPopoverStepButtons = ({
+  name,
+  copy = {},
+  dateTime,
+} = {}) => {
   const field = SLIDER_POPOVER_FIELDS[name];
-  return field ? getSliderStepButtons({ field, copy }) : [];
+  return field ? getSliderStepButtons({ field, copy, dateTime }) : [];
 };
 
 // A value moved by a step, rounded to the step and kept within the field's

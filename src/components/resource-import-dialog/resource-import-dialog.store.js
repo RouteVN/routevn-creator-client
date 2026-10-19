@@ -1,4 +1,5 @@
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { formatPercent } from "../../internal/dates.js";
 import { ROUTEVN_ASSET_STORE_URL } from "../../internal/routevnUrls.js";
 
 const SOURCE_STEP = "source";
@@ -471,7 +472,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
       copy.preparingLabel ??
       "Preparing import",
     progressCountLabel: `${state.progress.completed} / ${state.progress.total}`,
-    progressPercent,
+    progressPercentLabel: formatPercent(progressPercent, i18n.dateTime),
     cancelButton: copy.cancelButton ?? "Cancel Import",
     dialogAriaLabel: copy.title ?? "Import Package",
   };

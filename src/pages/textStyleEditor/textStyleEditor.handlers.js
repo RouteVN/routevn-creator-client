@@ -600,7 +600,6 @@ export const handleFontFileSelected = async (deps, payload) => {
   if (uploadResults.length === 0) {
     showResourcePageError({
       appService,
-      errorOrResult: copy.failedUploadFontFile,
       fallbackMessage: copy.failedUploadFontFile,
     });
     return;

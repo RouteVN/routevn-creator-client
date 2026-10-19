@@ -436,7 +436,7 @@ export const createCatalogPageStore = ({
         })
       : unfilteredCatalogGroups;
     const detailFields = selectedItem
-      ? buildDetailFields(selectedItem, { copy })
+      ? buildDetailFields(selectedItem, { copy, dateTime: i18n.dateTime })
       : buildFolderDetailFields(selectedFolder).map((field) => {
           if (field.label === "Type") {
             return {

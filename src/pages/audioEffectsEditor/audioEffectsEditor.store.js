@@ -55,10 +55,14 @@ const createDefaultPropertyTrack = (property, { side = "update" } = {}) => {
   return track;
 };
 
-const formatEasingLabel = (easing) =>
-  easing
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^./, (value) => value.toUpperCase());
+// Easing curve names stay in English, as in the animation editor. Only
+// Linear is in the app's language.
+const formatEasingLabel = (easing, linearLabel) =>
+  easing === "linear"
+    ? linearLabel
+    : easing
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/^./, (value) => value.toUpperCase());
 
 const getPropertyLabel = (property, copy = {}) => {
   const labels = {
@@ -80,9 +84,9 @@ const createDefaultDefinition = () => ({
   },
 });
 
-const createEasingOptions = () =>
+const createEasingOptions = (linearLabel) =>
   SUPPORTED_AUDIO_EFFECT_EASINGS.map((easing) => ({
-    label: formatEasingLabel(easing),
+    label: formatEasingLabel(easing, linearLabel),
     value: easing,
   }));
 
@@ -93,6 +97,7 @@ const createAddPropertyForm = (availableProperties, copy = {}) => ({
       name: "property",
       type: "select",
       label: copy.propertyLabel ?? "Property",
+      placeholder: copy.selectOptionPlaceholder ?? "Select an option",
       options: availableProperties.map((property) => ({
         label: getPropertyLabel(property, copy),
         value: property,
@@ -117,6 +122,7 @@ const createKeyframeForm = ({
   finalKeyframe = false,
   property,
   copy,
+  linearEasingLabel,
 } = {}) => {
   const propertyConfig = AUDIO_EFFECT_PROPERTY_CONFIG[property] ?? {};
   const actions = [];
@@ -139,7 +145,7 @@ const createKeyframeForm = ({
       name: "useStartValue",
       type: "segmented-control",
       label: copy.startValueLabel ?? "Start value",
-      noClear: true,
+      clearable: false,
       options: [
         { label: copy.currentValueOption ?? "Current value", value: false },
         { label: copy.customValueOption ?? "Custom", value: true },
@@ -161,7 +167,7 @@ const createKeyframeForm = ({
       name: "relative",
       type: "segmented-control",
       label: copy.valueTypeLabel ?? "Value type",
-      noClear: true,
+      clearable: false,
       options: [
         { label: copy.absoluteValueType ?? "Absolute", value: false },
         { label: copy.relativeValueType ?? "Relative", value: true },
@@ -199,7 +205,8 @@ const createKeyframeForm = ({
       name: "easing",
       type: "select",
       label: copy.easingLabel ?? "Easing",
-      options: createEasingOptions(),
+      placeholder: copy.selectOptionPlaceholder ?? "Select an option",
+      options: createEasingOptions(linearEasingLabel),
       required: true,
     },
   );
@@ -1379,7 +1386,7 @@ export const selectKeyframeDialogValues = ({ state }) => {
   };
 };
 
-const buildSelectedKeyframePanelData = (state, copy = {}) => {
+const buildSelectedKeyframePanelData = (state, copy, linearEasingLabel) => {
   const selectedKeyframe = state.selectedKeyframe;
   const keyframe = getMutableSelectedKeyframe(state);
   if (!selectedKeyframe || !keyframe) {
@@ -1463,7 +1470,7 @@ const buildSelectedKeyframePanelData = (state, copy = {}) => {
       duration: keyframe.duration,
       durationLabel: copy.durationMsLabel ?? "Duration (ms)",
       easing: keyframe.easing ?? "linear",
-      easingOptions: createEasingOptions(),
+      easingOptions: createEasingOptions(linearEasingLabel),
       relative: keyframe.relative === true,
       relativeOptions: [
         { label: copy.absoluteValueType ?? "Absolute", value: false },
@@ -1560,6 +1567,8 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectAudioEffectsEditorPageCopy(i18n);
   const editHistoryCopy = selectEditHistoryCopy(i18n);
+  // The keyframe timeline names Linear with the animation editor's word.
+  const linearEasingLabel = i18n.animationEditorPage.linearEasingLabel;
   const isTransition = state.definition.type === "transition";
   const tween = isTransition ? {} : state.definition.tween;
   const addPropertySide = isTransition ? state.addPropertySide : "update";
@@ -1612,7 +1621,10 @@ export const selectViewData = ({ state, i18n }) => {
           ? (copy.currentValueOption ?? "Current value")
           : `${keyframe.startValue}`,
       timingLabel: `${formatMilliseconds(keyframe.delay ?? 0, i18n.dateTime)} + ${formatMilliseconds(keyframe.duration, i18n.dateTime)}`,
-      easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
+      easingLabel: formatEasingLabel(
+        keyframe.easing ?? "linear",
+        linearEasingLabel,
+      ),
       canDelete: index < config.keyframes.length - 1,
     })),
   }));
@@ -1630,7 +1642,7 @@ export const selectViewData = ({ state, i18n }) => {
   const propertyCount = countAudioEffectProperties(state.definition);
   const selectedKeyframePanel =
     state.selectedEditorTab === "timeline"
-      ? buildSelectedKeyframePanelData(state, copy)
+      ? buildSelectedKeyframePanelData(state, copy, linearEasingLabel)
       : undefined;
   const selectedPropertyPanel =
     state.selectedEditorTab === "timeline"
@@ -1868,6 +1880,7 @@ export const selectViewData = ({ state, i18n }) => {
       finalKeyframe,
       property: dialogProperty,
       copy,
+      linearEasingLabel,
     }),
     keyframeFormDefaults: selectKeyframeDialogValues({ state }),
   };

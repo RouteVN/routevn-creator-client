@@ -483,6 +483,7 @@ export const createInitialState = () => ({
                 label: "Transform",
                 required: true,
                 clearable: false,
+                placeholder: "Select transform",
                 options: [],
               },
               {
@@ -1463,6 +1464,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     }),
     showSpriteGroupTabs: spriteSelectionTabs.length > 1,
     spriteSelectionTabs,
+    spriteGroupTabsLabel: localizeCommandLineText("Sprite Groups", copy),
     selectedSpriteGroupId,
     searchQuery: state.searchQuery,
     searchPlaceholder: localizeCommandLineText("Search...", copy),

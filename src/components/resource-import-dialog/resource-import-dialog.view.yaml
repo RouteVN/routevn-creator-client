@@ -92,5 +92,5 @@ template:
           - $if isProgressStep:
               - rtgl-view w=f h=220 av=c ah=c d=v g=md role=status aria-live=polite:
                   - rtgl-text s=lg: ${progressLabel}
-                  - rtgl-text c=mu-fg: ${progressCountLabel} (${progressPercent}%)
+                  - rtgl-text c=mu-fg: ${progressCountLabel} (${progressPercentLabel})
                   - rtgl-button#cancelProgressButton v=se: ${cancelButton}

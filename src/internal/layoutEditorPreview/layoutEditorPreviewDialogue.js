@@ -1,11 +1,15 @@
-export const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
-export const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
+import {
+  DEFAULT_PREVIEW_SAMPLE_TEXT,
+  formatSampleLine,
+} from "./layoutEditorPreviewSampleText.js";
+
 export const DEFAULT_DIALOGUE_REVEALING_SPEED = 50;
 
 export const createDialogueLines = ({
   characterId,
   characterName,
   dialogueContent,
+  narratorName,
 }) => {
   return [
     {
@@ -21,15 +25,18 @@ export const createDialogueLines = ({
     },
     {
       character: {
-        name: "Narrator",
+        name: narratorName,
       },
-      characterName: "Narrator",
+      characterName: narratorName,
       content: [{ text: dialogueContent }],
     },
   ];
 };
 
-export const createNvlLines = (nvlDefaultValues = {}) => {
+export const createNvlLines = (
+  nvlDefaultValues = {},
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
   const linesNum = Number(nvlDefaultValues.linesNum);
   const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
   const sourceCharacterNames = Array.isArray(nvlDefaultValues.characterNames)
@@ -42,7 +49,12 @@ export const createNvlLines = (nvlDefaultValues = {}) => {
   return Array.from({ length: lineCount }, (_unused, index) => {
     const characterName = sourceCharacterNames[index] ?? "";
     const line = {
-      content: [{ text: sourceLines[index] ?? `Line ${index + 1}` }],
+      content: [
+        {
+          text:
+            sourceLines[index] ?? formatSampleLine(sampleText.nvlLine, index),
+        },
+      ],
     };
 
     if (characterName) {
@@ -56,7 +68,10 @@ export const createNvlLines = (nvlDefaultValues = {}) => {
   });
 };
 
-export const createNvlFormDefaultValues = (nvlDefaultValues = {}) => {
+export const createNvlFormDefaultValues = (
+  nvlDefaultValues = {},
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
   const linesNum = Number(nvlDefaultValues.linesNum);
   const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
   const defaultValues = {
@@ -68,7 +83,7 @@ export const createNvlFormDefaultValues = (nvlDefaultValues = {}) => {
       nvlDefaultValues.characterNames?.[index] ?? "";
     defaultValues[`line${index}`] =
       nvlDefaultValues.lines?.[index] ??
-      `This is sample NVL line ${index + 1}.`;
+      formatSampleLine(sampleText.nvlLine, index);
   }
 
   return defaultValues;
@@ -79,14 +94,15 @@ export const createDialoguePreviewData = ({
   dialogueDefaultValues,
   nvlDefaultValues,
   previewRevealingSpeed,
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
 } = {}) => {
   const isNvlLayout = layoutType === "dialogue-nvl" || layoutType === "nvl";
   const characterId = dialogueDefaultValues?.["dialogue-character-id"] ?? "";
   const characterName =
     dialogueDefaultValues?.["dialogue-character-name"] ??
-    DEFAULT_DIALOGUE_CHARACTER_NAME;
+    sampleText.characterName;
   const dialogueContent =
-    dialogueDefaultValues?.["dialogue-content"] ?? DEFAULT_DIALOGUE_CONTENT;
+    dialogueDefaultValues?.["dialogue-content"] ?? sampleText.dialogueContent;
   const characterSpriteId =
     dialogueDefaultValues?.["dialogue-character-sprite-id"];
   const characterSpriteTransformId =
@@ -115,11 +131,12 @@ export const createDialoguePreviewData = ({
       ? parsedPreviewRevealingSpeed
       : DEFAULT_DIALOGUE_REVEALING_SPEED;
   const dialogueLines = isNvlLayout
-    ? createNvlLines(nvlDefaultValues)
+    ? createNvlLines(nvlDefaultValues, sampleText)
     : createDialogueLines({
         characterId,
         characterName,
         dialogueContent,
+        narratorName: sampleText.narratorName,
       });
 
   return {

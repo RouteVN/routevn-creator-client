@@ -147,7 +147,7 @@ template:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - $if showSpriteGroupTabs:
               - rtgl-view w=f ph=md:
-                  - rtgl-tabs#spriteGroupTabs :items=${spriteSelectionTabs} selected-tab=${selectedSpriteGroupId}: null
+                  - 'rtgl-tabs#spriteGroupTabs aria-label="${spriteGroupTabsLabel}" :items=${spriteSelectionTabs} selected-tab=${selectedSpriteGroupId}': null
           - rtgl-view d=h w=f av=c g=md ph=md:
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null

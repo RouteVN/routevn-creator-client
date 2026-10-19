@@ -452,7 +452,7 @@ describe("text style editor", () => {
       min: 8,
       max: 400,
       range: { min: 8, max: 128 },
-      unit: "px",
+      unit: "pixels",
     });
     expect(sliderValueField("lineHeight").field).toMatchObject({
       step: 0.1,

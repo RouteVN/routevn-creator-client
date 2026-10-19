@@ -13,6 +13,7 @@ import {
   MIN_LAYOUT_EDITOR_ITEM_SIZE,
 } from "../../internal/layoutEditorElementRegistry.js";
 import { createTransformKeyboardIntent } from "../../internal/transformKeyboard.js";
+import { selectLayoutPreviewSampleText } from "../../internal/ui/layoutPreviewSampleText.js";
 import {
   createLayoutEditorAssetReferences,
   createLayoutEditorHoverOverlay,
@@ -1008,6 +1009,7 @@ const prefetchLayoutEditorAssets = async (
       repositoryState,
       previewData: props.previewData,
       resolution: props.resolution,
+      sampleText: selectLayoutPreviewSampleText(deps.i18n),
     });
 
     if (fileReferences.length === 0) {
@@ -1077,6 +1079,7 @@ const renderLayoutEditorCanvas = async (
       disableMoveDrag: props.disableMoveDrag === true,
       canvasUnitsPerCssPixel,
       graphicsService: deps.graphicsService,
+      sampleText: selectLayoutPreviewSampleText(deps.i18n),
     });
     if (finishStaleCanvasRender(deps, renderRequestId)) {
       return;

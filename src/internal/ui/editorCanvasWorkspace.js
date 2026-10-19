@@ -1,3 +1,4 @@
+import { formatPercent } from "../dates.js";
 import {
   formatCanvasMaxWidth,
   formatHalfViewportCanvasMaxWidth,
@@ -116,10 +117,11 @@ export const buildEditorCanvasLayout = ({ state, resolution }) =>
     resolution,
   });
 
-// The header's zoom controls.
-export const buildEditorCanvasZoomViewData = (canvasZoom) => ({
+// The header's zoom controls, with the zoom formatted for the `dateTime`
+// catalog of the active locale.
+export const buildEditorCanvasZoomViewData = (canvasZoom, dateTime) => ({
   canvasZoom,
-  canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,
+  canvasZoomLabel: formatPercent(Math.round(canvasZoom * 100), dateTime),
   canvasZoomInDisabled: canvasZoom >= CANVAS_ZOOM_LEVELS.at(-1),
   canvasZoomOutDisabled: canvasZoom <= CANVAS_ZOOM_LEVELS[0],
 });

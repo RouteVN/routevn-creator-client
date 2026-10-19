@@ -30,9 +30,10 @@ const syncRepositoryState = async (deps) => {
   });
 };
 
-// `edited` says the user changed the preview, so the page saves it. Data the
-// Preview derives on its own, when it opens or the layout changes, is drawn
-// the same from what is saved, so it is not saved.
+// `edited` says the user changed the preview, so the page saves it, sample
+// text included. Data the Preview derives on its own, when it opens or the
+// layout changes, is not saved: the Preview fills in sample text in the app's
+// language and the thumbnail in English.
 const emitPreviewDataChange = (deps, { edited = false } = {}) => {
   deps.dispatchEvent(
     new CustomEvent("preview-data-change", {

@@ -5,11 +5,13 @@ import {
   applyTextStyleFontChange,
   applyTextStyleFormChange,
   buildFontWeightOptions,
+  buildTextStyleFormValues,
+  buildTextStyleSliderValueFields,
   toTextStyleUpdateData,
   toTextStyleValues,
 } from "../../src/pages/textStyleEditor/support/textStyleEditorForm.js";
 import { selectTextStyleEditorPageCopy } from "../../src/pages/textStyleEditor/support/textStyleEditorPageCopy.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const copy = selectTextStyleEditorPageCopy(EN_I18N);
 
@@ -269,5 +271,24 @@ describe("text style editor form", () => {
         colorId: undefined,
       }).colorId,
     ).toBe("color-1");
+  });
+
+  it("shows the slider presets' units and decimals as the locale writes them", () => {
+    const presets = (name, dateTime) =>
+      buildTextStyleSliderValueFields({
+        formValues: buildTextStyleFormValues(toTextStyleValues(createItem())),
+        copy,
+        dateTime,
+      })
+        .find((field) => field.name === name)
+        .field.presets.map((preset) => preset.suffixText ?? preset.label);
+
+    expect(presets("fontSize", EN_I18N.dateTime)[0]).toBe("12 px");
+    expect(presets("lineHeight", EN_I18N.dateTime)[1]).toBe("1.2");
+    expect(presets("shadowAlpha", EN_I18N.dateTime)[1]).toBe("0.25");
+    expect(presets("shadowOffsetX", EN_I18N.dateTime)[0]).toBe("-16 px");
+    expect(presets("fontSize", FR_I18N.dateTime)[0]).toBe("12\u00a0px");
+    expect(presets("lineHeight", FR_I18N.dateTime)[1]).toBe("1,2");
+    expect(presets("shadowAlpha", FR_I18N.dateTime)[1]).toBe("0,25");
   });
 });

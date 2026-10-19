@@ -38,4 +38,4 @@ template:
           - 'input#zoomSlider type="range" min="${minZoom}" max="${maxZoom}" step="${zoomStep}" :value=${zoomLevel} style="flex: 1; min-width: 0;"': null
           - rtgl-button#zoomInButton sq v=gh s=sm: +
           - rtgl-view w=64 ah=c av=c p=sm bgc=co br=full:
-              - rtgl-text s=sm: ${zoomPercent}%
+              - rtgl-text s=sm: ${zoomLabel}

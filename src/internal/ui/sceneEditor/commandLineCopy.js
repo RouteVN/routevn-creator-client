@@ -36,6 +36,7 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
     "validVariableOperationRequired",
   "Please select an input layout.": "selectInputLayoutRequired",
   "Search...": "searchPlaceholder",
+  "Select an option": "selectOptionPlaceholder",
   "Select a scene before adding voice audio.": "selectSceneBeforeVoiceAudio",
   "Select a voice audio file first.": "selectVoiceAudioFirst",
   "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action":

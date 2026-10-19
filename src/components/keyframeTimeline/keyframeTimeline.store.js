@@ -542,7 +542,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
   const playheadIndicatorTimeLabel =
     playheadIndicatorTimeMs === undefined
       ? ""
-      : `${playheadIndicatorTimeMs} ms`;
+      : formatMilliseconds(playheadIndicatorTimeMs, i18n.dateTime);
   const playheadIndicatorLabelStyle = rulerIndicatorVisible
     ? createHoverIndicatorLabelStyle(indicatorLeftPercent)
     : "";

@@ -1,3 +1,4 @@
+import { formatNumber } from "../../internal/dates.js";
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
@@ -50,7 +51,7 @@ const createEmptyMetadataValues = () => ({
   tagIds: [],
 });
 
-const buildDetailFields = (item, { copy } = {}) => {
+const buildDetailFields = (item, { copy, dateTime } = {}) => {
   if (!item) {
     return [];
   }
@@ -73,37 +74,37 @@ const buildDetailFields = (item, { copy } = {}) => {
     {
       type: "text",
       label: copy.positionXLabel,
-      value: String(item.x ?? 0),
+      value: formatNumber(item.x ?? 0, dateTime),
     },
     {
       type: "text",
       label: copy.positionYLabel,
-      value: String(item.y ?? 0),
+      value: formatNumber(item.y ?? 0, dateTime),
     },
     {
       type: "text",
       label: copy.scaleXLabel,
-      value: String(item.scaleX ?? 1),
+      value: formatNumber(item.scaleX ?? 1, dateTime),
     },
     {
       type: "text",
       label: copy.scaleYLabel,
-      value: String(item.scaleY ?? 1),
+      value: formatNumber(item.scaleY ?? 1, dateTime),
     },
     {
       type: "text",
       label: copy.anchorXLabel,
-      value: String(item.anchorX ?? 0),
+      value: formatNumber(item.anchorX ?? 0, dateTime),
     },
     {
       type: "text",
       label: copy.anchorYLabel,
-      value: String(item.anchorY ?? 0),
+      value: formatNumber(item.anchorY ?? 0, dateTime),
     },
     {
       type: "text",
       label: copy.rotationLabel,
-      value: String(item.rotation ?? 0),
+      value: formatNumber(item.rotation ?? 0, dateTime),
     },
   ];
 };

@@ -74,12 +74,16 @@ export const getTransitionTimelineDuration = ({
 
 export const toAnimationDisplayItem = (
   item,
-  { cameraLabel = "Camera" } = {},
+  { cameraLabel = "Camera", dateTime } = {},
 ) => {
   const animationType = getDialogType(item?.animation?.type);
   const displayProperties = (properties, side) =>
     item?.cameraTracks?.includes(side)
-      ? cameraTimelineProperties(groupCameraTrack(properties), cameraLabel)
+      ? cameraTimelineProperties(
+          groupCameraTrack(properties),
+          cameraLabel,
+          dateTime,
+        )
       : structuredClone(properties);
   const prevProperties = displayProperties(
     getTransitionSideTween(item, "prev"),

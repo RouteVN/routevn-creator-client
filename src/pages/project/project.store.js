@@ -228,7 +228,7 @@ export const selectViewData = ({ state, i18n }) => {
     {
       type: "text",
       label: copy.resolutionLabel,
-      value: formatProjectResolution(state.project.resolution),
+      value: formatProjectResolution(state.project.resolution, i18n.dateTime),
     },
   ];
   const editForm = {

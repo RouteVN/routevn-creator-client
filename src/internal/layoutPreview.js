@@ -1,6 +1,7 @@
 import { parseAndRender } from "jempl";
 import { formatDate, resolveLayoutReferences } from "route-engine-js";
 import { getFontFaceWeightDescriptor } from "./fontCapabilities.js";
+import { DEFAULT_PREVIEW_SAMPLE_TEXT } from "./layoutEditorPreview/layoutEditorPreviewSampleText.js";
 import { createSavedLayoutPreviewData } from "./layoutEditorPreview/layoutEditorPreviewValues.js";
 import { getParticleSettleMs } from "./particlePreview.js";
 import {
@@ -89,7 +90,12 @@ const normalizeHistoryDialogueItem = (item) => {
   };
 };
 
-const normalizeLayoutEditorPreviewData = (previewData = {}) => {
+// When the preview data has no history lines, the layout draws two from
+// `sampleText`.
+const normalizeLayoutEditorPreviewData = (
+  previewData = {},
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
   const nextPreviewData = toPlainObject(previewData);
   const nextRuntime = toPlainObject(nextPreviewData.runtime);
   const nextDialogue = toPlainObject(nextPreviewData.dialogue);
@@ -165,11 +171,11 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
         : [
             {
               characterName: "Alice",
-              text: "First history line",
+              text: sampleText.historyLines[0],
             },
             {
               characterName: "Bob",
-              text: "Second history line",
+              text: sampleText.historyLines[1],
             },
           ],
     saveSlots: toArray(nextPreviewData.saveSlots),
@@ -390,20 +396,24 @@ export const createLayoutPreviewRenderState = ({
 
 // What the layout draws with `previewData`: its elements, and the preview's
 // background and character sprite, when it has them, to draw under and over
-// them.
+// them. `sampleText` fills in sample history lines the preview data lacks.
 export const createLayoutPreviewElements = ({
   layoutState,
   repositoryState,
   previewData,
   resolution,
   mapElement,
+  sampleText,
 } = {}) => {
   const { renderStateElements, resources } = createLayoutPreviewRenderState({
     layoutState,
     repositoryState,
     mapElement,
   });
-  const normalizedPreviewData = normalizeLayoutEditorPreviewData(previewData);
+  const normalizedPreviewData = normalizeLayoutEditorPreviewData(
+    previewData,
+    sampleText,
+  );
   const elements = resolveLayoutReferences(
     resolveLayoutPreviewElements({
       elements: renderStateElements,
@@ -462,9 +472,9 @@ const collectElementsOfType = (elements, type) =>
 export const LAYOUT_THUMBNAIL_VERSION = 1;
 
 // What a saved layout's thumbnail shows: the layout with its saved preview
-// data, as the layout editor shows it when it opens, without its selection
-// chrome, at the project's resolution, and the files that draws. Sounds are
-// left out, since a still picture plays none.
+// data, as the layout editor shows it in English when it opens, without its
+// selection chrome, at the project's resolution, and the files that draws.
+// Sounds are left out, since a still picture plays none.
 export const createLayoutThumbnailSource = ({ item, repositoryState }) => {
   const resolution = requireProjectResolution(
     repositoryState.project?.resolution,

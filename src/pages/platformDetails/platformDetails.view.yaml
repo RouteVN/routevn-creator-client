@@ -64,7 +64,7 @@ template:
                   - $if hasPlatformDetails:
                       - rtgl-view w=f d=v g=md:
                           - rtgl-view w=f ph=md:
-                              - rtgl-tabs#platformTabs selected-tab=${selectedPlatform} :items=${platformTabs}: null
+                              - 'rtgl-tabs#platformTabs aria-label="${platformTabsLabel}" selected-tab=${selectedPlatform} :items=${platformTabs}': null
                           - rtgl-view w=f h=48 ph=md d=h av=c g=md:
                               - rtgl-text w=1fg s=h3: ${selectedPlatformTitle}
                               - 'rtgl-button#platformEditButton v=ol sq pre=edit title="${platformEditButtonLabel}" aria-label="${platformEditButtonLabel}"': null

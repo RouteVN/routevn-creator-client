@@ -519,6 +519,7 @@ layoutSections:
         name: textStyleId
         value: "${values.textStyleId}"
         options: "${textStyleItems}"
+        placeholder: Select a text style
       - "$when": "values.hoverTextStyleId"
         type: select
         stacked: true
@@ -593,6 +594,7 @@ layoutSections:
         name: fragmentLayoutId
         value: "${values.fragmentLayoutId}"
         options: "${fragmentLayoutOptions}"
+        placeholder: Select an option
   - "$when": 'itemType == "container-ref-save-load-slot"'
     label: Pagination
     items:

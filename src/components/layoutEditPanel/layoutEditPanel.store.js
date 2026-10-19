@@ -21,6 +21,7 @@ import { getRuntimeFieldLabel } from "./support/layoutEditPanelRuntimeLabels.js"
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
+import { formatPercent } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -39,6 +40,7 @@ import {
   createConditionalOverrideAttributeImagePreview,
   createConditionalOverrideConditionDefaults,
   createConditionalOverrideConditionForm,
+  createConditionTargetTypeLabels,
   createSaveLoadPaginationDialogDefaults,
   createSaveLoadPaginationForm,
   createVisibilityConditionDialogDefaults,
@@ -166,6 +168,8 @@ const STATIC_LABEL_COPY_KEYS = {
   Revealing: "revealingLabel",
   Right: "rightOption",
   Scroll: "scrollSection",
+  "Select a text style": "textStylePlaceholder",
+  "Select an option": "selectOptionPlaceholder",
   Slider: "sliderLabel",
   "Slider Bar": "sliderBarSection",
   "Slider Thumb": "sliderThumbSection",
@@ -262,6 +266,9 @@ const localizePanelItem = (item, copy = {}) => {
   };
   if (typeof nextItem.label === "string") {
     nextItem.label = localizeStaticLabel(nextItem.label, copy);
+  }
+  if (typeof nextItem.placeholder === "string") {
+    nextItem.placeholder = localizeStaticLabel(nextItem.placeholder, copy);
   }
   if (Array.isArray(nextItem.options)) {
     nextItem.options = localizeOptions(nextItem.options, copy);
@@ -569,15 +576,25 @@ const buildPopoverForm = ({
 
 // X, Y, width, height, rotation, scale, and opacity popovers show a slider
 // with a Presets menu and step buttons.
-const buildSliderPopoverContext = ({ name, projectResolution, copy } = {}) => {
+const buildSliderPopoverContext = ({
+  name,
+  projectResolution,
+  copy,
+  dateTime,
+} = {}) => {
   if (!isSliderPopoverField(name)) {
     return {};
   }
 
   return {
     isSliderPopover: true,
-    presetItems: getSliderPopoverPresets({ name, projectResolution, copy }),
-    stepButtons: getSliderPopoverStepButtons({ name, copy }),
+    presetItems: getSliderPopoverPresets({
+      name,
+      projectResolution,
+      copy,
+      dateTime,
+    }),
+    stepButtons: getSliderPopoverStepButtons({ name, copy, dateTime }),
     showAspectRatioToggle: hasAspectRatioToggle(name),
   };
 };
@@ -827,7 +844,7 @@ const roundScaleForDisplay = (value) => Number(Number(value ?? 1).toFixed(2));
 
 export const openPopoverForm = (
   { state },
-  { x, y, name, form, projectResolution, copy } = {},
+  { x, y, name, form, projectResolution, copy, dateTime } = {},
 ) => {
   if (!name) {
     return;
@@ -869,6 +886,7 @@ export const openPopoverForm = (
         name,
         projectResolution,
         copy,
+        dateTime,
       }),
     },
   };
@@ -876,7 +894,7 @@ export const openPopoverForm = (
 
 export const updatePopoverFormContext = (
   { state },
-  { values = {}, name, projectResolution, copy } = {},
+  { values = {}, name, projectResolution, copy, dateTime } = {},
 ) => {
   const nextName = name ?? state.popover.name;
 
@@ -886,6 +904,7 @@ export const updatePopoverFormContext = (
       name: nextName,
       projectResolution,
       copy,
+      dateTime,
     }),
   };
   state.popover.defaultValues = values;
@@ -1639,6 +1658,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     systemSectionLabel: copy.systemSection ?? "System",
     variablesSectionLabel: copy.variablesSection ?? "Variables",
     targetLabelCopy: copy,
+    targetTypeLabels: createConditionTargetTypeLabels(i18n, copy),
   };
   // Visibility and conditional overrides list the same targets, by section.
   const conditionTargetOptions = toSectionedVisibilityConditionTargetOptions(
@@ -1789,7 +1809,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       hasChildInteractionInheritance: hasChildInteractionInheritance(values),
       canAddChildInteractionInheritance:
         getAvailableChildInteractionItems(values, copy).length > 0,
-      blurSummary: getSpriteBlurSummary(values.blur, copy),
+      blurSummary: getSpriteBlurSummary(values.blur, copy, i18n.dateTime),
       canAddSpriteBlur: !hasSpriteBlur,
       canAddTextRevealSound:
         capabilities.supportsTextRevealSound === true && !values.revealSoundId,
@@ -1797,8 +1817,14 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       canAddTextStyleVariant:
         !values.hoverTextStyleId || !values.clickTextStyleId,
       canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
-      hoverSoundVolumeLabel: `${normalizeInteractionSoundVolume(values.hover?.soundVolume)}%`,
-      clickSoundVolumeLabel: `${normalizeInteractionSoundVolume(values.click?.soundVolume)}%`,
+      hoverSoundVolumeLabel: formatPercent(
+        normalizeInteractionSoundVolume(values.hover?.soundVolume),
+        i18n.dateTime,
+      ),
+      clickSoundVolumeLabel: formatPercent(
+        normalizeInteractionSoundVolume(values.click?.soundVolume),
+        i18n.dateTime,
+      ),
       conditionalOverrideItems,
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,

@@ -323,7 +323,7 @@ const createVariableForm = (copy = {}) => ({
       name: "valueSource",
       type: "segmented-control",
       label: copy.valueSourceLabel ?? "Value source",
-      noClear: true,
+      clearable: false,
       required: true,
       options: [
         {
@@ -341,6 +341,7 @@ const createVariableForm = (copy = {}) => ({
       type: "select",
       label: copy.scopeLabel ?? "Scope",
       required: true,
+      placeholder: copy.selectOptionPlaceholder ?? "Select an option",
       options: [
         { value: "context", label: copy.scopeContextLabel ?? "Context" },
         { value: "device", label: copy.scopeDeviceLabel ?? "Device" },
@@ -352,6 +353,7 @@ const createVariableForm = (copy = {}) => ({
       type: "select",
       label: copy.typeLabel ?? "Type",
       required: true,
+      placeholder: copy.selectOptionPlaceholder ?? "Select an option",
       options: "${variableTypeOptions}",
     },
     {
@@ -379,6 +381,7 @@ const createVariableForm = (copy = {}) => ({
         { value: false, label: copy.booleanFalseLabel ?? "False" },
       ],
       required: true,
+      placeholder: copy.selectOptionPlaceholder ?? "Select an option",
     },
     {
       $when:
@@ -395,6 +398,7 @@ const createVariableForm = (copy = {}) => ({
       type: "select",
       label: copy.defaultLabel ?? "Default",
       clearable: false,
+      placeholder: copy.selectOptionPlaceholder ?? "Select an option",
       options: "${enumValueOptions}",
       required: false,
     },

@@ -7,7 +7,7 @@ import {
   setSelectedItemId,
   setTagsData,
 } from "../../src/pages/textStyles/textStyles.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const menuValues = (items) => items.map((item) => item.value);
 
@@ -166,5 +166,49 @@ describe("textStyles.store", () => {
     expect(selectViewData({ state, i18n: EN_I18N }).detailPreviewText).toBe(
       "Text Style Two",
     );
+  });
+
+  it("writes the detail panel's numbers as the locale does", () => {
+    const state = createInitialState();
+    setItems(
+      { state },
+      {
+        textStylesData: {
+          items: {
+            "text-style-1": {
+              id: "text-style-1",
+              type: "textStyle",
+              name: "Text Style One",
+              fontSize: 24,
+              lineHeight: 1.5,
+              fontWeight: "400",
+              strokeColorId: "color-1",
+              strokeWidth: 2.5,
+              shadow: { colorId: "color-1", alpha: 0.75, blur: 4 },
+            },
+          },
+          tree: [{ id: "text-style-1" }],
+        },
+      },
+    );
+    setSelectedItemId({ state }, { itemId: "text-style-1" });
+    const detailValues = (i18n) =>
+      selectViewData({ state, i18n })
+        .detailFields.filter((field) => field.type === "text")
+        .map((field) => field.value);
+
+    // Outline thickness, font, font size and line height, then font weight
+    // and the shadow's color, opacity, blur and offsets.
+    expect(detailValues(EN_I18N).slice(2, 6)).toEqual(["2.5", "", "24", "1.5"]);
+    expect(detailValues(EN_I18N).slice(6)).toEqual([
+      "400",
+      "",
+      "0.75",
+      "4",
+      "2",
+      "2",
+    ]);
+    expect(detailValues(FR_I18N).slice(2, 6)).toEqual(["2,5", "", "24", "1,5"]);
+    expect(detailValues(FR_I18N).slice(8)).toEqual(["0,75", "4", "2", "2"]);
   });
 });

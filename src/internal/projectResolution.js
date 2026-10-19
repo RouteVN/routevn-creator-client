@@ -1,3 +1,5 @@
+import { formatDimensions } from "./dates.js";
+
 export const CUSTOM_PROJECT_RESOLUTION_PRESET = "custom";
 export const DEFAULT_PROJECT_RESOLUTION_PRESET = "1920x1080";
 export const DEFAULT_PROJECT_RESOLUTION = Object.freeze({
@@ -197,10 +199,16 @@ export const createProjectResolutionFormValues = (
   };
 };
 
-export const formatProjectResolution = (resolution) => {
+// The resolution as the active locale's `dateTime` catalog writes
+// dimensions, such as "1920 × 1080".
+export const formatProjectResolution = (resolution, dateTime) => {
   const requiredResolution = requireProjectResolution(resolution);
 
-  return `${requiredResolution.width} × ${requiredResolution.height}`;
+  return formatDimensions(
+    requiredResolution.width,
+    requiredResolution.height,
+    dateTime,
+  );
 };
 
 export const formatProjectResolutionAspectRatio = (resolution) => {

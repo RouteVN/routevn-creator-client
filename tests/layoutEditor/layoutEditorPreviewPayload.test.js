@@ -14,6 +14,7 @@ import {
 } from "../../src/deps/services/shared/commandApi/shared.js";
 import { createRuntimeSaveSlots } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewSaveLoad.js";
 import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
+import { EN_I18N } from "../support/i18n.js";
 
 // The preview data the layout editor saves with `layout.update`
 // (`data: { preview }`), built by the real Preview store and saved through the
@@ -122,6 +123,7 @@ describe("layout editor preview data payload", () => {
 
     const previewData = selectPreviewData({
       state: createPreviewState(SAVE_LOAD_LAYOUT_ID),
+      i18n: EN_I18N,
     });
 
     expect(nonJsonFieldsOf(previewData)).toEqual([]);
@@ -147,7 +149,7 @@ describe("layout editor preview data payload", () => {
       "image-3",
     ];
 
-    const previewData = selectPreviewData({ state });
+    const previewData = selectPreviewData({ state, i18n: EN_I18N });
 
     expect(nonJsonFieldsOf(previewData)).toEqual([]);
     expect(previewData.saveSlots).toStrictEqual([
@@ -185,7 +187,7 @@ describe("layout editor preview data payload", () => {
       { name: "dialogue-character-sprite-transform-id", fieldValue: undefined },
     );
 
-    const previewData = selectPreviewData({ state });
+    const previewData = selectPreviewData({ state, i18n: EN_I18N });
 
     expect(nonJsonFieldsOf(previewData)).toEqual([]);
     expect(previewData.dialogue.character.sprite).toStrictEqual({
@@ -198,6 +200,7 @@ describe("layout editor preview data payload", () => {
       await setup();
     const previewData = selectPreviewData({
       state: createPreviewState(SAVE_LOAD_LAYOUT_ID),
+      i18n: EN_I18N,
     });
 
     const result = await savePreview(SAVE_LOAD_LAYOUT_ID, previewData);
@@ -210,14 +213,17 @@ describe("layout editor preview data payload", () => {
 
     // The Preview shows the saved slots as it did before they were saved.
     const reopened = createPreviewState(SAVE_LOAD_LAYOUT_ID);
-    hydratePreviewState({ state: reopened }, { previewData: savedPreview });
+    hydratePreviewState(
+      { state: reopened, i18n: EN_I18N },
+      { previewData: savedPreview },
+    );
     expect(reopened.saveLoadDefaultValues).toMatchObject({
       slotsNum: 3,
       saveDates: [new Date("2026-03-10 18:00").toISOString(), "", ""],
     });
-    expect(selectPreviewData({ state: reopened }).saveSlots).toEqual(
-      previewData.saveSlots,
-    );
+    expect(
+      selectPreviewData({ state: reopened, i18n: EN_I18N }).saveSlots,
+    ).toEqual(previewData.saveSlots);
   });
 
   it("saves a dialogue avatar and then its removed transform without a report", async () => {
@@ -240,7 +246,10 @@ describe("layout editor preview data payload", () => {
         fieldValue: "transform-1",
       },
     );
-    await savePreview(DIALOGUE_LAYOUT_ID, selectPreviewData({ state }));
+    await savePreview(
+      DIALOGUE_LAYOUT_ID,
+      selectPreviewData({ state, i18n: EN_I18N }),
+    );
     expect(getSavedSprite()).toStrictEqual({
       transformId: "transform-1",
       items: [{ id: "base", resourceId: "sprite-1" }],
@@ -254,7 +263,7 @@ describe("layout editor preview data payload", () => {
     );
     const result = await savePreview(
       DIALOGUE_LAYOUT_ID,
-      selectPreviewData({ state }),
+      selectPreviewData({ state, i18n: EN_I18N }),
     );
 
     expect(result).toMatchObject({ valid: true });
@@ -266,7 +275,7 @@ describe("layout editor preview data payload", () => {
     // The Preview opens with no transform, as it was saved.
     const reopened = createPreviewState(DIALOGUE_LAYOUT_ID);
     hydratePreviewState(
-      { state: reopened },
+      { state: reopened, i18n: EN_I18N },
       {
         previewData:
           repository.getState().layouts.items[DIALOGUE_LAYOUT_ID].preview,

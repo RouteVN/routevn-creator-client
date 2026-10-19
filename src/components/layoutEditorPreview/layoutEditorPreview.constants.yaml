@@ -16,7 +16,7 @@ dialogueForm:
         - name: dialogue-custom-character-name
           label: Custom Speaker Name
           type: segmented-control
-          noClear: true
+          clearable: false
           options:
             - label: "No"
               value: false
@@ -43,7 +43,7 @@ dialogueForm:
     - name: dialogue-auto-mode
       label: Auto Mode
       type: segmented-control
-      noClear: true
+      clearable: false
       options:
         - label: "False"
           value: false
@@ -52,7 +52,7 @@ dialogueForm:
     - name: dialogue-skip-mode
       label: Skip Mode
       type: segmented-control
-      noClear: true
+      clearable: false
       options:
         - label: "False"
           value: false
@@ -61,7 +61,7 @@ dialogueForm:
     - name: dialogue-is-line-completed
       label: Line Completed
       type: segmented-control
-      noClear: true
+      clearable: false
       options:
         - label: "False"
           value: false

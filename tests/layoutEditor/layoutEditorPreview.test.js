@@ -20,6 +20,8 @@ import {
   LINE_COMPLETED_CONDITION_TARGET,
   SKIP_MODE_CONDITION_TARGET,
 } from "../../src/internal/layoutConditions.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
+import { selectLayoutPreviewSampleText } from "../../src/internal/ui/layoutPreviewSampleText.js";
 
 describe("layoutEditorPreview", () => {
   it("renders a character sprite above the layout with its selected transform and loads its asset", () => {
@@ -766,6 +768,58 @@ describe("layoutEditorPreview", () => {
     });
   });
 
+  it("draws sample history lines in the app's language when the preview has none", () => {
+    const rendered = createLayoutEditorRenderedElements({
+      layoutState: {
+        id: "layout-history",
+        layoutType: "history",
+        elements: {
+          items: {
+            "history-item": {
+              type: "container-ref-history-line",
+              x: 0,
+              y: 0,
+              width: 400,
+              height: 120,
+            },
+            "history-content": {
+              type: "text-ref-history-line-content",
+              x: 0,
+              y: 40,
+              width: 400,
+              height: 64,
+            },
+          },
+          tree: [
+            {
+              id: "history-item",
+              children: [{ id: "history-content", children: [] }],
+            },
+          ],
+        },
+      },
+      repositoryState: {
+        layouts: { items: {} },
+        images: { items: {} },
+        textStyles: { items: {} },
+        colors: { items: {} },
+        fonts: { items: {} },
+      },
+      previewData: { historyDialogue: [] },
+      sampleText: selectLayoutPreviewSampleText(FR_I18N),
+      graphicsService: {
+        parse: ({ elements }) => ({ elements }),
+      },
+    });
+
+    expect(
+      rendered.elements.map((element) => element.children[0].content),
+    ).toEqual([
+      "La première ligne de l’historique.",
+      "La deuxième ligne de l’historique.",
+    ]);
+  });
+
   it("builds NVL preview lines from the editable content list", () => {
     const previewData = createLayoutEditorPreviewData({
       layoutType: "nvl",
@@ -1436,13 +1490,16 @@ describe("layout thumbnails", () => {
     previewComponentStore.setLayoutState({ state }, { layoutState });
     previewComponentStore.setRepositoryState({ state }, { repositoryState });
     previewComponentStore.hydratePreviewState(
-      { state },
+      { state, i18n: EN_I18N },
       { previewData: item.preview },
     );
     return createLayoutEditorAssetReferences({
       layoutState,
       repositoryState,
-      previewData: previewComponentStore.selectPreviewData({ state }),
+      previewData: previewComponentStore.selectPreviewData({
+        state,
+        i18n: EN_I18N,
+      }),
       resolution: { width: 1280, height: 720 },
     }).renderedElements;
   };

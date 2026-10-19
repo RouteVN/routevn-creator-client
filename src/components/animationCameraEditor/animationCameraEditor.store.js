@@ -1,3 +1,5 @@
+import { formatNumber, formatPercent } from "../../internal/dates.js";
+
 export const createInitialState = () => ({ valueEditor: undefined });
 
 export const selectValueEditor = ({ state }) => state.valueEditor;
@@ -30,9 +32,12 @@ export const selectViewData = ({ state, props, i18n }) => {
     zoomInLabel: copy.zoomInLabel,
     zoomOutLabel: copy.zoomOutLabel,
     viewportLabel: copy.viewportLabel,
-    xLabel: `X ${formatValue(props.pose.x)}`,
-    yLabel: `Y ${formatValue(props.pose.y)}`,
-    zoomLabel: `${formatValue(props.pose.scaleX * 100)}%`,
+    xLabel: `X ${formatNumber(formatValue(props.pose.x), i18n.dateTime)}`,
+    yLabel: `Y ${formatNumber(formatValue(props.pose.y), i18n.dateTime)}`,
+    zoomLabel: formatPercent(
+      formatValue(props.pose.scaleX * 100),
+      i18n.dateTime,
+    ),
     valueLabels,
     valueEditor,
     valueEditorLabel: valueLabels[valueEditor?.field],

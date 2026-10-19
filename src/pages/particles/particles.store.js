@@ -165,7 +165,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "",
   },
-  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy, i18n }) => {
     const selectedTextureImageItem = resolveParticleTextureImageItem(
       selectedItem?.modules?.appearance?.texture,
       state.imagesData.items,
@@ -181,6 +181,7 @@ const {
             item: selectedItem,
             imagesData: state.imagesData,
             copy,
+            dateTime: i18n.dateTime,
           })
         : baseViewData.detailFields,
       itemContextMenuItems: createParticleExplorerItemContextMenuItems(copy),

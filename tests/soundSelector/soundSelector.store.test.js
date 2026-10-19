@@ -5,6 +5,7 @@ import {
   setSelectedSoundId,
   setSounds,
 } from "../../src/components/soundSelector/soundSelector.store.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 describe("soundSelector.store", () => {
   it("includes root-level sounds and marks the selected sound", () => {
@@ -45,7 +46,7 @@ describe("soundSelector.store", () => {
       },
     );
 
-    const viewData = selectViewData({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
 
     expect(viewData.groups.map((group) => group.fullLabel)).toEqual([
       "Sounds",
@@ -62,6 +63,25 @@ describe("soundSelector.store", () => {
     });
   });
 
+  it("names the group of sounds outside folders in the app's language", () => {
+    const state = createInitialState();
+    setSounds(
+      { state },
+      {
+        sounds: {
+          items: {
+            "sound-one": { id: "sound-one", type: "sound", name: "Sound One" },
+          },
+          tree: [{ id: "sound-one" }],
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: FR_I18N });
+
+    expect(viewData.groups[0].fullLabel).toBe("Sons");
+  });
+
   it("lays sounds out in a full-width grid when columns are set", () => {
     const state = createInitialState();
     setSounds(
@@ -76,14 +96,18 @@ describe("soundSelector.store", () => {
       },
     );
 
-    const fixedWidth = selectViewData({ state });
+    const fixedWidth = selectViewData({ state, i18n: EN_I18N });
     expect(fixedWidth.soundGridStyle).toBe("");
     expect(fixedWidth.soundPreviewStyle).toBe("height: 120px;");
     expect(fixedWidth.groups[0].children[0].soundCardStyle).toContain(
       "width: 220px;",
     );
 
-    const twoColumns = selectViewData({ state, props: { columns: 2 } });
+    const twoColumns = selectViewData({
+      state,
+      props: { columns: 2 },
+      i18n: EN_I18N,
+    });
     expect(twoColumns.soundGridStyle).toBe(
       "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
     );
@@ -99,6 +123,7 @@ describe("soundSelector.store", () => {
     const upToFourColumns = selectViewData({
       state,
       props: { columns: 4, minColumnWidth: 120 },
+      i18n: EN_I18N,
     });
     expect(upToFourColumns.soundGridStyle).toBe(
       "display: grid; grid-template-columns: repeat(auto-fill, minmax(max(120px, calc((100% - 3 * var(--spacing-md)) / 4)), 1fr));",
