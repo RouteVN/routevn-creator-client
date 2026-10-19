@@ -103,7 +103,7 @@ describe("images file explorer", () => {
 
     expect(deps.projectService.checkResourceUsage).toHaveBeenCalledWith({
       itemId: "image-1",
-      checkTargets: ["scenes", "layouts", "controls"],
+      checkTargets: ["scenes", "layouts", "controls", "animations"],
     });
     expect(deleteImages).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
