@@ -21,6 +21,7 @@ import {
   setCurrentRoute,
   setUiConfig,
 } from "../../src/pages/app/app.store.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 
 describe("app help button", () => {
   const openedDocsUrl = (uiConfig) => {
@@ -280,6 +281,62 @@ describe("app route transitions", () => {
 
     expect(appService.setUserConfig).not.toHaveBeenCalled();
     cleanup();
+    dom.window.close();
+  });
+
+  it("keeps the form validation messages in the active locale", () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+
+    let localeListener;
+    let i18n = EN_I18N;
+    const unsubscribeLocale = vi.fn();
+    const appService = {
+      getPath: vi.fn(() => "/"),
+      getPayload: vi.fn(() => ({})),
+      getUserConfig: vi.fn(() => undefined),
+      getPlatform: vi.fn(() => "web"),
+      setAppCopyProvider: vi.fn(),
+      setFormValidationMessages: vi.fn(),
+    };
+    const deps = {
+      appService,
+      locale: {
+        subscribe: vi.fn((listener) => {
+          localeListener = listener;
+          return unsubscribeLocale;
+        }),
+      },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
+      },
+      subject: {
+        dispatch: vi.fn(),
+        pipe: vi.fn(() => NEVER),
+      },
+      uiConfig: {},
+    };
+    Object.defineProperty(deps, "i18n", { get: () => i18n });
+
+    const cleanup = handleBeforeMount(deps);
+    expect(appService.setFormValidationMessages).toHaveBeenLastCalledWith(
+      EN_I18N.formValidation,
+    );
+
+    i18n = PT_I18N;
+    localeListener("pt");
+
+    expect(appService.setFormValidationMessages).toHaveBeenLastCalledWith(
+      PT_I18N.formValidation,
+    );
+    expect(PT_I18N.formValidation.required).toBe("Este campo é obrigatório");
+
+    cleanup();
+    expect(unsubscribeLocale).toHaveBeenCalledOnce();
     dom.window.close();
   });
 
@@ -974,6 +1031,7 @@ describe("app route transitions", () => {
     const deps = {
       appService,
       i18n: {},
+      locale: { subscribe: vi.fn(() => () => {}) },
       projectService: {
         ensureRepository: vi.fn(async () => {}),
         getEnsuredProjectId: vi.fn(() => "project-1"),
@@ -1072,6 +1130,8 @@ const createNavigationShortcutHarness = () => {
   };
   const deps = {
     appService,
+    i18n: {},
+    locale: { subscribe: vi.fn(() => () => {}) },
     store: {
       setPlatform: vi.fn(),
       setUiConfig: vi.fn(),

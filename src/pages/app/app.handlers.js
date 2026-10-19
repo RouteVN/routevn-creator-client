@@ -627,13 +627,19 @@ export const handleBeforeMount = (deps) => {
         status: "error",
       }),
   });
-  let cleanupDiscordPresenceLocaleSubscription = () => {};
-  if (appService.getPlatform() === "tauri") {
-    syncDiscordPresenceDetails(deps);
-    cleanupDiscordPresenceLocaleSubscription = deps.locale.subscribe(() =>
-      syncDiscordPresenceDetails(deps),
-    );
-  }
+  // Copy kept outside the component tree follows the active locale: Rettangoli
+  // UI's default form validation messages, which forms read on each
+  // validation (errors already shown keep their text until their field is
+  // validated again), and the desktop Discord presence.
+  const isTauri = appService.getPlatform() === "tauri";
+  const syncLocaleCopy = () => {
+    appService.setFormValidationMessages?.(deps.i18n.formValidation);
+    if (isTauri) {
+      syncDiscordPresenceDetails(deps);
+    }
+  };
+  syncLocaleCopy();
+  const cleanupLocaleCopySubscription = deps.locale.subscribe(syncLocaleCopy);
   const currentPath = appService.getPath();
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
@@ -669,7 +675,7 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     cleanupSubscriptions();
-    cleanupDiscordPresenceLocaleSubscription();
+    cleanupLocaleCopySubscription();
     cleanupWindowMetrics?.();
     cleanupBackup?.();
     cleanupFullscreenEscape?.();

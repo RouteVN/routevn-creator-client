@@ -130,6 +130,18 @@ describe("appShellService", () => {
     }
   });
 
+  it("sets the default form validation messages for Rettangoli UI forms", () => {
+    const service = createAppShellService(createDeps());
+    const messages = { required: "Este campo é obrigatório" };
+
+    try {
+      service.setFormValidationMessages(messages);
+      expect(globalThis.rtglFormMessages).toBe(messages);
+    } finally {
+      delete globalThis.rtglFormMessages;
+    }
+  });
+
   it("awaits registered work before navigation continues", async () => {
     const deps = createDeps();
     const service = createAppShellService(deps);

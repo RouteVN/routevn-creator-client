@@ -2921,3 +2921,16 @@ editHistory:
 dateTime:
   intlLocale: "ja"
   justNow: "たった今"
+formValidation:
+  required: "この項目は必須です"
+  minLength: "{value}文字以上で入力してください"
+  maxLength: "{value}文字以内で入力してください"
+  pattern: "形式が正しくありません"
+  invalidDate: "日付の形式が正しくありません"
+  invalidTime: "時刻の形式が正しくありません"
+  invalidDateTime: "日時の形式が正しくありません"
+  minTemporal: "{value}以降を指定してください"
+  maxTemporal: "{value}以前を指定してください"
+  invalidDuration: "長さが正しくありません"
+  minDuration: "{value}以上にしてください"
+  maxDuration: "{value}以下にしてください"

@@ -357,6 +357,12 @@ export const createAppShellService = ({
       applyLanguageToDocument(language);
     },
 
+    // Rettangoli UI forms use these as their default validation messages
+    // (window.rtglFormMessages); a field's own message still takes precedence.
+    setFormValidationMessages(messages) {
+      globalThis.rtglFormMessages = messages;
+    },
+
     getAppVersion() {
       return appVersion;
     },

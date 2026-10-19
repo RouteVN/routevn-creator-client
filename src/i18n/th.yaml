@@ -2921,3 +2921,16 @@ editHistory:
 dateTime:
   intlLocale: "th"
   justNow: "เมื่อสักครู่"
+formValidation:
+  required: "ต้องกรอกช่องนี้"
+  minLength: "ต้องมีอย่างน้อย {value} ตัวอักษร"
+  maxLength: "ต้องมีไม่เกิน {value} ตัวอักษร"
+  pattern: "รูปแบบไม่ถูกต้อง"
+  invalidDate: "รูปแบบวันที่ไม่ถูกต้อง"
+  invalidTime: "รูปแบบเวลาไม่ถูกต้อง"
+  invalidDateTime: "รูปแบบวันที่และเวลาไม่ถูกต้อง"
+  minTemporal: "ต้องเป็น {value} หรือหลังจากนั้น"
+  maxTemporal: "ต้องเป็น {value} หรือก่อนหน้านั้น"
+  invalidDuration: "ระยะเวลาไม่ถูกต้อง"
+  minDuration: "ต้องไม่น้อยกว่า {value}"
+  maxDuration: "ต้องไม่เกิน {value}"

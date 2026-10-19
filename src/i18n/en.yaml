@@ -2921,3 +2921,16 @@ editHistory:
 dateTime:
   intlLocale: "en-US"
   justNow: "Just now"
+formValidation:
+  required: "This field is required"
+  minLength: "Must be at least {value} characters"
+  maxLength: "Must be at most {value} characters"
+  pattern: "Invalid format"
+  invalidDate: "Invalid date format"
+  invalidTime: "Invalid time format"
+  invalidDateTime: "Invalid date and time format"
+  minTemporal: "Must be on or after {value}"
+  maxTemporal: "Must be on or before {value}"
+  invalidDuration: "Invalid duration"
+  minDuration: "Must be at least {value}"
+  maxDuration: "Must be at most {value}"
