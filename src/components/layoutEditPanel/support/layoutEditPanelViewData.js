@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../../internal/project/tree.js";
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 import { getInteractionActions } from "../../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
@@ -211,7 +212,10 @@ const toLayoutActionItems = (values, hiddenActionModes, copy = {}) => {
       .map(([key]) => ({
         id: key,
         interactionType,
-        label: `${getActionInteractionLabel(interactionType, copy)}: ${getActionLabel(key, copy)}`,
+        label: formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
+          label: getActionInteractionLabel(interactionType, copy),
+          value: getActionLabel(key, copy),
+        }),
         svg: SETTINGS_ACTION_MODES.has(key) ? "settings" : `action-${key}`,
       })),
   );

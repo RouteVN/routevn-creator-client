@@ -520,6 +520,7 @@ const createAssetLoadingProgress = (deps, resources, total) => {
     projectService.getRepositoryState(),
     resources,
     i18n?.resourceTypes ?? {},
+    i18n?.resourcePages?.labelValue,
   );
   return ({ stage, completed, fileId }) =>
     setSceneLoadingProgress(deps, {

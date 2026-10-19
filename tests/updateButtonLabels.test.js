@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EN_I18N,
   ES_I18N,
+  FR_I18N,
   JA_I18N,
   PT_I18N,
   RU_I18N,
@@ -35,6 +36,7 @@ describe("update button labels", () => {
     ["Thai", TH_I18N, "อัปเดต"],
     ["Russian", RU_I18N, "Сохранить"],
     ["Portuguese", PT_I18N, "Atualizar"],
+    ["French", FR_I18N, "Mettre à jour"],
   ])("uses a generic label in %s edit forms", (_locale, catalog, expected) => {
     const labels = collectUpdateButtonLabels(catalog);
 

@@ -9,6 +9,7 @@ import { getRuntimeFieldItems } from "../../src/internal/runtimeFields.js";
 import {
   EN_I18N,
   ES_I18N,
+  FR_I18N,
   JA_I18N,
   PT_I18N,
   RU_I18N,
@@ -24,6 +25,7 @@ const LOCALE_I18N = {
   th: TH_I18N,
   ru: RU_I18N,
   pt: PT_I18N,
+  fr: FR_I18N,
 };
 
 describe("command-line action counts", () => {
@@ -39,6 +41,23 @@ describe("command-line action counts", () => {
 
     expect(formatCommandLineActionCount(1, copy)).toBe("Действий: 1");
     expect(formatCommandLineActionCount(21, copy)).toBe("Действий: 21");
+  });
+
+  it("follows the catalog's plural rules for 0", () => {
+    const formatZero = (i18n) =>
+      formatCommandLineActionCount(
+        0,
+        selectCommandLineCopy(i18n),
+        i18n.dateTime,
+      );
+
+    expect(formatZero(EN_I18N)).toBe("0 actions");
+    expect(formatZero(FR_I18N)).toBe(
+      FR_I18N.commandLinePage["{count} action"].replace("{count}", "0"),
+    );
+    expect(formatZero(PT_I18N)).toBe(
+      PT_I18N.commandLinePage["{count} actions"].replace("{count}", "0"),
+    );
   });
 });
 

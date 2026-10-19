@@ -10,6 +10,8 @@ import {
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
 import { PRESENTATION_ACTION_CSS_ORDER } from "../../src/internal/presentationActionOrder.js";
+import { selectCommandLineCopy } from "../../src/internal/ui/sceneEditor/commandLineCopy.js";
+import { FR_I18N } from "../support/i18n.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -121,6 +123,28 @@ describe("systemActions.store", () => {
     });
 
     expect(viewData.hiddenModes).toEqual(["rollbackByOffset"]);
+  });
+
+  it("follows the catalog's plural rules in action previews", () => {
+    const copy = selectCommandLineCopy(FR_I18N);
+    const { preview } = selectActionsData({
+      state: createInitialState(),
+      props: {
+        actions: {
+          conditional: { branches: [] },
+          rollbackByOffset: { offset: -1 },
+        },
+      },
+      copy,
+      dateTime: FR_I18N.dateTime,
+    });
+
+    expect(preview.conditional.actionsSummary).toBe(
+      copy["{count} nested action"].replace("{count}", "0"),
+    );
+    expect(preview.rollbackByOffset.summary).toBe(
+      copy["Rollback by {count} line"].replace("{count}", "1"),
+    );
   });
 
   it("preserves and previews update variable actions", () => {

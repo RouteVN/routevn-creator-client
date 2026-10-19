@@ -22,7 +22,10 @@ export const getSaveLoadPaginationSummary = ({ values, copy = {} } = {}) => {
   );
 
   // The page shown comes from the Save/Load Pagination runtime value.
-  return `${copy.paginatedOption ?? "Paginated"}: ${copy.runtimeSaveLoadPaginationLabel ?? "Save/Load Pagination"} • ${perPageLabel}`;
+  return formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
+    label: copy.paginatedOption ?? "Paginated",
+    value: `${copy.runtimeSaveLoadPaginationLabel ?? "Save/Load Pagination"} • ${perPageLabel}`,
+  });
 };
 
 export const createSaveLoadPaginationDialogDefaults = (values = {}) => {

@@ -52,9 +52,9 @@ template:
                                       - $if packageDescription:
                                           - rtgl-text: ${packageDescription}
                                       - $if packagePublisher:
-                                          - 'rtgl-text s=sm c=mu-fg': '${publisherLabel}: ${packagePublisher}'
+                                          - 'rtgl-text s=sm c=mu-fg': ${packagePublisherText}
                                       - $if packageSource:
-                                          - 'rtgl-text s=sm c=mu-fg': '${sourceLabel}: ${packageSource}'
+                                          - 'rtgl-text s=sm c=mu-fg': ${packageSourceText}
                               - $if warnings.length > 0:
                                   - rtgl-view d=v w=f g=xs p=md bgc=wa br=md:
                                       - rtgl-text c=wa-fg: ${warningsLabel}

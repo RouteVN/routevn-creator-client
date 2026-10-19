@@ -135,6 +135,7 @@ describe("config language store", () => {
         { value: "th", label: "ไทย (Beta)" },
         { value: "ru", label: "Русский (Beta)" },
         { value: "pt", label: "Português (Beta)" },
+        { value: "fr", label: "Français (bêta)" },
       ],
     });
   });

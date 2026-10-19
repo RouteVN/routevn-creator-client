@@ -15,7 +15,7 @@ import {
   handleVersionFormAction,
 } from "../../src/pages/versions/versions.handlers.js";
 import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
-import { EN_I18N, PT_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, PT_I18N } from "../support/i18n.js";
 
 const createTreeCollection = (items = {}, tree = []) => ({
   items,
@@ -680,6 +680,46 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "ZIP export completed.\nSaved to: /tmp/export.zip",
       title: EN_I18N.versionsPage.exportCompletedTitle,
+    });
+  });
+
+  it("shows package sizes and elapsed times with French units", async () => {
+    const repository = {
+      getRevision: vi.fn(() => 3),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({ repository });
+    deps.i18n = FR_I18N;
+    const copy = FR_I18N.versionsPage;
+    const MB = 1024 * 1024;
+    deps.projectService.promptDistributionZipPath.mockResolvedValue(
+      "/tmp/export.zip",
+    );
+    deps.projectService.createDistributionZipStreamedToPath.mockImplementation(
+      async (_projectData, _fileEntries, outputPath, options) => {
+        options.onProgress({
+          phase: "writePackage",
+          current: 1.5 * MB,
+          total: 12.3 * MB,
+          elapsedMs: 65000,
+        });
+        return outputPath;
+      },
+    );
+
+    await chooseAndConfirmExport(handleDownloadZipClick, deps);
+
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      progress: { current: 1.5 * MB, total: 12.3 * MB },
+      status: copy.bundleElapsedStatus
+        .replace(
+          "{status}",
+          copy.bundleWritingPackageStatus
+            .replace("{current}", "1,5\u00a0Mo")
+            .replace("{total}", "12,3\u00a0Mo"),
+        )
+        .replace("{elapsed}", "1\u00a0min 5\u00a0s"),
     });
   });
 

@@ -6,6 +6,7 @@ import {
 } from "../../internal/variableEnums.js";
 import {
   formatCommandLineActionCount,
+  formatCommandLineCopy,
   localizeCommandLineBreadcrumb,
   localizeCommandLineDropdownMenu,
   localizeCommandLineOptions,
@@ -14,6 +15,7 @@ import {
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import {
   CONDITION_OPERATOR_LABELS,
+  CONDITION_SUMMARY_TEMPLATES,
   getConditionOperatorOptions,
   isConditionOperatorAllowed,
 } from "../../internal/ui/sceneEditor/commandLineConditionOperators.js";
@@ -197,12 +199,14 @@ const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
       return localizeCommandLineText("Unsupported condition", copy);
     }
 
-    const variableName = variable?.name ?? simpleCondition.variableId;
-    const operatorLabel = localizeCommandLineText(
-      CONDITION_OPERATOR_LABELS[simpleCondition.op] ?? simpleCondition.op,
+    return formatCommandLineCopy(
+      CONDITION_SUMMARY_TEMPLATES[simpleCondition.op],
+      {
+        variable: variable?.name ?? simpleCondition.variableId,
+        value: formatConditionValue(simpleCondition.value, copy),
+      },
       copy,
     );
-    return `${variableName} ${operatorLabel} ${formatConditionValue(simpleCondition.value, copy)}`;
   }
 
   return localizeCommandLineText("Unsupported condition", copy);
@@ -479,7 +483,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       summary: getBranchSummary(branch, state.variablesData, copy),
       actionsSummary:
         branchActionCount > 0
-          ? formatCommandLineActionCount(branchActionCount, copy)
+          ? formatCommandLineActionCount(branchActionCount, copy, i18n.dateTime)
           : localizeCommandLineText("No actions", copy),
     };
   };
@@ -557,7 +561,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     branchActions: state.tempBranch.actions,
     branchActionsSummary:
       actionCount > 0
-        ? formatCommandLineActionCount(actionCount, copy)
+        ? formatCommandLineActionCount(actionCount, copy, i18n.dateTime)
         : localizeCommandLineText("No actions", copy),
     branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,

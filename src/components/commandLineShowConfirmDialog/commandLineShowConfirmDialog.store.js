@@ -138,11 +138,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     cancelActions: state.cancelActions,
     confirmActionsSummary:
       confirmActionCount > 0
-        ? formatCommandLineActionCount(confirmActionCount, copy)
+        ? formatCommandLineActionCount(confirmActionCount, copy, i18n.dateTime)
         : localizeCommandLineText("No actions", copy),
     cancelActionsSummary:
       cancelActionCount > 0
-        ? formatCommandLineActionCount(cancelActionCount, copy)
+        ? formatCommandLineActionCount(cancelActionCount, copy, i18n.dateTime)
         : localizeCommandLineText("Default hide only", copy),
     nestedHiddenModes: ["showConfirmDialog", "hideConfirmDialog"],
   };

@@ -1,4 +1,8 @@
-import { formatI18nCopy, selectI18nCopy } from "../i18nCopy.js";
+import {
+  formatI18nCopy,
+  isSingularCount,
+  selectI18nCopy,
+} from "../i18nCopy.js";
 
 const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "A resource is required.": "resourceRequiredMessage",
@@ -105,9 +109,10 @@ export const formatCommandLineCopy = (template, replacements = {}, copy = {}) =>
   formatI18nCopy(localizeCommandLineText(template, copy), replacements);
 
 // The count is part of the template so that each language can place it.
-export const formatCommandLineActionCount = (count, copy = {}) =>
+// `dateTime` is the active locale's catalog, which sets the plural rules.
+export const formatCommandLineActionCount = (count, copy = {}, dateTime) =>
   formatCommandLineCopy(
-    count === 1 ? "{count} action" : "{count} actions",
+    isSingularCount(count, dateTime) ? "{count} action" : "{count} actions",
     { count },
     copy,
   );

@@ -9,7 +9,13 @@ import {
   showDropdownMenu,
   updateBranch,
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
-import { EN_I18N, JA_I18N, PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
+import {
+  EN_I18N,
+  FR_I18N,
+  JA_I18N,
+  PT_I18N,
+  ZH_HANS_I18N,
+} from "../support/i18n.js";
 
 describe("commandLineConditional.store", () => {
   it("shows boolean values with the True and False labels of the value select", () => {
@@ -52,8 +58,8 @@ describe("commandLineConditional.store", () => {
 
     const ptViewData = selectViewData({ state, i18n: PT_I18N });
     expect(ptViewData.branches.map((branch) => branch.summary)).toEqual([
-      "Active Igual a Verdadeiro",
-      "Active Igual a um de Falso",
+      "Active igual a Verdadeiro",
+      "Active igual a um de Falso",
     ]);
     expect(ptViewData.booleanOptions).toEqual([
       { value: "true", label: "Verdadeiro" },
@@ -66,8 +72,13 @@ describe("commandLineConditional.store", () => {
     expect(
       selectViewData({ state, i18n: JA_I18N }).branches[0].summary,
     ).toMatch(/真$/);
+    expect(
+      selectViewData({ state, i18n: FR_I18N }).branches.map(
+        (branch) => branch.summary,
+      ),
+    ).toEqual(["Active = Vrai", "Active parmi Faux"]);
     expect(selectViewData({ state, i18n: EN_I18N }).branches[0].summary).toBe(
-      "Active Equals True",
+      "Active equals True",
     );
   });
 
@@ -122,7 +133,7 @@ describe("commandLineConditional.store", () => {
     expect(viewData.branches).toMatchObject([
       {
         id: "branch-1",
-        summary: "Trust Greater Than or Equal 70",
+        summary: "Trust is greater than or equal to 70",
         actionsSummary: "1 action",
       },
     ]);
@@ -268,7 +279,7 @@ describe("commandLineConditional.store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.branches[0].summary).toBe("Mood One Of happy, neutral");
+    expect(viewData.branches[0].summary).toBe("Mood is one of happy, neutral");
     expect(viewData.showValueField).toBe(false);
     expect(viewData.showOneOfValueFields).toBe(true);
     expect(viewData.oneOfValues).toEqual(["happy", "neutral"]);

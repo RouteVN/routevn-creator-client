@@ -2230,7 +2230,7 @@ export const selectViewData = ({ state, i18n }) => {
       sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
         language: state.projectLanguage,
         copy,
-        intlLocale: i18n?.dateTime?.intlLocale,
+        dateTime: i18n?.dateTime,
       }),
       backgroundTransformEditor: selectBackgroundTransformEditorViewData({
         state,
@@ -2635,7 +2635,7 @@ export const selectViewData = ({ state, i18n }) => {
     sceneTextStatsLabel: formatSceneTextStatsLabel(state.sceneTextStats, {
       language: state.projectLanguage,
       copy,
-      intlLocale: i18n?.dateTime?.intlLocale,
+      dateTime: i18n?.dateTime,
     }),
     backgroundTransformEditor: selectBackgroundTransformEditorViewData({
       state,
