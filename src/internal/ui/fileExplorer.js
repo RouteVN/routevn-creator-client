@@ -369,6 +369,9 @@ const validateResourceDeletion = async ({
     checkTargets = ["textStyles"];
   } else if (resourceType === "characters") {
     checkTargets = ["scenes", "layouts", "controls"];
+  } else if (resourceType === "images") {
+    // An image that a transition mask uses cannot be deleted.
+    checkTargets = ["scenes", "layouts", "controls", "animations"];
   }
 
   const usage = await checkResourceUsage({

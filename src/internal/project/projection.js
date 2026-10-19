@@ -2747,6 +2747,19 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
     }
   }
 
+  // The project model refuses to delete an image that a transition mask
+  // uses, whether or not anything picks that transition. With the
+  // "animations" target, every animation is checked.
+  if (checkTargets.includes("animations")) {
+    for (const [animationId, animationItem] of Object.entries(
+      state.animations?.items ?? {},
+    )) {
+      if (animationItem?.type === "animation") {
+        referencedAnimationIds.add(animationId);
+      }
+    }
+  }
+
   if (referencedAnimationIds.size > 0) {
     const animationItems = state.animations?.items ?? {};
     const imageItems = state.images?.items ?? {};

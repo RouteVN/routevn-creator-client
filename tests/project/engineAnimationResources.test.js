@@ -148,6 +148,66 @@ describe("animation resources in Route Engine project data", () => {
     ]);
   });
 
+  it.each([
+    ["a single mask", MASK],
+    [
+      "a sequence mask",
+      {
+        kind: "sequence",
+        imageIds: ["wipe-mask"],
+        channel: "red",
+        softness: 0.1,
+        progressDuration: 900,
+        progressEasing: "linear",
+      },
+    ],
+  ])(
+    "counts the image of %s as used by a transition nothing picks, with the animations target",
+    (_label, mask) => {
+      const repositoryState = createRepositoryState({
+        type: "transition",
+        mask,
+      });
+      delete repositoryState.scenes.items["scene-1"].sections.items["section-1"]
+        .lines.items["line-1"].actions.character.items[0].animations;
+      const state = projectRepositoryStateToDomainState({
+        repositoryState,
+        projectId: "project-one",
+      });
+
+      const withAnimations = recursivelyCheckResource({
+        state,
+        itemId: "wipe-mask",
+        checkTargets: ["scenes", "layouts", "controls", "animations"],
+      });
+      expect(withAnimations.isUsed).toBe(true);
+      expect(withAnimations.inProps.animations).toHaveLength(1);
+
+      expect(
+        recursivelyCheckResource({
+          state,
+          itemId: "wipe-mask",
+          checkTargets: ["scenes", "layouts", "controls"],
+        }).isUsed,
+      ).toBe(false);
+    },
+  );
+
+  it("does not count an image no animation uses, with the animations target", () => {
+    const state = projectRepositoryStateToDomainState({
+      repositoryState: createRepositoryState({ type: "transition" }),
+      projectId: "project-one",
+    });
+
+    expect(
+      recursivelyCheckResource({
+        state,
+        itemId: "wipe-mask",
+        checkTargets: ["scenes", "layouts", "controls", "animations"],
+      }).isUsed,
+    ).toBe(false);
+  });
+
   it("counts a mask image as used while a line picks its transition", () => {
     const state = projectRepositoryStateToDomainState({
       repositoryState: createRepositoryState({
