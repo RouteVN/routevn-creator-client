@@ -130,15 +130,20 @@ describe("appShellService", () => {
     }
   });
 
-  it("sets the default form validation messages for Rettangoli UI forms", () => {
+  it("passes the default form and component text to Rettangoli UI", () => {
     const service = createAppShellService(createDeps());
-    const messages = { required: "Este campo é obrigatório" };
+    const rtgl = { setFormMessages: vi.fn(), setUiMessages: vi.fn() };
+    const formMessages = { required: "Este campo é obrigatório" };
+    const uiMessages = { selectPlaceholder: "Selecione uma opção" };
+    vi.stubGlobal("rtgl", rtgl);
 
     try {
-      service.setFormValidationMessages(messages);
-      expect(globalThis.rtglFormMessages).toBe(messages);
+      service.setFormValidationMessages(formMessages);
+      service.setUiMessages(uiMessages);
+      expect(rtgl.setFormMessages).toHaveBeenCalledWith(formMessages);
+      expect(rtgl.setUiMessages).toHaveBeenCalledWith(uiMessages);
     } finally {
-      delete globalThis.rtglFormMessages;
+      vi.unstubAllGlobals();
     }
   });
 
