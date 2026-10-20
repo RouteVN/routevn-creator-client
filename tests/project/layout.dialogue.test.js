@@ -234,3 +234,95 @@ describe("dialogue layout projection", () => {
     });
   });
 });
+
+describe("NVL dialogue line content", () => {
+  const STYLED_LINE = [
+    { text: "Hello " },
+    { text: "brave", textStyle: { fontWeight: "bold" } },
+    { text: " world" },
+  ];
+
+  const renderNvlLineText = (lineTextNode) => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "nvl-lines",
+          type: "container",
+          direction: "vertical",
+          children: [
+            {
+              id: "nvl-line",
+              type: "container-ref-dialogue-line",
+              children: [
+                {
+                  id: "line-text",
+                  width: 700,
+                  textStyle: { fontSize: 24, fill: "#ffffff" },
+                  ...lineTextNode,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      {},
+      emptyCollection,
+      emptyCollection,
+      emptyCollection,
+      { layoutId: "nvl", layoutType: "dialogue-nvl" },
+    );
+    const engine = createRouteEngine({ handlePendingEffects: () => {} });
+    engine.init({
+      initialState: {
+        projectData: {
+          screen: { width: 800, height: 500 },
+          resources: { layouts: { nvl: { elements } } },
+          story: {
+            initialSceneId: "scene-1",
+            scenes: {
+              "scene-1": {
+                initialSectionId: "section-1",
+                sections: {
+                  "section-1": {
+                    lines: [
+                      {
+                        id: "line-1",
+                        actions: {
+                          dialogue: {
+                            mode: "nvl",
+                            ui: { resourceId: "nvl" },
+                            content: STYLED_LINE,
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    const findLineText = (items) =>
+      items.flatMap((element) =>
+        element.id?.includes("line-text")
+          ? [element]
+          : findLineText(element.children ?? []),
+      );
+    return findLineText(engine.selectRenderState().elements)[0];
+  };
+
+  it.each([
+    [
+      "the Text (Line Content) element from the default template",
+      { type: "text-revealing", text: "${line.content[0].text}" },
+    ],
+    [
+      "a Text (Dialogue Line Content) element",
+      { type: "text-ref-dialogue-line-content" },
+    ],
+  ])("shows every run of a styled line in %s", (_name, lineTextNode) => {
+    expect(renderNvlLineText(lineTextNode).content).toEqual(STYLED_LINE);
+  });
+});
