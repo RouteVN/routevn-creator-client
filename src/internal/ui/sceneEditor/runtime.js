@@ -1908,7 +1908,7 @@ export const initializeSceneEditorPage = async (deps) => {
   }, 1000);
 };
 
-export const restoreSceneEditorFromPreview = async (deps) => {
+const restoreSceneEditorCanvas = async (deps) => {
   const { store, render, graphicsService, refs } = deps;
   const sceneId = store.selectSceneId();
 
@@ -1966,6 +1966,17 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   });
 
   await renderSceneEditorState(deps);
+};
+
+// Closing the full-screen preview gives the canvas back to the scene editor.
+// Nothing waits for that, so its failure is reported and alerted here.
+export const restoreSceneEditorFromPreview = async (deps) => {
+  try {
+    await restoreSceneEditorCanvas(deps);
+  } catch (error) {
+    reportCanvasRenderFailure(deps, error, "sceneEditor.restoreFromPreview");
+    alertCanvasRenderFailure(deps, error);
+  }
 };
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
@@ -2419,12 +2430,15 @@ const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
   });
 };
 
-// A queued canvas render has no caller to receive its error.
-const reportCanvasRenderFailure = (deps, error) => {
+// A canvas render that nothing waits for, such as a queued one, has no caller
+// to receive its error.
+const reportCanvasRenderFailure = (
+  deps,
+  error,
+  operation = "sceneEditor.renderCanvas",
+) => {
   console.error("[sceneEditor] Failed to render canvas", error);
-  deps.appService.reportError(error, {
-    operation: "sceneEditor.renderCanvas",
-  });
+  deps.appService.reportError(error, { operation });
 };
 
 // A computed variable that cannot be calculated is named, as the full-screen
@@ -2458,6 +2472,22 @@ export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
   // Edits keep re-rendering the canvas, so alert once until a render succeeds.
   let canvasFailureAlerted = false;
+  const handleCanvasRenderFailure = (error) => {
+    reportCanvasRenderFailure(deps, error);
+    if (!canvasFailureAlerted) {
+      canvasFailureAlerted = true;
+      alertCanvasRenderFailure(deps, error);
+    }
+  };
+  // Tapping or scrolling the canvas can move to another line and render it.
+  // Nothing waits for that render, so its failure is handled here.
+  const runCanvasInputFallback = async (fallback, payload) => {
+    try {
+      await fallback(deps, payload);
+    } catch (error) {
+      handleCanvasRenderFailure(error);
+    }
+  };
   const canvasRuntimeLineSyncGate = createCanvasRuntimeLineSyncGate(deps.store);
   const queueRenderCanvas = createSceneEditorRenderQueue((payload) =>
     renderSceneEditorCanvas(deps, payload),
@@ -2506,11 +2536,7 @@ export const mountSceneEditorSubscriptions = (deps) => {
             return;
           }
 
-          reportCanvasRenderFailure(deps, error);
-          if (!canvasFailureAlerted) {
-            canvasFailureAlerted = true;
-            alertCanvasRenderFailure(deps, error);
-          }
+          handleCanvasRenderFailure(error);
         }
       }),
     ),
@@ -2603,7 +2629,10 @@ export const mountSceneEditorSubscriptions = (deps) => {
           })),
           debounceTime(140),
           tap(async (payload) => {
-            await handleCanvasForwardNavigationFallback(deps, payload);
+            await runCanvasInputFallback(
+              handleCanvasForwardNavigationFallback,
+              payload,
+            );
           }),
         );
       }),
@@ -2626,7 +2655,10 @@ export const mountSceneEditorSubscriptions = (deps) => {
           })),
           debounceTime(140),
           tap(async (payload) => {
-            await handleCanvasForwardNavigationFallback(deps, payload);
+            await runCanvasInputFallback(
+              handleCanvasForwardNavigationFallback,
+              payload,
+            );
           }),
         );
       }),
@@ -2649,7 +2681,10 @@ export const mountSceneEditorSubscriptions = (deps) => {
           })),
           debounceTime(120),
           tap(async (payload) => {
-            await handleCanvasRollbackWheelFallback(deps, payload);
+            await runCanvasInputFallback(
+              handleCanvasRollbackWheelFallback,
+              payload,
+            );
           }),
         );
       }),

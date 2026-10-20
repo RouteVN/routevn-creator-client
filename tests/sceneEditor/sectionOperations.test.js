@@ -397,7 +397,7 @@ describe("scene editor section operations", () => {
       const syncProjectState = vi.fn();
 
       await createSceneEditorSectionWithName(
-        { store, projectService, render },
+        { store, projectService, render, subject: { dispatch: vi.fn() } },
         "New Section",
         syncProjectState,
         {
@@ -422,6 +422,39 @@ describe("scene editor section operations", () => {
       expect(store.setSelectedSectionId).not.toHaveBeenCalled();
       expect(store.setSelectedLineId).not.toHaveBeenCalled();
       expect(render).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("renders the canvas through the canvas render queue after creating a section", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const subject = { dispatch: vi.fn() };
+      const store = {
+        selectSceneId: vi.fn(() => "scene-1"),
+      };
+      const projectService = {
+        getState: vi.fn(() => ({})),
+        createSectionItem: vi.fn(async () => {}),
+        createLineItem: vi.fn(async () => {}),
+      };
+
+      await createSceneEditorSectionWithName(
+        { store, projectService, render: vi.fn(), subject },
+        "New Section",
+        vi.fn(),
+        { inheritPresentationFromSelectedLine: false },
+      );
+
+      // The queue reports a failed render and alerts once, which a render
+      // started from a timer could not do.
+      expect(subject.dispatch).toHaveBeenCalledExactlyOnceWith(
+        "sceneEditor.renderCanvas",
+        {},
+      );
+      expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
     }
