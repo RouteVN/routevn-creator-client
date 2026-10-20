@@ -239,7 +239,7 @@ template:
                           - rvn-file-image#avatarImage fileId=${avatarFileId} w=120 h=120 cur=pointer br=md: null
                     $else:
                       - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
-                          - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c ph=md bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c ph=sm bgc=bg bc=bo bw=xs br=md cur=pointer:
                               - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
   - $if isEditDialogOpen:
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
@@ -250,7 +250,7 @@ template:
                           - rvn-file-image#editAvatarImage fileId=${editAvatarFileId} w=120 h=120 cur=pointer br=md: null
                     $else:
                       - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
-                          - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c ph=md bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c ph=sm bgc=bg bc=bo bw=xs br=md cur=pointer:
                               - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
                   - 'rtgl-view slot="sprite-groups-slot" d=v w=f g=md':
                       - $if editSpriteGroupTagOptions.length > 0:
