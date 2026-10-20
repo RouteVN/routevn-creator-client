@@ -309,25 +309,20 @@ const isPlainObject = (value) => {
   return prototype === Object.prototype || prototype === null;
 };
 
-const sanitizeDialogueContentInlineTextStyleMetadata = (content) => {
+// Route Engine renders a run's inline textStyle, so the canvas keeps it.
+// textStyleSegmentId is leftover editor metadata that the engine does not use.
+const removeDialogueContentTextStyleSegmentIds = (content) => {
   if (!Array.isArray(content)) {
     return content;
   }
 
   let changed = false;
   const nextContent = content.map((item) => {
-    if (!isPlainObject(item)) {
-      return item;
-    }
-
-    const hasInlineTextStyle = Object.hasOwn(item, "textStyle");
-    const hasTextStyleSegmentId = Object.hasOwn(item, "textStyleSegmentId");
-    if (!hasInlineTextStyle && !hasTextStyleSegmentId) {
+    if (!isPlainObject(item) || !Object.hasOwn(item, "textStyleSegmentId")) {
       return item;
     }
 
     const nextItem = { ...item };
-    delete nextItem.textStyle;
     delete nextItem.textStyleSegmentId;
 
     changed = true;
@@ -337,9 +332,7 @@ const sanitizeDialogueContentInlineTextStyleMetadata = (content) => {
   return changed ? nextContent : content;
 };
 
-const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
-  repositoryState = {},
-) => {
+const removeSceneDialogueTextStyleSegmentIds = (repositoryState = {}) => {
   const sceneItems = repositoryState.scenes?.items;
   if (!isPlainObject(sceneItems)) {
     return repositoryState;
@@ -370,7 +363,7 @@ const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
 
       Object.entries(lineItems).forEach(([lineId, line]) => {
         const dialogue = line?.actions?.dialogue;
-        const nextContent = sanitizeDialogueContentInlineTextStyleMetadata(
+        const nextContent = removeDialogueContentTextStyleSegmentIds(
           dialogue?.content,
         );
 
@@ -436,7 +429,7 @@ const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
 };
 
 const prepareProjectDataSourceStateForPreview = (repositoryState = {}) => {
-  return sanitizeSceneDialogueContentInlineTextStyleMetadata(repositoryState);
+  return removeSceneDialogueTextStyleSegmentIds(repositoryState);
 };
 
 const getDraftSectionKey = (sceneId, sectionId) => {
