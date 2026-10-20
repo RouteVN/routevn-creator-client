@@ -3903,12 +3903,16 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
             setDomainState: vi.fn(),
             setRepositoryRevision: vi.fn(),
             clearDraftSection: vi.fn(),
+            setSectionLineChanges: vi.fn(),
           });
           Object.assign(deps.projectService, {
             getDomainState: vi.fn(),
             getRepositoryRevision: vi.fn(),
           });
-
+          // Refreshing after the save reads the scene's line changes.
+          deps.graphicsService = {
+            engineSelectSectionLineChanges: vi.fn(() => ({ lines: [] })),
+          };
           await handleCommandLineSubmit(deps, { _event: { detail } });
 
           // The queue reports a failed render and alerts once, which a render
