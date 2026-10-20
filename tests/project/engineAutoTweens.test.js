@@ -82,13 +82,13 @@ const createRepositoryState = (animation) => ({
 
 describe("Auto tweens in Route Engine project data", () => {
   // Route Graphics reads an Auto tween's end value from the element's state,
-  // which has no translate or blur offsets.
+  // which has no translate offsets.
   it("leaves out Auto tweens on properties Route Graphics cannot resolve", () => {
     const auto = { auto: { duration: 400, easing: "linear" } };
     const projectData = constructProjectData(
       createRepositoryState({
         type: "update",
-        tween: { translateX: auto, blurY: auto, alpha: auto },
+        tween: { translateX: auto, translateY: auto, alpha: auto },
       }),
     );
 
@@ -103,7 +103,14 @@ describe("Auto tweens in Route Engine project data", () => {
     const projectData = constructProjectData(
       createRepositoryState({
         type: "update",
-        tween: { alpha: auto, x: auto, scaleX: auto, rotation: auto },
+        tween: {
+          alpha: auto,
+          x: auto,
+          scaleX: auto,
+          rotation: auto,
+          blurX: auto,
+          blurY: auto,
+        },
       }),
     );
 
@@ -112,6 +119,8 @@ describe("Auto tweens in Route Engine project data", () => {
       x: auto,
       scaleX: auto,
       rotation: auto,
+      blurX: auto,
+      blurY: auto,
     });
   });
 });

@@ -22,13 +22,24 @@ vi.hoisted(() => {
 });
 
 const AUTO = { auto: { duration: 400, easing: "linear" } };
-const AUTO_PROPERTIES = ["alpha", "x", "y", "scaleX", "scaleY", "rotation"];
-const NON_AUTO_PROPERTIES = ["translateX", "translateY", "blurX", "blurY"];
+const AUTO_PROPERTIES = [
+  "alpha",
+  "x",
+  "y",
+  "scaleX",
+  "scaleY",
+  "rotation",
+  "blurX",
+  "blurY",
+];
+const NON_AUTO_PROPERTIES = ["translateX", "translateY"];
 const ELEMENT_PLUGINS = { rect: rectPlugin, sprite: spritePlugin };
 
-// Route Graphics resolves an Auto tween from the target element's parsed
-// state and stops with "cannot auto-resolve property" when the state has no
-// such property. Returns the Auto properties that would stop the render.
+// Route Graphics resolves an Auto tween from the target element's state and
+// stops with "cannot auto-resolve property" when the state has no such
+// property. That state is the parsed element, plus blurX and blurY (the
+// element's blur, or 0) when an update animation tweens blur on it. Returns
+// the Auto properties that would stop the render.
 const findUnresolvableAutoProperties = (renderState) => {
   return renderState.animations.flatMap((animation) => {
     const element = renderState.elements.find(
@@ -37,6 +48,16 @@ const findUnresolvableAutoProperties = (renderState) => {
     const targetState = ELEMENT_PLUGINS[element.type].parse({
       state: element,
     });
+    const tweensBlur = renderState.animations.some(
+      (item) =>
+        item.targetId === element.id &&
+        item.type === "update" &&
+        (item.tween?.blurX || item.tween?.blurY),
+    );
+    if (tweensBlur) {
+      targetState.blurX = targetState.blur?.x ?? 0;
+      targetState.blurY = targetState.blur?.y ?? 0;
+    }
     return Object.entries(animation.tween ?? {})
       .filter(
         ([property, config]) =>
@@ -141,7 +162,7 @@ describe("Auto tweens in the animation editor", () => {
   it("does not preview Auto tweens saved on properties Auto cannot resolve", () => {
     const state = createUpdateEditorState({
       translateX: AUTO,
-      blurY: AUTO,
+      translateY: AUTO,
       alpha: AUTO,
     });
 
@@ -150,6 +171,17 @@ describe("Auto tweens in the animation editor", () => {
     expect(
       renderState.animations.map(({ tween }) => Object.keys(tween)),
     ).toEqual([["alpha"]]);
+    expect(findUnresolvableAutoProperties(renderState)).toEqual([]);
+  });
+
+  it("previews Auto tweens saved on blur, which resolve to the element's blur", () => {
+    const state = createUpdateEditorState({ blurX: AUTO, blurY: AUTO });
+
+    const renderState = selectAnimationRenderStateWithAnimations({ state });
+
+    expect(
+      renderState.animations.flatMap(({ tween }) => Object.keys(tween)).sort(),
+    ).toEqual(["blurX", "blurY"]);
     expect(findUnresolvableAutoProperties(renderState)).toEqual([]);
   });
 

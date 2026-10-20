@@ -4,8 +4,9 @@ export const DEFAULT_ANIMATION_PLAYBACK_SPEED = 1;
 export const DEFAULT_ANIMATION_PLAYBACK_CONTINUITY = "render";
 
 // Route Graphics reads an Auto tween's end value from the animated element's
-// own state. Translate and blur offsets are not part of that state, so an
-// Auto tween on them stops rendering with "cannot auto-resolve property".
+// own state. Blur resolves to the element's blur, or none. Translate offsets
+// are not part of that state, so an Auto tween on them stops rendering with
+// "cannot auto-resolve property".
 const AUTO_TWEEN_PROPERTIES = Object.freeze([
   "alpha",
   "x",
@@ -13,6 +14,8 @@ const AUTO_TWEEN_PROPERTIES = Object.freeze([
   "scaleX",
   "scaleY",
   "rotation",
+  "blurX",
+  "blurY",
 ]);
 
 export const canAutoTweenProperty = (property) => {
