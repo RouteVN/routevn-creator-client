@@ -237,6 +237,58 @@ describe("layoutEditPanel actions", () => {
       toggleDialogueUI: {},
     });
   });
+
+  it("replaces the interaction's navigation action with a submitted one", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+    setValues(
+      { state },
+      {
+        values: {
+          click: {
+            payload: {
+              actions: {
+                sectionTransition: {
+                  sceneId: "scene-1",
+                  sectionId: "section-2",
+                },
+                pushOverlay: { resourceId: "layout-settings" },
+              },
+            },
+          },
+        },
+      },
+    );
+    setActiveInteractionType({ state }, { interactionType: "click" });
+    syncActionsEditorActions({ state }, { interactionType: "click" });
+
+    handleActionsChange(
+      {
+        store: {
+          updateValueProperty: (payload) =>
+            updateValueProperty({ state }, payload),
+          selectActiveInteractionType: () => state.activeInteractionType,
+          selectValues: () => state.values,
+          setActionsEditorActions: (payload) =>
+            setActionsEditorActions({ state }, payload),
+        },
+        render: () => {},
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      { _event: { detail: { nextLine: {} } } },
+    );
+
+    const expectedActions = {
+      pushOverlay: { resourceId: "layout-settings" },
+      nextLine: {},
+    };
+    expect(state.values.click.payload.actions).toEqual(expectedActions);
+    expect(state.actionsEditorActions).toEqual(expectedActions);
+    // The layout editor saves the actions the update carries.
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].detail.name).toBe("click.payload.actions");
+    expect(dispatchedEvents[0].detail.value).toEqual(expectedActions);
+  });
 });
 
 describe("layoutEditPanel action delete", () => {

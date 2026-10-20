@@ -73,6 +73,7 @@ import {
   selectSceneEditorCopy,
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
+import { mergeSubmittedActions } from "../../internal/navigationActions.js";
 import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import {
   createSceneCanvasFileName,
@@ -2187,7 +2188,24 @@ const openSectionTabDropdown = (deps, event) => {
   render();
 };
 
-const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
+// Submitted actions merge into the line's actions. When they replace the
+// line's navigation actions (see mergeSubmittedActions), a merge could not
+// remove those, so the line's actions are written whole.
+const createLineActionsWrite = (line, actions) => {
+  const lineActions = line?.actions ?? {};
+  const nextActions = mergeSubmittedActions(lineActions, actions);
+  const replace = Object.entries(lineActions).some(
+    ([actionType, action]) =>
+      !Object.hasOwn(actions, actionType) && nextActions[actionType] !== action,
+  );
+  return { data: replace ? nextActions : actions, replace };
+};
+
+const submitSceneEditorCommandLine = async (
+  deps,
+  payload,
+  { lineId, line },
+) => {
   const { store, render, projectService, subject, appService } = deps;
   const copy = selectCopy(deps);
   if (lineId) {
@@ -2216,12 +2234,13 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       return;
     }
 
+    const { data, replace } = createLineActionsWrite(line, safeDetail);
     const didSave = await saveLineCommand(async () => {
       assertSceneEditorCommandResult(
         await projectService.updateLineActions({
           lineId,
-          data: safeDetail,
-          replace: false,
+          data,
+          replace,
         }),
         {
           appService,
@@ -2366,11 +2385,12 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       }
 
       if (Object.keys(otherActions).length > 0) {
+        const { data, replace } = createLineActionsWrite(line, otherActions);
         assertSceneEditorCommandResult(
           await projectService.updateLineActions({
             lineId,
-            data: otherActions,
-            replace: false,
+            data,
+            replace,
           }),
           {
             appService,
@@ -2404,7 +2424,8 @@ export const handleCommandLineSubmit = (deps, payload) =>
   runRecordedLineCommand(
     deps,
     { lineId: resolveActionTargetLineId(deps.store) },
-    ({ lineId }) => submitSceneEditorCommandLine(deps, payload, { lineId }),
+    ({ lineId, line }) =>
+      submitSceneEditorCommandLine(deps, payload, { lineId, line }),
   );
 
 export const handleEditorDataChanged = async (deps, payload) => {

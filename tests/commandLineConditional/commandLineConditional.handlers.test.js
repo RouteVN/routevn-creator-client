@@ -10,6 +10,7 @@ import {
   selectDefaultBranch,
   selectDropdownMenuBranchId,
   selectSaveBranchDraft,
+  selectTempBranchActions,
   selectVariableItemById,
   selectVariablesData,
   setBranches,
@@ -23,6 +24,7 @@ import {
 import {
   handleAddOneOfValueClick,
   handleAddDefaultClick,
+  handleBranchActionsChange,
   handleBranchClick,
   handleBranchMenuButtonClick,
   handleBranchMenuButtonKeyDown,
@@ -49,6 +51,7 @@ const createStore = (state) => ({
   selectDefaultBranch: () => selectDefaultBranch({ state }),
   selectDropdownMenuBranchId: () => selectDropdownMenuBranchId({ state }),
   selectSaveBranchDraft: () => selectSaveBranchDraft({ state }),
+  selectTempBranchActions: () => selectTempBranchActions({ state }),
   selectVariableItemById: (payload) =>
     selectVariableItemById({ state }, payload),
   selectVariablesData: () => selectVariablesData({ state }),
@@ -1020,6 +1023,40 @@ describe("commandLineConditional.handlers", () => {
     expect(state.branches.map((branch) => branch.id)).toEqual(["branch-1"]);
     expect(preventDefault).toHaveBeenCalledOnce();
     expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it("keeps one navigation action in a branch", () => {
+    const state = createInitialState();
+    const store = createStore(state);
+    const render = vi.fn();
+    const updateVariable = {
+      id: "update-1",
+      operations: [{ variableId: "variable-1", op: "set", value: 1 }],
+    };
+    setTempBranch(
+      { state },
+      {
+        actions: {
+          sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+          updateVariable,
+        },
+      },
+    );
+
+    handleBranchActionsChange(
+      { store, render },
+      {
+        _event: {
+          detail: { resetStoryAtSection: { sectionId: "section-3" } },
+        },
+      },
+    );
+
+    expect(state.tempBranch.actions).toEqual({
+      updateVariable,
+      resetStoryAtSection: { sectionId: "section-3" },
+    });
     expect(render).toHaveBeenCalledOnce();
   });
 });

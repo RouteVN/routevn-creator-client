@@ -72,6 +72,34 @@ describe("commandLineShowConfirmDialog.handlers", () => {
     });
   });
 
+  it("keeps one navigation action in the confirm and cancel actions", () => {
+    const deps = createDeps();
+
+    deps.store.setConfirmActions({
+      actions: { nextLine: {}, toggleAutoMode: {} },
+    });
+    deps.store.setCancelActions({
+      actions: { rollbackByOffset: { offset: -1 } },
+    });
+
+    handleConfirmActionsChange(deps, {
+      _event: {
+        detail: {
+          sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+        },
+      },
+    });
+    handleCancelActionsChange(deps, {
+      _event: { detail: { loadSlot: { slotId: "1" } } },
+    });
+
+    expect(deps.state.confirmActions).toEqual({
+      toggleAutoMode: {},
+      sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+    });
+    expect(deps.state.cancelActions).toEqual({ loadSlot: { slotId: "1" } });
+  });
+
   it("deletes a nested confirm action by action type", () => {
     const deps = createDeps();
 

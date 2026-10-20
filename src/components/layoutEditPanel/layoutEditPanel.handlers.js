@@ -7,6 +7,7 @@ import {
   mergeWhenExpressions,
   splitVisibilityConditionFromWhen,
 } from "../../internal/layoutConditions.js";
+import { mergeSubmittedActions } from "../../internal/navigationActions.js";
 import {
   getRuntimeFieldItem,
   toRuntimeTemplateValue,
@@ -2297,10 +2298,9 @@ const setActiveInteractionActions = (deps, updateActions) => {
 };
 
 export const handleActionsChange = (deps, payload) => {
-  setActiveInteractionActions(deps, (currentActions) => ({
-    ...currentActions,
-    ...payload._event.detail,
-  }));
+  setActiveInteractionActions(deps, (currentActions) =>
+    mergeSubmittedActions(currentActions, payload._event.detail),
+  );
 };
 
 // Delete in the actions list, or a command line submitted with nothing set,

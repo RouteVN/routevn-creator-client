@@ -9,6 +9,7 @@ import {
   withInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
 import { BASE_LAYOUT_KEYBOARD_OPTIONS } from "../../internal/project/layout.js";
+import { mergeSubmittedActions } from "../../internal/navigationActions.js";
 import {
   getTagsCollection,
   resolveCollectionWithTags,
@@ -612,10 +613,7 @@ export const handleKeyboardActionsChange = async (deps, payload) => {
   const phase = store.selectKeyboardEditorPhase?.() ?? "keydown";
   const control = getSelectedControl(store);
   const currentActions = getKeyboardEntryActions(control, phase, key);
-  const actions = {
-    ...currentActions,
-    ...payload._event.detail,
-  };
+  const actions = mergeSubmittedActions(currentActions, payload._event.detail);
   const interaction = withInteractionPayload({}, { actions });
   const updated = await updateControlKeyboard({
     appService,

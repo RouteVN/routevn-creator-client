@@ -1,14 +1,9 @@
+import { mergeSubmittedActions } from "../../internal/navigationActions.js";
+
 const toPlainObject = (value) => {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
     : {};
-};
-
-const mergeActions = (currentActions, nextActions) => {
-  return {
-    ...toPlainObject(currentActions),
-    ...toPlainObject(nextActions),
-  };
 };
 
 const removeAction = (actions, actionType) => {
@@ -85,7 +80,10 @@ export const handleCancelActionsClick = (deps) => {
 export const handleConfirmActionsChange = (deps, payload) => {
   const { render, store } = deps;
   store.setConfirmActions({
-    actions: mergeActions(store.selectConfirmActions(), payload._event.detail),
+    actions: mergeSubmittedActions(
+      store.selectConfirmActions(),
+      payload._event.detail,
+    ),
   });
   render();
 };
@@ -93,7 +91,10 @@ export const handleConfirmActionsChange = (deps, payload) => {
 export const handleCancelActionsChange = (deps, payload) => {
   const { render, store } = deps;
   store.setCancelActions({
-    actions: mergeActions(store.selectCancelActions(), payload._event.detail),
+    actions: mergeSubmittedActions(
+      store.selectCancelActions(),
+      payload._event.detail,
+    ),
   });
   render();
 };

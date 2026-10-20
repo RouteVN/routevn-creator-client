@@ -381,3 +381,138 @@ describe("scene editor: a line action among the saves around it", () => {
     expect(page.store.selectIsEditHistoryBlocked()).toBe(false);
   });
 });
+
+describe("scene editor: one navigation action per line", () => {
+  const sectionTransition = { sceneId: "scene-1", sectionId: "section-2" };
+  const resetStoryAtSection = { sectionId: "section-3" };
+  const updateVariable = {
+    id: "update-1",
+    operations: [{ variableId: "variable-1", op: "set", value: 1 }],
+  };
+  const conditionalWith = (branchActions) => ({
+    branches: [
+      {
+        when: { eq: [{ var: "variables.variable-1" }, 1] },
+        actions: branchActions,
+      },
+      { actions: {} },
+    ],
+  });
+  const lineOneActions = {
+    background: { resourceId: "image-1" },
+    dialogue: { content: [{ text: "First" }] },
+  };
+
+  // Submitting from the actions dialog of the selected line.
+  const submit = (page, detail) =>
+    handleCommandLineSubmit(page.deps, { _event: { detail } });
+  const savedLineOne = (page) =>
+    page.savedSection().lines.items["line-1"].actions;
+  const shownLineOne = (page) =>
+    page.store.selectScene().sections[0].lines[0].actions;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback) =>
+      setTimeout(callback, 16),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("replaces the line's section transition with a reset story at section", async () => {
+    const page = createPage();
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    await submit(page, { sectionTransition });
+
+    await submit(page, { resetStoryAtSection });
+
+    const expectedActions = { ...lineOneActions, resetStoryAtSection };
+    expect(savedLineOne(page)).toEqual(expectedActions);
+    expect(shownLineOne(page)).toEqual(expectedActions);
+    // Each submit is one save, so one undo step.
+    expect(page.writes).toEqual(["actions line-1", "actions line-1"]);
+  });
+
+  it("replaces the line's reset story at section with a section transition", async () => {
+    const page = createPage();
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    await submit(page, { resetStoryAtSection });
+
+    await submit(page, { sectionTransition });
+
+    expect(savedLineOne(page)).toEqual({
+      ...lineOneActions,
+      sectionTransition,
+    });
+  });
+
+  it("takes the navigation out of the line's conditional when a section transition is added", async () => {
+    const page = createPage();
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    await submit(page, {
+      conditional: conditionalWith({ resetStoryAtSection, updateVariable }),
+    });
+
+    await submit(page, { sectionTransition });
+
+    expect(savedLineOne(page)).toEqual({
+      ...lineOneActions,
+      conditional: conditionalWith({ updateVariable }),
+      sectionTransition,
+    });
+  });
+
+  it("removes the line's section transition when a conditional that navigates is saved", async () => {
+    const page = createPage();
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    await submit(page, { sectionTransition });
+
+    await submit(page, {
+      conditional: conditionalWith({ resetStoryAtSection }),
+    });
+
+    expect(savedLineOne(page)).toEqual({
+      ...lineOneActions,
+      conditional: conditionalWith({ resetStoryAtSection }),
+    });
+  });
+
+  it("merges other actions, and leaves a line that already has two navigation actions alone", async () => {
+    const page = createPage();
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    page.updateRepository((draft) => {
+      const { actions } =
+        draft.scenes.items["scene-1"].sections.items["section-1"].lines.items[
+          "line-1"
+        ];
+      actions.sectionTransition = sectionTransition;
+      actions.resetStoryAtSection = resetStoryAtSection;
+    });
+    page.store.setRepositoryState({
+      repository: page.deps.projectService.getRepositoryState(),
+    });
+    expect(shownLineOne(page)).toMatchObject({
+      sectionTransition,
+      resetStoryAtSection,
+    });
+
+    await submit(page, { bgm: {} });
+
+    expect(page.shared.submitCommandWithContext).toHaveBeenCalledOnce();
+    expect(
+      page.shared.submitCommandWithContext.mock.calls[0][0].payload.replace,
+    ).toBeUndefined();
+    expect(savedLineOne(page)).toEqual({
+      ...lineOneActions,
+      sectionTransition,
+      resetStoryAtSection,
+      bgm: {},
+    });
+  });
+});

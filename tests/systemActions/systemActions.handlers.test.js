@@ -186,6 +186,50 @@ describe("systemActions.handlers", () => {
     });
   });
 
+  it("replaces the navigation action already in the list with a submitted one", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+
+    updateActions(
+      { state },
+      {
+        sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+        toggleAutoMode: {},
+      },
+    );
+
+    handleCommandLineSubmit(
+      {
+        store: {
+          selectAction: () => selectAction({ state }),
+          setAuthoredDialogueWasCleared: (payload) =>
+            setAuthoredDialogueWasCleared({ state }, payload),
+          updateActions: (payload) => updateActions({ state }, payload),
+          hideActionsDialog: () => {},
+        },
+        render: () => {},
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      {
+        _event: {
+          stopPropagation: () => {},
+          detail: { resetStoryAtSection: { sectionId: "section-3" } },
+        },
+      },
+    );
+
+    expect(selectAction({ state })).toEqual({
+      toggleAutoMode: {},
+      resetStoryAtSection: { sectionId: "section-3" },
+    });
+    // The host applies the same rule when it merges the submitted actions.
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe("actions-change");
+    expect(dispatchedEvents[0].detail).toEqual({
+      resetStoryAtSection: { sectionId: "section-3" },
+    });
+  });
+
   it("does not leak stale dialogue content when submitting an unrelated action", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
