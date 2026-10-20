@@ -1,3 +1,4 @@
+import { findSceneIdBySectionId } from "../../internal/project/projection.js";
 import {
   localizeCommandLineText,
   selectCommandLineCopy,
@@ -36,13 +37,12 @@ export const handleAfterMount = async (deps) => {
     playbackContinuity: transition.screen?.animations?.playback?.continuity,
   };
 
-  if (transition.sceneId) {
-    // Scene transition
-    formValues.sceneId = transition.sceneId;
-  } else {
-    // Default to current scene if no scene specified
-    formValues.sceneId = props?.currentSceneId;
-  }
+  // A transition saved with only its section goes to that section's scene.
+  // The current scene is the fallback, and the layout editor has none.
+  formValues.sceneId =
+    transition.sceneId ??
+    findSceneIdBySectionId(scenes, transition.sectionId) ??
+    props?.currentSceneId;
 
   if (transition.sectionId) {
     // Section transition

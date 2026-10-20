@@ -1616,6 +1616,18 @@ export const getSectionPresentation = ({
   };
 };
 
+// The scene that holds a section. A section transition or story reset may be
+// saved with only its section; the scene is found from it.
+export const findSceneIdBySectionId = (scenes, sectionId) => {
+  if (!sectionId) {
+    return undefined;
+  }
+
+  return Object.entries(scenes?.items ?? {}).find(
+    ([, scene]) => scene?.sections?.items?.[sectionId] !== undefined,
+  )?.[0];
+};
+
 export const getVariableOptions = (variablesData, options = {}) => {
   const { type, showType = false, includeComputed = true } = options;
   const variablesItems = variablesData?.items || {};
