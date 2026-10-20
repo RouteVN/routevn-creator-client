@@ -18,6 +18,7 @@ import {
   handleGetBackgroundTransformPreviewCanvasRoot,
   handleEmbeddedCloseClick,
   handleOnUpdate,
+  handleCommandLineActionDelete,
   handleCommandLineSubmit,
   handleTemporaryPresentationStateChange,
   handleTransformEditorCanvasResize,
@@ -1217,5 +1218,59 @@ describe("systemActions.handlers", () => {
       expect(state.mode).toBe("actions");
       expect(selectAction({ state })).toEqual(savedActions);
     });
+  });
+});
+
+describe("systemActions command line action delete", () => {
+  const deleteFromCommandLine = (actions, actionType) => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+    const hideActionsDialog = vi.fn();
+    const stopPropagation = vi.fn();
+    updateActions({ state }, actions);
+
+    handleCommandLineActionDelete(
+      {
+        store: {
+          selectAction: () => selectAction({ state }),
+          updateActions: (payload) => updateActions({ state }, payload),
+          hideActionsDialog,
+        },
+        render: vi.fn(),
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      { _event: { stopPropagation, detail: { actionType } } },
+    );
+
+    return { state, dispatchedEvents, hideActionsDialog, stopPropagation };
+  };
+
+  it("removes the action and passes the delete to the host", () => {
+    const { state, dispatchedEvents, hideActionsDialog, stopPropagation } =
+      deleteFromCommandLine(
+        {
+          sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+          toggleAutoMode: {},
+        },
+        "sectionTransition",
+      );
+
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(selectAction({ state })).toEqual({ toggleAutoMode: {} });
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe("action-delete");
+    expect(dispatchedEvents[0].detail).toEqual({
+      actionType: "sectionTransition",
+    });
+    expect(hideActionsDialog).toHaveBeenCalledOnce();
+  });
+
+  it("only closes the dialog when the action was never set", () => {
+    const { state, dispatchedEvents, hideActionsDialog } =
+      deleteFromCommandLine({ toggleAutoMode: {} }, "resetStoryAtSection");
+
+    expect(selectAction({ state })).toEqual({ toggleAutoMode: {} });
+    expect(dispatchedEvents).toEqual([]);
+    expect(hideActionsDialog).toHaveBeenCalledOnce();
   });
 });

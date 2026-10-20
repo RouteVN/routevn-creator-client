@@ -7,7 +7,10 @@ import {
   syncActionsEditorActions,
   updateValueProperty,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
-import { handleActionsChange } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import {
+  handleActionsChange,
+  handleActionsDelete,
+} from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 
 describe("layoutEditPanel actions", () => {
   it("keeps existing click actions when adding another action", () => {
@@ -233,5 +236,66 @@ describe("layoutEditPanel actions", () => {
       },
       toggleDialogueUI: {},
     });
+  });
+});
+
+describe("layoutEditPanel action delete", () => {
+  const createDeps = (actions) => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+    setValues({ state }, { values: { click: { payload: { actions } } } });
+    setActiveInteractionType({ state }, { interactionType: "click" });
+    syncActionsEditorActions({ state }, { interactionType: "click" });
+
+    return {
+      state,
+      dispatchedEvents,
+      deps: {
+        store: {
+          updateValueProperty: (payload) =>
+            updateValueProperty({ state }, payload),
+          selectActiveInteractionType: () => state.activeInteractionType,
+          selectValues: () => state.values,
+          setActionsEditorActions: (payload) =>
+            setActionsEditorActions({ state }, payload),
+        },
+        render: () => {},
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+    };
+  };
+
+  it("removes the deleted action from the interaction", () => {
+    const { state, dispatchedEvents, deps } = createDeps({
+      sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+      pushOverlay: { resourceId: "layout-settings" },
+    });
+
+    handleActionsDelete(deps, {
+      _event: { detail: { actionType: "sectionTransition" } },
+    });
+
+    expect(state.values.click.payload.actions).toEqual({
+      pushOverlay: { resourceId: "layout-settings" },
+    });
+    expect(state.actionsEditorActions).toEqual({
+      pushOverlay: { resourceId: "layout-settings" },
+    });
+    expect(dispatchedEvents).toHaveLength(1);
+  });
+
+  it("leaves the interaction alone when the action is not there", () => {
+    const { state, dispatchedEvents, deps } = createDeps({
+      pushOverlay: { resourceId: "layout-settings" },
+    });
+
+    handleActionsDelete(deps, {
+      _event: { detail: { actionType: "resetStoryAtSection" } },
+    });
+
+    expect(state.values.click.payload.actions).toEqual({
+      pushOverlay: { resourceId: "layout-settings" },
+    });
+    expect(dispatchedEvents).toEqual([]);
   });
 });

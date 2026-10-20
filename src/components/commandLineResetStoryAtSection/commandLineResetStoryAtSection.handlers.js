@@ -70,14 +70,22 @@ export const handleAfterMount = async (deps) => {
         props?.resetStoryAtSection?.screen?.animations?.playback?.continuity,
     },
   });
+  store.setInitiated();
   render();
 };
 
 export const handleFormChange = (deps, payload) => {
-  const { render, store } = deps;
-  const values = payload?._event?.detail?.values;
-  if (!values) {
+  const { render, store, refs } = deps;
+  const detailValues = payload?._event?.detail?.values;
+  if (!detailValues) {
     return;
+  }
+
+  const values = { ...detailValues };
+  // A section belongs to its scene, so clearing the scene clears the section.
+  if (!values.sceneId && values.sectionId !== undefined) {
+    values.sectionId = undefined;
+    refs.form.setValues({ values: { sectionId: undefined } });
   }
 
   store.setFormValues({ values });
@@ -91,6 +99,16 @@ export const handleSubmitClick = (deps) => {
   const { formValues, scenes } = store.selectSubmitData();
   const sceneId = formValues?.sceneId;
   const sectionId = formValues?.sectionId;
+
+  // With the scene and section cleared, submitting removes the reset.
+  if (!sceneId && !sectionId) {
+    dispatchEvent(
+      new CustomEvent("action-delete", {
+        detail: { actionType: "resetStoryAtSection" },
+      }),
+    );
+    return;
+  }
 
   if (!sceneId) {
     appService.showAlert({
