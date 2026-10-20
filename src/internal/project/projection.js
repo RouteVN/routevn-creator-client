@@ -20,7 +20,10 @@ import {
 import { toVariableConditionTarget } from "../layoutConditions.js";
 import { requireProjectResolution } from "../projectResolution.js";
 import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
-import { resolveSpritesheetAnimationFps } from "../spritesheets.js";
+import {
+  resolveSpritesheetAnimationFps,
+  resolveSpritesheetSize,
+} from "../spritesheets.js";
 import { toExecutableComputed } from "../computedExamples.js";
 
 const DEFAULT_TIMESTAMP = 0;
@@ -774,10 +777,11 @@ const constructSpritesheetResources = (
         "fileType",
         "fileSize",
         "jsonData",
-        "width",
-        "height",
         "animations",
       ]);
+      const { width, height } = resolveSpritesheetSize(normalizedItem);
+      result[spritesheetId].width = width;
+      result[spritesheetId].height = height;
       if (normalizedItem.animations !== undefined) {
         result[spritesheetId].animations =
           normalizeSpritesheetAnimationsForRouteEngine(
@@ -1081,10 +1085,11 @@ const extractCharacterSpritesheets = (
           "fileType",
           "fileSize",
           "jsonData",
-          "width",
-          "height",
           "animations",
         ]);
+        const { width, height } = resolveSpritesheetSize(normalizedSprite);
+        result[spriteId].width = width;
+        result[spriteId].height = height;
         if (normalizedSprite.animations !== undefined) {
           result[spriteId].animations =
             normalizeSpritesheetAnimationsForRouteEngine(

@@ -58,6 +58,32 @@ export const resolveSpritesheetFrameName = (frameNames = [], frameRef) => {
   return undefined;
 };
 
+// Default Width and Height are optional, but Route Graphics cannot draw a
+// spritesheet without a size. A missing one falls back to the size the import
+// fills in: the first clip's first frame, or else the whole sheet.
+export const resolveSpritesheetSize = (spritesheet = {}) => {
+  const frames = spritesheet.jsonData?.frames ?? {};
+  const frameNames = Object.keys(frames);
+  const firstClip = Object.values(spritesheet.animations ?? {})[0];
+  const frameName =
+    resolveSpritesheetFrameName(frameNames, firstClip?.frames?.[0]) ??
+    frameNames[0];
+  const frame = frames[frameName];
+
+  return {
+    width:
+      spritesheet.width ??
+      frame?.sourceSize?.w ??
+      frame?.frame?.w ??
+      spritesheet.sheetWidth,
+    height:
+      spritesheet.height ??
+      frame?.sourceSize?.h ??
+      frame?.frame?.h ??
+      spritesheet.sheetHeight,
+  };
+};
+
 export const normalizeSpritesheetAnimationsFps = (
   animations = {},
   missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
