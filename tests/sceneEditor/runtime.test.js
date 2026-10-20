@@ -2529,7 +2529,15 @@ describe("scene editor canvas transition loop", () => {
         subject,
         appService,
         i18n,
-        store: { selectIsScenePageLoading },
+        store: {
+          selectIsScenePageLoading,
+          // A press, click or scroll on the canvas reads the selected line
+          // before it moves the story on.
+          selectSelectedLineId: () => "line-1",
+          selectSelectedSectionId: () => "section-1",
+          selectNextLineId: () => undefined,
+          selectPreviousLineId: () => undefined,
+        },
       });
       return {
         subject,
