@@ -285,16 +285,31 @@ export const createProjectCollabCore = ({
     getOpenRepository,
   });
 
+  // Whether the project still has the item. A delete that waited behind
+  // another delete of the same item finds it gone.
+  const hasResourceItem = ({ repository, collection, resourceId }) => {
+    const state = repository ? repository.getState() : commandApi.getState();
+    return Boolean(state?.[collection]?.items?.[resourceId]);
+  };
+
+  // An item stays on its page until the page refreshes after a delete, so it
+  // can be deleted again while the first delete runs. Deleting an item that is
+  // already gone is done, not a failure.
   const deleteItemIfUnused = async ({
     resourceId,
+    collection,
     checkTargets = [],
     deleteItem,
   }) => {
     const projectId = getCurrentProjectId();
+    const repository = projectId ? await getCurrentRepository() : undefined;
     let usage;
 
+    if (!hasResourceItem({ repository, collection, resourceId })) {
+      return { deleted: true, usage: { inProps: {}, isUsed: false, count: 0 } };
+    }
+
     if (projectId) {
-      const repository = await getCurrentRepository();
       const store = getAdapterByProject(projectId);
       if (repository && store) {
         usage = await checkProjectResourceUsage({
@@ -323,6 +338,11 @@ export const createProjectCollabCore = ({
     const deleteResult = await deleteItem(resourceId);
 
     if (deleteResult?.valid === false) {
+      // Refused because a delete made before it removed the item.
+      if (!hasResourceItem({ repository, collection, resourceId })) {
+        return { deleted: true, usage, deleteResult };
+      }
+
       return {
         deleted: false,
         usage,
@@ -336,6 +356,7 @@ export const createProjectCollabCore = ({
   const deleteImageIfUnused = async ({ imageId, checkTargets = [] }) =>
     deleteItemIfUnused({
       resourceId: imageId,
+      collection: "images",
       checkTargets,
       deleteItem: (resourceId) =>
         commandApi.deleteImages({
@@ -346,6 +367,7 @@ export const createProjectCollabCore = ({
   const deleteSoundIfUnused = async ({ soundId, checkTargets = [] }) =>
     deleteItemIfUnused({
       resourceId: soundId,
+      collection: "sounds",
       checkTargets,
       deleteItem: (resourceId) =>
         commandApi.deleteSounds({
@@ -356,6 +378,7 @@ export const createProjectCollabCore = ({
   const deleteVideoIfUnused = async ({ videoId, checkTargets = [] }) =>
     deleteItemIfUnused({
       resourceId: videoId,
+      collection: "videos",
       checkTargets,
       deleteItem: (resourceId) =>
         commandApi.deleteVideos({

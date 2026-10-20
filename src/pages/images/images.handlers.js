@@ -959,26 +959,56 @@ export const handleEditFormAction = async (deps, payload) => {
 const deleteImage = async (deps, { itemId } = {}) => {
   const { projectService, appService, render, store } = deps;
   const copy = selectCopy(deps);
-  const result = await projectService.deleteImageIfUnused({
-    imageId: itemId,
-    checkTargets: ["scenes", "layouts", "controls", "animations"],
-  });
 
-  if (!result.deleted) {
-    appService.showAlert({
-      message: result.usage?.isUsed
-        ? copy.cannotDeleteResourceInUse
-        : copy.failedDeleteResource,
-    });
-    render();
+  // The image stays listed until the first delete finishes and the page
+  // refreshes, so Delete can be confirmed for it again meanwhile.
+  if (store.selectIsDeletingItem({ itemId })) {
     return;
   }
 
-  if (store?.selectSelectedItemId?.() === itemId) {
-    store.setSelectedItemId({ itemId: undefined });
-  }
+  store.startDeletingItem({ itemId });
+  try {
+    const deleteAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: copy.failedDeleteResource,
+      title: copy.errorTitle,
+      action: () =>
+        projectService.deleteImageIfUnused({
+          imageId: itemId,
+          checkTargets: ["scenes", "layouts", "controls", "animations"],
+        }),
+    });
+    if (!deleteAttempt.ok) {
+      render();
+      return;
+    }
 
-  await handleDataChanged(deps);
+    const { result } = deleteAttempt;
+    if (!result.deleted) {
+      if (result.usage?.isUsed) {
+        appService.showAlert({
+          message: copy.cannotDeleteResourceInUse,
+        });
+      } else {
+        showResourcePageError({
+          appService,
+          errorOrResult: result.deleteResult,
+          fallbackMessage: copy.failedDeleteResource,
+          title: copy.errorTitle,
+        });
+      }
+      render();
+      return;
+    }
+
+    if (store.selectSelectedItemId() === itemId) {
+      store.setSelectedItemId({ itemId: undefined });
+    }
+
+    await handleDataChanged(deps);
+  } finally {
+    store.finishDeletingItem({ itemId });
+  }
 };
 
 export const handleItemDelete = (deps, payload) => {
