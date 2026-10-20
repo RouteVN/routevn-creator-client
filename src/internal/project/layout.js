@@ -77,12 +77,18 @@ import {
 } from "../layoutConditions.js";
 import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
+const DIALOGUE_LINE_CONTENT = "${line.content}";
+// The layout editor, new NVL layouts and the default template bind an NVL
+// line's text element to its first run. A line with styled words has several
+// runs, so that element is projected as the whole line.
+const FIRST_RUN_DIALOGUE_LINE_TEXT = "${line.content[0].text}";
+
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content}",
   "text-ref-choice-item-content": "${item.content}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
-  "text-ref-dialogue-line-content": "${line.content[0].text}",
+  "text-ref-dialogue-line-content": DIALOGUE_LINE_CONTENT,
   "text-ref-history-line-character-name": "${item.characterName}",
   "text-ref-history-line-content": "${item.text}",
 };
@@ -1262,6 +1268,10 @@ const getTextNodeContent = (node, context = {}) => {
     return referencedContent;
   }
 
+  if (node.text === FIRST_RUN_DIALOGUE_LINE_TEXT) {
+    return DIALOGUE_LINE_CONTENT;
+  }
+
   // The renderer's legacy string path drops fontWeight. Keep old persisted
   // text nodes compatible by projecting them through the rich-text path.
   return toRouteGraphicsLayoutTextContent([{ text: node.text ?? "" }]);
@@ -1292,7 +1302,10 @@ const applyTextNode = ({ element, node, context }) => {
     nextElement.content = TEXT_CONTENT_BY_TYPE[node.type];
     nextElement.initialRevealedCharacters =
       "${dialogue.initialRevealedCharacters}";
-  } else if (renderType === "text-revealing") {
+  } else if (
+    renderType === "text-revealing" &&
+    content !== DIALOGUE_LINE_CONTENT
+  ) {
     nextElement.content = toTextRevealingSegments(content);
   } else {
     nextElement.content = content;

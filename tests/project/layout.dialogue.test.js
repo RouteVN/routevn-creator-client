@@ -6,18 +6,22 @@ import {
 } from "../../src/internal/project/layout.js";
 import {
   createNvlDialogueProject,
-  NVL_LINE_TEXT,
+  NVL_STYLED_LINES,
 } from "../support/nvlDialogue.js";
 
 const emptyCollection = { items: {}, tree: [] };
 
 describe("dialogue layout projection", () => {
   it.each([undefined, "typewriter", "softWipe", "none"])(
-    "only reveals the newest NVL line with effect %s",
+    "shows every run and only reveals the newest NVL line with effect %s",
     (revealEffect) => {
       const engine = createRouteEngine({ handlePendingEffects: () => {} });
       engine.init({
-        initialState: { projectData: createNvlDialogueProject(revealEffect) },
+        initialState: {
+          projectData: createNvlDialogueProject(revealEffect, {
+            lineContents: NVL_STYLED_LINES,
+          }),
+        },
       });
       const collectText = (elements) =>
         elements.flatMap((element) =>
@@ -26,15 +30,13 @@ describe("dialogue layout projection", () => {
             : collectText(element.children ?? []),
         );
 
-      for (let index = 0; index < NVL_LINE_TEXT.length; index += 1) {
+      for (let index = 0; index < NVL_STYLED_LINES.length; index += 1) {
         const expectedLines =
           index === 3
-            ? [NVL_LINE_TEXT[index]]
-            : NVL_LINE_TEXT.slice(0, index + 1);
+            ? [NVL_STYLED_LINES[index]]
+            : NVL_STYLED_LINES.slice(0, index + 1);
         const text = collectText(engine.selectRenderState().elements);
-        expect(text.map((element) => element.content)).toEqual(
-          expectedLines.map((line) => [{ text: line }]),
-        );
+        expect(text.map((element) => element.content)).toEqual(expectedLines);
         expect(
           text.map((element) => element.revealEffect ?? "typewriter"),
         ).toEqual(
@@ -51,7 +53,7 @@ describe("dialogue layout projection", () => {
             (element) => element.revealEffect === "none",
           ),
         ).toBe(true);
-        if (index < NVL_LINE_TEXT.length - 1) {
+        if (index < NVL_STYLED_LINES.length - 1) {
           engine.handleActions({ nextLine: {} });
         }
       }
@@ -232,5 +234,43 @@ describe("dialogue layout projection", () => {
         offsetY: 0,
       },
     });
+  });
+});
+
+describe("NVL dialogue line content", () => {
+  it("shows every run of each line in a Text (Dialogue Line Content) element", () => {
+    const engine = createRouteEngine({ handlePendingEffects: () => {} });
+    engine.init({
+      initialState: {
+        projectData: createNvlDialogueProject(undefined, {
+          lineContents: NVL_STYLED_LINES,
+          lineText: { type: "text-ref-dialogue-line-content" },
+        }),
+      },
+    });
+    const collectLineText = (elements) =>
+      elements.flatMap((element) =>
+        element.id?.includes("line-text")
+          ? [element]
+          : collectLineText(element.children ?? []),
+      );
+
+    for (let index = 0; index < NVL_STYLED_LINES.length; index += 1) {
+      const expectedLines =
+        index === 3
+          ? [NVL_STYLED_LINES[index]]
+          : NVL_STYLED_LINES.slice(0, index + 1);
+      const lineTexts = collectLineText(engine.selectRenderState().elements);
+      expect(lineTexts.map((element) => element.type)).toEqual(
+        expectedLines.map(() => "text"),
+      );
+      expect(lineTexts.map((element) => element.content)).toEqual(
+        expectedLines,
+      );
+      engine.handleAction("markLineCompleted", {});
+      if (index < NVL_STYLED_LINES.length - 1) {
+        engine.handleActions({ nextLine: {} });
+      }
+    }
   });
 });
