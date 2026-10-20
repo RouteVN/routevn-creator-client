@@ -38,13 +38,39 @@ const getDefaultSaveLoadPagination = () => {
   return runtimeField?.value ?? runtimeField?.default ?? 1;
 };
 
+// The Preview keeps a slot's image and date by its slot number, in arrays as
+// long as the highest number. A page or a page size typed with too many
+// digits would make those arrays, and the slots drawn, as long as the number
+// typed, so the Preview shows at most this many slots on a page, from at most
+// this many pages.
+export const MAX_SAVE_LOAD_PREVIEW_SLOTS_PER_PAGE = 100;
+export const MAX_SAVE_LOAD_PREVIEW_PAGES = 100;
+export const MAX_SAVE_LOAD_PREVIEW_SLOTS =
+  MAX_SAVE_LOAD_PREVIEW_SLOTS_PER_PAGE * MAX_SAVE_LOAD_PREVIEW_PAGES;
+
 const toPaginationIndex = (value) => {
   const parsedValue = Number(value);
   if (!Number.isFinite(parsedValue)) {
     return 1;
   }
 
-  return Math.max(1, Math.trunc(parsedValue));
+  return Math.min(
+    Math.max(1, Math.trunc(parsedValue)),
+    MAX_SAVE_LOAD_PREVIEW_PAGES,
+  );
+};
+
+// A whole number of slots, none for what is not a positive number.
+const toSlotsPerPage = (value) => {
+  const parsedValue = Number(value);
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    Math.max(1, Math.trunc(parsedValue)),
+    MAX_SAVE_LOAD_PREVIEW_SLOTS_PER_PAGE,
+  );
 };
 
 export const getSaveLoadPreviewWindow = ({
@@ -53,11 +79,7 @@ export const getSaveLoadPreviewWindow = ({
   previewVariableValues = {},
 } = {}) => {
   if (saveLoadPreviewSettings?.paginationMode === "paginated") {
-    const paginationSize = Number(saveLoadPreviewSettings.paginationSize);
-    const slotsPerPage =
-      Number.isFinite(paginationSize) && paginationSize > 0
-        ? paginationSize
-        : 0;
+    const slotsPerPage = toSlotsPerPage(saveLoadPreviewSettings.paginationSize);
     const paginationTarget = toRuntimeConditionTarget("saveLoadPagination");
     const rawPaginationValue =
       paginationTarget && Object.hasOwn(previewVariableValues, paginationTarget)
@@ -73,8 +95,7 @@ export const getSaveLoadPreviewWindow = ({
     };
   }
 
-  const slotsNum = Number(saveLoadDefaultValues?.slotsNum);
-  const slotCount = Number.isFinite(slotsNum) && slotsNum > 0 ? slotsNum : 0;
+  const slotCount = toSlotsPerPage(saveLoadDefaultValues?.slotsNum);
 
   return {
     startIndex: 0,
