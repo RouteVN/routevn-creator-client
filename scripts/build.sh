@@ -111,7 +111,8 @@ cp -rf static/* _site/
 
 # Build UI components
 echo "Building UI components..."
-"${RTGL_BIN}" ui build-svg
+# The installed @rettangoli/ui generator; the rtgl CLI can pin an older one.
+bun run build:icons
 mkdir -p _site/public
 cp -f static/public/rtgl-icons.js _site/public/rtgl-icons.js
 
