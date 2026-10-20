@@ -147,6 +147,25 @@ Systems:
 - The main place to write visual novels.
 - It combines text editing, sections, preview, and actions.
 
+#### New Sections
+
+With **Inherit state from selected line** set to **Inherit** (the default), a
+new section's first line continues the ongoing scene of the selected line.
+Anything that happens only on the selected line is left out, because copying
+it would make it happen again or move the story away from the new section.
+
+| Copied                                                       | Not copied                                                                                                                                                                 |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Background, characters, and visuals                          | Choice and input, which block advancing until they are answered                                                                                                            |
+| Background music and sound effect channels set to persistent | Section transition, reset story at section, next line, conditional, and rollback, which move the story                                                                     |
+| Dialogue box and speaker settings, with the text cleared     | Voice, one-shot sound effect channels, one-time animations on the background, characters, and visuals, and the speaker portrait's animation, which play only on their line |
+| Controls and screen effects                                  |                                                                                                                                                                            |
+
+Other actions, such as save and load, skip and auto mode, variables, confirm
+dialogs, and overlays, are not part of the scene and are never copied. With
+**Don't Inherit**, the first line starts with the default dialogue box and
+controls.
+
 ### Release Page
 
 - Used to prepare project release output.

@@ -102,11 +102,23 @@ describe("scene editor section operations", () => {
     control,
   };
 
+  // The editor's presentation state comes from frozen engine state.
+  const deepFreeze = (value) => {
+    if (value && typeof value === "object") {
+      Object.values(value).forEach(deepFreeze);
+      Object.freeze(value);
+    }
+    return value;
+  };
+
   const createFirstLineActions = async ({
     presentationState,
     inheritPresentationFromSelectedLine,
   }) => {
     vi.useFakeTimers();
+    const frozenPresentationState = deepFreeze(
+      structuredClone(presentationState),
+    );
 
     try {
       const projectService = {
@@ -124,7 +136,9 @@ describe("scene editor section operations", () => {
         {
           store: {
             selectSceneId: vi.fn(() => "scene-1"),
-            selectEffectivePresentationState: vi.fn(() => presentationState),
+            selectEffectivePresentationState: vi.fn(
+              () => frozenPresentationState,
+            ),
           },
           projectService,
           render: vi.fn(),
@@ -192,6 +206,174 @@ describe("scene editor section operations", () => {
     });
 
     expect(actions).toEqual(defaultFirstLineActions);
+  });
+
+  it("does not copy navigation or line-only actions into a new section", async () => {
+    const background = { resourceId: "background-1" };
+    const actions = await createFirstLineActions({
+      presentationState: {
+        background,
+        dialogue: {
+          ui: { resourceId: "dialogue-layout" },
+          mode: "adv",
+          content: [{ text: "Hello" }],
+        },
+        control,
+        sectionTransition: { sceneId: "scene-1", sectionId: "section-3" },
+        resetStoryAtSection: { sectionId: "section-1" },
+        nextLine: {},
+        conditional: { branches: [] },
+        rollbackByOffset: { offset: -1 },
+        voice: { resourceId: "voice-1" },
+        layout: { resourceId: "layout-1" },
+        animation: { resourceId: "animation-1" },
+      },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual({ ...defaultFirstLineActions, background });
+  });
+
+  it("keeps only the persistent sound effect channels", async () => {
+    const rain = {
+      id: "rain",
+      applyMode: "persistent",
+      sounds: [{ resourceId: "rain-loop", loop: true }],
+    };
+    const actions = await createFirstLineActions({
+      presentationState: {
+        ...defaultFirstLineActions,
+        sfx: {
+          items: [{ resourceId: "door-slam" }],
+          channels: [{ id: "1", sounds: [{ resourceId: "knock" }] }, rain],
+        },
+      },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual({
+      ...defaultFirstLineActions,
+      sfx: { channels: [rain] },
+    });
+  });
+
+  it("leaves out sound effects that only play on the selected line", async () => {
+    const actions = await createFirstLineActions({
+      presentationState: {
+        ...defaultFirstLineActions,
+        sfx: {
+          items: [{ resourceId: "door-slam" }],
+          channels: [{ id: "1", sounds: [{ resourceId: "knock" }] }],
+        },
+      },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual(defaultFirstLineActions);
+  });
+
+  it("keeps persistent animations and leaves out one-time ones", async () => {
+    const persistentAnimations = {
+      resourceId: "sway",
+      playback: { continuity: "persistent", speed: 1, loop: true },
+    };
+    const oneTimeAnimations = {
+      resourceId: "slide-in",
+      playback: { continuity: "render", speed: 1 },
+    };
+    const actions = await createFirstLineActions({
+      presentationState: {
+        ...defaultFirstLineActions,
+        background: {
+          resourceId: "background-1",
+          animations: oneTimeAnimations,
+        },
+        character: {
+          items: [
+            { id: "hero", resourceId: "hero", animations: oneTimeAnimations },
+            {
+              id: "friend",
+              resourceId: "friend",
+              animations: persistentAnimations,
+            },
+          ],
+        },
+        visual: {
+          items: [
+            { id: "cg", resourceId: "cg-1", animations: oneTimeAnimations },
+          ],
+        },
+      },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual({
+      ...defaultFirstLineActions,
+      background: { resourceId: "background-1" },
+      character: {
+        items: [
+          { id: "hero", resourceId: "hero" },
+          {
+            id: "friend",
+            resourceId: "friend",
+            animations: persistentAnimations,
+          },
+        ],
+      },
+      visual: { items: [{ id: "cg", resourceId: "cg-1" }] },
+    });
+  });
+
+  it("keeps a persistent background animation", async () => {
+    const background = {
+      resourceId: "background-1",
+      animations: {
+        resourceId: "drift",
+        playback: { continuity: "persistent", speed: 1, loop: true },
+      },
+    };
+    const actions = await createFirstLineActions({
+      presentationState: { ...defaultFirstLineActions, background },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual({ ...defaultFirstLineActions, background });
+  });
+
+  it("keeps the speaker portrait and leaves out its animation", async () => {
+    const sprite = {
+      transformId: "portrait",
+      items: [{ id: "base", resourceId: "hero-face" }],
+    };
+    const actions = await createFirstLineActions({
+      presentationState: {
+        dialogue: {
+          ...defaultFirstLineActions.dialogue,
+          characterId: "hero",
+          character: {
+            sprite: {
+              ...sprite,
+              animations: {
+                resourceId: "pop-in",
+                playback: { continuity: "persistent", speed: 1 },
+              },
+            },
+          },
+          content: [{ text: "Hello" }],
+        },
+        control,
+      },
+      inheritPresentationFromSelectedLine: true,
+    });
+
+    expect(actions).toEqual({
+      dialogue: {
+        ...defaultFirstLineActions.dialogue,
+        characterId: "hero",
+        character: { sprite },
+      },
+      control,
+    });
   });
 
   it("does not select or scroll to a newly created section", async () => {
