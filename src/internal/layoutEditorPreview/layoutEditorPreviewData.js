@@ -13,6 +13,7 @@ import {
   usesSaveLoadPreviewInLayout,
   visitLayoutItemsWithFragments,
 } from "./layoutEditorPreviewSupport.js";
+import { DEFAULT_PREVIEW_SAMPLE_TEXT } from "./layoutEditorPreviewSampleText.js";
 
 const DIALOGUE_ADV_LAYOUT_TYPES = new Set(["dialogue", "dialogue-adv"]);
 const DIALOGUE_NVL_LAYOUT_TYPES = new Set(["nvl", "dialogue-nvl"]);
@@ -228,6 +229,7 @@ export const createLayoutEditorPreviewData = ({
   choicesData,
   saveLoadData,
   backgroundImageId,
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
 } = {}) => {
   const { dialogue, dialogueLines, dialogueRevealingSpeed } =
     createDialoguePreviewData({
@@ -235,6 +237,7 @@ export const createLayoutEditorPreviewData = ({
       dialogueDefaultValues,
       nvlDefaultValues,
       previewRevealingSpeed,
+      sampleText,
     });
   const backgroundPreviewImageId =
     typeof backgroundImageId === "string" && backgroundImageId.length > 0
@@ -260,9 +263,11 @@ export const createLayoutEditorPreviewData = ({
     previewInputFieldValues,
   );
   const historyDialogue =
-    layoutType === "history" ? createHistoryLines(historyDefaultValues) : [];
+    layoutType === "history"
+      ? createHistoryLines(historyDefaultValues, sampleText)
+      : [];
   const choice = {
-    items: createChoicePreviewItems(choicesData),
+    items: createChoicePreviewItems(choicesData, sampleText),
   };
   const confirmDialog = createConfirmDialogPreviewData();
   const saveSlots =
@@ -333,7 +338,10 @@ export const createLayoutEditorPreviewData = ({
   }
 
   if (sections.includeHistory) {
-    previewData.historyDialogue = createHistoryLines(historyDefaultValues);
+    previewData.historyDialogue = createHistoryLines(
+      historyDefaultValues,
+      sampleText,
+    );
   }
 
   if (sections.includeChoice) {

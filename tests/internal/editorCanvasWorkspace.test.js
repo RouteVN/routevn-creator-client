@@ -11,6 +11,7 @@ import {
   zoomEditorCanvasInState,
   zoomEditorCanvasOutState,
 } from "../../src/internal/ui/editorCanvasWorkspace.js";
+import { FR_I18N } from "../support/i18n.js";
 
 const createState = ({
   isTouchMode = false,
@@ -47,6 +48,11 @@ describe("editor canvas workspace", () => {
       canvasZoomInDisabled: true,
       canvasZoomOutDisabled: false,
     });
+    // The zoom is formatted for the active locale.
+    expect(
+      buildEditorCanvasZoomViewData(state.canvasZoom, FR_I18N.dateTime)
+        .canvasZoomLabel,
+    ).toBe("1000 %");
     setEditorCanvasZoomState(state, { zoom: 0 });
     expect(state.canvasZoom).toBe(0.1);
     resetEditorCanvasZoomState(state);
@@ -191,7 +197,7 @@ describe("editor canvas workspace", () => {
     (page) => {
       const view = readEditorView(page);
       const tabs =
-        "rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null";
+        'rtgl-tabs#rightPanelModeTabs s=sm aria-label="${editorPanelsLabel}" selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}\': null';
 
       // The navbar: undo and redo, or the tabs after the name.
       const navbar = view.slice(

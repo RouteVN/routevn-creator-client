@@ -15,6 +15,7 @@ import {
   setSceneEditorKeyboardVisible,
   setUiConfig,
 } from "../../src/pages/app/app.store.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 describe("app.store route context", () => {
   it.each(["web", "tauri", "android", "ios"])(
@@ -134,6 +135,13 @@ describe("app.store repository loading progress", () => {
       repositoryLoadingProgressWidth: "50%",
       repositoryLoadingStatusText: "Loading project... 50%",
     });
+    // The catalog places the percentage and its sign.
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).repositoryLoadingStatusText,
+    ).toBe("Loading project... 50%");
+    expect(
+      selectViewData({ state, i18n: FR_I18N }).repositoryLoadingStatusText,
+    ).toBe("Chargement du projet… 50 %");
   });
 
   it("keeps a stable loading message before progress exists", () => {

@@ -1,6 +1,7 @@
 import { parseAndRender } from "jempl";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { stableStringify } from "../../internal/stableStringify.js";
+import { formatPercent } from "../../internal/dates.js";
 import { isTouchPhone } from "../../internal/touchLayout.js";
 import { toLayoutPreviewType } from "../../internal/layoutPreview.js";
 import {
@@ -909,7 +910,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
       : `position: relative; width: ${canvasFitWidth}; margin-left: auto; margin-right: auto;`,
     canvasZoom,
     showCanvasZoomControls: showRightPanel,
-    canvasZoomLabel: `${Math.round(canvasZoom * 100)}%`,
+    canvasZoomLabel: formatPercent(Math.round(canvasZoom * 100), i18n.dateTime),
     canvasZoomInDisabled: canvasZoom >= CANVAS_ZOOM_LEVELS.at(-1),
     canvasZoomOutDisabled: canvasZoom <= CANVAS_ZOOM_LEVELS[0],
     canvasZoomInLabel: copy.canvasZoomInLabel ?? "Zoom in",
@@ -950,6 +951,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
       { id: "edit", label: copy.editModeLabel ?? "Edit" },
       { id: "preview", label: copy.previewTitle ?? "Preview" },
     ],
+    editorPanelsLabel: copy.editorPanelsLabel ?? "Layout editor panels",
     rightPanelEditStyle:
       state.rightPanelMode === "edit" ? "" : "display: none;",
     rightPanelPreviewStyle:

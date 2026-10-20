@@ -527,12 +527,23 @@ const findSectionReference = (sceneItems = {}, sectionId) => {
   return {};
 };
 
-const formatSectionReferenceLabel = ({ scene, section, sectionId } = {}) => {
+// A section with its scene, joined by the catalog's separator.
+const formatSceneSectionLabel = (sceneName, sectionName, copy) =>
+  formatCommandLineCopy(
+    "{scene} - {section}",
+    { scene: sceneName, section: sectionName },
+    copy,
+  );
+
+const formatSectionReferenceLabel = (
+  { scene, section, sectionId } = {},
+  copy,
+) => {
   const sceneName = scene?.name ?? "";
   const sectionName = section?.name ?? sectionId ?? "";
 
   if (sceneName && sectionName) {
-    return `${sceneName} - ${sectionName}`;
+    return formatSceneSectionLabel(sceneName, sectionName, copy);
   }
 
   return sectionName || sceneName;
@@ -854,7 +865,9 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       preview.sectionTransition = {
         scene,
         section,
-        label: isCurrentScene ? sectionName : `${sceneName} - ${sectionName}`,
+        label: isCurrentScene
+          ? sectionName
+          : formatSceneSectionLabel(sceneName, sectionName, copy),
       };
     }
   }
@@ -863,11 +876,14 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     actionsObject.resetStoryAtSection = actions.resetStoryAtSection;
     const sectionId = actions.resetStoryAtSection.sectionId;
     const { scene, section } = findSectionReference(sceneItems, sectionId);
-    const targetLabel = formatSectionReferenceLabel({
-      scene,
-      section,
-      sectionId,
-    });
+    const targetLabel = formatSectionReferenceLabel(
+      {
+        scene,
+        section,
+        sectionId,
+      },
+      copy,
+    );
 
     preview.resetStoryAtSection = {
       scene,

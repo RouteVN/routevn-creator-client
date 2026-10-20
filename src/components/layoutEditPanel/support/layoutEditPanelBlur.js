@@ -1,3 +1,6 @@
+import { formatNumber } from "../../../internal/dates.js";
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
+
 const SPRITE_BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
 
 const DEFAULT_SPRITE_BLUR = {
@@ -140,7 +143,8 @@ export const createSpriteBlurForm = ({
   },
 });
 
-export const getSpriteBlurSummary = (blur, copy = {}) => {
+// `dateTime` is the active locale's catalog, which writes the numbers.
+export const getSpriteBlurSummary = (blur, copy = {}, dateTime) => {
   if (!isSpriteBlurValue(blur)) {
     return copy.noBlurSummary ?? "No blur";
   }
@@ -150,5 +154,15 @@ export const getSpriteBlurSummary = (blur, copy = {}) => {
     ? (copy.repeatEdgeSummary ?? "repeat edge")
     : (copy.noRepeatEdgeSummary ?? "no repeat edge");
 
-  return `X ${normalizedBlur.x}, Y ${normalizedBlur.y}, ${copy.qualitySummaryLabel ?? "quality"} ${normalizedBlur.quality}, ${copy.kernelSummaryLabel ?? "kernel"} ${normalizedBlur.kernelSize}, ${edgeLabel}`;
+  return formatI18nCopy(
+    copy.blurSummary ??
+      "X {x}, Y {y}, quality {quality}, kernel {kernel}, {edge}",
+    {
+      x: formatNumber(normalizedBlur.x, dateTime),
+      y: formatNumber(normalizedBlur.y, dateTime),
+      quality: formatNumber(normalizedBlur.quality, dateTime),
+      kernel: formatNumber(normalizedBlur.kernelSize, dateTime),
+      edge: edgeLabel,
+    },
+  );
 };

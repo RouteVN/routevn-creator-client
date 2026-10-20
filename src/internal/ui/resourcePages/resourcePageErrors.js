@@ -1,23 +1,35 @@
+import { withErrorDetails } from "../../errorDetails.js";
 import { isProjectStorageUnavailableError } from "../../projectOpenErrors.js";
 import { isStorageFullError } from "../../storageFullError.js";
 
 const STORAGE_FULL_FALLBACK_MESSAGE =
   "There is not enough free storage space on this device to save this. Free up some space, then try again.";
 
-export const getResourcePageErrorMessage = (errorOrResult, fallbackMessage) => {
-  if (typeof errorOrResult === "string") {
-    return errorOrResult;
+// The failure behind a refused result, or the thrown error itself.
+const getTechnicalError = (errorOrResult) =>
+  errorOrResult?.valid === false ? errorOrResult.error : errorOrResult;
+
+// The caller's localized message leads. The failure's own text is not in the
+// app language, so it follows under the localized details label.
+export const getResourcePageErrorMessage = ({
+  appService,
+  errorOrResult,
+  fallbackMessage,
+} = {}) => {
+  const copy = appService.getAppCopy?.() ?? {};
+  // A full device is the user's to fix: say so in the app language, whatever
+  // language or wording the system's own message has.
+  if (
+    isStorageFullError(errorOrResult) ||
+    isStorageFullError(errorOrResult?.error)
+  ) {
+    return copy.storageFullMessage ?? STORAGE_FULL_FALLBACK_MESSAGE;
   }
 
-  if (typeof errorOrResult?.error === "string") {
-    return errorOrResult.error;
-  }
-
-  return (
-    errorOrResult?.error?.message ||
-    errorOrResult?.error?.creatorModelError?.message ||
-    errorOrResult?.message ||
-    fallbackMessage
+  return withErrorDetails(
+    fallbackMessage,
+    getTechnicalError(errorOrResult),
+    copy.errorDetailsLabel ?? "Details:",
   );
 };
 
@@ -25,17 +37,17 @@ export const showResourcePageError = ({
   appService,
   errorOrResult,
   fallbackMessage,
-  title = "Error",
+  title,
 } = {}) => {
-  // A full device is the user's to fix: say so in the app language, whatever
-  // language or wording the system's own message has.
-  const message =
-    isStorageFullError(errorOrResult) ||
-    isStorageFullError(errorOrResult?.error)
-      ? (appService.getAppCopy?.().storageFullMessage ??
-        STORAGE_FULL_FALLBACK_MESSAGE)
-      : getResourcePageErrorMessage(errorOrResult, fallbackMessage);
-  appService.showAlert({ message: message, title });
+  const message = getResourcePageErrorMessage({
+    appService,
+    errorOrResult,
+    fallbackMessage,
+  });
+  appService.showAlert({
+    message: message,
+    title: title ?? appService.getAppCopy?.().errorTitle ?? "Error",
+  });
   return message;
 };
 
@@ -43,7 +55,7 @@ export const runResourcePageMutation = async ({
   appService,
   action,
   fallbackMessage,
-  title = "Error",
+  title,
   logLabel = fallbackMessage,
 } = {}) => {
   try {

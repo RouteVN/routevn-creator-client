@@ -1,3 +1,4 @@
+import { formatNumber, formatPercent } from "../dates.js";
 import { formatI18nCopy } from "./i18nCopy.js";
 
 // A slider popover edits one number with a slider, and a row with a Presets
@@ -49,17 +50,19 @@ export const getSliderRange = ({
 });
 
 // A step's size as its button shows it: 0.25 is 25% where the steps read as
-// percentages.
-const formatStepAmount = ({ field, delta }) => {
+// percentages, formatted for `dateTime`, the active locale's catalog.
+const formatStepAmount = ({ field, delta, dateTime }) => {
   const amount = Math.abs(delta);
-  return field.stepsAsPercent ? `${Math.round(amount * 100)}%` : `${amount}`;
+  return field.stepsAsPercent
+    ? formatPercent(Math.round(amount * 100), dateTime)
+    : formatNumber(amount, dateTime);
 };
 
 // The step buttons show what they add: the larger step down, the step down,
 // the step up, and the larger step up, as −4 −1 +1 +4.
-export const getSliderStepButtons = ({ field, copy = {} }) =>
+export const getSliderStepButtons = ({ field, copy = {}, dateTime }) =>
   [-field.fastStep, -field.step, field.step, field.fastStep].map((delta) => {
-    const amount = formatStepAmount({ field, delta });
+    const amount = formatStepAmount({ field, delta, dateTime });
     return {
       delta,
       text: `${delta < 0 ? "−" : "+"}${amount}`,

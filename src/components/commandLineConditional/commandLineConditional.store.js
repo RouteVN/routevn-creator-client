@@ -582,6 +582,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     conditionLabel: localizeCommandLineText("Condition", copy),
     defaultBranchLabel: localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy),
     operatorLabel: localizeCommandLineText("Operator", copy),
+    operatorPlaceholder: localizeCommandLineText("Select an option", copy),
     removeValueButton: localizeCommandLineText("Remove Value", copy),
     saveBranchButton: localizeCommandLineText(
       state.tempBranch.conditionKind === "default"

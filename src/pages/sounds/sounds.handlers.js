@@ -35,12 +35,16 @@ const showUnsupportedFormatToast = (appService, copy, message) => {
   });
 };
 
-const getSoundUploadErrorMessage = (error, copy) => {
+const getSoundUploadErrorMessage = (appService, error, copy) => {
   if (error?.code === "unsupported_audio_format") {
     return copy.unsupportedFormatMessage;
   }
 
-  return getResourcePageErrorMessage(error, copy.unsupportedFormatMessage);
+  return getResourcePageErrorMessage({
+    appService,
+    errorOrResult: error,
+    fallbackMessage: copy.unsupportedFormatMessage,
+  });
 };
 
 const validateSoundFiles = ({ appService, files, copy } = {}) => {
@@ -89,7 +93,7 @@ const pickAndUploadSound = async ({
 
   const uploadResult = uploadedFiles?.[0];
   if (!uploadResult) {
-    return { error: "upload-failed", errorType: "upload-failed" };
+    return { errorType: "upload-failed" };
   }
 
   return { uploadResult };
@@ -145,7 +149,7 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
       showUnsupportedFormatToast(
         appService,
         copy,
-        getSoundUploadErrorMessage(error, copy),
+        getSoundUploadErrorMessage(appService, error, copy),
       );
     },
     onNoSuccessfulUploads: () => {
@@ -628,7 +632,7 @@ export const handleEditDialogSoundClick = async (deps) => {
     showUnsupportedFormatToast(
       appService,
       copy,
-      getSoundUploadErrorMessage(result.error, copy),
+      getSoundUploadErrorMessage(appService, result.error, copy),
     );
     return;
   }

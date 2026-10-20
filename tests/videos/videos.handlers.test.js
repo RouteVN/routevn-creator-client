@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   handleDataChanged,
+  handleEditDialogVideoClick,
   handleEditFormAction,
   handleFileExplorerKeyboardScopeKeyDown,
   handleOutsideVideoClick,
 } from "../../src/pages/videos/videos.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 
@@ -28,6 +29,27 @@ describe("videos handlers", () => {
     });
 
     expect(calls).toEqual(["pause", "close", "render"]);
+  });
+
+  it("explains an upload that saved no file in the app language", async () => {
+    const appService = {
+      pickFiles: vi.fn(async () => ({ name: "clip.mp4" })),
+      showAlert: vi.fn(),
+      getAppCopy: () => FR_I18N.appPage,
+    };
+
+    await handleEditDialogVideoClick({
+      appService,
+      projectService: { uploadFiles: vi.fn(async () => []) },
+      store: {},
+      render: vi.fn(),
+      i18n: FR_I18N,
+    });
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: FR_I18N.videosPage.failedUploadVideo,
+      title: FR_I18N.appPage.errorTitle,
+    });
   });
 
   it("can close the preview while its video is still loading", () => {

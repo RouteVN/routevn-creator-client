@@ -6,7 +6,7 @@ import {
   setSelectedItemId,
   setTagsData,
 } from "../../src/pages/particles/particles.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const createState = () => {
   const state = createInitialState();
@@ -117,5 +117,15 @@ describe("particles store", () => {
       "Texture Image",
       "Seed",
     ]);
+  });
+
+  it("writes the canvas size as the locale does", () => {
+    const state = createState();
+    setSelectedItemId({ state }, { itemId: "particle-1" });
+    const canvasSize = (i18n) =>
+      selectViewData({ state, i18n }).detailFields[3].value;
+
+    expect(canvasSize(EN_I18N)).toBe("640 × 360");
+    expect(canvasSize(FR_I18N)).toBe("640\u00a0×\u00a0360");
   });
 });

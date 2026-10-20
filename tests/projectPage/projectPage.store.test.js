@@ -10,7 +10,7 @@ import {
   setSceneTextAnalyticsStatus,
   setUiConfig,
 } from "../../src/pages/project/project.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 describe("project page store", () => {
   it("uses two full-width resource columns only in touch mode", () => {
@@ -52,6 +52,24 @@ describe("project page store", () => {
     expect(viewData.isSceneTextLoading).toBe(false);
     expect(viewData.hasSceneTextError).toBe(false);
     expect(viewData.sceneCount).toBe("0");
+  });
+
+  it("writes the resolution as the locale does", () => {
+    const state = createInitialState();
+    setCurrentProject(
+      { state },
+      {
+        project: {
+          name: "Project One",
+          resolution: { width: 1920, height: 1080 },
+        },
+      },
+    );
+    const resolution = (i18n) =>
+      selectViewData({ state, i18n }).detailFields.at(-1).value;
+
+    expect(resolution(EN_I18N)).toBe("1920 × 1080");
+    expect(resolution(FR_I18N)).toBe("1920\u00a0×\u00a01080");
   });
 
   it("shows project language in detail and the edit form", () => {

@@ -828,7 +828,7 @@ export const setTransientValues = (deps, { values = {} } = {}) => {
 
 export const handleOnUpdate = (deps, payload) => {
   const { oldProps, newProps } = payload;
-  const { store, render } = deps;
+  const { store, render, i18n } = deps;
   const valuesEquivalent = arePlainObjectsShallowEqual(
     oldProps?.values || {},
     newProps?.values || {},
@@ -895,6 +895,7 @@ export const handleOnUpdate = (deps, payload) => {
       name: popover.name,
       projectResolution: newProps.projectResolution,
       copy: selectCopy(deps),
+      dateTime: i18n.dateTime,
     });
   }
 
@@ -902,7 +903,7 @@ export const handleOnUpdate = (deps, payload) => {
 };
 
 export const handleGroupItemClick = (deps, payload) => {
-  const { props, render, store } = deps;
+  const { props, render, store, i18n } = deps;
   const copy = selectCopy(deps);
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
@@ -921,6 +922,7 @@ export const handleGroupItemClick = (deps, payload) => {
     form: popoverForm,
     projectResolution: props.projectResolution,
     copy,
+    dateTime: i18n.dateTime,
   });
 
   render();
@@ -2335,7 +2337,7 @@ export const handlePopoverFormInput = (deps, payload) => {
 };
 
 export const handlePopoverFormChange = async (deps, payload) => {
-  const { props, store, render } = deps;
+  const { props, store, render, i18n } = deps;
   const { _event } = payload;
   const { name } = store.selectPopoverForm();
   // A committed value shows within the field's bounds, as it will be saved.
@@ -2347,6 +2349,7 @@ export const handlePopoverFormChange = async (deps, payload) => {
     name,
     projectResolution: props.projectResolution,
     copy: selectCopy(deps),
+    dateTime: i18n.dateTime,
   });
   render();
   emitPanelPreview(deps, { name, value: values.value });
@@ -2399,7 +2402,7 @@ export const handlePopoverStepPress = (deps, payload) => {
 
 // Shows a value picked in the popover in its form, and previews it.
 const applyPopoverValue = (deps, value) => {
-  const { props, render, store } = deps;
+  const { props, render, store, i18n } = deps;
   const popover = store.selectPopoverForm();
   const { name } = popover;
   if (!name) {
@@ -2414,6 +2417,7 @@ const applyPopoverValue = (deps, value) => {
     name,
     projectResolution: props.projectResolution,
     copy: selectCopy(deps),
+    dateTime: i18n.dateTime,
   });
   render();
   emitPanelPreview(deps, { name, value });

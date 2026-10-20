@@ -238,7 +238,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "You're trying to open an incompatible project with version 1 using RouteVN Creator project format 2. For assistance, please reach out to RouteVN staff for support.\nMake sure you're using the latest version of RouteVN Creator.",
+        "This project was saved in a format that this version of RouteVN Creator can't open.\nMake sure you're using the latest version of RouteVN Creator.\n\nDetails:\nYou're trying to open an incompatible project with version 1 using RouteVN Creator project format 2. For assistance, please reach out to RouteVN staff for support.",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
@@ -258,7 +258,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.\nMake sure you're using the latest version of RouteVN Creator.",
+        "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for help migrating the old project.\nMake sure you're using the latest version of RouteVN Creator.",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
@@ -280,7 +280,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "This project contains committed changes that this RouteVN Creator build cannot project safely. Update RouteVN Creator before opening the project. Last incompatible command 'scene.update' uses schemaVersion 3, while this client supports 2. schemaVersion 3 is newer than supported 2",
+        "This project was saved in a format that this version of RouteVN Creator can't open.\nMake sure you're using the latest version of RouteVN Creator.\n\nDetails:\nThis project contains committed changes that this RouteVN Creator build cannot project safely. Update RouteVN Creator before opening the project. Last incompatible command 'scene.update' uses schemaVersion 3, while this client supports 2. schemaVersion 3 is newer than supported 2",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
@@ -300,7 +300,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.\nMake sure you're using the latest version of RouteVN Creator.",
+        "Unsupported project storage format. This version of RouteVN Creator only supports the current storage format and can't convert older local projects automatically.\nMake sure you're using the latest version of RouteVN Creator.",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
@@ -317,9 +317,28 @@ describe("projects.handleProjectsClick", () => {
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
-        "Failed to open project. An unexpected error occurred while preparing the project.\nMake sure you're using the latest version of RouteVN Creator.",
+        "Failed to open project. An unexpected error occurred while preparing the project.\nMake sure you're using the latest version of RouteVN Creator.\n\nDetails:\nFailed to open project.",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
+  it("explains an unsupported project store format in the app language", async () => {
+    const deps = createDeps({
+      ensureProjectCompatibleById: vi.fn(async () => {
+        const error = new Error("unsupported bootstrap history");
+        error.code = "project_store_format_unsupported";
+        throw error;
+      }),
+    });
+    deps.i18n = PT_I18N;
+
+    await handleProjectsClick(deps, createPayload());
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: PT_I18N.projectsPage.incompatibleProjectTitle,
+      message: `${PT_I18N.appPage.projectOpenUnsupportedStoreFormat}\n${PT_I18N.appPage.latestCreatorVersionHint}`,
+      status: "error",
+    });
   });
 
   it("shows a clearer message for missing project resolution errors", async () => {
@@ -354,7 +373,7 @@ describe("projects.handleProjectsClick", () => {
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
-        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nPlease make sure you're using the latest version of RouteVN Creator. If the problem continues, please reach out to RouteVN for support.\n\nTechnical details: payload.sectionId must reference an existing section",
+        "RouteVN Creator couldn't safely open this project because its saved project history is inconsistent.\n\nMake sure you're using the latest version of RouteVN Creator. If the problem continues, contact RouteVN for support.\n\nDetails:\npayload.sectionId must reference an existing section",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
@@ -372,7 +391,7 @@ describe("projects.handleProjectsClick", () => {
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message:
-        "Failed to open project. character.spriteGroups[0].tags[0] must reference an existing tag in scope 'characterSprites:g2PMeSgDVtoZ'.\nMake sure you're using the latest version of RouteVN Creator.",
+        "Failed to open project. An unexpected error occurred while preparing the project.\nMake sure you're using the latest version of RouteVN Creator.\n\nDetails:\ncharacter.spriteGroups[0].tags[0] must reference an existing tag in scope 'characterSprites:g2PMeSgDVtoZ'",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });

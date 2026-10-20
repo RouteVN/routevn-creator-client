@@ -10,7 +10,7 @@ import {
   getSliderPopoverRange,
   stepSliderPopoverValue,
 } from "../../src/components/layoutEditPanel/support/layoutEditPanelSliderPopovers.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const NUMBER_POPOVER_FORM = {
   fields: [
@@ -30,7 +30,11 @@ const NUMBER_POPOVER_FORM = {
   },
 };
 
-const openSliderPopover = (name, values = { x: 120, y: 120 }) => {
+const openSliderPopover = (
+  name,
+  values = { x: 120, y: 120 },
+  i18n = EN_I18N,
+) => {
   const state = createInitialState();
   setValues({ state }, { values });
 
@@ -45,7 +49,8 @@ const openSliderPopover = (name, values = { x: 120, y: 120 }) => {
         width: 1920,
         height: 1080,
       },
-      copy: selectLayoutEditPanelCopy(EN_I18N),
+      copy: selectLayoutEditPanelCopy(i18n),
+      dateTime: i18n.dateTime,
     },
   );
 
@@ -191,6 +196,25 @@ describe("layoutEditPanel popover forms", () => {
       ["−1%", "Decrease by 1%"],
       ["+1%", "Increase by 1%"],
       ["+10%", "Increase by 10%"],
+    ]);
+    // The percentages are formatted for the active locale.
+    const frenchPopover = openSliderPopover(
+      "opacity",
+      { opacity: 0.5 },
+      FR_I18N,
+    );
+    expect(frenchPopover.context.presetItems[1]).toEqual({
+      label: "25\u00a0%",
+      value: 0.25,
+      suffixText: "0,25",
+    });
+    expect(
+      frenchPopover.context.stepButtons.map(({ text, label }) => [text, label]),
+    ).toEqual([
+      ["−10\u00a0%", "Diminuer de 10\u00a0%"],
+      ["−1\u00a0%", "Diminuer de 1\u00a0%"],
+      ["+1\u00a0%", "Augmenter de 1\u00a0%"],
+      ["+10\u00a0%", "Augmenter de 10\u00a0%"],
     ]);
   });
 

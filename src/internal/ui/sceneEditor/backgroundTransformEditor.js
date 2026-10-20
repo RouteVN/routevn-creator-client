@@ -1,8 +1,10 @@
+import { formatNumber, formatNumberWithUnit } from "../../dates.js";
 import {
   createTransformSelectionAnchor,
   createTransformSelectionHitArea,
   createTransformSelectionResizeHandle,
 } from "../../transformSelectionChrome.js";
+import { formatCommandLineCopy } from "./commandLineCopy.js";
 
 const BACKGROUND_TRANSFORM_EDITOR_TRANSFORM_ID =
   "__background_transform_editor__";
@@ -193,14 +195,38 @@ export const removeInlineTransformFields = (item = {}) => {
   return nextItem;
 };
 
-export const formatBackgroundTransformEditorMetric = (value) => {
+const roundBackgroundTransformEditorMetric = (value) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
-    return "0";
+    return 0;
   }
 
-  return String(Math.round(parsed * 100) / 100);
+  return Math.round(parsed * 100) / 100;
 };
+
+// Two of a transform's numbers, such as a position or a scale, in a command
+// line catalog template such as "{x}, {y}". `copy` is the command line
+// catalog, and `dateTime` the active locale's, which writes the numbers.
+export const formatBackgroundTransformEditorPair = (
+  template,
+  [x, y],
+  { copy, dateTime } = {},
+) =>
+  formatCommandLineCopy(
+    template,
+    {
+      x: formatNumber(roundBackgroundTransformEditorMetric(x), dateTime),
+      y: formatNumber(roundBackgroundTransformEditorMetric(y), dateTime),
+    },
+    copy,
+  );
+
+export const formatBackgroundTransformEditorRotation = (value, dateTime) =>
+  formatNumberWithUnit(
+    roundBackgroundTransformEditorMetric(value),
+    "degrees",
+    dateTime,
+  );
 
 const findSelectedLine = (projectData, { sceneId, sectionId, lineId } = {}) => {
   if (!sceneId || !sectionId || !lineId) {

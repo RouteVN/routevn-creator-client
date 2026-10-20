@@ -534,7 +534,7 @@ export const selectViewData = ({ state, i18n }) => {
     undoLabel: editHistoryCopy.undoLabel,
     redoLabel: editHistoryCopy.redoLabel,
     showCanvasZoomControls: showRightPanel,
-    ...buildEditorCanvasZoomViewData(state.canvasZoom),
+    ...buildEditorCanvasZoomViewData(state.canvasZoom, i18n.dateTime),
     canvasBackgroundStyle,
     canvasWrapperStyle,
     canvasZoomInLabel: copy.canvasZoomInLabel,
@@ -551,6 +551,7 @@ export const selectViewData = ({ state, i18n }) => {
       { id: "edit", label: copy.editModeLabel },
       { id: "preview", label: copy.previewTitle },
     ],
+    editorPanelsLabel: copy.editorPanelsLabel,
     // Both bodies stay mounted, so scroll positions survive a switch.
     rightPanelEditStyle:
       state.rightPanelMode === "edit" ? "" : "display: none;",
@@ -559,7 +560,11 @@ export const selectViewData = ({ state, i18n }) => {
     particleForm: createParticleForm({ copy }),
     particleFormKey: buildFormKey(state, formValues),
     formValues,
-    sliderValueFields: buildParticleSliderValueFields({ formValues, copy }),
+    sliderValueFields: buildParticleSliderValueFields({
+      formValues,
+      copy,
+      dateTime: i18n.dateTime,
+    }),
     textureImageLabel: copy.textureImageLabel,
     textureImageDescription: copy.textureImageDescription,
     textureImage: buildImageCard(selectTextureImageState(state)),

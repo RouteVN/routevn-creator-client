@@ -1,3 +1,8 @@
+import {
+  formatNumber,
+  formatNumberWithUnit,
+  formatPercent,
+} from "../../../internal/dates.js";
 import { isFontWeightSupported } from "../../../internal/fontCapabilities.js";
 import { toFontIds, toPrimaryFontId } from "../../../internal/fontIds.js";
 
@@ -155,33 +160,37 @@ const SHADOW_OPACITY_PRESETS = [0, 0.25, 0.5, 0.75, 1];
 const SHADOW_BLUR_PRESETS = [0, 2, 4, 8, 12, 16, 24, 32];
 const SHADOW_OFFSET_PRESETS = [-16, -8, -4, -2, 0, 2, 4, 8, 16];
 
-const toPixelPresets = (values) =>
-  values.map((value) => ({ label: `${value} px`, value }));
-
-// A share as a percentage, with its value beside it.
-const toPercentPresets = (values) =>
+const toPixelPresets = (values, dateTime) =>
   values.map((value) => ({
-    label: `${Math.round(value * 100)}%`,
+    label: formatNumberWithUnit(value, "pixels", dateTime),
     value,
-    suffixText: `${value}`,
   }));
 
-const SHADOW_OFFSET_FIELD = {
+// A share as a percentage, with its value beside it.
+const toPercentPresets = (values, dateTime) =>
+  values.map((value) => ({
+    label: formatPercent(Math.round(value * 100), dateTime),
+    value,
+    suffixText: formatNumber(value, dateTime),
+  }));
+
+const createShadowOffsetField = (dateTime) => ({
   step: 1,
   fastStep: 4,
   min: -500,
   max: 500,
   range: { min: -32, max: 32 },
-  unit: "px",
-  presets: toPixelPresets(SHADOW_OFFSET_PRESETS),
-};
+  unit: "pixels",
+  presets: toPixelPresets(SHADOW_OFFSET_PRESETS, dateTime),
+});
 
 // The form's numbers open slider popovers (see
 // src/internal/ui/sliderPopover.js). Each slider runs over its range, the
 // form's sliders' from before, with font size from 8 px, the minimum its
 // input had, to 128 px. A typed value can go past it, within `min` and
-// `max`.
-export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
+// `max`. The presets show their numbers as `dateTime`, the active locale's
+// catalog, writes them.
+const createTextStyleSliderFields = (dateTime) => ({
   fontSize: {
     defaultValue: 16,
     step: 1,
@@ -189,8 +198,8 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     min: 8,
     max: 400,
     range: { min: 8, max: 128 },
-    unit: "px",
-    presets: toPixelPresets(FONT_SIZE_PRESETS),
+    unit: "pixels",
+    presets: toPixelPresets(FONT_SIZE_PRESETS, dateTime),
   },
   lineHeight: {
     defaultValue: 1.5,
@@ -199,7 +208,10 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     min: 0.8,
     max: 10,
     range: { min: 0.8, max: 3 },
-    presets: LINE_HEIGHT_PRESETS.map((value) => ({ label: `${value}`, value })),
+    presets: LINE_HEIGHT_PRESETS.map((value) => ({
+      label: formatNumber(value, dateTime),
+      value,
+    })),
   },
   strokeWidth: {
     defaultValue: DEFAULT_OUTLINE_WIDTH,
@@ -208,8 +220,8 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     min: 0,
     max: 100,
     range: { min: 0, max: 12 },
-    unit: "px",
-    presets: toPixelPresets(OUTLINE_THICKNESS_PRESETS),
+    unit: "pixels",
+    presets: toPixelPresets(OUTLINE_THICKNESS_PRESETS, dateTime),
   },
   shadowAlpha: {
     defaultValue: DEFAULT_SHADOW.alpha,
@@ -218,7 +230,7 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     stepsAsPercent: true,
     min: 0,
     max: 1,
-    presets: toPercentPresets(SHADOW_OPACITY_PRESETS),
+    presets: toPercentPresets(SHADOW_OPACITY_PRESETS, dateTime),
   },
   shadowBlur: {
     defaultValue: DEFAULT_SHADOW.blur,
@@ -227,15 +239,15 @@ export const TEXT_STYLE_SLIDER_FIELDS = Object.freeze({
     min: 0,
     max: 200,
     range: { min: 0, max: 32 },
-    unit: "px",
-    presets: toPixelPresets(SHADOW_BLUR_PRESETS),
+    unit: "pixels",
+    presets: toPixelPresets(SHADOW_BLUR_PRESETS, dateTime),
   },
   shadowOffsetX: {
-    ...SHADOW_OFFSET_FIELD,
+    ...createShadowOffsetField(dateTime),
     defaultValue: DEFAULT_SHADOW.offsetX,
   },
   shadowOffsetY: {
-    ...SHADOW_OFFSET_FIELD,
+    ...createShadowOffsetField(dateTime),
     defaultValue: DEFAULT_SHADOW.offsetY,
   },
 });
@@ -270,16 +282,22 @@ const createSliderSlotField = (name, copy, { required = false } = {}) => {
 
 // The slider value fields the page puts in the form's slots, with the form's
 // values. A field whose section is hidden has no slot to show in.
-export const buildTextStyleSliderValueFields = ({ formValues, copy }) =>
-  Object.entries(SLIDER_VALUE_FIELD_SLOTS).map(
+export const buildTextStyleSliderValueFields = ({
+  formValues,
+  copy,
+  dateTime,
+}) => {
+  const sliderFields = createTextStyleSliderFields(dateTime);
+  return Object.entries(SLIDER_VALUE_FIELD_SLOTS).map(
     ([name, { slot, labelKey }]) => ({
       name,
       slot,
       label: copy[labelKey],
       value: formValues[name],
-      field: TEXT_STYLE_SLIDER_FIELDS[name],
+      field: sliderFields[name],
     }),
   );
+};
 
 const SHADOW_FIELD_KEYS = {
   shadowAlpha: "alpha",

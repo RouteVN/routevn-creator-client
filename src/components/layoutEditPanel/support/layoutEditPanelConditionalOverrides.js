@@ -342,6 +342,7 @@ export const createConditionalOverrideConditionForm = ({
         label: copy.targetLabel ?? "Target",
         required: true,
         clearable: false,
+        placeholder: copy.conditionTargetPlaceholder ?? "Select a target",
         searchable: true,
         searchPlaceholder:
           copy.conditionTargetSearchPlaceholder ?? "Search targets...",
@@ -528,6 +529,8 @@ export const createConditionalOverrideAttributeForm = ({
         label: copy.attributeLabel ?? "Attribute",
         required: true,
         clearable: false,
+        placeholder:
+          copy.conditionAttributePlaceholder ?? "Select an attribute",
         options: attributeOptions,
       },
       {
@@ -538,6 +541,7 @@ export const createConditionalOverrideAttributeForm = ({
         label: copy.textStyleLabel ?? "Text Style",
         required: true,
         clearable: false,
+        placeholder: copy.textStylePlaceholder ?? "Select a text style",
         options: textStyleOptions,
       },
       {

@@ -17,7 +17,6 @@ import {
   syncMobileResourcePageUiConfig,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
-  getResourcePageErrorMessage,
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -2108,11 +2107,10 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (deleteResult?.valid === false) {
-    appService.showAlert({
-      message: getResourcePageErrorMessage(
-        deleteResult,
-        copy.failedDeleteSprite,
-      ),
+    showResourcePageError({
+      appService,
+      errorOrResult: deleteResult,
+      fallbackMessage: copy.failedDeleteSprite,
       title: copy.errorTitle,
     });
     return;

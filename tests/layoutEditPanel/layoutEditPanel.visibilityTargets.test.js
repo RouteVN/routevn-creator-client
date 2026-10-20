@@ -14,7 +14,7 @@ import {
   toSectionedVisibilityConditionTargetOptions,
 } from "../../src/components/layoutEditPanel/support/layoutEditPanelVisibility.js";
 import { toVariableConditionTarget } from "../../src/internal/layoutConditions.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 describe("layoutEditPanel visibility target options", () => {
   it("groups system targets first and variables by folder order", () => {
@@ -173,6 +173,99 @@ describe("layoutEditPanel visibility condition dialog", () => {
     });
     // Clearing the target removes the visibility condition.
     expect(visibilityTarget.required).toBe(false);
+  });
+});
+
+describe("layoutEditPanel condition dialogs in another language", () => {
+  const CONSTANTS = yaml.load(
+    readFileSync(
+      new URL(
+        "../../src/components/layoutEditPanel/layoutEditPanel.constants.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const selectFrenchViewData = () => {
+    const state = createInitialState();
+    setValues({ state }, { values: { id: "text-1", type: "text" } });
+    setVariablesData(
+      { state },
+      {
+        variablesData: {
+          items: {
+            hasKey: {
+              id: "hasKey",
+              type: "variable",
+              name: "Has Key",
+              variableType: "boolean",
+            },
+            score: {
+              id: "score",
+              type: "variable",
+              name: "Score",
+              variableType: "number",
+            },
+            playerName: {
+              id: "playerName",
+              type: "variable",
+              name: "Player Name",
+              variableType: "string",
+            },
+          },
+          tree: [{ id: "hasKey" }, { id: "score" }, { id: "playerName" }],
+        },
+      },
+    );
+    return selectViewData({
+      state,
+      props: { itemType: "text" },
+      constants: CONSTANTS,
+      i18n: FR_I18N,
+    });
+  };
+
+  it("names each target's type and asks for a target in the app's language", () => {
+    const viewData = selectFrenchViewData();
+
+    for (const form of [
+      viewData.visibilityConditionDialogForm,
+      viewData.conditionalOverrideConditionForm,
+    ]) {
+      const target = form.fields.find((field) => field.name === "target");
+      const suffixByValue = Object.fromEntries(
+        target.options
+          .filter((option) => option.type !== "section")
+          .map((option) => [option.value, option.suffixText]),
+      );
+
+      expect(target.placeholder).toBe("Sélectionnez une cible");
+      expect(suffixByValue).toMatchObject({
+        [toVariableConditionTarget("hasKey")]: "booléen",
+        [toVariableConditionTarget("score")]: "nombre",
+        [toVariableConditionTarget("playerName")]: "texte",
+        "dialogue.characterId": "personnage",
+      });
+    }
+  });
+
+  it("asks for a condition's attribute and text style in the app's language", () => {
+    const { fields } = selectFrenchViewData().conditionalOverrideAttributeForm;
+
+    expect(fields.find((field) => field.name === "fieldName").placeholder).toBe(
+      "Sélectionnez un attribut",
+    );
+    expect(
+      fields.find((field) => field.name === "textStyleId").placeholder,
+    ).toBe("Sélectionnez un style de texte");
+  });
+
+  it("asks for a text style in the app's language when the element has none", () => {
+    const textStyleSelect = selectFrenchViewData()
+      .config.sections.find((section) => section.id === "textStyles")
+      .items.find((item) => item.name === "textStyleId");
+
+    expect(textStyleSelect.placeholder).toBe("Sélectionnez un style de texte");
   });
 });
 

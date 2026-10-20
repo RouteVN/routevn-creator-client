@@ -34,7 +34,7 @@ template:
               - 'rtgl-button#backButton sq pre=chevronLeft v=ol aria-label="${charactersLabel}" title="${charactersLabel}"': null
               - rtgl-text ellipsis: ${characterName}
           - $if showGroupTabs:
-              - rtgl-tabs#groupTabs :items=${groupTabs} selected-tab=${selectedGroupId}: null
+              - 'rtgl-tabs#groupTabs aria-label="${groupTabsLabel}" :items=${groupTabs} selected-tab=${selectedGroupId}': null
         $else:
           - rtgl-view d=h av=c h=32 w=f:
               - rtgl-text: ${charactersLabel}

@@ -13,6 +13,7 @@ import {
   selectViewData,
   startKeyframeMove,
 } from "../../src/components/keyframeTimeline/keyframeTimeline.store.js";
+import { FR_I18N } from "../support/i18n.js";
 
 describe("keyframeTimeline easing curves", () => {
   const readPathPoints = (path) => {
@@ -895,25 +896,28 @@ describe("keyframeTimeline easing curves", () => {
   });
 
   it("shows the committed playhead time in the ruler", () => {
-    const viewData = selectViewData({
-      state: createInitialState(),
-      props: {
-        indicatorVisible: true,
-        indicatorTimeMs: 500,
-        showRuler: true,
-        timelineDuration: 1000,
-        properties: {
-          x: {
-            keyframes: [{ duration: 1000, value: 10 }],
-          },
+    const props = {
+      indicatorVisible: true,
+      indicatorTimeMs: 500,
+      showRuler: true,
+      timelineDuration: 1000,
+      properties: {
+        x: {
+          keyframes: [{ duration: 1000, value: 10 }],
         },
       },
-    });
+    };
+    const viewData = selectViewData({ state: createInitialState(), props });
 
     expect(viewData.rulerIndicatorVisible).toBe(true);
-    expect(viewData.playheadIndicatorTimeLabel).toBe("500 ms");
+    expect(viewData.playheadIndicatorTimeLabel).toBe("500ms");
     expect(viewData.playheadIndicatorLabelStyle).toContain("top: 4px");
     expect(viewData.playheadIndicatorLabelStyle).toContain("z-index: 10");
+    // The time takes its unit from the locale's dateTime catalog.
+    expect(
+      selectViewData({ state: createInitialState(), props, i18n: FR_I18N })
+        .playheadIndicatorTimeLabel,
+    ).toBe("500\u00a0ms");
   });
 
   it("uses the resize cursor only for an interactive ruler", () => {

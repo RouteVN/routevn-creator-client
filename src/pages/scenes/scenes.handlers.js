@@ -1,4 +1,5 @@
 import { defer } from "rxjs";
+import { getResourcePageErrorMessage } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { generateId, generatePrefixedId } from "../../internal/id.js";
 import {
   createCollabRemoteRefreshStream,
@@ -30,14 +31,9 @@ const WHITEBOARD_CONNECTIONS_HYDRATION_FRAME_COUNT = 4;
 const SCENE_OVERVIEW_HYDRATION_FRAME_COUNT = 8;
 const SCENE_OVERVIEW_IDLE_TIMEOUT_MS = 4000;
 
-const getProjectErrorMessage = (result, fallbackMessage) => {
-  return (
-    result?.error?.message ||
-    result?.error?.creatorModelError?.message ||
-    result?.message ||
-    fallbackMessage
-  );
-};
+// The localized message leads; the failure's own text follows as details.
+const getProjectErrorMessage = (appService, errorOrResult, fallbackMessage) =>
+  getResourcePageErrorMessage({ appService, errorOrResult, fallbackMessage });
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const toFiniteNumberOr = (value, fallback) =>
@@ -1268,6 +1264,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     } catch (error) {
       appService.showAlert({
         message: getProjectErrorMessage(
+          appService,
           error,
           copy.failedCreateScene ?? "Failed to create scene.",
         ),
@@ -1482,6 +1479,7 @@ export const handleEditFormAction = async (deps, payload) => {
   if (updateResult?.valid === false) {
     appService.showAlert({
       message: getProjectErrorMessage(
+        appService,
         updateResult,
         editItemType === "folder"
           ? (copy.failedUpdateFolder ?? "Failed to update folder.")

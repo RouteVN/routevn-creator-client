@@ -1,3 +1,4 @@
+import { formatDimensions } from "../../internal/dates.js";
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
@@ -7,12 +8,12 @@ import { selectVideosPageCopy } from "./support/videosPageCopy.js";
 
 const VIDEO_TAG_SCOPE_KEY = "videos";
 
-const formatDimensions = (item) => {
+const formatVideoDimensions = (item, dateTime) => {
   if (!item?.width || !item?.height) {
     return "";
   }
 
-  return `${item.width} × ${item.height}`;
+  return formatDimensions(item.width, item.height, dateTime);
 };
 
 const formatDuration = (duration, copy) => {
@@ -67,7 +68,7 @@ const buildDetailFields = (item, { copy, dateTime } = {}) => {
     {
       type: "text",
       label: copy.dimensionsLabel,
-      value: formatDimensions(item),
+      value: formatVideoDimensions(item, dateTime),
     },
     {
       type: "text",

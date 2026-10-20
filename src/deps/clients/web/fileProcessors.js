@@ -162,35 +162,40 @@ export const getVideoDimensions = (file) => {
   });
 };
 
+// Image validations return a code and the values its message needs, so the
+// caller can word the message in the app language.
 export const validateIconDimensions = async (file) => {
   const dimensions = await getImageDimensions(file);
 
   if (!dimensions) {
     return {
       isValid: false,
-      message: "Unable to read image dimensions",
+      code: "image-unreadable",
     };
   }
 
+  const { width, height } = dimensions;
+
   // Check if image is square
-  if (dimensions.width !== dimensions.height) {
+  if (width !== height) {
     return {
       isValid: false,
-      message: `Image must be square. Current size: ${dimensions.width}x${dimensions.height}`,
+      code: "image-not-square",
+      values: { width, height },
     };
   }
 
   // Check minimum size
-  if (dimensions.width < 64 || dimensions.height < 64) {
+  if (width < 64 || height < 64) {
     return {
       isValid: false,
-      message: `Image size must be at least 64x64 pixels. Current size: ${dimensions.width}x${dimensions.height}`,
+      code: "image-too-small",
+      values: { minWidth: 64, minHeight: 64, width, height },
     };
   }
 
   return {
     isValid: true,
-    message: null,
   };
 };
 
@@ -203,20 +208,22 @@ export const validateImageMinimumDimensions = async (
   if (!dimensions) {
     return {
       isValid: false,
-      message: "Unable to read image dimensions",
+      code: "image-unreadable",
     };
   }
 
-  if (dimensions.width < minWidth || dimensions.height < minHeight) {
+  const { width, height } = dimensions;
+
+  if (width < minWidth || height < minHeight) {
     return {
       isValid: false,
-      message: `Image size must be at least ${minWidth}x${minHeight} pixels. Current size: ${dimensions.width}x${dimensions.height}`,
+      code: "image-too-small",
+      values: { minWidth, minHeight, width, height },
     };
   }
 
   return {
     isValid: true,
-    message: null,
   };
 };
 

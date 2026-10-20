@@ -28,6 +28,7 @@ import {
   setUiConfig,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
 import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
+import { FR_I18N } from "../support/i18n.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -590,6 +591,38 @@ describe("commandLineBackground.store", () => {
     ]);
   });
 
+  it("writes the custom transform's numbers as the locale does", () => {
+    const state = createInitialState();
+    setCustomTransform(
+      { state },
+      {
+        transform: {
+          x: 100,
+          y: 120,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          scaleX: 1.25,
+          scaleY: 1.5,
+          rotation: -12.5,
+          originX: 320,
+          originY: 180,
+        },
+      },
+    );
+
+    expect(
+      selectViewDataBase({ state, i18n: FR_I18N }).customTransformDetails.map(
+        (item) => item.value,
+      ),
+    ).toEqual([
+      "100\u202f; 120",
+      "1,25\u00a0×\u00a01,5",
+      "0,5\u202f; 0,5",
+      "-12,5°",
+      "320\u202f; 180",
+    ]);
+  });
+
   it("uses a selected background opacity when provided", () => {
     const state = createInitialState();
 
@@ -804,7 +837,7 @@ describe("commandLineBackground.store", () => {
         {
           name: "colorId",
           type: "select",
-          noClear: true,
+          clearable: false,
           required: true,
           placeholder: "Select color",
           options: [

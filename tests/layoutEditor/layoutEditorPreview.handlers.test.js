@@ -10,6 +10,7 @@ import {
   setLayoutState,
   setRepositoryState,
 } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const EMPTY_COLLECTION = {
   items: {},
@@ -193,9 +194,9 @@ describe("layoutEditorPreview.handleOnUpdate", () => {
     deps.store.setLayoutState = (payload) =>
       previewStore.setLayoutState({ state }, payload);
     deps.store.selectPreviewData = () =>
-      previewStore.selectPreviewData({ state });
+      previewStore.selectPreviewData({ state, i18n: EN_I18N });
     deps.store.hydratePreviewState = vi.fn((payload) =>
-      previewStore.hydratePreviewState({ state }, payload),
+      previewStore.hydratePreviewState({ state, i18n: EN_I18N }, payload),
     );
     deps.store.hydratePreviewState({
       previewData: { backgroundImageId: "image-one" },

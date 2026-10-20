@@ -11,6 +11,7 @@ import {
   handleOnUpdate,
 } from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.handlers.js";
 import * as canvasStore from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.store.js";
+import { EN_I18N } from "../support/i18n.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -227,6 +228,7 @@ const createDeps = ({ selectedItemId } = {}) => {
         getBoundingClientRect: () => canvasBounds,
       },
     },
+    i18n: EN_I18N,
     graphicsService: {
       hitTestElementBounds: vi.fn(createNestedContentHits),
       render: vi.fn(),

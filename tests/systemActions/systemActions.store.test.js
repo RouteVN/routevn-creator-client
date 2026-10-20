@@ -296,6 +296,59 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("joins a scene and its section with the catalog's separator", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Opening",
+                sections: {
+                  items: {
+                    "section-2": {
+                      id: "section-2",
+                      type: "section",
+                      name: "Arrival",
+                    },
+                  },
+                  tree: [{ id: "section-2" }],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+    const copy = selectCommandLineCopy(FR_I18N);
+
+    const { preview } = selectActionsData({
+      state,
+      props: {
+        currentSceneId: "scene-2",
+        actions: {
+          sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+          resetStoryAtSection: { sectionId: "section-2" },
+        },
+      },
+      copy,
+      dateTime: FR_I18N.dateTime,
+    });
+
+    expect(preview.sectionTransition.label).toBe("Opening\u00a0– Arrival");
+    expect(preview.resetStoryAtSection.label).toBe(
+      copy["Reset story at {target}"].replace(
+        "{target}",
+        "Opening\u00a0– Arrival",
+      ),
+    );
+  });
+
   it("preserves and previews screen transition actions", () => {
     const state = createInitialState();
 

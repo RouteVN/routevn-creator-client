@@ -1,9 +1,17 @@
-export const createChoicePreviewItems = (choicesData = {}) => {
+import {
+  DEFAULT_PREVIEW_SAMPLE_TEXT,
+  formatSampleLine,
+} from "./layoutEditorPreviewSampleText.js";
+
+export const createChoicePreviewItems = (
+  choicesData = {},
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
   const choiceItems = Array.isArray(choicesData.items) ? choicesData.items : [];
 
   return choiceItems.map((choice, index) => {
     return {
-      content: choice?.content ?? `Choice ${index + 1}`,
+      content: choice?.content ?? formatSampleLine(sampleText.choice, index),
       events: {
         click: {
           actions: {},
@@ -13,7 +21,10 @@ export const createChoicePreviewItems = (choicesData = {}) => {
   });
 };
 
-export const createChoiceFormDefaultValues = (choiceDefaultValues = {}) => {
+export const createChoiceFormDefaultValues = (
+  choiceDefaultValues = {},
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
   const choicesNum = Number(choiceDefaultValues.choicesNum);
   const choiceCount =
     Number.isFinite(choicesNum) && choicesNum > 0 ? choicesNum : 0;
@@ -23,7 +34,8 @@ export const createChoiceFormDefaultValues = (choiceDefaultValues = {}) => {
 
   for (let index = 0; index < choiceCount; index += 1) {
     defaultValues[`choice${index}`] =
-      choiceDefaultValues.choices?.[index] ?? `Choice ${index + 1}`;
+      choiceDefaultValues.choices?.[index] ??
+      formatSampleLine(sampleText.choice, index);
   }
 
   return defaultValues;

@@ -1,3 +1,4 @@
+import { formatNumber } from "../../internal/dates.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
@@ -458,6 +459,7 @@ export const selectFolderById = ({ state }, { folderId } = {}) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectTextStylesPageCopy(i18n);
+  const { dateTime } = i18n;
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.textStylesData),
   );
@@ -640,8 +642,9 @@ export const selectViewData = ({ state, i18n }) => {
       {
         type: "text",
         label: copy.outlineThicknessLabel ?? "Outline Thickness",
-        value: String(
+        value: formatNumber(
           selectedItem.strokeColorId ? (selectedItem.strokeWidth ?? 0) : 0,
+          dateTime,
         ),
       },
       {
@@ -652,12 +655,12 @@ export const selectViewData = ({ state, i18n }) => {
       {
         type: "text",
         label: copy.fontSizeLabel ?? "Font Size",
-        value: String(selectedItem.fontSize ?? ""),
+        value: formatNumber(selectedItem.fontSize, dateTime),
       },
       {
         type: "text",
         label: copy.lineHeightLabel ?? "Line Height",
-        value: String(selectedItem.lineHeight ?? ""),
+        value: formatNumber(selectedItem.lineHeight, dateTime),
       },
       {
         type: "text",
@@ -675,22 +678,22 @@ export const selectViewData = ({ state, i18n }) => {
         {
           type: "text",
           label: copy.shadowOpacityLabel ?? "Shadow Opacity",
-          value: String(selectedItem.shadow.alpha ?? 1),
+          value: formatNumber(selectedItem.shadow.alpha ?? 1, dateTime),
         },
         {
           type: "text",
           label: copy.shadowBlurLabel ?? "Shadow Blur",
-          value: String(selectedItem.shadow.blur ?? 0),
+          value: formatNumber(selectedItem.shadow.blur ?? 0, dateTime),
         },
         {
           type: "text",
           label: copy.shadowOffsetXLabel ?? "Shadow Offset X",
-          value: String(selectedItem.shadow.offsetX ?? 2),
+          value: formatNumber(selectedItem.shadow.offsetX ?? 2, dateTime),
         },
         {
           type: "text",
           label: copy.shadowOffsetYLabel ?? "Shadow Offset Y",
-          value: String(selectedItem.shadow.offsetY ?? 2),
+          value: formatNumber(selectedItem.shadow.offsetY ?? 2, dateTime),
         },
       );
     }

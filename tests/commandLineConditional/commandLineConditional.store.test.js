@@ -510,4 +510,15 @@ describe("commandLineConditional.store", () => {
       "branch-default",
     ]);
   });
+
+  it("shows a cleared operator with a placeholder in the app's language", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state, i18n: EN_I18N }).operatorPlaceholder).toBe(
+      "Select an option",
+    );
+    expect(selectViewData({ state, i18n: FR_I18N }).operatorPlaceholder).toBe(
+      "Sélectionnez une option",
+    );
+  });
 });

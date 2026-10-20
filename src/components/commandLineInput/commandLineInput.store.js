@@ -29,6 +29,7 @@ const FORM_TEMPLATE = {
       label: "Input Layout",
       required: true,
       clearable: false,
+      placeholder: "Choose a layout...",
       options: "${layoutOptions}",
     },
     {
@@ -543,7 +544,7 @@ const getFieldRowSummary = (row, variableLabel, copy) => {
     );
   }
 
-  return summary.join(" - ");
+  return summary.join(copy.inputFieldSummarySeparator);
 };
 
 const createFieldDisplayRows = (fieldRows = [], variableOptions = [], copy) => {

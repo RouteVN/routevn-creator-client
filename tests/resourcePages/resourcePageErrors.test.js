@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { runResourcePageMutation } from "../../src/internal/ui/resourcePages/resourcePageErrors.js";
-import { ES_I18N, EN_I18N } from "../support/i18n.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../src/internal/ui/resourcePages/resourcePageErrors.js";
+import { ES_I18N, EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const runFailingMutation = async (action, copy = EN_I18N.appPage) => {
   const appService = {
@@ -92,6 +95,52 @@ describe("runResourcePageMutation", () => {
     expect(ES_I18N.appPage.storageFullMessage).not.toBe(
       EN_I18N.appPage.storageFullMessage,
     );
+  });
+
+  it("leads with the localized message and shows the thrown error as details", async () => {
+    const appService = await runFailingMutation(async () => {
+      throw new TypeError("Cannot read properties of undefined");
+    }, FR_I18N.appPage);
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: `Failed to update resource.\n\n${FR_I18N.appPage.errorDetailsLabel}\nTypeError: Cannot read properties of undefined`,
+      title: FR_I18N.appPage.errorTitle,
+    });
+    expect(FR_I18N.appPage.errorTitle).not.toBe(EN_I18N.appPage.errorTitle);
+  });
+
+  it("shows the reason of a refused result as details", async () => {
+    const appService = await runFailingMutation(async () => ({
+      valid: false,
+      error: {
+        code: "precondition_validation_failed",
+        message: "payload.parentId must reference a folder variable item",
+      },
+    }));
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message:
+        "Failed to update resource.\n\nDetails:\npayload.parentId must reference a folder variable item",
+      title: "Error",
+    });
+  });
+
+  it("shows only the localized message when there is no error", () => {
+    const appService = {
+      showAlert: vi.fn(),
+      getAppCopy: () => FR_I18N.appPage,
+    };
+
+    showResourcePageError({
+      appService,
+      fallbackMessage: FR_I18N.charactersPage.failedUploadAvatarImage,
+      title: FR_I18N.resourcePages.warningTitle,
+    });
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: FR_I18N.charactersPage.failedUploadAvatarImage,
+      title: FR_I18N.resourcePages.warningTitle,
+    });
   });
 
   it("explains a full device found in a refused result", async () => {

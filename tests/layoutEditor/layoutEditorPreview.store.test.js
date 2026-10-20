@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 import {
   applyImageSelectorSelection,
   closeImageSelectorDialog,
@@ -10,13 +10,18 @@ import {
   openImageSelectorDialog,
   selectPreviewData,
   selectViewData,
+  setChoiceDefaultValue,
   setDialogueDefaultValue,
+  setHistoryDefaultValue,
   setImageSelectorSelection,
   setLayoutState,
+  setNvlDefaultValue,
   setPreviewInputFieldValue,
   setRepositoryState,
   showImageSelectorCharacters,
 } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
+import { DEFAULT_PREVIEW_SAMPLE_TEXT } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewSampleText.js";
+import { selectLayoutPreviewSampleText } from "../../src/internal/ui/layoutPreviewSampleText.js";
 
 const EMPTY_COLLECTION = {
   items: {},
@@ -319,12 +324,12 @@ describe("layoutEditorPreview.store", () => {
         fieldValue: "transform-1",
       },
     );
-    const previewData = selectPreviewData({ state });
+    const previewData = selectPreviewData({ state, i18n: EN_I18N });
     expect(previewData.dialogue.character.sprite).toEqual({
       transformId: "transform-1",
       items: [{ id: "base", resourceId: "sprite-1" }],
     });
-    hydratePreviewState({ state }, { previewData });
+    hydratePreviewState({ state, i18n: EN_I18N }, { previewData });
     expect(state.dialogueDefaultValues).toMatchObject({
       "dialogue-character-sprite-id": "sprite-1",
       "dialogue-character-sprite-transform-id": "transform-1",
@@ -334,15 +339,16 @@ describe("layoutEditorPreview.store", () => {
       { name: "dialogue-character-sprite-id", fieldValue: undefined },
     );
     expect(
-      selectPreviewData({ state }).dialogue.character.sprite.items,
+      selectPreviewData({ state, i18n: EN_I18N }).dialogue.character.sprite
+        .items,
     ).toEqual([]);
     setDialogueDefaultValue(
       { state },
       { name: "dialogue-character-sprite-transform-id", fieldValue: undefined },
     );
-    expect(selectPreviewData({ state }).dialogue.character).not.toHaveProperty(
-      "sprite",
-    );
+    expect(
+      selectPreviewData({ state, i18n: EN_I18N }).dialogue.character,
+    ).not.toHaveProperty("sprite");
   });
 
   const getNamedFieldNames = (form) => {
@@ -592,7 +598,7 @@ describe("layoutEditorPreview.store", () => {
         placeholder: "Code",
       },
     ]);
-    expect(selectPreviewData({ state }).form.values).toEqual({
+    expect(selectPreviewData({ state, i18n: EN_I18N }).form.values).toEqual({
       name: "Mina",
       code: "B42",
     });
@@ -638,4 +644,86 @@ describe("dialogue preview avatar defaults", () => {
       ).toBe(transformId);
     },
   );
+});
+
+describe("layoutEditorPreview sample text", () => {
+  const createDialogueState = (i18n, previewData) => {
+    const state = createInitialState();
+    setLayoutState(
+      { state },
+      {
+        layoutState: {
+          id: "layout-1",
+          layoutType: "dialogue-adv",
+          elements: EMPTY_COLLECTION,
+        },
+      },
+    );
+    hydratePreviewState({ state, i18n }, { previewData });
+    return state;
+  };
+
+  it("fills in what is not saved with sample text in the app's language", () => {
+    const state = createDialogueState(FR_I18N, undefined);
+
+    expect(state.dialogueDefaultValues).toMatchObject({
+      "dialogue-character-name": "Personnage",
+      "dialogue-content": "Voici un exemple de dialogue.",
+    });
+    expect(state.nvlDefaultValues).toEqual({
+      linesNum: 3,
+      characterNames: ["Personnage", "", "Narrateur"],
+      lines: [
+        "Voici la première ligne d’exemple du dialogue NVL.",
+        "Voici la deuxième ligne d’exemple du dialogue NVL.",
+        "Voici la troisième ligne d’exemple du dialogue NVL.",
+      ],
+    });
+    expect(state.choiceDefaultValues.choices).toEqual(["Option 1", "Option 2"]);
+    expect(state.historyDefaultValues.texts).toEqual([
+      "La première ligne de l’historique.",
+      "La deuxième ligne de l’historique.",
+      "La troisième ligne de l’historique.",
+    ]);
+    expect(
+      selectPreviewData({ state, i18n: FR_I18N }).dialogue.lines.map(
+        (line) => line.characterName,
+      ),
+    ).toEqual(["Personnage", undefined, "Narrateur"]);
+  });
+
+  it("keeps the saved preview text in any language", () => {
+    const state = createDialogueState(FR_I18N, {
+      dialogue: {
+        character: { name: "Aki" },
+        content: [{ text: "Saved line" }],
+      },
+    });
+
+    expect(state.dialogueDefaultValues).toMatchObject({
+      "dialogue-character-name": "Aki",
+      "dialogue-content": "Saved line",
+    });
+  });
+
+  it("numbers the lines and choices the user adds in the app's language", () => {
+    const state = createDialogueState(FR_I18N, undefined);
+    const context = { state, i18n: FR_I18N };
+
+    setNvlDefaultValue(context, { name: "linesNum", fieldValue: 4 });
+    setChoiceDefaultValue(context, { name: "choicesNum", fieldValue: 3 });
+    setHistoryDefaultValue(context, { name: "linesNum", fieldValue: 4 });
+
+    expect(state.nvlDefaultValues.lines[3]).toBe(
+      "Voici la ligne d’exemple 4 du dialogue NVL.",
+    );
+    expect(state.choiceDefaultValues.choices[2]).toBe("Option 3");
+    expect(state.historyDefaultValues.texts[3]).toBe("Ligne de l’historique 4");
+  });
+
+  it("keeps the English sample text that thumbnails draw the same as the catalog's", () => {
+    expect(selectLayoutPreviewSampleText(EN_I18N)).toEqual(
+      DEFAULT_PREVIEW_SAMPLE_TEXT,
+    );
+  });
 });

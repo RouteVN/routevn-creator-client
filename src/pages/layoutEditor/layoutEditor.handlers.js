@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { getResourcePageErrorMessage } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { concatMap, debounceTime, filter, from } from "rxjs";
 import {
@@ -93,13 +94,9 @@ const LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS = 1500;
 
 const selectCopy = (deps = {}) => selectLayoutEditorPageCopy(deps.i18n);
 
-const getResultErrorMessage = (result, fallbackMessage) => {
-  return (
-    result?.error?.message ||
-    result?.error?.creatorModelError?.message ||
-    fallbackMessage
-  );
-};
+// The localized message leads; the failure's own text follows as details.
+const getResultErrorMessage = (appService, errorOrResult, fallbackMessage) =>
+  getResourcePageErrorMessage({ appService, errorOrResult, fallbackMessage });
 
 const showLayoutEditorError = ({
   appService,
@@ -1404,6 +1401,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     if (createContainerResult?.valid === false) {
       appService.showAlert({
         message: getResultErrorMessage(
+          appService,
           createContainerResult,
           copy.failedCreateSaveLoadSlot ?? "Failed to create save/load slot.",
         ),
@@ -1423,6 +1421,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     if (createImageResult?.valid === false) {
       appService.showAlert({
         message: getResultErrorMessage(
+          appService,
           createImageResult,
           copy.failedCreateSaveLoadSlotImage ??
             "Failed to create save/load slot image.",
@@ -1443,6 +1442,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     if (createDateResult?.valid === false) {
       appService.showAlert({
         message: getResultErrorMessage(
+          appService,
           createDateResult,
           copy.failedCreateSaveLoadSlotDate ??
             "Failed to create save/load slot date.",
@@ -1539,6 +1539,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     if (createResult?.valid === false) {
       appService.showAlert({
         message: getResultErrorMessage(
+          appService,
           createResult,
           copy.failedCreateFragment ?? "Failed to create fragment.",
         ),
@@ -1668,6 +1669,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     if (createResult?.valid === false) {
       appService.showAlert({
         message: getResultErrorMessage(
+          appService,
           createResult,
           copy.failedCreateSpritesheetAnimation ??
             "Failed to create spritesheet animation.",
@@ -1786,6 +1788,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     if (createResult?.valid === false) {
       appService.showAlert({
         message: getResultErrorMessage(
+          appService,
           createResult,
           copy.failedCreateParticle ?? "Failed to create particle.",
         ),
@@ -1904,6 +1907,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     if (createResult?.valid === false) {
       appService.showAlert({
         message: getResultErrorMessage(
+          appService,
           createResult,
           copy.failedCreateImage ?? "Failed to create image.",
         ),
@@ -2014,6 +2018,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   if (createResult?.valid === false) {
     appService.showAlert({
       message: getResultErrorMessage(
+        appService,
         createResult,
         copy.failedCreateSlider ?? "Failed to create slider.",
       ),

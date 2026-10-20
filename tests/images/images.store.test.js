@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EN_I18N, RU_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, RU_I18N } from "../support/i18n.js";
 import {
   clearFullImagePreviewSuppressNextClick,
   clearFullImagePreviewTouchStartPoint,
@@ -445,6 +445,31 @@ describe("images store preview navigation", () => {
     );
     expect(viewData.fullImagePreviewCanvasModeButton.selected).toBe(true);
     expect(viewData.fullImagePreviewFitModeButton.selected).toBe(false);
+  });
+
+  it("writes the image's dimensions as the locale does", () => {
+    const context = createContext();
+    setItems(context, {
+      data: {
+        tree: [{ id: "image-1" }],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Image One",
+            fileId: "image-file",
+            width: 1920,
+            height: 1080,
+          },
+        },
+      },
+    });
+    setSelectedItemId(context, { itemId: "image-1" });
+    const dimensions = (i18n) =>
+      selectViewData({ state: context.state, i18n }).detailFields.at(-1).value;
+
+    expect(dimensions(EN_I18N)).toBe("1920 × 1080");
+    expect(dimensions(FR_I18N)).toBe("1920\u00a0×\u00a01080");
   });
 
   it("sets the full preview display mode", () => {

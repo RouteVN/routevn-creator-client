@@ -1,51 +1,52 @@
 import { createLayoutEditorPreviewData } from "./layoutEditorPreviewData.js";
 import { createPersistedPreviewState } from "./layoutEditorPreviewPersistence.js";
+import {
+  DEFAULT_PREVIEW_SAMPLE_TEXT,
+  formatSampleLine,
+} from "./layoutEditorPreviewSampleText.js";
 import { createSaveLoadPreviewViewData } from "./layoutEditorPreviewSupport.js";
 
 // The values a layout's Preview is set with, and the preview data a layout
 // draws with them. The layout editor's Preview edits them, and a layout's
-// thumbnail is drawn from the saved ones the same way.
+// thumbnail is drawn from the saved ones the same way. `sampleText` is the
+// sample dialogue, lines, and choices shown for what is not set, as
+// `DEFAULT_PREVIEW_SAMPLE_TEXT` describes.
 
 const EMPTY_LAYOUT_DATA = {
   items: {},
   tree: [],
 };
 
-const createDialogueDefaultValues = () => ({
+const createDialogueDefaultValues = (sampleText) => ({
   "dialogue-character-id": undefined,
   "dialogue-custom-character-name": false,
-  "dialogue-character-name": "Character",
+  "dialogue-character-name": sampleText.characterName,
   "dialogue-character-sprite-id": undefined,
   "dialogue-character-sprite-transform-id": undefined,
-  "dialogue-content": "This is a sample dialogue content.",
+  "dialogue-content": sampleText.dialogueContent,
   "dialogue-auto-mode": false,
   "dialogue-skip-mode": false,
   "dialogue-is-line-completed": false,
 });
 
-const createNvlDefaultValues = () => ({
+const createNvlDefaultValues = (sampleText) => ({
   linesNum: 3,
-  characterNames: ["Character", "", "Narrator"],
-  lines: [
-    "This is the first sample NVL line.",
-    "This is the second sample NVL line.",
-    "This is the third sample NVL line.",
+  characterNames: [sampleText.characterName, "", sampleText.narratorName],
+  lines: [...sampleText.nvlLines],
+});
+
+const createChoiceDefaultValues = (sampleText) => ({
+  choicesNum: 2,
+  choices: [
+    formatSampleLine(sampleText.choice, 0),
+    formatSampleLine(sampleText.choice, 1),
   ],
 });
 
-const createChoiceDefaultValues = () => ({
-  choicesNum: 2,
-  choices: ["Choice 1", "Choice 2"],
-});
-
-const createHistoryDefaultValues = () => ({
+const createHistoryDefaultValues = (sampleText) => ({
   linesNum: 3,
   characterNames: ["Aki", "Mina", ""],
-  texts: [
-    "The first history line.",
-    "The second history line.",
-    "The third history line.",
-  ],
+  texts: [...sampleText.historyLines],
 });
 
 const createSaveLoadDefaultValues = () => ({
@@ -55,12 +56,14 @@ const createSaveLoadDefaultValues = () => ({
 });
 
 // The Preview's values before anything is set.
-export const createDefaultPreviewValues = () => ({
-  dialogueDefaultValues: createDialogueDefaultValues(),
-  nvlDefaultValues: createNvlDefaultValues(),
+export const createDefaultPreviewValues = (
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => ({
+  dialogueDefaultValues: createDialogueDefaultValues(sampleText),
+  nvlDefaultValues: createNvlDefaultValues(sampleText),
   previewRevealingSpeed: 50,
-  choiceDefaultValues: createChoiceDefaultValues(),
-  historyDefaultValues: createHistoryDefaultValues(),
+  choiceDefaultValues: createChoiceDefaultValues(sampleText),
+  historyDefaultValues: createHistoryDefaultValues(sampleText),
   saveLoadDefaultValues: createSaveLoadDefaultValues(),
   previewVariableValues: {},
   previewInputFieldValues: {},
@@ -78,8 +81,11 @@ const SAVED_VALUE_KEYS = [
 
 // The Preview's values for saved preview data: what it saved, and the
 // defaults for the rest.
-export const createSavedPreviewValues = (previewData) => {
-  const values = createDefaultPreviewValues();
+export const createSavedPreviewValues = (
+  previewData,
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
+  const values = createDefaultPreviewValues(sampleText);
   const persistedPreviewState = createPersistedPreviewState(previewData);
   for (const key of SAVED_VALUE_KEYS) {
     if (persistedPreviewState[key] !== undefined) {
@@ -140,6 +146,7 @@ export const createLayoutPreviewData = ({
   layoutState,
   repositoryState,
   values,
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
 }) => {
   const layout = toLayoutState(layoutState);
   const saveLoadPreviewViewData = createPreviewSaveLoadViewData({
@@ -166,11 +173,12 @@ export const createLayoutPreviewData = ({
     },
     hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
     backgroundImageId: values.previewBackgroundImageId,
+    sampleText,
   });
 };
 
 // The preview data a layout draws with its saved preview data, as the layout
-// editor's Preview shows it when it opens.
+// editor's Preview shows it when it opens, with the English sample text.
 export const createSavedLayoutPreviewData = ({
   layoutState,
   repositoryState,

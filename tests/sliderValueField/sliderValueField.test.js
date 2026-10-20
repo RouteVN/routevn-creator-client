@@ -11,7 +11,7 @@ import {
   handleSubmitClick,
   handleValueClick,
 } from "../../src/components/sliderValueField/sliderValueField.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 import { renderViewYaml } from "../support/renderView.js";
 
 const TEMPLATE = "src/components/sliderValueField/sliderValueField.view.yaml";
@@ -23,7 +23,7 @@ const FIELD = {
   min: 8,
   max: 400,
   range: { min: 8, max: 128 },
-  unit: "px",
+  unit: "pixels",
   presets: [
     { label: "12 px", value: 12 },
     { label: "24 px", value: 24 },
@@ -116,6 +116,22 @@ describe("rvn-slider-value-field", () => {
       expect(valueButton).toContain(attribute);
     }
     expect(html).toContain(">24 px<");
+  });
+
+  it("shows its value and unit as the locale writes them", () => {
+    const valueText = (i18n, props) =>
+      fieldStore.selectViewData({
+        state: fieldStore.createInitialState(),
+        props,
+        i18n,
+      }).valueText;
+    const seconds = { ...FIELD, unit: "seconds" };
+    const plain = { ...FIELD, unit: undefined };
+
+    expect(valueText(EN_I18N, { value: 1.5, field: seconds })).toBe("1.5 s");
+    expect(valueText(FR_I18N, { value: 1.5, field: seconds })).toBe("1,5 s");
+    expect(valueText(FR_I18N, { value: 24, field: FIELD })).toBe("24 px");
+    expect(valueText(FR_I18N, { value: 0.25, field: plain })).toBe("0,25");
   });
 
   it("opens a slider under the field, from its value, with Presets, four step buttons, and Submit in one row", () => {

@@ -126,7 +126,7 @@ template:
                       - 'rtgl-button#canvasZoomInButton sq pre=zoomIn v=ol ?disabled=${canvasZoomInDisabled} aria-label="${canvasZoomInLabel}" title="${canvasZoomInLabel}"': null
               - $if showMobilePanels:
                   - rtgl-view ml=sm:
-                      - rtgl-tabs#mobilePanelModeTabs s=sm selected-tab=${mobilePanelMode} :items=${mobilePanelModeTabs}: null
+                      - 'rtgl-tabs#mobilePanelModeTabs s=sm aria-label="${editorPanelsLabel}" selected-tab=${mobilePanelMode} :items=${mobilePanelModeTabs}': null
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0; ${canvasWorkspaceStyle}"':
               - 'rvn-zoom-viewport#layoutEditorCanvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls} style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'div style="${canvasWrapperStyle}"':
@@ -176,7 +176,7 @@ template:
               - rtgl-view d=v wh=f slot="content":
                   - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                       - 'rtgl-view w=1fg style="min-width: 0;"':
-                          - rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}: null
+                          - 'rtgl-tabs#rightPanelModeTabs s=sm aria-label="${editorPanelsLabel}" selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}': null
                   - 'rtgl-view d=v w=f h=1fg style="min-height: 0; ${rightPanelEditStyle}"':
                       - $if detailPanelSelectedItemId:
                           - rtgl-view d=v w=f h=f:

@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   formatDate,
+  formatDimensions,
   formatDurationLabel,
   formatElapsedSeconds,
   formatMilliseconds,
+  formatNumber,
+  formatNumberWithUnit,
+  formatPercent,
 } from "../../src/internal/dates.js";
-import { FR_I18N, RU_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, PT_I18N, RU_I18N } from "../support/i18n.js";
 
 const minutesAgo = (minutes) =>
   new Date(Date.now() - minutes * 60 * 1000).toISOString();
@@ -56,6 +60,65 @@ describe("duration formatting", () => {
     expect(formatDurationLabel(1500, FR_I18N.dateTime)).toBe("1,5\u00a0s");
     expect(formatElapsedSeconds(65, FR_I18N.dateTime)).toBe(
       "1\u00a0min 5\u00a0s",
+    );
+  });
+});
+
+describe("formatPercent", () => {
+  it("joins the number and the sign in English", () => {
+    expect(formatPercent(42)).toBe("42%");
+    expect(formatPercent(42, EN_I18N.dateTime)).toBe("42%");
+    expect(formatPercent(1000, EN_I18N.dateTime)).toBe("1000%");
+    expect(formatPercent(112.35, EN_I18N.dateTime)).toBe("112.35%");
+  });
+
+  it("takes the number format and the sign from the dateTime catalog", () => {
+    expect(formatPercent(42, FR_I18N.dateTime)).toBe("42\u00a0%");
+    expect(formatPercent(112.35, FR_I18N.dateTime)).toBe("112,35\u00a0%");
+    expect(formatPercent(1000, FR_I18N.dateTime)).toBe("1000\u00a0%");
+    expect(formatPercent(42, RU_I18N.dateTime)).toBe("42\u00a0%");
+    expect(formatPercent(12.5, PT_I18N.dateTime)).toBe("12,5%");
+  });
+});
+
+describe("number formatting", () => {
+  it("writes a number as String does in English", () => {
+    for (const value of [0, 1.5, 0.25, -180, 1920, 9007199254740991]) {
+      expect(formatNumber(value)).toBe(String(value));
+      expect(formatNumber(value, EN_I18N.dateTime)).toBe(String(value));
+    }
+    expect(formatNumber(0.1 + 0.2)).toBe("0.30000000000000004");
+    expect(formatNumber(-0)).toBe("0");
+    expect(formatNumber(undefined)).toBe("");
+    expect(formatNumber("")).toBe("");
+  });
+
+  it("uses the catalog locale's decimal separator without grouping", () => {
+    expect(formatNumber(1.5, FR_I18N.dateTime)).toBe("1,5");
+    expect(formatNumber(12500, FR_I18N.dateTime)).toBe("12500");
+    expect(formatNumber(-0.25, PT_I18N.dateTime)).toBe("-0,25");
+  });
+
+  it("takes units from the dateTime catalog", () => {
+    expect(formatNumberWithUnit(12, "pixels")).toBe("12 px");
+    expect(formatNumberWithUnit(1.5, "seconds", EN_I18N.dateTime)).toBe(
+      "1.5 s",
+    );
+    expect(formatNumberWithUnit(-45, "degrees", EN_I18N.dateTime)).toBe("-45°");
+    expect(formatNumberWithUnit(1.5, "seconds", FR_I18N.dateTime)).toBe(
+      "1,5\u00a0s",
+    );
+    expect(formatNumberWithUnit(0.5, "pixels", RU_I18N.dateTime)).toBe(
+      "0,5\u00a0px",
+    );
+    expect(formatNumberWithUnit(45, "degrees", FR_I18N.dateTime)).toBe("45°");
+  });
+
+  it("writes dimensions from the dateTime catalog", () => {
+    expect(formatDimensions(1920, 1080)).toBe("1920 × 1080");
+    expect(formatDimensions(1920, 1080, EN_I18N.dateTime)).toBe("1920 × 1080");
+    expect(formatDimensions(1920, 1080, FR_I18N.dateTime)).toBe(
+      "1920\u00a0×\u00a01080",
     );
   });
 });

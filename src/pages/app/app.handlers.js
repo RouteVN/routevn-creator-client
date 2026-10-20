@@ -550,14 +550,16 @@ export const createRouteTransitionRunner = (
       if (isIncompatibleProjectOpenError(error)) {
         await appService.showAlert({
           title: copy.incompatibleProjectTitle ?? "Incompatible Project",
-          message: getProjectOpenErrorMessage(error),
+          message: getProjectOpenErrorMessage(error, copy),
           status: "error",
         });
       } else {
         if (!isProjectStorageUnavailableError(error)) {
           appService.reportError(error, { operation: "route.projectOpen" });
         }
-        appService.showAlert({ message: getProjectOpenErrorMessage(error) });
+        appService.showAlert({
+          message: getProjectOpenErrorMessage(error, copy),
+        });
       }
       appService.redirect("/projects");
       store.setCurrentRoute({ route: "/projects", payload: {} });

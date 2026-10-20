@@ -124,6 +124,19 @@ Do not join a number and a unit in code. `formatFileSize`,
 the unit from `dateTime` catalog templates such as `fileSizeMegabytes` and
 `durationSeconds`, so a locale can write `2,45 Mo` or `250 ms`.
 
+Do not join a number and `%` in code either. `formatPercent` takes the sign
+from `dateTime.percent`, so French and Russian write `42 %` with a
+non-breaking space. Pass the formatted percentage into catalog messages,
+such as `"Loading project... {percent}"`, instead of writing the sign in the
+message.
+
+Do not show a decimal number with `String(value)` either. `formatNumber` in
+`src/internal/dates.js` keeps every decimal but writes the locale's separator,
+such as `1,5` in French. `formatNumberWithUnit` adds a unit from the
+`dateTime` templates `pixels`, `seconds`, and `degrees`, and
+`formatDimensions` writes a width and height from `dateTime.dimensions`, so
+French can put non-breaking spaces around `×`.
+
 Do not join a label and a value with `: ` in code either. French puts a
 non-breaking space before the colon, so use a catalog template such as
 `labelValue: "{label}: {value}"` in `resourcePages` or `resourceImport`.

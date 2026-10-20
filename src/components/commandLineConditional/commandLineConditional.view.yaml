@@ -132,7 +132,7 @@ template:
                               - rtgl-select#variableSelect w=f :selectedValue=${tempBranch.variableId} :options=${variableOptions} placeholder="${variablePlaceholder}": null
                               - $if tempBranch.variableId:
                                   - rtgl-text s=sm c=mu-fg mt=md: ${operatorLabel}
-                                  - rtgl-select#operatorSelect w=f :selectedValue=${tempBranch.op} :options=${operatorOptions}: null
+                                  - rtgl-select#operatorSelect w=f :selectedValue=${tempBranch.op} :options=${operatorOptions} placeholder="${operatorPlaceholder}": null
                               - $if showValueField && valueInputType == 'number':
                                   - rtgl-text s=sm c=mu-fg mt=md: ${valueLabel}
                                   - rtgl-input-number#valueInput w=f placeholder="${valueNumberPlaceholder}" value=${tempBranch.value}: null

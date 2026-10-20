@@ -55,7 +55,7 @@ describe("text style editor view", () => {
     // save on their own, so there is no Save Preview.
     expect(
       count(
-        /rtgl-tabs#rightPanelModeTabs s=sm selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}: null/g,
+        /rtgl-tabs#rightPanelModeTabs s=sm aria-label="\$\{editorPanelsLabel\}" selected-tab=\$\{rightPanelMode\} :items=\$\{rightPanelModeTabs\}': null/g,
       ),
     ).toBe(3);
     expect(view).not.toContain("savePreview");

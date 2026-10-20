@@ -12,7 +12,7 @@ import {
   startEditingField,
   updateEditFieldConfig,
 } from "../../src/components/commandLineInput/commandLineInput.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const inputLayout = {
   id: "profile-form-layout",
@@ -157,6 +157,16 @@ describe("commandLineInput.store", () => {
       "Player Name - Required - Trim - Single line - Placeholder: Full name - Max: 32",
       "Player Code - Optional - Keep whitespace - Single line - Placeholder: Code - Max: 8",
     ]);
+    // French separates the parts with an en dash after a no-break space.
+    const frenchSummary = selectViewData({
+      state,
+      props: {
+        layouts,
+      },
+      i18n: FR_I18N,
+    }).fieldRows[0].summary;
+    expect(frenchSummary.split("\u00a0– ")).toHaveLength(6);
+    expect(frenchSummary).not.toContain(" - ");
     expect(viewData.fieldRows[0]).toMatchObject({
       label: "Name",
       variableId: "playerName",
@@ -401,5 +411,17 @@ describe("commandLineInput.store", () => {
       trim: false,
       placeholder: "Full name",
     });
+  });
+
+  it("asks for the input layout in the app's language until one is chosen", () => {
+    const state = createInitialState();
+
+    const placeholderOf = (i18n) =>
+      selectViewData({ state, props: { layouts: [] }, i18n }).form.fields.find(
+        (field) => field.name === "resourceId",
+      ).placeholder;
+
+    expect(placeholderOf(EN_I18N)).toBe("Choose a layout...");
+    expect(placeholderOf(FR_I18N)).toBe("Choisissez une mise en page…");
   });
 });

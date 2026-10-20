@@ -37,7 +37,8 @@ import {
 import {
   BACKGROUND_TRANSFORM_FIELDS,
   createActionItemWithInlineTransform,
-  formatBackgroundTransformEditorMetric,
+  formatBackgroundTransformEditorPair,
+  formatBackgroundTransformEditorRotation,
   hasInlineTransform,
   normalizeBackgroundTransformEditorTransform,
   removeInlineTransformFields,
@@ -870,29 +871,49 @@ const getSelectedTransformResource = (state, visual = {}) => {
   );
 };
 
-const createCustomTransformDetails = (visual = {}) => {
+const createCustomTransformDetails = (visual = {}, { copy, dateTime } = {}) => {
   const transform = normalizeBackgroundTransformEditorTransform(visual);
+  const formatOptions = { copy, dateTime };
 
   return [
     {
       label: "Position",
-      value: `${formatBackgroundTransformEditorMetric(transform.x)}, ${formatBackgroundTransformEditorMetric(transform.y)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x}, {y}",
+        [transform.x, transform.y],
+        formatOptions,
+      ),
     },
     {
       label: "Scale",
-      value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x} x {y}",
+        [transform.scaleX, transform.scaleY],
+        formatOptions,
+      ),
     },
     {
       label: "Anchor",
-      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x}, {y}",
+        [transform.anchorX, transform.anchorY],
+        formatOptions,
+      ),
     },
     {
       label: "Rotation",
-      value: `${formatBackgroundTransformEditorMetric(transform.rotation)}°`,
+      value: formatBackgroundTransformEditorRotation(
+        transform.rotation,
+        dateTime,
+      ),
     },
     {
       label: "Origin",
-      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x}, {y}",
+        [transform.originX, transform.originY],
+        formatOptions,
+      ),
     },
   ];
 };
@@ -1742,12 +1763,13 @@ export const selectViewData = ({ state, i18n }) => {
         visual.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
       customTransform: hasInlineTransform(visual),
-      customTransformDetails: createCustomTransformDetails(visual).map(
-        (item) => ({
-          ...item,
-          label: localizeCommandLineText(item.label, copy),
-        }),
-      ),
+      customTransformDetails: createCustomTransformDetails(visual, {
+        copy,
+        dateTime: i18n.dateTime,
+      }).map((item) => ({
+        ...item,
+        label: localizeCommandLineText(item.label, copy),
+      })),
       animationId: visual.animations?.resourceId,
       animationPlaybackSpeed: normalizeAnimationPlaybackSpeed(
         visual.animations?.playback?.speed,
@@ -1846,6 +1868,7 @@ export const selectViewData = ({ state, i18n }) => {
     mode: state.mode,
     tab: activeResourceType,
     tabs: localizeCommandLineOptions(tabs, copy),
+    tabsLabel: localizeCommandLineText("Resource types", copy),
     resourceItems,
     resourceGroups,
     selectorEmptyMessage: selectResourceSelectorEmptyMessage({

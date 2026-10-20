@@ -87,7 +87,7 @@ describe("layoutEditor.view", () => {
     expect(explorerBranch).toContain("show-item-menu-actions");
     // Edit and Preview tabs in the header switch the panel under the canvas.
     expect(layoutEditorView).toContain(
-      "rtgl-tabs#mobilePanelModeTabs s=sm selected-tab=${mobilePanelMode} :items=${mobilePanelModeTabs}",
+      'rtgl-tabs#mobilePanelModeTabs s=sm aria-label="${editorPanelsLabel}" selected-tab=${mobilePanelMode} :items=${mobilePanelModeTabs}',
     );
     expect(layoutEditorView).toMatch(
       /mobilePanelModeTabs:\n\s+eventListeners:\n\s+item-click:\n\s+handler: handleMobilePanelModeChange/,
@@ -323,7 +323,7 @@ describe("layoutEditor.view", () => {
       "rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel show-on-touch",
     );
     expect(rightPanel).toContain(
-      "rtgl-tabs#rightPanelModeTabs s=sm selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}",
+      'rtgl-tabs#rightPanelModeTabs s=sm aria-label="${editorPanelsLabel}" selected-tab=${rightPanelMode} :items=${rightPanelModeTabs}',
     );
     // Both bodies stay mounted and are shown or hidden by style, so unsaved
     // preview settings and scroll positions survive switching modes.

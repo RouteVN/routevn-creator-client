@@ -246,7 +246,7 @@ template:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view d=h w=f av=c g=md ph=md style="min-width: 0;"':
               - 'rtgl-view#tabsScroll w=1fg sh style="min-width: 0; overscroll-behavior-x: contain;"':
-                  - 'rtgl-tabs#tabs selected-tab=${tab} :items=${tabs} style="display: block; min-width: max-content;"': null
+                  - 'rtgl-tabs#tabs aria-label="${tabsLabel}" selected-tab=${tab} :items=${tabs} style="display: block; min-width: max-content;"': null
               - $if showInlineSearch:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showSearchButton:

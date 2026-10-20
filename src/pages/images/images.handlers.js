@@ -105,7 +105,7 @@ const pickAndUploadImage = async (deps, copy) => {
 
   const uploadResult = uploadedFiles?.[0];
   if (!uploadResult) {
-    return { error: "upload-failed", errorType: "upload-failed" };
+    return { errorType: "upload-failed" };
   }
 
   return { uploadResult };

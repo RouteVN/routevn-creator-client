@@ -13,7 +13,7 @@ import {
   selectViewData,
   setEffect,
 } from "../../src/pages/particleEditor/particleEditor.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N } from "../support/i18n.js";
 
 const createSnowFormValues = () =>
   buildParticleFormValues({
@@ -115,6 +115,33 @@ describe("particle form", () => {
         value: 400,
         suffixText: "400 px",
       });
+    });
+
+    it("shows units and decimals in the presets as the locale writes them", () => {
+      const presetLabels = (name, dateTime) =>
+        buildParticleSliderValueFields({
+          formValues: buildParticleFormValues({
+            particle: { width: 800, height: 600, modules: {} },
+          }),
+          dateTime,
+        })
+          .find((item) => item.name === name)
+          .field.presets.map((preset) => preset.suffixText ?? preset.label);
+
+      expect(sliderField("lifetimeMin").field.unit).toBe("seconds");
+      expect(sliderField("width").field.unit).toBe("pixels");
+      expect(presetLabels("lifetimeMin", EN_I18N.dateTime)[0]).toBe("0.25 s");
+      expect(presetLabels("directionMin", EN_I18N.dateTime)[0]).toBe("-180°");
+      expect(presetLabels("scaleMin", EN_I18N.dateTime)[4]).toBe("1.5");
+      expect(presetLabels("opacity", EN_I18N.dateTime)[1]).toBe("0.25");
+      expect(presetLabels("sourceX", EN_I18N.dateTime)[2]).toBe("400 px");
+
+      expect(presetLabels("lifetimeMin", FR_I18N.dateTime)[0]).toBe("0,25 s");
+      expect(presetLabels("directionMin", FR_I18N.dateTime)[0]).toBe("-180°");
+      expect(presetLabels("scaleMin", FR_I18N.dateTime)[4]).toBe("1,5");
+      expect(presetLabels("opacity", FR_I18N.dateTime)[1]).toBe("0,25");
+      expect(presetLabels("width", FR_I18N.dateTime)[0]).toBe("256 px");
+      expect(presetLabels("sourceX", FR_I18N.dateTime)[2]).toBe("400 px");
     });
 
     it("keeps opacity between 0 and 1 with percentage steps", () => {

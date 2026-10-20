@@ -46,11 +46,15 @@ const getConditionTargetType = (item = {}) => {
   return String(item.type ?? "string").toLowerCase();
 };
 
-const toConditionTargetOption = (target, item, copy) => ({
-  label: getConditionTargetLabel(target, item.name, copy),
-  value: target,
-  suffixText: getConditionTargetValueKind(item),
-});
+// The target's name, with the type of value it holds after it.
+const toConditionTargetOption = (target, item, options) => {
+  const valueKind = getConditionTargetValueKind(item);
+  return {
+    label: getConditionTargetLabel(target, item.name, options.targetLabelCopy),
+    value: target,
+    suffixText: options.targetTypeLabels?.[valueKind] ?? valueKind,
+  };
+};
 
 const toConditionTargetSection = (label, items) => {
   if (items.length === 0) {
@@ -62,6 +66,18 @@ const toConditionTargetSection = (label, items) => {
 
 const getConditionTargetValueKind = (item = {}) => {
   return String(item.valueKind ?? getConditionTargetType(item)).toLowerCase();
+};
+
+// The names of the value types the targets hold. Variable types use the
+// words the scene editor shows for them.
+export const createConditionTargetTypeLabels = (i18n = {}, copy = {}) => {
+  const variableTypeCopy = i18n.commandLinePage ?? {};
+  return {
+    boolean: variableTypeCopy.boolean,
+    number: variableTypeCopy.number,
+    string: variableTypeCopy.string,
+    character: copy.conditionTargetCharacterType,
+  };
 };
 
 export const getScalarConditionTargetItems = (
@@ -99,9 +115,7 @@ export const toSectionedVisibilityConditionTargetOptions = (
       SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetType(item)),
     )
     .filter(([target]) => isVisibleVisibilityTarget(target))
-    .map(([target, item]) =>
-      toConditionTargetOption(target, item, options.targetLabelCopy),
-    )
+    .map(([target, item]) => toConditionTargetOption(target, item, options))
     .sort((left, right) => left.label.localeCompare(right.label));
 
   const groupedVariableIds = new Set();
@@ -121,7 +135,7 @@ export const toSectionedVisibilityConditionTargetOptions = (
         toConditionTargetOption(
           toVariableConditionTarget(item.id),
           item,
-          options.targetLabelCopy,
+          options,
         ),
       );
 
@@ -138,7 +152,7 @@ export const toSectionedVisibilityConditionTargetOptions = (
       toConditionTargetOption(
         toVariableConditionTarget(variableId),
         item,
-        options.targetLabelCopy,
+        options,
       ),
     );
 
@@ -325,6 +339,7 @@ export const createVisibilityConditionForm = ({
         type: "select",
         label: copy.targetLabel ?? "Target",
         required: false,
+        placeholder: copy.conditionTargetPlaceholder ?? "Select a target",
         searchable: true,
         searchPlaceholder:
           copy.conditionTargetSearchPlaceholder ?? "Search targets...",

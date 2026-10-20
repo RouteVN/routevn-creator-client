@@ -1,3 +1,5 @@
+import { formatPercent } from "../../internal/dates.js";
+
 const VIEWPORT_SIZE = 320;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
@@ -319,7 +321,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
       "pointer-events:none",
     ].join("; "),
     zoomLevel,
-    zoomPercent: Math.round(zoomLevel * 100),
+    zoomLabel: formatPercent(Math.round(zoomLevel * 100), i18n.dateTime),
     minZoom: MIN_ZOOM,
     maxZoom,
     zoomStep: ZOOM_STEP,

@@ -99,7 +99,7 @@ const createAddForm = (copy = {}) => ({
       name: "dialogType",
       type: "segmented-control",
       label: copy.typeLabel ?? "Type",
-      noClear: true,
+      clearable: false,
       required: true,
       options: [
         {
@@ -183,9 +183,10 @@ const createMaskTimelineRows = (item, imagesData, copy = {}) => {
     .filter(Boolean);
 };
 
-const buildCatalogItem = (item, { copy = {}, state } = {}) => {
+const buildCatalogItem = (item, { copy = {}, state, i18n } = {}) => {
   const displayItem = toAnimationDisplayItem(item, {
     cameraLabel: copy.cameraPropertyLabel,
+    dateTime: i18n.dateTime,
   });
   return {
     ...displayItem,

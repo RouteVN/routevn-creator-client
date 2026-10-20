@@ -1,3 +1,4 @@
+import { formatDimensions } from "../../internal/dates.js";
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
@@ -191,7 +192,10 @@ const buildImageDetailFields = (item, copy, dateTime) => {
     {
       type: "text",
       label: copy.dimensionsLabel,
-      value: item.width && item.height ? `${item.width} × ${item.height}` : "",
+      value:
+        item.width && item.height
+          ? formatDimensions(item.width, item.height, dateTime)
+          : "",
     },
   ];
 };
@@ -236,14 +240,21 @@ const buildSpritesheetDetailFields = (item, copy, dateTime) => {
     {
       type: "text",
       label: copy.defaultSizeLabel,
-      value: item.width && item.height ? `${item.width} × ${item.height}` : "",
+      value:
+        item.width && item.height
+          ? formatDimensions(item.width, item.height, dateTime)
+          : "",
     },
     {
       type: "text",
       label: copy.sheetSizeLabel,
       value:
         resolveSheetWidth(item) && resolveSheetHeight(item)
-          ? `${resolveSheetWidth(item)} × ${resolveSheetHeight(item)}`
+          ? formatDimensions(
+              resolveSheetWidth(item),
+              resolveSheetHeight(item),
+              dateTime,
+            )
           : "",
     },
     {

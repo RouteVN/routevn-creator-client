@@ -46,7 +46,7 @@ import {
 import {
   BACKGROUND_TRANSFORM_FIELDS,
   createActionItemWithInlineTransform,
-  formatBackgroundTransformEditorMetric,
+  formatBackgroundTransformEditorPair,
   hasInlineTransform,
   normalizeBackgroundTransformEditorTransform,
   removeInlineTransformFields,
@@ -312,17 +312,25 @@ const getSelectedTransformResource = (state, character = {}) => {
   );
 };
 
-const createCustomTransformDetails = (character = {}) => {
+const createCustomTransformDetails = (character = {}, formatOptions = {}) => {
   const transform = normalizeBackgroundTransformEditorTransform(character);
 
   return [
     {
       label: "Position",
-      value: `${formatBackgroundTransformEditorMetric(transform.x)}, ${formatBackgroundTransformEditorMetric(transform.y)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x}, {y}",
+        [transform.x, transform.y],
+        formatOptions,
+      ),
     },
     {
       label: "Scale",
-      value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x} x {y}",
+        [transform.scaleX, transform.scaleY],
+        formatOptions,
+      ),
     },
   ];
 };
@@ -1645,12 +1653,13 @@ export const selectViewData = ({ state, i18n }) => {
           char.transformId ||
           (transformOptions.length > 0 ? transformOptions[0].value : undefined),
         customTransform: hasInlineTransform(char),
-        customTransformDetails: createCustomTransformDetails(char).map(
-          (item) => ({
-            ...item,
-            label: localizeCommandLineText(item.label, copy),
-          }),
-        ),
+        customTransformDetails: createCustomTransformDetails(char, {
+          copy,
+          dateTime: i18n.dateTime,
+        }).map((item) => ({
+          ...item,
+          label: localizeCommandLineText(item.label, copy),
+        })),
         animationId: char.animations?.resourceId,
         animationPlaybackSpeed: normalizeAnimationPlaybackSpeed(
           char.animations?.playback?.speed,
@@ -1752,6 +1761,7 @@ export const selectViewData = ({ state, i18n }) => {
     }),
     showSpriteGroupTabs: spriteSelectionTabs.length > 1,
     spriteSelectionTabs,
+    spriteGroupTabsLabel: localizeCommandLineText("Sprite Groups", copy),
     selectedSpriteGroupId,
     selectedSpriteGroupName,
     selectedCharacterName,

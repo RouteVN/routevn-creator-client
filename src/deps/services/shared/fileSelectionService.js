@@ -3,11 +3,33 @@ import {
   validateImageMinimumDimensions,
 } from "../../clients/web/fileProcessors.js";
 
-const FILE_VALIDATION_ERROR_TITLE = "Error";
+// The `appPage` catalog key that words each validation failure, with the
+// English text used before the app catalog is available.
+const VALIDATION_MESSAGES = {
+  "image-unreadable": [
+    "filePickerImageUnreadable",
+    "Unable to read image dimensions.",
+  ],
+  "image-not-square": [
+    "filePickerImageNotSquare",
+    "Image must be square. Current size: {width} × {height}.",
+  ],
+  "image-too-small": [
+    "filePickerImageTooSmall",
+    "Image size must be at least {minWidth} × {minHeight} pixels. Current size: {width} × {height}.",
+  ],
+};
+
+const formatValidationMessage = ({ code, values = {} }, copy) => {
+  const [key, fallback] = VALIDATION_MESSAGES[code];
+  return (copy[key] ?? fallback).replace(/\{(\w+)\}/g, (_, name) =>
+    String(values[name]),
+  );
+};
 
 const runFileValidation = async ({ file, validation } = {}) => {
   if (!file || !validation || typeof validation !== "object") {
-    return { isValid: true, message: undefined };
+    return { isValid: true };
   }
 
   if (validation.type === "square") {
@@ -21,7 +43,7 @@ const runFileValidation = async ({ file, validation } = {}) => {
     });
   }
 
-  return { isValid: true, message: undefined };
+  return { isValid: true };
 };
 
 const validatePickedFiles = async ({ files, validations } = {}) => {
@@ -31,16 +53,13 @@ const validatePickedFiles = async ({ files, validations } = {}) => {
   for (const file of fileList) {
     for (const validation of validationList) {
       const result = await runFileValidation({ file, validation });
-      if (!result?.isValid) {
-        return {
-          isValid: false,
-          message: result?.message ?? "Invalid file selected.",
-        };
+      if (!result.isValid) {
+        return result;
       }
     }
   }
 
-  return { isValid: true, message: undefined };
+  return { isValid: true };
 };
 
 const attachUploadState = ({ file, uploadResult } = {}) => {
@@ -65,6 +84,7 @@ export const createFileSelectionService = ({
   filePicker,
   projectService,
   platformAdapter,
+  getAppCopy,
 }) => {
   return {
     async pickFiles(options = {}) {
@@ -97,9 +117,10 @@ export const createFileSelectionService = ({
       });
 
       if (!validationResult.isValid) {
+        const copy = getAppCopy();
         globalUI.showAlert({
-          message: validationResult.message,
-          title: FILE_VALIDATION_ERROR_TITLE,
+          message: formatValidationMessage(validationResult, copy),
+          title: copy.errorTitle ?? "Error",
         });
         return multiple ? [] : null;
       }

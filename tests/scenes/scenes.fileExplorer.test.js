@@ -81,7 +81,7 @@ describe("scenes file explorer", () => {
 
     expect(deps.projectService.createSceneItem).toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "cannot create folder",
+      message: "Failed to create folder.\n\nDetails:\ncannot create folder",
     });
     expect(refresh).not.toHaveBeenCalled();
   });

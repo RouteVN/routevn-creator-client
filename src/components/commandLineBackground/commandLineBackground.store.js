@@ -12,7 +12,8 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import {
-  formatBackgroundTransformEditorMetric,
+  formatBackgroundTransformEditorPair,
+  formatBackgroundTransformEditorRotation,
   normalizeBackgroundTransformEditorTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import {
@@ -913,31 +914,51 @@ const selectResourceById = (
   };
 };
 
-const createCustomTransformDetails = ({ state }) => {
+const createCustomTransformDetails = ({ state, copy, dateTime }) => {
   const transform = normalizeBackgroundTransformEditorTransform(
     state.selectedCustomTransform,
   );
+  const formatOptions = { copy, dateTime };
 
   return [
     {
       label: "Position",
-      value: `${formatBackgroundTransformEditorMetric(transform.x)}, ${formatBackgroundTransformEditorMetric(transform.y)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x}, {y}",
+        [transform.x, transform.y],
+        formatOptions,
+      ),
     },
     {
       label: "Scale",
-      value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x} x {y}",
+        [transform.scaleX, transform.scaleY],
+        formatOptions,
+      ),
     },
     {
       label: "Anchor",
-      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x}, {y}",
+        [transform.anchorX, transform.anchorY],
+        formatOptions,
+      ),
     },
     {
       label: "Rotation",
-      value: `${formatBackgroundTransformEditorMetric(transform.rotation)}°`,
+      value: formatBackgroundTransformEditorRotation(
+        transform.rotation,
+        dateTime,
+      ),
     },
     {
       label: "Origin",
-      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
+      value: formatBackgroundTransformEditorPair(
+        "{x}, {y}",
+        [transform.originX, transform.originY],
+        formatOptions,
+      ),
     },
   ];
 };
@@ -1155,6 +1176,7 @@ export const selectViewData = ({ state, i18n }) => {
       name: "loop",
       label: "Loop Video",
       type: "select",
+      placeholder: "Select an option",
       options: [
         { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
@@ -1177,7 +1199,7 @@ export const selectViewData = ({ state, i18n }) => {
         {
           name: "colorId",
           type: "select",
-          noClear: true,
+          clearable: false,
           required: true,
           placeholder: "Select color",
           options: colorOptions,
@@ -1256,7 +1278,7 @@ export const selectViewData = ({ state, i18n }) => {
               name: "blurKernelSize",
               label: "Kernel Size",
               type: "select",
-              noClear: true,
+              clearable: false,
               required: true,
               options: BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
                 value,
@@ -1269,7 +1291,7 @@ export const selectViewData = ({ state, i18n }) => {
           name: "blurRepeatEdgePixels",
           label: "Repeat Edge Pixels",
           type: "segmented-control",
-          noClear: true,
+          clearable: false,
           options: [
             { value: false, label: "No" },
             { value: true, label: "Yes" },
@@ -1392,6 +1414,7 @@ export const selectViewData = ({ state, i18n }) => {
     mode: state.mode,
     tab: state.tab,
     tabs: localizeCommandLineOptions(tabs, copy),
+    tabsLabel: localizeCommandLineText("Resource types", copy),
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     items: flatItems,
     showImageSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
@@ -1411,12 +1434,14 @@ export const selectViewData = ({ state, i18n }) => {
       state.tempSelectedSpritesheetAnimationName,
     ),
     selectedResource,
-    customTransformDetails: createCustomTransformDetails({ state }).map(
-      (item) => ({
-        ...item,
-        label: localizeCommandLineText(item.label, copy),
-      }),
-    ),
+    customTransformDetails: createCustomTransformDetails({
+      state,
+      copy,
+      dateTime: i18n.dateTime,
+    }).map((item) => ({
+      ...item,
+      label: localizeCommandLineText(item.label, copy),
+    })),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
     fullSpritesheetPreviewVisible: state.fullSpritesheetPreviewVisible,

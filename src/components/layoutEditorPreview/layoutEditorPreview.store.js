@@ -6,6 +6,7 @@ import {
   createPreviewSaveLoadViewData,
   createSavedPreviewValues,
 } from "../../internal/layoutEditorPreview/layoutEditorPreviewValues.js";
+import { formatSampleLine } from "../../internal/layoutEditorPreview/layoutEditorPreviewSampleText.js";
 import {
   createChoiceFormDefaultValues,
   createHistoryFormDefaultValues,
@@ -22,6 +23,7 @@ import { buildCharacterSpritePreviewLayer } from "../../internal/characterSprite
 import { getImageSelectorResources } from "../../internal/imageSelectorResources.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectRuntimeFieldTexts } from "../../internal/ui/runtimeFieldCopy.js";
+import { selectLayoutPreviewSampleText } from "../../internal/ui/layoutPreviewSampleText.js";
 
 const EMPTY_LAYOUT_DATA = {
   items: {},
@@ -38,8 +40,8 @@ const PREVIEW_BACKGROUND_MENU_ITEMS = [
 const DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD = "dialogue-custom-character-name";
 const DIALOGUE_CHARACTER_NAME_FIELD = "dialogue-character-name";
 
-const resetPreviewStateValues = (state) => {
-  Object.assign(state, createDefaultPreviewValues());
+const resetPreviewStateValues = (state, sampleText) => {
+  Object.assign(state, createDefaultPreviewValues(sampleText));
   state.imageSelectorDialog = {
     open: false,
     resourceTarget: "images",
@@ -313,6 +315,8 @@ export const createInitialState = () => ({
   repositoryState: {},
   speakerAvatarUrls: {},
   previewHydrationVersion: 0,
+  // In English until `hydratePreviewState`, which runs before the first
+  // render, fills in the sample text in the app's language.
   ...createDefaultPreviewValues(),
   imageSelectorDialog: {
     open: false,
@@ -347,14 +351,17 @@ export const setSpeakerAvatarUrls = ({ state }, { urls }) => {
   state.speakerAvatarUrls = urls;
 };
 
-export const resetPreviewState = ({ state }, _payload = {}) => {
-  resetPreviewStateValues(state);
+export const resetPreviewState = ({ state, i18n }, _payload = {}) => {
+  resetPreviewStateValues(state, selectLayoutPreviewSampleText(i18n));
   state.previewHydrationVersion += 1;
 };
 
-export const hydratePreviewState = ({ state }, { previewData } = {}) => {
-  resetPreviewStateValues(state);
-  Object.assign(state, createSavedPreviewValues(previewData));
+// What is not saved shows the sample text in the app's language. It is saved
+// with the rest once the user edits the Preview, as the English text was.
+export const hydratePreviewState = ({ state, i18n }, { previewData } = {}) => {
+  const sampleText = selectLayoutPreviewSampleText(i18n);
+  resetPreviewStateValues(state, sampleText);
+  Object.assign(state, createSavedPreviewValues(previewData, sampleText));
   state.previewHydrationVersion += 1;
 };
 
@@ -365,7 +372,10 @@ export const setDialogueDefaultValue = (
   state.dialogueDefaultValues[name] = fieldValue;
 };
 
-export const setNvlDefaultValue = ({ state }, { name, fieldValue } = {}) => {
+export const setNvlDefaultValue = (
+  { state, i18n },
+  { name, fieldValue } = {},
+) => {
   if (/^characterName\d+$/.test(name)) {
     const index = Number.parseInt(name.slice("characterName".length), 10);
     state.nvlDefaultValues.characterNames[index] = fieldValue;
@@ -386,12 +396,12 @@ export const setNvlDefaultValue = ({ state }, { name, fieldValue } = {}) => {
 
   const lines = [];
   const characterNames = [];
+  const { nvlLine } = selectLayoutPreviewSampleText(i18n);
 
   for (let index = 0; index < fieldValue; index += 1) {
     characterNames.push(state.nvlDefaultValues.characterNames[index] ?? "");
     lines.push(
-      state.nvlDefaultValues.lines[index] ||
-        `This is sample NVL line ${index + 1}.`,
+      state.nvlDefaultValues.lines[index] || formatSampleLine(nvlLine, index),
     );
   }
 
@@ -403,7 +413,10 @@ export const setPreviewRevealingSpeed = ({ state }, { value } = {}) => {
   state.previewRevealingSpeed = value;
 };
 
-export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
+export const setChoiceDefaultValue = (
+  { state, i18n },
+  { name, fieldValue } = {},
+) => {
   if (/^choice\d+$/.test(name)) {
     const index = Number.parseInt(name.slice("choice".length), 10);
     state.choiceDefaultValues.choices[index] = fieldValue;
@@ -417,16 +430,18 @@ export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
   }
 
   const choices = [];
+  const { choice } = selectLayoutPreviewSampleText(i18n);
   for (let index = 0; index < fieldValue; index += 1) {
     choices.push(
-      state.choiceDefaultValues.choices[index] || `Choice ${index + 1}`,
+      state.choiceDefaultValues.choices[index] ||
+        formatSampleLine(choice, index),
     );
   }
   state.choiceDefaultValues.choices = choices;
 };
 
 export const setHistoryDefaultValue = (
-  { state },
+  { state, i18n },
   { name, fieldValue } = {},
 ) => {
   if (/^characterName\d+$/.test(name)) {
@@ -449,11 +464,13 @@ export const setHistoryDefaultValue = (
 
   const texts = [];
   const characterNames = [];
+  const { historyLine } = selectLayoutPreviewSampleText(i18n);
 
   for (let index = 0; index < fieldValue; index += 1) {
     characterNames.push(state.historyDefaultValues.characterNames[index] ?? "");
     texts.push(
-      state.historyDefaultValues.texts[index] ?? `History line ${index + 1}`,
+      state.historyDefaultValues.texts[index] ??
+        formatSampleLine(historyLine, index),
     );
   }
 
@@ -668,16 +685,18 @@ export const selectSaveLoadData = ({ state }) => ({
 export const selectHasSaveLoadPreview = ({ state }) =>
   selectSaveLoadPreviewViewData(state).hasSaveLoadPreview;
 
-export const selectPreviewData = ({ state }) =>
+export const selectPreviewData = ({ state, i18n }) =>
   createLayoutPreviewData({
     layoutState: getLayoutState(state),
     repositoryState: state.repositoryState,
     values: state,
+    sampleText: selectLayoutPreviewSampleText(i18n),
   });
 
 export const selectViewData = ({ state, constants, props = {}, i18n }) => {
   const copy = i18n.layoutEditorPage;
   const formTexts = createPreviewFormTexts(i18n);
+  const sampleText = selectLayoutPreviewSampleText(i18n);
   const layoutState = getLayoutState(state);
   const layoutType = layoutState.layoutType;
   const previewHydrationVersion = Number.isFinite(state.previewHydrationVersion)
@@ -850,7 +869,10 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
       previewBackgroundFormTarget === "nvl"
         ? withPreviewBackgroundSlot(nvlForm, backgroundLabel)
         : nvlForm,
-    nvlDefaultValues: createNvlFormDefaultValues(state.nvlDefaultValues),
+    nvlDefaultValues: createNvlFormDefaultValues(
+      state.nvlDefaultValues,
+      sampleText,
+    ),
     nvlContext: {
       characterNames: state.nvlDefaultValues.characterNames,
       lines: state.nvlDefaultValues.lines,
@@ -864,6 +886,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
         : choiceForm,
     choiceDefaultValues: createChoiceFormDefaultValues(
       state.choiceDefaultValues,
+      sampleText,
     ),
     choicesContext: {
       choices: state.choiceDefaultValues.choices,
@@ -876,6 +899,7 @@ export const selectViewData = ({ state, constants, props = {}, i18n }) => {
         : historyForm,
     historyDefaultValues: createHistoryFormDefaultValues(
       state.historyDefaultValues,
+      sampleText,
     ),
     historyContext: {
       characterNames: state.historyDefaultValues.characterNames,

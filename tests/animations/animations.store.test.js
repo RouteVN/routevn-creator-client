@@ -8,7 +8,7 @@ import {
   setProjectResolution,
   setSelectedItemId,
 } from "../../src/pages/animations/animations.store.js";
-import { EN_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
+import { EN_I18N, FR_I18N, JA_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 import { JSDOM } from "jsdom";
 import * as timeline from "../../src/components/keyframeTimeline/keyframeTimeline.store.js";
 import { renderViewYaml } from "../support/renderView.js";
@@ -142,6 +142,14 @@ describe("animations.store", () => {
       );
     },
   );
+
+  it("formats the Camera zoom for the active locale", () => {
+    const display = catalogItem(createCameraItem("update"), FR_I18N);
+    expect(display.updateProperties.camera.keyframes[0]).toMatchObject({
+      startValueLabel: "110 %",
+      valueLabel: "125 %",
+    });
+  });
 
   it("exposes the selected animation preview metadata for the detail panel", () => {
     const state = createInitialState();

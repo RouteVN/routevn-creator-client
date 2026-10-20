@@ -1,4 +1,12 @@
-export const createHistoryLines = (historyDefaultValues = {}) => {
+import {
+  DEFAULT_PREVIEW_SAMPLE_TEXT,
+  formatSampleLine,
+} from "./layoutEditorPreviewSampleText.js";
+
+export const createHistoryLines = (
+  historyDefaultValues = {},
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
   const linesNum = Number(historyDefaultValues.linesNum);
   const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
   const sourceCharacterNames = Array.isArray(
@@ -12,11 +20,14 @@ export const createHistoryLines = (historyDefaultValues = {}) => {
 
   return Array.from({ length: lineCount }, (_unused, index) => ({
     characterName: sourceCharacterNames[index] ?? "",
-    text: sourceTexts[index] ?? `History line ${index + 1}`,
+    text: sourceTexts[index] ?? formatSampleLine(sampleText.historyLine, index),
   }));
 };
 
-export const createHistoryFormDefaultValues = (historyDefaultValues = {}) => {
+export const createHistoryFormDefaultValues = (
+  historyDefaultValues = {},
+  sampleText = DEFAULT_PREVIEW_SAMPLE_TEXT,
+) => {
   const linesNum = Number(historyDefaultValues.linesNum);
   const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
   const defaultValues = {
@@ -27,7 +38,8 @@ export const createHistoryFormDefaultValues = (historyDefaultValues = {}) => {
     defaultValues[`characterName${index}`] =
       historyDefaultValues.characterNames?.[index] ?? "";
     defaultValues[`text${index}`] =
-      historyDefaultValues.texts?.[index] ?? `History line ${index + 1}`;
+      historyDefaultValues.texts?.[index] ??
+      formatSampleLine(sampleText.historyLine, index);
   }
 
   return defaultValues;
