@@ -73,6 +73,7 @@ import {
   selectSceneEditorCopy,
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
+import { mergeSubmittedActions } from "../../internal/navigationActions.js";
 import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import {
   createSceneCanvasFileName,
@@ -2187,7 +2188,47 @@ const openSectionTabDropdown = (deps, event) => {
   render();
 };
 
-const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
+// Submitted actions merge into the line's actions. When they replace the
+// line's navigation actions (see mergeSubmittedActions), a merge could not
+// remove those, so the line's actions are written whole.
+const createLineActionsWrite = (line, actions) => {
+  const lineActions = line?.actions ?? {};
+  const nextActions = mergeSubmittedActions(lineActions, actions);
+  const replace = Object.entries(lineActions).some(
+    ([actionType, action]) =>
+      !Object.hasOwn(actions, actionType) && nextActions[actionType] !== action,
+  );
+  return { data: replace ? nextActions : actions, replace };
+};
+
+// A submitted dialogue is saved after the line's other actions: written
+// whole, those carry the line's dialogue from before the submit. It keeps the
+// line's text unless it brings its own.
+const saveSubmittedDialogue = async (deps, { lineId, dialogue }) => {
+  const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
+  assertSceneEditorCommandResult(
+    await projectService.updateLineDialogueAction({
+      lineId,
+      dialogue,
+      preserve: Object.hasOwn(dialogue, "content")
+        ? undefined
+        : ["dialogue.content"],
+    }),
+    {
+      appService,
+      copy,
+      fallbackMessage:
+        copy.failedSaveDialogueAction ?? "Failed to save dialogue action",
+    },
+  );
+};
+
+const submitSceneEditorCommandLine = async (
+  deps,
+  payload,
+  { lineId, line },
+) => {
   const { store, render, projectService, subject, appService } = deps;
   const copy = selectCopy(deps);
   if (lineId) {
@@ -2216,12 +2257,14 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
       return;
     }
 
+    const { dialogue, ...actions } = safeDetail;
+    const { data, replace } = createLineActionsWrite(line, actions);
     const didSave = await saveLineCommand(async () => {
       assertSceneEditorCommandResult(
         await projectService.updateLineActions({
           lineId,
-          data: safeDetail,
-          replace: false,
+          data,
+          replace,
         }),
         {
           appService,
@@ -2231,6 +2274,9 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
             "Failed to save section transition",
         },
       );
+      if (dialogue) {
+        await saveSubmittedDialogue(deps, { lineId, dialogue });
+      }
     });
     if (!didSave) {
       return;
@@ -2341,36 +2387,17 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
   }
 
   const { dialogue, ...otherActions } = submissionData;
-  const preserveDialogueContent =
-    dialogue && !Object.hasOwn(dialogue, "content")
-      ? ["dialogue.content"]
-      : undefined;
 
   let didSave = false;
   try {
     didSave = await saveLineCommand(async () => {
-      if (dialogue) {
-        assertSceneEditorCommandResult(
-          await projectService.updateLineDialogueAction({
-            lineId,
-            dialogue,
-            preserve: preserveDialogueContent,
-          }),
-          {
-            appService,
-            copy,
-            fallbackMessage:
-              copy.failedSaveDialogueAction ?? "Failed to save dialogue action",
-          },
-        );
-      }
-
       if (Object.keys(otherActions).length > 0) {
+        const { data, replace } = createLineActionsWrite(line, otherActions);
         assertSceneEditorCommandResult(
           await projectService.updateLineActions({
             lineId,
-            data: otherActions,
-            replace: false,
+            data,
+            replace,
           }),
           {
             appService,
@@ -2379,6 +2406,10 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
               copy.failedSaveLineActions ?? "Failed to save line actions",
           },
         );
+      }
+
+      if (dialogue) {
+        await saveSubmittedDialogue(deps, { lineId, dialogue });
       }
     });
   } finally {
@@ -2404,7 +2435,8 @@ export const handleCommandLineSubmit = (deps, payload) =>
   runRecordedLineCommand(
     deps,
     { lineId: resolveActionTargetLineId(deps.store) },
-    ({ lineId }) => submitSceneEditorCommandLine(deps, payload, { lineId }),
+    ({ lineId, line }) =>
+      submitSceneEditorCommandLine(deps, payload, { lineId, line }),
   );
 
 export const handleEditorDataChanged = async (deps, payload) => {

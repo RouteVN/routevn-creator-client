@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { mergeSubmittedActions } from "../../internal/navigationActions.js";
 import {
   localizeCommandLineText,
   selectCommandLineCopy,
@@ -16,13 +17,6 @@ const toPlainObject = (value) => {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
     : {};
-};
-
-const mergeActions = (currentActions, nextActions) => {
-  return {
-    ...toPlainObject(currentActions),
-    ...toPlainObject(nextActions),
-  };
 };
 
 const removeAction = (actions, actionType) => {
@@ -556,7 +550,7 @@ export const handleBranchActionsChange = (deps, payload) => {
   const { store, render } = deps;
 
   store.setTempBranch({
-    actions: mergeActions(
+    actions: mergeSubmittedActions(
       store.selectTempBranchActions(),
       payload._event.detail,
     ),

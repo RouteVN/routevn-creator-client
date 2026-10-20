@@ -157,6 +157,61 @@ describe("handleKeyboardActionsChange", () => {
       },
     });
   });
+
+  it("replaces the key's navigation action with a submitted one", async () => {
+    const updateControlItem = vi.fn(async () => ({}));
+    const deps = {
+      appService: { showAlert: vi.fn() },
+      i18n: EN_I18N,
+      projectService: {
+        updateControlItem,
+        getRepositoryState: () => ({ controls: { items: {}, tree: [] } }),
+      },
+      store: {
+        selectKeyboardEditorPhase: () => "keydown",
+        selectKeyboardEditorKey: () => "enter",
+        selectSelectedItem: () => ({
+          id: "control-1",
+          type: "control",
+          keyboard: {
+            enter: {
+              payload: {
+                actions: {
+                  nextLine: {},
+                  toggleAutoMode: {},
+                },
+              },
+            },
+          },
+        }),
+        closeKeyboardEditor: vi.fn(),
+        setItems: vi.fn(),
+        setTagsData: vi.fn(),
+      },
+      render: vi.fn(),
+      refs: {},
+    };
+
+    await handleKeyboardActionsChange(deps, {
+      _event: { detail: { rollbackByOffset: { offset: -1 } } },
+    });
+
+    expect(updateControlItem).toHaveBeenCalledWith({
+      controlId: "control-1",
+      data: {
+        keyboard: {
+          enter: {
+            payload: {
+              actions: {
+                toggleAutoMode: {},
+                rollbackByOffset: { offset: -1 },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
 });
 
 describe("handleKeyboardItemRightClick", () => {

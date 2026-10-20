@@ -1,5 +1,6 @@
 import { filter } from "rxjs";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
+import { mergeSubmittedActions } from "../../internal/navigationActions.js";
 import {
   HELP_BUTTON_VISIBLE_CONFIG_KEY,
   isHelpButtonVisible,
@@ -37,10 +38,10 @@ const areActionsEqual = (left, right) => {
 };
 
 const mergeActions = (currentActions, nextPartialActions) => {
-  return {
-    ...toPlainObject(currentActions),
-    ...toPlainObject(nextPartialActions),
-  };
+  return mergeSubmittedActions(
+    toPlainObject(currentActions),
+    toPlainObject(nextPartialActions),
+  );
 };
 
 const dispatchTemporaryPresentationStateChange = (
