@@ -11,7 +11,23 @@ const createCollection = (items = {}) => ({
   tree: Object.keys(items).map((id) => ({ id })),
 });
 
-const createRepositoryState = () => ({
+const STYLED_DIALOGUE_CONTENT = [
+  {
+    text: "Styled dialogue",
+    textStyle: {
+      fill: "#b45309",
+    },
+    textStyleSegmentId: "legacy-segment-id",
+  },
+  { text: " and " },
+  { text: "bold", textStyle: { fontWeight: "bold" } },
+  { text: "italic", textStyle: { fontStyle: "italic" } },
+  { text: "underline", textStyle: { textDecoration: "underline" } },
+];
+
+const createRepositoryState = ({
+  dialogueContent = STYLED_DIALOGUE_CONTENT,
+} = {}) => ({
   project: {
     resolution: {
       width: 1920,
@@ -135,22 +151,7 @@ const createRepositoryState = () => ({
                     dialogue: {
                       mode: "adv",
                       gui: { resourceId: "layout-dialogue" },
-                      content: [
-                        {
-                          text: "Styled dialogue",
-                          textStyle: {
-                            fill: "#b45309",
-                          },
-                          textStyleSegmentId: "legacy-segment-id",
-                        },
-                        { text: " and " },
-                        { text: "bold", textStyle: { fontWeight: "bold" } },
-                        { text: "italic", textStyle: { fontStyle: "italic" } },
-                        {
-                          text: "underline",
-                          textStyle: { textDecoration: "underline" },
-                        },
-                      ],
+                      content: dialogueContent,
                     },
                   },
                 },
@@ -165,13 +166,25 @@ const createRepositoryState = () => ({
   }),
 });
 
-const selectCanvasProjectData = () => {
+const selectCanvasProjectData = (options) => {
   const state = createInitialState();
   state.sceneId = "scene-1";
   state.selectedSectionId = "section-1";
   state.selectedLineId = "line-1";
-  state.repositoryState = createRepositoryState();
+  state.repositoryState = createRepositoryState(options);
   return selectProjectData({ state });
+};
+
+const renderDialogueText = (projectData) => {
+  const engine = createRouteEngine({ handlePendingEffects: () => {} });
+  engine.init({ initialState: { global: {}, projectData } });
+  const collectText = (elements) =>
+    elements.flatMap((element) =>
+      element.type === "text-revealing"
+        ? [element]
+        : collectText(element.children ?? []),
+    );
+  return collectText(engine.selectRenderState().elements)[0];
 };
 
 describe("sceneEditorLexical.store selectProjectData", () => {
@@ -197,24 +210,32 @@ describe("sceneEditorLexical.store selectProjectData", () => {
   });
 
   it("renders dialogue run styles through Route Engine", () => {
-    const engine = createRouteEngine({ handlePendingEffects: () => {} });
-    engine.init({
-      initialState: { global: {}, projectData: selectCanvasProjectData() },
-    });
-    const collectText = (elements) =>
-      elements.flatMap((element) =>
-        element.type === "text-revealing"
-          ? [element]
-          : collectText(element.children ?? []),
-      );
-    const [dialogueText] = collectText(engine.selectRenderState().elements);
-
-    expect(dialogueText.content).toEqual([
+    expect(renderDialogueText(selectCanvasProjectData()).content).toEqual([
       { text: "Styled dialogue", textStyle: { fill: "#b45309" } },
       { text: " and " },
       { text: "bold", textStyle: { fontWeight: "bold" } },
       { text: "italic", textStyle: { fontStyle: "italic" } },
       { text: "underline", textStyle: { textDecoration: "underline" } },
+    ]);
+  });
+
+  it("leaves out run styles Route Engine rejects, so the canvas still renders", () => {
+    const projectData = selectCanvasProjectData({
+      dialogueContent: [
+        { text: "Named", textStyle: { fill: "red" } },
+        { text: "Rgb", textStyle: { fill: "rgb(255, 0, 0)" } },
+        { text: "Big", textStyle: { fontSize: 40, fontWeight: "bold" } },
+        { text: "Short", textStyle: { fill: "#abc" } },
+        { text: "Empty", textStyle: null },
+      ],
+    });
+
+    expect(renderDialogueText(projectData).content).toEqual([
+      { text: "Named" },
+      { text: "Rgb" },
+      { text: "Big", textStyle: { fontWeight: "bold" } },
+      { text: "Short", textStyle: { fill: "#aabbcc" } },
+      { text: "Empty" },
     ]);
   });
 });

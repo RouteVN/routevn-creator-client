@@ -20,6 +20,7 @@ import {
   cloneSceneEditorLines,
   overlaySceneWithDraftSections,
 } from "../../internal/ui/sceneEditorLexical/draftSection.js";
+import { cloneTextStyle } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   constructProjectData,
   getSectionPresentation,
@@ -309,20 +310,46 @@ const isPlainObject = (value) => {
   return prototype === Object.prototype || prototype === null;
 };
 
-// Route Engine renders a run's inline textStyle, so the canvas keeps it.
-// textStyleSegmentId is leftover editor metadata that the engine does not use.
-const removeDialogueContentTextStyleSegmentIds = (content) => {
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+// The canvas draws the run styles the editor saves: bold, italic, underline
+// and a hex color. Route Engine rejects any other inline style, and when it
+// rejects the first line, the scene cannot be opened to fix it.
+const toCanvasTextStyle = (textStyle) => {
+  const nextTextStyle = cloneTextStyle(textStyle);
+  if (nextTextStyle?.fill && !HEX_COLOR_PATTERN.test(nextTextStyle.fill)) {
+    delete nextTextStyle.fill;
+  }
+
+  return nextTextStyle && Object.keys(nextTextStyle).length > 0
+    ? nextTextStyle
+    : undefined;
+};
+
+const sanitizeDialogueContentInlineTextStyleMetadata = (content) => {
   if (!Array.isArray(content)) {
     return content;
   }
 
   let changed = false;
   const nextContent = content.map((item) => {
-    if (!isPlainObject(item) || !Object.hasOwn(item, "textStyleSegmentId")) {
+    if (!isPlainObject(item)) {
+      return item;
+    }
+
+    const hasInlineTextStyle = Object.hasOwn(item, "textStyle");
+    const hasTextStyleSegmentId = Object.hasOwn(item, "textStyleSegmentId");
+    if (!hasInlineTextStyle && !hasTextStyleSegmentId) {
       return item;
     }
 
     const nextItem = { ...item };
+    const textStyle = toCanvasTextStyle(item.textStyle);
+    if (textStyle) {
+      nextItem.textStyle = textStyle;
+    } else {
+      delete nextItem.textStyle;
+    }
     delete nextItem.textStyleSegmentId;
 
     changed = true;
@@ -332,7 +359,9 @@ const removeDialogueContentTextStyleSegmentIds = (content) => {
   return changed ? nextContent : content;
 };
 
-const removeSceneDialogueTextStyleSegmentIds = (repositoryState = {}) => {
+const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
+  repositoryState = {},
+) => {
   const sceneItems = repositoryState.scenes?.items;
   if (!isPlainObject(sceneItems)) {
     return repositoryState;
@@ -363,7 +392,7 @@ const removeSceneDialogueTextStyleSegmentIds = (repositoryState = {}) => {
 
       Object.entries(lineItems).forEach(([lineId, line]) => {
         const dialogue = line?.actions?.dialogue;
-        const nextContent = removeDialogueContentTextStyleSegmentIds(
+        const nextContent = sanitizeDialogueContentInlineTextStyleMetadata(
           dialogue?.content,
         );
 
@@ -429,7 +458,7 @@ const removeSceneDialogueTextStyleSegmentIds = (repositoryState = {}) => {
 };
 
 const prepareProjectDataSourceStateForPreview = (repositoryState = {}) => {
-  return removeSceneDialogueTextStyleSegmentIds(repositoryState);
+  return sanitizeSceneDialogueContentInlineTextStyleMetadata(repositoryState);
 };
 
 const getDraftSectionKey = (sceneId, sectionId) => {
