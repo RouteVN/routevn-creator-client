@@ -312,6 +312,7 @@ export const createInitialState = () => ({
   fullImagePreviewSuppressNextClick: false,
   deleteDialogOpen: false,
   deleteDialogItemId: undefined,
+  deletingItemIds: [],
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
 });
 
@@ -448,6 +449,24 @@ export const closeDeleteDialog = ({ state }) => {
 };
 
 export const selectDeleteDialogItemId = ({ state }) => state.deleteDialogItemId;
+
+// An image stays on the page until its delete has finished and the page
+// refreshed, so it can be sent to delete again while the first delete runs.
+export const startDeletingItem = ({ state }, { itemId } = {}) => {
+  if (!state.deletingItemIds.includes(itemId)) {
+    state.deletingItemIds.push(itemId);
+  }
+};
+
+export const finishDeletingItem = ({ state }, { itemId } = {}) => {
+  const index = state.deletingItemIds.indexOf(itemId);
+  if (index >= 0) {
+    state.deletingItemIds.splice(index, 1);
+  }
+};
+
+export const selectIsDeletingItem = ({ state }, { itemId } = {}) =>
+  state.deletingItemIds.includes(itemId);
 
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(

@@ -18,6 +18,12 @@ vi.mock(
 );
 
 import {
+  createInitialState,
+  finishDeletingItem,
+  selectIsDeletingItem,
+  startDeletingItem,
+} from "../../src/pages/images/images.store.js";
+import {
   handleCreateTagFormAction,
   handleCreateTagDialogClose,
   handleDetailTagAddOptionClick,
@@ -43,6 +49,49 @@ import {
 } from "../../src/pages/images/images.handlers.js";
 
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+
+// The delete guard runs on the page store, so these tests use its real
+// actions over a real state.
+const createDeleteGuardStore = (overrides = {}) => {
+  const context = { state: createInitialState() };
+  return {
+    selectDeleteDialogItemId: vi.fn(() => "image-1"),
+    closeDeleteDialog: vi.fn(),
+    selectSelectedItemId: vi.fn(),
+    setSelectedItemId: vi.fn(),
+    setTagsData: vi.fn(),
+    setItems: vi.fn(),
+    setProjectResolution: vi.fn(),
+    startDeletingItem: (payload) => startDeletingItem(context, payload),
+    finishDeletingItem: (payload) => finishDeletingItem(context, payload),
+    selectIsDeletingItem: (payload) => selectIsDeletingItem(context, payload),
+    ...overrides,
+  };
+};
+
+const createEmptyRepositoryState = () => ({
+  images: {
+    tree: [],
+    items: {},
+  },
+  files: {
+    tree: [],
+    items: {},
+  },
+  project: {
+    resolution: {
+      width: 1920,
+      height: 1080,
+    },
+  },
+  tags: {},
+});
+
+const createDeleteAppService = () => ({
+  showAlert: vi.fn(),
+  reportError: vi.fn(),
+  getAppCopy: () => EN_I18N.appPage,
+});
 
 describe("images handlers", () => {
   it("closes the native preview dialog even while a post-swipe click is suppressed", () => {
@@ -505,23 +554,7 @@ describe("images handlers", () => {
 
   it("deletes confirmed images and clears the selection", async () => {
     globalThis.requestAnimationFrame = (callback) => callback();
-    const repositoryState = {
-      images: {
-        tree: [],
-        items: {},
-      },
-      files: {
-        tree: [],
-        items: {},
-      },
-      project: {
-        resolution: {
-          width: 1920,
-          height: 1080,
-        },
-      },
-      tags: {},
-    };
+    const repositoryState = createEmptyRepositoryState();
     let selectedItemId = "image-1";
     const deps = {
       i18n: EN_I18N,
@@ -531,20 +564,13 @@ describe("images handlers", () => {
         })),
         getRepositoryState: vi.fn(() => repositoryState),
       },
-      appService: {
-        showAlert: vi.fn(),
-      },
-      store: {
-        selectDeleteDialogItemId: vi.fn(() => "image-1"),
-        closeDeleteDialog: vi.fn(),
+      appService: createDeleteAppService(),
+      store: createDeleteGuardStore({
         selectSelectedItemId: vi.fn(() => selectedItemId),
         setSelectedItemId: vi.fn(({ itemId }) => {
           selectedItemId = itemId;
         }),
-        setTagsData: vi.fn(),
-        setItems: vi.fn(),
-        setProjectResolution: vi.fn(),
-      },
+      }),
       render: vi.fn(),
       refs: {},
     };
@@ -563,7 +589,7 @@ describe("images handlers", () => {
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 
-  it("shows a failure alert when deleteImageIfUnused fails without usage", async () => {
+  it("alerts with the refusal when deleteImageIfUnused fails without usage", async () => {
     globalThis.requestAnimationFrame = (callback) => callback();
     const deps = {
       i18n: EN_I18N,
@@ -573,15 +599,14 @@ describe("images handlers", () => {
           usage: {
             isUsed: false,
           },
+          deleteResult: {
+            valid: false,
+            error: { message: "payload.imageIds is invalid" },
+          },
         })),
       },
-      appService: {
-        showAlert: vi.fn(),
-      },
-      store: {
-        selectDeleteDialogItemId: vi.fn(() => "image-1"),
-        closeDeleteDialog: vi.fn(),
-      },
+      appService: createDeleteAppService(),
+      store: createDeleteGuardStore(),
       render: vi.fn(),
     };
 
@@ -591,10 +616,127 @@ describe("images handlers", () => {
       imageId: "image-1",
       checkTargets: ["scenes", "layouts", "controls", "animations"],
     });
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    const { message, title } = deps.appService.showAlert.mock.calls[0][0];
+    expect(message).toContain("Failed to delete resource.");
+    expect(message).toContain("payload.imageIds is invalid");
+    expect(title).toBe("Error");
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("tells the user an image in use cannot be deleted", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const deps = {
+      i18n: EN_I18N,
+      projectService: {
+        deleteImageIfUnused: vi.fn(async () => ({
+          deleted: false,
+          usage: {
+            isUsed: true,
+          },
+        })),
+      },
+      appService: createDeleteAppService(),
+      store: createDeleteGuardStore(),
+      render: vi.fn(),
+    };
+
+    await handleDeleteDialogConfirm(deps);
+
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "Failed to delete resource.",
+      message: "Cannot delete resource, it is currently in use.",
     });
     expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("alerts and reports a delete that throws instead of rejecting", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const error = new Error("disk full");
+    const deps = {
+      i18n: EN_I18N,
+      projectService: {
+        deleteImageIfUnused: vi.fn(async () => {
+          throw error;
+        }),
+      },
+      appService: createDeleteAppService(),
+      store: createDeleteGuardStore(),
+      render: vi.fn(),
+    };
+
+    await expect(handleDeleteDialogConfirm(deps)).resolves.toBeUndefined();
+    consoleError.mockRestore();
+
+    expect(deps.appService.reportError).toHaveBeenCalledWith(error, {
+      operation: "resourcePage.mutation",
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    const { message, title } = deps.appService.showAlert.mock.calls[0][0];
+    expect(message).toContain("Failed to delete resource.");
+    expect(message).toContain("disk full");
+    expect(title).toBe("Error");
+    expect(deps.store.selectIsDeletingItem({ itemId: "image-1" })).toBe(false);
+  });
+
+  it("ignores a second confirm for an image whose delete is still running", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    let finishDelete;
+    const deps = {
+      i18n: EN_I18N,
+      projectService: {
+        deleteImageIfUnused: vi.fn(
+          () =>
+            new Promise((resolve) => {
+              finishDelete = () => resolve({ deleted: true });
+            }),
+        ),
+        getRepositoryState: vi.fn(() => createEmptyRepositoryState()),
+      },
+      appService: createDeleteAppService(),
+      store: createDeleteGuardStore(),
+      render: vi.fn(),
+      refs: {},
+    };
+
+    const firstConfirm = handleDeleteDialogConfirm(deps);
+    await handleDeleteDialogConfirm(deps);
+
+    expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledTimes(1);
+    expect(deps.store.selectIsDeletingItem({ itemId: "image-1" })).toBe(true);
+
+    finishDelete();
+    await firstConfirm;
+
+    expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.store.selectIsDeletingItem({ itemId: "image-1" })).toBe(false);
+  });
+
+  it("allows deleting an image again after its delete was refused", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const deps = {
+      i18n: EN_I18N,
+      projectService: {
+        deleteImageIfUnused: vi.fn(async () => ({
+          deleted: false,
+          usage: {
+            isUsed: true,
+          },
+        })),
+      },
+      appService: createDeleteAppService(),
+      store: createDeleteGuardStore(),
+      render: vi.fn(),
+    };
+
+    await handleDeleteDialogConfirm(deps);
+    await handleDeleteDialogConfirm(deps);
+
+    expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledTimes(2);
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(2);
   });
 
   it("marks pending uploads with the created image id before importing", async () => {

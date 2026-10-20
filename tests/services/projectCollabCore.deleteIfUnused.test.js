@@ -141,6 +141,70 @@ describe("createProjectCollabCore versions cache", () => {
   });
 });
 
+const createDeleteCollabCore = () =>
+  createProjectCollabCore({
+    router: {
+      getPayload: () => ({ p: "project-1" }),
+    },
+    idGenerator: () => "generated-id",
+    now: () => 0,
+    collabLog: undefined,
+    getCurrentRepository: async () => undefined,
+    getCachedRepository: () => undefined,
+    getRepositoryByProject: async () => undefined,
+    getAdapterByProject: () => undefined,
+    createSessionForProject: async () => undefined,
+    createTransport: () => undefined,
+    onEnsureLocalSession: () => {},
+    onSessionCleared: () => {},
+    onSessionTransportUpdated: () => {},
+  });
+
+// The state the usage check reads, and the state that says which items exist.
+const createProjectState = () => ({
+  scenes: {},
+  sections: {},
+  lines: {},
+  layouts: {},
+  controls: {},
+  images: { items: { "image-1": { id: "image-1" } } },
+  sounds: { items: { "sound-1": { id: "sound-1" } } },
+  videos: { items: { "video-1": { id: "video-1" } } },
+});
+
+const RESOURCES = [
+  {
+    name: "image",
+    itemId: "image-1",
+    idField: "imageId",
+    collection: "images",
+    deleteIfUnused: "deleteImageIfUnused",
+    commandMethod: "deleteImages",
+  },
+  {
+    name: "sound",
+    itemId: "sound-1",
+    idField: "soundId",
+    collection: "sounds",
+    deleteIfUnused: "deleteSoundIfUnused",
+    commandMethod: "deleteSounds",
+  },
+  {
+    name: "video",
+    itemId: "video-1",
+    idField: "videoId",
+    collection: "videos",
+    deleteIfUnused: "deleteVideoIfUnused",
+    commandMethod: "deleteVideos",
+  },
+];
+
+const NOT_USED = {
+  inProps: {},
+  isUsed: false,
+  count: 0,
+};
+
 describe("createProjectCollabCore deleteIfUnused", () => {
   beforeEach(() => {
     mocked.commandApi.getState.mockReset();
@@ -150,13 +214,7 @@ describe("createProjectCollabCore deleteIfUnused", () => {
   });
 
   it("returns deleted false when the delete command fails validation", async () => {
-    mocked.commandApi.getState.mockReturnValue({
-      scenes: {},
-      sections: {},
-      lines: {},
-      layouts: {},
-      controls: {},
-    });
+    mocked.commandApi.getState.mockReturnValue(createProjectState());
     mocked.commandApi.deleteImages.mockResolvedValue({
       valid: false,
       error: {
@@ -164,23 +222,7 @@ describe("createProjectCollabCore deleteIfUnused", () => {
       },
     });
 
-    const collabCore = createProjectCollabCore({
-      router: {
-        getPayload: () => ({ p: "project-1" }),
-      },
-      idGenerator: () => "generated-id",
-      now: () => 0,
-      collabLog: undefined,
-      getCurrentRepository: async () => undefined,
-      getCachedRepository: () => undefined,
-      getRepositoryByProject: async () => undefined,
-      getAdapterByProject: () => undefined,
-      createSessionForProject: async () => undefined,
-      createTransport: () => undefined,
-      onEnsureLocalSession: () => {},
-      onSessionCleared: () => {},
-      onSessionTransportUpdated: () => {},
-    });
+    const collabCore = createDeleteCollabCore();
 
     const result = await collabCore.deleteImageIfUnused({
       imageId: "image-1",
@@ -189,11 +231,7 @@ describe("createProjectCollabCore deleteIfUnused", () => {
 
     expect(result).toEqual({
       deleted: false,
-      usage: {
-        inProps: {},
-        isUsed: false,
-        count: 0,
-      },
+      usage: NOT_USED,
       deleteResult: {
         valid: false,
         error: {
@@ -202,6 +240,51 @@ describe("createProjectCollabCore deleteIfUnused", () => {
       },
     });
   });
+
+  it.each(RESOURCES)(
+    "treats a $name that is already gone as deleted",
+    async ({ itemId, idField, deleteIfUnused, commandMethod }) => {
+      const state = createProjectState();
+      state.images.items = {};
+      state.sounds.items = {};
+      state.videos.items = {};
+      mocked.commandApi.getState.mockReturnValue(state);
+
+      const collabCore = createDeleteCollabCore();
+
+      const result = await collabCore[deleteIfUnused]({ [idField]: itemId });
+
+      expect(result).toEqual({ deleted: true, usage: NOT_USED });
+      expect(mocked.commandApi[commandMethod]).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(RESOURCES)(
+    "treats a $name delete refused because the item was just deleted as deleted",
+    async ({ itemId, idField, collection, deleteIfUnused, commandMethod }) => {
+      const state = createProjectState();
+      mocked.commandApi.getState.mockReturnValue(state);
+      const refused = {
+        valid: false,
+        error: { message: "payload must reference existing items" },
+      };
+      // The delete made before this one removes the item while this one waits.
+      mocked.commandApi[commandMethod].mockImplementation(async () => {
+        delete state[collection].items[itemId];
+        return refused;
+      });
+
+      const collabCore = createDeleteCollabCore();
+
+      const result = await collabCore[deleteIfUnused]({ [idField]: itemId });
+
+      expect(result).toEqual({
+        deleted: true,
+        usage: NOT_USED,
+        deleteResult: refused,
+      });
+    },
+  );
 });
 
 describe("createProjectCollabCore commands", () => {

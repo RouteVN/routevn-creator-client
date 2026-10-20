@@ -6,12 +6,14 @@ import {
   closeDeleteDialog,
   commitDetailTagIds,
   createInitialState,
+  finishDeletingItem,
   hideFullImagePreview,
   openDeleteDialog,
   selectAdjacentImageItemId,
   selectFullImagePreviewSuppressNextClick,
   selectFullImagePreviewTouchStartPoint,
   selectDeleteDialogItemId,
+  selectIsDeletingItem,
   selectViewData,
   setFullImagePreviewDisplayMode,
   setFullImagePreviewTouchStartPoint,
@@ -22,6 +24,7 @@ import {
   setTagsData,
   setUiConfig,
   showFullImagePreview,
+  startDeletingItem,
   suppressNextFullImagePreviewClick,
 } from "../../src/pages/images/images.store.js";
 
@@ -239,6 +242,24 @@ describe("images store delete dialog", () => {
 
     expect(selectDeleteDialogItemId(context)).toBeUndefined();
     expect(selectViewData(context).deleteDialogOpen).toBe(false);
+  });
+
+  it("tracks the images whose delete is running", () => {
+    const context = createContext();
+
+    expect(selectIsDeletingItem(context, { itemId: "image-1" })).toBe(false);
+
+    startDeletingItem(context, { itemId: "image-1" });
+    startDeletingItem(context, { itemId: "image-1" });
+    startDeletingItem(context, { itemId: "image-2" });
+
+    expect(selectIsDeletingItem(context, { itemId: "image-1" })).toBe(true);
+    expect(selectIsDeletingItem(context, { itemId: "image-2" })).toBe(true);
+
+    finishDeletingItem(context, { itemId: "image-1" });
+
+    expect(selectIsDeletingItem(context, { itemId: "image-1" })).toBe(false);
+    expect(selectIsDeletingItem(context, { itemId: "image-2" })).toBe(true);
   });
 
   it("quotes the image name with the catalog template", () => {
