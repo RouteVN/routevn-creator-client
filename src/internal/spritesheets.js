@@ -194,8 +194,5 @@ export const getSpritesheetResourceDefaultSize = (
     return {};
   }
 
-  return {
-    width: spritesheet.width,
-    height: spritesheet.height,
-  };
+  return resolveSpritesheetSize(spritesheet);
 };

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getSpritesheetAnimationPreview,
+  getSpritesheetResourceDefaultSize,
   resolveSpritesheetFrameName,
   resolveSpritesheetSize,
   toSpritesheetAnimationSelectionItems,
@@ -116,6 +117,52 @@ describe("spritesheets", () => {
       expect(
         resolveSpritesheetSize({ ...spritesheet, jsonData: { frames: {} } }),
       ).toEqual({ width: 288, height: 512 });
+    });
+  });
+
+  // The size the layout editor gives a new Spritesheet Animation element.
+  describe("getSpritesheetResourceDefaultSize", () => {
+    const spritesheetsData = {
+      items: {
+        sheet: {
+          type: "spritesheet",
+          jsonData: {
+            frames: {
+              "walk-0": {
+                frame: { x: 0, y: 0, w: 200, h: 480 },
+                sourceSize: { w: 256, h: 512 },
+              },
+            },
+          },
+          animations: { walk: { frames: [0], fps: 12 } },
+          sheetWidth: 256,
+          sheetHeight: 512,
+        },
+        folder: { type: "folder" },
+      },
+    };
+
+    it("gives a spritesheet without a default size its frame size", () => {
+      expect(
+        getSpritesheetResourceDefaultSize(spritesheetsData, "sheet"),
+      ).toEqual({ width: 256, height: 512 });
+    });
+
+    it("keeps the default size that is set", () => {
+      const sheet = { ...spritesheetsData.items.sheet, width: 128, height: 64 };
+
+      expect(
+        getSpritesheetResourceDefaultSize({ items: { sheet } }, "sheet"),
+      ).toEqual({ width: 128, height: 64 });
+    });
+
+    it("gives no size for a folder or a missing item", () => {
+      expect(
+        getSpritesheetResourceDefaultSize(spritesheetsData, "folder"),
+      ).toEqual({});
+      expect(
+        getSpritesheetResourceDefaultSize(spritesheetsData, "missing"),
+      ).toEqual({});
     });
   });
 });
