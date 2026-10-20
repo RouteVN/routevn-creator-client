@@ -483,6 +483,46 @@ describe("scene editor: one navigation action per line", () => {
     });
   });
 
+  it.each([
+    ["a section transition", { resetStoryAtSection }, { sectionTransition }],
+    [
+      "a reset story at section",
+      { sectionTransition },
+      { resetStoryAtSection },
+    ],
+  ])(
+    "keeps a dialogue change submitted with %s that replaces the line's navigation",
+    async (_name, savedNavigation, submittedNavigation) => {
+      const page = createPage();
+      page.store.setSelectedLineId({ selectedLineId: "line-1" });
+      page.updateRepository((draft) => {
+        const { actions } =
+          draft.scenes.items["scene-1"].sections.items["section-1"].lines.items[
+            "line-1"
+          ];
+        actions.dialogue.characterId = "character-1";
+        Object.assign(actions, savedNavigation);
+      });
+      page.store.setRepositoryState({
+        repository: page.deps.projectService.getRepositoryState(),
+      });
+
+      await submit(page, {
+        dialogue: { characterId: "character-2" },
+        ...submittedNavigation,
+      });
+
+      expect(savedLineOne(page)).toEqual({
+        background: { resourceId: "image-1" },
+        dialogue: {
+          characterId: "character-2",
+          content: [{ text: "First" }],
+        },
+        ...submittedNavigation,
+      });
+    },
+  );
+
   it("merges other actions, and leaves a line that already has two navigation actions alone", async () => {
     const page = createPage();
     page.store.setSelectedLineId({ selectedLineId: "line-1" });

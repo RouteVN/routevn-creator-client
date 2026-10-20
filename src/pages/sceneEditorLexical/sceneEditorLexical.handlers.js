@@ -2201,6 +2201,29 @@ const createLineActionsWrite = (line, actions) => {
   return { data: replace ? nextActions : actions, replace };
 };
 
+// A submitted dialogue is saved after the line's other actions: written
+// whole, those carry the line's dialogue from before the submit. It keeps the
+// line's text unless it brings its own.
+const saveSubmittedDialogue = async (deps, { lineId, dialogue }) => {
+  const { appService, projectService } = deps;
+  const copy = selectCopy(deps);
+  assertSceneEditorCommandResult(
+    await projectService.updateLineDialogueAction({
+      lineId,
+      dialogue,
+      preserve: Object.hasOwn(dialogue, "content")
+        ? undefined
+        : ["dialogue.content"],
+    }),
+    {
+      appService,
+      copy,
+      fallbackMessage:
+        copy.failedSaveDialogueAction ?? "Failed to save dialogue action",
+    },
+  );
+};
+
 const submitSceneEditorCommandLine = async (
   deps,
   payload,
@@ -2234,7 +2257,8 @@ const submitSceneEditorCommandLine = async (
       return;
     }
 
-    const { data, replace } = createLineActionsWrite(line, safeDetail);
+    const { dialogue, ...actions } = safeDetail;
+    const { data, replace } = createLineActionsWrite(line, actions);
     const didSave = await saveLineCommand(async () => {
       assertSceneEditorCommandResult(
         await projectService.updateLineActions({
@@ -2250,6 +2274,9 @@ const submitSceneEditorCommandLine = async (
             "Failed to save section transition",
         },
       );
+      if (dialogue) {
+        await saveSubmittedDialogue(deps, { lineId, dialogue });
+      }
     });
     if (!didSave) {
       return;
@@ -2360,30 +2387,10 @@ const submitSceneEditorCommandLine = async (
   }
 
   const { dialogue, ...otherActions } = submissionData;
-  const preserveDialogueContent =
-    dialogue && !Object.hasOwn(dialogue, "content")
-      ? ["dialogue.content"]
-      : undefined;
 
   let didSave = false;
   try {
     didSave = await saveLineCommand(async () => {
-      if (dialogue) {
-        assertSceneEditorCommandResult(
-          await projectService.updateLineDialogueAction({
-            lineId,
-            dialogue,
-            preserve: preserveDialogueContent,
-          }),
-          {
-            appService,
-            copy,
-            fallbackMessage:
-              copy.failedSaveDialogueAction ?? "Failed to save dialogue action",
-          },
-        );
-      }
-
       if (Object.keys(otherActions).length > 0) {
         const { data, replace } = createLineActionsWrite(line, otherActions);
         assertSceneEditorCommandResult(
@@ -2399,6 +2406,10 @@ const submitSceneEditorCommandLine = async (
               copy.failedSaveLineActions ?? "Failed to save line actions",
           },
         );
+      }
+
+      if (dialogue) {
+        await saveSubmittedDialogue(deps, { lineId, dialogue });
       }
     });
   } finally {
