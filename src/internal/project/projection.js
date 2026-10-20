@@ -12,6 +12,7 @@ import {
   collectTransitionMaskImageIds,
   compileTransitionMaskForRuntime,
 } from "../animationMasks.js";
+import { canAutoTweenProperty } from "../animationPlayback.js";
 import {
   collectParticleTextureImageIds,
   createRenderableParticleData,
@@ -900,6 +901,18 @@ const constructAnimationResources = (
           animation.mask === undefined
         ) {
           return result;
+        }
+      }
+
+      // An Auto tween on a property Route Graphics cannot resolve never plays
+      // and stops rendering, so the engine copy leaves it out.
+      if (animation.type === "update") {
+        for (const [property, config] of Object.entries(
+          animation.tween ?? {},
+        )) {
+          if (config?.auto !== undefined && !canAutoTweenProperty(property)) {
+            delete animation.tween[property];
+          }
         }
       }
 

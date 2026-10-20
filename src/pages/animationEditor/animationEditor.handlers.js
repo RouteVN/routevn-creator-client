@@ -12,6 +12,7 @@ import {
   serializeTransitionMask,
 } from "../../internal/animationMasks.js";
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
+import { canAutoTweenProperty } from "../../internal/animationPlayback.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -1674,7 +1675,10 @@ export const handleAddPropertyFormSubmit = async (deps, payload) => {
   } = mergedValues;
   const targetSide = submittedSide ?? side;
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
-  const useAutoTween = targetSide === "update" && tweenMode === "auto";
+  const useAutoTween =
+    targetSide === "update" &&
+    tweenMode === "auto" &&
+    canAutoTweenProperty(property);
   const submittedInitialValue = hasOwnFormValue(trackedValues, "initialValue")
     ? trackedValues.initialValue
     : defaultInitialValue;

@@ -23,6 +23,7 @@ import {
   getTransitionTimelineDuration,
   getUpdateAnimationTween,
 } from "../../internal/animationDisplay.js";
+import { canAutoTweenProperty } from "../../internal/animationPlayback.js";
 import {
   addKeyframeDefaultValues,
   ANIMATION_RESOURCE_CATEGORY,
@@ -376,6 +377,8 @@ const createEasingOptions = (copy = {}) => {
   }));
 };
 
+// Route Graphics keeps scaleX and scaleY in an element's state only when the
+// element sets them, and an Auto scale tween reads its end value from there.
 const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
   return {
     id,
@@ -387,6 +390,8 @@ const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
     fill,
     anchorX: 0.5,
     anchorY: 0.5,
+    scaleX: 1,
+    scaleY: 1,
   };
 };
 
@@ -627,6 +632,8 @@ const createPreviewContentElement = ({
     height: toPositiveNumber(imageItem.height, height),
     anchorX: 0.5,
     anchorY: 0.5,
+    scaleX: 1,
+    scaleY: 1,
   };
 };
 
@@ -958,7 +965,7 @@ const createAddPropertyForm = (
   { side, property, sideOptions = [] } = {},
   copy = {},
 ) => {
-  const isUpdateSide = side === "update";
+  const canUseAutoTween = side === "update" && canAutoTweenProperty(property);
   const initialValueField =
     property && property !== "camera"
       ? createSliderField({
@@ -971,7 +978,7 @@ const createAddPropertyForm = (
   if (initialValueField) {
     initialValueField.defaultValue =
       propertyFieldConfig[property]?.defaultValue ?? 0;
-    initialValueField.$when = isUpdateSide
+    initialValueField.$when = canUseAutoTween
       ? 'tweenMode != "auto" && initialValueType == "value"'
       : 'initialValueType == "value"';
   }
@@ -990,7 +997,7 @@ const createAddPropertyForm = (
     ],
     required: true,
   };
-  if (isUpdateSide) {
+  if (canUseAutoTween) {
     initialValueTypeField.$when = 'tweenMode != "auto"';
   }
   const fields = [];
@@ -1015,7 +1022,7 @@ const createAddPropertyForm = (
     required: true,
   });
 
-  if (isUpdateSide && property !== "camera") {
+  if (canUseAutoTween) {
     fields.push({
       name: "tweenMode",
       type: "segmented-control",
@@ -2390,6 +2397,10 @@ const createTweenAnimationsForTarget = ({
       const tween = {};
 
       if (config?.auto) {
+        // Saved before Auto was limited to properties it can resolve.
+        if (!canAutoTweenProperty(property)) {
+          continue;
+        }
         tween[property] = {
           auto: resolveAutoTweenConfig(config.auto),
         };
@@ -2671,7 +2682,11 @@ export const addProperty = (
     return;
   }
 
-  if (resolveDialogSide(state, side) === "update" && tweenMode === "auto") {
+  if (
+    resolveDialogSide(state, side) === "update" &&
+    tweenMode === "auto" &&
+    canAutoTweenProperty(property)
+  ) {
     properties[property] = {
       auto: resolveAutoTweenConfig({
         duration: autoDuration,
