@@ -55,9 +55,8 @@ const selectShowRightPanel = ({ state }) =>
 export const selectShowsMobilePanels = ({ state }) =>
   !selectShowRightPanel({ state });
 
-// In a Preview picked from its tab, pressing the canvas leaves the selection
-// alone. The Elements list still selects, and goes back to Edit. The Preview
-// shown when the selection clears keeps the canvas selecting.
+// In a Preview picked from its tab, pressing the canvas selects nothing. The
+// Elements list still selects, and goes back to Edit.
 export const selectIsCanvasSelectionDisabled = ({ state }) =>
   state.rightPanelMode === "preview" &&
   state.isPreviewPickedFromTab &&

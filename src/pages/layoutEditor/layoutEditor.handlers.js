@@ -575,27 +575,31 @@ const recordLayoutEditorStructureEdit = async (deps, run) => {
   render();
 };
 
-// Clearing a selection shows Preview, since Edit has nothing left to show.
-// With nothing selected, the tab stays as it is.
+// Clearing a selection leaves the tab as it is. Edit shows its placeholder
+// when nothing is selected.
 const clearSelectedItem = (store) => {
-  if (store.selectSelectedItemId()) {
-    store.setRightPanelMode({ mode: "preview" });
-  }
   store.setSelectedItemId({ itemId: undefined });
   store.setDetailPanelSelectedItemId({ itemId: undefined });
 };
 
+// Clears the selection on the canvas, in the Edit panel and in the Elements
+// list.
+const clearSelection = (deps) => {
+  const { refs, store } = deps;
+  clearSelectedItem(store);
+  refs.fileExplorer?.clearSelection?.();
+};
+
 // A press on empty canvas clears the selection. Under the canvas on phones,
 // where Edit was showing the element, the panel stays in Edit and goes to
-// the Elements list rather than to Preview.
+// the Elements list.
 const clearCanvasSelection = (deps) => {
-  const { refs, store } = deps;
+  const { store } = deps;
   const wasEditingElement =
     store.selectShowsMobilePanels() &&
     Boolean(store.selectDetailPanelSelectedItemId());
 
-  clearSelectedItem(store);
-  refs.fileExplorer?.clearSelection?.();
+  clearSelection(deps);
   if (wasEditingElement) {
     store.openMobileFileExplorer();
   }
@@ -604,13 +608,12 @@ const clearCanvasSelection = (deps) => {
 // An undo or redo can remove the selected element, as when it undoes the
 // element's create.
 const clearMissingLayoutEditorSelection = (deps) => {
-  const { refs, store } = deps;
+  const { store } = deps;
   const selectedItemId = store.selectSelectedItemId();
   if (!selectedItemId || store.selectItemDataById({ itemId: selectedItemId })) {
     return;
   }
-  clearSelectedItem(store);
-  refs.fileExplorer?.clearSelection?.();
+  clearSelection(deps);
 };
 
 // Saves the creates, deletes, and moves of an undone or redone step after
@@ -1148,14 +1151,14 @@ const openMobileNodeExplorer = (deps) => {
 
 // On phones, Edit goes back to the element selected on the canvas, or opens
 // the Elements list when none is; Preview shows the preview under the canvas
-// and keeps the selection.
+// with nothing selected.
 export const handleMobilePanelModeChange = (deps, payload) => {
   const { render, store } = deps;
   const { id } = payload._event.detail;
 
   if (id === "preview") {
     store.closeMobileFileExplorer();
-    store.setDetailPanelSelectedItemId({ itemId: undefined });
+    clearSelection(deps);
     render();
     return;
   }
@@ -1215,11 +1218,15 @@ export const handleCanvasZoomGesture = (deps, payload) => {
   render();
 };
 
+// Preview has no selection, so the canvas shows no selection border there.
 export const handleRightPanelModeChange = (deps, payload) => {
   const { render, store } = deps;
   const { id } = payload._event.detail;
 
   store.pickRightPanelTab({ mode: id });
+  if (id === "preview") {
+    clearSelection(deps);
+  }
   render();
 };
 
