@@ -681,6 +681,7 @@ resourcePages:
   spritesheetsLabel: "Spritesheets"
   selectTagsPlaceholder: "Select tags"
   tagFilterPlaceholder: "Filter tags"
+  tagNameExists: "A tag with this name already exists."
   tagNameLabel: "Tag Name"
   tagNameRequired: "Tag name is required."
   tagsLabel: "Tags"

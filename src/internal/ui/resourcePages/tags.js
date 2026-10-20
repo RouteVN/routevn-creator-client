@@ -5,6 +5,7 @@ import {
   buildUniqueTagIds,
   createEmptyTagCollection,
   getTagsCollection,
+  hasTagNamed,
   matchesTagFilter,
   resolveCollectionWithTags,
 } from "../../resourceTags.js";
@@ -67,6 +68,7 @@ export const createTagState = ({
   detailTagIdsDirty: false,
   isDetailTagSelectOpen: false,
   isCreateTagDialogOpen: false,
+  isCreateTagSubmitting: false,
   createTagDefaultValues: {
     ...CREATE_TAG_DEFAULT_VALUES,
   },
@@ -86,6 +88,13 @@ export const selectDetailTagIdsState = ({ state }) => state.detailTagIds ?? [];
 
 export const selectCreateTagContextState = ({ state }) =>
   state.createTagContext ?? {};
+
+export const selectIsCreateTagSubmittingState = ({ state }) =>
+  state.isCreateTagSubmitting;
+
+export const setCreateTagSubmittingState = ({ state, value } = {}) => {
+  state.isCreateTagSubmitting = value;
+};
 
 export const syncDetailTagIds = ({
   state,
@@ -160,6 +169,7 @@ export const openCreateTagDialogState = ({
   draftTagIds,
 } = {}) => {
   state.isCreateTagDialogOpen = true;
+  state.isCreateTagSubmitting = false;
   state.createTagDefaultValues = {
     ...CREATE_TAG_DEFAULT_VALUES,
   };
@@ -172,6 +182,7 @@ export const openCreateTagDialogState = ({
 
 export const closeCreateTagDialogState = ({ state } = {}) => {
   state.isCreateTagDialogOpen = false;
+  state.isCreateTagSubmitting = false;
   state.createTagDefaultValues = {
     ...CREATE_TAG_DEFAULT_VALUES,
   };
@@ -584,10 +595,25 @@ export const createResourcePageTagHandlers = ({
       return;
     }
 
+    // The dialog stays open until the save returns, so a second tap on Create
+    // would submit the same tag again.
+    if (store.selectIsCreateTagSubmitting()) {
+      return;
+    }
+
     const name = values?.name?.trim();
     if (!name) {
       appService.showAlert({
         message: resolvedCopy.tagNameRequired ?? "Tag name is required.",
+        title: resolvedCopy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    if (hasTagNamed({ tagsCollection: store.selectTagsData(), name })) {
+      appService.showAlert({
+        message:
+          resolvedCopy.tagNameExists ?? "A tag with this name already exists.",
         title: resolvedCopy.warningTitle ?? "Warning",
       });
       return;
@@ -600,6 +626,7 @@ export const createResourcePageTagHandlers = ({
       mode,
     });
     const tagId = generateId();
+    store.setCreateTagSubmitting({ value: true });
     const createAttempt = await runResourcePageMutation({
       appService,
       fallbackMessage:
@@ -618,6 +645,7 @@ export const createResourcePageTagHandlers = ({
           },
         }),
     });
+    store.setCreateTagSubmitting({ value: false });
 
     if (!createAttempt.ok) {
       return;

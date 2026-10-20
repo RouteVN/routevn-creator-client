@@ -17,8 +17,10 @@ import {
   selectActiveTagIdsState,
   selectCreateTagContextState,
   selectDetailTagIdsState,
+  selectIsCreateTagSubmittingState,
   selectTagsDataState,
   setActiveTagIdsState,
+  setCreateTagSubmittingState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
   setTagsDataState,
@@ -361,6 +363,13 @@ export const createCatalogPageStore = ({
     });
   };
 
+  const setCreateTagSubmitting = ({ state }, { value } = {}) => {
+    setCreateTagSubmittingState({
+      state,
+      value,
+    });
+  };
+
   const openFolderNameDialog = (
     { state },
     { folderId, defaultValues } = {},
@@ -563,12 +572,14 @@ export const createCatalogPageStore = ({
     setDetailTagPopoverOpen,
     openCreateTagDialog,
     closeCreateTagDialog,
+    setCreateTagSubmitting,
     openFolderNameDialog,
     closeFolderNameDialog,
     selectTagsData: selectTagsDataState,
     selectActiveTagIds: selectActiveTagIdsState,
     selectDetailTagIds: selectDetailTagIdsState,
     selectCreateTagContext: selectCreateTagContextState,
+    selectIsCreateTagSubmitting: selectIsCreateTagSubmittingState,
     selectViewData,
   };
 };

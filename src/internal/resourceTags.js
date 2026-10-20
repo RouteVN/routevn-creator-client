@@ -23,6 +23,17 @@ export const getTagsCollection = (projectState, scopeKey) => {
   };
 };
 
+// The project refuses a second tag whose name matches in the same scope when
+// both are trimmed and lowercased.
+export const hasTagNamed = ({ tagsCollection, name } = {}) => {
+  const normalizedName = name.trim().toLowerCase();
+
+  return Object.values(tagsCollection?.items ?? {}).some(
+    (tag) =>
+      tag?.type === "tag" && tag.name?.trim().toLowerCase() === normalizedName,
+  );
+};
+
 export const getOrderedTags = ({ tagsCollection } = {}) => {
   return toFlatItems(tagsCollection ?? createEmptyTagCollection())
     .filter((item) => item?.type === "tag")

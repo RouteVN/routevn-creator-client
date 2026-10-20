@@ -681,6 +681,7 @@ resourcePages:
   spritesheetsLabel: "Hojas de sprites"
   selectTagsPlaceholder: "Selecciona etiquetas"
   tagFilterPlaceholder: "Filtrar etiquetas"
+  tagNameExists: "Ya existe una etiqueta con este nombre."
   tagNameLabel: "Nombre de la etiqueta"
   tagNameRequired: "El nombre de la etiqueta es obligatorio."
   tagsLabel: "Etiquetas"

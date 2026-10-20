@@ -681,6 +681,7 @@ resourcePages:
   spritesheetsLabel: "สไปรต์ชีต"
   selectTagsPlaceholder: "เลือกแท็ก"
   tagFilterPlaceholder: "กรองแท็ก"
+  tagNameExists: "มีแท็กชื่อนี้อยู่แล้ว"
   tagNameLabel: "ชื่อแท็ก"
   tagNameRequired: "ต้องระบุชื่อแท็ก"
   tagsLabel: "แท็ก"

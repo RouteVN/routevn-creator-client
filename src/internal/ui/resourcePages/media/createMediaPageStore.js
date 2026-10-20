@@ -17,8 +17,10 @@ import {
   selectActiveTagIdsState,
   selectCreateTagContextState,
   selectDetailTagIdsState,
+  selectIsCreateTagSubmittingState,
   selectTagsDataState,
   setActiveTagIdsState,
+  setCreateTagSubmittingState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
   setTagsDataState,
@@ -482,6 +484,13 @@ export const createMediaPageStore = ({
     });
   };
 
+  const setCreateTagSubmitting = ({ state }, { value } = {}) => {
+    setCreateTagSubmittingState({
+      state,
+      value,
+    });
+  };
+
   const selectViewData = ({ state, i18n = {} }) => {
     const copy = resolveCopy(i18n);
     const { dateTime } = i18n;
@@ -715,10 +724,12 @@ export const createMediaPageStore = ({
     setDetailTagPopoverOpen,
     openCreateTagDialog,
     closeCreateTagDialog,
+    setCreateTagSubmitting,
     selectTagsData: selectTagsDataState,
     selectActiveTagIds: selectActiveTagIdsState,
     selectDetailTagIds: selectDetailTagIdsState,
     selectCreateTagContext: selectCreateTagContextState,
+    selectIsCreateTagSubmitting: selectIsCreateTagSubmittingState,
     selectViewData,
   };
 };

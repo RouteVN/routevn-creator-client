@@ -53,8 +53,10 @@ import {
   selectActiveTagIdsState,
   selectCreateTagContextState,
   selectDetailTagIdsState,
+  selectIsCreateTagSubmittingState,
   selectTagsDataState,
   setActiveTagIdsState,
+  setCreateTagSubmittingState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
   setTagsDataState,
@@ -782,6 +784,7 @@ export const clearCharacterSpritesView = ({ state }) => {
     description: "",
   };
   state.isCreateTagDialogOpen = false;
+  state.isCreateTagSubmitting = false;
   state.createTagDefaultValues = {
     ...CREATE_TAG_DEFAULT_VALUES,
   };
@@ -881,6 +884,10 @@ export const openCreateTagDialog = (
 
 export const closeCreateTagDialog = ({ state }) => {
   closeCreateTagDialogState({ state });
+};
+
+export const setCreateTagSubmitting = ({ state }, { value } = {}) => {
+  setCreateTagSubmittingState({ state, value });
 };
 
 export const openEditDialog = (
@@ -1184,6 +1191,8 @@ export const selectActiveTagIds = selectActiveTagIdsState;
 export const selectDetailTagIds = selectDetailTagIdsState;
 
 export const selectCreateTagContext = selectCreateTagContextState;
+
+export const selectIsCreateTagSubmitting = selectIsCreateTagSubmittingState;
 
 export const selectCharacterId = ({ state }) => {
   return state.characterId;

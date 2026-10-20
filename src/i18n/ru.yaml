@@ -681,6 +681,7 @@ resourcePages:
   spritesheetsLabel: "Спрайт-листы"
   selectTagsPlaceholder: "Выберите теги"
   tagFilterPlaceholder: "Фильтр по тегам"
+  tagNameExists: "Тег с таким названием уже существует."
   tagNameLabel: "Название тега"
   tagNameRequired: "Укажите название тега."
   tagsLabel: "Теги"

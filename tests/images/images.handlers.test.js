@@ -907,6 +907,8 @@ describe("images handlers", () => {
           },
           detailTagIds: [],
         })),
+        selectIsCreateTagSubmitting: vi.fn(() => false),
+        setCreateTagSubmitting: vi.fn(),
         closeCreateTagDialog: vi.fn(),
         setTagsData: vi.fn(),
         setItems: vi.fn(),
@@ -935,7 +937,7 @@ describe("images handlers", () => {
         detail: {
           actionId: "submit",
           values: {
-            name: "Background",
+            name: "Foreground",
           },
         },
       },
@@ -946,7 +948,7 @@ describe("images handlers", () => {
       tagId: "image-123",
       data: {
         type: "tag",
-        name: "Background",
+        name: "Foreground",
       },
     });
     expect(deps.store.setItems).not.toHaveBeenCalled();
@@ -962,7 +964,7 @@ describe("images handlers", () => {
           "image-123": {
             id: "image-123",
             type: "tag",
-            name: "Background",
+            name: "Foreground",
           },
         },
       },
