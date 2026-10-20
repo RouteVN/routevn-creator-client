@@ -47,8 +47,8 @@ template:
                   - rtgl-image#iconPreview src=${iconPreviewUrl} w=120 h=120 of=cov bw=xs bc=bo br=md cur=pointer: null
             $else:
               - rtgl-view w=120 h=120 av=c ah=c:
-                  - rtgl-view#iconPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                      - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+                  - rtgl-view#iconPlaceholder w=120 h=120 av=c ah=c ph=md bgc=bg bc=bo bw=xs br=md cur=pointer:
+                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
       - $if platform == 'tauri':
           - rtgl-view slot=project-path-selector w=f g=xs:
               - rtgl-view d=h w=f g=sm av=c:
