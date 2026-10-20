@@ -5,6 +5,7 @@ import {
   toVariableConditionTarget,
 } from "../layoutConditions.js";
 import { toRuntimeConditionTarget } from "../runtimeFields.js";
+import { MAX_SAVE_LOAD_PREVIEW_SLOTS } from "./layoutEditorPreviewSaveLoad.js";
 
 const DIALOGUE_RUNTIME_CONDITION_TARGETS = new Set([
   AUTO_MODE_CONDITION_TARGET,
@@ -101,7 +102,9 @@ export const createPersistedPreviewState = (previewData) => {
 
   saveSlots.forEach((slot, fallbackIndex) => {
     const slotIndex = toSlotIndex(slot, fallbackIndex);
-    if (slotIndex < 0) {
+    // A slot past the last one the Preview shows would make the arrays below
+    // as long as its number, which can be more than an array can hold.
+    if (slotIndex < 0 || slotIndex >= MAX_SAVE_LOAD_PREVIEW_SLOTS) {
       return;
     }
 
@@ -179,7 +182,7 @@ export const createPersistedPreviewState = (previewData) => {
           }
         : undefined,
     saveLoadDefaultValues:
-      saveSlots.length > 0
+      slotCount > 0
         ? {
             slotsNum: slotCount,
             saveImageIds,
