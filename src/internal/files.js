@@ -1,4 +1,19 @@
-export const formatFileSize = (bytes) => {
+const FILE_SIZE_UNITS = [
+  ["fileSizeBytes", "{value} B"],
+  ["fileSizeKilobytes", "{value} KB"],
+  ["fileSizeMegabytes", "{value} MB"],
+  ["fileSizeGigabytes", "{value} GB"],
+];
+
+/**
+ * Format a byte count with a binary unit, such as "2.45 MB".
+ * @param {number} bytes - Size in bytes
+ * @param {Object} [dateTime] - The `dateTime` catalog of the active locale,
+ *   with `intlLocale` for the number and `fileSizeBytes` through
+ *   `fileSizeGigabytes` templates for the unit
+ * @returns {string} Formatted size, or an empty string for an invalid size
+ */
+export const formatFileSize = (bytes, dateTime = {}) => {
   if (bytes === undefined || bytes === null) {
     return "";
   }
@@ -9,11 +24,20 @@ export const formatFileSize = (bytes) => {
     return "";
   }
 
-  if (normalizedBytes === 0) return "0 B";
   const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(normalizedBytes) / Math.log(k));
-  return (
-    Math.round((normalizedBytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
+  const i =
+    normalizedBytes === 0
+      ? 0
+      : Math.min(
+          Math.floor(Math.log(normalizedBytes) / Math.log(k)),
+          FILE_SIZE_UNITS.length - 1,
+        );
+  const [templateKey, defaultTemplate] = FILE_SIZE_UNITS[i];
+  const value = new Intl.NumberFormat(dateTime.intlLocale ?? "en-US", {
+    maximumFractionDigits: 2,
+  }).format(normalizedBytes / Math.pow(k, i));
+  return (dateTime[templateKey] ?? defaultTemplate).replaceAll(
+    "{value}",
+    () => value,
   );
 };

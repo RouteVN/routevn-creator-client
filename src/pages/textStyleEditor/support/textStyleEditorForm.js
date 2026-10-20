@@ -105,7 +105,9 @@ export const toTextStyleValues = (item) => ({
 });
 
 // The update that saves `values` over `savedValues`: an outline or shadow
-// that was removed is cleared from the saved text style.
+// that was removed is cleared from the saved text style. The command API
+// stores the update as JSON, which drops a field set to undefined, so the
+// outline color is left out unless there is one to set or to clear.
 export const toTextStyleUpdateData = (values, savedValues) => {
   const data = {
     fontId: values.fontId,
@@ -113,14 +115,12 @@ export const toTextStyleUpdateData = (values, savedValues) => {
     fontSize: values.fontSize,
     lineHeight: values.lineHeight,
     fontWeight: values.fontWeight,
-    strokeColorId: values.strokeColorId,
     strokeWidth: values.strokeWidth,
   };
-  // null removes a saved outline color; undefined would not be stored.
-  if (
-    values.strokeColorId === undefined &&
-    savedValues?.strokeColorId !== undefined
-  ) {
+  if (values.strokeColorId !== undefined) {
+    data.strokeColorId = values.strokeColorId;
+  } else if (savedValues?.strokeColorId !== undefined) {
+    // null removes a saved outline color.
     data.strokeColorId = null;
   }
   if (values.shadow) {

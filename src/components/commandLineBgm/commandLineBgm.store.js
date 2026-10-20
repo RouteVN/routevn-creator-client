@@ -12,6 +12,7 @@ import {
   sortAudioSoundsByStartDelay,
 } from "../../internal/audioTimeline.js";
 import {
+  formatCommandLineCopy,
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
   localizeCommandLineText,
@@ -160,7 +161,11 @@ const createAudioEffectOptions = ({
   ) {
     options.unshift({
       value: selectedResourceId,
-      label: `Missing audio effect (${selectedResourceId})`,
+      label: formatCommandLineCopy(
+        "Missing audio effect ({id})",
+        { id: selectedResourceId },
+        copy,
+      ),
     });
   }
 
@@ -529,6 +534,9 @@ export const selectViewData = ({ state, i18n }) => {
     : channelDefaultValues;
 
   return {
+    noWaveformLabel: localizeCommandLineText("No waveform", copy),
+    selectButtonLabel: localizeCommandLineText("Select", copy),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
     mode: state.mode,
     items: folderItems,
     groups,

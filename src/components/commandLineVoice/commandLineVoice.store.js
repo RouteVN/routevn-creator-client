@@ -287,6 +287,8 @@ export const selectViewData = ({ state, i18n }) => {
       };
 
   return {
+    noWaveformLabel: localizeCommandLineText("No waveform", copy),
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
     sounds,
     showChannelControls: sounds.length > 0,
     isChannelEditorOpen: state.isChannelEditorOpen,

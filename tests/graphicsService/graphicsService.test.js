@@ -470,6 +470,109 @@ describe("graphicsService", () => {
     }
   });
 
+  describe("when a WebGL context cannot be created", () => {
+    const contextFailure = () =>
+      new Error(
+        "This browser does not support WebGL. Try using the canvas renderer",
+      );
+
+    const startService = async (options = {}) => {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      return createGraphicsService({ startRetryDelaysMs: [5, 10], ...options });
+    };
+
+    it("tries again, then tells the owner once and still rejects", async () => {
+      const failure = contextFailure();
+      routeGraphicsInstance.init
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure)
+        .mockRejectedValueOnce(failure);
+      const onGraphicsUnavailable = vi.fn();
+      const service = await startService({ onGraphicsUnavailable });
+
+      await expect(service.init({ width: 64, height: 64 })).rejects.toBe(
+        failure,
+      );
+
+      expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(3);
+      expect(onGraphicsUnavailable).toHaveBeenCalledExactlyOnceWith(failure);
+      await service.destroy();
+    });
+
+    it("starts when a later try gets a context, and tells nobody", async () => {
+      routeGraphicsInstance.init.mockRejectedValueOnce(contextFailure());
+      const onGraphicsUnavailable = vi.fn();
+      const service = await startService({ onGraphicsUnavailable });
+
+      await service.init({ width: 64, height: 64 });
+
+      expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(2);
+      expect(onGraphicsUnavailable).not.toHaveBeenCalled();
+      await service.destroy();
+    });
+
+    it("stops trying again when it is cancelled while it waits", async () => {
+      routeGraphicsInstance.init.mockRejectedValueOnce(contextFailure());
+      const onGraphicsUnavailable = vi.fn();
+      const service = await startService({
+        onGraphicsUnavailable,
+        startRetryDelaysMs: [500, 500],
+      });
+      const controller = new AbortController();
+
+      const started = service.init({
+        width: 64,
+        height: 64,
+        signal: controller.signal,
+      });
+      const rejection = expect(started).rejects.toThrow();
+      await vi.waitFor(() =>
+        expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(1),
+      );
+      controller.abort();
+      await rejection;
+
+      expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(1);
+      expect(onGraphicsUnavailable).not.toHaveBeenCalled();
+      await service.destroy();
+    });
+  });
+
+  it("does not try again when the device has no WebGL at all, which Pixi remembers", async () => {
+    const failure = new Error("CanvasRenderer is not yet implemented");
+    routeGraphicsInstance.init.mockRejectedValueOnce(failure);
+    const onGraphicsUnavailable = vi.fn();
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ onGraphicsUnavailable });
+
+    await expect(service.init({ width: 64, height: 64 })).rejects.toBe(failure);
+
+    expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(1);
+    expect(onGraphicsUnavailable).toHaveBeenCalledExactlyOnceWith(failure);
+    await service.destroy();
+  });
+
+  it("does not call the WebGL owner for other initialization failures", async () => {
+    routeGraphicsInstance.init.mockRejectedValueOnce(
+      new Error("Initialization failed"),
+    );
+    const onGraphicsUnavailable = vi.fn();
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({ onGraphicsUnavailable });
+
+    await expect(service.init({ width: 64, height: 64 })).rejects.toThrow(
+      "Initialization failed",
+    );
+
+    expect(onGraphicsUnavailable).not.toHaveBeenCalled();
+  });
+
   it("releases the asset queue after a decoder hangs so the next request can retry", async () => {
     const manager = {
       has: () => false,
@@ -2824,6 +2927,154 @@ describe("graphicsService", () => {
     expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
       transitionRenderState,
     );
+  });
+
+  describe("video elements", () => {
+    const createVideoTexture = () => ({
+      destroyed: false,
+      destroy: vi.fn(),
+      source: {
+        destroyed: false,
+        resource: { pause: vi.fn() },
+      },
+    });
+
+    const createRenderState = () => ({
+      id: "render-with-videos",
+      elements: [
+        {
+          id: "background",
+          type: "video",
+          src: "video-missing",
+        },
+        {
+          id: "character",
+          type: "sprite",
+          src: "image-1",
+        },
+        {
+          id: "layer",
+          type: "container",
+          children: [
+            {
+              id: "loaded-video",
+              type: "video",
+              src: "video-loaded",
+            },
+            {
+              id: "destroyed-video",
+              type: "video",
+              src: "video-destroyed",
+            },
+            {
+              id: "video-without-src",
+              type: "video",
+            },
+          ],
+        },
+      ],
+      audio: [],
+      animations: [],
+    });
+
+    const expectedElements = [
+      {
+        id: "character",
+        type: "sprite",
+        src: "image-1",
+      },
+      {
+        id: "layer",
+        type: "container",
+        children: [
+          {
+            id: "loaded-video",
+            type: "video",
+            src: "video-loaded",
+          },
+        ],
+      },
+    ];
+
+    const createService = async () => {
+      createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+      assetsCache.set("video-loaded", createVideoTexture());
+      // An unloaded texture can stay in the cache, destroyed and without its
+      // video.
+      const destroyedTexture = createVideoTexture();
+      destroyedTexture.destroyed = true;
+      destroyedTexture.source.destroyed = true;
+      destroyedTexture.source.resource = null;
+      assetsCache.set("video-destroyed", destroyedTexture);
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: { dispatch: vi.fn() },
+      });
+      await service.init({ width: 1920, height: 1080 });
+      return service;
+    };
+
+    it("leaves a video that is not loaded out of an engine render", async () => {
+      const service = await createService();
+      try {
+        service.initRouteEngine({
+          screen: { width: 1920, height: 1080 },
+          story: { scenes: {} },
+          resources: {},
+        });
+        routeGraphicsInstance.render.mockClear();
+        const renderState = createRenderState();
+
+        service.engineRenderCurrentState({ renderState });
+
+        expect(routeGraphicsInstance.render).toHaveBeenCalledOnce();
+        expect(routeGraphicsInstance.render.mock.calls[0][0]).toEqual({
+          ...renderState,
+          elements: expectedElements,
+        });
+        // The caller's state is not changed.
+        expect(renderState.elements).toHaveLength(3);
+        expect(renderState.elements[2].children).toHaveLength(3);
+      } finally {
+        await service.destroy();
+      }
+    });
+
+    it("leaves a video that is not loaded out of a direct render", async () => {
+      const service = await createService();
+      try {
+        routeGraphicsInstance.render.mockClear();
+        const renderState = createRenderState();
+
+        service.render(renderState);
+
+        expect(routeGraphicsInstance.render).toHaveBeenCalledWith({
+          ...renderState,
+          elements: expectedElements,
+        });
+      } finally {
+        await service.destroy();
+      }
+    });
+
+    it("passes a state whose videos are all loaded on unchanged", async () => {
+      const service = await createService();
+      try {
+        routeGraphicsInstance.render.mockClear();
+        const renderState = {
+          elements: [{ id: "intro", type: "video", src: "video-loaded" }],
+          animations: [],
+        };
+
+        service.render(renderState);
+
+        expect(routeGraphicsInstance.render.mock.calls[0][0]).toBe(renderState);
+      } finally {
+        await service.destroy();
+      }
+    });
   });
 
   it("uses renderer snapshot mode for editor frames and completion callbacks only", async () => {

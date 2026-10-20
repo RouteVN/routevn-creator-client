@@ -22,8 +22,11 @@ const getFileIdFromProps = (attrs, projectService) => {
   if (attrs.imageId) {
     const repositoryState = projectService.getRepositoryState();
     const imageItem = repositoryState?.images?.items?.[attrs.imageId];
+    // Callers pass ids that were saved elsewhere, such as a layout's preview
+    // data, so an id can outlive its image. That shows the placeholder, as when
+    // no image is given.
     if (!imageItem) {
-      throw new Error(`Image with imageId "${attrs.imageId}" not found`);
+      return;
     }
 
     const source = attrs.source ?? "original";

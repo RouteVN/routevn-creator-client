@@ -1,4 +1,6 @@
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
+import { selectResourceViewCopy } from "../../internal/ui/resourcePages/resourceViewCopy.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -18,9 +20,6 @@ const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
 const MAX_MOBILE_ITEMS_PER_ROW = 6;
 const DEFAULT_CARD_WIDTH = 225;
-const MENU_BUTTON_LABEL = "Menu";
-const ZOOM_BUTTON_LABEL = "Zoom";
-const FILTER_BUTTON_LABEL = "Filter";
 const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
   x: 0,
   y: 0,
@@ -205,10 +204,9 @@ export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   const item = props.groups
     ?.flatMap((group) => group.children ?? [])
     .find((entry) => entry.id === itemId);
-  state.dropdownMenu.items = item?.contextMenuItems ??
-    props.itemContextMenuItems ?? [
-      { label: "Delete", type: "item", value: "delete-item" },
-    ];
+  // Undefined items fall back to a localized Delete item in selectViewData.
+  state.dropdownMenu.items =
+    item?.contextMenuItems ?? props.itemContextMenuItems;
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -229,7 +227,8 @@ export {
   toggleTagFilterPopoverTagId,
 };
 
-export const selectViewData = ({ state, props, i18n }) => {
+export const selectViewData = ({ state, props, i18n = {} }) => {
+  const animationCopy = i18n.animationEditorPage ?? {};
   const mobileLayout = parseBooleanProp(props.mobileLayout);
   const useColumnZoomControl = isColumnZoomControlMode(props);
   const columnZoomControlMax = getMaxItemsPerRow(props);
@@ -271,6 +270,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = searchQuery.trim().length > 0;
+  const viewCopy = selectResourceViewCopy({
+    i18n,
+    searchQuery,
+    hasActiveSearch,
+    hasActiveTagFilter,
+  });
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
   const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
@@ -325,8 +330,20 @@ export const selectViewData = ({ state, props, i18n }) => {
 
         return {
           ...item,
-          transitionOutgoingLabel: item.transitionOutgoingLabel ?? "Outgoing",
-          transitionIncomingLabel: item.transitionIncomingLabel ?? "Incoming",
+          animationTypeSummary:
+            item.cardKind === "animation"
+              ? formatI18nCopy(viewCopy.typeSummaryTemplate, {
+                  type: item.animationTypeLabel,
+                })
+              : undefined,
+          transitionOutgoingLabel:
+            item.transitionOutgoingLabel ??
+            animationCopy.outTimelineLabel ??
+            "Outgoing",
+          transitionIncomingLabel:
+            item.transitionIncomingLabel ??
+            animationCopy.inTimelineLabel ??
+            "Incoming",
           domItemId: isPlaceholder ? "" : item.id,
           longPressEnabled: mobileLayout && !isPlaceholder,
           cursor: isPlaceholder ? "default" : "pointer",
@@ -361,10 +378,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     groups,
     selectedItemId: props.selectedItemId,
     searchQuery,
-    searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    searchPlaceholder: props.searchPlaceholder ?? viewCopy.searchPlaceholder,
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
-    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    tagFilterPlaceholder:
+      props.tagFilterPlaceholder ?? viewCopy.tagFilterPlaceholder,
     tagFilterPopover: {
       ...tagFilterPopoverViewData.tagFilterPopover,
       clearDisabled:
@@ -384,9 +402,9 @@ export const selectViewData = ({ state, props, i18n }) => {
     showZoomControls,
     showZoomPopoverButton: showZoomControls && !mobileLayout,
     zoomPopover: state.zoomPopover,
-    menuButtonLabel: MENU_BUTTON_LABEL,
-    zoomButtonLabel: ZOOM_BUTTON_LABEL,
-    filterButtonLabel: FILTER_BUTTON_LABEL,
+    menuButtonLabel: viewCopy.menuButtonLabel,
+    zoomButtonLabel: viewCopy.zoomLabel,
+    filterButtonLabel: viewCopy.filterLabel,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
     showFilterPopoverSearch: searchInFilterPopover,
@@ -398,17 +416,17 @@ export const selectViewData = ({ state, props, i18n }) => {
       props.progressiveInitialItemCount,
       DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
     ),
-    emptyMessage:
-      props.emptyMessage ??
-      (hasActiveSearch
-        ? `No items found matching "${searchQuery}"`
-        : hasActiveTagFilter
-          ? "No items found for the selected tags"
-          : `No items found matching "${searchQuery}"`),
-    addText: props.addText ?? "Add",
+    emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
+    viewCopy,
+    addText: props.addText ?? viewCopy.addText,
     canAdd: parseBooleanProp(props.canAdd, true),
     mobileLayout,
     scrollBottomPadding,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: state.dropdownMenu.items ?? [
+        { label: viewCopy.deleteMenuItem, type: "item", value: "delete-item" },
+      ],
+    },
   };
 };

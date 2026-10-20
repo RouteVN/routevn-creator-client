@@ -961,7 +961,7 @@ const deleteImage = async (deps, { itemId } = {}) => {
   const copy = selectCopy(deps);
   const result = await projectService.deleteImageIfUnused({
     imageId: itemId,
-    checkTargets: ["scenes", "layouts", "controls"],
+    checkTargets: ["scenes", "layouts", "controls", "animations"],
   });
 
   if (!result.deleted) {

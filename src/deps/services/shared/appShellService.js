@@ -47,6 +47,16 @@ const applyThemeToDocument = (
   return resolvedTheme;
 };
 
+// Screen readers, hyphenation and spellcheck read the document language.
+const applyLanguageToDocument = (
+  language,
+  root = typeof document === "undefined" ? undefined : document,
+) => {
+  if (root?.documentElement) {
+    root.documentElement.lang = language;
+  }
+};
+
 const getActiveElement = (root = document) => {
   let active = root.activeElement;
   while (active && active.shadowRoot && active.shadowRoot.activeElement) {
@@ -71,6 +81,10 @@ const hideVirtualKeyboard = (root = document) => {
     root?.defaultView || (typeof window === "undefined" ? undefined : window);
   resolvedWindow?.navigator?.virtualKeyboard?.hide?.();
 };
+
+// A wait before leaving a page shorter than this shows no message, so a quick
+// save does not flash one.
+const SHOW_SAVING_NOTICE_AFTER_MS = 300;
 
 export const createAppShellService = ({
   router,
@@ -116,9 +130,33 @@ export const createAppShellService = ({
     return router.getPayload()?.p ?? "";
   };
 
+  // Leaving a page waits for the saves it still owes. A wait that is long
+  // enough to notice says so, instead of leaving the page looking frozen. Only
+  // a move to another page has a destination: the app going to the background
+  // or quitting also waits, but nobody is looking at the screen then.
   const prepareNavigation = async (payload = {}) => {
-    for (const handler of beforeNavigationHandlers) {
-      await handler(payload);
+    let notice;
+    const timer =
+      payload.path === undefined
+        ? undefined
+        : setTimeout(() => {
+            const copy = getAppCopy();
+            notice = globalUI?.showProgressDialog?.({
+              title: copy.savingChangesTitle ?? "Saving your changes…",
+              message:
+                copy.savingChangesMessage ??
+                "Please wait while your changes are saved.",
+              progress: {},
+            });
+          }, SHOW_SAVING_NOTICE_AFTER_MS);
+
+    try {
+      for (const handler of beforeNavigationHandlers) {
+        await handler(payload);
+      }
+    } finally {
+      clearTimeout(timer);
+      notice?.close();
     }
   };
 
@@ -312,6 +350,17 @@ export const createAppShellService = ({
 
     applyTheme(theme) {
       return applyThemeToDocument(theme);
+    },
+
+    // `language` is a BCP 47 tag, such as an app locale id.
+    setDocumentLanguage(language) {
+      applyLanguageToDocument(language);
+    },
+
+    // Rettangoli UI forms use these as their default validation messages
+    // (window.rtglFormMessages); a field's own message still takes precedence.
+    setFormValidationMessages(messages) {
+      globalThis.rtglFormMessages = messages;
     },
 
     getAppVersion() {

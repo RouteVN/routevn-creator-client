@@ -131,18 +131,4 @@ export const toAnimationDisplayItem = (
   };
 };
 
-export const formatAnimationDurationLabel = (durationMs) => {
-  const resolvedDurationMs = Number(durationMs) || 0;
-  if (resolvedDurationMs < 1000) {
-    return `${resolvedDurationMs}ms`;
-  }
-
-  const durationSeconds = resolvedDurationMs / 1000;
-  if (Number.isInteger(durationSeconds)) {
-    return `${durationSeconds}s`;
-  }
-
-  return `${Number(durationSeconds.toFixed(durationSeconds < 10 ? 1 : 2))}s`;
-};
-
 export { getDialogType };

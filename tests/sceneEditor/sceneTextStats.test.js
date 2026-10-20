@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSceneTextStats,
+  formatSceneTextStatsLabel,
   getSceneTextForStats,
 } from "../../src/internal/ui/sceneTextStats.js";
+import { FR_I18N, RU_I18N } from "../support/i18n.js";
 
 describe("sceneTextStats", () => {
   it("counts dialogue words and choice text", () => {
@@ -188,5 +190,30 @@ describe("sceneTextStats", () => {
       wordCount: 0,
       characterCount: 0,
     });
+  });
+
+  it("joins the line and word labels with the catalog summary", () => {
+    expect(
+      formatSceneTextStatsLabel(
+        { lineCount: 2, wordCount: 5, characterCount: 20 },
+        { language: "ru", copy: RU_I18N.scenesPage },
+      ),
+    ).toBe("Строк: 2 · Слов: 5");
+  });
+
+  it("uses the singular for 0 in French", () => {
+    const copy = FR_I18N.scenesPage;
+    const label = formatSceneTextStatsLabel(
+      { lineCount: 0, wordCount: 1, characterCount: 3 },
+      { language: "fr", copy, dateTime: FR_I18N.dateTime },
+    );
+
+    expect(label).toBe(
+      copy.sceneTextStatsSummary
+        .replace("{lineLabel}", copy.sceneTextStatsLineLabel)
+        .replace("{textCountLabel}", copy.sceneTextStatsWordLabel)
+        .replace("{count}", "0")
+        .replace("{count}", "1"),
+    );
   });
 });

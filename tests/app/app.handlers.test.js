@@ -21,6 +21,7 @@ import {
   setCurrentRoute,
   setUiConfig,
 } from "../../src/pages/app/app.store.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 
 describe("app help button", () => {
   const openedDocsUrl = (uiConfig) => {
@@ -237,6 +238,105 @@ describe("app route transitions", () => {
     });
     cleanup();
     expect(unsubscribe).toHaveBeenCalledOnce();
+    dom.window.close();
+  });
+
+  it("applies the saved app language when the app mounts on any page", async () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+    const appService = {
+      getPath: vi.fn(() => "/project/scenes"),
+      getPayload: vi.fn(() => ({ p: "project-1" })),
+      getUserConfig: vi.fn((key) => (key === "app.locale" ? "ru" : undefined)),
+      getPlatform: vi.fn(() => "web"),
+      setAppCopyProvider: vi.fn(),
+      setUserConfig: vi.fn(),
+    };
+    let currentLocale = "en";
+    const locale = {
+      available: vi.fn(() => ["en", "ru"]),
+      current: vi.fn(() => currentLocale),
+      set: vi.fn(async (nextLocale) => {
+        currentLocale = nextLocale;
+      }),
+      subscribe: vi.fn(() => () => {}),
+    };
+    const deps = {
+      appService,
+      locale,
+      i18n: { appPage: {} },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
+      },
+      subject: { dispatch: vi.fn(), pipe: vi.fn(() => NEVER) },
+      uiConfig: {},
+    };
+
+    const cleanup = handleBeforeMount(deps);
+    await vi.waitFor(() => expect(locale.set).toHaveBeenCalledWith("ru"));
+
+    expect(appService.setUserConfig).not.toHaveBeenCalled();
+    cleanup();
+    dom.window.close();
+  });
+
+  it("keeps the form validation messages in the active locale", () => {
+    const dom = new JSDOM("<!doctype html><body></body>");
+    vi.stubGlobal("window", dom.window);
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("Element", dom.window.Element);
+
+    let localeListener;
+    let i18n = EN_I18N;
+    const unsubscribeLocale = vi.fn();
+    const appService = {
+      getPath: vi.fn(() => "/"),
+      getPayload: vi.fn(() => ({})),
+      getUserConfig: vi.fn(() => undefined),
+      getPlatform: vi.fn(() => "web"),
+      setAppCopyProvider: vi.fn(),
+      setFormValidationMessages: vi.fn(),
+    };
+    const deps = {
+      appService,
+      locale: {
+        subscribe: vi.fn((listener) => {
+          localeListener = listener;
+          return unsubscribeLocale;
+        }),
+      },
+      store: {
+        setPlatform: vi.fn(),
+        setUiConfig: vi.fn(),
+        setHelpButtonVisible: vi.fn(),
+      },
+      subject: {
+        dispatch: vi.fn(),
+        pipe: vi.fn(() => NEVER),
+      },
+      uiConfig: {},
+    };
+    Object.defineProperty(deps, "i18n", { get: () => i18n });
+
+    const cleanup = handleBeforeMount(deps);
+    expect(appService.setFormValidationMessages).toHaveBeenLastCalledWith(
+      EN_I18N.formValidation,
+    );
+
+    i18n = PT_I18N;
+    localeListener("pt");
+
+    expect(appService.setFormValidationMessages).toHaveBeenLastCalledWith(
+      PT_I18N.formValidation,
+    );
+    expect(PT_I18N.formValidation.required).toBe("Este campo é obrigatório");
+
+    cleanup();
+    expect(unsubscribeLocale).toHaveBeenCalledOnce();
     dom.window.close();
   });
 
@@ -692,6 +792,101 @@ describe("app route transitions", () => {
     ]);
   });
 
+  it("opens a project again only after its previous release finishes", async () => {
+    // Like the project service, the project counts as ensured until its
+    // release has flushed and closed it.
+    let routeProjectId = "project-1";
+    let ensuredProjectId;
+    let finishRelease;
+    const appService = {
+      prepareNavigation: vi.fn(async () => {}),
+      getCurrentProjectId: vi.fn(() => routeProjectId),
+      refreshCurrentProjectEntry: vi.fn(async () => {}),
+      getPlatform: vi.fn(() => "android"),
+    };
+    const projectService = {
+      ensureRepository: vi.fn(async () => {
+        ensuredProjectId = routeProjectId;
+      }),
+      getEnsuredProjectId: vi.fn(() => ensuredProjectId),
+      releaseProjectRuntime: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            finishRelease = () => {
+              ensuredProjectId = undefined;
+              resolve();
+            };
+          }),
+      ),
+    };
+    const store = {
+      setCurrentRoute: vi.fn(),
+      closeMobileSheet: vi.fn(),
+      setRepositoryLoading: vi.fn(),
+      setRepositoryLoadingPhase: vi.fn(),
+      setRepositoryLoadingProgress: vi.fn(),
+    };
+    const onOpenProjectChange = vi.fn();
+    const runRouteTransition = createRouteTransitionRunner(
+      {
+        appService,
+        projectService,
+        store,
+        render: vi.fn(),
+        i18n: {},
+      },
+      { onOpenProjectChange },
+    );
+
+    await runRouteTransition({
+      path: "/project",
+      payload: { p: "project-1" },
+      navigationPrepared: true,
+    });
+
+    routeProjectId = "";
+    const leaveProject = runRouteTransition({
+      path: "/projects",
+      payload: {},
+      navigationPrepared: true,
+    });
+    await vi.waitFor(() =>
+      expect(projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+        "project-1",
+      ),
+    );
+
+    routeProjectId = "project-1";
+    const reopenProject = runRouteTransition({
+      path: "/project",
+      payload: { p: "project-1" },
+      navigationPrepared: true,
+    });
+    await Promise.resolve();
+
+    // The closing project is not shown as ready, nor ensured again, while
+    // its release can still close it.
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: true,
+    });
+    expect(projectService.ensureRepository).toHaveBeenCalledOnce();
+    expect(projectService.releaseProjectRuntime).toHaveBeenCalledOnce();
+
+    finishRelease();
+    await Promise.all([leaveProject, reopenProject]);
+
+    expect(projectService.ensureRepository).toHaveBeenCalledTimes(2);
+    expect(ensuredProjectId).toBe("project-1");
+    expect(store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
+    expect(onOpenProjectChange.mock.calls).toEqual([
+      ["project-1"],
+      [undefined],
+      ["project-1"],
+    ]);
+  });
+
   it("prepares browser back navigation without rewriting the popped entry", async () => {
     const currentPath = "/projects";
     const currentPayload = {};
@@ -836,6 +1031,7 @@ describe("app route transitions", () => {
     const deps = {
       appService,
       i18n: {},
+      locale: { subscribe: vi.fn(() => () => {}) },
       projectService: {
         ensureRepository: vi.fn(async () => {}),
         getEnsuredProjectId: vi.fn(() => "project-1"),
@@ -934,6 +1130,8 @@ const createNavigationShortcutHarness = () => {
   };
   const deps = {
     appService,
+    i18n: {},
+    locale: { subscribe: vi.fn(() => () => {}) },
     store: {
       setPlatform: vi.fn(),
       setUiConfig: vi.fn(),

@@ -890,6 +890,17 @@ const constructAnimationResources = (
         } else {
           delete animation.mask;
         }
+
+        // Route Engine refuses a transition with no prev, next or mask. One
+        // saved before anything was added to it, or whose mask image is gone,
+        // shows nothing, so it is left out and lines show without it.
+        if (
+          animation.prev === undefined &&
+          animation.next === undefined &&
+          animation.mask === undefined
+        ) {
+          return result;
+        }
       }
 
       result[animationId] = animation;
@@ -1353,6 +1364,35 @@ const alignDialogueModesWithLayouts = (story, layouts = {}) => {
   });
 };
 
+// Saved lines can still update a variable that was deleted while they used
+// it. Route Engine stops on such an update ("Variable scope is required for
+// variable"), and the update has nothing to change, so the engine copy leaves
+// it out. The saved line keeps it.
+const removeUpdatesToMissingVariables = (value, variables) => {
+  if (Array.isArray(value)) {
+    value.forEach((entry) => removeUpdatesToMissingVariables(entry, variables));
+    return;
+  }
+
+  if (!isObjectRecord(value)) {
+    return;
+  }
+
+  const updateVariable = value.updateVariable;
+  if (Array.isArray(updateVariable?.operations)) {
+    updateVariable.operations = updateVariable.operations.filter((operation) =>
+      Object.hasOwn(variables, operation?.variableId ?? ""),
+    );
+    if (updateVariable.operations.length === 0) {
+      delete value.updateVariable;
+    }
+  }
+
+  Object.values(value).forEach((entry) =>
+    removeUpdatesToMissingVariables(entry, variables),
+  );
+};
+
 export function constructProjectData(state, options = {}) {
   const screenResolution = requireProjectResolution(
     state?.project?.resolution,
@@ -1365,6 +1405,7 @@ export function constructProjectData(state, options = {}) {
   };
 
   alignDialogueModesWithLayouts(story, resources.layouts);
+  removeUpdatesToMissingVariables(story.scenes, resources.variables);
 
   return {
     screen: {
@@ -2689,7 +2730,13 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
       }
 
       scanNodeForResourceReferences(data, ({ key, value }) => {
-        if (key === "animation" && typeof value === "string") {
+        // Lines, layouts and controls pick animations as
+        // `animations: { resourceId }`; ids that are not animations are
+        // skipped below.
+        if (
+          (key === "animation" || key === "resourceId") &&
+          typeof value === "string"
+        ) {
           referencedAnimationIds.add(value);
         }
 
@@ -2697,6 +2744,19 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
           referencedParticleIds.add(value);
         }
       });
+    }
+  }
+
+  // The project model refuses to delete an image that a transition mask
+  // uses, whether or not anything picks that transition. With the
+  // "animations" target, every animation is checked.
+  if (checkTargets.includes("animations")) {
+    for (const [animationId, animationItem] of Object.entries(
+      state.animations?.items ?? {},
+    )) {
+      if (animationItem?.type === "animation") {
+        referencedAnimationIds.add(animationId);
+      }
     }
   }
 

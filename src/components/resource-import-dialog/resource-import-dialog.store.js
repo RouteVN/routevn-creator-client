@@ -1,3 +1,4 @@
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { ROUTEVN_ASSET_STORE_URL } from "../../internal/routevnUrls.js";
 
 const SOURCE_STEP = "source";
@@ -449,12 +450,21 @@ export const selectViewData = ({ state, i18n = {} }) => {
     packageVersion: plan?.package?.version,
     packageDescription: plan?.package?.description,
     packagePublisher: plan?.package?.publisher,
+    packagePublisherText: formatI18nCopy(
+      copy.labelValue ?? "{label}: {value}",
+      {
+        label: copy.publisherLabel ?? "Publisher",
+        value: plan?.package?.publisher,
+      },
+    ),
     packageSource: plan?.package?.source,
+    packageSourceText: formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
+      label: copy.sourceLabel ?? "Source",
+      value: plan?.package?.source,
+    }),
     resources,
     resourceSections,
     warnings,
-    publisherLabel: copy.publisherLabel ?? "Publisher",
-    sourceLabel: copy.sourceLabel ?? "Source",
     warningsLabel: copy.warningsLabel ?? "Warnings",
     progressLabel:
       progressLabelByPhase[state.progress.phase] ??

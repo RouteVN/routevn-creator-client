@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
@@ -176,4 +177,106 @@ it("uses the clicked item's context menu rather than the selected item's menu", 
   expect(state.dropdownMenu.items).toEqual(customMenu);
   showContextMenu({ state, props }, { itemId: "one", x: 1, y: 2 });
   expect(state.dropdownMenu.items).toEqual(props.itemContextMenuItems);
+});
+
+describe("catalogResourcesView.store localized copy", () => {
+  const animationGroups = [
+    {
+      id: "folder-1",
+      children: [
+        {
+          id: "animation-1",
+          name: "Animation One",
+          cardKind: "animation",
+          animationType: "transition",
+          animationTypeLabel: "Transição",
+        },
+        { id: "color-1", name: "Color One", cardKind: "color" },
+      ],
+    },
+  ];
+
+  it("builds the animation type line from the catalog template", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: { groups: animationGroups },
+      i18n: {
+        resourcePages: { typeSummaryTemplate: "Tipo: {type}" },
+        animationEditorPage: {
+          outTimelineLabel: "Saída",
+          inTimelineLabel: "Entrada",
+        },
+      },
+    });
+
+    const [animationCard, colorCard] = viewData.groups[0].children;
+    expect(animationCard).toMatchObject({
+      animationTypeSummary: "Tipo: Transição",
+      transitionOutgoingLabel: "Saída",
+      transitionIncomingLabel: "Entrada",
+    });
+    expect(colorCard.animationTypeSummary).toBeUndefined();
+  });
+
+  it("keeps the side labels a page passes on an animation card", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        groups: [
+          {
+            id: "folder-1",
+            children: [
+              {
+                id: "audio-effect-1",
+                cardKind: "animation",
+                transitionOutgoingLabel: "Page outgoing",
+                transitionIncomingLabel: "Page incoming",
+              },
+            ],
+          },
+        ],
+      },
+      i18n: {
+        animationEditorPage: {
+          outTimelineLabel: "Saída",
+          inTimelineLabel: "Entrada",
+        },
+      },
+    });
+
+    expect(viewData.groups[0].children[0]).toMatchObject({
+      transitionOutgoingLabel: "Page outgoing",
+      transitionIncomingLabel: "Page incoming",
+    });
+  });
+
+  it("renders the type line without a hardcoded prefix", () => {
+    const view = readFileSync(
+      "src/components/catalogResourcesView/catalogResourcesView.view.yaml",
+      "utf8",
+    );
+
+    expect(view).toContain(
+      "- rtgl-text s=xs c=mu-fg mb=md: ${item.animationTypeSummary}",
+    );
+    expect(view).not.toContain("Type: ");
+  });
+
+  it("falls back to a localized Delete item and add label", () => {
+    const state = createInitialState();
+    const props = { groups: animationGroups };
+    const i18n = {
+      resourcePages: { deleteMenuItem: "Apagar", addText: "Adicionar" },
+    };
+
+    showContextMenu({ state, props }, { itemId: "animation-1", x: 1, y: 2 });
+    const viewData = selectViewData({ state, props, i18n });
+
+    expect(viewData.dropdownMenu).toMatchObject({
+      isOpen: true,
+      targetItemId: "animation-1",
+      items: [{ label: "Apagar", type: "item", value: "delete-item" }],
+    });
+    expect(viewData.addText).toBe("Adicionar");
+  });
 });

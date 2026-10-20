@@ -336,6 +336,12 @@ export const createProjectRepositoryService = ({
     return currentReference?.projectPath ?? "";
   };
 
+  // The repository of the project that is open, whatever the route names: a
+  // route leaves a project before the project is closed.
+  const getEnsuredRepository = () => {
+    return currentRepository;
+  };
+
   const emitRepositoryLoadStage = (onLoadStage, payload = {}) => {
     if (typeof onLoadStage !== "function") {
       return;
@@ -1491,6 +1497,7 @@ export const createProjectRepositoryService = ({
     getCurrentProjectId,
     getEnsuredProjectId,
     getEnsuredProjectPath,
+    getEnsuredRepository,
     getProjectCacheKey,
     ensureProjectCompatibleByProjectId,
     getProjectInfoByProjectId,

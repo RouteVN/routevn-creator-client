@@ -21,6 +21,7 @@ import { createApiService } from "./deps/services/apiService.js";
 import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
+import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { createBundleInstructions } from "./deps/services/shared/projectExportService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
@@ -298,6 +299,7 @@ const alertPreviewAudioFailure = (error) => {
 
 const graphicsService = await createGraphicsService({
   subject,
+  onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   audioOutput: iosGraphicsAudioOutput,
   onAudioOutputError: alertPreviewAudioFailure,
   onRenderError: (error) => {

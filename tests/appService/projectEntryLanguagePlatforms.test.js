@@ -306,9 +306,7 @@ describe("project-entry language platform propagation", () => {
         template: "blank",
         projectResolution: { width: 1280, height: 720 },
       }),
-    ).rejects.toThrow(
-      "The selected folder must be empty. Please choose an empty folder for your new project.",
-    );
+    ).rejects.toMatchObject({ code: "project_folder_not_empty" });
 
     expect(projectService.initializeProject).not.toHaveBeenCalled();
     await expect(db.get("projectEntries")).resolves.toEqual([]);

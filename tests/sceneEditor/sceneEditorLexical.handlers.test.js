@@ -36,7 +36,10 @@ import * as storeModule from "../../src/pages/sceneEditorLexical/sceneEditorLexi
 import {
   EN_I18N,
   ES_I18N,
+  FR_I18N,
   JA_I18N,
+  PT_I18N,
+  RU_I18N,
   TH_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
@@ -322,6 +325,7 @@ describe("sceneEditorLexical.handlers preview", () => {
       selectPendingDraftSections: vi.fn(() => []),
       setDraftSavePendingSinceAt: vi.fn(),
       setSkipNextEditorBlurDraftFlush: vi.fn(),
+      selectIsCanvasUnavailable: () => false,
       showPreviewSceneId: vi.fn(() => calls.push("show-preview")),
       selectScene: vi.fn(() => ({
         sections: [{ id: "section-1", lines: [line] }],
@@ -394,6 +398,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
           payload.completion.resolve();
         }),
       },
+      store: { selectIsCanvasUnavailable: () => false },
     };
 
     await handleDownloadCanvasClick(deps);
@@ -447,7 +452,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
           payload.completion.resolve();
         }),
       },
-      store: {},
+      store: { selectIsCanvasUnavailable: () => false },
     };
 
     await handleDownloadCanvasClick(deps);
@@ -1130,6 +1135,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       store: {
         clearBackgroundTransformEditorDragStartPosition: vi.fn(),
         setBackgroundTransformEditorTransform: vi.fn(),
+        selectIsCanvasUnavailable: () => false,
       },
       render: vi.fn(),
       subject: {
@@ -1178,6 +1184,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           editor.transform = transform;
         }),
         selectBackgroundTransformEditor: vi.fn(() => editor),
+        selectIsCanvasUnavailable: () => false,
       },
       graphicsService: {
         engineSelectRenderState: vi.fn(() => ({
@@ -2182,7 +2189,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
   it("clears temporary presentation state and refreshes the canvas when action save fails", async () => {
     const saveError = new Error("save failed");
     const store = {
-      ...editHistoryStore(),
+      ...editHistoryStore({ line: { id: "line-2", actions: {} } }),
       selectActionTargetLineId: vi.fn(() => "line-2"),
       selectSelectedLineId: vi.fn(() => "line-1"),
       selectDraftSection: vi.fn(() => undefined),
@@ -2238,7 +2245,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       throw saveError;
     });
     const store = {
-      ...editHistoryStore(),
+      ...editHistoryStore({ line: { id: "line-1", actions: {} } }),
       selectActionTargetLineId: vi.fn(() => undefined),
       selectSelectedLineId: vi.fn(() => "line-1"),
       selectDraftSection: vi.fn(() => undefined),
@@ -3604,6 +3611,9 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     ["Spanish", ES_I18N],
     ["Japanese", JA_I18N],
     ["Thai", TH_I18N],
+    ["Russian", RU_I18N],
+    ["Portuguese", PT_I18N],
+    ["French", FR_I18N],
     ["Simplified Chinese", ZH_HANS_I18N],
   ])(
     "tells the user in %s that a referenced section can't be deleted",
@@ -3790,7 +3800,7 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     const createCommandLineDeps = ({ updateLineActions }) => ({
       i18n: EN_I18N,
       store: {
-        ...editHistoryStore(),
+        ...editHistoryStore({ line: { id: "line-2", actions: {} } }),
         selectActionTargetLineId: vi.fn(() => "line-2"),
         selectSelectedLineId: vi.fn(() => "line-1"),
         selectDraftSection: vi.fn(() => undefined),
@@ -3829,7 +3839,8 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
           "Failed to save section transition\n\nDetails:\nSection not found.",
         title: "Error",
       });
-      expect(deps.store.clearActionTargetLineId).not.toHaveBeenCalled();
+      // The dialog hides on submit, so its line is let go: undo stays usable.
+      expect(deps.store.clearActionTargetLineId).toHaveBeenCalledOnce();
       expect(deps.render).not.toHaveBeenCalled();
       expectNothingFollowedTheFailedSave(deps);
     });
@@ -3864,9 +3875,57 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
           skipAnimations: true,
         },
       );
-      expect(deps.store.clearActionTargetLineId).not.toHaveBeenCalled();
+      // The dialog hides on submit, so its line is let go: undo stays usable.
+      expect(deps.store.clearActionTargetLineId).toHaveBeenCalledOnce();
       expect(deps.render).not.toHaveBeenCalled();
       expect(deps.projectService.getRepositoryState).not.toHaveBeenCalled();
     });
+
+    it.each([
+      [
+        "a section transition",
+        { sectionTransition: { sceneId: "scene-1", sectionId: "section-2" } },
+      ],
+      ["a pushed overlay", { pushOverlay: { resourceId: "layout-1" } }],
+      ["a popped overlay", { popOverlay: {} }],
+    ])(
+      "renders the canvas through the canvas render queue after saving %s",
+      async (_name, detail) => {
+        vi.useFakeTimers();
+        try {
+          const deps = createCommandLineDeps({
+            updateLineActions: vi.fn(async () => ({ valid: true })),
+          });
+          Object.assign(deps.store, {
+            selectSceneId: vi.fn(() => undefined),
+            selectSelectedSectionId: vi.fn(() => undefined),
+            setRepositoryState: vi.fn(),
+            setDomainState: vi.fn(),
+            setRepositoryRevision: vi.fn(),
+            clearDraftSection: vi.fn(),
+            setSectionLineChanges: vi.fn(),
+          });
+          Object.assign(deps.projectService, {
+            getDomainState: vi.fn(),
+            getRepositoryRevision: vi.fn(),
+          });
+          // Refreshing after the save reads the scene's line changes.
+          deps.graphicsService = {
+            engineSelectSectionLineChanges: vi.fn(() => ({ lines: [] })),
+          };
+          await handleCommandLineSubmit(deps, { _event: { detail } });
+
+          // The queue reports a failed render and alerts once, which a render
+          // started from a timer could not do.
+          expect(deps.subject.dispatch).toHaveBeenCalledExactlyOnceWith(
+            "sceneEditor.renderCanvas",
+            {},
+          );
+          expect(vi.getTimerCount()).toBe(0);
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
   });
 });

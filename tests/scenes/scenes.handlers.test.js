@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Subject } from "rxjs";
-import {
-  handleAfterMount,
+import * as scenesHandlers from "../../src/pages/scenes/scenes.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
+import { mountHandlers } from "../support/mountHandlers.js";
+
+const {
   handleBeforeMount,
   handleFileExplorerKeyboardScopeKeyDown,
   handleFileExplorerSelectionChanged,
@@ -15,8 +18,19 @@ import {
   handleWhiteboardItemSelected,
   handleWhiteboardPanChanged,
   handleWhiteboardZoomChanged,
-} from "../../src/pages/scenes/scenes.handlers.js";
-import { EN_I18N } from "../support/i18n.js";
+} = scenesHandlers;
+
+// Mounts the page and waits until its scene map is ready.
+const mountScenesPage = async (deps) => {
+  const page = mountHandlers(scenesHandlers, deps);
+  await page.afterMount;
+  await vi.waitFor(() =>
+    expect(deps.store.setSceneWorkspaceReady).toHaveBeenCalledWith({
+      isReady: true,
+    }),
+  );
+  return page;
+};
 
 const originalWindow = globalThis.window;
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
@@ -184,6 +198,26 @@ describe("scenes.handlers config keys", () => {
     cleanup();
   });
 
+  it("shows a scene without a name by its id on the map", () => {
+    const deps = createDeps();
+    deps.projectService.getRepositoryState.mockReturnValue({
+      scenes: { tree: [], items: { "scene-1": { id: "scene-1" } } },
+      layouts: { tree: [], items: {} },
+    });
+    deps.projectService.getDomainState.mockReturnValue({
+      scenes: { "scene-1": { id: "scene-1" } },
+      story: { sceneOrder: ["scene-1"] },
+    });
+
+    const cleanup = handleBeforeMount(deps);
+
+    expect(deps.store.setWhiteboardItems).toHaveBeenCalledWith({
+      items: [expect.objectContaining({ id: "scene-1", name: "scene-1" })],
+    });
+
+    cleanup();
+  });
+
   it("loads the scenes viewport from project-scoped userConfig keys", async () => {
     const deps = createDeps({
       userConfig: {
@@ -194,8 +228,7 @@ describe("scenes.handlers config keys", () => {
       },
     });
 
-    const cleanup = handleBeforeMount(deps);
-    await handleAfterMount(deps);
+    const page = await mountScenesPage(deps);
 
     expect(deps.projectService.getCurrentProjectInfo).toHaveBeenCalledTimes(1);
     expect(deps.store.setProjectLanguage).toHaveBeenCalledWith({
@@ -224,7 +257,7 @@ describe("scenes.handlers config keys", () => {
     expect(deps.store.setSceneWorkspaceReady).toHaveBeenCalledWith({
       isReady: true,
     });
-    cleanup();
+    page.unmount();
   });
 
   it("writes zoom and pan changes to project-scoped viewport keys", () => {
@@ -273,8 +306,7 @@ describe("scenes.handlers config keys", () => {
     const deps = createDeps();
     deps.projectService.loadSceneOverviews = loadSceneOverviews;
 
-    const cleanup = handleBeforeMount(deps);
-    await handleAfterMount(deps);
+    const page = await mountScenesPage(deps);
 
     expect(deps.store.setItems).toHaveBeenCalled();
     expect(deps.store.setLayouts).toHaveBeenCalled();
@@ -294,7 +326,7 @@ describe("scenes.handlers config keys", () => {
 
     resolveOverviews({});
     await Promise.resolve();
-    cleanup();
+    page.unmount();
   });
 
   it("waits for idle time before loading scene overviews", async () => {
@@ -307,8 +339,7 @@ describe("scenes.handlers config keys", () => {
 
     const deps = createDeps();
 
-    const cleanup = handleBeforeMount(deps);
-    await handleAfterMount(deps);
+    const page = await mountScenesPage(deps);
 
     expect(deps.projectService.loadSceneOverviews).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -320,7 +351,53 @@ describe("scenes.handlers config keys", () => {
     expect(deps.projectService.loadSceneOverviews).toHaveBeenCalledWith({
       sceneIds: ["scene-1"],
     });
-    cleanup();
+    page.unmount();
+  });
+
+  it("stops opening the scene map when the page closes before the project details load", async () => {
+    let projectOpen = true;
+    let resolveProjectInfo;
+    const deps = createDeps();
+    deps.projectService.getCurrentProjectInfo = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveProjectInfo = resolve;
+        }),
+    );
+    // Like the project service, reading the project fails once it is no
+    // longer open.
+    deps.projectService.getDomainState = vi.fn(() => {
+      if (!projectOpen) {
+        throw new Error(
+          "Repository not initialized. Call ensureRepository() first.",
+        );
+      }
+      return { scenes: {}, story: { sceneOrder: [] } };
+    });
+
+    const page = mountHandlers(scenesHandlers, deps);
+    await vi.waitFor(() =>
+      expect(deps.projectService.getCurrentProjectInfo).toHaveBeenCalledOnce(),
+    );
+
+    const projectReadsWhileOpen =
+      deps.projectService.getDomainState.mock.calls.length;
+
+    // The user leaves the project: the page closes, then the project does.
+    page.unmount();
+    projectOpen = false;
+    resolveProjectInfo({ language: "en" });
+
+    await expect(page.afterMount).resolves.toBeUndefined();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(deps.projectService.getDomainState).toHaveBeenCalledTimes(
+      projectReadsWhileOpen,
+    );
+    expect(
+      deps.refs.whiteboard.transformedHandlers.handleInitialZoomAndPanSetup,
+    ).not.toHaveBeenCalled();
+    expect(deps.store.setSceneWorkspaceReady).not.toHaveBeenCalled();
+    expect(deps.projectService.loadSceneOverviews).not.toHaveBeenCalled();
   });
 
   it("animates scene map centering from file explorer scene selection", () => {

@@ -44,7 +44,7 @@ export const getChildInteractionSummary = (values = {}, copy = {}) => {
   });
 
   if (labels.length === 0) {
-    return copy.noneOption ?? "None";
+    return copy.noChildInteractionLabel ?? "None";
   }
 
   return labels.join(", ");

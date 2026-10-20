@@ -2,6 +2,7 @@ import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
+  localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 
@@ -78,6 +79,7 @@ export const selectViewData = ({ state, i18n }) => {
   const context = { layoutOptions };
 
   return {
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
     initiated: state.initiated,
     mode: state.mode,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),

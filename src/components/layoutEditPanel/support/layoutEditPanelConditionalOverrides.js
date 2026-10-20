@@ -1,3 +1,5 @@
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
+
 const createConditionOpOptions = (copy = {}) => [
   { label: copy.equalsOption ?? "Equals", value: "eq" },
 ];
@@ -664,7 +666,10 @@ export const toConditionalOverrideAttributeItems = (
       fieldName,
       label,
       value,
-      summary: `${label}: ${value}`,
+      summary: formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
+        label,
+        value,
+      }),
     };
   });
 };

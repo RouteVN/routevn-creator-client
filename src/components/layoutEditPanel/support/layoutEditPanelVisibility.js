@@ -10,6 +10,7 @@ import {
   toCharacterSelectOptions,
 } from "../../../internal/characterOptions.js";
 import { toFlatGroups } from "../../../internal/project/tree.js";
+import { getConditionTargetLabel } from "./layoutEditPanelRuntimeLabels.js";
 
 const createVisibilityConditionOpOptions = (copy = {}) => [
   { label: copy.equalsOption ?? "Equals", value: "eq" },
@@ -45,8 +46,8 @@ const getConditionTargetType = (item = {}) => {
   return String(item.type ?? "string").toLowerCase();
 };
 
-const toConditionTargetOption = (target, item) => ({
-  label: item.name,
+const toConditionTargetOption = (target, item, copy) => ({
+  label: getConditionTargetLabel(target, item.name, copy),
   value: target,
   suffixText: getConditionTargetValueKind(item),
 });
@@ -98,7 +99,9 @@ export const toSectionedVisibilityConditionTargetOptions = (
       SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetType(item)),
     )
     .filter(([target]) => isVisibleVisibilityTarget(target))
-    .map(([target, item]) => toConditionTargetOption(target, item))
+    .map(([target, item]) =>
+      toConditionTargetOption(target, item, options.targetLabelCopy),
+    )
     .sort((left, right) => left.label.localeCompare(right.label));
 
   const groupedVariableIds = new Set();
@@ -115,7 +118,11 @@ export const toSectionedVisibilityConditionTargetOptions = (
         );
       })
       .map((item) =>
-        toConditionTargetOption(toVariableConditionTarget(item.id), item),
+        toConditionTargetOption(
+          toVariableConditionTarget(item.id),
+          item,
+          options.targetLabelCopy,
+        ),
       );
 
     return toConditionTargetSection(folder.name, variableOptions);
@@ -128,7 +135,11 @@ export const toSectionedVisibilityConditionTargetOptions = (
         SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetType(item)),
     )
     .map(([variableId, item]) =>
-      toConditionTargetOption(toVariableConditionTarget(variableId), item),
+      toConditionTargetOption(
+        toVariableConditionTarget(variableId),
+        item,
+        options.targetLabelCopy,
+      ),
     );
 
   return [
@@ -169,10 +180,12 @@ export const toVisibilityConditionTargetValueKindByTarget = (
 export const getVisibilityConditionCharacterValueOptions = ({
   charactersData,
   currentValue,
+  noneLabel,
 } = {}) => {
   return toCharacterSelectOptions(charactersData, {
     includeNone: true,
     includeMissingValue: currentValue,
+    noneLabel,
   });
 };
 
@@ -185,7 +198,11 @@ const getVisibilityConditionTargetName = (
     target
   ];
   if (targetItem?.name) {
-    return targetItem.name;
+    return getConditionTargetLabel(
+      target,
+      targetItem.name,
+      options.targetLabelCopy,
+    );
   }
 
   const variableId = parseVariableConditionTarget(target);

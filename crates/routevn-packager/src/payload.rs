@@ -6,6 +6,7 @@ use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
 use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
 use sha2::{Digest, Sha256};
 
+use crate::authenticode::{self, PE_HEADER_WINDOW, SignatureFields};
 use crate::errors::{PackagerError, Result};
 
 const FOOTER_MAGIC: [u8; 16] = *b"RVNEXEPAYLOAD001";
@@ -359,8 +360,8 @@ pub fn read_self_contained_embedded_payload(exe_path: &Path) -> Result<Vec<u8>> 
 pub fn read_self_contained_embedded_payload_metadata(
     exe_path: &Path,
 ) -> Result<EmbeddedPayloadMetadata> {
-    let (footer, file_len) = read_chunked_footer(exe_path)?;
-    validate_chunked_footer_ranges(exe_path, &footer, file_len)?;
+    let (footer, unsigned_len) = read_chunked_footer(exe_path)?;
+    validate_chunked_footer_ranges(exe_path, &footer, unsigned_len)?;
 
     Ok(EmbeddedPayloadMetadata {
         plaintext_len: footer.plaintext_len,
@@ -378,8 +379,8 @@ pub fn read_self_contained_embedded_payload_range(
         return Ok(Vec::new());
     }
 
-    let (footer, file_len) = read_chunked_footer(exe_path)?;
-    validate_chunked_footer_ranges(exe_path, &footer, file_len)?;
+    let (footer, unsigned_len) = read_chunked_footer(exe_path)?;
+    validate_chunked_footer_ranges(exe_path, &footer, unsigned_len)?;
 
     if offset >= footer.plaintext_len {
         return Ok(Vec::new());
@@ -587,44 +588,88 @@ fn parse_chunk_table(path: &Path, bytes: &[u8]) -> Result<Vec<ChunkedPayloadTabl
 }
 
 fn read_chunked_footer(path: &Path) -> Result<(EmbeddedChunkedPayloadFooter, u64)> {
-    let mut file = fs::File::open(path).map_err(|source| PackagerError::ReadFile {
+    let read_error = |source| PackagerError::ReadFile {
         path: path.to_path_buf(),
         source,
-    })?;
-    let file_len = file
-        .metadata()
-        .map_err(|source| PackagerError::ReadFile {
-            path: path.to_path_buf(),
-            source,
-        })?
-        .len();
+    };
+    let mut file = fs::File::open(path).map_err(read_error)?;
+    let file_len = file.metadata().map_err(read_error)?.len();
 
     if file_len < CHUNKED_FOOTER_SIZE as u64 {
-        return Err(invalid_payload(
-            path,
-            "file is smaller than the RouteVN chunked payload footer",
-        ));
+        return Err(chunked_footer_too_small(path));
     }
 
-    file.seek(SeekFrom::End(-(CHUNKED_FOOTER_SIZE as i64)))
-        .map_err(|source| PackagerError::ReadFile {
-            path: path.to_path_buf(),
-            source,
-        })?;
-    let mut footer_bytes = [0u8; CHUNKED_FOOTER_SIZE];
-    file.read_exact(&mut footer_bytes)
-        .map_err(|source| PackagerError::ReadFile {
-            path: path.to_path_buf(),
-            source,
-        })?;
+    let mut header = vec![0u8; file_len.min(PE_HEADER_WINDOW as u64) as usize];
+    file.read_exact(&mut header).map_err(read_error)?;
+    // A signed executable has its certificate table after the footer, separated
+    // by the padding that aligns the table. Removing the signature can leave
+    // that padding behind, and the headers can also describe a table that is
+    // not there, so the end of the file is always tried too.
+    let mut candidate_ends = Vec::new();
+    if let Some(table_offset) = authenticode::certificate_table_offset(&header, file_len) {
+        candidate_ends.extend(padded_ends(table_offset));
+    }
+    candidate_ends.extend(padded_ends(file_len));
 
-    Ok((parse_chunked_footer(path, &footer_bytes)?, file_len))
+    let mut first_result = None;
+    for end in candidate_ends {
+        let result = read_chunked_footer_ending_at(&mut file, path, end);
+        if let Ok(footer) = &result
+            && chunk_table_ends_at_footer(footer, end)
+        {
+            return Ok((result?, end));
+        }
+        first_result.get_or_insert(result.map(|footer| (footer, end)));
+    }
+
+    first_result.unwrap_or_else(|| Err(chunked_footer_too_small(path)))
+}
+
+fn padded_ends(end: u64) -> impl Iterator<Item = u64> {
+    (0..authenticode::CERTIFICATE_TABLE_ALIGNMENT)
+        .filter_map(move |padding| end.checked_sub(padding))
+}
+
+fn read_chunked_footer_ending_at(
+    file: &mut fs::File,
+    path: &Path,
+    end: u64,
+) -> Result<EmbeddedChunkedPayloadFooter> {
+    let read_error = |source| PackagerError::ReadFile {
+        path: path.to_path_buf(),
+        source,
+    };
+    let footer_start = end
+        .checked_sub(CHUNKED_FOOTER_SIZE as u64)
+        .ok_or_else(|| chunked_footer_too_small(path))?;
+
+    file.seek(SeekFrom::Start(footer_start))
+        .map_err(read_error)?;
+    let mut footer_bytes = [0u8; CHUNKED_FOOTER_SIZE];
+    file.read_exact(&mut footer_bytes).map_err(read_error)?;
+
+    parse_chunked_footer(path, &footer_bytes)
+}
+
+fn chunked_footer_too_small(path: &Path) -> PackagerError {
+    invalid_payload(
+        path,
+        "file is smaller than the RouteVN chunked payload footer",
+    )
+}
+
+fn chunk_table_ends_at_footer(footer: &EmbeddedChunkedPayloadFooter, unsigned_len: u64) -> bool {
+    footer
+        .table_offset
+        .checked_add(footer.table_len)
+        .and_then(|table_end| table_end.checked_add(CHUNKED_FOOTER_SIZE as u64))
+        == Some(unsigned_len)
 }
 
 fn validate_chunked_footer_ranges(
     path: &Path,
     footer: &EmbeddedChunkedPayloadFooter,
-    file_len: u64,
+    unsigned_len: u64,
 ) -> Result<()> {
     if footer.chunk_size == 0 {
         return Err(invalid_payload(
@@ -655,14 +700,11 @@ fn validate_chunked_footer_ranges(
         ));
     }
 
-    let table_end = footer
+    footer
         .table_offset
         .checked_add(footer.table_len)
         .ok_or_else(|| invalid_payload(path, "chunk table range overflows"))?;
-    if table_end
-        .checked_add(CHUNKED_FOOTER_SIZE as u64)
-        .is_none_or(|expected_file_len| expected_file_len != file_len)
-    {
+    if !chunk_table_ends_at_footer(footer, unsigned_len) {
         return Err(invalid_payload(
             path,
             "chunk table range does not end at footer boundary",
@@ -795,9 +837,12 @@ fn unwrap_chunked_payload_key_from_file(
 }
 
 fn derive_key_mask(template_bytes: &[u8], nonce: PayloadNonce) -> [u8; KEY_SIZE] {
-    let mut hasher = create_key_mask_hasher(nonce, template_bytes.len() as u64);
-    hasher.update(template_bytes);
-    hasher.finalize().into()
+    let mut hasher = KeyMaskHasher::new(nonce, template_bytes.len() as u64);
+    for chunk in template_bytes.chunks(PE_HEADER_WINDOW) {
+        hasher.update(chunk);
+    }
+
+    hasher.finalize()
 }
 
 fn derive_key_mask_from_file(
@@ -809,9 +854,9 @@ fn derive_key_mask_from_file(
         path: path.to_path_buf(),
         source,
     })?;
-    let mut hasher = create_key_mask_hasher(nonce, template_len);
+    let mut hasher = KeyMaskHasher::new(nonce, template_len);
     let mut remaining = template_len;
-    let mut buffer = [0u8; 64 * 1024];
+    let mut buffer = [0u8; PE_HEADER_WINDOW];
 
     while remaining > 0 {
         let read_len = remaining.min(buffer.len() as u64) as usize;
@@ -824,15 +869,51 @@ fn derive_key_mask_from_file(
         remaining -= read_len as u64;
     }
 
-    Ok(hasher.finalize().into())
+    Ok(hasher.finalize())
 }
 
-fn create_key_mask_hasher(nonce: PayloadNonce, template_len: u64) -> Sha256 {
-    let mut hasher = Sha256::new();
-    hasher.update(KEY_MASK_LABEL);
-    hasher.update(nonce.0);
-    hasher.update(template_len.to_le_bytes());
-    hasher
+/// Hashes the executable the payload was appended to. The template is fed in
+/// `PE_HEADER_WINDOW` chunks so the first one holds the PE headers; the
+/// checksum and certificate-table entry are hashed as zero because signing the
+/// finished export rewrites them.
+struct KeyMaskHasher {
+    hasher: Sha256,
+    hashed_len: u64,
+}
+
+impl KeyMaskHasher {
+    fn new(nonce: PayloadNonce, template_len: u64) -> Self {
+        let mut hasher = Sha256::new();
+        hasher.update(KEY_MASK_LABEL);
+        hasher.update(nonce.0);
+        hasher.update(template_len.to_le_bytes());
+
+        Self {
+            hasher,
+            hashed_len: 0,
+        }
+    }
+
+    fn update(&mut self, chunk: &[u8]) {
+        let signature_fields: Option<SignatureFields> = if self.hashed_len == 0 {
+            authenticode::signature_fields(chunk)
+        } else {
+            None
+        };
+
+        if let Some(fields) = signature_fields {
+            let mut masked_chunk = chunk.to_vec();
+            fields.zero(&mut masked_chunk);
+            self.hasher.update(&masked_chunk);
+        } else {
+            self.hasher.update(chunk);
+        }
+        self.hashed_len += chunk.len() as u64;
+    }
+
+    fn finalize(self) -> [u8; KEY_SIZE] {
+        self.hasher.finalize().into()
+    }
 }
 
 fn derive_segment_nonce(seed: PayloadNonce, segment_index: u64) -> PayloadNonce {

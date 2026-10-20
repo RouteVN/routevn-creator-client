@@ -61,11 +61,13 @@ const toAndroidProjectEntry = ({ project, existingEntry } = {}) => {
     return undefined;
   }
 
+  // A project without a name keeps an empty name; the projects page shows
+  // its localized "Untitled" label.
   const projectName = project.name?.trim?.() || existingEntry?.name;
 
   return {
     id: projectId,
-    name: projectName || "Untitled Project",
+    name: projectName ?? "",
     description: project.description ?? existingEntry?.description ?? "",
     language: normalizeProjectLanguage(
       project.language ?? existingEntry?.language,
@@ -85,15 +87,9 @@ const registerImportedAndroidProject = async ({
   loadProjectIcon,
   projectService,
 }) => {
-  const importedName = importedProject.name?.trim?.() ?? "";
-  let projectName = "Untitled Project";
-  if (importedName) {
-    projectName = importedName;
-  }
-
   const projectEntry = {
     id: projectId,
-    name: projectName,
+    name: importedProject.name?.trim?.() ?? "",
     description: importedProject.description ?? "",
     language: normalizeProjectLanguage(importedProject.language),
     iconFileId: importedProject.iconFileId ?? null,

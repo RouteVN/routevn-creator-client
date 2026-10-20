@@ -78,23 +78,33 @@ export const buildSpriteGroupInUseMessage = ({
       : copy.spriteGroupInUseLabelFallback;
   const locationParts = [];
 
-  if (usage?.sceneName) {
+  if (usage?.sceneName && usage?.sectionName) {
     locationParts.push(
-      copy.spriteGroupInUseScene.replace("{sceneName}", usage.sceneName),
+      copy.spriteGroupInUseSceneSection
+        .replace("{sceneName}", () => usage.sceneName)
+        .replace("{sectionName}", () => usage.sectionName),
     );
-  }
-
-  if (usage?.sectionName) {
+  } else if (usage?.sceneName) {
     locationParts.push(
-      copy.spriteGroupInUseSection.replace("{sectionName}", usage.sectionName),
+      copy.spriteGroupInUseScene.replace("{sceneName}", () => usage.sceneName),
+    );
+  } else if (usage?.sectionName) {
+    locationParts.push(
+      copy.spriteGroupInUseSection.replace(
+        "{sectionName}",
+        () => usage.sectionName,
+      ),
     );
   }
 
   if (locationParts.length === 0) {
-    return copy.spriteGroupInUseMessage.replace("{groupLabel}", groupLabel);
+    return copy.spriteGroupInUseMessage.replace(
+      "{groupLabel}",
+      () => groupLabel,
+    );
   }
 
   return copy.spriteGroupInUseMessageWithLocation
-    .replace("{groupLabel}", groupLabel)
-    .replace("{location}", locationParts.join(", "));
+    .replace("{groupLabel}", () => groupLabel)
+    .replace("{location}", () => locationParts.join(", "));
 };

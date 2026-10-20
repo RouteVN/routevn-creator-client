@@ -1,7 +1,7 @@
 import { produce } from "immer";
 import { describe, expect, it } from "vitest";
 import * as selectorStore from "../../src/components/characterSpriteSelector/characterSpriteSelector.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, PT_I18N } from "../support/i18n.js";
 import { renderViewYaml } from "../support/renderView.js";
 
 const sprite = (id, name, tagIds) => ({
@@ -227,5 +227,39 @@ describe("rvn-character-sprite-selector", () => {
     expect(spritesHtml).toContain("rtgl-tabs");
     expect(spritesHtml).toContain('fileId="file-sprite-smile"');
     expect(spritesHtml).not.toContain("rvn-stacked-file-images");
+  });
+});
+
+describe("rvn-character-sprite-selector sprite group names", () => {
+  it("names a sprite group without a name by its position in the active locale", () => {
+    const character = charactersData.items["character-1"];
+    let state = selectorStore.createInitialState();
+    state = produce(state, (draft) => {
+      selectorStore.loadSelection(
+        { state: draft },
+        {
+          charactersData: {
+            tree: [{ id: "character-1" }],
+            items: {
+              "character-1": {
+                ...character,
+                spriteGroups: [
+                  { id: "body", tags: ["tag-body"] },
+                  { id: "face", name: "Face", tags: ["tag-face"] },
+                ],
+              },
+            },
+          },
+          characterId: "character-1",
+        },
+      );
+    });
+
+    expect(
+      selectorStore.selectViewData({ state, i18n: PT_I18N }).groupTabs,
+    ).toEqual([
+      { id: "face", label: "Face" },
+      { id: "body", label: "Grupo 1" },
+    ]);
   });
 });

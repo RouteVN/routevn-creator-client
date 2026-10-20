@@ -8,6 +8,7 @@ import {
   renderSceneEditorCanvas,
   renderSceneEditorState,
   resolveSceneEditorEntrySelection,
+  restoreSceneEditorFromPreview,
   updateSceneEditorSectionChanges,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
 
@@ -623,6 +624,122 @@ describe("renderSceneEditorState", () => {
       expect(appService.showAlertWhenIdle).toHaveBeenCalledOnce();
     } finally {
       unmount();
+      consoleError.mockRestore();
+    }
+  });
+
+  it("reports and alerts a failed render after the canvas wheel moves to another line", async () => {
+    const subject = new Subject();
+    subject.dispatch = (action, payload) => {
+      subject.next({ action, payload });
+    };
+    const failure = new Error("Canvas render failed");
+    const appService = {
+      reportError: vi.fn(),
+      showAlertWhenIdle: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const unhandledRejections = [];
+    const onUnhandledRejection = (reason) => {
+      unhandledRejections.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandledRejection);
+    let selectedLineId = "line-2";
+    const store = {
+      selectSelectedLineId: () => selectedLineId,
+      selectSelectedSectionId: () => "section-1",
+      selectPreviousLineId: () => "line-1",
+      selectNextLineId: () => undefined,
+      setSelectedLineId: ({ selectedLineId: lineId }) => {
+        selectedLineId = lineId;
+      },
+      // The render of the line the wheel moved to fails.
+      selectSceneId: () => {
+        throw failure;
+      },
+    };
+    const unmount = mountSceneEditorSubscriptions({
+      subject,
+      appService,
+      store,
+      refs: {},
+      render: vi.fn(),
+      i18n: {
+        resourcePages: { errorTitle: "Error title" },
+        scenesPage: {},
+        sceneEditorPage: {
+          errorDetailsLabel: "Details label:",
+          failedRenderCanvas: "Canvas message",
+        },
+      },
+    });
+    const canvasRoot = new EventTarget();
+
+    try {
+      subject.dispatch("sceneEditor.canvasMounted", { canvasRoot });
+      const wheel = new Event("wheel");
+      wheel.deltaY = -10;
+      canvasRoot.dispatchEvent(wheel);
+
+      await vi.waitFor(() => {
+        expect(appService.showAlertWhenIdle).toHaveBeenCalledWith({
+          title: "Error title",
+          message: "Canvas message\n\nDetails label:\nCanvas render failed",
+        });
+      });
+      expect(selectedLineId).toBe("line-1");
+      expect(appService.reportError).toHaveBeenCalledWith(failure, {
+        operation: "sceneEditor.renderCanvas",
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandledRejections).toEqual([]);
+    } finally {
+      unmount();
+      process.off("unhandledRejection", onUnhandledRejection);
+      consoleError.mockRestore();
+    }
+  });
+
+  it("reports and alerts a failed return from the full-screen preview", async () => {
+    const failure = new Error("Canvas render failed");
+    const appService = {
+      reportError: vi.fn(),
+      showAlertWhenIdle: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    try {
+      await expect(
+        restoreSceneEditorFromPreview({
+          appService,
+          i18n: {
+            resourcePages: { errorTitle: "Error title" },
+            scenesPage: {},
+            sceneEditorPage: {
+              errorDetailsLabel: "Details label:",
+              failedRenderCanvas: "Canvas message",
+            },
+          },
+          store: {
+            selectSceneId: () => {
+              throw failure;
+            },
+          },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(appService.reportError).toHaveBeenCalledWith(failure, {
+        operation: "sceneEditor.restoreFromPreview",
+      });
+      expect(appService.showAlertWhenIdle).toHaveBeenCalledWith({
+        title: "Error title",
+        message: "Canvas message\n\nDetails label:\nCanvas render failed",
+      });
+    } finally {
       consoleError.mockRestore();
     }
   });
@@ -2176,5 +2293,113 @@ describe("renderSceneEditorState", () => {
     });
 
     expect(graphicsService.setEngineAudioMuted).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("scene editor canvas entry line", () => {
+  // Runs line actions through Route Engine's effects handler, as the app does,
+  // so the canvas follows a line that routes away.
+  const createLineActionGraphicsService = () => {
+    let engine;
+    const graphicsService = createGraphicsService();
+    graphicsService.initRouteEngine = (projectData) => {
+      const handlePendingEffects = createEffectsHandler({
+        getEngine: () => engine,
+        persistence: {
+          saveSlots: vi.fn().mockResolvedValue(undefined),
+          saveGlobalDeviceVariables: vi.fn().mockResolvedValue(undefined),
+          saveGlobalAccountVariables: vi.fn().mockResolvedValue(undefined),
+          saveGlobalRuntime: vi.fn().mockResolvedValue(undefined),
+          applyScopedDataUpdates: vi.fn().mockResolvedValue(undefined),
+        },
+        routeGraphics: { render: () => {} },
+        ticker: { add: vi.fn(), remove: vi.fn() },
+      });
+      engine = createRouteEngine({ handlePendingEffects });
+      engine.init({ initialState: { global: {}, projectData } });
+    };
+    graphicsService.engineSelectPresentationState = () =>
+      engine.selectPresentationState();
+    graphicsService.engineSelectRenderState = () => engine.selectRenderState();
+    graphicsService.engineHandleActions = (actions, eventContext, options) =>
+      engine.handleActions(actions, eventContext, options);
+    return graphicsService;
+  };
+
+  const createCanvasStore = (projectData, { lineId }) => {
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => lineId,
+      selectProjectData: () => projectData,
+      selectIsMuted: () => true,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+    };
+    return store;
+  };
+
+  const getFirstLine = (projectData) =>
+    projectData.story.scenes["scene-1"].sections["section-1"].lines[0];
+
+  const renderCanvasLine = async (projectData, { lineId }) => {
+    const store = createCanvasStore(projectData, { lineId });
+    await renderSceneEditorState({
+      store,
+      graphicsService: createLineActionGraphicsService(),
+    });
+    return store.presentationState?.dialogue?.content?.[0]?.text;
+  };
+
+  // Each loops back to the selected line itself: Route Engine stops such a
+  // loop with "exceeded 1000 synchronous effect batches".
+  it.each([
+    ["a story reset", { resetStoryAtSection: { sectionId: "section-1" } }],
+    [
+      "a conditional transition",
+      {
+        conditional: {
+          branches: [
+            { actions: { sectionTransition: { sectionId: "section-1" } } },
+          ],
+        },
+      },
+    ],
+  ])(
+    "shows a selected line that loops back to itself through %s",
+    async (_label, routing) => {
+      const projectData = createProjectData();
+      Object.assign(getFirstLine(projectData).actions, routing);
+      const original = structuredClone(projectData);
+
+      await expect(
+        renderCanvasLine(projectData, { lineId: "line-1" }),
+      ).resolves.toBe("first");
+      // The canvas works on a copy; the project keeps the actions.
+      expect(projectData).toEqual(original);
+    },
+  );
+
+  it("does not continue past a selected line whose conditional stays", async () => {
+    const projectData = createProjectData();
+    getFirstLine(projectData).actions.conditional = {
+      branches: [{ actions: {} }],
+    };
+
+    await expect(
+      renderCanvasLine(projectData, { lineId: "line-1" }),
+    ).resolves.toBe("first");
+  });
+
+  it("enters the section's first line without its transition when the selected line is not in the section", async () => {
+    const projectData = createProjectData();
+    getFirstLine(projectData).actions.sectionTransition = {
+      sectionId: "section-1",
+    };
+
+    await expect(
+      renderCanvasLine(projectData, { lineId: "line-removed" }),
+    ).resolves.toBe("first");
   });
 });

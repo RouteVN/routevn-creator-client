@@ -94,9 +94,13 @@ export const createDialoguePreviewData = ({
   const character = { name: characterName };
   if (characterSpriteId || characterSpriteTransformId) {
     character.sprite = {
-      transformId: characterSpriteTransformId,
       items: [],
     };
+    // The preview data is saved with the layout and cannot hold an undefined
+    // field, so an avatar without a transform has no `transformId`.
+    if (characterSpriteTransformId !== undefined) {
+      character.sprite.transformId = characterSpriteTransformId;
+    }
     if (characterSpriteId) {
       character.sprite.items.push({
         id: "base",
