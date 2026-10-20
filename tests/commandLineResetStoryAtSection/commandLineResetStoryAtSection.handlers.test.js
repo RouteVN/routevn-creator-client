@@ -3,10 +3,13 @@ import {
   createInitialState,
   selectSubmitData,
   selectViewData,
+  setAnimations,
   setFormValues,
+  setInitiated,
   setScenes,
 } from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.store.js";
 import {
+  handleAfterMount,
   handleFormChange,
   handleSubmitClick,
 } from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.handlers.js";
@@ -213,5 +216,51 @@ describe("commandLineResetStoryAtSection.handlers", () => {
     });
 
     expect(viewData.context.sectionOptions).toEqual([]);
+  });
+
+  it("shows the form only once it has the action's scene and section", async () => {
+    const state = createInitialState();
+    const render = vi.fn(() => {
+      const viewData = selectViewData({
+        state,
+        props: { currentSceneId: "scene-1" },
+        i18n: EN_I18N,
+      });
+      // The form takes its values when it is created.
+      if (viewData.initiated) {
+        expect(viewData.defaultValues).toMatchObject({
+          sceneId: "scene-1",
+          sectionId: "section-2",
+        });
+      }
+    });
+
+    expect(selectViewData({ state, props: {}, i18n: EN_I18N }).initiated).toBe(
+      false,
+    );
+
+    await handleAfterMount({
+      projectService: {
+        ensureRepository: vi.fn(async () => {}),
+        getRepositoryState: () => ({
+          scenes: SCENES,
+          animations: { items: {}, tree: [] },
+        }),
+      },
+      store: {
+        setScenes: (payload) => setScenes({ state }, payload),
+        setAnimations: (payload) => setAnimations({ state }, payload),
+        setFormValues: (payload) => setFormValues({ state }, payload),
+        setInitiated: () => setInitiated({ state }),
+      },
+      props: {
+        currentSceneId: "scene-1",
+        resetStoryAtSection: { sectionId: "section-2" },
+      },
+      render,
+    });
+
+    expect(state.initiated).toBe(true);
+    expect(render).toHaveBeenCalledOnce();
   });
 });

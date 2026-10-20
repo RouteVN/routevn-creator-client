@@ -79,10 +79,15 @@ const form = {
 };
 
 export const createInitialState = () => ({
+  initiated: false,
   scenes: { items: {}, tree: [] },
   animations: { items: {}, tree: [] },
   formValues: {},
 });
+
+export const setInitiated = ({ state }) => {
+  state.initiated = true;
+};
 
 export const setScenes = ({ state }, { scenes } = {}) => {
   state.scenes = scenes ?? { items: {}, tree: [] };
@@ -149,6 +154,7 @@ export const selectViewData = ({ state, props, i18n }) => {
   }
 
   return {
+    initiated: state.initiated,
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     breadcrumb: localizeCommandLineBreadcrumb(
       [

@@ -70,6 +70,7 @@ export const handleAfterMount = async (deps) => {
         props?.resetStoryAtSection?.screen?.animations?.playback?.continuity,
     },
   });
+  store.setInitiated();
   render();
 };
 
