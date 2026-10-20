@@ -312,9 +312,10 @@ const isPlainObject = (value) => {
 
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-// The canvas draws the run styles the editor saves: bold, italic, underline
-// and a hex color. Route Engine rejects any other inline style, and when it
-// rejects the first line, the scene cannot be opened to fix it.
+// The canvas keeps only the run styles the editor saves: bold, italic,
+// underline and a hex color, which Route Engine accepts. It rejects others,
+// such as fontSize or a named color, and when it rejects the first line, the
+// scene cannot be opened to fix it.
 const toCanvasTextStyle = (textStyle) => {
   const nextTextStyle = cloneTextStyle(textStyle);
   if (nextTextStyle?.fill && !HEX_COLOR_PATTERN.test(nextTextStyle.fill)) {

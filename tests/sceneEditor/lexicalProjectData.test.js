@@ -226,6 +226,9 @@ describe("sceneEditorLexical.store selectProjectData", () => {
         { text: "Rgb", textStyle: { fill: "rgb(255, 0, 0)" } },
         { text: "Big", textStyle: { fontSize: 40, fontWeight: "bold" } },
         { text: "Short", textStyle: { fill: "#abc" } },
+        { text: "Upper", textStyle: { fill: "#ABCDEF" } },
+        { text: "Alpha", textStyle: { fill: "#b4530980" } },
+        { text: "Number", textStyle: { fill: 0xb45309 } },
         { text: "Empty", textStyle: null },
       ],
     });
@@ -235,6 +238,9 @@ describe("sceneEditorLexical.store selectProjectData", () => {
       { text: "Rgb" },
       { text: "Big", textStyle: { fontWeight: "bold" } },
       { text: "Short", textStyle: { fill: "#aabbcc" } },
+      { text: "Upper", textStyle: { fill: "#ABCDEF" } },
+      { text: "Alpha" },
+      { text: "Number" },
       { text: "Empty" },
     ]);
   });
