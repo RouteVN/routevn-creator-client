@@ -1940,25 +1940,30 @@ describe("layoutEditor.handleMobilePanelModeChange", () => {
     setDetailPanelSelectedItemId: vi.fn(),
     setRightPanelMode: vi.fn(),
   });
+  const refs = { fileExplorer: { clearSelection: vi.fn() } };
   const choose = (store, id) => {
     const render = vi.fn();
     handleMobilePanelModeChange(
-      { store, render, refs: {} },
+      { store, render, refs },
       { _event: { detail: { id } } },
     );
     return render;
   };
 
-  it("shows the preview under the canvas and keeps the selection", () => {
+  it("shows the preview under the canvas with nothing selected", () => {
     const store = createStore("node-1");
+    refs.fileExplorer.clearSelection.mockClear();
 
     const render = choose(store, "preview");
 
     expect(store.closeMobileFileExplorer).toHaveBeenCalled();
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
     expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
       itemId: undefined,
     });
-    expect(store.setSelectedItemId).not.toHaveBeenCalled();
+    expect(refs.fileExplorer.clearSelection).toHaveBeenCalledTimes(1);
     expect(render).toHaveBeenCalledTimes(1);
   });
 
@@ -2132,6 +2137,44 @@ describe("layoutEditor right panel mode", () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
+  it("clears the selection and the Elements list selection when Preview is picked", () => {
+    const store = createModeStore({
+      selectSelectedItemId: vi.fn(() => "node-1"),
+    });
+    const refs = { fileExplorer: { clearSelection: vi.fn() } };
+    const render = vi.fn();
+
+    handleRightPanelModeChange(
+      { store, refs, render },
+      { _event: { detail: { id: "preview" } } },
+    );
+
+    expect(store.pickRightPanelTab).toHaveBeenCalledWith({ mode: "preview" });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(store.setDetailPanelSelectedItemId).toHaveBeenCalledWith({
+      itemId: undefined,
+    });
+    expect(refs.fileExplorer.clearSelection).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the selection when Edit is picked", () => {
+    const store = createModeStore({
+      selectSelectedItemId: vi.fn(() => "node-1"),
+    });
+    const refs = { fileExplorer: { clearSelection: vi.fn() } };
+
+    handleRightPanelModeChange(
+      { store, refs, render: vi.fn() },
+      { _event: { detail: { id: "edit" } } },
+    );
+
+    expect(store.setSelectedItemId).not.toHaveBeenCalled();
+    expect(refs.fileExplorer.clearSelection).not.toHaveBeenCalled();
+  });
+
   it("shows Edit as soon as an element is picked on a touch layout", async () => {
     const store = createModeStore({
       selectIsTouchMode: vi.fn(() => true),
@@ -2147,7 +2190,7 @@ describe("layoutEditor right panel mode", () => {
     expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "edit" });
   });
 
-  it("shows Edit when the canvas selects an element and Preview when it clears", () => {
+  it("shows Edit when the canvas selects an element and keeps it when it clears", () => {
     const store = createModeStore({
       selectIsTouchMode: vi.fn(() => true),
       selectSelectedItemId: vi.fn(() => "node-1"),
@@ -2162,16 +2205,15 @@ describe("layoutEditor right panel mode", () => {
     );
     expect(store.setRightPanelMode).toHaveBeenLastCalledWith({ mode: "edit" });
 
+    store.setRightPanelMode.mockClear();
     handleLayoutEditorCanvasSelectionChange(
       { store, refs, render: vi.fn() },
       { _event: { detail: {} } },
     );
-    expect(store.setRightPanelMode).toHaveBeenLastCalledWith({
-      mode: "preview",
-    });
+    expect(store.setRightPanelMode).not.toHaveBeenCalled();
   });
 
-  it("shows Preview again after clearing the selection from the explorer or canvas background", async () => {
+  it("keeps the tab after clearing the selection from the explorer or canvas background", async () => {
     const store = createModeStore({
       selectSelectedItemId: vi.fn(() => "node-1"),
     });
@@ -2181,17 +2223,14 @@ describe("layoutEditor right panel mode", () => {
       { store, refs, render: vi.fn() },
       { _event: { detail: {} } },
     );
-    expect(store.setRightPanelMode).toHaveBeenLastCalledWith({
-      mode: "preview",
-    });
-
-    store.setRightPanelMode.mockClear();
     const background = {};
     handleLayoutEditorCanvasBackgroundClick(
       { store, refs, render: vi.fn() },
       { _event: { target: background, currentTarget: background } },
     );
-    expect(store.setRightPanelMode).toHaveBeenCalledWith({ mode: "preview" });
+
+    expect(store.setSelectedItemId).toHaveBeenCalledTimes(2);
+    expect(store.setRightPanelMode).not.toHaveBeenCalled();
   });
 
   it("keeps the tab when nothing was selected", async () => {
