@@ -300,6 +300,7 @@ describe("app route transitions", () => {
       getPlatform: vi.fn(() => "web"),
       setAppCopyProvider: vi.fn(),
       setFormValidationMessages: vi.fn(),
+      setUiMessages: vi.fn(),
     };
     const deps = {
       appService,
@@ -326,6 +327,7 @@ describe("app route transitions", () => {
     expect(appService.setFormValidationMessages).toHaveBeenLastCalledWith(
       EN_I18N.formValidation,
     );
+    expect(appService.setUiMessages).toHaveBeenLastCalledWith(EN_I18N.rtglUi);
 
     i18n = PT_I18N;
     localeListener("pt");
@@ -333,6 +335,7 @@ describe("app route transitions", () => {
     expect(appService.setFormValidationMessages).toHaveBeenLastCalledWith(
       PT_I18N.formValidation,
     );
+    expect(appService.setUiMessages).toHaveBeenLastCalledWith(PT_I18N.rtglUi);
     expect(PT_I18N.formValidation.required).toBe("Este campo é obrigatório");
 
     cleanup();

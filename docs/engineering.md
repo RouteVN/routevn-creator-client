@@ -100,9 +100,15 @@ Switzerland, and types its non-breaking spaces (U+202F before `;`, `!`, and
 `?`, U+00A0 before `:` and inside « ») as the characters themselves.
 
 Rettangoli UI form validation errors, such as the required-field message, come
-from the `formValidation` catalog namespace. The app passes it to Rettangoli UI
-as `window.rtglFormMessages` on mount and on every locale change; a field's own
-`required.message` or rule `message` still takes precedence.
+from the `formValidation` catalog namespace, and the text Rettangoli UI
+components show when the app passes none, such as a select's placeholder or a
+dialog's Cancel button, comes from the `rtglUi` namespace. The app passes them
+to `rtgl.setFormMessages` and `rtgl.setUiMessages` on mount and on every locale
+change; a field's own `required.message` or rule `message`, and text passed to a
+component, still take precedence. Keep `rtglUi` keys identical to Rettangoli
+UI's `DEFAULT_UI_MESSAGES`, with the English defaults in `en.yaml`, when
+upgrading `@rettangoli/ui`. Icons still register through `window.rtglIcons`,
+because `rtgl ui build-svg` generates `static/public/rtgl-icons.js` that way.
 
 Keep a count inside its catalog template, such as `"{count} actions"`, instead
 of joining a number and a translated word in code. Russian has three plural
