@@ -296,8 +296,8 @@ template:
                           - rvn-file-image#editDialogImage fileId=${editPreviewFileId} w=f h=f bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
                     $else:
                       - rtgl-view slot=image-slot w=120 h=120 av=c ah=c:
-                          - rtgl-view#editDialogImagePlaceholder w=f h=f av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                              - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+                          - rtgl-view#editDialogImagePlaceholder w=f h=f av=c ah=c ph=sm bgc=bg bc=bo bw=xs br=md cur=pointer:
+                              - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
   - $if isFolderNameDialogOpen:
       - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
           - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null

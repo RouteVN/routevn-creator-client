@@ -20,6 +20,6 @@ template:
               - $if iconFileId:
                   - rvn-file-image fileId=${iconFileId} w=120 h=120 bw=xs bc=bo br=md: null
                 $else:
-                  - rtgl-view w=120 h=120 ah=c av=c bw=xs bc=bo br=md:
-                      - rtgl-text c=mu-fg ta=c: ${clickToUploadLabel}
+                  - rtgl-view w=120 h=120 ah=c av=c ph=sm bw=xs bc=bo br=md:
+                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
   - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile} :outputSize=${iconOutputSize}: null

@@ -341,8 +341,8 @@ template:
                       - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
                 $else:
                   - rtgl-view slot=image-slot av=c ah=c:
-                      - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: ${clickToUploadLabel}
+                      - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c ph=sm bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#spritesheetDialog ?open=${isSpritesheetDialogOpen} s=lg md-layout=fixed-top p=none:
@@ -377,7 +377,7 @@ template:
                                         $elif spritesheetDialogImageSourceFileId:
                                           - rvn-file-image#spritesheetDialogImageSourceButton fileId=${spritesheetDialogImageSourceFileId} w=120 h=120 bw=xs bc=bo br=md cur=pointer: null
                                         $else:
-                                          - rtgl-view#spritesheetDialogImageSourceButton w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                          - rtgl-view#spritesheetDialogImageSourceButton w=120 h=120 av=c ah=c ph=sm bgc=bg bc=bo bw=xs br=md cur=pointer:
                                               - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
                               - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
                                   - rtgl-view d=h g=sm av=c:
