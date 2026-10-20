@@ -309,6 +309,7 @@ const toCanvasRenderPayload = (payload = {}) => {
   delete renderPayload.completion;
   delete renderPayload.debounceMs;
   delete renderPayload.flush;
+  delete renderPayload.rebuildAfterPlaybackFailure;
   return renderPayload;
 };
 
@@ -2502,6 +2503,27 @@ export const mountSceneEditorSubscriptions = (deps) => {
       alertCanvasRenderFailure(deps, error);
     }
   };
+  // A failed canvas interaction is followed by one rebuild of the canvas. If
+  // the engine fails again after that with nobody having touched the canvas or
+  // asked for a render, the story repeats it by itself, for example a line
+  // whose next-line setting moves on to a looping line. Rebuilding again
+  // would never end, so that failure is only reported.
+  let canvasRebuiltAfterPlaybackFailure = false;
+  const handleCanvasPlaybackFailure = (error) => {
+    if (canvasRebuiltAfterPlaybackFailure) {
+      reportCanvasRenderFailure(deps, error);
+      return;
+    }
+    canvasRebuiltAfterPlaybackFailure = true;
+    handleCanvasRenderFailure(error);
+    // Route Engine keeps the work it could not finish and fails again on its
+    // next action. Starting it again from the selected line leaves the canvas
+    // working.
+    subject.dispatch("sceneEditor.renderCanvas", {
+      flush: true,
+      rebuildAfterPlaybackFailure: true,
+    });
+  };
   // Tapping or scrolling the canvas can move to another line and render it.
   // Nothing waits for that render, so its failure is handled here.
   const runCanvasInputFallback = async (fallback, payload) => {
@@ -2520,6 +2542,9 @@ export const mountSceneEditorSubscriptions = (deps) => {
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.renderCanvas"),
       tap(({ payload }) => {
+        if (payload?.rebuildAfterPlaybackFailure !== true) {
+          canvasRebuiltAfterPlaybackFailure = false;
+        }
         emitSceneEditorTiming("runtime.render-canvas.event", {
           phase: "received",
           skipRender: payload?.skipRender === true,
@@ -2566,11 +2591,26 @@ export const mountSceneEditorSubscriptions = (deps) => {
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.canvasPlaybackFailed"),
       tap(({ payload }) => {
-        handleCanvasRenderFailure(payload.error);
-        // Route Engine keeps the work it could not finish and fails again on
-        // its next action. Starting it again from the selected line leaves the
-        // canvas working.
-        subject.dispatch("sceneEditor.renderCanvas", { flush: true });
+        handleCanvasPlaybackFailure(payload.error);
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return merge(
+          fromEvent(canvasRoot, "pointerdown", { capture: true }),
+          fromEvent(canvasRoot, "click", { capture: true }),
+          fromEvent(canvasRoot, "wheel", { capture: true, passive: true }),
+        ).pipe(
+          tap(() => {
+            canvasRebuiltAfterPlaybackFailure = false;
+          }),
+        );
       }),
     ),
     subject.pipe(

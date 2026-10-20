@@ -2564,7 +2564,7 @@ describe("scene editor canvas transition loop", () => {
           expect(appService.reportError).not.toHaveBeenCalled();
           expect(dispatched).toContainEqual({
             action: "sceneEditor.renderCanvas",
-            payload: { flush: true },
+            payload: { flush: true, rebuildAfterPlaybackFailure: true },
           });
           await vi.waitFor(() => {
             expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
@@ -2600,7 +2600,7 @@ describe("scene editor canvas transition loop", () => {
         });
         expect(dispatched).toContainEqual({
           action: "sceneEditor.renderCanvas",
-          payload: { flush: true },
+          payload: { flush: true, rebuildAfterPlaybackFailure: true },
         });
         await vi.waitFor(() => {
           expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
@@ -2609,6 +2609,131 @@ describe("scene editor canvas transition loop", () => {
         unmount();
         consoleError.mockRestore();
       }
+    });
+
+    describe("when it fails again right after the canvas was built again", () => {
+      // A line that moves on by itself into a loop fails again every time its
+      // canvas is built, with no input in between.
+      const mountWithCanvas = () => {
+        const mounted = mountWithRenderCounter();
+        const canvasRoot = new EventTarget();
+        mounted.subject.dispatch("sceneEditor.canvasMounted", { canvasRoot });
+        return {
+          ...mounted,
+          canvasRoot,
+          rebuilds: () =>
+            mounted.dispatched.filter(
+              ({ action, payload }) =>
+                action === "sceneEditor.renderCanvas" &&
+                payload.rebuildAfterPlaybackFailure === true,
+            ).length,
+          // Lets the rebuild finish, which also ends "alert once".
+          finishRebuild: async () => {
+            await vi.waitFor(() => {
+              expect(mounted.selectIsScenePageLoading).toHaveBeenCalled();
+            });
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          },
+        };
+      };
+
+      it("builds the canvas again once and alerts once", async () => {
+        const mounted = mountWithCanvas();
+        const { subject, appService, unmount } = mounted;
+        const consoleError = silenceConsoleError();
+
+        try {
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: createLoopError(),
+          });
+          await mounted.finishRebuild();
+          expect(mounted.rebuilds()).toBe(1);
+
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: createLoopError(),
+          });
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: createLoopError(),
+          });
+          await new Promise((resolve) => setTimeout(resolve, 0));
+
+          expect(mounted.rebuilds()).toBe(1);
+          expect(appService.showAlertWhenIdle).toHaveBeenCalledOnce();
+          expect(appService.reportError).not.toHaveBeenCalled();
+          expect(mounted.selectIsScenePageLoading).toHaveBeenCalledOnce();
+        } finally {
+          unmount();
+          consoleError.mockRestore();
+        }
+      });
+
+      it("keeps reporting an ordinary error that repeats, without alerting again", async () => {
+        const failure = new Error("Canvas render failed");
+        const mounted = mountWithCanvas();
+        const { subject, appService, unmount } = mounted;
+        const consoleError = silenceConsoleError();
+
+        try {
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: failure,
+          });
+          await mounted.finishRebuild();
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: failure,
+          });
+
+          expect(mounted.rebuilds()).toBe(1);
+          expect(appService.showAlertWhenIdle).toHaveBeenCalledOnce();
+          expect(appService.reportError).toHaveBeenCalledTimes(2);
+        } finally {
+          unmount();
+          consoleError.mockRestore();
+        }
+      });
+
+      it.each([
+        [
+          "a press on the canvas",
+          ({ canvasRoot }) =>
+            canvasRoot.dispatchEvent(new Event("pointerdown")),
+        ],
+        [
+          "a click on the canvas",
+          ({ canvasRoot }) => canvasRoot.dispatchEvent(new Event("click")),
+        ],
+        [
+          "a scroll over the canvas",
+          ({ canvasRoot }) => canvasRoot.dispatchEvent(new Event("wheel")),
+        ],
+        [
+          "a request to render the canvas",
+          ({ subject }) =>
+            subject.dispatch("sceneEditor.renderCanvas", { flush: true }),
+        ],
+      ])("builds the canvas again after %s", async (_label, interact) => {
+        const mounted = mountWithCanvas();
+        const { subject, appService, unmount } = mounted;
+        const consoleError = silenceConsoleError();
+
+        try {
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: createLoopError(),
+          });
+          await mounted.finishRebuild();
+
+          interact(mounted);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: createLoopError(),
+          });
+
+          expect(mounted.rebuilds()).toBe(2);
+          expect(appService.showAlertWhenIdle).toHaveBeenCalledTimes(2);
+        } finally {
+          unmount();
+          consoleError.mockRestore();
+        }
+      });
     });
   });
 
