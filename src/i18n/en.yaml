@@ -2193,6 +2193,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "Details:"
   failedOpenScene: "Could not open the scene."
+  transitionLoop: "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
   computedVariableFailed: "Could not calculate computed variable “{name}”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables."
   actionsLabel: "Actions"
   addSectionMenuItem: "Add section"

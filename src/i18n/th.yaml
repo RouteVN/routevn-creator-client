@@ -2193,6 +2193,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "รายละเอียด:"
   failedOpenScene: "ไม่สามารถเปิดฉากได้"
+  transitionLoop: "เกมไปยังส่วนอื่นซ้ำไปเรื่อย ๆ โดยไม่รอผู้เล่น ตรวจสอบว่าการไปยังส่วนไม่ได้วนซ้ำไม่รู้จบ"
   computedVariableFailed: "ไม่สามารถคำนวณค่าของตัวแปรที่คำนวณ “{name}” ได้ สูตรอาจให้ค่าผิดประเภท ตรวจสอบสูตรและตัวแปรที่สูตรใช้ในหน้า “ตัวแปร”"
   actionsLabel: "แอ็กชัน"
   addSectionMenuItem: "เพิ่มส่วน"

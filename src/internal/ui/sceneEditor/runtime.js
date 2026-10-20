@@ -58,6 +58,7 @@ import {
 import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
 import { withErrorDetails } from "../../errorDetails.js";
 import { getComputedVariableErrorName } from "../../computedVariableError.js";
+import { isRoutingCycleError } from "../../routingCycleError.js";
 import {
   emitSceneEditorTiming,
   shouldMeasureSceneEditorTiming,
@@ -1109,6 +1110,16 @@ const createBeforeHandleActionsHook = (deps) => {
   };
 };
 
+// The user plays the canvas by clicking or scrolling forward. That moves Route
+// Engine on, outside any canvas render, into lines that keep their transitions,
+// and it can fail there, for example on a loop between sections. The
+// subscriptions handle the failure.
+const createCanvasPlaybackErrorHandler = (deps) => {
+  return (error) => {
+    deps.subject.dispatch("sceneEditor.canvasPlaybackFailed", { error });
+  };
+};
+
 // Route Engine leaves a line as soon as it enters it through these actions: a
 // section transition or a story reset moves to another section, and a
 // conditional does that or continues to the next line. The canvas shows one
@@ -1878,6 +1889,7 @@ export const initializeSceneEditorPage = async (deps) => {
   await graphicsService.init({
     canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    onPlaybackError: createCanvasPlaybackErrorHandler(deps),
     width: previewWidth,
     height: previewHeight,
   });
@@ -1934,6 +1946,7 @@ const restoreSceneEditorCanvas = async (deps) => {
   await graphicsService.init({
     canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    onPlaybackError: createCanvasPlaybackErrorHandler(deps),
     width: previewWidth,
     height: previewHeight,
   });
@@ -2438,14 +2451,24 @@ const reportCanvasRenderFailure = (
   operation = "sceneEditor.renderCanvas",
 ) => {
   console.error("[sceneEditor] Failed to render canvas", error);
+  // A loop between the author's transitions is a story to fix, not a crash.
+  if (isRoutingCycleError(error)) {
+    return;
+  }
   deps.appService.reportError(error, { operation });
 };
 
-// A computed variable that cannot be calculated is named, as the full-screen
-// preview names it.
+// A transition loop and a computed variable that cannot be calculated are
+// explained as the full-screen preview explains them.
 const getCanvasRenderFailureMessage = (deps, error) => {
   const { i18n, projectService } = deps;
   const copy = selectSceneEditorCopy(i18n);
+  if (isRoutingCycleError(error)) {
+    return (
+      copy.transitionLoop ??
+      "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
+    );
+  }
   const variableName = getComputedVariableErrorName(error, () =>
     projectService.getRepositoryState(),
   );
@@ -2538,6 +2561,16 @@ export const mountSceneEditorSubscriptions = (deps) => {
 
           handleCanvasRenderFailure(error);
         }
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasPlaybackFailed"),
+      tap(({ payload }) => {
+        handleCanvasRenderFailure(payload.error);
+        // Route Engine keeps the work it could not finish and fails again on
+        // its next action. Starting it again from the selected line leaves the
+        // canvas working.
+        subject.dispatch("sceneEditor.renderCanvas", { flush: true });
       }),
     ),
     subject.pipe(

@@ -2193,6 +2193,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "详细信息："
   failedOpenScene: "无法打开场景。"
+  transitionLoop: "跳转在没有等待玩家操作的情况下不断重复。请确保你的跳转不会造成无限循环。"
   computedVariableFailed: "无法算出计算变量“{name}”的值。其公式可能得出了类型不符的值。请在“变量”中检查该公式及其使用的变量。"
   actionsLabel: "动作"
   addSectionMenuItem: "添加段落"

@@ -4,6 +4,7 @@ import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import {
   createSceneEditorRenderQueue,
   flushSceneEditorCanvasRender,
+  initializeSceneEditorPage,
   mountSceneEditorSubscriptions,
   renderSceneEditorCanvas,
   renderSceneEditorState,
@@ -2401,5 +2402,299 @@ describe("scene editor canvas entry line", () => {
     await expect(
       renderCanvasLine(projectData, { lineId: "line-removed" }),
     ).resolves.toBe("first");
+  });
+});
+
+describe("scene editor canvas transition loop", () => {
+  const createLoopError = () =>
+    Object.assign(
+      new Error(
+        'RouteEngine exceeded 1000 synchronous effect batches at section "section-1", line "line-2". Check for an immediate routing cycle.',
+      ),
+      {
+        code: "routing_cycle",
+        pointer: { sectionId: "section-1", lineId: "line-2" },
+      },
+    );
+  // Route Engine wraps a loop in an AggregateError when its cleanup fails too.
+  const createWrappedLoopError = () =>
+    new AggregateError([createLoopError()], "Cleanup also failed");
+
+  const i18n = {
+    resourcePages: { errorTitle: "Error title" },
+    scenesPage: {},
+    sceneEditorPage: {
+      errorDetailsLabel: "Details label:",
+      failedRenderCanvas: "Canvas message",
+      transitionLoop: "Loop message",
+    },
+  };
+  const LOOP_ALERT = { title: "Error title", message: "Loop message" };
+  const ORDINARY_ALERT = {
+    title: "Error title",
+    message: "Canvas message\n\nDetails label:\nCanvas render failed",
+  };
+
+  const createSubject = () => {
+    const subject = new Subject();
+    subject.dispatch = (action, payload) => {
+      subject.next({ action, payload });
+    };
+    return subject;
+  };
+
+  const createAppService = () => ({
+    reportError: vi.fn(),
+    showAlertWhenIdle: vi.fn(),
+  });
+
+  const silenceConsoleError = () =>
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+  it.each([
+    ["a routing cycle", createLoopError],
+    ["a routing cycle inside an AggregateError", createWrappedLoopError],
+  ])(
+    "explains %s in a canvas render without reporting it",
+    async (_label, createError) => {
+      const subject = createSubject();
+      const appService = createAppService();
+      let pageLoading = () => {
+        throw createError();
+      };
+      const unmount = mountSceneEditorSubscriptions({
+        subject,
+        appService,
+        i18n,
+        store: { selectIsScenePageLoading: () => pageLoading() },
+      });
+      const consoleError = silenceConsoleError();
+
+      try {
+        subject.dispatch("sceneEditor.renderCanvas", { flush: true });
+
+        await vi.waitFor(() => {
+          expect(appService.showAlertWhenIdle).toHaveBeenCalledWith(LOOP_ALERT);
+        });
+        expect(appService.reportError).not.toHaveBeenCalled();
+
+        // The canvas still renders the next selection.
+        pageLoading = () => true;
+        await expect(
+          flushSceneEditorCanvasRender(subject),
+        ).resolves.toBeUndefined();
+        expect(appService.showAlertWhenIdle).toHaveBeenCalledOnce();
+      } finally {
+        unmount();
+        consoleError.mockRestore();
+      }
+    },
+  );
+
+  it("explains a routing cycle on return from the full-screen preview without reporting it", async () => {
+    const appService = createAppService();
+    const consoleError = silenceConsoleError();
+
+    try {
+      await restoreSceneEditorFromPreview({
+        appService,
+        i18n,
+        store: {
+          selectSceneId: () => {
+            throw createLoopError();
+          },
+        },
+      });
+
+      expect(appService.showAlertWhenIdle).toHaveBeenCalledWith(LOOP_ALERT);
+      expect(appService.reportError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  describe("when the engine fails after the canvas moves on", () => {
+    const mountWithRenderCounter = () => {
+      const subject = createSubject();
+      const appService = createAppService();
+      const dispatched = [];
+      const dispatch = subject.dispatch;
+      subject.dispatch = (action, payload) => {
+        dispatched.push({ action, payload });
+        dispatch(action, payload);
+      };
+      // A render of the rebuilt canvas reads this first.
+      const selectIsScenePageLoading = vi.fn(() => true);
+      const unmount = mountSceneEditorSubscriptions({
+        subject,
+        appService,
+        i18n,
+        store: { selectIsScenePageLoading },
+      });
+      return {
+        subject,
+        appService,
+        dispatched,
+        selectIsScenePageLoading,
+        unmount,
+      };
+    };
+
+    it.each([
+      ["a routing cycle", createLoopError],
+      ["a routing cycle inside an AggregateError", createWrappedLoopError],
+    ])(
+      "explains %s without reporting it and builds the canvas again",
+      async (_label, createError) => {
+        const {
+          subject,
+          appService,
+          dispatched,
+          selectIsScenePageLoading,
+          unmount,
+        } = mountWithRenderCounter();
+        const consoleError = silenceConsoleError();
+
+        try {
+          subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+            error: createError(),
+          });
+
+          expect(appService.showAlertWhenIdle).toHaveBeenCalledWith(LOOP_ALERT);
+          expect(appService.reportError).not.toHaveBeenCalled();
+          expect(dispatched).toContainEqual({
+            action: "sceneEditor.renderCanvas",
+            payload: { flush: true },
+          });
+          await vi.waitFor(() => {
+            expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
+          });
+        } finally {
+          unmount();
+          consoleError.mockRestore();
+        }
+      },
+    );
+
+    it("still reports and alerts an ordinary error, and builds the canvas again", async () => {
+      const failure = new Error("Canvas render failed");
+      const {
+        subject,
+        appService,
+        dispatched,
+        selectIsScenePageLoading,
+        unmount,
+      } = mountWithRenderCounter();
+      const consoleError = silenceConsoleError();
+
+      try {
+        subject.dispatch("sceneEditor.canvasPlaybackFailed", {
+          error: failure,
+        });
+
+        expect(appService.showAlertWhenIdle).toHaveBeenCalledWith(
+          ORDINARY_ALERT,
+        );
+        expect(appService.reportError).toHaveBeenCalledWith(failure, {
+          operation: "sceneEditor.renderCanvas",
+        });
+        expect(dispatched).toContainEqual({
+          action: "sceneEditor.renderCanvas",
+          payload: { flush: true },
+        });
+        await vi.waitFor(() => {
+          expect(selectIsScenePageLoading).toHaveBeenCalledOnce();
+        });
+      } finally {
+        unmount();
+        consoleError.mockRestore();
+      }
+    });
+  });
+
+  describe("graphics playback errors", () => {
+    const createDeps = () => {
+      const subject = createSubject();
+      const canvasRoot = { isConnected: true };
+      const stop = new Error("Graphics stopped for the test");
+      const graphicsService = { init: vi.fn().mockRejectedValue(stop) };
+      return {
+        stop,
+        deps: {
+          subject,
+          graphicsService,
+          appService: {
+            ...createAppService(),
+            getPayload: () => ({ s: "scene-1" }),
+          },
+          i18n,
+          refs: { previewCanvasHost: { getCanvasRoot: () => canvasRoot } },
+          render: vi.fn(),
+          syncProjectState: vi.fn(),
+          projectService: {
+            ensureRepository: vi.fn(),
+            setActiveSceneId: vi.fn(),
+            getRepositoryState: () => ({}),
+          },
+          store: {
+            hidePreviewScene: vi.fn(),
+            selectSceneId: () => "scene-1",
+            selectScene: () => ({}),
+            setSceneId: vi.fn(),
+            selectSelectedSectionId: () => "section-1",
+            selectSelectedLineId: () => "line-1",
+            selectProjectData: () => createProjectData(),
+            selectIsScenePageLoading: () => false,
+            selectIsSceneAssetLoading: () => false,
+            setScenePageLoading: vi.fn(),
+            setSceneAssetLoading: vi.fn(),
+            setSceneLoadingProgress: vi.fn(),
+          },
+        },
+      };
+    };
+
+    const expectPlaybackErrorHandler = ({ deps }) => {
+      const [{ onPlaybackError }] = deps.graphicsService.init.mock.calls[0];
+      expect(onPlaybackError).toEqual(expect.any(Function));
+
+      // The failure reaches the subscriptions, which alert the user.
+      const failure = createLoopError();
+      const events = [];
+      const subscription = deps.subject.subscribe((event) =>
+        events.push(event),
+      );
+      onPlaybackError(failure);
+      subscription.unsubscribe();
+      expect(events).toEqual([
+        {
+          action: "sceneEditor.canvasPlaybackFailed",
+          payload: { error: failure },
+        },
+      ]);
+    };
+
+    it("hands the engine failures of the canvas to the editor when the page starts", async () => {
+      const setup = createDeps();
+
+      await expect(initializeSceneEditorPage(setup.deps)).rejects.toBe(
+        setup.stop,
+      );
+
+      expectPlaybackErrorHandler(setup);
+    });
+
+    it("hands the engine failures of the canvas to the editor when the full-screen preview closes", async () => {
+      const setup = createDeps();
+      const consoleError = silenceConsoleError();
+
+      try {
+        await restoreSceneEditorFromPreview(setup.deps);
+      } finally {
+        consoleError.mockRestore();
+      }
+
+      expectPlaybackErrorHandler(setup);
+    });
   });
 });

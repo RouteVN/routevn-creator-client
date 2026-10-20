@@ -2193,6 +2193,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "Détails :"
   failedOpenScene: "Impossible d’ouvrir la scène."
+  transitionLoop: "Les changements de section se sont répétés sans attendre d’interaction. Vérifiez qu’ils ne provoquent pas de boucle infinie."
   computedVariableFailed: "Impossible d’évaluer la variable calculée « {name} ». Sa formule a peut-être produit une valeur du mauvais type. Vérifiez la formule et les variables qu’elle utilise sur l’écran « Variables »."
   actionsLabel: "Actions"
   addSectionMenuItem: "Ajouter une section"
