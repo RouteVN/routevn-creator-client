@@ -162,6 +162,21 @@ describe("layoutEditorPreview", () => {
     expect(result.fileReferences).toEqual(
       expect.arrayContaining([expect.objectContaining({ url: "sheet-file" })]),
     );
+    const sprite = repositoryState.characters.items["character-1"].sprites
+      .items["sprite-1"];
+    delete sprite.width;
+    delete sprite.height;
+    expect(
+      createLayoutEditorAssetReferences({
+        layoutState,
+        repositoryState,
+        previewData,
+      }).renderedElements[0].children[0],
+    ).toMatchObject({
+      type: "spritesheet-animation",
+      width: 32,
+      height: 32,
+    });
     repositoryState.characters.items = {};
     expect(
       createLayoutEditorAssetReferences({

@@ -10,6 +10,7 @@ import {
 } from "./project/layout.js";
 import { toHierarchyStructure } from "./project/tree.js";
 import { requireProjectResolution } from "./projectResolution.js";
+import { resolveSpritesheetSize } from "./spritesheets.js";
 
 // What a layout draws with its preview data, as the layout editor shows it.
 // The editor's canvas adds its selection chrome on top, and a layout's
@@ -289,8 +290,9 @@ const createLayoutEditorPreviewCharacterSprite = ({
       spritesheets[item.resourceId] = resource;
       child.type = "spritesheet-animation";
       child.resourceId = item.resourceId;
-      child.width = resource.width;
-      child.height = resource.height;
+      const { width, height } = resolveSpritesheetSize(resource);
+      child.width = width;
+      child.height = height;
     } else {
       continue;
     }
