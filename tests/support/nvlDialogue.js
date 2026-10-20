@@ -7,7 +7,23 @@ export const NVL_LINE_TEXT = [
   "A new page starts with only this line revealing.",
 ];
 
-export const createNvlDialogueProject = (revealEffect) => {
+// Each line with its second word in bold, so a line has three runs.
+export const NVL_STYLED_LINES = NVL_LINE_TEXT.map((text) => {
+  const [firstWord, secondWord, ...rest] = text.split(" ");
+  return [
+    { text: `${firstWord} ` },
+    { text: secondWord, textStyle: { fontWeight: "bold" } },
+    { text: ` ${rest.join(" ")}` },
+  ];
+});
+
+export const createNvlDialogueProject = (
+  revealEffect,
+  {
+    lineContents = NVL_LINE_TEXT.map((text) => [{ text }]),
+    lineText = { type: "text-revealing", text: "${line.content[0].text}" },
+  } = {},
+) => {
   const emptyCollection = { items: {}, tree: [] };
   const { elements } = buildLayoutElements(
     [
@@ -30,8 +46,7 @@ export const createNvlDialogueProject = (revealEffect) => {
                 children: [
                   {
                     id: "line-text",
-                    type: "text-revealing",
-                    text: "${line.content[0].text}",
+                    ...lineText,
                     revealEffect,
                     width: 700,
                     textStyle: { fontSize: 24, fill: "#ffffff" },
@@ -60,7 +75,7 @@ export const createNvlDialogueProject = (revealEffect) => {
           initialSectionId: "section-1",
           sections: {
             "section-1": {
-              lines: NVL_LINE_TEXT.map((text, index) => ({
+              lines: lineContents.map((content, index) => ({
                 id: `line-${index + 1}`,
                 actions: {
                   dialogue: {
@@ -68,7 +83,7 @@ export const createNvlDialogueProject = (revealEffect) => {
                     ui: { resourceId: "nvl" },
                     textSpeed: 0,
                     clearPage: index === 3,
-                    content: [{ text }],
+                    content,
                   },
                 },
               })),
