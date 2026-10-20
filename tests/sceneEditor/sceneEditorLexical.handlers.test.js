@@ -3880,5 +3880,52 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
       expect(deps.render).not.toHaveBeenCalled();
       expect(deps.projectService.getRepositoryState).not.toHaveBeenCalled();
     });
+
+    it.each([
+      [
+        "a section transition",
+        { sectionTransition: { sceneId: "scene-1", sectionId: "section-2" } },
+      ],
+      ["a pushed overlay", { pushOverlay: { resourceId: "layout-1" } }],
+      ["a popped overlay", { popOverlay: {} }],
+    ])(
+      "renders the canvas through the canvas render queue after saving %s",
+      async (_name, detail) => {
+        vi.useFakeTimers();
+        try {
+          const deps = createCommandLineDeps({
+            updateLineActions: vi.fn(async () => ({ valid: true })),
+          });
+          Object.assign(deps.store, {
+            selectSceneId: vi.fn(() => undefined),
+            selectSelectedSectionId: vi.fn(() => undefined),
+            setRepositoryState: vi.fn(),
+            setDomainState: vi.fn(),
+            setRepositoryRevision: vi.fn(),
+            clearDraftSection: vi.fn(),
+            setSectionLineChanges: vi.fn(),
+          });
+          Object.assign(deps.projectService, {
+            getDomainState: vi.fn(),
+            getRepositoryRevision: vi.fn(),
+          });
+          // Refreshing after the save reads the scene's line changes.
+          deps.graphicsService = {
+            engineSelectSectionLineChanges: vi.fn(() => ({ lines: [] })),
+          };
+          await handleCommandLineSubmit(deps, { _event: { detail } });
+
+          // The queue reports a failed render and alerts once, which a render
+          // started from a timer could not do.
+          expect(deps.subject.dispatch).toHaveBeenCalledExactlyOnceWith(
+            "sceneEditor.renderCanvas",
+            {},
+          );
+          expect(vi.getTimerCount()).toBe(0);
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
   });
 });

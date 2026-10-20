@@ -632,10 +632,12 @@ export const handleBeforeMount = (deps) => {
   // Copy kept outside the component tree follows the active locale: Rettangoli
   // UI's default form validation messages, which forms read on each
   // validation (errors already shown keep their text until their field is
-  // validated again), and the desktop Discord presence.
+  // validated again), Rettangoli UI's default component text, which mounted
+  // components redraw with, and the desktop Discord presence.
   const isTauri = appService.getPlatform() === "tauri";
   const syncLocaleCopy = () => {
     appService.setFormValidationMessages?.(deps.i18n.formValidation);
+    appService.setUiMessages?.(deps.i18n.rtglUi);
     if (isTauri) {
       syncDiscordPresenceDetails(deps);
     }

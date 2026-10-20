@@ -45,7 +45,6 @@ import {
   flushSceneEditorCanvasRender,
   initializeSceneEditorPage,
   mountSceneEditorSubscriptions,
-  renderSceneEditorState,
   resetSceneEditorRuntime,
   resolveSceneEditorEntrySelection,
   restoreSceneEditorFromPreview,
@@ -2242,9 +2241,7 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
     render();
 
     // Render the canvas with the latest data
-    setTimeout(async () => {
-      await renderSceneEditorState(deps);
-    }, 10);
+    subject.dispatch("sceneEditor.renderCanvas", {});
     return;
   }
 
@@ -2281,9 +2278,7 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
     render();
 
     // Render the canvas with the latest data
-    setTimeout(async () => {
-      await renderSceneEditorState(deps);
-    }, 10);
+    subject.dispatch("sceneEditor.renderCanvas", {});
     return;
   }
 
@@ -2320,9 +2315,7 @@ const submitSceneEditorCommandLine = async (deps, payload, { lineId }) => {
     render();
 
     // Render the canvas with the latest data
-    setTimeout(async () => {
-      await renderSceneEditorState(deps);
-    }, 10);
+    subject.dispatch("sceneEditor.renderCanvas", {});
     return;
   }
 

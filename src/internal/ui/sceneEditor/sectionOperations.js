@@ -1,8 +1,5 @@
 import { generateId } from "../../id.js";
-import {
-  renderSceneEditorState,
-  updateSceneEditorSectionChanges,
-} from "./runtime.js";
+import { updateSceneEditorSectionChanges } from "./runtime.js";
 
 export const isSectionsOverviewOpen = (store) => {
   return store.selectIsSectionsOverviewOpen();
@@ -135,11 +132,49 @@ export const reconcileSceneEditorSelection = (store) => {
   };
 };
 
+// A new section inherits the ongoing scene of the selected line, not what
+// happens only on that line. See "New Sections" in docs/product.md.
+const NON_INHERITED_ACTION_KEYS = new Set([
+  // Interactions block advancing until they are answered.
+  "choice",
+  "form",
+  // Navigation would move the story away from the new section.
+  "sectionTransition",
+  "resetStoryAtSection",
+  "nextLine",
+  "conditional",
+  "rollbackByOffset",
+  // These play only on the line that sets them.
+  "voice",
+  "layout",
+  "animation",
+]);
+
+// Only a sound effect channel set to persistent keeps playing on later lines.
+const toInheritedSfx = (sfx) => {
+  const channels = (sfx.channels ?? []).filter(
+    (channel) => channel.applyMode === "persistent",
+  );
+  if (channels.length === 0) {
+    return undefined;
+  }
+  return { channels: structuredClone(channels) };
+};
+
+// A one-time animation, such as an entrance, plays only on its line.
+const withoutOneTimeAnimations = (item) => {
+  const nextItem = structuredClone(item);
+  if (nextItem.animations?.playback?.continuity !== "persistent") {
+    delete nextItem.animations;
+  }
+  return nextItem;
+};
+
 const createInheritedPresentationActions = (presentationState = {}) => {
   const actions = {};
 
   for (const [key, value] of Object.entries(presentationState || {})) {
-    if (value === undefined) {
+    if (value === undefined || NON_INHERITED_ACTION_KEYS.has(key)) {
       continue;
     }
 
@@ -148,7 +183,31 @@ const createInheritedPresentationActions = (presentationState = {}) => {
       if (dialogue.clear !== true) {
         dialogue.content = [{ text: "" }];
       }
+      // The speaker portrait's animation plays only on the line that sets it.
+      if (dialogue.character?.sprite) {
+        delete dialogue.character.sprite.animations;
+      }
       actions.dialogue = dialogue;
+      continue;
+    }
+
+    if (key === "sfx") {
+      const sfx = toInheritedSfx(value);
+      if (sfx) {
+        actions.sfx = sfx;
+      }
+      continue;
+    }
+
+    if (key === "background") {
+      actions.background = withoutOneTimeAnimations(value);
+      continue;
+    }
+
+    if ((key === "visual" || key === "character") && value.items) {
+      const action = structuredClone(value);
+      action.items = value.items.map(withoutOneTimeAnimations);
+      actions[key] = action;
       continue;
     }
 
@@ -164,7 +223,7 @@ export const createSceneEditorSectionWithName = async (
   syncProjectState,
   options = {},
 ) => {
-  const { store, projectService, render } = deps;
+  const { store, projectService, render, subject } = deps;
   const {
     inheritPresentationFromSelectedLine = true,
     position = "last",
@@ -252,8 +311,5 @@ export const createSceneEditorSectionWithName = async (
 
   syncProjectState(store, projectService);
   render();
-
-  setTimeout(async () => {
-    await renderSceneEditorState(deps);
-  }, 10);
+  subject.dispatch("sceneEditor.renderCanvas", {});
 };
