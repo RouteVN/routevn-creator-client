@@ -399,8 +399,9 @@ See Apple's [directory-access guidance](https://developer.apple.com/documentatio
 
 ### Audio Playback
 
-The native WebView allows audio playback without a user gesture
-(`mediaTypesRequiringUserActionForPlayback = .video`). That was enough on
+The native WebView allows audio and video playback without a user gesture
+(`mediaTypesRequiringUserActionForPlayback = []`, as Android does with
+`setMediaPlaybackRequiresUserGesture(false)`). That was enough for audio on
 iPadOS 26.4, but iPadOS 27 still rejects `play()` on the media-stream audio
 element with `NotAllowedError` outside a gesture. WebKit lets an element start
 on its own once it has started inside a gesture, so:
@@ -559,6 +560,13 @@ platforms do not install it. The shell allows inline media, and preview videos
 set `playsinline` to avoid a second native fullscreen player. Close controls
 respect top/side/bottom safe areas; closing pauses the video before removal.
 
+Route Graphics starts the videos of the scene editor canvas and Preview with
+`video.play()` from a render, after debounces and awaits, never inside a tap.
+The shell therefore must not require a user action for video: with
+`mediaTypesRequiringUserActionForPlayback = .video`, WebKit rejected that call
+with `NotAllowedError` and the video stayed on its first frame. Changing this
+setting requires rebuilding and installing the native shell.
+
 ### Orientation
 
 iPhone is portrait-only: `UISupportedInterfaceOrientations` in `Info.plist`
@@ -633,6 +641,8 @@ Use a physical device for these final checks:
   Ring/Silent switch both on and off. Verify MP3 and both OGG fixture codecs.
 - Upload a gallery video; processing must finish without native fullscreen.
   Close a loading preview, drag/pinch the cropper, and verify its exported crop.
+- Open a scene with a video in the editor canvas and in Preview; the video must
+  play without a tap.
 - Open/type/dismiss the software keyboard, move across sections, and scroll to
   both ends. The preview stays at the safe-area top and the caret stays visible.
 - Rotate/resize the iPad and background/resume; content fills its container,
