@@ -296,6 +296,53 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("lists a section transition saved with only its section under that section's scene", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Opening",
+                sections: {
+                  items: {
+                    "section-2": {
+                      id: "section-2",
+                      type: "section",
+                      name: "Arrival",
+                    },
+                  },
+                  tree: [{ id: "section-2" }],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+    const select = (currentSceneId) =>
+      selectActionsData({
+        state,
+        props: {
+          currentSceneId,
+          actions: {
+            sectionTransition: { sectionId: "section-2" },
+          },
+        },
+      }).preview.sectionTransition;
+
+    expect(select("scene-2")).toMatchObject({
+      label: "Opening - Arrival",
+    });
+    expect(select("scene-1")).toMatchObject({ label: "Arrival" });
+  });
+
   it("joins a scene and its section with the catalog's separator", () => {
     const state = createInitialState();
     setRepositoryState(

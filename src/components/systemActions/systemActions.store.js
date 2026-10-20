@@ -15,6 +15,7 @@ import {
   PRESENTATION_ACTION_CSS_ORDER,
 } from "../../internal/presentationActionOrder.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
+import { findSceneIdBySectionId } from "../../internal/project/projection.js";
 import {
   getSpritesheetAnimationPreview,
   toSpritesheetAnimationSelectionValue,
@@ -851,12 +852,15 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
 
   if (actions.sectionTransition) {
     actionsObject.sectionTransition = actions.sectionTransition;
-    const scene = sceneItems[actions.sectionTransition.sceneId];
-    const section =
-      scene?.sections?.items?.[actions.sectionTransition.sectionId];
+    const { sectionId } = actions.sectionTransition;
+    // A transition saved with only its section goes to that section's scene.
+    const sceneId =
+      actions.sectionTransition.sceneId ??
+      findSceneIdBySectionId(scenes, sectionId);
+    const scene = sceneItems[sceneId];
+    const section = scene?.sections?.items?.[sectionId];
     if (scene) {
-      const isCurrentScene =
-        actions.sectionTransition.sceneId === props.currentSceneId;
+      const isCurrentScene = sceneId === props.currentSceneId;
       const sceneName =
         scene.name || localizeCommandLineText("Unknown Scene", copy);
       const sectionName =
