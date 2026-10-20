@@ -681,6 +681,7 @@ resourcePages:
   spritesheetsLabel: "精灵图集"
   selectTagsPlaceholder: "选择标签"
   tagFilterPlaceholder: "筛选标签"
+  tagNameExists: "已有同名标签。"
   tagNameLabel: "标签名称"
   tagNameRequired: "标签名称为必填项。"
   tagsLabel: "标签"

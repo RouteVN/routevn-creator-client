@@ -681,6 +681,7 @@ resourcePages:
   spritesheetsLabel: "スプライトシート"
   selectTagsPlaceholder: "タグを選択"
   tagFilterPlaceholder: "タグで絞り込み"
+  tagNameExists: "同名のタグがすでにあります。"
   tagNameLabel: "タグ名"
   tagNameRequired: "タグ名は必須です。"
   tagsLabel: "タグ"

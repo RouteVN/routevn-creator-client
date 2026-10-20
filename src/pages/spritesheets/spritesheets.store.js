@@ -451,6 +451,7 @@ export const createInitialState = () => ({
   detailSelectedClipName: undefined,
   isDialogOpen: false,
   isCreateTagDialogOpen: false,
+  isCreateTagSubmitting: false,
   createTagDefaultValues: {
     ...CREATE_TAG_DEFAULT_VALUES,
   },
@@ -735,6 +736,7 @@ export const openCreateTagDialog = (
   { mode, itemId, draftTagIds } = {},
 ) => {
   state.isCreateTagDialogOpen = true;
+  state.isCreateTagSubmitting = false;
   state.createTagDefaultValues = {
     ...CREATE_TAG_DEFAULT_VALUES,
   };
@@ -747,6 +749,7 @@ export const openCreateTagDialog = (
 
 export const closeCreateTagDialog = ({ state }) => {
   state.isCreateTagDialogOpen = false;
+  state.isCreateTagSubmitting = false;
   state.createTagDefaultValues = {
     ...CREATE_TAG_DEFAULT_VALUES,
   };
@@ -755,6 +758,10 @@ export const closeCreateTagDialog = ({ state }) => {
     itemId: undefined,
     draftTagIds: [],
   };
+};
+
+export const setCreateTagSubmitting = ({ state }, { value } = {}) => {
+  state.isCreateTagSubmitting = value;
 };
 
 export const setDialogValues = ({ state }, { values } = {}) => {
@@ -859,6 +866,9 @@ export const selectDetailTagIds = ({ state }) => state.detailTagIds ?? [];
 
 export const selectCreateTagContext = ({ state }) =>
   state.createTagContext ?? {};
+
+export const selectIsCreateTagSubmitting = ({ state }) =>
+  state.isCreateTagSubmitting;
 
 export const selectDialogMode = ({ state }) => state.dialogMode;
 

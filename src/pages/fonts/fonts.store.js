@@ -183,10 +183,12 @@ const {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  setCreateTagSubmitting,
   selectTagsData,
   selectActiveTagIds,
   selectDetailTagIds,
   selectCreateTagContext,
+  selectIsCreateTagSubmitting,
   selectViewData: selectMediaViewData,
 } = createMediaPageStore({
   itemType: "font",
@@ -308,10 +310,12 @@ export {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  setCreateTagSubmitting,
   selectTagsData,
   selectActiveTagIds,
   selectDetailTagIds,
   selectCreateTagContext,
+  selectIsCreateTagSubmitting,
 };
 
 export const selectFontItemById = selectItemById;

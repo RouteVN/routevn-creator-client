@@ -13,8 +13,10 @@ import {
   selectActiveTagIdsState,
   selectCreateTagContextState,
   selectDetailTagIdsState,
+  selectIsCreateTagSubmittingState,
   selectTagsDataState,
   setActiveTagIdsState,
+  setCreateTagSubmittingState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
   setTagsDataState,
@@ -380,6 +382,13 @@ export const closeCreateTagDialog = ({ state }) => {
   });
 };
 
+export const setCreateTagSubmitting = ({ state }, { value } = {}) => {
+  setCreateTagSubmittingState({
+    state,
+    value,
+  });
+};
+
 export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;
   state.targetGroupId = groupId === "_root" ? undefined : groupId;
@@ -446,6 +455,8 @@ export const selectActiveTagIds = selectActiveTagIdsState;
 export const selectDetailTagIds = selectDetailTagIdsState;
 
 export const selectCreateTagContext = selectCreateTagContextState;
+
+export const selectIsCreateTagSubmitting = selectIsCreateTagSubmittingState;
 
 export const selectItemById = ({ state }, itemId) => {
   const flatItems = toFlatItems(state.textStylesData);

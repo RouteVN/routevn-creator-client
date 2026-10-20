@@ -14,8 +14,10 @@ import {
   selectActiveTagIdsState,
   selectCreateTagContextState,
   selectDetailTagIdsState,
+  selectIsCreateTagSubmittingState,
   selectTagsDataState,
   setActiveTagIdsState,
+  setCreateTagSubmittingState,
   setDetailTagIdsState,
   setDetailTagPopoverOpenState,
   setTagsDataState,
@@ -316,6 +318,13 @@ export const closeCreateTagDialog = ({ state }, _payload = {}) => {
   });
 };
 
+export const setCreateTagSubmitting = ({ state }, { value } = {}) => {
+  setCreateTagSubmittingState({
+    state,
+    value,
+  });
+};
+
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
@@ -336,6 +345,8 @@ export const selectActiveTagIds = selectActiveTagIdsState;
 export const selectDetailTagIds = selectDetailTagIdsState;
 
 export const selectCreateTagContext = selectCreateTagContextState;
+
+export const selectIsCreateTagSubmitting = selectIsCreateTagSubmittingState;
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return undefined;
