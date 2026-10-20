@@ -2193,6 +2193,7 @@ scenesPage:
 sceneEditorPage:
   errorDetailsLabel: "Detalhes:"
   failedOpenScene: "Não foi possível abrir a cena."
+  transitionLoop: "As mudanças de parte foram repetidas sem esperar pelo jogador. Verifique se não criam uma repetição infinita."
   computedVariableFailed: "Não foi possível obter o valor da variável calculada “{name}”. A fórmula pode ter produzido um tipo de valor errado. Em “Variáveis”, verifique a fórmula e as variáveis que entram no cálculo."
   actionsLabel: "Ações"
   addSectionMenuItem: "Adicionar parte"

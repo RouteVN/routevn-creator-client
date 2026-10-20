@@ -58,6 +58,7 @@ import {
 import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
 import { withErrorDetails } from "../../errorDetails.js";
 import { getComputedVariableErrorName } from "../../computedVariableError.js";
+import { isRoutingCycleError } from "../../routingCycleError.js";
 import {
   emitSceneEditorTiming,
   shouldMeasureSceneEditorTiming,
@@ -308,6 +309,7 @@ const toCanvasRenderPayload = (payload = {}) => {
   delete renderPayload.completion;
   delete renderPayload.debounceMs;
   delete renderPayload.flush;
+  delete renderPayload.rebuildAfterPlaybackFailure;
   return renderPayload;
 };
 
@@ -1109,6 +1111,16 @@ const createBeforeHandleActionsHook = (deps) => {
   };
 };
 
+// The user plays the canvas by clicking or scrolling forward. That moves Route
+// Engine on, outside any canvas render, into lines that keep their transitions,
+// and it can fail there, for example on a loop between sections. The
+// subscriptions handle the failure.
+const createCanvasPlaybackErrorHandler = (deps) => {
+  return (error) => {
+    deps.subject.dispatch("sceneEditor.canvasPlaybackFailed", { error });
+  };
+};
+
 // Route Engine leaves a line as soon as it enters it through these actions: a
 // section transition or a story reset moves to another section, and a
 // conditional does that or continues to the next line. The canvas shows one
@@ -1878,6 +1890,7 @@ export const initializeSceneEditorPage = async (deps) => {
   await graphicsService.init({
     canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    onPlaybackError: createCanvasPlaybackErrorHandler(deps),
     width: previewWidth,
     height: previewHeight,
   });
@@ -1934,6 +1947,7 @@ const restoreSceneEditorCanvas = async (deps) => {
   await graphicsService.init({
     canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    onPlaybackError: createCanvasPlaybackErrorHandler(deps),
     width: previewWidth,
     height: previewHeight,
   });
@@ -2438,14 +2452,24 @@ const reportCanvasRenderFailure = (
   operation = "sceneEditor.renderCanvas",
 ) => {
   console.error("[sceneEditor] Failed to render canvas", error);
+  // A loop between the author's transitions is a story to fix, not a crash.
+  if (isRoutingCycleError(error)) {
+    return;
+  }
   deps.appService.reportError(error, { operation });
 };
 
-// A computed variable that cannot be calculated is named, as the full-screen
-// preview names it.
+// A transition loop and a computed variable that cannot be calculated are
+// explained as the full-screen preview explains them.
 const getCanvasRenderFailureMessage = (deps, error) => {
   const { i18n, projectService } = deps;
   const copy = selectSceneEditorCopy(i18n);
+  if (isRoutingCycleError(error)) {
+    return (
+      copy.transitionLoop ??
+      "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
+    );
+  }
   const variableName = getComputedVariableErrorName(error, () =>
     projectService.getRepositoryState(),
   );
@@ -2479,6 +2503,27 @@ export const mountSceneEditorSubscriptions = (deps) => {
       alertCanvasRenderFailure(deps, error);
     }
   };
+  // A failed canvas interaction is followed by one rebuild of the canvas. If
+  // the engine fails again after that with nobody having touched the canvas or
+  // asked for a render, the story repeats it by itself, for example a line
+  // whose next-line setting moves on to a looping line. Rebuilding again
+  // would never end, so that failure is only reported.
+  let canvasRebuiltAfterPlaybackFailure = false;
+  const handleCanvasPlaybackFailure = (error) => {
+    if (canvasRebuiltAfterPlaybackFailure) {
+      reportCanvasRenderFailure(deps, error);
+      return;
+    }
+    canvasRebuiltAfterPlaybackFailure = true;
+    handleCanvasRenderFailure(error);
+    // Route Engine keeps the work it could not finish and fails again on its
+    // next action. Starting it again from the selected line leaves the canvas
+    // working.
+    subject.dispatch("sceneEditor.renderCanvas", {
+      flush: true,
+      rebuildAfterPlaybackFailure: true,
+    });
+  };
   // Tapping or scrolling the canvas can move to another line and render it.
   // Nothing waits for that render, so its failure is handled here.
   const runCanvasInputFallback = async (fallback, payload) => {
@@ -2497,6 +2542,9 @@ export const mountSceneEditorSubscriptions = (deps) => {
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.renderCanvas"),
       tap(({ payload }) => {
+        if (payload?.rebuildAfterPlaybackFailure !== true) {
+          canvasRebuiltAfterPlaybackFailure = false;
+        }
         emitSceneEditorTiming("runtime.render-canvas.event", {
           phase: "received",
           skipRender: payload?.skipRender === true,
@@ -2538,6 +2586,31 @@ export const mountSceneEditorSubscriptions = (deps) => {
 
           handleCanvasRenderFailure(error);
         }
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasPlaybackFailed"),
+      tap(({ payload }) => {
+        handleCanvasPlaybackFailure(payload.error);
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return merge(
+          fromEvent(canvasRoot, "pointerdown", { capture: true }),
+          fromEvent(canvasRoot, "click", { capture: true }),
+          fromEvent(canvasRoot, "wheel", { capture: true, passive: true }),
+        ).pipe(
+          tap(() => {
+            canvasRebuiltAfterPlaybackFailure = false;
+          }),
+        );
       }),
     ),
     subject.pipe(
