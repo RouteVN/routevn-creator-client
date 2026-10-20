@@ -135,7 +135,7 @@ describe("spritesheets", () => {
             },
           },
           animations: { walk: { frames: [0], fps: 12 } },
-          sheetWidth: 256,
+          sheetWidth: 1024,
           sheetHeight: 512,
         },
         folder: { type: "folder" },
@@ -146,6 +146,14 @@ describe("spritesheets", () => {
       expect(
         getSpritesheetResourceDefaultSize(spritesheetsData, "sheet"),
       ).toEqual({ width: 256, height: 512 });
+    });
+
+    it("fills only the missing side of the default size", () => {
+      const sheet = { ...spritesheetsData.items.sheet, width: 128 };
+
+      expect(
+        getSpritesheetResourceDefaultSize({ items: { sheet } }, "sheet"),
+      ).toEqual({ width: 128, height: 512 });
     });
 
     it("keeps the default size that is set", () => {
