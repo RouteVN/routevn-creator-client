@@ -420,6 +420,30 @@ export const handleCommandLineSubmit = (deps, payload) => {
   render();
 };
 
+// A command line submitted with nothing set removes its action, for example a
+// section transition whose scene and section were cleared. The host removes it
+// as it does for Delete in the actions list.
+export const handleCommandLineActionDelete = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store, render, dispatchEvent } = deps;
+  const { actionType } = payload._event.detail;
+  const currentActions = store.selectAction();
+
+  if (Object.hasOwn(currentActions, actionType)) {
+    const nextActions = { ...currentActions };
+    delete nextActions[actionType];
+    store.updateActions(normalizeActionsObject(nextActions));
+    dispatchEvent(
+      new CustomEvent("action-delete", {
+        detail: { actionType },
+      }),
+    );
+  }
+
+  store.hideActionsDialog();
+  render();
+};
+
 export const handleAddActionButtonClicked = (deps) => {
   const { store, render } = deps;
   dispatchActionsDialogOpen(deps, "actions");

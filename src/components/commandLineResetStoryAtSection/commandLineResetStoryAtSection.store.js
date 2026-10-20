@@ -21,7 +21,7 @@ const form = {
           type: "select",
           label: "Scene",
           description: "",
-          required: true,
+          required: false,
           placeholder: "Choose a scene",
           options: "${sceneOptions}",
         },
@@ -30,7 +30,7 @@ const form = {
           type: "select",
           label: "Section",
           description: "",
-          required: true,
+          required: false,
           placeholder: "Choose a section",
           options: "${sectionOptions}",
         },
@@ -112,7 +112,8 @@ export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const scenes = toFlatItems(state.scenes);
   const allScenes = scenes.filter((item) => item.type === "scene");
-  const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
+  // The scene is set when the dialog opens; a cleared scene lists no sections.
+  const selectedSceneId = state.formValues?.sceneId;
   const selectedScene = allScenes.find((scene) => scene.id === selectedSceneId);
   const selectedSectionId = state.formValues?.sectionId;
   const selectedAnimationId =

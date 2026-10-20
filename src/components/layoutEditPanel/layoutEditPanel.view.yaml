@@ -189,6 +189,8 @@ refs:
     eventListeners:
       actions-change:
         handler: handleActionsChange
+      action-delete:
+        handler: handleActionsDelete
   listItem*:
     eventListeners:
       click:

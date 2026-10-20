@@ -2260,7 +2260,7 @@ export const handleConditionalOverrideAttributeFormAction = (deps, payload) => {
   render();
 };
 
-export const handleActionsChange = (deps, payload) => {
+const setActiveInteractionActions = (deps, updateActions) => {
   const { store, render } = deps;
   const interactionType = store.selectActiveInteractionType();
   const interactionKey = getInteractionPropertyName(interactionType);
@@ -2268,10 +2268,10 @@ export const handleActionsChange = (deps, payload) => {
   const currentActions = getInteractionActions(
     store.selectValues()[interactionKey],
   );
-  const newActions = {
-    ...currentActions,
-    ...payload._event.detail,
-  };
+  const newActions = updateActions(currentActions);
+  if (!newActions) {
+    return;
+  }
   const currentPayload = getInteractionPayload(
     store.selectValues()[interactionKey],
   );
@@ -2291,6 +2291,28 @@ export const handleActionsChange = (deps, payload) => {
   emitPanelUpdate(deps, {
     name: `${interactionKey}.payload.actions`,
     value: newActions,
+  });
+};
+
+export const handleActionsChange = (deps, payload) => {
+  setActiveInteractionActions(deps, (currentActions) => ({
+    ...currentActions,
+    ...payload._event.detail,
+  }));
+};
+
+// Delete in the actions list, or a command line submitted with nothing set,
+// such as a section transition whose scene and section were cleared.
+export const handleActionsDelete = (deps, payload) => {
+  const { actionType } = payload._event.detail;
+  setActiveInteractionActions(deps, (currentActions) => {
+    if (!Object.hasOwn(currentActions, actionType)) {
+      return undefined;
+    }
+
+    const newActions = { ...currentActions };
+    delete newActions[actionType];
+    return newActions;
   });
 };
 

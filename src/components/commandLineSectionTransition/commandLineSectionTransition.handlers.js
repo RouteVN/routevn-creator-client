@@ -60,6 +60,16 @@ export const handleSubmitClick = (deps) => {
   const warningTitle = localizeCommandLineText("Warning", copy);
   const { formValues, scenes } = store.selectSubmitData();
 
+  // With the scene and section cleared, submitting removes the transition.
+  if (!formValues?.sceneId && !formValues?.sectionId) {
+    dispatchEvent(
+      new CustomEvent("action-delete", {
+        detail: { actionType: "sectionTransition" },
+      }),
+    );
+    return;
+  }
+
   if (!formValues?.sceneId) {
     appService.showAlert({
       message: localizeCommandLineText("Please select a scene", copy),
@@ -137,8 +147,14 @@ export const handleBreadcumbClick = (deps, payload) => {
 };
 
 export const handleFormChange = (deps, payload) => {
-  const { store, render } = deps;
-  const { values: formValues } = payload._event.detail;
+  const { store, render, refs } = deps;
+  const formValues = { ...payload._event.detail.values };
+
+  // A section belongs to its scene, so clearing the scene clears the section.
+  if (!formValues.sceneId && formValues.sectionId !== undefined) {
+    formValues.sectionId = undefined;
+    refs.transitionForm.setValues({ values: { sectionId: undefined } });
+  }
 
   store.setFormValues(formValues);
   render();

@@ -637,6 +637,45 @@ export const handleKeyboardActionsChange = async (deps, payload) => {
   await handleDataChanged(deps);
 };
 
+// Delete in the actions list, or a command line submitted with nothing set,
+// such as a section transition whose scene and section were cleared.
+export const handleKeyboardActionsDelete = async (deps, payload) => {
+  const { appService, render, store } = deps;
+  const copy = selectCopy(deps);
+  const key = store.selectKeyboardEditorKey();
+  if (!key) {
+    return;
+  }
+
+  const { actionType } = payload._event.detail;
+  const phase = store.selectKeyboardEditorPhase?.() ?? "keydown";
+  const control = getSelectedControl(store);
+  const currentActions = getKeyboardEntryActions(control, phase, key);
+  if (!Object.hasOwn(currentActions, actionType)) {
+    return;
+  }
+
+  const actions = { ...currentActions };
+  delete actions[actionType];
+  const updated = await updateControlKeyboard({
+    appService,
+    projectService: deps.projectService,
+    store,
+    copy,
+    phase,
+    key,
+    interaction: withInteractionPayload({}, { actions }),
+  });
+  if (!updated) {
+    return;
+  }
+
+  // The editor stays on the key, with the actions that are left.
+  store.openKeyboardEditor({ phase, key, actions });
+  render();
+  await handleDataChanged(deps);
+};
+
 export const handleKeyboardActionsClose = (deps) => {
   const { render, store } = deps;
   store.closeKeyboardEditor();

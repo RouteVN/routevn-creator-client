@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createControlTemplate,
   handleKeyboardActionsChange,
+  handleKeyboardActionsDelete,
   handleKeyboardItemRightClick,
 } from "../../src/pages/controls/controls.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -222,5 +223,85 @@ describe("handleKeyboardItemRightClick", () => {
         keyboard: {},
       },
     });
+  });
+});
+
+describe("handleKeyboardActionsDelete", () => {
+  it("saves the key's remaining actions and keeps the editor on the key", async () => {
+    const updateControlItem = vi.fn(async () => ({}));
+    const openKeyboardEditor = vi.fn();
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      i18n: EN_I18N,
+      projectService: {
+        updateControlItem,
+        getRepositoryState: () => ({
+          controls: {
+            items: {},
+            tree: [],
+          },
+        }),
+      },
+      store: {
+        selectKeyboardEditorPhase: () => "keydown",
+        selectKeyboardEditorKey: () => "enter",
+        selectSelectedItem: () => ({
+          id: "control-1",
+          type: "control",
+          keyboard: {
+            enter: {
+              payload: {
+                actions: {
+                  toggleAutoMode: {},
+                  sectionTransition: {
+                    sceneId: "scene-1",
+                    sectionId: "section-2",
+                  },
+                },
+              },
+            },
+          },
+        }),
+        openKeyboardEditor,
+        closeKeyboardEditor: vi.fn(),
+        setItems: vi.fn(),
+        setTagsData: vi.fn(),
+      },
+      render: vi.fn(),
+      refs: {},
+    };
+
+    await handleKeyboardActionsDelete(deps, {
+      _event: {
+        detail: {
+          actionType: "sectionTransition",
+        },
+      },
+    });
+
+    expect(updateControlItem).toHaveBeenCalledWith({
+      controlId: "control-1",
+      data: {
+        keyboard: {
+          enter: {
+            payload: {
+              actions: {
+                toggleAutoMode: {},
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(openKeyboardEditor).toHaveBeenCalledWith({
+      phase: "keydown",
+      key: "enter",
+      actions: {
+        toggleAutoMode: {},
+      },
+    });
+    expect(deps.store.closeKeyboardEditor).not.toHaveBeenCalled();
   });
 });

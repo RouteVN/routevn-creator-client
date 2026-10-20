@@ -127,6 +127,8 @@ refs:
     eventListeners:
       actions-change:
         handler: handleKeyboardActionsChange
+      action-delete:
+        handler: handleKeyboardActionsDelete
       close:
         handler: handleKeyboardActionsClose
 template:
