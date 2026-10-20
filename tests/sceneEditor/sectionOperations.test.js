@@ -142,6 +142,7 @@ describe("scene editor section operations", () => {
           },
           projectService,
           render: vi.fn(),
+          subject: { dispatch: vi.fn() },
         },
         "Section Two",
         vi.fn(),
