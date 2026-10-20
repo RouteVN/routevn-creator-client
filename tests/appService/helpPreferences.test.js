@@ -68,6 +68,7 @@ describe("global help button preference", () => {
         store,
         render,
         i18n: EN_I18N,
+        locale: { subscribe: () => () => {} },
         uiConfig: { id: platform === "android" ? "touch" : "normal" },
       });
       try {

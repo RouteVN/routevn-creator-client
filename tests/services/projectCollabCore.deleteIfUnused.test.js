@@ -13,6 +13,7 @@ vi.mock("../../src/deps/services/shared/commandApi.js", () => ({
   createCommandApi: vi.fn(() => mocked.commandApi),
 }));
 
+import { createCommandApi } from "../../src/deps/services/shared/commandApi.js";
 import { createProjectCollabCore } from "../../src/deps/services/shared/projectCollabCore.js";
 
 const createVersionsCollabCore = (initialVersions = []) => {
@@ -200,5 +201,24 @@ describe("createProjectCollabCore deleteIfUnused", () => {
         },
       },
     });
+  });
+});
+
+describe("createProjectCollabCore commands", () => {
+  it("are made in the open project, not the one the route names", () => {
+    const openRepository = { projectId: "project-1" };
+    createProjectCollabCore({
+      router: { getPayload: () => ({}) },
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      getOpenProjectId: () => "project-1",
+      getOpenRepository: () => openRepository,
+    });
+
+    const { getCurrentProjectId, getOpenRepository } =
+      createCommandApi.mock.calls.at(-1)[0];
+    expect(getCurrentProjectId()).toBe("project-1");
+    expect(getOpenRepository()).toBe(openRepository);
   });
 });

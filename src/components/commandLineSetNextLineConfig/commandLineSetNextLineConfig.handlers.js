@@ -29,12 +29,18 @@ export const handleSubmitClick = (deps) => {
   // Validate delay on submit - default to 1000 if empty or invalid
   const delay = parseInt(defaultValues.autoDelay, 10) || 1000;
 
+  // The form has no field for this yet, so a new config has no value for it.
+  // A saved change cannot hold undefined, so the field is then left out.
+  const manual = {
+    enabled: defaultValues.manualEnabled,
+  };
+  if (defaultValues.manualRequireLineCompleted !== undefined) {
+    manual.requireLineCompleted = defaultValues.manualRequireLineCompleted;
+  }
+
   const setNextLineConfig = {
     applyMode: defaultValues.applyMode ?? "singleLine",
-    manual: {
-      enabled: defaultValues.manualEnabled,
-      requireLineCompleted: defaultValues.manualRequireLineCompleted,
-    },
+    manual,
     auto: {
       enabled: defaultValues.autoEnabled,
       trigger: defaultValues.autoTrigger,

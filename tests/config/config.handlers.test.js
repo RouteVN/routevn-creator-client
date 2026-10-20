@@ -40,7 +40,16 @@ const createDeps = () => {
     showToast: vi.fn(),
   };
   const locale = {
-    available: vi.fn(() => ["en", "ja", "zh-hans", "es", "th"]),
+    available: vi.fn(() => [
+      "en",
+      "ja",
+      "zh-hans",
+      "es",
+      "th",
+      "ru",
+      "pt",
+      "fr",
+    ]),
     current: vi.fn(() => currentLocale),
     set: vi.fn(async (nextLocale) => {
       currentLocale = nextLocale;

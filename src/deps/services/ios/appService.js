@@ -11,7 +11,9 @@ import { isDarkTheme } from "../../../internal/theme.js";
 import { createProgressDialog } from "../../clients/progressDialog.js";
 import { createIOSProjectFolderSetup } from "../../clients/ios/projectFolderSetup.js";
 
-const formatFileDisplayPath = (filePath, deviceName) => {
+// `rootLabels` name the Files app locations in the app language, as Files
+// shows them: `onMyDevice` ("On My iPhone") and `iCloudDrive`.
+const formatFileDisplayPath = (filePath, rootLabels) => {
   if (!filePath) return undefined;
 
   // Native exports return URLs; project listings already contain decoded paths.
@@ -21,8 +23,8 @@ const formatFileDisplayPath = (filePath, deviceName) => {
   }
 
   const roots = [
-    ["/File Provider Storage/", `On My ${deviceName}`],
-    ["/Mobile Documents/com~apple~CloudDocs/", "iCloud Drive"],
+    ["/File Provider Storage/", rootLabels.onMyDevice],
+    ["/Mobile Documents/com~apple~CloudDocs/", rootLabels.iCloudDrive],
   ];
   for (const [marker, label] of roots) {
     const index = filePath.indexOf(marker);
@@ -55,12 +57,14 @@ const toIOSProjectEntry = ({ project, existingEntry } = {}) => {
     return undefined;
   }
 
+  // A project without a name keeps an empty name; the projects page shows
+  // its localized "Untitled" label.
   const projectName = project.name?.trim?.() || existingEntry?.name;
 
   return {
     id: projectId,
     projectFilePath: project.projectFilePath,
-    name: projectName || "Untitled Project",
+    name: projectName ?? "",
     description: project.description ?? existingEntry?.description ?? "",
     language: normalizeProjectLanguage(
       project.language ?? existingEntry?.language,
@@ -106,16 +110,10 @@ const createRegisterImportedIOSProject = ({ appDb, getFileDisplayPath }) => {
       projectFilePath = renamed.projectFilePath;
     }
 
-    const importedName = importedProject.name?.trim?.() ?? "";
-    let projectName = "Untitled Project";
-    if (importedName) {
-      projectName = importedName;
-    }
-
     const projectEntry = {
       id: projectId,
       projectFilePath,
-      name: projectName,
+      name: importedProject.name?.trim?.() ?? "",
       description: importedProject.description ?? "",
       language: normalizeProjectLanguage(importedProject.language),
       iconFileId: importedProject.iconFileId ?? null,
@@ -161,11 +159,16 @@ export const createAppService = (params) => {
   const projectFolderSetup = createIOSProjectFolderSetup({
     filePicker: params.filePicker,
   });
-  const getFileDisplayPath = (filePath) =>
-    formatFileDisplayPath(
-      filePath,
-      projectFolderSetup.getStatus().deviceName ?? "iPhone",
-    );
+  // Labels come from the app copy, which is set once the app mounts.
+  const getFileDisplayPath = (filePath) => {
+    const copy = appService.getAppCopy();
+    const deviceName = projectFolderSetup.getStatus().deviceName ?? "iPhone";
+    const onMyDevice = copy.iosOnMyDeviceLocation ?? "On My {deviceName}";
+    return formatFileDisplayPath(filePath, {
+      onMyDevice: onMyDevice.replaceAll("{deviceName}", () => deviceName),
+      iCloudDrive: copy.iosICloudDriveLocation ?? "iCloud Drive",
+    });
+  };
 
   const registerImportedIOSProject = createRegisterImportedIOSProject({
     appDb,
@@ -416,9 +419,11 @@ export const createAppService = (params) => {
 
     initializeProjectFolderSetup: () => projectFolderSetup.load(),
     getProjectFolderSetup: () => projectFolderSetup.getStatus(),
+    // `name` must not be empty: before a name is typed, the create dialog
+    // passes its localized "Untitled" label.
     async previewNewProjectLocation({ name }) {
       const location = await callIOSBridge("previewNewProjectLocation", {
-        name: name.trim() || "Untitled Project",
+        name,
       });
       return {
         folderName: location.folderName,

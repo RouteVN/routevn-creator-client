@@ -131,6 +131,62 @@ describe("checkProjectResourceUsage", () => {
     });
   });
 
+  it("counts an image used by a transition mask with the animations target", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.images.items["image-1"] = {
+      id: "image-1",
+      type: "image",
+      name: "Wipe mask",
+      fileId: "file-image-1",
+      width: 64,
+      height: 64,
+    };
+    repositoryState.images.tree = [{ id: "image-1" }];
+    repositoryState.animations.items["animation-1"] = {
+      id: "animation-1",
+      type: "animation",
+      name: "Wipe",
+      animation: {
+        type: "transition",
+        mask: {
+          kind: "single",
+          imageId: "image-1",
+          channel: "red",
+          softness: 0.1,
+          progressDuration: 900,
+          progressEasing: "linear",
+        },
+      },
+    };
+    repositoryState.animations.tree = [{ id: "animation-1" }];
+    const repository = {
+      getState: () => structuredClone(repositoryState),
+    };
+    const store = {
+      loadMaterializedViewCheckpoint: vi.fn(async () => undefined),
+    };
+
+    const usage = await checkProjectResourceUsage({
+      repository,
+      store,
+      projectId: "project-1",
+      itemId: "image-1",
+      checkTargets: ["scenes", "layouts", "controls", "animations"],
+    });
+    expect(usage.isUsed).toBe(true);
+    expect(usage.inProps.animations).toHaveLength(1);
+    expect(store.loadMaterializedViewCheckpoint).not.toHaveBeenCalled();
+
+    const withoutAnimations = await checkProjectResourceUsage({
+      repository,
+      store,
+      projectId: "project-1",
+      itemId: "image-1",
+      checkTargets: ["scenes", "layouts", "controls"],
+    });
+    expect(withoutAnimations.isUsed).toBe(false);
+  });
+
   it("marks a scene as in use when another scene transitions to it", () => {
     const usage = checkSceneDeleteUsage({
       sceneId: "scene-2",

@@ -88,6 +88,8 @@ export const createProjectServiceCore = ({
     getRepositoryByProject: repositoryService.getRepositoryByProject,
     getAdapterByProject: repositoryService.getStoreByProjectSync,
     getProjectCacheKey: repositoryService.getProjectCacheKey,
+    getOpenProjectId: () => getCurrentProjectId(),
+    getOpenRepository: repositoryService.getEnsuredRepository,
     createSessionForProject: (payload) =>
       collabAdapter.createSessionForProject({
         ...payload,
@@ -121,6 +123,11 @@ export const createProjectServiceCore = ({
     repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
 
   const contentPatchesByProject = new Map();
+  // The repositories whose content patches completed. The route opens a project
+  // once and its pages ensure it many times; only the first ensure of an opened
+  // repository reads the patch markers. Held weakly, so a released repository
+  // can be freed.
+  const patchedRepositories = new WeakSet();
 
   const getRepositoryState = () => {
     const repository = repositoryService.getCachedRepository();
@@ -427,6 +434,10 @@ export const createProjectServiceCore = ({
 
   const ensureContentPatches = async (repository) => {
     const projectId = getCurrentProjectId();
+    if (patchedRepositories.has(repository)) {
+      return;
+    }
+
     const existingPatches = contentPatchesByProject.get(projectId);
     if (existingPatches) {
       return existingPatches;
@@ -437,6 +448,7 @@ export const createProjectServiceCore = ({
 
     try {
       await patches;
+      patchedRepositories.add(repository);
     } finally {
       if (contentPatchesByProject.get(projectId) === patches) {
         contentPatchesByProject.delete(projectId);
@@ -640,18 +652,24 @@ export const createProjectServiceCore = ({
   };
 
   const releaseProjectRuntime = async (projectId) => {
-    const targetProjectId =
-      projectId ||
-      repositoryService.getEnsuredProjectId() ||
-      router.getPayload()?.p;
+    // The changes made in the project, and those they lead to, reach it before
+    // it closes. Closing then takes its turn among the changes, so one made
+    // while it closes waits for it and is refused, not run in a closing project.
+    await collabService.commandApi.waitForChanges();
+    await collabService.commandApi.runAfterChanges(async () => {
+      const targetProjectId =
+        projectId ||
+        repositoryService.getEnsuredProjectId() ||
+        router.getPayload()?.p;
 
-    if (targetProjectId) {
-      await collabService.stopCollabSession(targetProjectId);
-      await repositoryService.releaseRepositoryByProjectId(targetProjectId);
-      return;
-    }
+      if (targetProjectId) {
+        await collabService.stopCollabSession(targetProjectId);
+        await repositoryService.releaseRepositoryByProjectId(targetProjectId);
+        return;
+      }
 
-    await repositoryService.releaseCurrentRepository();
+      await repositoryService.releaseCurrentRepository();
+    });
   };
 
   return {

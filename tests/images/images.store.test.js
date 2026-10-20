@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, RU_I18N } from "../support/i18n.js";
 import {
   clearFullImagePreviewSuppressNextClick,
   clearFullImagePreviewTouchStartPoint,
@@ -34,6 +34,7 @@ const createContext = () => ({
       deleteButton: "Delete",
       deleteMessage: "Delete {itemName}? This cannot be undone.",
       deleteTargetFallback: "this image",
+      deleteTargetName: '"{name}"',
       deleteTitle: "Delete Image",
     },
   },
@@ -238,6 +239,30 @@ describe("images store delete dialog", () => {
 
     expect(selectDeleteDialogItemId(context)).toBeUndefined();
     expect(selectViewData(context).deleteDialogOpen).toBe(false);
+  });
+
+  it("quotes the image name with the catalog template", () => {
+    const context = { ...createContext(), i18n: RU_I18N };
+
+    setItems(context, {
+      data: {
+        tree: [{ id: "image-1" }],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Hero",
+          },
+        },
+      },
+    });
+    openDeleteDialog(context, {
+      itemId: "image-1",
+    });
+
+    expect(selectViewData(context).deleteDialogMessage).toBe(
+      "Удалить «Hero»? Это действие нельзя отменить.",
+    );
   });
 });
 

@@ -57,6 +57,12 @@ const social = [
   },
 ];
 
+// Brand names stay as they are; only generic labels are translated.
+const SOCIAL_LABEL_COPY_KEYS = {
+  website: "websiteButton",
+  "all-social": "allSocialMediaButton",
+};
+
 export const createInitialState = () => ({
   resourceCategory: "settings",
   selectedResourceId: "about",
@@ -80,8 +86,9 @@ export const selectViewData = ({ state, i18n }) => {
   return {
     ...state,
     social: social.map((item) => {
-      if (item.id !== "all-social") return item;
-      return { ...item, label: copy.allSocialMediaButton ?? item.label };
+      const copyKey = SOCIAL_LABEL_COPY_KEYS[item.id];
+      if (!copyKey) return item;
+      return { ...item, label: copy[copyKey] ?? item.label };
     }),
     showExplorerPanel: !state.isTouchMode,
     contentPadding: state.isTouchMode ? "0" : "lg",

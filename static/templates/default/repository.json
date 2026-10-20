@@ -2139,7 +2139,7 @@
               "id": "56AspVFSb9CV",
               "type": "text-ref-choice-item-content",
               "name": "Text (Choice Item Content)",
-              "x": 960,
+              "x": 900,
               "y": 10,
               "anchorX": 0.5,
               "anchorY": 0,
@@ -2272,11 +2272,6 @@
               "text": "START",
               "textStyle": {
                 "align": "center"
-              },
-              "click": {
-                "payload": {
-                  "actions": {}
-                }
               },
               "textStyleId": "e2WbW3vcPZR9",
               "hoverTextStyleId": "saV5A4pkvHRb"

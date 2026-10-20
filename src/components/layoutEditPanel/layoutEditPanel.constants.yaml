@@ -97,6 +97,7 @@ transformSections:
                   x: 0
                   y: 0.5
               - label: Center
+                labelKey: anchorCenter
                 value:
                   x: 0.5
                   y: 0.5
@@ -236,6 +237,7 @@ layoutSections:
                   x: 0
                   y: 0.5
               - label: Center
+                labelKey: anchorCenter
                 value:
                   x: 0.5
                   y: 0.5
@@ -333,7 +335,7 @@ layoutSections:
   - "$when": "supportsChildInteractionInheritance"
     id: childInteraction
     label: Child Interaction
-    tooltip: Inherit child event from parent
+    tooltip: Child elements inherit interaction events from the parent
     "$if canAddChildInteractionInheritance":
       labelAction: plus
     items:

@@ -547,8 +547,13 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
     name: snapshot.name,
     description: snapshot.description,
     animation: snapshot.animationData,
-    cameraTracks: snapshot.cameraTracks,
   };
+  // An animation that never had camera tracks has no list to save. A saved
+  // change cannot hold undefined, so the field is left out rather than set.
+  // Removing the tracks of a saved animation saves an empty list instead.
+  if (snapshot.cameraTracks !== undefined) {
+    data.cameraTracks = snapshot.cameraTracks;
+  }
   if (
     !areEditHistoryValuesEqual(
       snapshot.preview,
@@ -3307,7 +3312,9 @@ export const handleCaptureAnimationCanvas = async (deps) => {
       `${animationName}.png`,
       {
         title: copy.saveAnimationCanvasTitle ?? "Save animation canvas",
-        filters: [{ name: "PNG Image", extensions: ["png"] }],
+        filters: [
+          { name: copy.pngFileTypeName ?? "PNG Image", extensions: ["png"] },
+        ],
       },
     );
     if (!savedPath) {

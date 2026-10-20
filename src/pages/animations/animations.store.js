@@ -7,10 +7,8 @@ import {
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
-import {
-  formatAnimationDurationLabel,
-  toAnimationDisplayItem,
-} from "../../internal/animationDisplay.js";
+import { formatDurationLabel } from "../../internal/dates.js";
+import { toAnimationDisplayItem } from "../../internal/animationDisplay.js";
 import { normalizeTransitionMaskForEditor } from "../../internal/animationMasks.js";
 import {
   createDefaultInitialValuesByProperty,
@@ -246,7 +244,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData, copy }) => {
+  extendViewData: ({ state, selectedItem, baseViewData, copy, i18n }) => {
     const selectedAnimationItem = selectedItem
       ? toAnimationDisplayItem(selectedItem)
       : undefined;
@@ -280,8 +278,9 @@ const {
       ),
       animationPreviewOpacity: state.animationPreviewVisible ? 1 : 0,
       selectedItemDescription: selectedAnimationItem?.description ?? "",
-      selectedItemDuration: formatAnimationDurationLabel(
+      selectedItemDuration: formatDurationLabel(
         selectedAnimationItem?.duration,
+        i18n.dateTime,
       ),
     };
   },

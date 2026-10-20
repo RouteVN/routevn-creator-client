@@ -20,6 +20,7 @@ import { createApiService } from "./deps/services/apiService.js";
 import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
+import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import { installNativeBackOverlays } from "./primitives/nativeBackOverlays.js";
@@ -179,6 +180,7 @@ const apiService = createApiService({
 
 const graphicsService = await createGraphicsService({
   subject,
+  onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   onRenderError: (error) => {
     console.error(error);
     errorReporter.capture(error, { operation: "graphics.render" });

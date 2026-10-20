@@ -98,13 +98,32 @@ export const selectImageSelectorDialog = ({ state }) => {
   return state.imageSelectorDialog;
 };
 
-export const selectViewData = ({ state, constants }) => {
+const localizeSpriteCreateForm = (form = {}, i18n = {}) => {
+  const fieldLabels = {
+    name: i18n.resourcePages?.nameLabel,
+    "sprite-image": i18n.layoutEditPanel?.imageLabel,
+  };
+
+  return {
+    ...form,
+    fields: form.fields?.map((field) => ({
+      ...field,
+      label: fieldLabels[field.name ?? field.slot] ?? field.label,
+    })),
+  };
+};
+
+export const selectViewData = ({ state, constants, i18n = {} }) => {
+  const panelCopy = i18n.layoutEditPanel ?? {};
   const fileExplorerItems = toFlatItems(state.images).filter(
     (item) => item.type === "folder",
   );
 
   return {
-    form: constants.spriteCreateForm,
+    form: localizeSpriteCreateForm(constants.spriteCreateForm, i18n),
+    selectImageLabel: panelCopy.selectImageLabel ?? "Select image",
+    cancelButton: i18n.resourcePages?.cancelButton ?? "Cancel",
+    okButton: panelCopy.okButton ?? "OK",
     formKey: state.formKey,
     defaultValues: state.defaultValues,
     imageId: state.imageId,

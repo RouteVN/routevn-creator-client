@@ -1,4 +1,6 @@
 import { buildResourceOverflowMenuItems } from "../../internal/ui/resourcePages/resourceOverflowMenu.js";
+import { selectResourceViewCopy } from "../../internal/ui/resourcePages/resourceViewCopy.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { buildProgressivePlaceholderChildren } from "../../internal/ui/resourcePages/progressivePlaceholders.js";
 import {
   buildTagFilterPopoverViewData,
@@ -20,10 +22,6 @@ const DEFAULT_MOBILE_ITEMS_PER_ROW = 2;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
 const MAX_MOBILE_ITEMS_PER_ROW = 6;
-const MENU_BUTTON_LABEL = "Menu";
-const BACK_BUTTON_LABEL = "Back";
-const ZOOM_BUTTON_LABEL = "Zoom";
-const FILTER_BUTTON_LABEL = "Filter";
 const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
   x: 0,
   y: 0,
@@ -273,9 +271,8 @@ export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items = props.itemContextMenuItems ?? [
-    { label: "Delete", icon: "trash", type: "item", value: "delete-item" },
-  ];
+  // Undefined items fall back to a localized Delete item in selectViewData.
+  state.dropdownMenu.items = props.itemContextMenuItems;
 };
 
 export const hideContextMenu = ({ state }, _payload = {}) => {
@@ -372,6 +369,12 @@ export const selectViewData = ({ state, props, i18n }) => {
   const menuButtonPlacement =
     props.menuButtonPlacement === "trailing" ? "trailing" : "leading";
   const hasActiveSearch = searchQuery.trim().length > 0;
+  const viewCopy = selectResourceViewCopy({
+    i18n,
+    searchQuery,
+    hasActiveSearch,
+    hasActiveTagFilter,
+  });
   const hasActiveFilter =
     hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
   const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
@@ -426,6 +429,9 @@ export const selectViewData = ({ state, props, i18n }) => {
       hasChildren: hasVisibleChildren,
       hasChildFolders,
       showEmptyUpload: !hasVisibleChildren && !hasChildFolders,
+      dropFilesLabel: formatI18nCopy(viewCopy.dropFilesMessage, {
+        folder: group.fullLabel,
+      }),
       headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
       progressiveContentMinHeight: 0,
       children: progressiveChildren.children.map((item, itemIndex) => {
@@ -538,10 +544,11 @@ export const selectViewData = ({ state, props, i18n }) => {
     groups,
     selectedItemId: props.selectedItemId,
     searchQuery,
-    searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    searchPlaceholder: props.searchPlaceholder ?? viewCopy.searchPlaceholder,
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
-    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    tagFilterPlaceholder:
+      props.tagFilterPlaceholder ?? viewCopy.tagFilterPlaceholder,
     tagFilterPopover: {
       ...tagFilterPopoverViewData.tagFilterPopover,
       clearDisabled:
@@ -553,13 +560,8 @@ export const selectViewData = ({ state, props, i18n }) => {
     showTagFilter: showTagFilter && !filterInOverflowMenu,
     uploadText: props.uploadText ?? "Upload Files",
     uploadIcon: props.uploadIcon ?? "upload",
-    emptyMessage:
-      props.emptyMessage ??
-      (hasActiveSearch
-        ? `No items found matching "${searchQuery}"`
-        : hasActiveTagFilter
-          ? "No items found for the selected tags"
-          : "No items found"),
+    emptyMessage: props.emptyMessage ?? viewCopy.emptyMessage,
+    viewCopy,
     acceptedFileTypes: props.acceptedFileTypes ?? [],
     imageHeight,
     maxWidth,
@@ -579,10 +581,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     showZoomPopover,
     showZoomPopoverButton: showZoomPopover && !zoomInOverflowMenu,
     zoomPopover: state.zoomPopover,
-    menuButtonLabel: MENU_BUTTON_LABEL,
-    backButtonLabel: BACK_BUTTON_LABEL,
-    zoomButtonLabel: ZOOM_BUTTON_LABEL,
-    filterButtonLabel: FILTER_BUTTON_LABEL,
+    menuButtonLabel: viewCopy.menuButtonLabel,
+    backButtonLabel: viewCopy.backButtonLabel,
+    zoomButtonLabel: viewCopy.zoomLabel,
+    filterButtonLabel: viewCopy.filterLabel,
     resourceImportMenuItems,
     showSearch:
       parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
@@ -600,6 +602,16 @@ export const selectViewData = ({ state, props, i18n }) => {
     showImageCardPreview: parseBooleanProp(props.showImageCardPreview, true),
     scrollBottomPadding,
     draggingGroupId: state.draggingGroupId,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu: {
+      ...state.dropdownMenu,
+      items: state.dropdownMenu.items ?? [
+        {
+          label: viewCopy.deleteMenuItem,
+          icon: "trash",
+          type: "item",
+          value: "delete-item",
+        },
+      ],
+    },
   };
 };

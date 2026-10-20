@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../../internal/project/tree.js";
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 import { getInteractionActions } from "../../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
@@ -174,6 +175,20 @@ export const createTextContentDialogForm = (copy = {}) => ({
   },
 });
 
+// The text editor's variable menu. Variable types use the names the scene
+// editor shows for them.
+export const createTextContentMenuLabels = (i18n = {}, copy = {}) => {
+  const variableTypeCopy = i18n.commandLinePage ?? {};
+  return {
+    noVariables: copy.noVariablesMenuItem ?? "No variables",
+    variableTypes: {
+      string: variableTypeCopy.string,
+      number: variableTypeCopy.number,
+      boolean: variableTypeCopy.boolean,
+    },
+  };
+};
+
 export const getLayoutInteractionActions = (values, interactionType) => {
   return getInteractionActions(values?.[interactionType]);
 };
@@ -197,7 +212,10 @@ const toLayoutActionItems = (values, hiddenActionModes, copy = {}) => {
       .map(([key]) => ({
         id: key,
         interactionType,
-        label: `${getActionInteractionLabel(interactionType, copy)}: ${getActionLabel(key, copy)}`,
+        label: formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
+          label: getActionInteractionLabel(interactionType, copy),
+          value: getActionLabel(key, copy),
+        }),
         svg: SETTINGS_ACTION_MODES.has(key) ? "settings" : `action-${key}`,
       })),
   );
@@ -283,7 +301,7 @@ export const toInspectorValues = ({
   firstTextStyleId,
   hiddenActionModes,
   variablesData,
-  copy,
+  copy = {},
 }) => {
   const capabilities =
     getLayoutEditorElementDefinition(values?.type)?.capabilities ?? {};
@@ -324,11 +342,13 @@ export const toInspectorValues = ({
           fallbackText: values?.text,
         })
       : values?.content;
+  const emptyText = copy.emptyTextSummary ?? "Empty";
   const textContentSummary =
     capabilities.supportsTextEditing === true
       ? getLayoutTextSummary(values?.content, {
           fallbackText: values?.text,
           variablesData,
+          emptyText,
         })
       : "";
   const textContentSummaryParts =
@@ -336,6 +356,7 @@ export const toInspectorValues = ({
       ? getLayoutTextSummaryParts(values?.content, {
           fallbackText: values?.text,
           variablesData,
+          emptyText,
         })
       : [];
 

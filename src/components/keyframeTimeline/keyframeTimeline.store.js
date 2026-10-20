@@ -1,3 +1,7 @@
+import {
+  formatDurationLabel,
+  formatMilliseconds,
+} from "../../internal/dates.js";
 import { createKeyframeValueCurvePath } from "./keyframeTimeline.easing.js";
 
 export const createInitialState = () => ({
@@ -248,27 +252,18 @@ export const clearKeyframeClickSuppression = ({ state }, _payload = {}) => {
 
 const RULER_TARGET_MAJOR_TICK_COUNT = 6;
 const RULER_MINOR_TICKS_PER_MAJOR = 5;
+// Marks a property that keeps its default initial value. A dash reads the same
+// in every language, and the localized word, too wide for the 24px value
+// column, becomes its title.
+const DEFAULT_INITIAL_VALUE_MARKER = "—";
 
 const clamp = (value, min, max) => {
   return Math.min(Math.max(value, min), max);
 };
 
-const formatRulerTimeLabel = (timeMs) => {
-  if (timeMs < 1000) {
-    return `${timeMs}ms`;
-  }
-
-  const seconds = timeMs / 1000;
-  if (Number.isInteger(seconds)) {
-    return `${seconds}s`;
-  }
-
-  return `${Number(seconds.toFixed(seconds < 10 ? 1 : 2))}s`;
-};
-
-const formatEasingLabel = (easingName) => {
+const formatEasingLabel = (easingName, linearLabel) => {
   if (easingName === "linear") {
-    return "Linear";
+    return linearLabel;
   }
 
   return easingName
@@ -331,6 +326,7 @@ const createRulerTick = ({
   durationMs,
   isMajor = false,
   showLabel = false,
+  dateTime,
 } = {}) => {
   const leftPercent =
     durationMs > 0 ? clamp((timeMs / durationMs) * 100, 0, 100) : 0;
@@ -348,7 +344,7 @@ const createRulerTick = ({
 
   return {
     id: `tick-${timeMs}`,
-    label: showLabel ? formatRulerTimeLabel(timeMs) : undefined,
+    label: showLabel ? formatDurationLabel(timeMs, dateTime) : undefined,
     labelStyle,
     tickStyle: `top: ${isMajor ? 40 : 45}px; left: ${leftPercent}%; width: ${isMajor ? 2 : 1}px; height: ${isMajor ? 12 : 7}px; transform: translateX(-${isMajor ? 1 : 0.5}px); pointer-events: none;`,
   };
@@ -366,7 +362,7 @@ const createHoverIndicatorLabelStyle = (leftPercent) => {
   return `top: 4px; left: ${leftPercent}%; transform: translateX(-50%); pointer-events: none; z-index: 10; white-space: nowrap;`;
 };
 
-const createRulerTicks = (durationMs) => {
+const createRulerTicks = (durationMs, dateTime) => {
   if (durationMs <= 0) {
     return [
       createRulerTick({
@@ -374,6 +370,7 @@ const createRulerTicks = (durationMs) => {
         durationMs: 0,
         isMajor: true,
         showLabel: true,
+        dateTime,
       }),
     ];
   }
@@ -418,12 +415,16 @@ const createRulerTicks = (durationMs) => {
         durationMs,
         isMajor: tick.isMajor,
         showLabel: tick.showLabel,
+        dateTime,
       }),
     );
 };
 
 export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
-  const autoLabel = i18n.animationEditorPage?.autoTweenMode ?? "Auto";
+  const animationCopy = i18n.animationEditorPage ?? {};
+  const autoLabel = animationCopy.autoTweenMode ?? "Auto";
+  const defaultInitialValueLabel = animationCopy.defaultLabel ?? "Default";
+  const linearEasingLabel = animationCopy.linearEasingLabel ?? "Linear";
   const showRuler = attrs.showRuler === true;
   const showTracks = attrs.showTracks !== false;
   const resolveTrackCursor = ({ propertyName, trackMode } = {}) => {
@@ -446,6 +447,11 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
       const value = propertyConfig.initialValue;
       const isDefault = value === undefined || value === "";
       const autoConfig = propertyConfig.auto;
+      const initialValue = autoConfig
+        ? autoLabel.toLocaleLowerCase()
+        : isDefault
+          ? DEFAULT_INITIAL_VALUE_MARKER
+          : (propertyConfig.initialValueLabel ?? value);
       const selected =
         propertyConfig.selected === true ||
         (attrs.selectedProperty?.side === attrs.side &&
@@ -468,11 +474,9 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
         thumbnailBorderColor: propertyConfig.thumbnailBorderColor ?? "bo",
         thumbnailFileId: propertyConfig.thumbnailFileId,
         thumbnailName: propertyConfig.thumbnailName ?? propertyName,
-        initialValue: autoConfig
-          ? autoLabel.toLocaleLowerCase()
-          : isDefault
-            ? "D"
-            : (propertyConfig.initialValueLabel ?? value),
+        initialValue,
+        initialValueTitle:
+          !autoConfig && isDefault ? defaultInitialValueLabel : initialValue,
         initialValueColor: autoConfig ? "mu" : selected ? "ac-fg" : "fg",
         trackMode: autoConfig ? "auto" : "keyframes",
         keyframes: propertyConfig.keyframes,
@@ -511,8 +515,10 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
   const usedDurationStyle = usedDurationVisible
     ? `left: 0; top: 0; bottom: 0; width: ${usedDurationPercent.toFixed(2)}%; pointer-events: none; z-index: 0;`
     : "";
-  const totalDuration =
-    resolvedTimelineDuration > 0 ? `${resolvedTimelineDuration}ms` : "0ms";
+  const totalDuration = formatMilliseconds(
+    Math.max(0, resolvedTimelineDuration),
+    i18n.dateTime,
+  );
   const externalIndicatorTimeMs = Number(attrs.indicatorTimeMs);
   const externalIndicatorLeftPercent =
     attrs.indicatorVisible === true &&
@@ -541,7 +547,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
     ? createHoverIndicatorLabelStyle(indicatorLeftPercent)
     : "";
   const rulerTicks = showRuler
-    ? createRulerTicks(resolvedTimelineDuration)
+    ? createRulerTicks(resolvedTimelineDuration, i18n.dateTime)
     : [];
 
   selectedProperties = selectedProperties.map((property) => {
@@ -563,7 +569,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
       nextProperty.auto = {
         ...property.auto,
         duration: propertyDuration,
-        easingLabel: formatEasingLabel(property.auto.easing),
+        easingLabel: formatEasingLabel(property.auto.easing, linearEasingLabel),
         widthPercent: autoWidthPercent.toFixed(2),
       };
       nextProperty.fillerWidthPercent = Math.max(
@@ -627,7 +633,10 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
             return {
               ...keyframe,
               easing: keyframe.easing ?? "linear",
-              easingLabel: formatEasingLabel(keyframe.easing ?? "linear"),
+              easingLabel: formatEasingLabel(
+                keyframe.easing ?? "linear",
+                linearEasingLabel,
+              ),
               startValueLabel:
                 keyframe.startValueLabel ??
                 formatKeyframeValue({
@@ -717,6 +726,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
     usedDuration,
     usedDurationStyle,
     editable: attrs.editable,
+    noKeyframesLabel: animationCopy.noKeyframesLabel ?? "No keyframes",
   };
 
   return result;

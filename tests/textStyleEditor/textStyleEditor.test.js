@@ -1,6 +1,7 @@
 import { produce } from "immer";
 import { Subject } from "rxjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { collectNonJsonFields } from "../../src/deps/services/shared/commandApi/shared.js";
 import * as textStyleEditorStore from "../../src/pages/textStyleEditor/textStyleEditor.store.js";
 import {
   handleAddColorDialogClose,
@@ -696,6 +697,42 @@ describe("text style editor", () => {
     });
     await wait(AUTOSAVE_WAIT_MS);
     expect(page.savedData()).toEqual([]);
+  });
+
+  it("saves a text style without an outline with only JSON values, and clears a removed outline with null", async () => {
+    const nonJsonFieldsOf = (data) => {
+      const fields = new Set();
+      collectNonJsonFields(
+        { textStyleId: "text-style-1", data },
+        "payload",
+        fields,
+      );
+      return [...fields];
+    };
+
+    const plain = await createPage({
+      item: {
+        ...createSavedTextStyle(),
+        strokeColorId: undefined,
+        strokeWidth: undefined,
+      },
+    });
+    await plain.changeField("fontSize", 32);
+    await wait(AUTOSAVE_WAIT_MS);
+    expect(plain.savedData()).toHaveLength(1);
+    expect(plain.savedData()[0].data).toMatchObject({ fontSize: 32 });
+    expect(plain.savedData()[0].data).not.toHaveProperty("strokeColorId");
+    expect(nonJsonFieldsOf(plain.savedData()[0].data)).toEqual([]);
+
+    const outlined = await createPage();
+    outlined.pickColor("strokeColorId", undefined);
+    await wait(AUTOSAVE_WAIT_MS);
+    expect(outlined.savedData()).toHaveLength(1);
+    expect(outlined.savedData()[0].data).toMatchObject({
+      strokeColorId: null,
+      strokeWidth: 0,
+    });
+    expect(nonJsonFieldsOf(outlined.savedData()[0].data)).toEqual([]);
   });
 
   it("adds a shadow with default settings and saves it, then clears it", async () => {

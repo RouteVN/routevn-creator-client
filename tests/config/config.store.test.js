@@ -133,6 +133,9 @@ describe("config language store", () => {
         { value: "zh-hans", label: "简体中文 (Beta)" },
         { value: "es", label: "Español (Beta)" },
         { value: "th", label: "ไทย (Beta)" },
+        { value: "ru", label: "Русский (Beta)" },
+        { value: "pt", label: "Português (Beta)" },
+        { value: "fr", label: "Français (bêta)" },
       ],
     });
   });

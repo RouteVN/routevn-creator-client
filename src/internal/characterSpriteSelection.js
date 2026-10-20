@@ -20,15 +20,18 @@ const resolveSpriteGroupId = (spriteGroup = {}, index = 0) => {
   return `legacy-sprite-group-${index + 1}`;
 };
 
-const resolveSpriteGroupName = (spriteGroup = {}, index = 0) => {
+const resolveSpriteGroupName = (spriteGroup = {}, index = 0, groupLabel) => {
   if (typeof spriteGroup.name === "string" && spriteGroup.name.length > 0) {
     return spriteGroup.name;
   }
 
-  return `Group ${index + 1}`;
+  return groupLabel?.replace("{index}", String(index + 1));
 };
 
-export const buildSpriteSelectionGroups = (character = {}) => {
+// A sprite group from an older project may have no name. A caller that shows
+// the names passes groupLabel, a catalog template such as "Group {index}", to
+// name such a group by its position.
+export const buildSpriteSelectionGroups = (character = {}, groupLabel) => {
   if (
     !Array.isArray(character?.spriteGroups) ||
     character.spriteGroups.length === 0
@@ -44,7 +47,7 @@ export const buildSpriteSelectionGroups = (character = {}) => {
 
   return character.spriteGroups.map((spriteGroup, index) => ({
     id: resolveSpriteGroupId(spriteGroup, index),
-    name: resolveSpriteGroupName(spriteGroup, index),
+    name: resolveSpriteGroupName(spriteGroup, index, groupLabel),
     tags: Array.isArray(spriteGroup?.tags) ? spriteGroup.tags : [],
   }));
 };

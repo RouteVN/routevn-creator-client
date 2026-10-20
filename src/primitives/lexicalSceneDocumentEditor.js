@@ -107,6 +107,23 @@ import {
 } from "./lexicalSceneDocumentReferences.js";
 
 const DEFAULT_PLACEHOLDER = "";
+// English defaults for the context and variable menus. The owning component
+// passes localized labels through the `menuLabels` property. `variableTypes`
+// maps a variable type to the text shown after the variable name; a type
+// without a label shows as is.
+const DEFAULT_MENU_LABELS = Object.freeze({
+  changeVariable: "Change variable",
+  removeVariable: "Remove variable",
+  addTextStyle: "Add text style",
+  editTextStyle: "Edit text style",
+  removeTextStyle: "Remove text style",
+  addRubyText: "Add ruby text",
+  editRubyText: "Edit ruby text",
+  removeRubyText: "Remove ruby text",
+  noVariables: "No variables",
+  noTextStyles: "No text styles",
+  variableTypes: Object.freeze({}),
+});
 const LEFT_GUTTER_WIDTH_WITH_NUMBERS = 60;
 const LEFT_GUTTER_WIDTH_WITHOUT_NUMBERS = 26;
 const DEFAULT_RIGHT_GUTTER_WIDTH = 24;
@@ -129,6 +146,12 @@ const DEFAULT_EDITOR_FONT_SIZE = "md";
 
 const isTouchInputMode = () =>
   document.documentElement.dataset.rvnInputMode === "touch";
+
+// Chromium, Android WebView included, sends the keys of a composing keyboard as
+// process keys and sends insertText only once it has no composition left. The
+// lost-composition checks rely on that order; other engines keep Lexical's own
+// handling.
+const isChromiumEngine = () => /Chrome\//.test(navigator.userAgent);
 
 const normalizeEditorFontSize = (fontSize) =>
   EDITOR_FONT_SIZE_VALUES[fontSize] ? fontSize : DEFAULT_EDITOR_FONT_SIZE;
@@ -989,6 +1012,19 @@ const isImeProcessKeyboardEvent = (event) => {
   return event?.keyCode === 229 || event?.which === 229;
 };
 
+// Deletions that can arrive while a keyboard is still composing a word, from
+// a Backspace/Delete key or Android's deleteSurroundingText.
+const COMPOSITION_DELETE_INPUT_TYPES = new Set([
+  "deleteContentBackward",
+  "deleteContentForward",
+  "deleteWordBackward",
+  "deleteWordForward",
+  "deleteSoftLineBackward",
+  "deleteSoftLineForward",
+  "deleteHardLineBackward",
+  "deleteHardLineForward",
+]);
+
 const getEventTimestamp = (event) => {
   const timestamp = Number(event?.timeStamp);
   // iPadOS 17 software-keyboard events can report 0. Use the page clock
@@ -1257,6 +1293,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       },
       mentionMenu: createClosedMentionMenuState(),
       placeholder: DEFAULT_PLACEHOLDER,
+      menuLabels: DEFAULT_MENU_LABELS,
     };
 
     this.refs = {};
@@ -1717,6 +1754,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get mentionTargets() {
     return normalizeMentionTargets(this.state.mentionTargets);
+  }
+
+  // Menus read these labels when they open, so new labels apply to the next
+  // menu that opens.
+  set menuLabels(value) {
+    const menuLabels = {};
+    for (const [key, defaultLabel] of Object.entries(DEFAULT_MENU_LABELS)) {
+      menuLabels[key] = value?.[key] ?? defaultLabel;
+    }
+    this.state.menuLabels = menuLabels;
+  }
+
+  get menuLabels() {
+    return this.state.menuLabels;
+  }
+
+  getVariableTypeLabel(variableType) {
+    if (!variableType) {
+      return "";
+    }
+
+    return this.state.menuLabels.variableTypes[variableType] ?? variableType;
   }
 
   set selectedLineId(value) {
@@ -3257,6 +3316,25 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    // A key the keyboard did not process, sent while the browser reports no
+    // composition, shows that the editor's composition was lost. A key sent by
+    // the page, such as a keyboard toolbar arrow, says nothing about it.
+    if (
+      this.isComposing &&
+      event.isTrusted &&
+      isChromiumEngine() &&
+      !event.isComposing &&
+      !isImeProcessKeyboardEvent(event) &&
+      isEditorOrSurfaceEventTarget({
+        activeElement: this.getActiveElement(),
+        event,
+        editorElement: this.refs.editor,
+        surfaceElement: this.refs.surface,
+      })
+    ) {
+      this.endLostComposition();
+    }
+
     if (this.handleTextModeWindowBackspace(event)) {
       return;
     }
@@ -4614,44 +4692,20 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const richTextState = this.getReferenceRichTextState(
       referenceSnapshot.nodeKey,
     );
-    const hasTextStyle = !!richTextState.textStyleId;
-    const hasFurigana = !!richTextState.furigana;
+    const { changeVariable, removeVariable } = this.state.menuLabels;
     menu.items = [
       {
         id: "change-reference",
         type: "item",
-        label: "Change variable",
+        label: changeVariable,
       },
       {
         id: "remove-reference",
         type: "item",
-        label: "Remove variable",
+        label: removeVariable,
       },
-      {
-        id: hasTextStyle ? "edit-text-style" : "add-text-style",
-        type: "item",
-        label: hasTextStyle ? "Edit text style" : "Add text style",
-      },
-      {
-        id: hasFurigana ? "edit-furigana" : "add-furigana",
-        type: "item",
-        label: hasFurigana ? "Edit ruby text" : "Add ruby text",
-      },
+      ...this.getRichTextMenuItems(richTextState),
     ];
-    if (hasTextStyle) {
-      menu.items.push({
-        id: "remove-text-style",
-        type: "item",
-        label: "Remove text style",
-      });
-    }
-    if (hasFurigana) {
-      menu.items.push({
-        id: "remove-furigana",
-        type: "item",
-        label: "Remove ruby text",
-      });
-    }
 
     menu.x = this.selectionMenuPosition.x;
     menu.y = this.selectionMenuPosition.y;
@@ -4666,7 +4720,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         {
           id: "no-reference-targets",
           type: "item",
-          label: "No variables",
+          label: this.state.menuLabels.noVariables,
           disabled: true,
         },
       ];
@@ -4676,7 +4730,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       id: `reference:${target.id}`,
       type: "item",
       label: target.label,
-      suffixText: target.variableType || "",
+      suffixText: this.getVariableTypeLabel(target.variableType),
       referenceResourceId: target.id,
     }));
   }
@@ -5114,10 +5168,42 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    if (event.isComposing || this.isComposing) {
+    // Chromium sends insertText only when it has no composition, so the
+    // keyboard's composition was lost without a compositionend. The insertion
+    // below ends Lexical's composition once it has read the target range.
+    const isLostComposition =
+      this.isComposing &&
+      isChromiumEngine() &&
+      !event.isComposing &&
+      inputType === "insertText";
+    if (isLostComposition) {
+      this.handleCompositionEnd();
+    }
+
+    const isCompositionDelete =
+      this.isComposing && COMPOSITION_DELETE_INPUT_TYPES.has(inputType);
+    if (isCompositionDelete && this.isTextNodeDeletion(event, inputType)) {
+      // Lexical ends its composition for a delete and rewrites the text node.
+      // That drops the browser's composition without a compositionend, and
+      // the keyboard's next update inserted its word again. The browser's own
+      // delete shrinks the composition with the text, and Lexical reads the
+      // result from the input event.
+      this.clearPendingTextInputFallback();
+      event.stopImmediatePropagation?.();
+      return;
+    }
+
+    if (!isCompositionDelete && (event.isComposing || this.isComposing)) {
       this.clearPendingTextInputFallback();
       return;
     }
+
+    // Other deletes during a composition, such as joining lines, rebuild the
+    // line below. That ends the composition when it replaced the composing
+    // text node.
+    const composingTextNode = isCompositionDelete
+      ? getSelectionRange(this.refs.editor)?.startContainer
+      : undefined;
 
     this.clearSelectedReferenceNodeKey();
 
@@ -5186,6 +5272,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         event.preventDefault();
         event.stopPropagation?.();
         event.stopImmediatePropagation?.();
+        // No insertion follows to end Lexical's composition.
+        if (isLostComposition) {
+          this.endLostComposition();
+        }
         return;
       }
 
@@ -5193,6 +5283,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         allowKeyFallback: inputType === "insertText",
       });
       if (inputText === undefined) {
+        if (isLostComposition) {
+          this.endLostComposition();
+        }
         return;
       }
 
@@ -5212,6 +5305,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
           event.getTargetRanges?.()[0],
         ),
+        endComposition: isLostComposition,
       });
       return;
     }
@@ -5239,6 +5333,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       if (!didHandle) {
         this.deleteCharacterBackward({ nativeSelection });
       }
+      if (composingTextNode?.isConnected === false) {
+        this.endLostComposition();
+      }
       return;
     }
 
@@ -5253,6 +5350,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           event.getTargetRanges?.()[0],
         ),
       });
+      if (composingTextNode?.isConnected === false) {
+        this.endLostComposition();
+      }
       return;
     }
 
@@ -5277,6 +5377,63 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       });
       return;
     }
+  }
+
+  // Whether the browser's deletion stays inside the editable text node that
+  // holds the caret: the event's target range, or the character next to a
+  // collapsed caret when no range is given. The invisible line placeholder is
+  // left to the editor.
+  isTextNodeDeletion(event, inputType) {
+    const caretRange = getSelectionRange(this.refs.editor);
+    const targetRange = event.getTargetRanges?.()[0];
+    let textNode;
+    let start;
+    let end;
+    if (targetRange) {
+      if (targetRange.startContainer !== targetRange.endContainer) {
+        return false;
+      }
+      textNode = targetRange.startContainer;
+      start = targetRange.startOffset;
+      end = targetRange.endOffset;
+    } else {
+      if (!caretRange?.collapsed || !inputType.startsWith("deleteContent")) {
+        return false;
+      }
+      textNode = caretRange.startContainer;
+      start =
+        inputType === "deleteContentBackward"
+          ? caretRange.startOffset - 1
+          : caretRange.startOffset;
+      end = start + 1;
+    }
+
+    return (
+      textNode?.nodeType === Node.TEXT_NODE &&
+      textNode === caretRange?.startContainer &&
+      this.refs.editor.contains(textNode) &&
+      textNode.parentElement?.isContentEditable === true &&
+      start >= 0 &&
+      start < end &&
+      end <= textNode.length &&
+      !textNode.data.slice(start, end).includes(EDITOR_CARET_TEXT)
+    );
+  }
+
+  // Ends composition state when the browser shows that it has no composition
+  // left but compositionend never came, for example after the composing text
+  // was replaced underneath the keyboard. Otherwise later input would bypass
+  // the editor, and the page would keep blocking undo for a composition.
+  endLostComposition() {
+    if (this.editor.isComposing()) {
+      this.editor.update(
+        () => {
+          $setCompositionKey(null);
+        },
+        { discrete: true },
+      );
+    }
+    this.handleCompositionEnd();
   }
 
   handleCompositionStart() {
@@ -5545,13 +5702,56 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
+  getRichTextMenuItems(richTextState = {}) {
+    const {
+      addTextStyle,
+      editTextStyle,
+      removeTextStyle,
+      addRubyText,
+      editRubyText,
+      removeRubyText,
+    } = this.state.menuLabels;
+    const hasTextStyle = !!richTextState.textStyleId;
+    const hasFurigana = !!richTextState.furigana;
+    const items = [
+      {
+        id: hasTextStyle ? "edit-text-style" : "add-text-style",
+        type: "item",
+        label: hasTextStyle ? editTextStyle : addTextStyle,
+      },
+      {
+        id: hasFurigana ? "edit-furigana" : "add-furigana",
+        type: "item",
+        label: hasFurigana ? editRubyText : addRubyText,
+      },
+    ];
+
+    if (hasTextStyle) {
+      items.push({
+        id: "remove-text-style",
+        type: "item",
+        label: removeTextStyle,
+      });
+    }
+
+    if (hasFurigana) {
+      items.push({
+        id: "remove-furigana",
+        type: "item",
+        label: removeRubyText,
+      });
+    }
+
+    return items;
+  }
+
   getTextStyleMenuItems() {
     if (this.state.textStyles.length === 0) {
       return [
         {
           id: "no-text-styles",
           type: "item",
-          label: "No text styles",
+          label: this.state.menuLabels.noTextStyles,
           disabled: true,
         },
       ];
@@ -5596,43 +5796,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const richTextState = this.getRichTextStateForSelectionSnapshot(
       this.pendingSelectionSnapshot,
     );
-    const hasTextStyle = !!richTextState.textStyleId;
-    const hasFurigana = !!richTextState.furigana;
-    const actions = [
-      {
-        id: hasTextStyle ? "edit-text-style" : "add-text-style",
-        type: "item",
-        label: hasTextStyle ? "Edit text style" : "Add text style",
-      },
-      {
-        id: hasFurigana ? "edit-furigana" : "add-furigana",
-        type: "item",
-        label: hasFurigana ? "Edit ruby text" : "Add ruby text",
-      },
-    ];
-
-    if (hasTextStyle) {
-      actions.push({
-        id: "remove-text-style",
-        type: "item",
-        label: "Remove text style",
-      });
-    }
-
-    if (hasFurigana) {
-      actions.push({
-        id: "remove-furigana",
-        type: "item",
-        label: "Remove ruby text",
-      });
-    }
 
     this.selectionMenuPosition = {
       x: String(event.clientX),
       y: String(event.clientY),
     };
 
-    menu.items = actions;
+    menu.items = this.getRichTextMenuItems(richTextState);
     menu.x = this.selectionMenuPosition.x;
     menu.y = this.selectionMenuPosition.y;
     menu.place = "bs";
@@ -6132,6 +6302,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.editor.update(
       () => {
+        // Rebuilding replaces any composing text, so the browser's composition
+        // ends without a compositionend. A composition key left on a new node
+        // would keep Lexical's selection from following later taps.
+        $setCompositionKey(null);
         const root = $getRoot();
         root.clear();
         this.lineMetaByKey.clear();
@@ -9541,7 +9715,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       id: `mention:${item.id}`,
       type: "item",
       label: item.label,
-      suffixText: item.variableType ?? "",
+      suffixText: this.getVariableTypeLabel(item.variableType),
     }));
     const nextX = String(menuState.left);
     const nextY = String(menuState.top);

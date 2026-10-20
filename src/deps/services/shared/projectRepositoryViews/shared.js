@@ -377,3 +377,95 @@ export const toCommittedProjectEvent = ({ event, committedId, projectId }) => ({
         ? Number(event.meta.clientTs)
         : Date.now(),
 });
+
+const getReplayFailedEventIndex = (error, eventCount) => {
+  const failedIndex = error?.details?.commandIndex;
+  return Number.isInteger(failedIndex) &&
+    failedIndex >= 0 &&
+    failedIndex < eventCount
+    ? failedIndex
+    : undefined;
+};
+
+// Replays `events` after replaying them together failed with `error`, whose
+// `details.commandIndex` is the failed event's index in them. Each event
+// replayed on its own validates the whole state, so the events before the
+// failed one are replayed together, only the failed one goes to
+// `replayEvent`, and the events after it are replayed together again,
+// resuming the same way if they fail. Without a usable index, including from
+// the events before the failed one, or without `error`, the rest of `events`
+// go to `replayEvent` one at a time.
+//
+// `replayEvent({ repositoryState, event, index })` gets the event's index in
+// `events` and returns the next state. It skips the event by returning the
+// state it was given, or throws to stop the replay.
+export const replayFailedEventBatch = ({
+  repositoryState,
+  events,
+  error,
+  reduceEventsToState,
+  replayEvent,
+}) => {
+  let state = repositoryState;
+  let start = 0;
+  let failure = error;
+  const keepState = (nextState) => {
+    if (nextState !== undefined) {
+      state = nextState;
+    }
+  };
+  const replayEventsTogether = (end) => {
+    keepState(
+      reduceEventsToState({
+        repositoryState: state,
+        events: events.slice(start, end),
+      }),
+    );
+  };
+  const replayRestOneAtATime = () => {
+    for (let index = start; index < events.length; index += 1) {
+      keepState(
+        replayEvent({ repositoryState: state, event: events[index], index }),
+      );
+    }
+    return state;
+  };
+
+  while (true) {
+    const failedIndex = getReplayFailedEventIndex(
+      failure,
+      events.length - start,
+    );
+    if (failedIndex === undefined) {
+      return replayRestOneAtATime();
+    }
+
+    const eventIndex = start + failedIndex;
+    if (failedIndex > 0) {
+      try {
+        replayEventsTogether(eventIndex);
+      } catch {
+        return replayRestOneAtATime();
+      }
+    }
+
+    keepState(
+      replayEvent({
+        repositoryState: state,
+        event: events[eventIndex],
+        index: eventIndex,
+      }),
+    );
+    start = eventIndex + 1;
+    if (start === events.length) {
+      return state;
+    }
+
+    try {
+      replayEventsTogether(events.length);
+      return state;
+    } catch (restError) {
+      failure = restError;
+    }
+  }
+};

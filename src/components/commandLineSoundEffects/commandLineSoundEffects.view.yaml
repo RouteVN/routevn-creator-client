@@ -258,7 +258,7 @@ template:
                                                           - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
                                                         $else:
                                                           - rtgl-view w=f h=94 av=c ah=c:
-                                                              - rtgl-text s=sm c=mu-fg: No waveform
+                                                              - rtgl-text s=sm c=mu-fg: ${noWaveformLabel}
                                                   - rtgl-view d=h w=f h=30 ph=sm av=c g=sm:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=1fg: ${sound.name}
                                                       - 'rtgl-text s=xs c=mu-fg style="flex: 0 0 auto;"': ${sound.durationLabel}
@@ -294,7 +294,7 @@ template:
                                                               - rvn-waveform-visualizer waveformDataFileId=${sound.waveformDataFileId} w=f h=94: null
                                                             $else:
                                                               - rtgl-view w=f h=94 av=c ah=c:
-                                                                  - rtgl-text s=sm c=mu-fg: No waveform
+                                                                  - rtgl-text s=sm c=mu-fg: ${noWaveformLabel}
                                                           - 'div#soundDragSurface0x${j}.sfxSoundDragSurface data-channel-id="${editorChannel.id}" data-sound-id="${sound.id}"': null
                                                           - 'button#insertBeforeButton0x${j}.sfxInsertZone.sfxInsertBefore type=button data-channel-id="${editorChannel.id}" data-insert-index=${sound.insertBeforeIndex} aria-label="${addBeforeLabel}"': "+"
                                                           - 'button#insertAfterButton0x${j}.sfxInsertZone.sfxInsertAfter type=button data-channel-id="${editorChannel.id}" data-insert-index=${sound.insertAfterIndex} aria-label="${addAfterLabel}"': "+"
@@ -332,7 +332,7 @@ template:
                                                           - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=f h=f: null
                                                         $else:
                                                           - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
-                                                              - rtgl-text s=sm c=mu-fg: No waveform
+                                                              - rtgl-text s=sm c=mu-fg: ${noWaveformLabel}
                                                   - rtgl-view w=f p=md:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
               - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':

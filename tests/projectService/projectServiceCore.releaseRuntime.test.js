@@ -20,6 +20,7 @@ const mocked = vi.hoisted(() => ({
     getRepositoryById: vi.fn(),
     getAdapterById: vi.fn(),
     getEnsuredProjectId: vi.fn(),
+    getEnsuredRepository: vi.fn(),
     releaseCurrentRepository: vi.fn(),
     releaseRepositoryByProjectId: vi.fn(),
     ensureRepository: vi.fn(),
@@ -50,6 +51,8 @@ const mocked = vi.hoisted(() => ({
       updateFont: vi.fn(),
       updateSound: vi.fn(),
       deleteSceneItem: vi.fn(),
+      waitForChanges: vi.fn(),
+      runAfterChanges: vi.fn(),
     },
     addVersionToProject: vi.fn(),
     updateVersionInProject: vi.fn(),
@@ -117,6 +120,7 @@ vi.mock("../../src/internal/fontCapabilities.js", async (importOriginal) => {
   };
 });
 
+import { createProjectCollabCore } from "../../src/deps/services/shared/projectCollabCore.js";
 import { createProjectServiceCore } from "../../src/deps/services/shared/projectServiceCore.js";
 
 const createTestProjectService = (overrides = {}) =>
@@ -157,6 +161,12 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.collabService.commandApi.updateSound.mockReset();
     mocked.assetService.storeFile.mockReset();
     mocked.collabService.commandApi.deleteSceneItem.mockReset();
+    mocked.collabService.commandApi.waitForChanges.mockReset();
+    mocked.collabService.commandApi.waitForChanges.mockResolvedValue(undefined);
+    mocked.collabService.commandApi.runAfterChanges.mockReset();
+    mocked.collabService.commandApi.runAfterChanges.mockImplementation((task) =>
+      task(),
+    );
     mocked.assetService.getFileContent.mockReset();
     mocked.extractFontWeightCapabilities.mockReset();
     mocked.fetch.mockReset();
@@ -388,6 +398,81 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       mocked.collabService.stopCollabSession.mock.invocationCallOrder[0],
     ).toBeLessThan(
       mocked.repositoryService.releaseRepositoryByProjectId.mock
+        .invocationCallOrder[0],
+    );
+  });
+
+  it("makes changes in the open project while the route already names the next page", () => {
+    mocked.repositoryService.getEnsuredProjectId.mockReturnValue("project-1");
+    createTestProjectService({ router: { getPayload: () => ({}) } });
+
+    const { getOpenProjectId, getOpenRepository } =
+      createProjectCollabCore.mock.calls.at(-1)[0];
+    expect(getOpenProjectId()).toBe("project-1");
+    expect(getOpenRepository).toBe(
+      mocked.repositoryService.getEnsuredRepository,
+    );
+  });
+
+  it("waits for the changes still waiting to run before it closes the project", async () => {
+    mocked.repositoryService.getEnsuredProjectId.mockReturnValue("project-1");
+    mocked.collabService.stopCollabSession.mockResolvedValue(undefined);
+    mocked.repositoryService.releaseRepositoryByProjectId.mockResolvedValue(
+      undefined,
+    );
+    let finishChanges;
+    mocked.collabService.commandApi.waitForChanges.mockReturnValue(
+      new Promise((resolve) => {
+        finishChanges = resolve;
+      }),
+    );
+    const projectService = createTestProjectService();
+
+    const releasing = projectService.releaseProjectRuntime();
+    await Promise.resolve();
+    expect(mocked.collabService.stopCollabSession).not.toHaveBeenCalled();
+    expect(
+      mocked.repositoryService.releaseRepositoryByProjectId,
+    ).not.toHaveBeenCalled();
+
+    finishChanges();
+    await releasing;
+    expect(
+      mocked.repositoryService.releaseRepositoryByProjectId,
+    ).toHaveBeenCalledWith("project-1");
+  });
+
+  it("closes the project as a step among the changes, so a change made meanwhile waits for it", async () => {
+    mocked.repositoryService.getEnsuredProjectId.mockReturnValue("project-1");
+    mocked.collabService.stopCollabSession.mockResolvedValue(undefined);
+    mocked.repositoryService.releaseRepositoryByProjectId.mockResolvedValue(
+      undefined,
+    );
+    const closingSteps = [];
+    mocked.collabService.commandApi.runAfterChanges.mockImplementation(
+      async (task) => {
+        closingSteps.push("closing starts");
+        await task();
+        closingSteps.push("closing ends");
+      },
+    );
+    mocked.collabService.stopCollabSession.mockImplementation(async () => {
+      closingSteps.push("session stopped");
+    });
+    const projectService = createTestProjectService();
+
+    await projectService.releaseProjectRuntime();
+
+    expect(closingSteps).toEqual([
+      "closing starts",
+      "session stopped",
+      "closing ends",
+    ]);
+    expect(
+      mocked.collabService.commandApi.waitForChanges.mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(
+      mocked.collabService.commandApi.runAfterChanges.mock
         .invocationCallOrder[0],
     );
   });
@@ -784,6 +869,70 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       mocked.collabService.commandApi.updateLayoutElement,
     ).not.toHaveBeenCalled();
     expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+  });
+
+  it("does not read the patch markers again when a page ensures the open project", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        layouts: {
+          items: {},
+        },
+      })),
+    };
+    let routePayload = { p: "project-1" };
+    let leaveOnNextMarkerRead = false;
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.repositoryService.getEnsuredProjectId.mockReturnValue("project-1");
+    // Like the repository service, the cached store belongs to the project
+    // in the route.
+    mocked.repositoryService.getCachedStore.mockImplementation(() => {
+      if (routePayload.p !== "project-1") {
+        throw new Error(
+          "Adapter not initialized. Call ensureRepository() first.",
+        );
+      }
+      return mocked.projectStore;
+    });
+    mocked.projectStore.app.get.mockImplementation(async () => {
+      if (leaveOnNextMarkerRead) {
+        routePayload = {};
+      }
+      return true;
+    });
+    const projectService = createTestProjectService({
+      router: {
+        getPayload: () => routePayload,
+      },
+    });
+
+    // The route opens the project and evaluates its content patches.
+    await projectService.ensureRepository();
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(2);
+
+    // A page ensures the open project again, and the user leaves the project
+    // while that call would read the project store.
+    leaveOnNextMarkerRead = true;
+    await expect(projectService.ensureRepository()).resolves.toBe(repository);
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(2);
+  });
+
+  it("evaluates the content patches again for a reopened project", async () => {
+    const firstRepository = {
+      getState: vi.fn(() => ({ layouts: { items: {} } })),
+    };
+    const reopenedRepository = {
+      getState: vi.fn(() => ({ layouts: { items: {} } })),
+    };
+    mocked.repositoryService.ensureRepository
+      .mockResolvedValueOnce(firstRepository)
+      .mockResolvedValueOnce(reopenedRepository);
+    mocked.projectStore.app.get.mockResolvedValue(true);
+    const projectService = createTestProjectService();
+
+    await projectService.ensureRepository();
+    await projectService.ensureRepository();
+
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(4);
   });
 
   it("defers automatic content patches until the platform marks the project ready", async () => {

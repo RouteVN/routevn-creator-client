@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { collectNonJsonFields } from "../../src/deps/services/shared/commandApi/shared.js";
 import {
+  handleBackgroundImageRightClick,
   handleBeforeMount,
   handleButtonSelectClick,
   handleCustomTransformButtonClick,
@@ -2136,5 +2138,162 @@ describe("commandLineBackground.handlers", () => {
     expect(dispatchEvent.mock.calls[0][0].type).toBe(
       "background-transform-customize",
     );
+  });
+
+  describe("submitted background", () => {
+    // The names of the fields a line actions update would report as non-JSON.
+    const nonJsonFieldsOf = (detail) => {
+      const fields = new Set();
+      collectNonJsonFields(
+        { lineId: "line-1", data: detail },
+        "payload",
+        fields,
+      );
+      return [...fields];
+    };
+
+    const submit = (state) => {
+      const dispatchEvent = vi.fn();
+      handleSubmitClick({ dispatchEvent, store: createStoreApi(state) }, {});
+
+      expect(dispatchEvent).toHaveBeenCalledTimes(1);
+      return dispatchEvent.mock.calls[0][0].detail;
+    };
+
+    it("submits a color-only background without a resourceId field", () => {
+      const state = createInitialState();
+      setRepositoryCollections(state);
+      handleBeforeMount({
+        store: createStoreApi(state),
+        props: { background: { colorId: "color-night" } },
+      });
+
+      const detail = submit(state);
+
+      // Strict equality tells a field set to undefined from a missing one.
+      expect(detail).toStrictEqual({
+        background: {
+          colorId: "color-night",
+        },
+      });
+      expect(nonJsonFieldsOf(detail)).toEqual([]);
+    });
+
+    it("submits a color chosen in the form without a resourceId field", () => {
+      const state = createInitialState();
+      setRepositoryCollections(state);
+      const store = createStoreApi(state);
+      handleBeforeMount({ store, props: {} });
+
+      handleFormInputChange(
+        { store, render: vi.fn(), dispatchEvent: vi.fn() },
+        { _event: { detail: { name: "colorId", value: "color-night" } } },
+      );
+
+      const detail = submit(state);
+
+      expect(detail).toStrictEqual({
+        background: {
+          colorId: "color-night",
+        },
+      });
+      expect(nonJsonFieldsOf(detail)).toEqual([]);
+    });
+
+    it("submits an empty background without a resourceId field", () => {
+      const state = createInitialState();
+      setRepositoryCollections(state);
+      handleBeforeMount({ store: createStoreApi(state), props: {} });
+
+      const detail = submit(state);
+
+      expect(detail).toStrictEqual({ background: {} });
+      expect(nonJsonFieldsOf(detail)).toEqual([]);
+    });
+
+    it("drops the resourceId of a removed image and keeps the color", async () => {
+      const state = createInitialState();
+      setRepositoryCollections(state);
+      const store = createStoreApi(state);
+      const dispatchEvent = vi.fn();
+      setSelectedResource(
+        { state },
+        { resourceId: "bg-school", resourceType: "image" },
+      );
+      setSelectedColor({ state }, { colorId: "color-night" });
+      expect(submit(state)).toStrictEqual({
+        background: {
+          resourceId: "bg-school",
+          colorId: "color-night",
+        },
+      });
+
+      await handleBackgroundImageRightClick(
+        {
+          store,
+          render: vi.fn(),
+          dispatchEvent,
+          appService: {
+            showDropdownMenu: vi.fn().mockResolvedValue({
+              item: { key: "remove" },
+            }),
+          },
+          i18n: {
+            resourcePages: {},
+            sceneEditorPage: {},
+            commandLinePage: {},
+          },
+        },
+        {
+          _event: {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+            clientX: 0,
+            clientY: 0,
+          },
+        },
+      );
+
+      const detail = submit(state);
+
+      expect(detail).toStrictEqual({
+        background: {
+          colorId: "color-night",
+        },
+      });
+      expect(nonJsonFieldsOf(detail)).toEqual([]);
+    });
+
+    it("submits the resourceId of a selected image and spritesheet animation", () => {
+      const state = createInitialState();
+      setRepositoryCollections(state);
+      setSelectedResource(
+        { state },
+        { resourceId: "bg-school", resourceType: "image" },
+      );
+
+      expect(submit(state)).toStrictEqual({
+        background: { resourceId: "bg-school" },
+      });
+
+      setSelectedResource(
+        { state },
+        {
+          resourceId: "bg-spritesheet",
+          resourceType: "spritesheet",
+          animationName: "wind",
+        },
+      );
+
+      const detail = submit(state);
+
+      expect(detail).toStrictEqual({
+        background: {
+          resourceId: "bg-spritesheet",
+          animationName: "wind",
+        },
+      });
+      expect(nonJsonFieldsOf(detail)).toEqual([]);
+    });
   });
 });

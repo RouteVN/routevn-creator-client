@@ -222,25 +222,24 @@ export const getRuntimeActionModes = () => {
 const findPresetValue = (definition, value) =>
   definition.presetValues?.find((preset) => preset.value === value);
 
-const formatPreviewValue = (definition, value) => {
+// What a preview shows for the value. valueLabel is English catalog text:
+// Current Value, a predefined value's label, True, or False. valueText is a
+// value as it was typed in, which is not translated.
+const createPreviewValue = (definition, value) => {
   if (value === EVENT_VALUE_BINDING) {
-    return "Current Value";
+    return { valueLabel: "Current Value" };
   }
 
   const preset = findPresetValue(definition, value);
   if (preset) {
-    return preset.label;
+    return { valueLabel: preset.label };
   }
 
   if (definition.inputType === "boolean") {
-    return value === true ? "true" : "false";
+    return { valueLabel: value === true ? "True" : "False" };
   }
 
-  if (value === undefined) {
-    return "";
-  }
-
-  return String(value);
+  return { valueText: value === undefined ? "" : String(value) };
 };
 
 const getRuntimeActionValueSource = (value) => {
@@ -413,21 +412,27 @@ export const createRuntimeActionSubmitDetail = (mode, values = {}) => {
   };
 };
 
+// The label is the action's English label; the caller translates it and the
+// value's label. An action without a value has neither valueLabel nor
+// valueText.
 export const createRuntimeActionPreview = (mode, action = {}) => {
   const definition = getRuntimeActionDefinition(mode);
   if (!definition) {
     return undefined;
   }
 
-  const summary =
-    definition.inputType === "none"
-      ? definition.label
-      : `${definition.label}: ${formatPreviewValue(definition, action.value)}`;
-
-  return {
+  const preview = {
     mode,
     icon: definition.icon,
     label: definition.label,
-    summary,
+  };
+
+  if (definition.inputType === "none") {
+    return preview;
+  }
+
+  return {
+    ...preview,
+    ...createPreviewValue(definition, action.value),
   };
 };

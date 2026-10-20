@@ -1,3 +1,5 @@
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { formatMilliseconds } from "../../internal/dates.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import {
   getAudioEffectDefinitionDuration,
@@ -43,7 +45,7 @@ const getTransitionSideDuration = (tracks = {}) =>
     0,
   );
 
-const formatAudioEffectSummary = (item, copy = {}) => {
+const formatAudioEffectSummary = (item, copy = {}, dateTime) => {
   const definition = item?.audioEffect;
   if (definition?.type === "transition") {
     const sides = [];
@@ -52,7 +54,10 @@ const formatAudioEffectSummary = (item, copy = {}) => {
         .map((property) => getAudioEffectPropertyLabel(property, copy))
         .join(", ");
       sides.push(
-        `${copy.outgoingLabel ?? "Outgoing"}: ${properties} · ${getTransitionSideDuration(definition.prev)}ms`,
+        formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
+          label: copy.outgoingLabel ?? "Outgoing",
+          value: `${properties} · ${formatMilliseconds(getTransitionSideDuration(definition.prev), dateTime)}`,
+        }),
       );
     }
     if (definition.next) {
@@ -60,7 +65,10 @@ const formatAudioEffectSummary = (item, copy = {}) => {
         .map((property) => getAudioEffectPropertyLabel(property, copy))
         .join(", ");
       sides.push(
-        `${copy.incomingLabel ?? "Incoming"}: ${properties} · ${getTransitionSideDuration(definition.next)}ms`,
+        formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
+          label: copy.incomingLabel ?? "Incoming",
+          value: `${properties} · ${formatMilliseconds(getTransitionSideDuration(definition.next), dateTime)}`,
+        }),
       );
     }
     return sides.join(" · ");
@@ -172,7 +180,7 @@ const createCenterItemContextMenuItems = (copy = {}) => [
   },
 ];
 
-const buildCatalogItem = (item, { copy = {} } = {}) => {
+const buildCatalogItem = (item, { copy = {}, i18n } = {}) => {
   const definition = item.audioEffect ?? {};
   const transition = definition.type === "transition";
   return {
@@ -204,7 +212,7 @@ const buildCatalogItem = (item, { copy = {} } = {}) => {
       pan: 0,
       playbackRate: 1,
     },
-    summary: formatAudioEffectSummary(item, copy),
+    summary: formatAudioEffectSummary(item, copy, i18n.dateTime),
   };
 };
 
@@ -252,7 +260,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData, copy }) => ({
+  extendViewData: ({ state, selectedItem, baseViewData, copy, i18n }) => ({
     ...baseViewData,
     itemContextMenuItems: createExplorerItemContextMenuItems(copy),
     centerItemContextMenuItems: createCenterItemContextMenuItems(copy),
@@ -272,7 +280,7 @@ const {
       ? getAudioEffectTypeLabel(selectedItem.audioEffect.type, copy)
       : "",
     selectedAudioEffectSummary: selectedItem
-      ? formatAudioEffectSummary(selectedItem, copy)
+      ? formatAudioEffectSummary(selectedItem, copy, i18n.dateTime)
       : "",
     descriptionLabel: copy.descriptionLabel ?? "Description",
     tagsLabel: copy.tagsLabel ?? "Tags",

@@ -73,7 +73,7 @@ template:
               - 'div style="width: 100%; flex: 0 0 6px;"':
                   - 'rtgl-view#loadingProgressBar w=f h=6 br=full pos=rel bgc=su style="overflow: hidden; background-color: var(--surface);"': null
               - rtgl-view w=f av=c p=md h=1fg:
-                  - rtgl-text c=mu-fg: Loading audio...
+                  - rtgl-text c=mu-fg: ${loadingLabel}
         $else:
           - 'rtgl-view w=f h=f d=v bgc=mu style="min-height: 0;"':
               - 'div style="width: 100%; flex: 0 0 6px; position: relative;"':

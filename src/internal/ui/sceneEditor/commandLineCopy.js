@@ -1,4 +1,8 @@
-import { formatI18nCopy, selectI18nCopy } from "../i18nCopy.js";
+import {
+  formatI18nCopy,
+  isSingularCount,
+  selectI18nCopy,
+} from "../i18nCopy.js";
 
 const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "A resource is required.": "resourceRequiredMessage",
@@ -43,6 +47,45 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "The selected input layout does not contain input fields.":
     "inputLayoutHasNoFields",
   "Variable operation value is invalid.": "variableOperationValueInvalid",
+  "Choose an operation...": "chooseOperationPlaceholder",
+  "Decrement the current save/load pagination page.":
+    "decrementSaveLoadPageDescription",
+  "Increment the current save/load pagination page.":
+    "incrementSaveLoadPageDescription",
+  "Leave empty for auto, or use a fixed value like 1, ${slot.slotId}, or _event.slotId":
+    "slotIdDescription",
+  "Pop the current overlay and return to the previous view.":
+    "popOverlayDescription",
+  "Single Line applies only to the next line. Persistent keeps this config active until changed":
+    "nextLineConfigModeTooltip",
+  "Specific Value lets you enter a value. Current Value uses the value from the triggering control.":
+    "runtimeValueSourceTooltip",
+  "When the auto-advance timer starts counting. 'Text Complete' waits for the text animation to finish first. 'Line Start' starts the timer immediately when the line begins":
+    "autoAdvanceTimerStartTooltip",
+  // The runtime field descriptions in runtimeFields.js.
+  "Controls the default dialogue text reveal speed.":
+    "dialogueTextSpeedDescription",
+  "Controls the default auto mode delay in milliseconds.":
+    "autoForwardDelayDescription",
+  "When enabled, skip mode can continue through lines the player has not viewed yet.":
+    "skipUnseenTextDescription",
+  "When enabled, transitions and animations are skipped during presentation.":
+    "skipTransitionsAndAnimationsDescription",
+  "Controls the effective sound effects volume.": "soundVolumeDescription",
+  "Controls the effective music volume.": "musicVolumeDescription",
+  "Controls whether all audio output is muted.": "muteAllDescription",
+  "Tracks the current save/load pagination page for the active context.":
+    "saveLoadPaginationDescription",
+  "Tracks the current menu page id for the active UI flow.":
+    "menuPageDescription",
+  "Tracks how the current menu flow was opened for the active context.":
+    "menuEntryPointDescription",
+  "Reflects whether auto mode is currently active.": "autoModeDescription",
+  "Reflects whether skip mode is currently active.": "skipModeDescription",
+  "Reflects whether the dialogue UI is currently hidden.":
+    "dialogueUIHiddenDescription",
+  "Reflects whether the current line has completed its presentation.":
+    "isLineCompletedDescription",
 });
 
 export const selectCommandLineCopy = (i18n = {}) => {
@@ -64,6 +107,15 @@ export const localizeCommandLineText = (value, copy = {}) => {
 
 export const formatCommandLineCopy = (template, replacements = {}, copy = {}) =>
   formatI18nCopy(localizeCommandLineText(template, copy), replacements);
+
+// The count is part of the template so that each language can place it.
+// `dateTime` is the active locale's catalog, which sets the plural rules.
+export const formatCommandLineActionCount = (count, copy = {}, dateTime) =>
+  formatCommandLineCopy(
+    isSingularCount(count, dateTime) ? "{count} action" : "{count} actions",
+    { count },
+    copy,
+  );
 
 export const localizeCommandLineOptions = (options = [], copy = {}) => {
   return options.map((option) => ({

@@ -17,6 +17,10 @@ import {
   isCharacterSpriteResourceItem,
 } from "../../internal/characterSpritePreview.js";
 import {
+  DEFAULT_SPRITE_GROUP_ID,
+  buildSpriteSelectionGroups,
+} from "../../internal/characterSpriteSelection.js";
+import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
   localizeCommandLineText,
@@ -38,8 +42,6 @@ const PERSIST_SPRITE_OPTIONS = [
 ];
 
 const DEFAULT_TEXT_SPEED = 75;
-const DEFAULT_SPRITE_GROUP_ID = "base";
-const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
 const SPEAKER_SPRITE_LABEL = "Dialogue sprite";
 const SPEAKER_SPRITE_TOOLTIP =
   "Speaker's face that appears on top of the dialogue box. For body sprites use the Character Sprites action";
@@ -124,43 +126,6 @@ const normalizeTextSpeed = (textSpeed, fallback = DEFAULT_TEXT_SPEED) => {
   }
 
   return Math.max(0, Math.min(100, Math.round(parsedTextSpeed)));
-};
-
-const resolveSpriteGroupId = (spriteGroup = {}, index = 0) => {
-  if (typeof spriteGroup.id === "string" && spriteGroup.id.length > 0) {
-    return spriteGroup.id;
-  }
-
-  return `legacy-sprite-group-${index + 1}`;
-};
-
-const resolveSpriteGroupName = (spriteGroup = {}, index = 0) => {
-  if (typeof spriteGroup.name === "string" && spriteGroup.name.length > 0) {
-    return spriteGroup.name;
-  }
-
-  return `Group ${index + 1}`;
-};
-
-const buildSpriteSelectionGroups = (character = {}) => {
-  if (
-    !Array.isArray(character?.spriteGroups) ||
-    character.spriteGroups.length === 0
-  ) {
-    return [
-      {
-        id: DEFAULT_SPRITE_GROUP_ID,
-        name: DEFAULT_SPRITE_GROUP_NAME,
-        tags: [],
-      },
-    ];
-  }
-
-  return character.spriteGroups.map((spriteGroup, index) => ({
-    id: resolveSpriteGroupId(spriteGroup, index),
-    name: resolveSpriteGroupName(spriteGroup, index),
-    tags: Array.isArray(spriteGroup?.tags) ? spriteGroup.tags : [],
-  }));
 };
 
 const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
@@ -1117,6 +1082,7 @@ export const selectViewData = ({ state, props, i18n }) => {
   });
   const spriteSelectionGroups = buildSpriteSelectionGroups(
     selectedSpriteCharacter,
+    i18n.charactersPage.spriteGroupLabel,
   );
   const spriteGroupBoxes = buildSpriteGroupBoxViewData({
     spriteSelectionGroups,

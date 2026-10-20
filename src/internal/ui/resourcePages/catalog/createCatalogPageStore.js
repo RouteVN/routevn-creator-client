@@ -93,7 +93,7 @@ const createFolderNameForm = (copy = {}) => ({
     {
       name: "name",
       type: "input-text",
-      label: copy.nameLabel ?? "Name",
+      label: copy.folderNameLabel ?? "Name",
       required: true,
     },
     {
@@ -415,7 +415,7 @@ export const createCatalogPageStore = ({
         return {
           ...group,
           children: filteredChildren.map((item) =>
-            buildCatalogItem(item, { copy, state }),
+            buildCatalogItem(item, { copy, state, i18n }),
           ),
           hasChildFolders: folderIdsWithChildFolders.has(group.id),
           hasChildren: filteredChildren.length > 0,
@@ -519,6 +519,7 @@ export const createCatalogPageStore = ({
       catalogGroups,
       baseViewData,
       copy,
+      i18n,
     });
 
     if (extendedViewData.detailFields !== baseViewData.detailFields) {

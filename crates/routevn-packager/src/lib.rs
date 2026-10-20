@@ -1,4 +1,5 @@
 pub mod artifacts;
+mod authenticode;
 pub mod cli;
 pub mod errors;
 pub mod installer;

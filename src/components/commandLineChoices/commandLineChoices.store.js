@@ -568,6 +568,10 @@ export const selectViewData = ({ state, props, i18n }) => {
   };
 
   const viewData = {
+    submitButtonLabel: localizeCommandLineText("Submit", copy),
+    addChoiceButtonLabel: localizeCommandLineText("+ Add Choice", copy),
+    cancelButtonLabel: localizeCommandLineText("Cancel", copy),
+    saveChoiceButtonLabel: localizeCommandLineText("Save Choice", copy),
     mode: state?.mode || "list",
     items: processedItems,
     layouts: resourceOptions,

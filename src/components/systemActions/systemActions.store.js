@@ -1,3 +1,4 @@
+import { isSingularCount } from "../../internal/ui/i18nCopy.js";
 import {
   createRuntimeActionPreview,
   getRuntimeActionModes,
@@ -214,6 +215,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     props: actionProps,
     state,
     copy,
+    dateTime: i18n.dateTime,
   });
   const hiddenModes = getHiddenModes(attrs);
   const allowedModes = getAllowedModes(attrs);
@@ -353,7 +355,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
       copy,
     ),
     hideConfirmDialogLabel: localizeCommandLineText(
-      "Hide confirm dialog",
+      "Hide Confirm Dialog",
       copy,
     ),
     nextLineConfigLabel: localizeCommandLineText("Next Line Config", copy),
@@ -542,6 +544,28 @@ const countActions = (actions = {}) => {
     : 0;
 };
 
+// A typed-in value shows as it is; a value's catalog label is translated.
+const formatRuntimeActionSummary = (runtimePreview, copy) => {
+  const action = localizeCommandLineText(runtimePreview.label, copy);
+  const value =
+    localizeCommandLineText(runtimePreview.valueLabel, copy) ??
+    runtimePreview.valueText;
+  if (value === undefined) {
+    return action;
+  }
+
+  return formatCommandLineCopy("{action}: {value}", { action, value }, copy);
+};
+
+// A boolean is shown with the same label as in the operation's value select.
+const formatUpdateVariableValue = (value, copy) => {
+  if (typeof value === "boolean") {
+    return localizeCommandLineText(value ? "True" : "False", copy);
+  }
+
+  return value;
+};
+
 const isActionBranchDefault = (branch) => {
   return (
     branch &&
@@ -593,7 +617,7 @@ const isDisplayableScreenAction = (screenAction) => {
 };
 
 // Moved from sceneEditor.store.js - now returns object instead of array
-export const selectActionsData = ({ props, state, copy }) => {
+export const selectActionsData = ({ props, state, copy, dateTime }) => {
   const actions = normalizeLineActions(props.actions || {});
   const presentationState =
     props.presentationState && typeof props.presentationState === "object"
@@ -887,18 +911,17 @@ export const selectActionsData = ({ props, state, copy }) => {
     const offset = Number.isFinite(rawOffset) ? rawOffset : -1;
     preview.rollbackByOffset = {
       offset,
-      summary:
-        Math.abs(offset) === 1
-          ? formatCommandLineCopy(
-              "Rollback by {count} line",
-              { count: Math.abs(offset) },
-              copy,
-            )
-          : formatCommandLineCopy(
-              "Rollback by {count} lines",
-              { count: Math.abs(offset) },
-              copy,
-            ),
+      summary: isSingularCount(Math.abs(offset), dateTime)
+        ? formatCommandLineCopy(
+            "Rollback by {count} line",
+            { count: Math.abs(offset) },
+            copy,
+          )
+        : formatCommandLineCopy(
+            "Rollback by {count} lines",
+            { count: Math.abs(offset) },
+            copy,
+          ),
     };
   }
 
@@ -954,18 +977,17 @@ export const selectActionsData = ({ props, state, copy }) => {
       branchCount: branches.length,
       actionCount,
       summary: formatConditionalSummary(branches, copy),
-      actionsSummary:
-        actionCount === 1
-          ? formatCommandLineCopy(
-              "{count} nested action",
-              { count: actionCount },
-              copy,
-            )
-          : formatCommandLineCopy(
-              "{count} nested actions",
-              { count: actionCount },
-              copy,
-            ),
+      actionsSummary: isSingularCount(actionCount, dateTime)
+        ? formatCommandLineCopy(
+            "{count} nested action",
+            { count: actionCount },
+            copy,
+          )
+        : formatCommandLineCopy(
+            "{count} nested actions",
+            { count: actionCount },
+            copy,
+          ),
     };
     preview.conditional.title = formatCommandLineCopy(
       "Conditional: {summary}",
@@ -1234,8 +1256,12 @@ export const selectActionsData = ({ props, state, copy }) => {
       continue;
     }
 
-    preview[mode] = runtimePreview;
-    runtimePreviewItems.push(runtimePreview);
+    const runtimeActionPreview = {
+      ...runtimePreview,
+      summary: formatRuntimeActionSummary(runtimePreview, copy),
+    };
+    preview[mode] = runtimeActionPreview;
+    runtimePreviewItems.push(runtimeActionPreview);
   }
 
   if (runtimePreviewItems.length > 0) {
@@ -1326,7 +1352,7 @@ export const selectActionsData = ({ props, state, copy }) => {
               copy,
             );
           } else if (op.op === "set") {
-            return `${varName} = ${op.value}`;
+            return `${varName} = ${formatUpdateVariableValue(op.value, copy)}`;
           } else if (op.op === "increment") {
             return `${varName} +${op.value ?? 1}`;
           } else if (op.op === "decrement") {

@@ -27,6 +27,7 @@ import {
   setZipImportDestinationFolder,
   setZipImportErrors,
 } from "../../src/pages/projects/projects.store.js";
+import { PT_I18N } from "../support/i18n.js";
 
 const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
 const EN_I18N = yaml.load(readFileSync(EN_I18N_URL, "utf8"));
@@ -136,6 +137,31 @@ describe("projects.store addProject", () => {
     expect(viewData.projects[1].encodedProjectPath).toBe(
       encodeURIComponent("/projects/project-two"),
     );
+  });
+
+  it("labels an unnamed local project in the app language", () => {
+    const state = createInitialState();
+    setProjects(
+      { state },
+      {
+        projects: [
+          { id: "project-1", name: "", projectPath: "/projects/one" },
+          {
+            id: "project-2",
+            name: "Project Two",
+            projectPath: "/projects/two",
+          },
+        ],
+      },
+    );
+
+    const viewData = selectViewData({ state, i18n: PT_I18N });
+
+    expect(viewData.projects.map(({ name }) => name)).toEqual([
+      PT_I18N.projectsPage.untitledProject,
+      "Project Two",
+    ]);
+    expect(state.projects[0].name).toBe("");
   });
 
   it("removes only the local project at the selected path", () => {
@@ -258,6 +284,18 @@ describe("projects.store addProject", () => {
             {
               value: "th",
               label: "ไทย (Beta)",
+            },
+            {
+              value: "ru",
+              label: "Русский (Beta)",
+            },
+            {
+              value: "pt",
+              label: "Português (Beta)",
+            },
+            {
+              value: "fr",
+              label: "Français (bêta)",
             },
           ],
         },
