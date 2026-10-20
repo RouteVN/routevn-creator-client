@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import createRouteEngine from "route-engine-js";
 import {
   createInitialState,
   selectProjectData,
@@ -10,7 +11,23 @@ const createCollection = (items = {}) => ({
   tree: Object.keys(items).map((id) => ({ id })),
 });
 
-const createRepositoryState = () => ({
+const STYLED_DIALOGUE_CONTENT = [
+  {
+    text: "Styled dialogue",
+    textStyle: {
+      fill: "#b45309",
+    },
+    textStyleSegmentId: "legacy-segment-id",
+  },
+  { text: " and " },
+  { text: "bold", textStyle: { fontWeight: "bold" } },
+  { text: "italic", textStyle: { fontStyle: "italic" } },
+  { text: "underline", textStyle: { textDecoration: "underline" } },
+];
+
+const createRepositoryState = ({
+  dialogueContent = STYLED_DIALOGUE_CONTENT,
+} = {}) => ({
   project: {
     resolution: {
       width: 1920,
@@ -87,6 +104,27 @@ const createRepositoryState = () => ({
         tree: [{ id: "text-1" }],
       },
     },
+    "layout-dialogue": {
+      id: "layout-dialogue",
+      type: "layout",
+      name: "Dialogue",
+      layoutType: "dialogue-adv",
+      elements: {
+        items: {
+          "dialogue-text": {
+            id: "dialogue-text",
+            type: "text-revealing-ref-dialogue-content",
+            name: "Dialogue Text",
+            x: 0,
+            y: 0,
+            width: 800,
+            height: 100,
+            textStyleId: "style-1",
+          },
+        },
+        tree: [{ id: "dialogue-text" }],
+      },
+    },
   }),
   controls: createCollection(),
   transforms: createCollection(),
@@ -111,15 +149,9 @@ const createRepositoryState = () => ({
                   id: "line-1",
                   actions: {
                     dialogue: {
-                      content: [
-                        {
-                          text: "Styled dialogue",
-                          textStyle: {
-                            fill: "#b45309",
-                          },
-                          textStyleSegmentId: "legacy-segment-id",
-                        },
-                      ],
+                      mode: "adv",
+                      gui: { resourceId: "layout-dialogue" },
+                      content: dialogueContent,
                     },
                   },
                 },
@@ -134,15 +166,30 @@ const createRepositoryState = () => ({
   }),
 });
 
-describe("sceneEditorLexical.store selectProjectData", () => {
-  it("sanitizes legacy dialogue textStyle metadata without stripping layout textStyle overrides", () => {
-    const state = createInitialState();
-    state.sceneId = "scene-1";
-    state.selectedSectionId = "section-1";
-    state.selectedLineId = "line-1";
-    state.repositoryState = createRepositoryState();
+const selectCanvasProjectData = (options) => {
+  const state = createInitialState();
+  state.sceneId = "scene-1";
+  state.selectedSectionId = "section-1";
+  state.selectedLineId = "line-1";
+  state.repositoryState = createRepositoryState(options);
+  return selectProjectData({ state });
+};
 
-    const projectData = selectProjectData({ state });
+const renderDialogueText = (projectData) => {
+  const engine = createRouteEngine({ handlePendingEffects: () => {} });
+  engine.init({ initialState: { global: {}, projectData } });
+  const collectText = (elements) =>
+    elements.flatMap((element) =>
+      element.type === "text-revealing"
+        ? [element]
+        : collectText(element.children ?? []),
+    );
+  return collectText(engine.selectRenderState().elements)[0];
+};
+
+describe("sceneEditorLexical.store selectProjectData", () => {
+  it("keeps dialogue run styles and drops legacy segment ids without stripping layout textStyle overrides", () => {
+    const projectData = selectCanvasProjectData();
     const dialogueContent =
       projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
         .dialogue.content;
@@ -151,16 +198,50 @@ describe("sceneEditorLexical.store selectProjectData", () => {
         "$if runtime.skipMode == false"
       ].textStyleId;
 
-    expect(dialogueContent[0]).toMatchObject({
+    expect(dialogueContent[0]).toEqual({
       text: "Styled dialogue",
+      textStyle: { fill: "#b45309" },
     });
-    expect(dialogueContent[0]).not.toHaveProperty("textStyleId");
-    expect(dialogueContent[0]).not.toHaveProperty("textStyle");
-    expect(dialogueContent[0]).not.toHaveProperty("textStyleSegmentId");
     expect(projectData.resources.textStyles[conditionalTextStyleId]).toEqual(
       expect.objectContaining({
         align: "center",
       }),
     );
+  });
+
+  it("renders dialogue run styles through Route Engine", () => {
+    expect(renderDialogueText(selectCanvasProjectData()).content).toEqual([
+      { text: "Styled dialogue", textStyle: { fill: "#b45309" } },
+      { text: " and " },
+      { text: "bold", textStyle: { fontWeight: "bold" } },
+      { text: "italic", textStyle: { fontStyle: "italic" } },
+      { text: "underline", textStyle: { textDecoration: "underline" } },
+    ]);
+  });
+
+  it("leaves out run styles Route Engine rejects, so the canvas still renders", () => {
+    const projectData = selectCanvasProjectData({
+      dialogueContent: [
+        { text: "Named", textStyle: { fill: "red" } },
+        { text: "Rgb", textStyle: { fill: "rgb(255, 0, 0)" } },
+        { text: "Big", textStyle: { fontSize: 40, fontWeight: "bold" } },
+        { text: "Short", textStyle: { fill: "#abc" } },
+        { text: "Upper", textStyle: { fill: "#ABCDEF" } },
+        { text: "Alpha", textStyle: { fill: "#b4530980" } },
+        { text: "Number", textStyle: { fill: 0xb45309 } },
+        { text: "Empty", textStyle: null },
+      ],
+    });
+
+    expect(renderDialogueText(projectData).content).toEqual([
+      { text: "Named" },
+      { text: "Rgb" },
+      { text: "Big", textStyle: { fontWeight: "bold" } },
+      { text: "Short", textStyle: { fill: "#aabbcc" } },
+      { text: "Upper", textStyle: { fill: "#ABCDEF" } },
+      { text: "Alpha" },
+      { text: "Number" },
+      { text: "Empty" },
+    ]);
   });
 });

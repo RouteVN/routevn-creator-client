@@ -20,6 +20,7 @@ import {
   cloneSceneEditorLines,
   overlaySceneWithDraftSections,
 } from "../../internal/ui/sceneEditorLexical/draftSection.js";
+import { cloneTextStyle } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   constructProjectData,
   getSectionPresentation,
@@ -309,6 +310,23 @@ const isPlainObject = (value) => {
   return prototype === Object.prototype || prototype === null;
 };
 
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+// The canvas keeps only the run styles the editor saves: bold, italic,
+// underline and a hex color, which Route Engine accepts. It rejects others,
+// such as fontSize or a named color, and when it rejects the first line, the
+// scene cannot be opened to fix it.
+const toCanvasTextStyle = (textStyle) => {
+  const nextTextStyle = cloneTextStyle(textStyle);
+  if (nextTextStyle?.fill && !HEX_COLOR_PATTERN.test(nextTextStyle.fill)) {
+    delete nextTextStyle.fill;
+  }
+
+  return nextTextStyle && Object.keys(nextTextStyle).length > 0
+    ? nextTextStyle
+    : undefined;
+};
+
 const sanitizeDialogueContentInlineTextStyleMetadata = (content) => {
   if (!Array.isArray(content)) {
     return content;
@@ -327,7 +345,12 @@ const sanitizeDialogueContentInlineTextStyleMetadata = (content) => {
     }
 
     const nextItem = { ...item };
-    delete nextItem.textStyle;
+    const textStyle = toCanvasTextStyle(item.textStyle);
+    if (textStyle) {
+      nextItem.textStyle = textStyle;
+    } else {
+      delete nextItem.textStyle;
+    }
     delete nextItem.textStyleSegmentId;
 
     changed = true;
