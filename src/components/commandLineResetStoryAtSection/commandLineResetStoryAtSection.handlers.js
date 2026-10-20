@@ -1,3 +1,4 @@
+import { findSceneIdBySectionId } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
   localizeCommandLineText,
@@ -12,20 +13,6 @@ const hasSectionId = (scenes = {}, sectionId) => {
   return Object.values(scenes?.items ?? {}).some((scene) => {
     return scene?.sections?.items?.[sectionId] !== undefined;
   });
-};
-
-const findSceneIdBySectionId = (scenes = {}, sectionId) => {
-  if (typeof sectionId !== "string" || sectionId.length === 0) {
-    return undefined;
-  }
-
-  for (const [sceneId, scene] of Object.entries(scenes?.items ?? {})) {
-    if (scene?.sections?.items?.[sectionId] !== undefined) {
-      return sceneId;
-    }
-  }
-
-  return undefined;
 };
 
 const resolveInitialSceneId = (scenes = {}, currentSceneId, sectionId) => {
