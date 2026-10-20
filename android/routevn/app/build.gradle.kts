@@ -74,8 +74,8 @@ android {
         applicationId = "com.routevn.creator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 20
-        versionName = "1.18.2"
+        versionCode = 21
+        versionName = "1.19.0"
         buildConfigField("String", "UPDATE_DISTRIBUTION", javaString(routevnDistribution))
         buildConfigField("String", "PROGUARD_UUID", javaString(proguardUuid))
         manifestPlaceholders["usesCleartextTraffic"] = "false"
