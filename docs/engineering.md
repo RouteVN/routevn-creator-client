@@ -107,8 +107,12 @@ to `rtgl.setFormMessages` and `rtgl.setUiMessages` on mount and on every locale
 change; a field's own `required.message` or rule `message`, and text passed to a
 component, still take precedence. Keep `rtglUi` keys identical to Rettangoli
 UI's `DEFAULT_UI_MESSAGES`, with the English defaults in `en.yaml`, when
-upgrading `@rettangoli/ui`. Icons still register through `window.rtglIcons`,
-because `rtgl ui build-svg` generates `static/public/rtgl-icons.js` that way.
+upgrading `@rettangoli/ui`. Icons in `svg/` register through `rtgl.setIcons`:
+the web, iOS, and Android builds run `bun run build:icons`, which regenerates
+the git-ignored `static/public/rtgl-icons.js` with the installed
+`@rettangoli/ui` generator (the `rtgl` CLI can pin an older one), and every page
+loads that file after the Rettangoli UI script so the function exists when it
+runs.
 
 Keep a count inside its catalog template, such as `"{count} actions"`, instead
 of joining a number and a translated word in code. Russian has three plural
