@@ -1,7 +1,7 @@
 import {
   formatI18nCopy,
-  formatPluralCopy,
   selectI18nCopy,
+  selectPluralCopy,
 } from "../i18nCopy.js";
 
 const COMMAND_LINE_COPY_KEYS = Object.freeze({
@@ -125,13 +125,10 @@ const DEFAULT_COMMAND_LINE_PLURAL_COPY = Object.freeze({
 // place the count and pick its plural form. `dateTime` is the active
 // locale's catalog, which sets the plural rules.
 export const formatCommandLinePluralCopy = (key, count, copy = {}, dateTime) =>
-  formatPluralCopy(
-    { ...DEFAULT_COMMAND_LINE_PLURAL_COPY, ...copy },
-    key,
-    count,
-    {
-      dateTime,
-    },
+  formatI18nCopy(
+    selectPluralCopy(copy, key, count, dateTime) ??
+      selectPluralCopy(DEFAULT_COMMAND_LINE_PLURAL_COPY, key, count, dateTime),
+    { count },
   );
 
 export const formatCommandLineActionCount = (count, copy = {}, dateTime) =>

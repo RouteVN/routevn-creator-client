@@ -122,8 +122,9 @@ rules use, such as `actionCount_few` and `actionCount_many` for Russian
 (`1 действие`, `2 действия`, `5 действий`). Format one with `formatPluralCopy`
 from `src/internal/ui/i18nCopy.js`, which applies `Intl.PluralRules` for
 `dateTime.pluralRulesLocale` and falls back to the `_other` key.
-`bun run check:i18n` requires every category a locale's rules select for whole
-numbers and rejects categories they never select. French uses the singular for
+`bun run check:i18n` requires every category a locale's rules select for
+numbers below 200 and rejects categories they never select. A category used
+only for larger numbers, such as French `many` for exact millions, is optional. French uses the singular for
 0, so `fr` shows `0 ligne`. `pt` sets `pt-PT` so that 0 keeps the plural as its
 guide asks, because CLDR's `pt` rule makes 0 singular.
 

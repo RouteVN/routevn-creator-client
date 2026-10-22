@@ -28,11 +28,13 @@ const defaultCatalog = loadCatalog(defaultLocale);
 const problems = [];
 
 // A count message is a family of keys named after CLDR plural categories,
-// such as `actionCount_one` and `actionCount_other` (see i18nCopy.js). The
-// default locale defines each family with its own categories, so every
-// locale has those keys. A locale adds the other categories its plural rules
-// use for whole numbers, such as `_few` and `_many` for Russian, and must not
-// add categories its rules never select.
+// such as `actionCount_one` and `actionCount_other` (see i18nCopy.js). A
+// family is a name with both `_one` and `_other` keys in the default locale,
+// so snake_case keys such as the error code `too_many_files` are left alone.
+// Every locale has the default locale's keys. A locale adds the categories
+// its plural rules select below 200, such as `_few` and `_many` for Russian,
+// may add ones they select only for larger numbers, such as `_many` for
+// French millions, and must not add categories its rules never select.
 const PLURAL_KEY = /^(.+)_(zero|one|two|few|many|other)$/;
 
 const parsePluralKey = (key) => {
@@ -47,6 +49,11 @@ for (const key of defaultCatalog.keys()) {
     const categories = pluralFamilies.get(pluralKey.family) ?? new Set();
     categories.add(pluralKey.category);
     pluralFamilies.set(pluralKey.family, categories);
+  }
+}
+for (const [family, categories] of pluralFamilies) {
+  if (!categories.has("one") || !categories.has("other")) {
+    pluralFamilies.delete(family);
   }
 }
 
@@ -100,11 +107,34 @@ const isAddedPluralKey = (key) => {
   );
 };
 
+const defaultPluralCategories = listPluralCategories(
+  defaultCatalog,
+  defaultLocale,
+).allowed;
 for (const [family, categories] of pluralFamilies) {
-  if (!categories.has("other")) {
-    problems.push(
-      `${dir}/${defaultLocale}.yaml: "${family}" has no "${family}_other" key`,
+  // Every locale copies the default locale's keys, so a category it never
+  // selects would add a key no locale can show.
+  for (const category of categories) {
+    if (!defaultPluralCategories.has(category)) {
+      problems.push(
+        `${dir}/${defaultLocale}.yaml: "${family}_${category}" is a plural category that ${defaultLocale}'s plural rules never select`,
+      );
+    }
+  }
+  // Every form shows the same values, so a form such as "1 branch" cannot
+  // hard-code a number that another count in its category would also use.
+  const otherPlaceholders = listPlaceholders(
+    defaultCatalog.get(`${family}_other`),
+  );
+  for (const category of categories) {
+    const placeholders = listPlaceholders(
+      defaultCatalog.get(`${family}_${category}`),
     );
+    if (placeholders !== otherPlaceholders) {
+      problems.push(
+        `${dir}/${defaultLocale}.yaml: "${family}_${category}" has placeholders [${placeholders}], but "${family}_other" has [${otherPlaceholders}]`,
+      );
+    }
   }
 }
 checkPluralFamilies(
@@ -169,7 +199,12 @@ for (const locale of locales) {
   for (const key of catalog.keys()) {
     if (isAddedPluralKey(key)) {
       const { family } = parsePluralKey(key);
-      const placeholders = listPlaceholders(catalog.get(key));
+      const value = catalog.get(key);
+      if (typeof value !== "string" || value.trim() === "") {
+        problems.push(`${file}: "${key}" is empty`);
+        continue;
+      }
+      const placeholders = listPlaceholders(value);
       const defaultPlaceholders = listPlaceholders(
         defaultCatalog.get(`${family}_other`),
       );
