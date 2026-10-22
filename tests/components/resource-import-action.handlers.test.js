@@ -4,6 +4,7 @@ import {
   handleMenuItemClick,
   handleResourceImportComplete,
 } from "../../src/components/resourceImportAction/resourceImportAction.handlers.js";
+import { RU_I18N } from "../support/i18n.js";
 
 const createDeps = () => ({
   appService: { showToast: vi.fn() },
@@ -128,5 +129,28 @@ describe("resourceImportAction.handlers", () => {
       }),
     );
     expect(deps.render).toHaveBeenCalledOnce();
+  });
+
+  it("picks the plural form of the imported count", () => {
+    vi.stubGlobal("CustomEvent", class CustomEvent {});
+    const reportImport = (i18n, importedCount) => {
+      const deps = createDeps();
+      deps.i18n = i18n;
+      handleResourceImportComplete(deps, {
+        _event: { detail: { importedCount } },
+      });
+      return deps.appService.showToast.mock.calls[0][0].message;
+    };
+
+    expect(reportImport({ resourceImport: {} }, 1)).toBe(
+      "Imported 1 resource from the asset package.",
+    );
+    expect(reportImport(RU_I18N, 1)).toBe("Из пакета импортирован 1 ресурс.");
+    expect(reportImport(RU_I18N, 22)).toBe(
+      "Из пакета импортировано 22 ресурса.",
+    );
+    expect(reportImport(RU_I18N, 25)).toBe(
+      "Из пакета импортировано 25 ресурсов.",
+    );
   });
 });

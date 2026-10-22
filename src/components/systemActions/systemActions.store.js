@@ -1,4 +1,3 @@
-import { isSingularCount } from "../../internal/ui/i18nCopy.js";
 import {
   createRuntimeActionPreview,
   getRuntimeActionModes,
@@ -21,7 +20,9 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import {
+  formatCommandLineActionCount,
   formatCommandLineCopy,
+  formatCommandLinePluralCopy,
   localizeCommandLineDropdownMenu,
   localizeCommandLineText,
   selectCommandLineCopy,
@@ -587,21 +588,20 @@ const isActionBranchDefault = (branch) => {
   );
 };
 
-const formatConditionalSummary = (branches = [], copy) => {
+const formatConditionalSummary = (branches = [], copy, dateTime) => {
   const conditionalCount = branches.filter(
     (branch) => !isActionBranchDefault(branch),
   ).length;
   const hasDefault = branches.some((branch) => isActionBranchDefault(branch));
   const branchLabel =
-    conditionalCount === 1
-      ? localizeCommandLineText("1 branch", copy)
-      : conditionalCount > 1
-        ? formatCommandLineCopy(
-            "{count} branches",
-            { count: conditionalCount },
-            copy,
-          )
-        : "";
+    conditionalCount > 0
+      ? formatCommandLinePluralCopy(
+          "branchCount",
+          conditionalCount,
+          copy,
+          dateTime,
+        )
+      : "";
 
   if (branchLabel && hasDefault) {
     return formatCommandLineCopy(
@@ -931,17 +931,12 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     const offset = Number.isFinite(rawOffset) ? rawOffset : -1;
     preview.rollbackByOffset = {
       offset,
-      summary: isSingularCount(Math.abs(offset), dateTime)
-        ? formatCommandLineCopy(
-            "Rollback by {count} line",
-            { count: Math.abs(offset) },
-            copy,
-          )
-        : formatCommandLineCopy(
-            "Rollback by {count} lines",
-            { count: Math.abs(offset) },
-            copy,
-          ),
+      summary: formatCommandLinePluralCopy(
+        "rollbackLineCount",
+        Math.abs(offset),
+        copy,
+        dateTime,
+      ),
     };
   }
 
@@ -974,10 +969,18 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       copy,
     );
     preview.showConfirmDialog.summary = formatCommandLineCopy(
-      "Confirm: {confirmCount} action(s), Cancel: {cancelCount} action(s)",
+      "Confirm: {confirmActions}, Cancel: {cancelActions}",
       {
-        confirmCount: preview.showConfirmDialog.confirmActionCount,
-        cancelCount: preview.showConfirmDialog.cancelActionCount,
+        confirmActions: formatCommandLineActionCount(
+          preview.showConfirmDialog.confirmActionCount,
+          copy,
+          dateTime,
+        ),
+        cancelActions: formatCommandLineActionCount(
+          preview.showConfirmDialog.cancelActionCount,
+          copy,
+          dateTime,
+        ),
       },
       copy,
     );
@@ -996,18 +999,13 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     preview.conditional = {
       branchCount: branches.length,
       actionCount,
-      summary: formatConditionalSummary(branches, copy),
-      actionsSummary: isSingularCount(actionCount, dateTime)
-        ? formatCommandLineCopy(
-            "{count} nested action",
-            { count: actionCount },
-            copy,
-          )
-        : formatCommandLineCopy(
-            "{count} nested actions",
-            { count: actionCount },
-            copy,
-          ),
+      summary: formatConditionalSummary(branches, copy, dateTime),
+      actionsSummary: formatCommandLinePluralCopy(
+        "nestedActionCount",
+        actionCount,
+        copy,
+        dateTime,
+      ),
     };
     preview.conditional.title = formatCommandLineCopy(
       "Conditional: {summary}",

@@ -115,13 +115,17 @@ loads that file after the Rettangoli UI script so the function exists when it
 runs.
 
 Keep a count inside its catalog template, such as `"{count} actions"`, instead
-of joining a number and a translated word in code. Russian has three plural
-forms, so its catalog writes counts as a label followed by the number, such as
-`Строк: {count}`, and needs to move the number. Pick the singular template with
-`isSingularCount` from `src/internal/ui/i18nCopy.js`, which applies
-`Intl.PluralRules` for `dateTime.pluralRulesLocale`. French uses the singular
-for 0, so `fr` shows `0 ligne`. `pt` sets `pt-PT` so that 0 keeps the plural
-as its guide asks, because CLDR's `pt` rule makes 0 singular.
+of joining a number and a translated word in code. A count message is a family
+of keys named after the CLDR plural categories: `en` defines `actionCount_one`
+and `actionCount_other`, and a locale adds the other categories its plural
+rules use, such as `actionCount_few` and `actionCount_many` for Russian
+(`1 действие`, `2 действия`, `5 действий`). Format one with `formatPluralCopy`
+from `src/internal/ui/i18nCopy.js`, which applies `Intl.PluralRules` for
+`dateTime.pluralRulesLocale` and falls back to the `_other` key.
+`bun run check:i18n` requires every category a locale's rules select for whole
+numbers and rejects categories they never select. French uses the singular for
+0, so `fr` shows `0 ligne`. `pt` sets `pt-PT` so that 0 keeps the plural as its
+guide asks, because CLDR's `pt` rule makes 0 singular.
 
 Do not join a number and a unit in code. `formatFileSize`,
 `formatDurationLabel`, `formatMilliseconds`, and `formatElapsedSeconds` take

@@ -193,12 +193,19 @@ describe("sceneTextStats", () => {
   });
 
   it("joins the line and word labels with the catalog summary", () => {
-    expect(
+    const format = (lineCount, wordCount) =>
       formatSceneTextStatsLabel(
-        { lineCount: 2, wordCount: 5, characterCount: 20 },
-        { language: "ru", copy: RU_I18N.scenesPage },
-      ),
-    ).toBe("Строк: 2 · Слов: 5");
+        { lineCount, wordCount, characterCount: 20 },
+        {
+          language: "ru",
+          copy: RU_I18N.scenesPage,
+          dateTime: RU_I18N.dateTime,
+        },
+      );
+
+    expect(format(2, 5)).toBe("2 строки · 5 слов");
+    expect(format(1, 21)).toBe("1 строка · 21 слово");
+    expect(format(11, 3)).toBe("11 строк · 3 слова");
   });
 
   it("uses the singular for 0 in French", () => {
@@ -210,10 +217,33 @@ describe("sceneTextStats", () => {
 
     expect(label).toBe(
       copy.sceneTextStatsSummary
-        .replace("{lineLabel}", copy.sceneTextStatsLineLabel)
-        .replace("{textCountLabel}", copy.sceneTextStatsWordLabel)
+        .replace("{lineLabel}", copy.sceneTextStatsLines_one)
+        .replace("{textCountLabel}", copy.sceneTextStatsWords_one)
         .replace("{count}", "0")
         .replace("{count}", "1"),
+    );
+  });
+
+  it("formats each count with the catalog's number format", () => {
+    expect(
+      formatSceneTextStatsLabel(
+        { lineCount: 1200, wordCount: 25000, characterCount: 0 },
+        {
+          language: "ru",
+          copy: RU_I18N.scenesPage,
+          dateTime: RU_I18N.dateTime,
+        },
+      ),
+    ).toBe(
+      RU_I18N.scenesPage.sceneTextStatsSummary
+        .replace(
+          "{lineLabel}",
+          `${(1200).toLocaleString(RU_I18N.dateTime.intlLocale)} строк`,
+        )
+        .replace(
+          "{textCountLabel}",
+          `${(25000).toLocaleString(RU_I18N.dateTime.intlLocale)} слов`,
+        ),
     );
   });
 });

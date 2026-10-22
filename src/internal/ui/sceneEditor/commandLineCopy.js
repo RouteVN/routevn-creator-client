@@ -1,6 +1,6 @@
 import {
   formatI18nCopy,
-  isSingularCount,
+  formatPluralCopy,
   selectI18nCopy,
 } from "../i18nCopy.js";
 
@@ -109,14 +109,33 @@ export const localizeCommandLineText = (value, copy = {}) => {
 export const formatCommandLineCopy = (template, replacements = {}, copy = {}) =>
   formatI18nCopy(localizeCommandLineText(template, copy), replacements);
 
-// The count is part of the template so that each language can place it.
-// `dateTime` is the active locale's catalog, which sets the plural rules.
-export const formatCommandLineActionCount = (count, copy = {}, dateTime) =>
-  formatCommandLineCopy(
-    isSingularCount(count, dateTime) ? "{count} action" : "{count} actions",
-    { count },
-    copy,
+// English text for the count messages, used when a caller passes no catalog.
+const DEFAULT_COMMAND_LINE_PLURAL_COPY = Object.freeze({
+  actionCount_one: "{count} action",
+  actionCount_other: "{count} actions",
+  nestedActionCount_one: "{count} nested action",
+  nestedActionCount_other: "{count} nested actions",
+  rollbackLineCount_one: "Rollback by {count} line",
+  rollbackLineCount_other: "Rollback by {count} lines",
+  branchCount_one: "{count} branch",
+  branchCount_other: "{count} branches",
+});
+
+// Formats a count message such as `actionCount`, so that each language can
+// place the count and pick its plural form. `dateTime` is the active
+// locale's catalog, which sets the plural rules.
+export const formatCommandLinePluralCopy = (key, count, copy = {}, dateTime) =>
+  formatPluralCopy(
+    { ...DEFAULT_COMMAND_LINE_PLURAL_COPY, ...copy },
+    key,
+    count,
+    {
+      dateTime,
+    },
   );
+
+export const formatCommandLineActionCount = (count, copy = {}, dateTime) =>
+  formatCommandLinePluralCopy("actionCount", count, copy, dateTime);
 
 export const localizeCommandLineOptions = (options = [], copy = {}) => {
   return options.map((option) => ({
