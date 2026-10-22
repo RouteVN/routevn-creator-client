@@ -29,8 +29,8 @@ const problems = [];
 
 // A count message is a family of keys named after CLDR plural categories,
 // such as `actionCount_one` and `actionCount_other` (see i18nCopy.js). A
-// family is a name with both `_one` and `_other` keys in the default locale,
-// so snake_case keys such as the error code `too_many_files` are left alone.
+// family is a name with an `_other` key in the default locale, so snake_case
+// keys such as the error code `too_many_files` are left alone.
 // Every locale has the default locale's keys. A locale adds the categories
 // its plural rules select below 200, such as `_few` and `_many` for Russian,
 // may add ones they select only for larger numbers, such as `_many` for
@@ -52,8 +52,12 @@ for (const key of defaultCatalog.keys()) {
   }
 }
 for (const [family, categories] of pluralFamilies) {
-  if (!categories.has("one") || !categories.has("other")) {
+  if (!categories.has("other")) {
     pluralFamilies.delete(family);
+  } else if (!categories.has("one")) {
+    problems.push(
+      `${dir}/${defaultLocale}.yaml: "${family}_other" has no "${family}_one" key`,
+    );
   }
 }
 
