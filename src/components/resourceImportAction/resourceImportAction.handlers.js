@@ -1,4 +1,4 @@
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { formatPluralCopy } from "../../internal/ui/i18nCopy.js";
 
 const resolveMenuPosition = (element) => {
   const rect = element.getBoundingClientRect();
@@ -48,14 +48,21 @@ export const handleImportDialogClose = (deps) => {
 };
 
 export const handleResourceImportComplete = (deps, payload) => {
-  const { appService, dispatchEvent, render, store } = deps;
+  const { appService, dispatchEvent, i18n, render, store } = deps;
   const result = payload._event.detail;
   store.closeImportDialog();
   appService.showToast({
-    message: formatI18nCopy(
-      deps.i18n.resourceImport?.assetPackageImported ??
-        "Imported {count} resources from the asset package.",
-      { count: result.importedCount },
+    message: formatPluralCopy(
+      {
+        assetPackageImported_one:
+          "Imported {count} resource from the asset package.",
+        assetPackageImported_other:
+          "Imported {count} resources from the asset package.",
+        ...i18n.resourceImport,
+      },
+      "assetPackageImported",
+      result.importedCount,
+      { dateTime: i18n.dateTime },
     ),
     status: "success",
   });

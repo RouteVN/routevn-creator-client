@@ -20,7 +20,10 @@ import {
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  formatI18nCopy,
+  formatPluralCopy,
+} from "../../internal/ui/i18nCopy.js";
 import {
   buildMobileResourcePageViewData,
   closeMobileResourceFileExplorerState,
@@ -259,6 +262,7 @@ const buildClipOptions = (
   selectedClipName,
   missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
   copy = {},
+  dateTime,
 ) => {
   const clipOptions = Object.entries(animations ?? {}).map(
     ([name, animation]) => {
@@ -286,11 +290,20 @@ const buildClipOptions = (
       loopLabel: clip.loop
         ? (copy.loopLabel ?? "Loop")
         : (copy.onceLabel ?? "Once"),
-      summaryLabel: formatI18nCopy(
-        copy.clipSummaryTemplate ?? "{frameCount} frames • {fpsLabel} fps",
+      summaryLabel: formatPluralCopy(
         {
-          frameCount: String(clip.frameCount),
-          fpsLabel: clip.fpsLabel,
+          clipSummary_one: "{frameCount} frame • {fpsLabel} fps",
+          clipSummary_other: "{frameCount} frames • {fpsLabel} fps",
+          ...copy,
+        },
+        "clipSummary",
+        clip.frameCount,
+        {
+          dateTime,
+          replacements: {
+            frameCount: String(clip.frameCount),
+            fpsLabel: clip.fpsLabel,
+          },
         },
       ),
       borderColor: clip.name === fallbackSelectedClipName ? "ac" : "bo",
@@ -914,6 +927,7 @@ export const selectViewData = ({ state, i18n }) => {
     state.detailSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
     copy,
+    i18n.dateTime,
   );
   const detailSelectedClipName = detailSelection.selectedClipName;
   const detailPreviewAnimation =
@@ -932,6 +946,7 @@ export const selectViewData = ({ state, i18n }) => {
     state.dialogSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
     copy,
+    i18n.dateTime,
   );
   const dialogSelectedClipName = dialogSelection.selectedClipName;
 

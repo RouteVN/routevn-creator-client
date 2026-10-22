@@ -11,7 +11,7 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 import { PRESENTATION_ACTION_CSS_ORDER } from "../../src/internal/presentationActionOrder.js";
 import { selectCommandLineCopy } from "../../src/internal/ui/sceneEditor/commandLineCopy.js";
-import { FR_I18N } from "../support/i18n.js";
+import { FR_I18N, RU_I18N } from "../support/i18n.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -140,10 +140,75 @@ describe("systemActions.store", () => {
     });
 
     expect(preview.conditional.actionsSummary).toBe(
-      copy["{count} nested action"].replace("{count}", "0"),
+      copy.nestedActionCount_one.replace("{count}", "0"),
     );
     expect(preview.rollbackByOffset.summary).toBe(
-      copy["Rollback by {count} line"].replace("{count}", "1"),
+      copy.rollbackLineCount_one.replace("{count}", "1"),
+    );
+  });
+
+  it("uses every Russian plural form in action previews", () => {
+    // Each count here takes a different form under Russian and English rules,
+    // so the test fails if a preview drops the catalog's plural rules.
+    const fiveActions = {
+      nextLine: {},
+      toggleAutoMode: {},
+      toggleSkipMode: {},
+      startSkipMode: {},
+      stopSkipMode: {},
+    };
+    const branch = {
+      when: { eq: [{ var: "variables.trust" }, 1] },
+      actions: {},
+    };
+    const { preview } = selectActionsData({
+      state: createInitialState(),
+      props: {
+        actions: {
+          conditional: {
+            branches: [
+              { ...branch, actions: { nextLine: {}, toggleAutoMode: {} } },
+              branch,
+              branch,
+              branch,
+              branch,
+              { actions: {} },
+            ],
+          },
+          rollbackByOffset: { offset: -5 },
+          showConfirmDialog: {
+            confirmActions: { nextLine: {} },
+            cancelActions: fiveActions,
+          },
+        },
+      },
+      copy: selectCommandLineCopy(RU_I18N),
+      dateTime: RU_I18N.dateTime,
+    });
+
+    expect(preview.conditional.summary).toBe("5 веток + ветка по умолчанию");
+    expect(preview.conditional.actionsSummary).toBe("2 вложенных действия");
+    expect(preview.rollbackByOffset.summary).toBe("Откат на 5 строк");
+    expect(preview.showConfirmDialog.summary).toBe(
+      "При подтверждении: 1 действие, при отмене: 5 действий",
+    );
+  });
+
+  it("counts each side of a confirm dialog in English", () => {
+    const { preview } = selectActionsData({
+      state: createInitialState(),
+      props: {
+        actions: {
+          showConfirmDialog: {
+            confirmActions: { nextLine: {} },
+            cancelActions: {},
+          },
+        },
+      },
+    });
+
+    expect(preview.showConfirmDialog.summary).toBe(
+      "Confirm: 1 action, Cancel: 0 actions",
     );
   });
 
