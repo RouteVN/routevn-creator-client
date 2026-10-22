@@ -2407,7 +2407,7 @@ commandLinePage:
   conditionOperatorUnsupported: "Оператор условия не поддерживается."
   conditionTypeUnsupported: "Тип условия не поддерживается."
   "Conditional": "Условие"
-  "Conditional: {summary}": "Условие ({summary})"
+  "Conditional: {summary}": "Условие: {summary}"
   "Confirm": "Подтвердить"
   "Confirm Actions": "Действия при подтверждении"
   "Confirm Dialog": "Подтверждение"

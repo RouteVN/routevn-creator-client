@@ -2808,8 +2808,8 @@ assetPackagePage:
   videosSectionTitle: "Vídeos"
   zipFileTypeName: "Arquivo ZIP"
 resourceImport:
-  assetPackageImported_one: "Recursos importados do pacote: {count}."
-  assetPackageImported_other: "Recursos importados do pacote: {count}."
+  assetPackageImported_one: "{count} recurso importado do pacote."
+  assetPackageImported_other: "{count} recursos importados do pacote."
   title: "Importar pacote"
   urlLabel: "URL de importação"
   urlDescription: "Cole o link de importação HTTPS fornecido por quem publicou o pacote."
