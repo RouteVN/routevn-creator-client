@@ -98,12 +98,12 @@ describe("resource-import-dialog rendering", () => {
       packs: [
         {
           id: "pack-1",
-          title: "Essential Transition Pack",
+          title: "Pack One",
           assetCount: 42,
           coverUrl: "https://files.example/cover.png",
           author: {
             id: "author-1",
-            name: "RouteVN",
+            name: "Author One",
             avatarUrl: "https://files.example/avatar.png",
           },
         },
@@ -111,7 +111,7 @@ describe("resource-import-dialog rendering", () => {
           id: "pack-2",
           title: "Coverless Pack",
           assetCount: 3,
-          author: { id: "author-1", name: "RouteVN" },
+          author: { id: "author-1", name: "Author One" },
         },
       ],
       nextCursor: "cursor-2",
@@ -123,10 +123,8 @@ describe("resource-import-dialog rendering", () => {
       "pack-1",
       "pack-2",
     ]);
-    expect(cards[0].getAttribute("aria-label")).toBe(
-      "Open Essential Transition Pack",
-    );
-    expect(cards[0].textContent).toContain("RouteVN");
+    expect(cards[0].getAttribute("aria-label")).toBe("Open Pack One");
+    expect(cards[0].textContent).toContain("Author One");
     expect(cards[0].textContent).toContain("42 assets");
     expect(
       cards[0].querySelector(

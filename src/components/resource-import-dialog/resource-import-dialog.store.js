@@ -1,4 +1,7 @@
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  formatI18nCopy,
+  formatPluralCopy,
+} from "../../internal/ui/i18nCopy.js";
 import { formatCalendarDate, formatPercent } from "../../internal/dates.js";
 import { generateId } from "../../internal/id.js";
 
@@ -587,21 +590,31 @@ export const selectAuthorPacksFailedCursor = ({ state }) =>
   state.author.packsFailedCursor;
 
 // One pack card, the same in the store list and on an author page.
-const getPackCardViewData = (pack, copy) => ({
+const formatAssetCount = ({ count, copy, dateTime }) =>
+  formatPluralCopy(
+    {
+      assetCount_one: "{count} asset",
+      assetCount_other: "{count} assets",
+      ...copy,
+    },
+    "assetCount",
+    count,
+    { dateTime },
+  );
+
+const getPackCardViewData = ({ pack, copy, dateTime }) => ({
   id: pack.id,
   title: pack.title,
   coverUrl: pack.coverUrl,
   authorName: pack.author.name,
   authorAvatarUrl: pack.author.avatarUrl,
-  assetCountLabel: formatI18nCopy(copy.assetCountLabel ?? "{count} assets", {
-    count: pack.assetCount,
-  }),
+  assetCountLabel: formatAssetCount({ count: pack.assetCount, copy, dateTime }),
   openLabel: formatI18nCopy(copy.openPackLabel ?? "Open {name}", {
     name: pack.title,
   }),
 });
 
-const getAuthorViewData = ({ state, copy }) => {
+const getAuthorViewData = ({ state, copy, dateTime }) => {
   const { author } = state;
   return {
     isLoading: author.status === "loading",
@@ -618,7 +631,9 @@ const getAuthorViewData = ({ state, copy }) => {
     packsTitle: copy.authorPacksTitle ?? "Asset packs",
     noPacksLabel: copy.authorNoPacks ?? "This author has no asset packs yet.",
     hasNoPacks: author.status === "ready" && author.packs.length === 0,
-    packs: author.packs.map((pack) => getPackCardViewData(pack, copy)),
+    packs: author.packs.map((pack) =>
+      getPackCardViewData({ pack, copy, dateTime }),
+    ),
     hasMorePacks:
       author.nextCursor !== undefined &&
       !author.loadingMorePacks &&
@@ -632,7 +647,7 @@ const getAuthorViewData = ({ state, copy }) => {
   };
 };
 
-const getCatalogViewData = ({ state, copy, resourceTypeCopy }) => {
+const getCatalogViewData = ({ state, copy, resourceTypeCopy, dateTime }) => {
   const { catalog } = state;
   const isFiltered = catalog.query !== "" || catalog.tags.length > 0;
   return {
@@ -666,7 +681,9 @@ const getCatalogViewData = ({ state, copy, resourceTypeCopy }) => {
       !catalog.loadingMore,
     isLoadingMorePacks: catalog.loadingMore,
     loadMoreLabel: copy.loadMoreButton ?? "Load More",
-    packs: catalog.packs.map((pack) => getPackCardViewData(pack, copy)),
+    packs: catalog.packs.map((pack) =>
+      getPackCardViewData({ pack, copy, dateTime }),
+    ),
   };
 };
 // The pack page groups its assets the way resource pages do: the type's own
@@ -733,8 +750,10 @@ const getPackViewData = ({ state, copy, dateTime }) => {
     versionName: pack.versionName,
     released: formatDay(pack.releasedAt),
     updated: formatDay(pack.updatedAt),
-    assetCountLabel: formatI18nCopy(copy.assetCountLabel ?? "{count} assets", {
+    assetCountLabel: formatAssetCount({
       count: pack.assetCount,
+      copy,
+      dateTime,
     }),
     backLabel: copy.backButton ?? "Back",
     importLabel: copy.importButton ?? "Import",
@@ -853,7 +872,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     isStoreStep: state.step === STORE_STEP,
     isPackStep: state.step === PACK_STEP,
     isAuthorStep: state.step === AUTHOR_STEP,
-    author: getAuthorViewData({ state, copy }),
+    author: getAuthorViewData({ state, copy, dateTime: i18n.dateTime }),
     isSelectionStep,
     allResourcesSelected,
     selectionToggleAllLabel: allResourcesSelected
@@ -870,6 +889,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
       state,
       copy,
       resourceTypeCopy: i18n.resourceTypes ?? {},
+      dateTime: i18n.dateTime,
     }),
     pack: getPackViewData({ state, copy, dateTime: i18n.dateTime }),
     isAssetPreviewOpen: previewResource !== undefined,

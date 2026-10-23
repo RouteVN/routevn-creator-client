@@ -114,12 +114,12 @@ describe("resource-import-dialog.store", () => {
         packs: [
           {
             id: "pack-1",
-            title: "Essential Transition Pack",
+            title: "Pack One",
             assetCount: 42,
             coverUrl: "https://files.example/cover.png",
             author: {
               id: "author-1",
-              name: "RouteVN",
+              name: "Author One",
               avatarUrl: "https://files.example/avatar.png",
             },
           },
@@ -132,7 +132,8 @@ describe("resource-import-dialog.store", () => {
       state,
       i18n: {
         resourceImport: {
-          assetCountLabel: "{count} items",
+          assetCount_one: "{count} item",
+          assetCount_other: "{count} items",
           openPackLabel: "View {name}",
         },
       },
@@ -141,12 +142,12 @@ describe("resource-import-dialog.store", () => {
     expect(view.catalog.packs).toEqual([
       {
         id: "pack-1",
-        title: "Essential Transition Pack",
+        title: "Pack One",
         coverUrl: "https://files.example/cover.png",
-        authorName: "RouteVN",
+        authorName: "Author One",
         authorAvatarUrl: "https://files.example/avatar.png",
         assetCountLabel: "42 items",
-        openLabel: "View Essential Transition Pack",
+        openLabel: "View Pack One",
       },
     ]);
     expect(view.catalog).toMatchObject({
@@ -162,6 +163,38 @@ describe("resource-import-dialog.store", () => {
       hasMorePacks: false,
     });
     expect(state.catalog.packs).toHaveLength(1);
+  });
+
+  it("picks the asset count's plural form for the locale", () => {
+    const state = createInitialState();
+    startCatalogLoad({ state }, { requestId: "request-1" });
+    const pack = (id, assetCount) => ({
+      id,
+      title: "Pack One",
+      assetCount,
+      author: { id: "author-1", name: "Author One" },
+    });
+    setCatalogPage(
+      { state },
+      { packs: [pack("pack-1", 1), pack("pack-2", 2), pack("pack-3", 5)] },
+    );
+    const labels = (i18n) =>
+      selectViewData({ state, i18n }).catalog.packs.map(
+        (card) => card.assetCountLabel,
+      );
+
+    expect(labels({})).toEqual(["1 asset", "2 assets", "5 assets"]);
+    expect(
+      labels({
+        dateTime: { pluralRulesLocale: "ru" },
+        resourceImport: {
+          assetCount_one: "{count} ресурс",
+          assetCount_few: "{count} ресурса",
+          assetCount_many: "{count} ресурсов",
+          assetCount_other: "{count} ресурса",
+        },
+      }),
+    ).toEqual(["1 ресурс", "2 ресурса", "5 ресурсов"]);
   });
 
   it("shows the empty and failed store states", () => {
@@ -348,7 +381,7 @@ describe("resource-import-dialog.store", () => {
 
   it("opens a pack's page at once from its card, then fills in its details and assets", () => {
     const state = createInitialState();
-    const author = { id: "author-1", name: "RouteVN", avatarUrl: undefined };
+    const author = { id: "author-1", name: "Author One", avatarUrl: undefined };
     startOpeningPack(
       { state },
       {
@@ -371,7 +404,7 @@ describe("resource-import-dialog.store", () => {
     expect(view.pack).toMatchObject({
       title: "Pack One",
       coverUrl: "https://files.example/cover.png",
-      authorName: "RouteVN",
+      authorName: "Author One",
       assetCountLabel: "12 assets",
       description: ["First paragraph.", "Second paragraph."],
       screenshotUrls: ["https://files.example/shot-1.jpg"],
@@ -460,7 +493,7 @@ describe("resource-import-dialog.store", () => {
           description: [],
           screenshotUrls: [],
           assetCount: 2,
-          author: { id: "author-1", name: "RouteVN" },
+          author: { id: "author-1", name: "Author One" },
         },
       },
     );
@@ -521,7 +554,7 @@ describe("resource-import-dialog.store", () => {
       {
         profile: {
           id: "author-1",
-          name: "RouteVN",
+          name: "Author One",
           avatarUrl: "https://files.example/avatar.png",
           description: ["Free tools."],
           links: [{ label: "X", url: "https://x.example" }],
@@ -531,7 +564,7 @@ describe("resource-import-dialog.store", () => {
     );
     expect(selectViewData({ state, i18n: {} }).author).toMatchObject({
       isReady: true,
-      name: "RouteVN",
+      name: "Author One",
       description: ["Free tools."],
       links: [{ label: "X", url: "https://x.example" }],
       packsTitle: "Asset packs",
