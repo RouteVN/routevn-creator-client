@@ -449,6 +449,99 @@ describe("clientStoreHistory", () => {
     expect(skippedDrafts).toEqual([]);
   });
 
+  describe("a create that repeats a file or resource the project has", () => {
+    const createFileCreate = ({ id, sha256 = "hash-1", clientTs }) =>
+      createDraft({
+        id,
+        partition: "m",
+        type: "file.create",
+        payload: {
+          fileId: "file-1",
+          data: { mimeType: "image/png", size: 123, sha256 },
+        },
+        clientTs,
+      });
+
+    it("does not report an identical copy, such as one stored by a double save", async () => {
+      const { eventIds, skippedDrafts } = await loadHistory({
+        drafts: [
+          createBootstrapDraft(),
+          ...createSceneDrafts(),
+          createFileCreate({ id: "file-create", clientTs: 5 }),
+          createFileCreate({ id: "file-create-again", clientTs: 6 }),
+          createSceneRename({ id: "rename-1", name: "Scene Two", clientTs: 7 }),
+        ],
+      });
+
+      expect(eventIds).toEqual([
+        "project-create:project-1",
+        "scene-create",
+        "section-create",
+        "line-create",
+        "file-create",
+        "rename-1",
+      ]);
+      expect(skippedDrafts).toEqual([]);
+    });
+
+    it("does not report an identical copy of a resource create", async () => {
+      const createImageCreate = ({ id, clientTs }) =>
+        createDraft({
+          id,
+          partition: "m",
+          type: "image.create",
+          payload: {
+            imageId: "image-1",
+            data: { name: "Image One", type: "image", fileId: "file-1" },
+          },
+          clientTs,
+        });
+
+      const { eventIds, skippedDrafts } = await loadHistory({
+        drafts: [
+          createBootstrapDraft(),
+          createFileCreate({ id: "file-create", clientTs: 2 }),
+          createImageCreate({ id: "image-create", clientTs: 3 }),
+          createImageCreate({ id: "image-create-again", clientTs: 4 }),
+        ],
+      });
+
+      expect(eventIds).toEqual([
+        "project-create:project-1",
+        "file-create",
+        "image-create",
+      ]);
+      expect(skippedDrafts).toEqual([]);
+    });
+
+    it("reports a copy whose file differs from the one the project has", async () => {
+      const { eventIds, skippedDrafts } = await loadHistory({
+        drafts: [
+          createBootstrapDraft(),
+          createFileCreate({ id: "file-create", clientTs: 2 }),
+          createFileCreate({
+            id: "other-file-create",
+            sha256: "hash-2",
+            clientTs: 3,
+          }),
+        ],
+      });
+
+      expect(eventIds).toEqual(["project-create:project-1", "file-create"]);
+      expect(skippedDrafts).toEqual([
+        expect.objectContaining({
+          draftId: "other-file-create",
+          type: "file.create",
+          error: expect.objectContaining({
+            message: expect.stringContaining(
+              "payload.fileId must not already exist",
+            ),
+          }),
+        }),
+      ]);
+    });
+  });
+
   it("does not report a draft that repeats a committed event", async () => {
     const committed = [createBootstrapDraft(), ...createSceneDrafts()].map(
       (event, index) => ({
