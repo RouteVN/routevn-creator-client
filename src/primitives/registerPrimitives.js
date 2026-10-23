@@ -14,6 +14,7 @@ import {
   VisibilityObserverElement,
   VISIBILITY_OBSERVER_TAG_NAME,
 } from "./visibilityObserver.js";
+import { PreviewVideoElement, PREVIEW_VIDEO_TAG_NAME } from "./previewVideo.js";
 import { CameraViewportElement } from "./cameraViewport.js";
 import { ZoomViewportElement, ZOOM_VIEWPORT_TAG_NAME } from "./zoomViewport.js";
 import { installHoldRepeat } from "./holdRepeat.js";
@@ -51,5 +52,8 @@ export const registerPrimitives = () => {
       VISIBILITY_OBSERVER_TAG_NAME,
       VisibilityObserverElement,
     );
+  }
+  if (!customElements.get(PREVIEW_VIDEO_TAG_NAME)) {
+    customElements.define(PREVIEW_VIDEO_TAG_NAME, PreviewVideoElement);
   }
 };

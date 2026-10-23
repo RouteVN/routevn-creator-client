@@ -7,6 +7,7 @@ import { parse } from "jempl";
 import { beforeAll, describe, expect, it } from "vitest";
 import * as handlers from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 import * as store from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
+import Subject from "../../src/deps/subject.js";
 
 const readYaml = (path) =>
   yaml.load(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -74,6 +75,7 @@ beforeAll(() => {
     { handlers, schema, store, view },
     {
       appService: {},
+      subject: new Subject(),
       projectService: {
         cancelResourceImport() {},
       },
@@ -86,6 +88,60 @@ beforeAll(() => {
 });
 
 describe("resource-import-dialog rendering", () => {
+  it("renders store packs as cards with their cover, author and asset count", () => {
+    const dialog = document.createElement(
+      "rvn-resource-import-dialog-render-test",
+    );
+    document.body.append(dialog);
+    dialog.store.startCatalogLoad({ requestId: "request-1" });
+    dialog.store.setCatalogPage({
+      packs: [
+        {
+          id: "pack-1",
+          title: "Essential Transition Pack",
+          assetCount: 42,
+          coverUrl: "https://files.example/cover.png",
+          author: {
+            id: "author-1",
+            name: "RouteVN",
+            avatarUrl: "https://files.example/avatar.png",
+          },
+        },
+        {
+          id: "pack-2",
+          title: "Coverless Pack",
+          assetCount: 3,
+          author: { id: "author-1", name: "RouteVN" },
+        },
+      ],
+      nextCursor: "cursor-2",
+    });
+    dialog.render();
+
+    const cards = dialog.shadowRoot.querySelectorAll("[data-pack-id]");
+    expect([...cards].map((card) => card.dataset.packId)).toEqual([
+      "pack-1",
+      "pack-2",
+    ]);
+    expect(cards[0].getAttribute("aria-label")).toBe(
+      "Open Essential Transition Pack",
+    );
+    expect(cards[0].textContent).toContain("RouteVN");
+    expect(cards[0].textContent).toContain("42 assets");
+    expect(
+      cards[0].querySelector(
+        'rtgl-image[src="https://files.example/cover.png"]',
+      ),
+    ).not.toBeNull();
+    expect(cards[1].querySelector("rtgl-image")).toBeNull();
+    expect(
+      dialog.shadowRoot.querySelector("#loadMorePacksButton"),
+    ).not.toBeNull();
+    expect(dialog.shadowRoot.querySelector("rtgl-form")).toBeNull();
+
+    dialog.remove();
+  });
+
   it("updates only clicked cards across folder groups and sections", () => {
     const dialog = document.createElement(
       "rvn-resource-import-dialog-render-test",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatCalendarDate,
   formatDate,
   formatDimensions,
   formatDurationLabel,
@@ -13,6 +14,18 @@ import { EN_I18N, FR_I18N, PT_I18N, RU_I18N } from "../support/i18n.js";
 
 const minutesAgo = (minutes) =>
   new Date(Date.now() - minutes * 60 * 1000).toISOString();
+
+describe("formatCalendarDate", () => {
+  it("shows the UTC day without the time in the catalog locale", () => {
+    expect(formatCalendarDate(1786492800000)).toBe("Aug 12, 2026");
+    expect(formatCalendarDate(1786492800000 + 23 * 3600 * 1000)).toBe(
+      "Aug 12, 2026",
+    );
+    expect(formatCalendarDate(1786492800000, FR_I18N.dateTime)).toBe(
+      "12 août 2026",
+    );
+  });
+});
 
 describe("formatDate", () => {
   it("keeps the English labels by default", () => {

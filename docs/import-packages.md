@@ -106,7 +106,8 @@ transitive resource and file dependencies, even when their source folders were
 not explicitly selected.
 
 Import recreates the selected resources' complete package folder ancestry in
-the matching project collections. It does not ask for replacement destination
+the matching project collections, after the project's own folders and
+resources, in package order. It does not ask for replacement destination
 folders or media substitutions.
 
 Files, folders, and resources are committed in one atomic command batch. A
@@ -137,9 +138,66 @@ Creator-generated previews include:
 Generated video MIME type is MP4 or WebM depending on the desktop WebView's
 canvas recording support. Generated previews exist only in the exported ZIP.
 
+Video previews play muted and loop, holding the last frame for half a second
+before playing again. In the pack page's asset grid and the
+resource choice list, each video shows the frame a third of the way through
+and plays from the start only while a mouse is over its card or the card has
+keyboard focus; touch devices show the still frame. The full-screen preview
+plays at once. A video stops while it is off screen or covered by the
+full-screen preview. WebKit, which the macOS and iOS apps use, can stop a
+WebM video at its end while still reporting it as playing, without an ended
+event, so the player treats a video held on its last frame as ended.
+
+## Asset store
+
+Import opens the RouteVN asset store full screen: a sidebar with Search and Tags
+fields, and free packs, newest first, 20 at a time, each with its cover, author
+and asset count. Search matches pack titles and author names once typing pauses
+for 300 ms. A pack's tags name the kinds of resources it holds, such as Images
+or Sounds, and use the resource types' names. The Tags field shows the chosen
+tags; clicking it lists every tag, and saving the choice lists the packs with
+any of them. Import on a resource page opens the store with that resource type's
+tag chosen, such as Images on the Images page; character sprites and layouts
+open with no tag. Choosing a pack opens its page: a gallery of the pack's
+screenshots, which steps forward and back and opens full screen, its
+description, and every asset in the pack, read from its manifest. Assets are
+grouped as on the resource pages: a group for each type's own assets and one for
+each folder, labelled with its path such as Images > Masks, collapsible, with
+each asset on a card that shows its name. Beside them, a pack info panel holds the cover, author,
+version, release and update dates, asset count and Import, and stays in view
+while the page scrolls; narrower windows show the panel above the gallery. The
+page opens at once with what the pack's list card carries: title, cover,
+gallery, description, author, release date and asset count. The version and last
+update follow with the pack's details, and the assets last, once its manifest is
+read; Import waits for them. Back while the page loads cancels its requests.
+Clicking an asset previews it full screen, with its whole description, using its
+full-size preview file when the pack has one. The pack's author opens the author page: avatar, name, bio,
+profile links, which open in the system browser, and the author's packs. Import
+on a pack page continues with the import flow below. Back, the square button
+beside each page's title, steps from the resource choice to the pack page,
+keeping the choices made there, from a pack page to the list or author page it
+was opened from, and from the author page to the pack page it was opened from,
+or to the list. The app has no purchases, so it requests and shows free packs
+only.
+
+The client calls three JSON-RPC methods at `https://api1.routevn.com/reader/rpc`,
+with the `X-RouteVN-RPC: 1` header and no credentials:
+
+| Method                    | Params                                                                | Used for                                                                                                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reader.listAssetPacks`   | `{query, authorId, pricingType: "FREE", tags, page: {cursor, limit}}` | Pack cards. Each item carries `data`, with the description and `screenshotFileIds`, and `author`; `files` maps cover, avatar and screenshot IDs to URLs. `tags` is `null` or a list of tags. |
+| `reader.getAssetPackById` | `{assetPackId}`                                                       | The pack page's details, its screenshots (`data.screenshotFileIds`), and the import link: the `files` URL of `data.manifestFileId`.                                                          |
+| `reader.getCreatorById`   | `{creatorId}`                                                         | The author page's profile; an author is a publisher profile. `reader.listAssetPacks` with `authorId` lists the author's packs.                                                               |
+
+Development builds call `http://127.0.0.1:3100/reader/rpc` instead. Set
+`VITE_ROUTEVN_ASSET_STORE_RPC_URL` when starting the watch server to use another
+local API. A list that fails to load shows Try Again, and a pack that is no
+longer listed shows its own message.
+
 ## Import flow
 
-1. Load and strictly validate the manifest.
+1. Choose a pack in the asset store, then load and strictly validate its
+   manifest.
 2. Show a selection page when the package contains multiple resources.
 3. Keep required dependencies selected and locked.
 4. Let the user review and edit each selected resource's name and description.
@@ -152,8 +210,8 @@ A one-resource package skips the selection page.
 
 ## Publisher requirements
 
-Production import links and every redirected manifest or file URL must use
-HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
+Production import links from the asset store and every redirected manifest or
+file URL must use HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
 testing.
 
 Publishers should:

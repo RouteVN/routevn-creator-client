@@ -1,0 +1,95 @@
+refs:
+  gallery:
+    eventListeners:
+      mousedown:
+        handler: handleGalleryMouseDown
+  galleryOpen:
+    eventListeners:
+      click:
+        handler: handleLightboxOpen
+      keydown:
+        handler: handleActivateKeyDown
+  galleryPrev:
+    eventListeners:
+      click:
+        handler: handleStep
+      keydown:
+        handler: handleActivateKeyDown
+  galleryNext:
+    eventListeners:
+      click:
+        handler: handleStep
+      keydown:
+        handler: handleActivateKeyDown
+  thumbnail*:
+    eventListeners:
+      click:
+        handler: handleThumbnailClick
+      keydown:
+        handler: handleActivateKeyDown
+  lightbox:
+    eventListeners:
+      mousedown:
+        handler: handleGalleryMouseDown
+      keydown:
+        handler: handleLightboxKeyDown
+      # The pack page sits in a dialog that closes on this event.
+      close:
+        handler: handleLightboxClose
+        stopPropagation: true
+  lightboxStage:
+    eventListeners:
+      click:
+        handler: handleLightboxBackdrop
+  lightboxClose:
+    eventListeners:
+      click:
+        handler: handleLightboxClose
+      keydown:
+        handler: handleActivateKeyDown
+  lightboxPrev:
+    eventListeners:
+      click:
+        handler: handleStep
+      keydown:
+        handler: handleActivateKeyDown
+  lightboxNext:
+    eventListeners:
+      click:
+        handler: handleStep
+      keydown:
+        handler: handleActivateKeyDown
+template:
+  - rtgl-view#gallery w=f g=sm:
+      - 'rtgl-view w=f pos=rel br=md bgc=mu overflow=hidden style="aspect-ratio: 16 / 9;"':
+          - 'rtgl-view#galleryOpen role=button tabindex=0 aria-label="${openLabel}" w=f h=f cur=zoom-in':
+              - 'rtgl-image src=${src} w=f h=f of=con alt=""': null
+          - $if hasMany:
+              - 'rtgl-view#galleryPrev data-step=-1 role=button tabindex=0 aria-label="${previousLabel}" title="${previousLabel}" pos=abs wh=44 br=f ah=c av=c bgc=bg bw=xs bc=bo cur=pointer style="left: 12px; top: 50%; transform: translateY(-50%);"':
+                  - rtgl-svg svg=chevronLeft wh=22 c=fg: null
+              - 'rtgl-view#galleryNext data-step=1 role=button tabindex=0 aria-label="${nextLabel}" title="${nextLabel}" pos=abs wh=44 br=f ah=c av=c bgc=bg bw=xs bc=bo cur=pointer style="right: 12px; top: 50%; transform: translateY(-50%);"':
+                  - 'rtgl-view style="transform: scaleX(-1);"':
+                      - rtgl-svg svg=chevronLeft wh=22 c=fg: null
+      - $if hasMany:
+          - 'rtgl-view w=f d=h sh sbv=always g=md pb=md aria-label="${imagesLabel}"':
+              - $for image, i in images:
+                  - 'rtgl-view#thumbnail${i} data-image-index=${i} role=button tabindex=0 aria-current=${image.current} aria-label="${image.showLabel}" w=120 br=md bw=sm bc=${image.ring} op=${image.opacity} overflow=hidden cur=pointer style="aspect-ratio: 16 / 9; flex: 0 0 auto;"':
+                      - 'rtgl-image src=${image.src} w=f h=f of=cov alt=""': null
+  - $if isOpen:
+      # A click beside the image closes the full-screen view
+      # (handleLightboxBackdrop).
+      - 'rtgl-dialog#lightbox open layout=fixed bare p=none aria-label="${dialogLabel}"':
+          - rtgl-view slot=content w=f h=f d=v bgc=bg:
+              - rtgl-view w=f d=h av=c ph=lg pv=md:
+                  - rtgl-text s=sm c=mu-fg w=1fg: ${position}
+                  - 'rtgl-view#lightboxClose role=button tabindex=0 aria-label="${closeLabel}" title="${closeLabel}" wh=44 br=f ah=c av=c bgc=mu cur=pointer':
+                      - rtgl-svg svg=x wh=20 c=fg: null
+              - rtgl-view#lightboxStage w=f h=1fg ah=c av=c pos=rel:
+                  - 'rtgl-view w="calc(100% - 144px)" sm-w="calc(100% - 16px)" h="calc(100% - 24px)"':
+                      - 'rtgl-image src=${src} w=f h=f of=con alt="${imageAlt}"': null
+                  - $if hasMany:
+                      - 'rtgl-view#lightboxPrev data-step=-1 role=button tabindex=0 aria-label="${previousLabel}" title="${previousLabel}" pos=abs wh=44 br=f ah=c av=c bgc=mu cur=pointer style="left: 16px; top: 50%; transform: translateY(-50%);"':
+                          - rtgl-svg svg=chevronLeft wh=28 c=fg: null
+                      - 'rtgl-view#lightboxNext data-step=1 role=button tabindex=0 aria-label="${nextLabel}" title="${nextLabel}" pos=abs wh=44 br=f ah=c av=c bgc=mu cur=pointer style="right: 16px; top: 50%; transform: translateY(-50%);"':
+                          - 'rtgl-view style="transform: scaleX(-1);"':
+                              - rtgl-svg svg=chevronLeft wh=28 c=fg: null

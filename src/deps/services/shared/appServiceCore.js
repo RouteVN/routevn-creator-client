@@ -6,6 +6,7 @@ import { createUserConfigService } from "./userConfigService.js";
 import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
 import { normalizeTheme } from "../../../internal/theme.js";
 import { noopErrorTracker } from "../../clients/errorReporting.js";
+import { createAssetStoreClient } from "../../clients/assetStoreClient.js";
 
 export const createAppServiceCore = ({
   db,
@@ -26,6 +27,7 @@ export const createAppServiceCore = ({
   triggerTestCrash,
   windowMetricsClient,
   uiConfig,
+  assetStoreClient = createAssetStoreClient(),
 }) => {
   const getCurrentProjectId = () => {
     return router.getPayload()?.p ?? "";
@@ -139,6 +141,22 @@ export const createAppServiceCore = ({
 
     getTheme,
     applyTheme,
+
+    // Free packs from the RouteVN asset store, newest first; `authorId` lists
+    // one author's packs.
+    listAssetStorePacks({ cursor, query, tags, authorId } = {}) {
+      return assetStoreClient.listAssetPacks({ cursor, query, tags, authorId });
+    },
+
+    // An asset store author's profile: name, avatar, bio and links.
+    getAssetStoreAuthor({ authorId } = {}) {
+      return assetStoreClient.getAuthorById({ authorId });
+    },
+
+    // One free pack, with the import link the resource importer reads.
+    getAssetStorePack({ assetPackId } = {}) {
+      return assetStoreClient.getAssetPackById({ assetPackId });
+    },
 
     getFileDisplayPath(path) {
       return platformAdapter.getFileDisplayPath?.(path) ?? path;

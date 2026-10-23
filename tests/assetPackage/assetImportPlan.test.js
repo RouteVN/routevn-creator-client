@@ -548,5 +548,9 @@ describe("asset import plan", () => {
     expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
       "file-particle-thumbnail",
     );
+    expect(particle.largePreviewSourceId).toBe("file-particle-preview");
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file-particle-preview",
+    );
   });
 });
