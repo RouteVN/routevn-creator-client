@@ -5324,15 +5324,14 @@ public class MainActivity extends Activity {
                 continue;
             }
 
-            boolean exists = false;
-            for (int index = 0; index < mimeTypes.length(); index += 1) {
-                if (mimeType.equals(mimeTypes.optString(index))) {
-                    exists = true;
-                    break;
-                }
-            }
-            if (!exists) {
-                mimeTypes.put(mimeType);
+            addAcceptedMimeType(mimeTypes, mimeType);
+            // Android reports WAV files as audio/x-wav, and up to Android 10 its
+            // Audio section reports OGG files as application/ogg. The picker
+            // greys out files whose type is not listed.
+            if ("audio/wav".equals(mimeType)) {
+                addAcceptedMimeType(mimeTypes, "audio/x-wav");
+            } else if ("audio/ogg".equals(mimeType)) {
+                addAcceptedMimeType(mimeTypes, "application/ogg");
             }
         }
 
@@ -5345,6 +5344,15 @@ public class MainActivity extends Activity {
             result[index] = mimeTypes.optString(index);
         }
         return result;
+    }
+
+    private void addAcceptedMimeType(JSONArray mimeTypes, String mimeType) {
+        for (int index = 0; index < mimeTypes.length(); index += 1) {
+            if (mimeType.equals(mimeTypes.optString(index))) {
+                return;
+            }
+        }
+        mimeTypes.put(mimeType);
     }
 
     private String mapAcceptedValueToMimeType(String value) {
