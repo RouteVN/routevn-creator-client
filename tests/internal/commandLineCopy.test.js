@@ -36,11 +36,17 @@ describe("command-line action counts", () => {
     expect(formatCommandLineActionCount(3, copy)).toBe("3 actions");
   });
 
-  it("lets the catalog place the count", () => {
+  it("picks each plural category the catalog's rules select", () => {
     const copy = selectCommandLineCopy(RU_I18N);
+    const format = (count) =>
+      formatCommandLineActionCount(count, copy, RU_I18N.dateTime);
 
-    expect(formatCommandLineActionCount(1, copy)).toBe("Действий: 1");
-    expect(formatCommandLineActionCount(21, copy)).toBe("Действий: 21");
+    expect(format(1)).toBe("1 действие");
+    expect(format(2)).toBe("2 действия");
+    expect(format(5)).toBe("5 действий");
+    expect(format(11)).toBe("11 действий");
+    expect(format(21)).toBe("21 действие");
+    expect(format(24)).toBe("24 действия");
   });
 
   it("follows the catalog's plural rules for 0", () => {
@@ -53,11 +59,12 @@ describe("command-line action counts", () => {
 
     expect(formatZero(EN_I18N)).toBe("0 actions");
     expect(formatZero(FR_I18N)).toBe(
-      FR_I18N.commandLinePage["{count} action"].replace("{count}", "0"),
+      FR_I18N.commandLinePage.actionCount_one.replace("{count}", "0"),
     );
     expect(formatZero(PT_I18N)).toBe(
-      PT_I18N.commandLinePage["{count} actions"].replace("{count}", "0"),
+      PT_I18N.commandLinePage.actionCount_other.replace("{count}", "0"),
     );
+    expect(formatZero(RU_I18N)).toBe("0 действий");
   });
 });
 

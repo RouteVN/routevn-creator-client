@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, RU_I18N } from "../support/i18n.js";
 import {
   createInitialState,
   openPreviewDialog,
@@ -60,5 +60,31 @@ describe("spritesheets store", () => {
     expect(selectViewData({ state, i18n: EN_I18N }).detailPreviewPaused).toBe(
       true,
     );
+  });
+
+  it("picks the plural form of each clip's frame count", () => {
+    const state = createInitialState();
+    const frames = (count) =>
+      Array.from({ length: count }, (_, index) => `frame-${index}`);
+    state.dialogDraftAnimations = {
+      idle: { frames: frames(1), fps: 12 },
+      walk: { frames: frames(3), fps: 12 },
+      run: { frames: frames(5), fps: 12 },
+    };
+    const summaries = (i18n) =>
+      selectViewData({ state, i18n }).dialogClipOptions.map(
+        (clip) => clip.summaryLabel,
+      );
+
+    expect(summaries(EN_I18N)).toEqual([
+      "1 frame • 12 fps",
+      "3 frames • 12 fps",
+      "5 frames • 12 fps",
+    ]);
+    expect(summaries(RU_I18N)).toEqual([
+      "1 кадр • 12 FPS",
+      "3 кадра • 12 FPS",
+      "5 кадров • 12 FPS",
+    ]);
   });
 });

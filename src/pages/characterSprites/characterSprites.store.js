@@ -7,7 +7,7 @@ import {
   matchesTagAwareSearch,
   matchesTagFilter,
 } from "../../internal/resourceTags.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { formatPluralCopy } from "../../internal/ui/i18nCopy.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
@@ -486,6 +486,7 @@ const buildClipOptions = (
   selectedClipName,
   missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
   copy = {},
+  dateTime,
 ) => {
   const clipOptions = Object.entries(animations ?? {}).map(
     ([name, animation]) => {
@@ -511,11 +512,20 @@ const buildClipOptions = (
       ...clip,
       isSelected: clip.name === fallbackSelectedClipName,
       loopLabel: clip.loop ? copy.loopLabel : copy.onceLabel,
-      summaryLabel: formatI18nCopy(
-        copy.clipSummaryTemplate ?? "{frameCount} frames • {fpsLabel} fps",
+      summaryLabel: formatPluralCopy(
         {
-          frameCount: String(clip.frameCount),
-          fpsLabel: clip.fpsLabel,
+          clipSummary_one: "{frameCount} frame • {fpsLabel} fps",
+          clipSummary_other: "{frameCount} frames • {fpsLabel} fps",
+          ...copy,
+        },
+        "clipSummary",
+        clip.frameCount,
+        {
+          dateTime,
+          replacements: {
+            frameCount: String(clip.frameCount),
+            fpsLabel: clip.fpsLabel,
+          },
         },
       ),
       borderColor: clip.name === fallbackSelectedClipName ? "ac" : "bo",
@@ -1401,6 +1411,7 @@ export const selectViewData = ({ state, i18n }) => {
     state.detailSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
     copy,
+    i18n.dateTime,
   );
   const detailSelectedClipName = detailSelection.selectedClipName;
   const detailPreviewAnimation =
@@ -1422,6 +1433,7 @@ export const selectViewData = ({ state, i18n }) => {
     state.spritesheetDialogSelectedClipName,
     INITIAL_SPRITESHEET_CLIP_FPS,
     copy,
+    i18n.dateTime,
   );
   const spritesheetDialogSelectedClipName =
     spritesheetDialogSelection.selectedClipName;

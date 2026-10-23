@@ -21,8 +21,27 @@ export const formatI18nCopy = (template, replacements = {}) => {
   return text;
 };
 
-// True when the locale uses its singular form for the count, such as 1 in
-// English or 0 and 1 in French. `pluralRulesLocale` comes from the `dateTime`
-// catalog, which can name a different locale than `intlLocale`.
-export const isSingularCount = (count, { pluralRulesLocale = "en-US" } = {}) =>
-  new Intl.PluralRules(pluralRulesLocale).select(count) === "one";
+// A count message is a family of keys named after the CLDR plural categories,
+// such as `actionCount_one` and `actionCount_other`. English needs `one` and
+// `other`; Russian also needs `few` and `many` (1 строка, 2 строки, 5 строк).
+// This picks the key for the count's category and falls back to `_other`.
+// `pluralRulesLocale` comes from the `dateTime` catalog, which can name a
+// different locale than `intlLocale`.
+export const selectPluralCopy = (
+  copy,
+  key,
+  count,
+  { pluralRulesLocale = "en-US" } = {},
+) => {
+  const category = new Intl.PluralRules(pluralRulesLocale).select(count);
+  return copy[`${key}_${category}`] ?? copy[`${key}_other`];
+};
+
+// Formats a count message. `replacements` defaults to `{ count }`; pass it
+// when the message needs other values or a formatted number.
+export const formatPluralCopy = (
+  copy,
+  key,
+  count,
+  { dateTime, replacements = { count } } = {},
+) => formatI18nCopy(selectPluralCopy(copy, key, count, dateTime), replacements);
