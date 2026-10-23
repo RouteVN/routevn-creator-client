@@ -1857,6 +1857,9 @@ export const createProjectRepositoryRuntime = async ({
 
     getFileRecord,
 
+    // Whether the next added event first loads the history.
+    isHistoryLoadPending: isEventHistoryPending,
+
     getRevision(untilEventIndex) {
       if (untilEventIndex === undefined || untilEventIndex === null) {
         return currentRevision;

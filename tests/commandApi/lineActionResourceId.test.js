@@ -53,6 +53,7 @@ const setup = () => {
     getState: vi.fn(() => structuredClone(repositoryState)),
     addEvent: vi.fn(async () => {}),
     flushMainCheckpoint: vi.fn(async () => {}),
+    isHistoryLoadPending: () => false,
   };
   const session = {
     getActor: vi.fn(() => ({ userId: "user-1", clientId: "client-1" })),
