@@ -1,17 +1,5 @@
 import { generateId } from "../../internal/id.js";
 
-const playMuted = (video) => {
-  if (!video) return;
-  video.defaultMuted = true;
-  video.muted = true;
-  try {
-    const playback = video.play();
-    playback?.catch(() => undefined);
-  } catch {
-    // A later canplay event retries playback when the media becomes ready.
-  }
-};
-
 const revokePreviewUrl = (store) => {
   const src = store.selectSrc();
   if (src) URL.revokeObjectURL(src);
@@ -65,8 +53,4 @@ export const handleAfterMount = async (deps) => {
 
 export const handleVisible = async (deps) => {
   await loadPreview(deps);
-};
-
-export const handleVideoCanPlay = (_deps, payload) => {
-  playMuted(payload._event.currentTarget);
 };

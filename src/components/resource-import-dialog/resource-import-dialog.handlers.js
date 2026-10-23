@@ -1,7 +1,9 @@
+import { debounceTime, filter } from "rxjs";
 import { generateId } from "../../internal/id.js";
 
-const SOURCE_STEP = "source";
 const SELECTION_STEP = "selection";
+const STORE_SEARCH_ACTION = "resourceImport.storeSearch";
+const STORE_SEARCH_DEBOUNCE_MS = 300;
 
 const mapErrorMessage = (error, i18n = {}) => {
   const copy = i18n.resourceImport ?? {};
@@ -16,9 +18,64 @@ const syncFromProps = (deps, props, { reset = false } = {}) => {
   deps.store.syncFromProps({ props, reset });
 };
 
+// Loads the first page of the store, or the page after `cursor`. A response
+// that arrives after a newer request, or after the dialog reopened, is dropped.
+const loadCatalog = async (deps, { cursor } = {}) => {
+  const { appService, store, render } = deps;
+  const requestId = generateId();
+  store.startCatalogLoad({ requestId, cursor });
+  render();
+  try {
+    const page = await appService.listAssetStorePacks({
+      cursor,
+      query: store.selectCatalogQuery(),
+      tags: store.selectCatalogTags(),
+    });
+    if (store.selectCatalogRequestId() !== requestId) return;
+    store.setCatalogPage({ packs: page.packs, nextCursor: page.nextCursor });
+  } catch {
+    if (store.selectCatalogRequestId() !== requestId) return;
+    store.setCatalogError({ cursor });
+  }
+  render();
+};
+
+// The store opens filtered by the tag of the resource page it opened from.
+const openStore = (deps) => {
+  const { appService, store } = deps;
+  store.setCatalogTagsForPath({ path: appService.getPath() });
+  return loadCatalog(deps);
+};
+
+// Typing settles for a moment before the store reloads with the new query.
+const searchCatalog = (deps, value) => {
+  const { store } = deps;
+  const query = value.trim();
+  if (query === store.selectCatalogQuery()) return;
+  store.setCatalogQuery({ query });
+  loadCatalog(deps);
+};
+
+const mountSearchSubscription = (deps) => {
+  const { store, subject } = deps;
+  return subject
+    .pipe(
+      filter(
+        ({ action, payload }) =>
+          action === STORE_SEARCH_ACTION &&
+          payload.instanceId === store.selectInstanceId(),
+      ),
+      debounceTime(STORE_SEARCH_DEBOUNCE_MS),
+    )
+    .subscribe(({ payload }) => searchCatalog(deps, payload.value));
+};
+
 export const handleBeforeMount = (deps) => {
   syncFromProps(deps, deps.props);
+  if (deps.props.open === true) openStore(deps);
+  const searchSubscription = mountSearchSubscription(deps);
   return () => {
+    searchSubscription.unsubscribe();
     const operationId = deps.store.selectOperationId();
     if (operationId) {
       deps.projectService.cancelResourceImport({ operationId });
@@ -31,6 +88,10 @@ export const handleOnUpdate = (deps, payload = {}) => {
   const newProps = payload.newProps ?? {};
   if (oldProps.open === newProps.open) return;
   syncFromProps(deps, newProps);
+  if (newProps.open === true) {
+    openStore(deps);
+    return;
+  }
   deps.render();
 };
 
@@ -38,11 +99,273 @@ const emitCancelled = ({ dispatchEvent }) => {
   dispatchEvent(new CustomEvent("import-cancelled"));
 };
 
-export const handleAssetStoreLink = (deps, payload) => {
-  const { appService } = deps;
+export const handleStoreSearchInput = (deps, payload) => {
+  const { store, subject } = deps;
+  const value = payload._event.detail.value ?? "";
+  store.setSearchText({ value });
+  subject.dispatch(STORE_SEARCH_ACTION, {
+    instanceId: store.selectInstanceId(),
+    value,
+  });
+};
+
+// Saving the tag list reloads the store unless the tags are unchanged.
+export const handleStoreTagsChange = (deps, payload) => {
+  const { store } = deps;
+  const tags = payload._event.detail.value;
+  const currentTags = store.selectCatalogTags();
+  if (
+    tags.length === currentTags.length &&
+    tags.every((tag) => currentTags.includes(tag))
+  ) {
+    return;
+  }
+  store.setCatalogTags({ tags });
+  return loadCatalog(deps);
+};
+
+export const handleCatalogRetry = (deps) => {
+  const { store } = deps;
+  return loadCatalog(deps, { cursor: store.selectCatalogFailedCursor() });
+};
+
+export const handleLoadMorePacks = (deps) => {
+  const { store } = deps;
+  return loadCatalog(deps, { cursor: store.selectCatalogNextCursor() });
+};
+
+// Opens the pack page at once from the pack's card, then loads the pack's
+// details and, from its manifest, the import plan whose assets the page
+// lists. Reopening the pack whose plan is loaded keeps the choices made for
+// it. A response for a pack the user has left is dropped.
+const openPack = async (deps, packId) => {
+  const { appService, projectService, store, render } = deps;
+  if (store.selectPlan() && store.selectPlanPackId() === packId) {
+    store.reopenPackPage();
+    render();
+    return;
+  }
+
+  const previousOperationId = store.selectOperationId();
+  if (previousOperationId) {
+    projectService.cancelResourceImport({ operationId: previousOperationId });
+  }
+  const operationId = generateId();
+  store.startOpeningPack({
+    operationId,
+    pack: store.selectCatalogPackById({ packId }),
+  });
+  render();
+  let pack;
+  try {
+    pack = await appService.getAssetStorePack({ assetPackId: packId });
+  } catch (error) {
+    if (store.selectOperationId() !== operationId) return;
+    store.setPackLoadError({
+      error: mapErrorMessage({ code: error.code }, deps.i18n),
+    });
+    render();
+    return;
+  }
+  if (store.selectOperationId() !== operationId) return;
+  store.setPackDetails({ pack });
+  render();
+
+  const result = await projectService.createResourceImportPlan({
+    url: pack.importUrl,
+    operationId,
+  });
+  if (store.selectOperationId() !== operationId) return;
+  if (result.valid === false) {
+    store.setPackLoadError({ error: mapErrorMessage(result.error, deps.i18n) });
+    render();
+    return;
+  }
+  store.setPackPage({ plan: result.plan });
+  render();
+};
+
+export const handlePackBack = (deps) => {
+  const { projectService, store, render } = deps;
+  const operationId = store.selectOperationId();
+  if (operationId) projectService.cancelResourceImport({ operationId });
+  store.returnFromPackPage();
+  render();
+};
+
+// Loads an author's profile and first page of packs together. A response for
+// an earlier request, or from before the dialog reopened, is dropped.
+const loadAuthor = async (deps, authorId) => {
+  const { appService, store, render } = deps;
+  const requestId = generateId();
+  store.startAuthorLoad({ requestId, authorId });
+  render();
+  try {
+    const [profile, page] = await Promise.all([
+      appService.getAssetStoreAuthor({ authorId }),
+      appService.listAssetStorePacks({ authorId }),
+    ]);
+    if (store.selectAuthorRequestId() !== requestId) return;
+    store.setAuthorPage({
+      profile,
+      packs: page.packs,
+      nextCursor: page.nextCursor,
+    });
+  } catch (error) {
+    if (store.selectAuthorRequestId() !== requestId) return;
+    store.setAuthorError({
+      error: mapErrorMessage({ code: error.code }, deps.i18n),
+    });
+  }
+  render();
+};
+
+const openAuthor = (deps, authorId) => {
+  const { store, render } = deps;
+  if (
+    store.selectAuthorId() === authorId &&
+    store.selectAuthorStatus() === "ready"
+  ) {
+    store.reopenAuthorPage();
+    render();
+    return;
+  }
+  return loadAuthor(deps, authorId);
+};
+
+export const handlePackAuthorClick = (deps) => {
+  const { store } = deps;
+  return openAuthor(deps, store.selectPack().author.id);
+};
+
+export const handlePackAuthorKeyDown = (deps, payload) => {
+  const { store } = deps;
   const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") return;
   _event.preventDefault();
-  appService.openUrl(_event.currentTarget.getAttribute("href"));
+  return openAuthor(deps, store.selectPack().author.id);
+};
+
+export const handleAuthorBack = (deps) => {
+  const { store, render } = deps;
+  store.returnFromAuthorPage();
+  render();
+};
+
+export const handleAuthorRetry = (deps) => {
+  const { store } = deps;
+  return loadAuthor(deps, store.selectAuthorId());
+};
+
+const loadAuthorPacks = async (deps, cursor) => {
+  const { appService, store, render } = deps;
+  const requestId = generateId();
+  store.startAuthorPacksLoad({ requestId });
+  render();
+  try {
+    const page = await appService.listAssetStorePacks({
+      cursor,
+      authorId: store.selectAuthorId(),
+    });
+    if (store.selectAuthorPacksRequestId() !== requestId) return;
+    store.setAuthorPacksPage({
+      packs: page.packs,
+      nextCursor: page.nextCursor,
+    });
+  } catch {
+    if (store.selectAuthorPacksRequestId() !== requestId) return;
+    store.setAuthorPacksError({ cursor });
+  }
+  render();
+};
+
+export const handleAuthorLoadMorePacks = (deps) => {
+  const { store } = deps;
+  return loadAuthorPacks(deps, store.selectAuthorNextCursor());
+};
+
+export const handleAuthorPacksRetry = (deps) => {
+  const { store } = deps;
+  return loadAuthorPacks(deps, store.selectAuthorPacksFailedCursor());
+};
+
+// Author profile links open in the system browser.
+export const handleAuthorLinkClick = (deps, payload) => {
+  const { appService } = deps;
+  const link = payload._event
+    .composedPath()
+    .find((target) => target?.dataset?.url !== undefined);
+  if (!link) return;
+  appService.openUrl(link.dataset.url);
+};
+
+export const handlePackImport = (deps) => {
+  const { store, render } = deps;
+  store.reopenLoadedPlan();
+  render();
+};
+
+const findAssetCard = (_event) =>
+  _event
+    .composedPath()
+    .find((target) => target?.dataset?.assetSourceId !== undefined);
+
+const openAssetPreview = (deps, card) => {
+  const { store, render } = deps;
+  store.openAssetPreview({ sourceId: card.dataset.assetSourceId });
+  render();
+};
+
+export const handlePackAssetClick = (deps, payload) => {
+  const card = findAssetCard(payload._event);
+  if (!card) return;
+  openAssetPreview(deps, card);
+};
+
+export const handlePackAssetKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") return;
+  const card = findAssetCard(_event);
+  if (!card) return;
+  _event.preventDefault();
+  openAssetPreview(deps, card);
+};
+
+export const handlePackGroupToggle = (deps, payload) => {
+  const { store, render } = deps;
+  store.togglePackGroup({ key: payload._event.currentTarget.dataset.groupKey });
+  render();
+};
+
+export const handlePackGroupKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") return;
+  _event.preventDefault();
+  handlePackGroupToggle(deps, payload);
+};
+
+export const handleAssetPreviewClose = (deps) => {
+  const { store, render } = deps;
+  store.closeAssetPreview();
+  render();
+};
+
+const findPackCard = (_event) =>
+  _event.composedPath().find((target) => target?.dataset?.packId !== undefined);
+
+export const handlePackGridClick = (deps, payload) => {
+  const card = findPackCard(payload._event);
+  if (!card) return;
+  return openPack(deps, card.dataset.packId);
+};
+
+export const handlePackGridKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  if (_event.key !== "Enter" && _event.key !== " ") return;
+  const card = findPackCard(_event);
+  if (!card) return;
+  _event.preventDefault();
+  return openPack(deps, card.dataset.packId);
 };
 
 export const handleDialogClose = (deps) => {
@@ -75,32 +398,6 @@ const mergeReviewValues = (store, values) => {
   const mergedValues = {};
   Object.assign(mergedValues, store.selectReviewValues(), values);
   return mergedValues;
-};
-
-const handleSourceSubmit = async (deps, values) => {
-  const { projectService, store, render } = deps;
-  const previousSourceUrl = store.selectSourceValues()?.url?.trim();
-  const nextSourceUrl = values.url?.trim();
-  if (store.selectPlan() && previousSourceUrl === nextSourceUrl) {
-    store.reopenLoadedPlan();
-    render();
-    return;
-  }
-
-  const operationId = generateId();
-  store.setLoading({ loading: true, operationId, sourceValues: values });
-  render();
-  const result = await projectService.createResourceImportPlan({
-    url: nextSourceUrl,
-    operationId,
-  });
-  if (result.valid === false) {
-    store.setError({ error: mapErrorMessage(result.error, deps.i18n) });
-    render();
-    return;
-  }
-  store.setPlan({ plan: result.plan });
-  render();
 };
 
 const handleReviewSubmit = async (deps, values) => {
@@ -148,23 +445,18 @@ const handleReviewSubmit = async (deps, values) => {
   );
 };
 
+// The store keeps the choices made here, so the pack's Import reopens them.
+export const handleSelectionBack = (deps) => {
+  const { store, render } = deps;
+  store.openPackStep();
+  render();
+};
+
 export const handleFormAction = async (deps, payload) => {
   const { store, render } = deps;
   const { actionId, values, valid } = payload._event.detail;
-  if (actionId === "back") {
-    const step = store.selectStep();
-    if (step === SELECTION_STEP) {
-      store.openSourceStep({ values });
-      render();
-    }
-    return;
-  }
   if (valid === false) return;
   const step = store.selectStep();
-  if (actionId === "continue" && step === SOURCE_STEP) {
-    await handleSourceSubmit(deps, values);
-    return;
-  }
   if (actionId === "import" && step === SELECTION_STEP) {
     const mergedValues = mergeReviewValues(store, values);
     const hasSelectedResource = store

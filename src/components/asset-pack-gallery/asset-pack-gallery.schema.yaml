@@ -1,0 +1,17 @@
+componentName: rvn-asset-pack-gallery
+description: >-
+  An asset pack's screenshots: a 16:9 frame with the shown image, previous and
+  next arrows, a row of thumbnails, and a full-screen view. It keeps the shown
+  image and whether the full-screen view is open, and starts again at the first
+  image when the pack changes.
+propsSchema:
+  type: object
+  properties:
+    packId:
+      type: string
+    title:
+      type: string
+    images:
+      type: array
+      items:
+        type: string

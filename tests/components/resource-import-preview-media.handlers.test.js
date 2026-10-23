@@ -3,14 +3,7 @@ import {
   handleAfterMount,
   handleBeforeMount,
   handleVisible,
-  handleVideoCanPlay,
 } from "../../src/components/resource-import-preview-media/resource-import-preview-media.handlers.js";
-
-const createVideo = () => ({
-  defaultMuted: false,
-  muted: false,
-  play: vi.fn(() => Promise.resolve()),
-});
 
 describe("resource-import-preview-media.handlers", () => {
   it("loads preview bytes through the project service", async () => {
@@ -112,13 +105,5 @@ describe("resource-import-preview-media.handlers", () => {
 
     await handleVisible(deps);
     expect(projectService.loadResourceImportPreview).toHaveBeenCalledTimes(1);
-  });
-
-  it("retries muted playback when the video can play", () => {
-    const video = createVideo();
-    handleVideoCanPlay({}, { _event: { currentTarget: video } });
-
-    expect(video.muted).toBe(true);
-    expect(video.play).toHaveBeenCalledTimes(1);
   });
 });

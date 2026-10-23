@@ -42,4 +42,6 @@ export const selectViewData = ({ state, props }) => ({
   kind: state.kind,
   loading: state.loading,
   label: props.label ?? "",
+  paused: props.paused === true,
+  hover: props.hover === true,
 });
