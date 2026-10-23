@@ -5193,6 +5193,7 @@ public class MainActivity extends Activity {
         String fileId = safePathSegment("file-" + index);
         String displayName = resolveContentDisplayName(uri, fileId);
         String mimeType = resolveContentMimeType(uri, displayName);
+        displayName = ensureAudioFileExtension(displayName, mimeType);
         long size = writePickerFileBytes(requestId, fileId, uri, mimeType);
 
         JSONObject file = new JSONObject();
@@ -5270,6 +5271,41 @@ public class MainActivity extends Activity {
 
         String guessedMimeType = URLConnection.guessContentTypeFromName(displayName);
         return normalizeMimeType(guessedMimeType);
+    }
+
+    // Android 10 and earlier name audio documents after their title tag, which
+    // has no file extension. Sound uploads check the extension, so add it.
+    private String ensureAudioFileExtension(String displayName, String mimeType) {
+        String extension = resolveAudioFileExtension(mimeType);
+        String lowerCaseName = displayName.toLowerCase(Locale.ROOT);
+        if (
+            extension == null ||
+            lowerCaseName.endsWith(".mp3") ||
+            lowerCaseName.endsWith(".wav") ||
+            lowerCaseName.endsWith(".ogg")
+        ) {
+            return displayName;
+        }
+
+        return displayName + "." + extension;
+    }
+
+    private String resolveAudioFileExtension(String mimeType) {
+        switch (mimeType.trim().toLowerCase(Locale.ROOT)) {
+            case "audio/mpeg":
+            case "audio/mp3":
+            case "audio/x-mpeg":
+                return "mp3";
+            case "audio/wav":
+            case "audio/wave":
+            case "audio/x-wav":
+                return "wav";
+            case "audio/ogg":
+            case "application/ogg":
+                return "ogg";
+            default:
+                return null;
+        }
     }
 
     private String[] resolveAcceptedMimeTypes(String accept) {
