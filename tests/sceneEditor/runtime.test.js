@@ -629,6 +629,174 @@ describe("renderSceneEditorState", () => {
     }
   });
 
+  describe("when the page leaves the project during a canvas render", () => {
+    const i18n = {
+      resourcePages: { errorTitle: "Error title" },
+      scenesPage: {},
+      sceneEditorPage: {
+        errorDetailsLabel: "Details label:",
+        failedRenderCanvas: "Canvas message",
+      },
+    };
+    // Each page loads its own image: loaded files are cached across renders.
+    const createLeavingPage = (fileId) => {
+      const projectData = createProjectData();
+      projectData.resources.images["bg-leave"] = {
+        id: "bg-leave",
+        fileId,
+        width: 1920,
+        height: 1080,
+      };
+      projectData.story.scenes["scene-1"].sections[
+        "section-1"
+      ].lines[1].actions.background = { resourceId: "bg-leave" };
+      const page = {
+        canvasRoot: { isConnected: true },
+        projectOpen: true,
+      };
+      const graphicsService = createGraphicsService();
+      graphicsService.attachCanvas = vi.fn(async () => {});
+      graphicsService.loadAssets = vi.fn(
+        () =>
+          new Promise((resolve) => {
+            page.finishAssetLoad = resolve;
+          }),
+      );
+      const projectService = {
+        getFileContent: vi.fn(async (fileId) => ({ url: fileId })),
+        // The open project's repository is gone once the user has left it.
+        getRepositoryState: vi.fn(() => {
+          if (!page.projectOpen) {
+            throw new Error(
+              "Repository not initialized. Call ensureRepository() first.",
+            );
+          }
+          return {};
+        }),
+      };
+      const store = {
+        selectIsScenePageLoading: () => false,
+        selectPreviewScene: () => ({ previewVisible: false }),
+        selectSceneId: () => "scene-1",
+        selectSelectedSectionId: () => "section-1",
+        selectSelectedLineId: () => "line-2",
+        selectProjectData: () => projectData,
+        selectTemporaryPresentationState: () => ({}),
+        selectIsBackgroundTransformEditorOpen: () => false,
+        selectScene: () => ({ sections: [{ id: "section-1" }] }),
+        selectIsMuted: () => false,
+        setPresentationState: vi.fn(),
+        setSectionLineChanges: vi.fn(),
+      };
+      const appService = {
+        reportError: vi.fn(),
+        showAlertWhenIdle: vi.fn(),
+      };
+      const subject = new Subject();
+      subject.dispatch = (action, payload) => {
+        subject.next({ action, payload });
+      };
+      page.deps = {
+        subject,
+        appService,
+        graphicsService,
+        projectService,
+        store,
+        render: vi.fn(),
+        refs: {
+          previewCanvasHost: { getCanvasRoot: () => page.canvasRoot },
+        },
+        i18n,
+      };
+      return page;
+    };
+
+    it("stops the render once its canvas is gone", async () => {
+      const page = createLeavingPage("bg-leave-stop.png");
+      const { appService, projectService, subject } = page.deps;
+      const unmount = mountSceneEditorSubscriptions(page.deps);
+
+      subject.dispatch("sceneEditor.renderCanvas", { flush: true });
+      await vi.waitFor(() => {
+        expect(page.finishAssetLoad).toBeTypeOf("function");
+      });
+      const repositoryReads = projectService.getRepositoryState.mock.calls;
+      const readsBeforeLeaving = repositoryReads.length;
+
+      // Leaving for the Projects list unmounts the page and closes the project
+      // while the line's assets are still loading.
+      unmount();
+      page.canvasRoot.isConnected = false;
+      page.projectOpen = false;
+      page.finishAssetLoad();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(repositoryReads.length).toBe(readsBeforeLeaving);
+      expect(appService.reportError).not.toHaveBeenCalled();
+      expect(appService.showAlertWhenIdle).not.toHaveBeenCalled();
+    });
+
+    it("drops a failure that arrives after the page unmounted", async () => {
+      const page = createLeavingPage("bg-leave-drop.png");
+      const { appService, subject } = page.deps;
+      const consoleWarn = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
+      const unmount = mountSceneEditorSubscriptions(page.deps);
+
+      try {
+        subject.dispatch("sceneEditor.renderCanvas", { flush: true });
+        await vi.waitFor(() => {
+          expect(page.finishAssetLoad).toBeTypeOf("function");
+        });
+
+        // The canvas element can outlive the page briefly; the render then
+        // fails on the closed project.
+        unmount();
+        page.projectOpen = false;
+        page.finishAssetLoad();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(appService.reportError).not.toHaveBeenCalled();
+        expect(appService.showAlertWhenIdle).not.toHaveBeenCalled();
+        expect(consoleWarn).toHaveBeenCalledOnce();
+      } finally {
+        consoleWarn.mockRestore();
+      }
+    });
+
+    it("still reports and alerts a failure while the page is open", async () => {
+      const page = createLeavingPage("bg-leave-open.png");
+      const { appService, subject } = page.deps;
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const unmount = mountSceneEditorSubscriptions(page.deps);
+
+      try {
+        subject.dispatch("sceneEditor.renderCanvas", { flush: true });
+        await vi.waitFor(() => {
+          expect(page.finishAssetLoad).toBeTypeOf("function");
+        });
+
+        page.projectOpen = false;
+        page.finishAssetLoad();
+
+        await vi.waitFor(() => {
+          expect(appService.showAlertWhenIdle).toHaveBeenCalledWith({
+            title: "Error title",
+            message:
+              "Canvas message\n\nDetails label:\nRepository not initialized. Call ensureRepository() first.",
+          });
+        });
+        expect(appService.reportError).toHaveBeenCalledOnce();
+      } finally {
+        unmount();
+        consoleError.mockRestore();
+      }
+    });
+  });
+
   it("reports and alerts a failed render after the canvas wheel moves to another line", async () => {
     const subject = new Subject();
     subject.dispatch = (action, payload) => {
