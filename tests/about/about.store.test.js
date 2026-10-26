@@ -15,6 +15,21 @@ describe("about store", () => {
       contactDescription:
         "Have feedback, a comment, a bug report, or a feature request? Get in touch with us.",
       contactButton: "Contact Us",
+      chatSupportTitle: "Chat Support",
+      chatSupport: [
+        {
+          id: "whatsapp",
+          label: "WhatsApp: +65 89113417",
+          svg: "whatsapp",
+          href: "https://wa.me/6589113417",
+        },
+        {
+          id: "telegram",
+          label: "Telegram: t.me/routevn",
+          svg: "telegram",
+          href: "https://t.me/routevn",
+        },
+      ],
     });
   });
 

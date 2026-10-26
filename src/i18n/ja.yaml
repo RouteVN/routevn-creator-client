@@ -2737,6 +2737,7 @@ audioPlayerPage:
 aboutPage:
   allSocialMediaButton: "SNS一覧"
   appVersionText: "RouteVN Creator {appVersion}"
+  chatSupportTitle: "チャットサポート"
   checkForUpdatesButton: "アップデートを確認"
   communityTitle: "コミュニティ"
   contactButton: "お問い合わせ"

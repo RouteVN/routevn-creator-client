@@ -57,6 +57,21 @@ const social = [
   },
 ];
 
+const chatSupport = [
+  {
+    id: "whatsapp",
+    label: "WhatsApp: +65 89113417",
+    svg: "whatsapp",
+    href: "https://wa.me/6589113417",
+  },
+  {
+    id: "telegram",
+    label: "Telegram: t.me/routevn",
+    svg: "telegram",
+    href: "https://t.me/routevn",
+  },
+];
+
 // Brand names stay as they are; only generic labels are translated.
 const SOCIAL_LABEL_COPY_KEYS = {
   website: "websiteButton",
@@ -78,6 +93,11 @@ export const createInitialState = () => ({
 export const selectSocial = (_, payload) => {
   const { id } = payload;
   return social.find((s) => s.id === id);
+};
+
+export const selectChatSupport = (_, payload) => {
+  const { id } = payload;
+  return chatSupport.find((chat) => chat.id === id);
 };
 
 export const selectViewData = ({ state, i18n }) => {
@@ -113,6 +133,8 @@ export const selectViewData = ({ state, i18n }) => {
       copy.contactDescription ??
       "Have feedback, a comment, a bug report, or a feature request? Get in touch with us.",
     contactButton: copy.contactButton ?? "Contact Us",
+    chatSupportTitle: copy.chatSupportTitle ?? "Chat Support",
+    chatSupport,
   };
 };
 

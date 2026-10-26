@@ -2737,6 +2737,7 @@ audioPlayerPage:
 aboutPage:
   allSocialMediaButton: "全部社交媒体"
   appVersionText: "RouteVN Creator {appVersion}"
+  chatSupportTitle: "在线客服"
   checkForUpdatesButton: "检查更新"
   communityTitle: "社区"
   contactButton: "联系我们"

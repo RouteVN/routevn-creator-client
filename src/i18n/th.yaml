@@ -2737,6 +2737,7 @@ audioPlayerPage:
 aboutPage:
   allSocialMediaButton: "โซเชียลมีเดียทั้งหมด"
   appVersionText: "RouteVN Creator {appVersion}"
+  chatSupportTitle: "ช่วยเหลือทางแชท"
   checkForUpdatesButton: "ตรวจหาอัปเดต"
   communityTitle: "ชุมชน"
   contactButton: "ติดต่อเรา"
