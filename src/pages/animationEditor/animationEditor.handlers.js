@@ -1,5 +1,6 @@
 import { auditTime, filter, tap } from "rxjs";
 import { generateId } from "../../internal/id.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import {
   createAnimationEditorPayload,
@@ -3101,7 +3102,7 @@ export const handleMaskImagePreviewOverlayClick = (deps) => {
   deps.render();
 };
 
-export const handleReplayAnimation = async (deps) => {
+const playPreviewAnimation = async (deps) => {
   const { graphicsService, projectService, render, store } = deps;
   if (!graphicsService) {
     return;
@@ -3177,6 +3178,30 @@ export const handleReplayAnimation = async (deps) => {
     store,
   });
   render();
+};
+
+// Play is started from a button or shortcut that does not wait for it, so a
+// preview that cannot render is explained here instead of failing silently.
+export const handleReplayAnimation = async (deps) => {
+  const { appService, i18n } = deps;
+  try {
+    await playPreviewAnimation(deps);
+  } catch (error) {
+    console.error("[animationEditor] Failed to play the preview", error);
+    appService.reportError(error, {
+      operation: "animationEditor.playPreview",
+    });
+    const copy = selectCopy(deps);
+    appService.showAlert({
+      title: copy.errorTitle ?? "Error",
+      message: withErrorDetails(
+        copy.failedRenderAnimationPreview ??
+          "Failed to render animation preview.",
+        error,
+        i18n.appPage.errorDetailsLabel,
+      ),
+    });
+  }
 };
 
 export const handleExportAnimationVideo = async (deps) => {

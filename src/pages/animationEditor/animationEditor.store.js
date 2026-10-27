@@ -395,6 +395,12 @@ const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
   };
 };
 
+// A cleared number field submits null, which parseFloat turns into NaN.
+const toFiniteNumber = (value, fallback) => {
+  const numericValue = Number.parseFloat(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
 const toPositiveNumber = (value, fallback) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0
@@ -2407,10 +2413,9 @@ const createTweenAnimationsForTarget = ({
       } else if (config?.keyframes?.length) {
         tween[property] = {
           keyframes: config.keyframes.map((keyframe) => {
-            let value = parseFloat(keyframe.value) ?? 0;
             const nextKeyframe = {
               duration: keyframe.duration,
-              value,
+              value: toFiniteNumber(keyframe.value, 0),
               easing: keyframe.easing ?? "linear",
               relative: keyframe.relative ?? false,
             };
@@ -2481,7 +2486,7 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
       keyframes: config.keyframes.map((keyframe) => {
         const nextKeyframe = {
           duration: keyframe.duration,
-          value: parseFloat(keyframe.value) ?? 0,
+          value: toFiniteNumber(keyframe.value, 0),
           easing: keyframe.easing ?? "linear",
           relative: keyframe.relative ?? false,
         };
@@ -2739,7 +2744,7 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
               properties.camera.initialValue ??
               createCameraPose(state.projectResolution)),
           }
-        : parseFloat(keyframe.value),
+        : toFiniteNumber(keyframe.value, addKeyframeDefaultValues.value),
     relative: keyframe.relative,
   };
   if (keyframe.startValue !== undefined && keyframe.startValue !== "") {
@@ -2885,7 +2890,7 @@ export const updateKeyframe = (
     value:
       property === "camera"
         ? keyframes[index].value
-        : parseFloat(keyframe.value),
+        : toFiniteNumber(keyframe.value, keyframes[index].value),
     relative: property === "camera" ? false : keyframe.relative,
   };
   const currentStartValue = keyframes[index]?.startValue;
