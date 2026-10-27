@@ -2702,6 +2702,7 @@ commandLinePage:
   incrementSaveLoadPageDescription: "Increment the current save/load pagination page."
   decrementSaveLoadPageDescription: "Decrement the current save/load pagination page."
   slotIdDescription: "Leave empty for auto, or use a fixed value like 1, ${slot.slotId}, or _event.slotId"
+  autoSlotOutsideSlotContainer: "Auto only works inside a Save/Load Slot container. Enter a slot id."
   "Missing audio effect ({id})": "Missing audio effect ({id})"
   "Runtime Action": "Runtime Action"
   "{action}: {value}": "{action}: {value}"

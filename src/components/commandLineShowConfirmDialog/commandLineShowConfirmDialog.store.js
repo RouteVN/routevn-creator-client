@@ -145,5 +145,6 @@ export const selectViewData = ({ state, props, i18n }) => {
         ? formatCommandLineActionCount(cancelActionCount, copy, i18n.dateTime)
         : localizeCommandLineText("Default hide only", copy),
     nestedHiddenModes: ["showConfirmDialog", "hideConfirmDialog"],
+    allowAutoSlot: props.allowAutoSlot === true,
   };
 };

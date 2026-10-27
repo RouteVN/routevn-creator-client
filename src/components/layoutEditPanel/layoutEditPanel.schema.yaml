@@ -37,5 +37,7 @@ propsSchema:
       type: object
     isInsideSaveLoadSlot:
       type: boolean
+    allowAutoSlot:
+      type: boolean
     isInsideDirectedContainer:
       type: boolean

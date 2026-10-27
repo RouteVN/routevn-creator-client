@@ -51,6 +51,8 @@ propsSchema:
       type: boolean
     suppressDialogClose:
       type: boolean
+    allowAutoSlot:
+      type: boolean
 events:
   actions-dialog-open:
     type: object

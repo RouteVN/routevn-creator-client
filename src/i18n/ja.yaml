@@ -2702,6 +2702,7 @@ commandLinePage:
   incrementSaveLoadPageDescription: "現在のセーブ/ロードページを1つ進めます。"
   decrementSaveLoadPageDescription: "現在のセーブ/ロードページを1つ戻します。"
   slotIdDescription: "自動にする場合は空のままにします。1、${slot.slotId}、_event.slotId などの固定値も指定できます"
+  autoSlotOutsideSlotContainer: "自動はコンテナ（セーブ/ロードスロット）の中でのみ使えます。スロットIDを入力してください。"
   "Missing audio effect ({id})": "見つからないオーディオエフェクト（{id}）"
   "Runtime Action": "ランタイムアクション"
   "{action}: {value}": "{action}: {value}"
