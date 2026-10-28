@@ -341,6 +341,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     actionsDialogPanelRight: attrs.dialogPanelRight ?? "0px",
     hiddenModes,
     allowedModes,
+    allowAutoSlot: parseBooleanProp(attrs.allowAutoSlot, false),
     suppressDialogClose:
       state.suppressDialogClose === true ||
       parseBooleanProp(attrs.suppressDialogClose, false) ||

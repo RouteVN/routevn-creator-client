@@ -458,6 +458,37 @@ export const applyRuntimeActionContext = (
   return actions;
 };
 
+const isMissingSlotId = (slotId) =>
+  slotId === undefined || slotId === null || slotId === "";
+
+// A Save Slot or Load Slot action left on Auto gets its slot from the save or
+// load slot item that was clicked. Anywhere else, such as a title screen Load
+// button or a key, it has no slot and Route Engine would throw, so the action
+// is left out and saves or loads nothing.
+const removeSlotActionsWithoutSlot = (actions) => {
+  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
+    return;
+  }
+
+  for (const [actionName, payload] of Object.entries(actions)) {
+    if (actionName === "showConfirmDialog") {
+      removeSlotActionsWithoutSlot(payload?.confirmActions);
+      removeSlotActionsWithoutSlot(payload?.cancelActions);
+      continue;
+    }
+
+    if (
+      (actionName === "saveSlot" || actionName === "loadSlot") &&
+      isMissingSlotId(payload?.slotId)
+    ) {
+      console.warn(
+        `[runtime] Skipped ${actionName}: it has no slot outside a save or load slot item.`,
+      );
+      delete actions[actionName];
+    }
+  }
+};
+
 export const prepareRuntimeInteractionActions = (actions, eventData) => {
   if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
     return actions;
@@ -469,6 +500,7 @@ export const prepareRuntimeInteractionActions = (actions, eventData) => {
   applyRuntimeActionContext(preparedActions, {
     slotBinding,
   });
+  removeSlotActionsWithoutSlot(preparedActions);
 
   return preparedActions;
 };

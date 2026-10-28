@@ -1953,6 +1953,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     showTrailingDivider: props.mode !== "transform",
     actionsData: state.actionsEditorActions,
     hiddenSystemActionModes: [...HIDDEN_LAYOUT_ACTION_MODES],
+    allowAutoSlot: props.allowAutoSlot === true,
     config: {
       sections,
     },

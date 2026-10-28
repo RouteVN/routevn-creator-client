@@ -2702,6 +2702,7 @@ commandLinePage:
   incrementSaveLoadPageDescription: "Passe à la page de sauvegardes suivante."
   decrementSaveLoadPageDescription: "Revient à la page de sauvegardes précédente."
   slotIdDescription: "Laissez vide pour un emplacement automatique ou utilisez une valeur fixe comme 1, ${slot.slotId} ou _event.slotId"
+  autoSlotOutsideSlotContainer: "Le mode automatique ne fonctionne que dans un conteneur (emplacement de sauvegarde). Saisissez un ID d’emplacement."
   "Missing audio effect ({id})": "Effet audio introuvable ({id})"
   "Runtime Action": "Action sur l’état du jeu"
   "{action}: {value}": "{action} : {value}"

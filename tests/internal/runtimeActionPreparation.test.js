@@ -434,6 +434,92 @@ describe("prepareRuntimeInteractionActions", () => {
   });
 });
 
+describe("prepareRuntimeInteractionActions without a slot", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("leaves out save and load slot actions that have no slot to use", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const actions = {
+      loadSlot: {},
+      saveSlot: { slotId: "" },
+      updateVariable: {
+        id: "update-1",
+        operations: [{ variableId: "var-1", op: "set", value: 1 }],
+      },
+      showConfirmDialog: {
+        confirmActions: {
+          loadSlot: { slotId: null },
+          hideConfirmDialog: {},
+        },
+        cancelActions: {
+          saveSlot: {},
+        },
+      },
+    };
+
+    const result = prepareRuntimeInteractionActions(actions, {});
+
+    expect(result).toEqual({
+      updateVariable: {
+        id: "update-1",
+        operations: [{ variableId: "var-1", op: "set", value: 1 }],
+      },
+      showConfirmDialog: {
+        confirmActions: {
+          hideConfirmDialog: {},
+        },
+        cancelActions: {},
+      },
+    });
+    expect(warn).toHaveBeenCalledTimes(4);
+    expect(actions.loadSlot).toEqual({});
+    expect(actions.showConfirmDialog.cancelActions.saveSlot).toEqual({});
+  });
+
+  it("keeps slot actions whose slot is set or comes from the clicked item", () => {
+    const result = prepareRuntimeInteractionActions(
+      {
+        loadSlot: { slotId: 0 },
+        saveSlot: { slotId: "${slot.slotId}" },
+        showConfirmDialog: {
+          confirmActions: {
+            loadSlot: {},
+          },
+        },
+      },
+      { slotId: 2 },
+    );
+
+    expect(result).toEqual({
+      loadSlot: { slotId: 0 },
+      saveSlot: { slotId: "${slot.slotId}" },
+      showConfirmDialog: {
+        confirmActions: {
+          loadSlot: { slotId: 2 },
+        },
+      },
+    });
+  });
+
+  it("captures no save thumbnail when the save slot action is left out", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const graphicsService = {
+      extractBase64: vi.fn(async () => "data:image/png;base64,full"),
+    };
+
+    const result = await prepareRuntimeInteractionExecution({
+      actions: { saveSlot: {} },
+      eventContext: { _event: {} },
+      graphicsService,
+    });
+
+    expect(result.preparedActions).toEqual({});
+    expect(graphicsService.extractBase64).not.toHaveBeenCalled();
+  });
+});
+
 describe("prepareRuntimeInteractionExecution", () => {
   afterEach(() => {
     vi.restoreAllMocks();
