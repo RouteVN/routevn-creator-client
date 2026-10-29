@@ -6,17 +6,23 @@ import { createCommandApiShared } from "./commandApi/shared.js";
 import { createStoryCommandApi } from "./commandApi/story.js";
 
 // A change that runs this long holds up every change after it; it is reported
-// so that a change that never finishes does not go unnoticed.
+// so that a change that never finishes does not go unnoticed. The report names
+// the step the change is at and the project's revision, its number of events,
+// and a second report gives the change's full time if it finishes.
 export const SLOW_CHANGE_REPORT_MS = 60000;
 
-const reportSlowChange = (errorTracker, name) =>
-  setTimeout(() => {
-    const error = new Error(
-      `Project change ${name} is still running after ${SLOW_CHANGE_REPORT_MS / 1000} s`,
-    );
-    error.name = "SlowProjectChangeError";
-    errorTracker?.capture(error, { operation: "projectCommand.slowChange" });
-  }, SLOW_CHANGE_REPORT_MS);
+const captureSlowChange = (errorTracker, name, message) => {
+  const error = new Error(message);
+  error.name = name;
+  errorTracker?.capture(error, { operation: "projectCommand.slowChange" });
+};
+
+const describeChangeStep = ({ step, repository }) => {
+  const revision = repository?.getRevision();
+  return revision === undefined
+    ? `at step ${step}`
+    : `at step ${step}, revision ${revision}`;
+};
 
 // A change is checked against the project state when it starts, then saved,
 // then applied to the open project. Two changes running at once would each be
@@ -36,8 +42,16 @@ export const createCommandApi = (options) => {
   // The project of the change that is running, and its repository. Changes run
   // one at a time, so there is at most one.
   let runningChange;
+  // The step the running change is at, and the repository it works on.
+  let runningChangeProgress;
   const changeShared = createCommandApiShared({
     ...options,
+    markChangeStep: (step, repository) => {
+      if (runningChangeProgress) {
+        runningChangeProgress.step = step;
+        runningChangeProgress.repository = repository;
+      }
+    },
     getCurrentProjectId: () =>
       runningChange?.projectId ?? getCurrentProjectId(),
     getCachedRepository: () =>
@@ -63,12 +77,32 @@ export const createCommandApi = (options) => {
     }
 
     runningChange = target;
-    const slowChangeTimer = reportSlowChange(errorTracker, name);
+    const progress = { step: "start", repository: target.repository };
+    runningChangeProgress = progress;
+    const startedAt = Date.now();
+    let reportedSlow = false;
+    const slowChangeTimer = setTimeout(() => {
+      reportedSlow = true;
+      captureSlowChange(
+        errorTracker,
+        "SlowProjectChangeError",
+        `Project change ${name} is still running after ${SLOW_CHANGE_REPORT_MS / 1000} s, ${describeChangeStep(progress)}`,
+      );
+    }, SLOW_CHANGE_REPORT_MS);
     try {
       return await change(...args);
     } finally {
       clearTimeout(slowChangeTimer);
       runningChange = undefined;
+      runningChangeProgress = undefined;
+      if (reportedSlow) {
+        const seconds = Math.round((Date.now() - startedAt) / 1000);
+        captureSlowChange(
+          errorTracker,
+          "SlowProjectChangeFinished",
+          `Project change ${name} finished after ${seconds} s`,
+        );
+      }
     }
   };
 
