@@ -14,18 +14,18 @@ describe("about store", () => {
       contactTitle: "Contact Us",
       contactDescription:
         "Have feedback, a comment, a bug report, or a feature request? Get in touch with us.",
-      contactButton: "Contact Us",
+      contactButton: "Contact Form",
       chatSupportTitle: "Chat Support",
       chatSupport: [
         {
           id: "whatsapp",
-          label: "WhatsApp: +65 89113417",
+          label: "WhatsApp",
           svg: "whatsapp",
           href: "https://wa.me/6589113417",
         },
         {
           id: "telegram",
-          label: "Telegram: t.me/routevn",
+          label: "Telegram",
           svg: "telegram",
           href: "https://t.me/routevn",
         },

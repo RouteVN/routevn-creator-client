@@ -60,13 +60,13 @@ const social = [
 const chatSupport = [
   {
     id: "whatsapp",
-    label: "WhatsApp: +65 89113417",
+    label: "WhatsApp",
     svg: "whatsapp",
     href: "https://wa.me/6589113417",
   },
   {
     id: "telegram",
-    label: "Telegram: t.me/routevn",
+    label: "Telegram",
     svg: "telegram",
     href: "https://t.me/routevn",
   },
@@ -132,7 +132,7 @@ export const selectViewData = ({ state, i18n }) => {
     contactDescription:
       copy.contactDescription ??
       "Have feedback, a comment, a bug report, or a feature request? Get in touch with us.",
-    contactButton: copy.contactButton ?? "Contact Us",
+    contactButton: copy.contactButton ?? "Contact Form",
     chatSupportTitle: copy.chatSupportTitle ?? "Chat Support",
     chatSupport,
   };

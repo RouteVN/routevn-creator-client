@@ -63,7 +63,7 @@ template:
                       - rtgl-view g=sm mt=sm w=f:
                           - rtgl-text s=md: ${chatSupportTitle}
                           - $if isTouchMode:
-                              - rtgl-view g=md w=f:
+                              - rtgl-grid cols=2 g=md w=f:
                                   - $for item, i in chatSupport:
                                       - rtgl-button#chatSupportButton${i} data-id="${item.id}" v=se pre=${item.svg} w=f: ${item.label}
                             $else:
