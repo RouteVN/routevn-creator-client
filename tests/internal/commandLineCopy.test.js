@@ -14,6 +14,7 @@ import {
   PT_I18N,
   RU_I18N,
   TH_I18N,
+  VI_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
 
@@ -26,6 +27,7 @@ const LOCALE_I18N = {
   ru: RU_I18N,
   pt: PT_I18N,
   fr: FR_I18N,
+  vi: VI_I18N,
 };
 
 describe("command-line action counts", () => {
