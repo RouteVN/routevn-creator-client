@@ -10,6 +10,7 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "ru", label: "Русский (Beta)" }),
   Object.freeze({ value: "pt", label: "Português (Beta)" }),
   Object.freeze({ value: "fr", label: "Français (bêta)" }),
+  Object.freeze({ value: "vi", label: "Tiếng Việt (beta)" }),
 ]);
 
 const getAvailableAppLocales = (localeService) => {

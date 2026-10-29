@@ -99,6 +99,13 @@ The `fr` catalog uses one standard French for France, Quebec, Belgium, and
 Switzerland, and types its non-breaking spaces (U+202F before `;`, `!`, and
 `?`, U+00A0 before `:` and inside « ») as the characters themselves.
 
+For Vietnamese localization, follow the RouteVN Vietnamese translation style
+guide. The `vi` catalog uses standard Vietnamese in precomposed Unicode (NFC),
+with tone marks on the first vowel of open `oa`, `oe`, and `uy` syllables
+(`xóa`, `hủy`) and `y` after `h`, `k`, `l`, `m`, and `t` (`lý`, `kỹ`).
+Vietnamese nouns do not change form after a number, so both keys of a count
+family hold the same text.
+
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace, and the text Rettangoli UI
 components show when the app passes none, such as a select's placeholder or a
