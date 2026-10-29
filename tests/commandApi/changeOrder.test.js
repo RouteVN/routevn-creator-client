@@ -3,7 +3,16 @@ import {
   createCommandApi,
   SLOW_CHANGE_REPORT_MS,
 } from "../../src/deps/services/shared/commandApi.js";
-import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
+import {
+  createProjectCreateRepositoryEvent,
+  createProjectRepository,
+  initialProjectData,
+} from "../../src/deps/services/shared/projectRepository.js";
+import {
+  MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
+  createMainProjectionState,
+} from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
 
 // A change is checked against the project state, saved, then applied. Changes
 // made while another one is saving must be checked against the state it
@@ -440,6 +449,81 @@ describe("project changes run one at a time", () => {
 
       finishHistoryLoad();
       await expect(slow).resolves.toBe("image-1");
+    });
+
+    // A change that names a scene loads the history while it reads the
+    // scene, before it is saved.
+    it("names the history load when the first change of a session reads a scene and waits for it", async () => {
+      const state = structuredClone(initialProjectData);
+      state.scenes.items["scene-1"] = {
+        id: "scene-1",
+        type: "scene",
+        name: "Scene One",
+      };
+      state.scenes.tree.push({ id: "scene-1" });
+      let finishHistoryLoad;
+      const historyLoad = new Promise((resolve) => {
+        finishHistoryLoad = resolve;
+      });
+      const store = createStore();
+      store.loadMaterializedViewCheckpoint.mockImplementation(
+        async ({ viewName }) =>
+          viewName === MAIN_VIEW_NAME
+            ? {
+                viewName,
+                viewVersion: MAIN_VIEW_VERSION,
+                partition: "m",
+                lastCommittedId: 1,
+                value: createMainProjectionState(structuredClone(state)),
+              }
+            : undefined,
+      );
+      const { api, repository, errorTracker } = await setup({
+        repositoryOptions: {
+          store,
+          events: undefined,
+          historyLoaded: false,
+          initialRevision: 1,
+          historyStats: {
+            committedCount: 0,
+            latestCommittedId: 0,
+            draftCount: 1,
+            latestDraftClock: 1,
+          },
+          loadEvents: async () => {
+            await historyLoad;
+            return [
+              createProjectCreateRepositoryEvent({
+                projectId: "project-1",
+                state,
+                commandId: "project-create-1",
+                clientTs: 1,
+              }),
+            ];
+          },
+        },
+      });
+      vi.useFakeTimers();
+
+      const slow = api.updateSceneItem({
+        sceneId: "scene-1",
+        data: { name: "Scene Two" },
+      });
+      await vi.advanceTimersByTimeAsync(SLOW_CHANGE_REPORT_MS);
+      expect(errorTracker.capture).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          name: "SlowProjectChangeError",
+          message:
+            "Project change updateSceneItem is still running after 60 s, at step read-context-loading-history, revision 1",
+        }),
+        { operation: "projectCommand.slowChange" },
+      );
+
+      finishHistoryLoad();
+      await slow;
+      expect(repository.getState().scenes.items["scene-1"].name).toBe(
+        "Scene Two",
+      );
     });
   });
 });

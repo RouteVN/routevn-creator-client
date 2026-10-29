@@ -154,11 +154,13 @@ export const createCommandApiShared = ({
   const filePartitionFor = (projectId) =>
     resourceTypePartitionFor(projectId, "files");
 
-  // The first change applied in a session also loads the project's history,
-  // which takes longest in a large project.
-  const markApplyStep = (repository) => {
+  // The first change of a session also loads the project's history, which
+  // takes longest in a large project: a change that names a scene, section or
+  // line can load it while it reads its context, any other loads it while it
+  // is applied.
+  const markHistoryStep = (step, repository) => {
     markChangeStep(
-      repository.isHistoryLoadPending() ? "apply-loading-history" : "apply",
+      repository.isHistoryLoadPending() ? `${step}-loading-history` : step,
       repository,
     );
   };
@@ -176,7 +178,7 @@ export const createCommandApiShared = ({
       repository = await getCurrentRepository();
     }
 
-    markChangeStep("read-context", repository);
+    markHistoryStep("read-context", repository);
     const contextState = await repository.getContextState({
       sceneIds,
       sectionIds,
@@ -382,7 +384,7 @@ export const createCommandApiShared = ({
       return submitResult;
     }
 
-    markApplyStep(context.repository);
+    markHistoryStep("apply", context.repository);
     const applyResult = await applyCommandToRepository({
       repository: context.repository,
       command,
@@ -453,7 +455,7 @@ export const createCommandApiShared = ({
       }
       submitted = true;
 
-      markApplyStep(context.repository);
+      markHistoryStep("apply", context.repository);
       const applyResult = await applyCommandsToRepository({
         repository: context.repository,
         commands: localApplyCommands,
