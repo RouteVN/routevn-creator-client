@@ -76,7 +76,7 @@ describe.each(slotActions)(
       });
 
       expect(viewData.form.fields[0].required.message).toBe(
-        "自動はコンテナ（セーブ/ロードスロット）の中でのみ使えます。スロットIDを入力してください。",
+        "「自動」は「コンテナー（セーブ/ロードスロット）」の中でのみ使えます。スロットIDを入力してください。",
       );
     });
 
