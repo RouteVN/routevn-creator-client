@@ -203,10 +203,11 @@ const selectionForm = ({ copy }) => {
   };
 };
 
+// Nothing starts selected: the creator picks what to import.
 const createReviewValues = (plan) => {
   const values = {};
   plan.resources.forEach((resource, index) => {
-    values[`resource_${index}_include`] = true;
+    values[`resource_${index}_include`] = false;
     values[`resource_${index}_name`] = resource.name;
     values[`resource_${index}_description`] = resource.description ?? "";
   });
@@ -791,7 +792,6 @@ export const selectViewData = ({ state, i18n = {} }) => {
           : selected
             ? (copy.selectedStatus ?? "Selected")
             : (copy.notSelectedStatus ?? "Not selected"),
-        selectionStatusColor: selected ? "pr" : "mu-fg",
         previewLabel: formatI18nCopy(
           copy.previewAssetLabel ?? "Preview {name}",
           { name: getResourceLabel(resource, resourceIndex, copy) },

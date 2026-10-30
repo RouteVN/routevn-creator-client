@@ -409,28 +409,29 @@ describe("resource-import-dialog rendering", () => {
         new MouseEvent("click", { bubbles: true, composed: true }),
       );
 
+    // Nothing starts selected, so the clicked cards alone are.
     expect(dialog.store.selectReviewValues()).toMatchObject({
-      resource_0_include: true,
-      resource_1_include: true,
-      resource_2_include: true,
-      resource_3_include: false,
-      resource_4_include: false,
+      resource_0_include: false,
+      resource_1_include: false,
+      resource_2_include: false,
+      resource_3_include: true,
+      resource_4_include: true,
     });
     expect(
       dialog.shadowRoot
         .querySelector('[data-resource-index="3"]')
         .getAttribute("aria-pressed"),
-    ).toBe("false");
+    ).toBe("true");
     expect(
       dialog.shadowRoot
         .querySelector('[data-resource-index="1"]')
         .getAttribute("aria-pressed"),
-    ).toBe("true");
+    ).toBe("false");
     expect(
       dialog.shadowRoot
         .querySelector('[data-resource-index="4"]')
         .getAttribute("aria-pressed"),
-    ).toBe("false");
+    ).toBe("true");
 
     dialog.remove();
   });
@@ -458,7 +459,7 @@ describe("resource-import-dialog rendering", () => {
     );
     expect(renderedCard).toBe(card);
     expect(dialog.shadowRoot.activeElement).toBe(card);
-    expect(renderedCard.getAttribute("aria-pressed")).toBe("false");
+    expect(renderedCard.getAttribute("aria-pressed")).toBe("true");
 
     dialog.remove();
   });

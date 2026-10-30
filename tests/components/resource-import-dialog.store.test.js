@@ -656,6 +656,7 @@ describe("resource-import-dialog.store", () => {
     syncFromProps({ state }, { props: { open: true } });
     setPlan({ state }, { plan: createMultiResourcePlan() });
 
+    // Nothing starts selected.
     const view = selectViewData({ state, i18n: {} });
     expect(view.step).toBe("selection");
     expect(view.isSelectionStep).toBe(true);
@@ -665,12 +666,11 @@ describe("resource-import-dialog.store", () => {
           previewSourceId: "file.transform-one",
           planResourceIndex: 0,
           typeLabel: "Transform",
-          selected: true,
+          selected: false,
           selectionLabel: "Import Transform One",
-          selectionBorderColor: "pr",
-          selectionHoverBorderColor: "pr",
-          selectionStatus: "Selected",
-          selectionStatusColor: "pr",
+          selectionBorderColor: "bo",
+          selectionHoverBorderColor: "ac",
+          selectionStatus: "Not selected",
         }),
         expect.objectContaining({
           previewSourceId: "file.transform-two",
@@ -703,8 +703,8 @@ describe("resource-import-dialog.store", () => {
     expect(view.selectionBackLabel).toBe("Back");
     expect(view.form).not.toHaveProperty("sticky");
     expect(view).toMatchObject({
-      allResourcesSelected: true,
-      selectionToggleAllLabel: "Deselect All",
+      allResourcesSelected: false,
+      selectionToggleAllLabel: "Select All",
     });
     expect(view.warnings).toEqual([]);
     expect(view.resourceSections[0]).toMatchObject({
@@ -726,22 +726,19 @@ describe("resource-import-dialog.store", () => {
       ],
     });
 
-    setResourceSelected({ state }, { sourceId: "source.one", selected: false });
-    const deselectedView = selectViewData({ state, i18n: {} });
-    expect(deselectedView.resources.map(({ sourceId }) => sourceId)).toEqual([
+    setResourceSelected({ state }, { sourceId: "source.one", selected: true });
+    const selectedView = selectViewData({ state, i18n: {} });
+    expect(selectedView.resources.map(({ sourceId }) => sourceId)).toEqual([
       "source.one",
       "source.two",
     ]);
     expect(
-      deselectedView.resources.find(
-        ({ sourceId }) => sourceId === "source.one",
-      ),
+      selectedView.resources.find(({ sourceId }) => sourceId === "source.one"),
     ).toMatchObject({
-      selected: false,
-      selectionBorderColor: "bo",
-      selectionHoverBorderColor: "ac",
-      selectionStatus: "Not selected",
-      selectionStatusColor: "mu-fg",
+      selected: true,
+      selectionBorderColor: "pr",
+      selectionHoverBorderColor: "pr",
+      selectionStatus: "Selected",
     });
     expect(selectViewData({ state, i18n: {} })).toMatchObject({
       allResourcesSelected: false,
@@ -761,6 +758,8 @@ describe("resource-import-dialog.store", () => {
     plan.resources[1].dependencySourceIds = [plan.resources[0].sourceId];
     syncFromProps({ state }, { props: { open: true } });
     setPlan({ state }, { plan });
+    // Selecting a resource selects what it needs.
+    setResourceSelected({ state }, { sourceId: "source.two", selected: true });
 
     expect(selectViewData({ state, i18n: {} }).resources[0]).toMatchObject({
       sourceId: "source.one",

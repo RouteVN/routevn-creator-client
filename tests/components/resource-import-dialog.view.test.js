@@ -231,7 +231,9 @@ describe("resource-import-dialog.view", () => {
 
   it("renders preview media in bounded 16:9 frames", () => {
     expect(viewSource).toContain("rvn-resource-import-preview-media");
-    expect(viewSource).toContain("w=160 h=90");
+    expect(viewSource).toContain(
+      "rtgl-view w=f av=c ah=c bgc=mu pos=rel overflow=hidden style=\"aspect-ratio: 16 / 9;\"",
+    );
     expect(viewSource).toContain("sourceFileId=${resource.previewSourceId}");
     expect(viewSource).toContain("?lazy=true");
   });
@@ -241,7 +243,7 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain(
       "rtgl-view#resourceSelectionGrid slot=resource-selection-grid",
     );
-    expect(viewSource).toContain("rtgl-grid cols=3 xl-cols=2 md-cols=1");
+    expect(viewSource).not.toContain("rtgl-grid cols=3 xl-cols=2 md-cols=1");
     expect(viewSource).toContain("$for section in resourceSections");
     expect(viewSource).toContain("$for group in section.groups");
     expect(viewSource).toContain("$for resource in group.resources");
@@ -269,11 +271,19 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain('aria-pressed="${resource.selected}"');
     expect(viewSource).not.toContain("selectionLocked");
     expect(viewSource).not.toContain("aria-disabled");
-    expect(viewSource).toContain("${resource.selectionStatus}");
-    // A card shows only the name: the headers give the type, and the
-    // description shows in the pack page's preview.
+    // A card is the pack page's: the preview, then only the name, since the
+    // headers give the type and the description shows in the pack page's
+    // preview. A selected one shows a check on the preview's top right; an
+    // unselected one shows nothing.
+    expect(viewSource).toContain(
+      "rtgl-grid cols=4 md-cols=3 sm-cols=2 g=md w=f style=\"padding-left: ${group.indent}px;",
+    );
     expect(viewSource).toMatch(
-      /'rtgl-view d=v w=1fg style="align-self: center; min-width: 0;"':\n +- rtgl-text s=md: \$\{resource\.name\}\n +- 'rtgl-view d=h av=c ah=e/,
+      /- \$if resource\.selected:\n +- 'rtgl-view d=h av=c g=xs pos=abs aria-hidden=true style="top: 8px; right: 8px;"':\n +- \$if resource\.required:\n +- rtgl-tag s=sm v=mu: \$\{resource\.selectionStatus\}\n +- rtgl-view wh=24 av=c ah=c br=f bgc=pr:\n +- rtgl-svg svg=check wh=16 c=pr-fg: null\n/,
+    );
+    expect(viewSource).not.toContain("bgc=bg bw=sm bc=bo");
+    expect(viewSource).toContain(
+      "rtgl-text s=xs c=mu-fg ellipsis w=f: ${resource.name}",
     );
     expect(viewSource).not.toContain("${resource.typeLabel}");
     expect(viewSource).not.toContain("${resource.description}");
@@ -285,7 +295,8 @@ describe("resource-import-dialog.view", () => {
     );
     expect(viewSource).not.toContain("selectionBackgroundColor");
     expect(viewSource).not.toContain("rtgl-checkbox");
-    expect(viewSource).toContain("rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu");
+    expect(viewSource).not.toContain("rtgl-view w=160 h=90");
+    expect(viewSource).not.toContain("selectionStatusColor");
     expect(viewSource).not.toContain("resource.previewUrl");
     expect(viewSource).not.toContain("${knownDownloadBytes}");
     expect(viewSource).not.toContain("${bytesLabel}");
