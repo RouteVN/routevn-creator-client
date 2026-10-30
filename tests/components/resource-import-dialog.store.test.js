@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   closeAssetPreview,
-  returnFromAuthorPage,
-  setAuthorError,
-  setAuthorPage,
-  startAuthorLoad,
+  returnFromCreatorPage,
+  setCreatorError,
+  setCreatorPage,
+  startCreatorLoad,
   createInitialState,
   openAssetPreview,
   openPackStep,
@@ -15,7 +15,7 @@ import {
   setCatalogError,
   setCatalogPage,
   setCatalogQuery,
-  setCatalogTags,
+  setCatalogAssetTypes,
   setPackDetails,
   setPackLoadError,
   setPackPage,
@@ -115,11 +115,16 @@ describe("resource-import-dialog.store", () => {
           {
             id: "pack-1",
             title: "Pack One",
+            summary: "Forest backgrounds.",
+            assetCounts: [
+              { assetType: "IMAGES", count: 40 },
+              { assetType: "SOUNDS", count: 2 },
+            ],
             assetCount: 42,
             coverUrl: "https://files.example/cover.png",
-            author: {
-              id: "author-1",
-              name: "Author One",
+            creator: {
+              id: "creator-1",
+              name: "Creator One",
               avatarUrl: "https://files.example/avatar.png",
             },
           },
@@ -132,8 +137,8 @@ describe("resource-import-dialog.store", () => {
       state,
       i18n: {
         resourceImport: {
-          assetCount_one: "{count} item",
-          assetCount_other: "{count} items",
+          imageCount_one: "{count} picture",
+          imageCount_other: "{count} pictures",
           openPackLabel: "View {name}",
         },
       },
@@ -143,10 +148,11 @@ describe("resource-import-dialog.store", () => {
       {
         id: "pack-1",
         title: "Pack One",
+        summary: "Forest backgrounds.",
         coverUrl: "https://files.example/cover.png",
-        authorName: "Author One",
-        authorAvatarUrl: "https://files.example/avatar.png",
-        assetCountLabel: "42 items",
+        creatorName: "Creator One",
+        creatorAvatarUrl: "https://files.example/avatar.png",
+        assetCountLabel: "42 assets",
         openLabel: "View Pack One",
       },
     ]);
@@ -165,25 +171,35 @@ describe("resource-import-dialog.store", () => {
     expect(state.catalog.packs).toHaveLength(1);
   });
 
-  it("picks the asset count's plural form for the locale", () => {
+  it("shows a card's total asset count in the locale's plural form", () => {
     const state = createInitialState();
     startCatalogLoad({ state }, { requestId: "request-1" });
-    const pack = (id, assetCount) => ({
+    const pack = (id, images, sounds) => ({
       id,
       title: "Pack One",
-      assetCount,
-      author: { id: "author-1", name: "Author One" },
+      assetCounts: [
+        { assetType: "IMAGES", count: images },
+        ...(sounds ? [{ assetType: "SOUNDS", count: sounds }] : []),
+      ],
+      assetCount: images + sounds,
+      creator: { id: "creator-1", name: "Creator One" },
     });
     setCatalogPage(
       { state },
-      { packs: [pack("pack-1", 1), pack("pack-2", 2), pack("pack-3", 5)] },
+      {
+        packs: [
+          pack("pack-1", 1, 0),
+          pack("pack-2", 2, 1),
+          pack("pack-3", 5, 21),
+        ],
+      },
     );
     const labels = (i18n) =>
       selectViewData({ state, i18n }).catalog.packs.map(
         (card) => card.assetCountLabel,
       );
 
-    expect(labels({})).toEqual(["1 asset", "2 assets", "5 assets"]);
+    expect(labels({})).toEqual(["1 asset", "3 assets", "26 assets"]);
     expect(
       labels({
         dateTime: { pluralRulesLocale: "ru" },
@@ -194,7 +210,7 @@ describe("resource-import-dialog.store", () => {
           assetCount_other: "{count} ресурса",
         },
       }),
-    ).toEqual(["1 ресурс", "2 ресурса", "5 ресурсов"]);
+    ).toEqual(["1 ресурс", "3 ресурса", "26 ресурсов"]);
   });
 
   it("shows the empty and failed store states", () => {
@@ -231,30 +247,30 @@ describe("resource-import-dialog.store", () => {
     });
 
     setCatalogQuery({ state }, { query: "" });
-    setCatalogTags({ state }, { tags: ["FONTS"] });
+    setCatalogAssetTypes({ state }, { assetTypes: ["FONTS"] });
     expect(selectViewData({ state, i18n: {} }).catalog).toMatchObject({
       isCatalogEmpty: false,
       isNoResults: true,
     });
 
-    setCatalogTags({ state }, { tags: [] });
+    setCatalogAssetTypes({ state }, { assetTypes: [] });
     expect(selectViewData({ state, i18n: {} }).catalog).toMatchObject({
       isCatalogEmpty: true,
       isNoResults: false,
     });
   });
 
-  it("offers every tag under the resource type's name and shows the chosen ones", () => {
+  it("offers every asset type under the resource type's name and shows the chosen ones", () => {
     const state = createInitialState();
-    setCatalogTags({ state }, { tags: ["ANIMATIONS"] });
+    setCatalogAssetTypes({ state }, { assetTypes: ["ANIMATIONS"] });
 
     const { catalog } = selectViewData({
       state,
       i18n: {
         resourceImport: {
           searchTitle: "検索",
-          tagsTitle: "タグ",
-          tagsPlaceholder: "タグを選択",
+          assetTypesTitle: "アセットの種類",
+          assetTypesPlaceholder: "アセットの種類を選択",
         },
         resourceTypes: { images: "画像", animations: "アニメーション" },
       },
@@ -262,11 +278,11 @@ describe("resource-import-dialog.store", () => {
 
     expect(catalog).toMatchObject({
       searchTitle: "検索",
-      tagsTitle: "タグ",
-      tagsPlaceholder: "タグを選択",
-      selectedTags: ["ANIMATIONS"],
+      assetTypesTitle: "アセットの種類",
+      assetTypesPlaceholder: "アセットの種類を選択",
+      selectedAssetTypes: ["ANIMATIONS"],
     });
-    expect(catalog.tagOptions.map((option) => option.value)).toEqual([
+    expect(catalog.assetTypeOptions.map((option) => option.value)).toEqual([
       "IMAGES",
       "SOUNDS",
       "VIDEOS",
@@ -282,9 +298,12 @@ describe("resource-import-dialog.store", () => {
       "VARIABLES",
       "CONTROLS",
     ]);
-    expect(catalog.tagOptions[0]).toEqual({ value: "IMAGES", label: "画像" });
-    expect(catalog.tagOptions[5].label).toBe("アニメーション");
-    expect(catalog.tagOptions[6].label).toBe("Audio Effects");
+    expect(catalog.assetTypeOptions[0]).toEqual({
+      value: "IMAGES",
+      label: "画像",
+    });
+    expect(catalog.assetTypeOptions[5].label).toBe("アニメーション");
+    expect(catalog.assetTypeOptions[6].label).toBe("Audio Effects");
   });
 
   it("groups the pack's assets by folder, labelled with their path, and collapses a group", () => {
@@ -320,10 +339,9 @@ describe("resource-import-dialog.store", () => {
     const pack = {
       id: "pack-1",
       title: "Pack One",
-      screenshotUrls: [],
+      assetCounts: [{ assetType: "TRANSFORMS", count: 2 }],
       assetCount: 2,
-      description: [],
-      author: { id: "author-1", name: "Author One" },
+      creator: { id: "creator-1", name: "Creator One" },
     };
     startOpeningPack({ state }, { operationId: "operation-1", pack });
     setPackPage({ state }, { plan });
@@ -381,7 +399,11 @@ describe("resource-import-dialog.store", () => {
 
   it("opens a pack's page at once from its card, then fills in its details and assets", () => {
     const state = createInitialState();
-    const author = { id: "author-1", name: "Author One", avatarUrl: undefined };
+    const creator = {
+      id: "creator-1",
+      name: "Creator One",
+      avatarUrl: undefined,
+    };
     startOpeningPack(
       { state },
       {
@@ -390,25 +412,25 @@ describe("resource-import-dialog.store", () => {
           id: "pack-1",
           title: "Pack One",
           coverUrl: "https://files.example/cover.png",
-          description: ["First paragraph.", "Second paragraph."],
-          screenshotUrls: ["https://files.example/shot-1.jpg"],
           releasedAt: 1786492800000,
+          assetCounts: [{ assetType: "IMAGES", count: 12 }],
           assetCount: 12,
-          author,
+          creator,
         },
       },
     );
     let view = selectViewData({ state, i18n: {} });
     expect(view).toMatchObject({ isPackStep: true, isSelectionStep: false });
-    // The card's description, gallery and release date show at once.
+    // A store list card's creator and release date show at once; a card has
+    // no description, so the page shows none until the details load.
     expect(view.pack).toMatchObject({
       title: "Pack One",
       coverUrl: "https://files.example/cover.png",
-      authorName: "Author One",
-      assetCountLabel: "12 assets",
-      description: ["First paragraph.", "Second paragraph."],
-      screenshotUrls: ["https://files.example/shot-1.jpg"],
-      hasGallery: true,
+      creatorName: "Creator One",
+      creatorLabel: "Creator",
+      openCreatorLabel: "View Creator One",
+      description: [],
+      releaseNotes: undefined,
       released: "Aug 12, 2026",
       versionName: undefined,
       isLoadingAssets: true,
@@ -425,26 +447,37 @@ describe("resource-import-dialog.store", () => {
           id: "pack-1",
           title: "Pack One",
           coverUrl: "https://files.example/cover.png",
-          screenshotUrls: ["https://files.example/shot-1.jpg"],
+          assetCounts: [
+            { assetType: "IMAGES", count: 1 },
+            { assetType: "TRANSFORMS", count: 1 },
+          ],
           assetCount: 2,
-          description: ["First paragraph.", "Second paragraph."],
+          description: [
+            { text: "First paragraph." },
+            { text: "Second paragraph." },
+          ],
           versionName: "1.0.0",
+          releaseNotes: "Adds masks.\nFixes fades.",
           releasedAt: 1786492800000,
           updatedAt: undefined,
-          author,
+          creator,
         },
       },
     );
     view = selectViewData({ state, i18n: {} });
+    // The details replace the card.
+    expect(view.pack).not.toHaveProperty("screenshotUrls");
     expect(view.pack).toMatchObject({
       id: "pack-1",
-      screenshotUrls: ["https://files.example/shot-1.jpg"],
-      hasGallery: true,
-      description: ["First paragraph.", "Second paragraph."],
+      description: [
+        { text: "First paragraph." },
+        { text: "Second paragraph." },
+      ],
       versionName: "1.0.0",
       released: "Aug 12, 2026",
       updated: undefined,
-      assetCountLabel: "2 assets",
+      releaseNotes: "Adds masks.\nFixes fades.",
+      releaseNotesTitle: "What's new",
       infoTitle: "Pack info",
       assetsTitle: "Assets in this pack",
       isLoadingAssets: true,
@@ -457,6 +490,8 @@ describe("resource-import-dialog.store", () => {
       isLoadingAssets: false,
       importDisabled: false,
     });
+    expect(view.pack).not.toHaveProperty("downloadSize");
+    expect(view.pack).not.toHaveProperty("assetCountLabels");
     expect(view.resourceSections[0].groups).toHaveLength(4);
     expect(state.operationId).toBeUndefined();
 
@@ -490,10 +525,9 @@ describe("resource-import-dialog.store", () => {
         pack: {
           id: "pack-1",
           title: "Pack One",
-          description: [],
-          screenshotUrls: [],
+          assetCounts: [{ assetType: "TRANSFORMS", count: 2 }],
           assetCount: 2,
-          author: { id: "author-1", name: "Author One" },
+          creator: { id: "creator-1", name: "Creator One" },
         },
       },
     );
@@ -538,47 +572,82 @@ describe("resource-import-dialog.store", () => {
     expect(selectViewData({ state, i18n: {} }).assetPreview).toBeUndefined();
   });
 
-  it("shows the author page's loading, profile, packs and failure", () => {
+  it("shows the creator page's loading, profile, packs and failure", () => {
     const state = createInitialState();
-    startAuthorLoad(
+    startCreatorLoad(
       { state },
-      { requestId: "request-1", authorId: "author-1" },
+      { requestId: "request-1", creatorId: "creator-1" },
     );
     expect(selectViewData({ state, i18n: {} })).toMatchObject({
-      isAuthorStep: true,
-      author: { isLoading: true, loadingLabel: "Loading author" },
+      isCreatorStep: true,
+      creator: { isLoading: true, loadingLabel: "Loading creator" },
     });
 
-    setAuthorPage(
+    const creator = {
+      id: "creator-1",
+      name: "Creator One",
+      avatarUrl: "https://files.example/avatar.png",
+    };
+    setCreatorPage(
       { state },
       {
         profile: {
-          id: "author-1",
-          name: "Author One",
-          avatarUrl: "https://files.example/avatar.png",
+          ...creator,
           description: ["Free tools."],
           links: [{ label: "X", url: "https://x.example" }],
         },
-        packs: [],
+        packs: [
+          {
+            id: "pack-1",
+            title: "Pack One",
+            assetCounts: [{ assetType: "FONTS", count: 1 }],
+            assetCount: 1,
+            coverUrl: "https://files.example/cover.png",
+            creator,
+          },
+        ],
       },
     );
-    expect(selectViewData({ state, i18n: {} }).author).toMatchObject({
+    const view = selectViewData({ state, i18n: {} }).creator;
+    expect(view).toMatchObject({
       isReady: true,
-      name: "Author One",
+      name: "Creator One",
       description: ["Free tools."],
       links: [{ label: "X", url: "https://x.example" }],
       packsTitle: "Asset packs",
+      hasNoPacks: false,
+      packs: [
+        {
+          id: "pack-1",
+          title: "Pack One",
+          coverUrl: "https://files.example/cover.png",
+          creatorName: "Creator One",
+          creatorAvatarUrl: "https://files.example/avatar.png",
+          assetCountLabel: "1 asset",
+          openLabel: "Open Pack One",
+        },
+      ],
+    });
+    // The creator page has every pack at once, so it has no Load More.
+    expect(view).not.toHaveProperty("hasMorePacks");
+    expect(view).not.toHaveProperty("loadMoreLabel");
+
+    setCreatorPage(
+      { state },
+      { profile: { ...creator, description: [], links: [] }, packs: [] },
+    );
+    expect(selectViewData({ state, i18n: {} }).creator).toMatchObject({
       hasNoPacks: true,
-      hasMorePacks: false,
+      noPacksLabel: "This creator has no asset packs yet.",
     });
 
-    setAuthorError({ state }, { error: { message: "Author gone." } });
-    expect(selectViewData({ state, i18n: {} }).author).toMatchObject({
+    setCreatorError({ state }, { error: { message: "Creator gone." } });
+    expect(selectViewData({ state, i18n: {} }).creator).toMatchObject({
       isFailed: true,
-      errorMessage: "Author gone.",
+      errorMessage: "Creator gone.",
     });
 
-    returnFromAuthorPage({ state });
+    returnFromCreatorPage({ state });
     expect(state.step).toBe("store");
   });
 

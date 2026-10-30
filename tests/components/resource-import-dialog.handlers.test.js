@@ -2,21 +2,21 @@ import { describe, expect, it, vi } from "vitest";
 import Subject from "../../src/deps/subject.js";
 import {
   handleAssetPreviewClose,
-  handleAuthorBack,
-  handleAuthorLinkClick,
-  handleAuthorLoadMorePacks,
-  handleAuthorPacksRetry,
-  handleAuthorRetry,
+  handleAssetPreviewOverlayClick,
   handleBeforeMount,
   handleCatalogRetry,
+  handleCreatorBack,
+  handleCreatorLinkClick,
+  handleCreatorRetry,
+  handleDialogClose,
   handleFormAction,
   handleSelectionBack,
   handleLoadMorePacks,
   handleOnUpdate,
   handlePackAssetClick,
   handlePackAssetKeyDown,
-  handlePackAuthorClick,
   handlePackBack,
+  handlePackCreatorClick,
   handlePackGridClick,
   handlePackImport,
   handlePackGridKeyDown,
@@ -26,7 +26,7 @@ import {
   handleResourceSelectionToggle,
   handleSelectionToggleAll,
   handleStoreSearchInput,
-  handleStoreTagsChange,
+  handleStoreAssetTypesChange,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 import * as dialogStore from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
 
@@ -63,6 +63,21 @@ const createDeps = () => {
 };
 
 describe("resource-import-dialog.handlers", () => {
+  it("closes from its close button, cancelling an import in progress", () => {
+    const { deps } = createDeps();
+    deps.store.selectOperationId = vi.fn(() => "operation-1");
+    deps.projectService.cancelResourceImport = vi.fn();
+
+    handleDialogClose(deps);
+
+    expect(deps.projectService.cancelResourceImport).toHaveBeenCalledWith({
+      operationId: "operation-1",
+    });
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "import-cancelled" }),
+    );
+  });
+
   it("imports the selected resources directly from the selection page", async () => {
     const { deps } = createDeps();
     const values = {
@@ -296,7 +311,7 @@ const createStoreDeps = () => {
     appService: {
       listAssetStorePacks: vi.fn(),
       getAssetStorePack: vi.fn(),
-      getAssetStoreAuthor: vi.fn(),
+      getAssetStoreCreator: vi.fn(),
       openUrl: vi.fn(),
       getPath: vi.fn(() => "/project/scenes"),
     },
@@ -311,13 +326,15 @@ const createStoreDeps = () => {
 const storePack = (id) => ({
   id,
   title: `Pack ${id}`,
+  assetCounts: [{ assetType: "IMAGES", count: 3 }],
   assetCount: 3,
   coverUrl: `https://files.example/${id}.png`,
-  description: [`About ${id}.`],
-  screenshotUrls: [`https://files.example/${id}-shot.jpg`],
   releasedAt: 1786492800000,
-  author: { id: "author-1", name: "Author One", avatarUrl: undefined },
+  creator: { id: "creator-1", name: "Creator One", avatarUrl: undefined },
 });
+
+// Creator page cards are the store list's cards.
+const creatorPack = (id) => storePack(id);
 
 const deferred = () => {
   let resolve;
@@ -361,7 +378,7 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
       cursor: undefined,
       query: "",
-      tags: [],
+      assetTypes: [],
     });
     expect(state.step).toBe("store");
     expect(state.catalog).toMatchObject({
@@ -393,7 +410,7 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
       cursor: "c2",
       query: "",
-      tags: [],
+      assetTypes: [],
     });
     expect(state.catalog.status).toBe("ready");
     expect(state.catalog.packs.map((pack) => pack.id)).toEqual([
@@ -425,8 +442,8 @@ describe("resource-import-dialog asset store", () => {
     const plan = { planId: "plan-1", package: {}, resources: [] };
     const detail = {
       ...storePack("pack-1"),
-      description: ["About the pack."],
-      screenshotUrls: [],
+      description: [{ text: "About the pack." }],
+      versionName: "1.0.0",
       importUrl: "https://files.example/manifest.json",
     };
     const details = deferred();
@@ -442,6 +459,8 @@ describe("resource-import-dialog asset store", () => {
     await settle();
 
     const opening = clickPack(deps, "pack-1");
+    // The list card shows at once. The card has no description; the page
+    // shows none until the details.
     expect(state).toMatchObject({
       step: "pack",
       packStatus: "details",
@@ -450,10 +469,13 @@ describe("resource-import-dialog asset store", () => {
         id: "pack-1",
         title: "Pack pack-1",
         coverUrl: "https://files.example/pack-1.png",
-        description: ["About pack-1."],
-        screenshotUrls: ["https://files.example/pack-1-shot.jpg"],
+        description: [],
         releasedAt: 1786492800000,
+        creator: { id: "creator-1", name: "Creator One" },
       },
+    });
+    expect(dialogStore.selectViewData({ state }).pack).toMatchObject({
+      description: [],
     });
     expect(deps.appService.getAssetStorePack).toHaveBeenCalledWith({
       assetPackId: "pack-1",
@@ -462,6 +484,11 @@ describe("resource-import-dialog asset store", () => {
     details.resolve(detail);
     await settle();
     expect(state).toMatchObject({ packStatus: "assets", pack: detail });
+    // The details replace the card.
+    expect(dialogStore.selectViewData({ state }).pack).toMatchObject({
+      description: [{ text: "About the pack." }],
+      versionName: "1.0.0",
+    });
     expect(deps.projectService.createResourceImportPlan).toHaveBeenCalledWith({
       url: "https://files.example/manifest.json",
       operationId: state.operationId,
@@ -506,7 +533,7 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.projectService.createResourceImportPlan).not.toHaveBeenCalled();
   });
 
-  it("keeps the author page open when the pack's assets finish loading", async () => {
+  it("keeps the creator page open when the pack's assets finish loading", async () => {
     const { state, deps } = createStoreDeps();
     const planned = deferred();
     deps.appService.listAssetStorePacks.mockResolvedValue({
@@ -515,14 +542,16 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
       description: [],
-      screenshotUrls: [],
       importUrl: "https://files.example/manifest.json",
     });
-    deps.appService.getAssetStoreAuthor.mockResolvedValue({
-      id: "author-1",
-      name: "Author One",
-      description: [],
-      links: [],
+    deps.appService.getAssetStoreCreator.mockResolvedValue({
+      creator: {
+        id: "creator-1",
+        name: "Creator One",
+        description: [],
+        links: [],
+      },
+      packs: [],
     });
     deps.projectService.createResourceImportPlan.mockReturnValue(
       planned.promise,
@@ -532,15 +561,15 @@ describe("resource-import-dialog asset store", () => {
 
     const opening = clickPack(deps, "pack-1");
     await settle();
-    await handlePackAuthorClick(deps);
-    expect(state.step).toBe("author");
+    await handlePackCreatorClick(deps);
+    expect(state.step).toBe("creator");
 
     planned.resolve({
       valid: true,
       plan: { planId: "plan-1", package: {}, resources: [] },
     });
     await opening;
-    expect(state).toMatchObject({ step: "author", packStatus: "ready" });
+    expect(state).toMatchObject({ step: "creator", packStatus: "ready" });
   });
 
   it("steps back from selection to the pack page and the store, and reopens the pack without fetching it again", async () => {
@@ -677,7 +706,7 @@ describe("resource-import-dialog asset store", () => {
       expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
         cursor: undefined,
         query: "transition",
-        tags: [],
+        assetTypes: [],
       });
       expect(state.searchText).toBe("transition ");
 
@@ -694,7 +723,7 @@ describe("resource-import-dialog asset store", () => {
     }
   });
 
-  it("opens filtered by the tag of the resource page it opened from", async () => {
+  it("opens filtered by the asset type of the resource page it opened from", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({ packs: [] });
     deps.appService.getPath.mockReturnValue("/project/audio-effects");
@@ -704,29 +733,31 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
       cursor: undefined,
       query: "",
-      tags: ["AUDIO_EFFECTS"],
+      assetTypes: ["AUDIO_EFFECTS"],
     });
 
-    await handleStoreTagsChange(deps, { _event: { detail: { value: [] } } });
+    await handleStoreAssetTypesChange(deps, {
+      _event: { detail: { value: [] } },
+    });
     closeDialog(deps);
     deps.appService.getPath.mockReturnValue("/project/images");
     openDialog(deps);
     await settle();
-    expect(state.catalog.tags).toEqual(["IMAGES"]);
+    expect(state.catalog.assetTypes).toEqual(["IMAGES"]);
     expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
       cursor: undefined,
       query: "",
-      tags: ["IMAGES"],
+      assetTypes: ["IMAGES"],
     });
 
     closeDialog(deps);
     deps.appService.getPath.mockReturnValue("/project/layouts");
     openDialog(deps);
     await settle();
-    expect(state.catalog.tags).toEqual([]);
+    expect(state.catalog.assetTypes).toEqual([]);
   });
 
-  it("reloads the first page when saved tags change, keeping the search", async () => {
+  it("reloads the first page when saved asset types change, keeping the search", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({
       packs: [storePack("pack-1")],
@@ -734,25 +765,25 @@ describe("resource-import-dialog asset store", () => {
     openDialog(deps);
     await settle();
     dialogStore.setCatalogQuery({ state }, { query: "fade" });
-    const saveTags = (value) =>
-      handleStoreTagsChange(deps, { _event: { detail: { value } } });
+    const saveAssetTypes = (value) =>
+      handleStoreAssetTypesChange(deps, { _event: { detail: { value } } });
 
-    await saveTags(["SOUNDS", "IMAGES"]);
+    await saveAssetTypes(["SOUNDS", "IMAGES"]);
     expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
       cursor: undefined,
       query: "fade",
-      tags: ["SOUNDS", "IMAGES"],
+      assetTypes: ["SOUNDS", "IMAGES"],
     });
     expect(state.catalog.packs).toEqual([storePack("pack-1")]);
 
-    await saveTags(["IMAGES", "SOUNDS"]);
+    await saveAssetTypes(["IMAGES", "SOUNDS"]);
     expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(2);
 
-    await saveTags([]);
+    await saveAssetTypes([]);
     expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
       cursor: undefined,
       query: "fade",
-      tags: [],
+      assetTypes: [],
     });
   });
 
@@ -800,9 +831,28 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.render).toHaveBeenCalledTimes(3);
   });
 
+  it("keeps a preview open for clicks on its controls, such as a sound's player", () => {
+    const { state, deps } = createStoreDeps();
+    state.previewAssetSourceId = "sounds:sound-1";
+    const controls = { dataset: { previewControls: "true" } };
+
+    handleAssetPreviewOverlayClick(deps, {
+      _event: { composedPath: () => [{}, controls, { dataset: {} }] },
+    });
+    expect(state.previewAssetSourceId).toBe("sounds:sound-1");
+    expect(deps.render).not.toHaveBeenCalled();
+
+    handleAssetPreviewOverlayClick(deps, {
+      _event: { composedPath: () => [{ dataset: {} }, {}] },
+    });
+    expect(state.previewAssetSourceId).toBeUndefined();
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
   const openPackPage = async (deps, packId = "pack-1") => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack(packId),
+      description: [],
       importUrl: `https://files.example/${packId}.json`,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
@@ -812,15 +862,22 @@ describe("resource-import-dialog asset store", () => {
     await clickPack(deps, packId);
   };
 
-  const authorProfile = {
-    id: "author-1",
-    name: "Author One",
+  const creatorProfile = {
+    id: "creator-1",
+    name: "Creator One",
     avatarUrl: undefined,
     description: ["Makes transitions."],
-    links: [{ label: "X", url: "https://x.example/author" }],
+    links: [{ label: "X", url: "https://x.example/creator" }],
   };
 
-  it("opens the pack's author page and steps back to the pack", async () => {
+  const creatorPage = (
+    packs = [creatorPack("pack-1"), creatorPack("pack-2")],
+  ) => ({
+    creator: creatorProfile,
+    packs,
+  });
+
+  it("opens the pack's creator page with their packs from one request and steps back to the pack", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({
       packs: [storePack("pack-1")],
@@ -829,41 +886,62 @@ describe("resource-import-dialog asset store", () => {
     await settle();
     await openPackPage(deps);
     deps.appService.listAssetStorePacks.mockClear();
-    deps.appService.getAssetStoreAuthor.mockResolvedValue(authorProfile);
-    deps.appService.listAssetStorePacks.mockResolvedValue({
-      packs: [storePack("pack-1"), storePack("pack-2")],
-      nextCursor: "author-c2",
-    });
+    deps.appService.getAssetStoreCreator.mockResolvedValue(creatorPage());
 
-    const loading = handlePackAuthorClick(deps);
-    expect(state.step).toBe("author");
-    expect(state.author.status).toBe("loading");
+    const loading = handlePackCreatorClick(deps);
+    expect(state.step).toBe("creator");
+    expect(state.creator.status).toBe("loading");
     await loading;
 
-    expect(deps.appService.getAssetStoreAuthor).toHaveBeenCalledWith({
-      authorId: "author-1",
+    expect(deps.appService.getAssetStoreCreator).toHaveBeenCalledTimes(1);
+    expect(deps.appService.getAssetStoreCreator).toHaveBeenCalledWith({
+      creatorId: "creator-1",
     });
-    expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
-      authorId: "author-1",
-    });
-    expect(state.author).toMatchObject({
+    expect(deps.appService.listAssetStorePacks).not.toHaveBeenCalled();
+    expect(state.creator).toMatchObject({
       status: "ready",
-      profile: authorProfile,
-      nextCursor: "author-c2",
+      profile: creatorProfile,
     });
-    expect(state.author.packs.map((pack) => pack.id)).toEqual([
+    expect(state.creator.packs.map((pack) => pack.id)).toEqual([
       "pack-1",
       "pack-2",
     ]);
+    expect(
+      dialogStore
+        .selectViewData({ state })
+        .creator.packs.map((pack) => pack.id),
+    ).toEqual(["pack-1", "pack-2"]);
 
-    handleAuthorBack(deps);
+    handleCreatorBack(deps);
     expect(state.step).toBe("pack");
-    handlePackAuthorClick(deps);
-    expect(state.step).toBe("author");
-    expect(deps.appService.getAssetStoreAuthor).toHaveBeenCalledTimes(1);
+    handlePackCreatorClick(deps);
+    expect(state.step).toBe("creator");
+    expect(deps.appService.getAssetStoreCreator).toHaveBeenCalledTimes(1);
   });
 
-  it("returns to the author page from a pack opened there", async () => {
+  it("drops a creator page that arrives after a newer request", async () => {
+    const { state, deps } = createStoreDeps();
+    const stale = deferred();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    openDialog(deps);
+    await settle();
+    await openPackPage(deps);
+    deps.appService.getAssetStoreCreator
+      .mockReturnValueOnce(stale.promise)
+      .mockResolvedValueOnce(creatorPage([creatorPack("fresh")]));
+
+    const first = handlePackCreatorClick(deps);
+    await handleCreatorRetry(deps);
+    stale.resolve(creatorPage([creatorPack("stale")]));
+    await first;
+
+    expect(state.creator.status).toBe("ready");
+    expect(state.creator.packs.map((pack) => pack.id)).toEqual(["fresh"]);
+  });
+
+  it("returns to the creator page from a pack opened there", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({
       packs: [storePack("pack-1")],
@@ -871,26 +949,24 @@ describe("resource-import-dialog asset store", () => {
     openDialog(deps);
     await settle();
     await openPackPage(deps);
-    deps.appService.getAssetStoreAuthor.mockResolvedValue(authorProfile);
-    deps.appService.listAssetStorePacks.mockResolvedValue({
-      packs: [storePack("pack-1"), storePack("pack-2")],
-    });
-    await handlePackAuthorClick(deps);
+    deps.appService.getAssetStoreCreator.mockResolvedValue(creatorPage());
+    await handlePackCreatorClick(deps);
 
     await openPackPage(deps, "pack-2");
     expect(state).toMatchObject({ step: "pack", planPackId: "pack-2" });
+    expect(state.pack.creator).toEqual(storePack("pack-2").creator);
     handlePackBack(deps);
-    expect(state.step).toBe("author");
-    handleAuthorBack(deps);
+    expect(state.step).toBe("creator");
+    handleCreatorBack(deps);
     expect(state.step).toBe("pack");
     handlePackBack(deps);
-    expect(state.step).toBe("author");
+    expect(state.step).toBe("creator");
   });
 
-  it("shows a missing author's message and retries", async () => {
+  it("shows a missing creator's message and retries", async () => {
     const { state, deps } = createStoreDeps();
     deps.i18n = {
-      resourceImportErrors: { asset_author_not_found: "Author gone." },
+      resourceImportErrors: { asset_creator_not_found: "Creator gone." },
     };
     deps.appService.listAssetStorePacks.mockResolvedValue({
       packs: [storePack("pack-1")],
@@ -898,65 +974,32 @@ describe("resource-import-dialog asset store", () => {
     openDialog(deps);
     await settle();
     await openPackPage(deps);
-    deps.appService.getAssetStoreAuthor.mockRejectedValueOnce(
-      Object.assign(new Error("raw"), { code: "asset_author_not_found" }),
+    deps.appService.getAssetStoreCreator.mockRejectedValueOnce(
+      Object.assign(new Error("raw"), { code: "asset_creator_not_found" }),
     );
 
-    await handlePackAuthorClick(deps);
-    expect(state.author).toMatchObject({
+    await handlePackCreatorClick(deps);
+    expect(state.creator).toMatchObject({
       status: "error",
-      error: { message: "Author gone." },
+      error: { message: "Creator gone." },
     });
 
-    deps.appService.getAssetStoreAuthor.mockResolvedValue(authorProfile);
-    await handleAuthorRetry(deps);
-    expect(state.author.status).toBe("ready");
-    handleAuthorBack(deps);
+    deps.appService.getAssetStoreCreator.mockResolvedValue(creatorPage());
+    await handleCreatorRetry(deps);
+    expect(state.creator.status).toBe("ready");
+    handleCreatorBack(deps);
     expect(state.step).toBe("pack");
   });
 
-  it("pages through an author's packs and retries a failed page", async () => {
-    const { state, deps } = createStoreDeps();
-    deps.appService.listAssetStorePacks.mockResolvedValue({
-      packs: [storePack("pack-1")],
-    });
-    openDialog(deps);
-    await settle();
-    await openPackPage(deps);
-    deps.appService.getAssetStoreAuthor.mockResolvedValue(authorProfile);
-    deps.appService.listAssetStorePacks
-      .mockResolvedValueOnce({ packs: [storePack("pack-1")], nextCursor: "a2" })
-      .mockRejectedValueOnce(new Error("offline"))
-      .mockResolvedValueOnce({ packs: [storePack("pack-2")] });
-    await handlePackAuthorClick(deps);
-
-    await handleAuthorLoadMorePacks(deps);
-    expect(state.author).toMatchObject({
-      morePacksFailed: true,
-      packsFailedCursor: "a2",
-    });
-    await handleAuthorPacksRetry(deps);
-
-    expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
-      cursor: "a2",
-      authorId: "author-1",
-    });
-    expect(state.author.packs.map((pack) => pack.id)).toEqual([
-      "pack-1",
-      "pack-2",
-    ]);
-    expect(state.author.nextCursor).toBeUndefined();
-  });
-
-  it("opens an author's link in the system browser", () => {
+  it("opens a creator's link in the system browser", () => {
     const { deps } = createStoreDeps();
 
-    handleAuthorLinkClick(deps, {
+    handleCreatorLinkClick(deps, {
       _event: {
         composedPath: () => [{}, { dataset: { url: "https://x.example" } }],
       },
     });
-    handleAuthorLinkClick(deps, { _event: { composedPath: () => [{}] } });
+    handleCreatorLinkClick(deps, { _event: { composedPath: () => [{}] } });
 
     expect(deps.appService.openUrl).toHaveBeenCalledTimes(1);
     expect(deps.appService.openUrl).toHaveBeenCalledWith("https://x.example");

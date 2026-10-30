@@ -392,6 +392,39 @@ describe("resourcePackageImportService", () => {
     });
   });
 
+  it("loads a sound's audio for its full-screen preview", async () => {
+    const { service, importClient } = createService();
+    importClient.fetchManifest.mockResolvedValue({
+      manifest: assetManifest(),
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    importClient.downloadFile.mockImplementation(async ({ descriptor }) => ({
+      bytes: new Uint8Array([1, 2, 3]),
+      byteLength: 3,
+      contentType: descriptor.mimeType,
+    }));
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const sound = planned.plan.resources.find(
+      (resource) => resource.resourceType === "sounds",
+    );
+
+    const result = await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: sound.largePreviewSourceId,
+    });
+
+    expect(result).toMatchObject({
+      valid: true,
+      preview: {
+        sourceFileId: "file.sound",
+        mimeType: "audio/mpeg",
+        kind: "audio",
+      },
+    });
+  });
+
   it("enforces the total download limit while loading previews", async () => {
     const { service, importClient } = createService();
     importClient.fetchManifest.mockResolvedValue({
@@ -574,9 +607,7 @@ describe("resourcePackageImportService", () => {
     } = createService();
     const unknownOutcome = new Error("confirmation interrupted");
     unknownOutcome.commitOutcome = "unknown";
-    commandApi.commitAssetImportPackage.mockRejectedValueOnce(
-      unknownOutcome,
-    );
+    commandApi.commitAssetImportPackage.mockRejectedValueOnce(unknownOutcome);
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
     });

@@ -14,6 +14,7 @@ const configs = [
     commandType: "sound.create",
     idField: "soundId",
     previewFileFields: ["previewMediaFileId"],
+    largePreviewFileFields: ["fileId", "previewMediaFileId"],
     importPriority: 20,
   },
   {

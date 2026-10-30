@@ -367,22 +367,33 @@ const rewriteMappedReferences = (
     return resourceIdBySourceId?.get(referenceId) ?? referenceId;
   });
 
-// The full-size preview the pack page shows when an asset is clicked. Types
-// without one reuse their grid preview, and a file the preview player cannot
-// show is skipped instead of rejecting the package.
+// The full-size preview the pack page shows when an asset is clicked; a sound
+// plays its audio. Types without one reuse their grid preview, and a file the
+// preview player cannot show is skipped instead of rejecting the package.
 const getLargePreviewSourceId = ({ item, config, files }) => {
   const fields = config.largePreviewFileFields ?? config.previewFileFields;
   for (const field of fields) {
     const mimeType = files[item[field]]?.mimeType?.toLowerCase();
     if (
       PREVIEW_IMAGE_MIME_TYPES.has(mimeType) ||
-      PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+      PREVIEW_VIDEO_MIME_TYPES.has(mimeType) ||
+      isAssetPackageFileMimeTypeAllowed({ validationKind: "audio", mimeType })
     ) {
       return item[field];
     }
   }
   return undefined;
 };
+
+// A color previews as a swatch of its value. Only the #RRGGBB values a
+// project's colors hold are kept, so package text never reaches a style.
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+const getColorHex = (item) =>
+  item.type === "color" &&
+  typeof item.hex === "string" &&
+  HEX_COLOR_PATTERN.test(item.hex)
+    ? item.hex.toUpperCase()
+    : undefined;
 
 const getPreviewData = ({ item, config, files }) => {
   for (const field of config.previewFileFields) {
@@ -712,6 +723,8 @@ export const createAssetImportPlan = ({
       config,
       files: manifest.repository.files.items,
     });
+    const colorHex = getColorHex(item);
+    if (colorHex) resource.colorHex = colorHex;
     resources.push(resource);
     const hasNameConflict = Object.values(
       repositoryState?.[entry.resourceType]?.items ?? {},

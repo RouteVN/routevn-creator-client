@@ -29,7 +29,7 @@ const loadCatalog = async (deps, { cursor } = {}) => {
     const page = await appService.listAssetStorePacks({
       cursor,
       query: store.selectCatalogQuery(),
-      tags: store.selectCatalogTags(),
+      assetTypes: store.selectCatalogAssetTypes(),
     });
     if (store.selectCatalogRequestId() !== requestId) return;
     store.setCatalogPage({ packs: page.packs, nextCursor: page.nextCursor });
@@ -40,10 +40,11 @@ const loadCatalog = async (deps, { cursor } = {}) => {
   render();
 };
 
-// The store opens filtered by the tag of the resource page it opened from.
+// The store opens filtered by the asset type of the resource page it opened
+// from.
 const openStore = (deps) => {
   const { appService, store } = deps;
-  store.setCatalogTagsForPath({ path: appService.getPath() });
+  store.setCatalogAssetTypesForPath({ path: appService.getPath() });
   return loadCatalog(deps);
 };
 
@@ -109,18 +110,19 @@ export const handleStoreSearchInput = (deps, payload) => {
   });
 };
 
-// Saving the tag list reloads the store unless the tags are unchanged.
-export const handleStoreTagsChange = (deps, payload) => {
+// Saving the asset type list reloads the store unless the types are
+// unchanged.
+export const handleStoreAssetTypesChange = (deps, payload) => {
   const { store } = deps;
-  const tags = payload._event.detail.value;
-  const currentTags = store.selectCatalogTags();
+  const assetTypes = payload._event.detail.value;
+  const currentTypes = store.selectCatalogAssetTypes();
   if (
-    tags.length === currentTags.length &&
-    tags.every((tag) => currentTags.includes(tag))
+    assetTypes.length === currentTypes.length &&
+    assetTypes.every((assetType) => currentTypes.includes(assetType))
   ) {
     return;
   }
-  store.setCatalogTags({ tags });
+  store.setCatalogAssetTypes({ assetTypes });
   return loadCatalog(deps);
 };
 
@@ -135,9 +137,10 @@ export const handleLoadMorePacks = (deps) => {
 };
 
 // Opens the pack page at once from the pack's card, then loads the pack's
-// details and, from its manifest, the import plan whose assets the page
-// lists. Reopening the pack whose plan is loaded keeps the choices made for
-// it. A response for a pack the user has left is dropped.
+// details, with its description, and, from its manifest, the import plan
+// whose assets the page lists. Reopening the pack whose plan is loaded keeps
+// the choices made for it. A response for a pack the user has left is
+// dropped.
 const openPack = async (deps, packId) => {
   const { appService, projectService, store, render } = deps;
   if (store.selectPlan() && store.selectPlanPackId() === packId) {
@@ -193,104 +196,65 @@ export const handlePackBack = (deps) => {
   render();
 };
 
-// Loads an author's profile and first page of packs together. A response for
-// an earlier request, or from before the dialog reopened, is dropped.
-const loadAuthor = async (deps, authorId) => {
+// Loads a creator's profile and packs in one request. A response for an
+// earlier request, or from before the dialog reopened, is dropped.
+const loadCreator = async (deps, creatorId) => {
   const { appService, store, render } = deps;
   const requestId = generateId();
-  store.startAuthorLoad({ requestId, authorId });
+  store.startCreatorLoad({ requestId, creatorId });
   render();
   try {
-    const [profile, page] = await Promise.all([
-      appService.getAssetStoreAuthor({ authorId }),
-      appService.listAssetStorePacks({ authorId }),
-    ]);
-    if (store.selectAuthorRequestId() !== requestId) return;
-    store.setAuthorPage({
-      profile,
-      packs: page.packs,
-      nextCursor: page.nextCursor,
-    });
+    const page = await appService.getAssetStoreCreator({ creatorId });
+    if (store.selectCreatorRequestId() !== requestId) return;
+    store.setCreatorPage({ profile: page.creator, packs: page.packs });
   } catch (error) {
-    if (store.selectAuthorRequestId() !== requestId) return;
-    store.setAuthorError({
+    if (store.selectCreatorRequestId() !== requestId) return;
+    store.setCreatorError({
       error: mapErrorMessage({ code: error.code }, deps.i18n),
     });
   }
   render();
 };
 
-const openAuthor = (deps, authorId) => {
+const openCreator = (deps, creatorId) => {
   const { store, render } = deps;
   if (
-    store.selectAuthorId() === authorId &&
-    store.selectAuthorStatus() === "ready"
+    store.selectCreatorId() === creatorId &&
+    store.selectCreatorStatus() === "ready"
   ) {
-    store.reopenAuthorPage();
+    store.reopenCreatorPage();
     render();
     return;
   }
-  return loadAuthor(deps, authorId);
+  return loadCreator(deps, creatorId);
 };
 
-export const handlePackAuthorClick = (deps) => {
+export const handlePackCreatorClick = (deps) => {
   const { store } = deps;
-  return openAuthor(deps, store.selectPack().author.id);
+  return openCreator(deps, store.selectPack().creator.id);
 };
 
-export const handlePackAuthorKeyDown = (deps, payload) => {
+export const handlePackCreatorKeyDown = (deps, payload) => {
   const { store } = deps;
   const { _event } = payload;
   if (_event.key !== "Enter" && _event.key !== " ") return;
   _event.preventDefault();
-  return openAuthor(deps, store.selectPack().author.id);
+  return openCreator(deps, store.selectPack().creator.id);
 };
 
-export const handleAuthorBack = (deps) => {
+export const handleCreatorBack = (deps) => {
   const { store, render } = deps;
-  store.returnFromAuthorPage();
+  store.returnFromCreatorPage();
   render();
 };
 
-export const handleAuthorRetry = (deps) => {
+export const handleCreatorRetry = (deps) => {
   const { store } = deps;
-  return loadAuthor(deps, store.selectAuthorId());
+  return loadCreator(deps, store.selectCreatorId());
 };
 
-const loadAuthorPacks = async (deps, cursor) => {
-  const { appService, store, render } = deps;
-  const requestId = generateId();
-  store.startAuthorPacksLoad({ requestId });
-  render();
-  try {
-    const page = await appService.listAssetStorePacks({
-      cursor,
-      authorId: store.selectAuthorId(),
-    });
-    if (store.selectAuthorPacksRequestId() !== requestId) return;
-    store.setAuthorPacksPage({
-      packs: page.packs,
-      nextCursor: page.nextCursor,
-    });
-  } catch {
-    if (store.selectAuthorPacksRequestId() !== requestId) return;
-    store.setAuthorPacksError({ cursor });
-  }
-  render();
-};
-
-export const handleAuthorLoadMorePacks = (deps) => {
-  const { store } = deps;
-  return loadAuthorPacks(deps, store.selectAuthorNextCursor());
-};
-
-export const handleAuthorPacksRetry = (deps) => {
-  const { store } = deps;
-  return loadAuthorPacks(deps, store.selectAuthorPacksFailedCursor());
-};
-
-// Author profile links open in the system browser.
-export const handleAuthorLinkClick = (deps, payload) => {
+// Creator profile links open in the system browser.
+export const handleCreatorLinkClick = (deps, payload) => {
   const { appService } = deps;
   const link = payload._event
     .composedPath()
@@ -348,6 +312,16 @@ export const handleAssetPreviewClose = (deps) => {
   const { store, render } = deps;
   store.closeAssetPreview();
   render();
+};
+
+// A click closes the preview, except on a preview's own controls, such as a
+// sound's player.
+export const handleAssetPreviewOverlayClick = (deps, payload) => {
+  const onControls = payload._event
+    .composedPath()
+    .some((target) => target?.dataset?.previewControls !== undefined);
+  if (onControls) return;
+  handleAssetPreviewClose(deps);
 };
 
 const findPackCard = (_event) =>

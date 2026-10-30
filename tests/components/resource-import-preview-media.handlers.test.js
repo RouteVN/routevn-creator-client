@@ -51,14 +51,16 @@ describe("resource-import-preview-media.handlers", () => {
 
   it("cancels loading and revokes its object URL when unmounted", () => {
     const projectService = { cancelResourceImport: vi.fn() };
+    const audioService = { stop: vi.fn() };
     const store = {
       selectOperationId: vi.fn(() => "operation-1"),
       selectSrc: vi.fn(() => "blob:preview"),
+      selectKind: vi.fn(() => "image"),
       cancelLoading: vi.fn(),
     };
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
 
-    const cleanup = handleBeforeMount({ projectService, store });
+    const cleanup = handleBeforeMount({ projectService, audioService, store });
     cleanup();
 
     expect(projectService.cancelResourceImport).toHaveBeenCalledWith({
@@ -66,6 +68,28 @@ describe("resource-import-preview-media.handlers", () => {
     });
     expect(store.cancelLoading).toHaveBeenCalledTimes(1);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+    expect(audioService.stop).not.toHaveBeenCalled();
+  });
+
+  it("stops a sound when its preview is unmounted", () => {
+    const audioService = { stop: vi.fn() };
+    const store = {
+      selectOperationId: vi.fn(),
+      selectSrc: vi.fn(() => "blob:sound"),
+      selectKind: vi.fn(() => "audio"),
+      cancelLoading: vi.fn(),
+    };
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    const cleanup = handleBeforeMount({
+      projectService: { cancelResourceImport: vi.fn() },
+      audioService,
+      store,
+    });
+    cleanup();
+
+    expect(audioService.stop).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:sound");
   });
 
   it("waits until a lazy preview is visible before loading it", async () => {

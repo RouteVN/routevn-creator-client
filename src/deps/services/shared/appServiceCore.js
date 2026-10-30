@@ -142,15 +142,15 @@ export const createAppServiceCore = ({
     getTheme,
     applyTheme,
 
-    // Free packs from the RouteVN asset store, newest first; `authorId` lists
-    // one author's packs.
-    listAssetStorePacks({ cursor, query, tags, authorId } = {}) {
-      return assetStoreClient.listAssetPacks({ cursor, query, tags, authorId });
+    // Free packs from the RouteVN asset store, newest first.
+    listAssetStorePacks({ cursor, query, assetTypes } = {}) {
+      return assetStoreClient.listAssetPacks({ cursor, query, assetTypes });
     },
 
-    // An asset store author's profile: name, avatar, bio and links.
-    getAssetStoreAuthor({ authorId } = {}) {
-      return assetStoreClient.getAuthorById({ authorId });
+    // An asset store creator's profile (name, avatar, bio and links) and
+    // their free packs.
+    getAssetStoreCreator({ creatorId } = {}) {
+      return assetStoreClient.getCreatorById({ creatorId });
     },
 
     // One free pack, with the import link the resource importer reads.

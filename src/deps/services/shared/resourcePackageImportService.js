@@ -321,9 +321,14 @@ export const createResourcePackageImportService = ({
           });
         }
         const mimeType = previewFile.descriptor.mimeType.toLowerCase();
+        const isAudio = isAssetPackageFileMimeTypeAllowed({
+          validationKind: "audio",
+          mimeType,
+        });
         if (
           !PREVIEW_IMAGE_MIME_TYPES.has(mimeType) &&
-          !PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+          !PREVIEW_VIDEO_MIME_TYPES.has(mimeType) &&
+          !isAudio
         ) {
           fail(
             "preview_type_unsupported",
@@ -361,7 +366,11 @@ export const createResourcePackageImportService = ({
           sourceFileId,
           bytes: download.bytes,
           mimeType,
-          kind: PREVIEW_VIDEO_MIME_TYPES.has(mimeType) ? "video" : "image",
+          kind: isAudio
+            ? "audio"
+            : PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+              ? "video"
+              : "image",
         };
         previewState.downloadedBytes += download.byteLength;
         previewState.results.set(sourceFileId, preview);

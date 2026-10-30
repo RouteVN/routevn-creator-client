@@ -7,58 +7,70 @@ import { generateId } from "../../internal/id.js";
 
 const STORE_STEP = "store";
 const PACK_STEP = "pack";
-const AUTHOR_STEP = "author";
+const CREATOR_STEP = "creator";
 const SELECTION_STEP = "selection";
 const PROGRESS_STEP = "progress";
 
-// The asset store's tag filter, in the order it shows them. Each tag names a
-// kind of resource a pack holds, takes that resource type's name, and is
-// chosen when the store opens from that resource type's page.
-const STORE_TAGS = Object.freeze([
-  { tag: "IMAGES", resourceType: "images", path: "/project/images" },
-  { tag: "SOUNDS", resourceType: "sounds", path: "/project/sounds" },
-  { tag: "VIDEOS", resourceType: "videos", path: "/project/videos" },
+// The asset store's asset type filter, in the order it shows them. Each type
+// names a kind of resource a pack holds, takes that resource type's name, and
+// is chosen when the store opens from that resource type's page.
+const STORE_ASSET_TYPES = Object.freeze([
+  { assetType: "IMAGES", resourceType: "images", path: "/project/images" },
+  { assetType: "SOUNDS", resourceType: "sounds", path: "/project/sounds" },
+  { assetType: "VIDEOS", resourceType: "videos", path: "/project/videos" },
   {
-    tag: "CHARACTERS",
+    assetType: "CHARACTERS",
     resourceType: "characters",
     path: "/project/characters",
   },
   {
-    tag: "TRANSFORMS",
+    assetType: "TRANSFORMS",
     resourceType: "transforms",
     path: "/project/transforms",
   },
   {
-    tag: "ANIMATIONS",
+    assetType: "ANIMATIONS",
     resourceType: "animations",
     path: "/project/animations",
   },
   {
-    tag: "AUDIO_EFFECTS",
+    assetType: "AUDIO_EFFECTS",
     resourceType: "audioEffects",
     path: "/project/audio-effects",
   },
-  { tag: "PARTICLES", resourceType: "particles", path: "/project/particles" },
   {
-    tag: "SPRITESHEETS",
+    assetType: "PARTICLES",
+    resourceType: "particles",
+    path: "/project/particles",
+  },
+  {
+    assetType: "SPRITESHEETS",
     resourceType: "spritesheets",
     path: "/project/spritesheets",
   },
-  { tag: "COLORS", resourceType: "colors", path: "/project/colors" },
-  { tag: "FONTS", resourceType: "fonts", path: "/project/fonts" },
+  { assetType: "COLORS", resourceType: "colors", path: "/project/colors" },
+  { assetType: "FONTS", resourceType: "fonts", path: "/project/fonts" },
   {
-    tag: "TEXT_STYLES",
+    assetType: "TEXT_STYLES",
     resourceType: "textStyles",
     path: "/project/text-styles",
   },
-  { tag: "VARIABLES", resourceType: "variables", path: "/project/variables" },
-  { tag: "CONTROLS", resourceType: "controls", path: "/project/controls" },
+  {
+    assetType: "VARIABLES",
+    resourceType: "variables",
+    path: "/project/variables",
+  },
+  {
+    assetType: "CONTROLS",
+    resourceType: "controls",
+    path: "/project/controls",
+  },
 ]);
 
 const createCatalogState = () => ({
   status: "idle",
   query: "",
-  tags: [],
+  assetTypes: [],
   packs: [],
   nextCursor: undefined,
   requestId: undefined,
@@ -66,18 +78,13 @@ const createCatalogState = () => ({
   failedCursor: undefined,
 });
 
-const createAuthorState = () => ({
+const createCreatorState = () => ({
   status: "idle",
   id: undefined,
   requestId: undefined,
   profile: undefined,
   error: undefined,
   packs: [],
-  nextCursor: undefined,
-  packsRequestId: undefined,
-  loadingMorePacks: false,
-  packsFailedCursor: undefined,
-  morePacksFailed: false,
 });
 
 const getResourceLabel = (resource, index, copy) =>
@@ -218,10 +225,10 @@ export const createInitialState = () => ({
   // The pack page loads in order: "details", then "assets", then "ready";
   // "failed" keeps what it has under the error.
   packStatus: "idle",
-  // Where Back leads from the pack page and from the author page.
+  // Where Back leads from the pack page and from the creator page.
   packReturnStep: STORE_STEP,
-  authorReturnStep: STORE_STEP,
-  author: createAuthorState(),
+  creatorReturnStep: STORE_STEP,
+  creator: createCreatorState(),
   // Folder groups collapsed on the pack page.
   collapsedPackGroupKeys: [],
   previewAssetSourceId: undefined,
@@ -246,8 +253,8 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
     state.pack = undefined;
     state.packStatus = "idle";
     state.packReturnStep = STORE_STEP;
-    state.authorReturnStep = STORE_STEP;
-    state.author = createAuthorState();
+    state.creatorReturnStep = STORE_STEP;
+    state.creator = createCreatorState();
     state.collapsedPackGroupKeys = [];
     state.previewAssetSourceId = undefined;
     state.reviewValues = {};
@@ -268,15 +275,17 @@ export const setCatalogQuery = ({ state }, { query } = {}) => {
   state.catalog.query = query;
 };
 
-// New tags reload the store from its first page.
-export const setCatalogTags = ({ state }, { tags } = {}) => {
-  state.catalog.tags = tags;
+// New asset types reload the store from its first page.
+export const setCatalogAssetTypes = ({ state }, { assetTypes } = {}) => {
+  state.catalog.assetTypes = assetTypes;
 };
 
-// Chooses the tag of the resource page at `path`, or none.
-export const setCatalogTagsForPath = ({ state }, { path } = {}) => {
-  const pageTag = STORE_TAGS.find((storeTag) => storeTag.path === path);
-  state.catalog.tags = pageTag ? [pageTag.tag] : [];
+// Chooses the asset type of the resource page at `path`, or none.
+export const setCatalogAssetTypesForPath = ({ state }, { path } = {}) => {
+  const pageType = STORE_ASSET_TYPES.find(
+    (storeType) => storeType.path === path,
+  );
+  state.catalog.assetTypes = pageType ? [pageType.assetType] : [];
 };
 
 // A first page replaces the list; a cursor appends the next page to it.
@@ -306,9 +315,9 @@ export const setCatalogError = ({ state }, { cursor } = {}) => {
   state.catalog.failedCursor = cursor;
 };
 
-// A pack opens from the store list or an author page at once, with what its
-// card shows: everything but the version, the last update and the assets,
-// which load next. Back returns there.
+// A pack opens at once from the store list or a creator page, with what its
+// card shows; Back returns there. The pack's details then replace the card,
+// with its description, version and last update, and the assets load last.
 export const startOpeningPack = ({ state }, { operationId, pack } = {}) => {
   state.operationId = operationId;
   state.packReturnStep = state.step;
@@ -317,10 +326,10 @@ export const startOpeningPack = ({ state }, { operationId, pack } = {}) => {
     id: pack.id,
     title: pack.title,
     coverUrl: pack.coverUrl,
+    assetCounts: pack.assetCounts,
     assetCount: pack.assetCount,
-    author: pack.author,
-    description: pack.description,
-    screenshotUrls: pack.screenshotUrls,
+    creator: pack.creator,
+    description: [],
     releasedAt: pack.releasedAt,
   };
   state.packStatus = "details";
@@ -357,7 +366,7 @@ export const setPlan = ({ state }, { plan } = {}) => {
 
 // The pack's assets, read from its manifest, finish the pack page. Import then
 // opens the selection without another request. The step stays as it is, so
-// a page the user moved on to, such as the author's, stays open.
+// a page the user moved on to, such as the creator's, stays open.
 export const setPackPage = ({ state }, { plan } = {}) => {
   state.plan = plan;
   state.planPackId = state.pack.id;
@@ -398,65 +407,42 @@ export const returnFromPackPage = ({ state }) => {
   state.error = undefined;
 };
 
-// The author page opens from a pack page or, for an author already loaded,
+// The creator page opens from a pack page or, for a creator already loaded,
 // again from wherever it was left.
-export const startAuthorLoad = ({ state }, { requestId, authorId } = {}) => {
-  if (state.step !== AUTHOR_STEP) state.authorReturnStep = state.step;
-  state.step = AUTHOR_STEP;
+export const startCreatorLoad = ({ state }, { requestId, creatorId } = {}) => {
+  if (state.step !== CREATOR_STEP) state.creatorReturnStep = state.step;
+  state.step = CREATOR_STEP;
   state.error = undefined;
-  state.author = createAuthorState();
-  state.author.status = "loading";
-  state.author.id = authorId;
-  state.author.requestId = requestId;
+  state.creator = createCreatorState();
+  state.creator.status = "loading";
+  state.creator.id = creatorId;
+  state.creator.requestId = requestId;
 };
 
-export const reopenAuthorPage = ({ state }) => {
-  state.authorReturnStep = state.step;
-  state.step = AUTHOR_STEP;
+export const reopenCreatorPage = ({ state }) => {
+  state.creatorReturnStep = state.step;
+  state.step = CREATOR_STEP;
   state.error = undefined;
 };
 
-export const setAuthorPage = (
-  { state },
-  { profile, packs, nextCursor } = {},
-) => {
-  state.author.status = "ready";
-  state.author.requestId = undefined;
-  state.author.profile = profile;
-  state.author.packs = packs;
-  state.author.nextCursor = nextCursor;
+export const setCreatorPage = ({ state }, { profile, packs } = {}) => {
+  state.creator.status = "ready";
+  state.creator.requestId = undefined;
+  state.creator.profile = profile;
+  state.creator.packs = packs;
 };
 
-export const setAuthorError = ({ state }, { error } = {}) => {
-  state.author.status = "error";
-  state.author.requestId = undefined;
-  state.author.error = error;
+export const setCreatorError = ({ state }, { error } = {}) => {
+  state.creator.status = "error";
+  state.creator.requestId = undefined;
+  state.creator.error = error;
 };
 
-export const startAuthorPacksLoad = ({ state }, { requestId } = {}) => {
-  state.author.packsRequestId = requestId;
-  state.author.loadingMorePacks = true;
-  state.author.morePacksFailed = false;
-  state.author.packsFailedCursor = undefined;
-};
-
-export const setAuthorPacksPage = ({ state }, { packs, nextCursor } = {}) => {
-  state.author.packsRequestId = undefined;
-  state.author.loadingMorePacks = false;
-  state.author.packs.push(...packs);
-  state.author.nextCursor = nextCursor;
-};
-
-export const setAuthorPacksError = ({ state }, { cursor } = {}) => {
-  state.author.packsRequestId = undefined;
-  state.author.loadingMorePacks = false;
-  state.author.morePacksFailed = true;
-  state.author.packsFailedCursor = cursor;
-};
-
-export const returnFromAuthorPage = ({ state }) => {
+export const returnFromCreatorPage = ({ state }) => {
   state.step =
-    state.authorReturnStep === PACK_STEP && state.plan ? PACK_STEP : STORE_STEP;
+    state.creatorReturnStep === PACK_STEP && state.plan
+      ? PACK_STEP
+      : STORE_STEP;
   state.error = undefined;
 };
 
@@ -571,25 +557,20 @@ export const selectOperationId = ({ state }) => state.operationId;
 export const selectReviewValues = ({ state }) => state.reviewValues;
 export const selectInstanceId = ({ state }) => state.instanceId;
 export const selectCatalogQuery = ({ state }) => state.catalog.query;
-export const selectCatalogTags = ({ state }) => state.catalog.tags;
+export const selectCatalogAssetTypes = ({ state }) => state.catalog.assetTypes;
 export const selectCatalogRequestId = ({ state }) => state.catalog.requestId;
 export const selectCatalogNextCursor = ({ state }) => state.catalog.nextCursor;
 export const selectCatalogFailedCursor = ({ state }) =>
   state.catalog.failedCursor;
 export const selectCatalogPackById = ({ state }, { packId } = {}) =>
   state.catalog.packs.find((pack) => pack.id === packId) ??
-  state.author.packs.find((pack) => pack.id === packId);
+  state.creator.packs.find((pack) => pack.id === packId);
 export const selectPack = ({ state }) => state.pack;
-export const selectAuthorId = ({ state }) => state.author.id;
-export const selectAuthorStatus = ({ state }) => state.author.status;
-export const selectAuthorRequestId = ({ state }) => state.author.requestId;
-export const selectAuthorPacksRequestId = ({ state }) =>
-  state.author.packsRequestId;
-export const selectAuthorNextCursor = ({ state }) => state.author.nextCursor;
-export const selectAuthorPacksFailedCursor = ({ state }) =>
-  state.author.packsFailedCursor;
+export const selectCreatorId = ({ state }) => state.creator.id;
+export const selectCreatorStatus = ({ state }) => state.creator.status;
+export const selectCreatorRequestId = ({ state }) => state.creator.requestId;
 
-// One pack card, the same in the store list and on an author page.
+// A pack's total asset count, such as "50 assets".
 const formatAssetCount = ({ count, copy, dateTime }) =>
   formatPluralCopy(
     {
@@ -602,67 +583,60 @@ const formatAssetCount = ({ count, copy, dateTime }) =>
     { dateTime },
   );
 
+// One pack card, the same in the store list and on a creator page. A card
+// shows the pack's total; its page lists the counts by type.
 const getPackCardViewData = ({ pack, copy, dateTime }) => ({
   id: pack.id,
   title: pack.title,
+  summary: pack.summary ?? "",
   coverUrl: pack.coverUrl,
-  authorName: pack.author.name,
-  authorAvatarUrl: pack.author.avatarUrl,
+  creatorName: pack.creator.name,
+  creatorAvatarUrl: pack.creator.avatarUrl,
   assetCountLabel: formatAssetCount({ count: pack.assetCount, copy, dateTime }),
   openLabel: formatI18nCopy(copy.openPackLabel ?? "Open {name}", {
     name: pack.title,
   }),
 });
 
-const getAuthorViewData = ({ state, copy, dateTime }) => {
-  const { author } = state;
+const getCreatorViewData = ({ state, copy, dateTime }) => {
+  const { creator } = state;
   return {
-    isLoading: author.status === "loading",
-    isFailed: author.status === "error",
-    isReady: author.status === "ready",
-    errorMessage: author.error?.message,
-    loadingLabel: copy.authorLoading ?? "Loading author",
+    isLoading: creator.status === "loading",
+    isFailed: creator.status === "error",
+    isReady: creator.status === "ready",
+    errorMessage: creator.error?.message,
+    loadingLabel: copy.creatorLoading ?? "Loading creator",
     retryLabel: copy.retryButton ?? "Try Again",
     backLabel: copy.backButton ?? "Back",
-    name: author.profile?.name,
-    avatarUrl: author.profile?.avatarUrl,
-    description: author.profile?.description ?? [],
-    links: author.profile?.links ?? [],
-    packsTitle: copy.authorPacksTitle ?? "Asset packs",
-    noPacksLabel: copy.authorNoPacks ?? "This author has no asset packs yet.",
-    hasNoPacks: author.status === "ready" && author.packs.length === 0,
-    packs: author.packs.map((pack) =>
+    name: creator.profile?.name,
+    avatarUrl: creator.profile?.avatarUrl,
+    description: creator.profile?.description ?? [],
+    links: creator.profile?.links ?? [],
+    packsTitle: copy.creatorPacksTitle ?? "Asset packs",
+    noPacksLabel: copy.creatorNoPacks ?? "This creator has no asset packs yet.",
+    hasNoPacks: creator.status === "ready" && creator.packs.length === 0,
+    packs: creator.packs.map((pack) =>
       getPackCardViewData({ pack, copy, dateTime }),
     ),
-    hasMorePacks:
-      author.nextCursor !== undefined &&
-      !author.loadingMorePacks &&
-      !author.morePacksFailed,
-    isLoadingMorePacks: author.loadingMorePacks,
-    morePacksFailed: author.morePacksFailed,
-    morePacksFailedLabel:
-      copy.storeLoadFailed ??
-      "The asset store could not be loaded. Check your connection and try again.",
-    loadMoreLabel: copy.loadMoreButton ?? "Load More",
   };
 };
 
 const getCatalogViewData = ({ state, copy, resourceTypeCopy, dateTime }) => {
   const { catalog } = state;
-  const isFiltered = catalog.query !== "" || catalog.tags.length > 0;
+  const isFiltered = catalog.query !== "" || catalog.assetTypes.length > 0;
   return {
     storeTitle: copy.storeTitle ?? "Asset Store",
     isCatalogLoading: catalog.status === "loading" && !catalog.loadingMore,
     searchTitle: copy.searchTitle ?? "Search",
     searchLabel: copy.searchPlaceholder ?? "Search asset packs",
     searchText: state.searchText,
-    tagsTitle: copy.tagsTitle ?? "Tags",
-    tagsPlaceholder: copy.tagsPlaceholder ?? "Choose tags",
-    tagOptions: STORE_TAGS.map(({ tag, resourceType }) => ({
-      value: tag,
+    assetTypesTitle: copy.assetTypesTitle ?? "Asset types",
+    assetTypesPlaceholder: copy.assetTypesPlaceholder ?? "Choose asset types",
+    assetTypeOptions: STORE_ASSET_TYPES.map(({ assetType, resourceType }) => ({
+      value: assetType,
       label: resourceTypeCopy[resourceType] ?? formatResourceType(resourceType),
     })),
-    selectedTags: catalog.tags,
+    selectedAssetTypes: catalog.assetTypes,
     isCatalogEmpty:
       catalog.status === "ready" && catalog.packs.length === 0 && !isFiltered,
     isNoResults:
@@ -741,26 +715,22 @@ const getPackViewData = ({ state, copy, dateTime }) => {
   return {
     id: pack.id,
     title: pack.title,
+    summary: pack.summary ?? "",
     coverUrl: pack.coverUrl,
-    screenshotUrls: pack.screenshotUrls,
-    hasGallery: pack.screenshotUrls.length > 0,
     description: pack.description,
-    authorName: pack.author.name,
-    authorAvatarUrl: pack.author.avatarUrl,
+    creatorName: pack.creator.name,
+    creatorAvatarUrl: pack.creator.avatarUrl,
     versionName: pack.versionName,
     released: formatDay(pack.releasedAt),
     updated: formatDay(pack.updatedAt),
-    assetCountLabel: formatAssetCount({
-      count: pack.assetCount,
-      copy,
-      dateTime,
-    }),
+    releaseNotes: pack.releaseNotes,
+    releaseNotesTitle: copy.releaseNotesTitle ?? "What's new",
     backLabel: copy.backButton ?? "Back",
     importLabel: copy.importButton ?? "Import",
     infoTitle: copy.packInfoTitle ?? "Pack info",
-    authorLabel: copy.authorLabel ?? "Author",
-    openAuthorLabel: formatI18nCopy(copy.openAuthorLabel ?? "View {name}", {
-      name: pack.author.name,
+    creatorLabel: copy.creatorLabel ?? "Creator",
+    openCreatorLabel: formatI18nCopy(copy.openCreatorLabel ?? "View {name}", {
+      name: pack.creator.name,
     }),
     versionLabel: copy.versionLabel ?? "Version",
     releasedLabel: copy.releasedLabel ?? "Released",
@@ -871,8 +841,8 @@ export const selectViewData = ({ state, i18n = {} }) => {
     step: state.step,
     isStoreStep: state.step === STORE_STEP,
     isPackStep: state.step === PACK_STEP,
-    isAuthorStep: state.step === AUTHOR_STEP,
-    author: getAuthorViewData({ state, copy, dateTime: i18n.dateTime }),
+    isCreatorStep: state.step === CREATOR_STEP,
+    creator: getCreatorViewData({ state, copy, dateTime: i18n.dateTime }),
     isSelectionStep,
     allResourcesSelected,
     selectionToggleAllLabel: allResourcesSelected
@@ -897,6 +867,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
       name: previewResource.name,
       typeLabel: previewResource.typeLabel,
       description: previewResource.description,
+      colorHex: previewResource.colorHex,
       sourceFileId:
         previewResource.largePreviewSourceId ?? previewResource.previewSourceId,
     },
@@ -936,5 +907,6 @@ export const selectViewData = ({ state, i18n = {} }) => {
     progressPercentLabel: formatPercent(progressPercent, i18n.dateTime),
     cancelButton: copy.cancelButton ?? "Cancel Import",
     dialogAriaLabel: copy.title ?? "Import Package",
+    closeLabel: copy.closeLabel ?? "Close",
   };
 };

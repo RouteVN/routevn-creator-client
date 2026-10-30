@@ -6,13 +6,16 @@ const revokePreviewUrl = (store) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, store } = deps;
+  const { projectService, audioService, store } = deps;
   return () => {
     const operationId = store.selectOperationId();
     if (operationId) {
       projectService.cancelResourceImport({ operationId });
     }
     store.cancelLoading();
+    // Another player, such as the Sounds page's, can keep the audio service
+    // open; a sound still stops with its preview.
+    if (store.selectKind() === "audio") audioService.stop();
     revokePreviewUrl(store);
   };
 };

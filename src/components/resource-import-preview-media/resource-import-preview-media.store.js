@@ -34,6 +34,7 @@ export const cancelLoading = ({ state }) => {
 };
 
 export const selectSrc = ({ state }) => state.src;
+export const selectKind = ({ state }) => state.kind;
 export const selectLoadRequested = ({ state }) => state.loadRequested;
 export const selectOperationId = ({ state }) => state.operationId;
 

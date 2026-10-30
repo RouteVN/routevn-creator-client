@@ -4,30 +4,41 @@ import {
   resolveAssetStoreRpcUrl,
 } from "../../src/deps/clients/assetStoreClient.js";
 
-const RPC_URL = "http://127.0.0.1:3100/reader/rpc";
+const RPC_URL = "http://127.0.0.1:3100/asset-store/rpc";
 
-const author = {
-  id: "Cr8rAuthorOne001",
-  name: "Author One",
-  avatarFileId: "FiAuthorAvatar01",
+const creator = {
+  id: "Cr8rCreatorOne01",
+  name: "Creator One",
+  avatarFileId: "FiCreatorAvatar1",
 };
 
 const packItem = (id, overrides = {}) => ({
   id,
   data: {
     title: `Pack ${id}`,
+    summary: "Hand-drawn forest backgrounds.",
     coverFileId: "FiPackCover00001",
     pricing: { type: "FREE" },
-    assetCount: 42,
+    assetCounts: { IMAGES: 40, SOUNDS: 2 },
     listedAt: 1786492800000,
     ...overrides,
   },
-  author,
+  creator,
 });
+
+// A pack's counts as the client gives them: by type in the app's order,
+// with their total.
+const packCounts = {
+  assetCounts: [
+    { assetType: "IMAGES", count: 40 },
+    { assetType: "SOUNDS", count: 2 },
+  ],
+  assetCount: 42,
+};
 
 const files = [
   { fileId: "FiPackCover00001", url: "https://files.example/FiPackCover00001" },
-  { fileId: "FiAuthorAvatar01", url: "https://files.example/FiAuthorAvatar01" },
+  { fileId: "FiCreatorAvatar1", url: "https://files.example/FiCreatorAvatar1" },
   { fileId: "FiPackManifest01", url: "https://files.example/FiPackManifest01" },
 ];
 
@@ -50,48 +61,38 @@ const createClient = (respond) => {
 describe("assetStoreClient", () => {
   it("uses the production API in release builds and a local API in development", () => {
     expect(resolveAssetStoreRpcUrl()).toBe(
-      "https://api1.routevn.com/reader/rpc",
+      "https://api1.routevn.com/asset-store/rpc",
     );
     expect(resolveAssetStoreRpcUrl({ debug: true })).toBe(RPC_URL);
     expect(
       resolveAssetStoreRpcUrl({
         debug: true,
-        override: "http://localhost:3000/reader/rpc",
+        override: "http://localhost:3000/asset-store/rpc",
       }),
-    ).toBe("http://localhost:3000/reader/rpc");
+    ).toBe("http://localhost:3000/asset-store/rpc");
     expect(
       resolveAssetStoreRpcUrl({
-        override: "http://localhost:3000/reader/rpc",
+        override: "http://localhost:3000/asset-store/rpc",
       }),
-    ).toBe("https://api1.routevn.com/reader/rpc");
+    ).toBe("https://api1.routevn.com/asset-store/rpc");
   });
 
-  it("lists free packs as JSON-RPC with the reader headers", async () => {
+  it("lists free packs as JSON-RPC with the RPC header", async () => {
     const { client, fetchImpl } = createClient(() =>
       rpcResponse({
         jsonrpc: "2.0",
         id: 1,
         result: {
           items: [
-            packItem("AsPkPackOne00001", {
-              description: [
-                {
-                  type: "PARAGRAPH",
-                  children: [
-                    { text: "Smooth transitions.", marks: [], link: null },
-                  ],
-                },
-              ],
-              screenshotFileIds: ["FiPackShot000001"],
-            }),
-          ],
-          files: [
-            ...files,
             {
-              fileId: "FiPackShot000001",
-              url: "https://files.example/FiPackShot000001",
+              // Counts come in any order; types the app does not know and
+              // counts that are not positive are left out.
+              ...packItem("AsPkPackOne00001", {
+                assetCounts: { SOUNDS: 2, LATER_TYPE: 9, IMAGES: 40, FONTS: 0 },
+              }),
             },
           ],
+          files,
           nextCursor: "cursor-2",
         },
       }),
@@ -110,12 +111,11 @@ describe("assetStoreClient", () => {
     expect(JSON.parse(request.body)).toEqual({
       jsonrpc: "2.0",
       id: 1,
-      method: "reader.listAssetPacks",
+      method: "assetStore.listAssetPacks",
       params: {
         query: null,
-        authorId: null,
         pricingType: "FREE",
-        tags: null,
+        assetTypes: null,
         page: { cursor: "cursor-1", limit: 20 },
       },
     });
@@ -124,16 +124,14 @@ describe("assetStoreClient", () => {
         {
           id: "AsPkPackOne00001",
           title: "Pack AsPkPackOne00001",
-          assetCount: 42,
+          summary: "Hand-drawn forest backgrounds.",
+          ...packCounts,
           coverUrl: "https://files.example/FiPackCover00001",
-          // Cards carry these so a pack page can show them at once.
-          description: ["Smooth transitions."],
-          screenshotUrls: ["https://files.example/FiPackShot000001"],
           releasedAt: 1786492800000,
-          author: {
-            id: "Cr8rAuthorOne001",
-            name: "Author One",
-            avatarUrl: "https://files.example/FiAuthorAvatar01",
+          creator: {
+            id: "Cr8rCreatorOne01",
+            name: "Creator One",
+            avatarUrl: "https://files.example/FiCreatorAvatar1",
           },
         },
       ],
@@ -179,7 +177,7 @@ describe("assetStoreClient", () => {
     expect(sentQuery(2)).toBe("x".repeat(100));
   });
 
-  it("sends the chosen tags", async () => {
+  it("sends the chosen asset types", async () => {
     const { client, fetchImpl } = createClient(() =>
       rpcResponse({
         jsonrpc: "2.0",
@@ -187,14 +185,14 @@ describe("assetStoreClient", () => {
         result: { items: [], files: [], nextCursor: null },
       }),
     );
-    const sentTags = (call) =>
-      JSON.parse(fetchImpl.mock.calls[call][1].body).params.tags;
+    const sentAssetTypes = (call) =>
+      JSON.parse(fetchImpl.mock.calls[call][1].body).params.assetTypes;
 
-    await client.listAssetPacks({ tags: ["IMAGES", "SOUNDS"] });
-    await client.listAssetPacks({ tags: [] });
+    await client.listAssetPacks({ assetTypes: ["IMAGES", "SOUNDS"] });
+    await client.listAssetPacks({ assetTypes: [] });
 
-    expect(sentTags(0)).toEqual(["IMAGES", "SOUNDS"]);
-    expect(sentTags(1)).toBeNull();
+    expect(sentAssetTypes(0)).toEqual(["IMAGES", "SOUNDS"]);
+    expect(sentAssetTypes(1)).toBeNull();
   });
 
   it("drops paid and malformed packs and images without a usable URL", async () => {
@@ -208,13 +206,20 @@ describe("assetStoreClient", () => {
               pricing: { type: "PAID", amountMinor: 499, currency: "USD" },
             }),
             packItem("AsPkNoTitle00001", { title: "" }),
-            { id: "AsPkNoAuthor0001", data: packItem("x").data },
+            packItem("AsPkNoCounts0001", { assetCounts: [40] }),
+            { id: "AsPkNoCreator001", data: packItem("x").data },
             "not a pack",
-            packItem("AsPkNoCover00001", { coverFileId: null }),
+            // An invalid summary leaves the card without one.
+            {
+              ...packItem("AsPkNoCover00001", {
+                coverFileId: null,
+                summary: 42,
+              }),
+            },
           ],
           files: [
-            { fileId: "FiAuthorAvatar01", url: "javascript:alert(1)" },
-            { fileId: "FiPackCover00001", url: "not a url" },
+            { fileId: "FiCreatorAvatar1", url: "javascript:alert(1)" },
+            { fileId: "FiPackCover00001", url: "ftp://files.example/cover" },
           ],
           nextCursor: null,
         },
@@ -227,12 +232,11 @@ describe("assetStoreClient", () => {
       {
         id: "AsPkNoCover00001",
         title: "Pack AsPkNoCover00001",
-        assetCount: 42,
+        summary: "",
+        ...packCounts,
         coverUrl: undefined,
-        description: [],
-        screenshotUrls: [],
         releasedAt: 1786492800000,
-        author: { id: author.id, name: author.name, avatarUrl: undefined },
+        creator: { id: creator.id, name: creator.name, avatarUrl: undefined },
       },
     ]);
   });
@@ -250,7 +254,7 @@ describe("assetStoreClient", () => {
               manifestFileId: "FiPackManifest01",
             },
           },
-          author,
+          creator,
           files,
         },
       }),
@@ -261,13 +265,15 @@ describe("assetStoreClient", () => {
     });
 
     expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toMatchObject({
-      method: "reader.getAssetPackById",
+      method: "assetStore.getAssetPackById",
       params: { assetPackId: "AsPkPackOne00001" },
     });
     expect(pack).toMatchObject({
       id: "AsPkPackOne00001",
+      summary: "Hand-drawn forest backgrounds.",
       importUrl: "https://files.example/FiPackManifest01",
-      author: { name: "Author One" },
+      releaseNotes: "",
+      creator: { name: "Creator One" },
     });
   });
 
@@ -282,12 +288,8 @@ describe("assetStoreClient", () => {
             data: {
               ...packItem("AsPkPackOne00001").data,
               manifestFileId: "FiPackManifest01",
-              screenshotFileIds: [
-                "FiPackShot000002",
-                "FiPackShotMissin",
-                "FiPackShot000001",
-              ],
               versionName: "1.0.0",
+              releaseNotes: "  Adds masks.\nFixes fades.\n",
               lastUpdatedAt: 1786579200000,
               description: [
                 { type: "HEADING", text: "About" },
@@ -315,21 +317,18 @@ describe("assetStoreClient", () => {
                   width: 1,
                   height: 1,
                 },
+                {
+                  type: "IMAGE",
+                  fileId: "FiPackShotMissin",
+                  alt: "Missing",
+                  width: 1,
+                  height: 1,
+                },
               ],
             },
           },
-          author,
-          files: [
-            ...files,
-            {
-              fileId: "FiPackShot000001",
-              url: "https://files.example/FiPackShot000001",
-            },
-            {
-              fileId: "FiPackShot000002",
-              url: "https://files.example/FiPackShot000002",
-            },
-          ],
+          creator,
+          files,
         },
       }),
     );
@@ -338,80 +337,170 @@ describe("assetStoreClient", () => {
       assetPackId: "AsPkPackOne00001",
     });
 
+    // The description keeps its order without the image `files` does not
+    // map.
+    expect(pack).not.toHaveProperty("screenshotUrls");
     expect(pack).toMatchObject({
-      description: ["About", "Smooth transitions.", "• Masks"],
-      screenshotUrls: [
-        "https://files.example/FiPackShot000002",
-        "https://files.example/FiPackShot000001",
+      description: [
+        { text: "About" },
+        { text: "Smooth transitions." },
+        { text: "• Masks" },
+        {
+          imageUrl: "https://files.example/FiPackCover00001",
+          alt: "",
+          width: 1,
+          height: 1,
+        },
       ],
       versionName: "1.0.0",
+      releaseNotes: "Adds masks.\nFixes fades.",
       releasedAt: 1786492800000,
       updatedAt: 1786579200000,
     });
   });
 
-  it("lists one author's packs", async () => {
-    const { client, fetchImpl } = createClient(() =>
-      rpcResponse({
-        jsonrpc: "2.0",
-        id: 1,
-        result: { items: [], files: [], nextCursor: null },
-      }),
-    );
-
-    await client.listAssetPacks({ authorId: "Cr8rAuthorOne001" });
-
-    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).params).toMatchObject({
-      query: null,
-      authorId: "Cr8rAuthorOne001",
-      pricingType: "FREE",
-    });
-  });
-
-  it("reads an author's profile through the reader creator method", async () => {
+  it("reads a creator's profile and free packs in one request", async () => {
     const { client, fetchImpl } = createClient(() =>
       rpcResponse({
         jsonrpc: "2.0",
         id: 1,
         result: {
           creator: {
-            id: "Cr8rAuthorOne001",
+            id: "Cr8rCreatorOne01",
             data: {
               schemaVersion: 1,
               status: "PUBLISHED",
-              name: "Author One",
+              name: "Creator One",
               handle: null,
               description: "Makes transitions.\n\n  Free to use.  ",
-              avatarFileId: "FiAuthorAvatar01",
+              avatarFileId: "FiCreatorAvatar1",
               links: [
-                { label: "X", url: "https://x.example/author" },
+                { label: "X", url: "https://x.example/creator" },
                 { label: "Plain", url: "http://insecure.example" },
                 { label: "Script", url: "javascript:alert(1)" },
               ],
             },
           },
-          products: [],
+          // Packs carry card data and no creator of their own.
+          assetPacks: [
+            { id: "AsPkPackTwo00001", data: packItem("AsPkPackTwo00001").data },
+            {
+              id: "AsPkPaidPack0001",
+              data: packItem("AsPkPaidPack0001", {
+                pricing: { type: "PAID", amountMinor: 499, currency: "USD" },
+              }).data,
+            },
+            {
+              id: "AsPkPackOne00001",
+              data: packItem("AsPkPackOne00001", {
+                coverFileId: null,
+                summary: "  Padded summary.  ",
+              }).data,
+            },
+            "not a pack",
+          ],
           files,
         },
       }),
     );
 
-    const author = await client.getAuthorById({ authorId: "Cr8rAuthorOne001" });
-
-    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toMatchObject({
-      method: "reader.getCreatorById",
-      params: { creatorId: "Cr8rAuthorOne001" },
+    const page = await client.getCreatorById({
+      creatorId: "Cr8rCreatorOne01",
     });
-    expect(author).toEqual({
-      id: "Cr8rAuthorOne001",
-      name: "Author One",
-      avatarUrl: "https://files.example/FiAuthorAvatar01",
-      description: ["Makes transitions.", "Free to use."],
-      links: [{ label: "X", url: "https://x.example/author" }],
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toMatchObject({
+      method: "assetStore.getCreatorById",
+      params: { creatorId: "Cr8rCreatorOne01" },
+    });
+    const packCreator = {
+      id: "Cr8rCreatorOne01",
+      name: "Creator One",
+      avatarUrl: "https://files.example/FiCreatorAvatar1",
+    };
+    expect(page).toEqual({
+      creator: {
+        ...packCreator,
+        description: ["Makes transitions.", "Free to use."],
+        links: [{ label: "X", url: "https://x.example/creator" }],
+      },
+      packs: [
+        {
+          id: "AsPkPackTwo00001",
+          title: "Pack AsPkPackTwo00001",
+          summary: "Hand-drawn forest backgrounds.",
+          ...packCounts,
+          coverUrl: "https://files.example/FiPackCover00001",
+          releasedAt: 1786492800000,
+          creator: packCreator,
+        },
+        {
+          id: "AsPkPackOne00001",
+          title: "Pack AsPkPackOne00001",
+          summary: "Padded summary.",
+          ...packCounts,
+          coverUrl: undefined,
+          releasedAt: 1786492800000,
+          creator: packCreator,
+        },
+      ],
     });
   });
 
-  it("reports a missing author with its own code", async () => {
+  it("reads a creator with no free packs as having none", async () => {
+    const { client } = createClient(() =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          creator: { id: "Cr8rCreatorOne01", data: { name: "Creator One" } },
+          assetPacks: [
+            {
+              id: "AsPkPaidPack0001",
+              data: packItem("AsPkPaidPack0001", {
+                pricing: { type: "PAID", amountMinor: 499, currency: "USD" },
+              }).data,
+            },
+          ],
+          files: [],
+        },
+      }),
+    );
+
+    const page = await client.getCreatorById({
+      creatorId: "Cr8rCreatorOne01",
+    });
+
+    expect(page).toEqual({
+      creator: {
+        id: "Cr8rCreatorOne01",
+        name: "Creator One",
+        avatarUrl: undefined,
+        description: [],
+        links: [],
+      },
+      packs: [],
+    });
+  });
+
+  it("reports a creator response without its packs as an unavailable store", async () => {
+    const { client } = createClient(() =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          creator: { id: "Cr8rCreatorOne01", data: { name: "Creator One" } },
+          files: [],
+        },
+      }),
+    );
+
+    await expect(
+      client.getCreatorById({ creatorId: "Cr8rCreatorOne01" }),
+    ).rejects.toMatchObject({ code: "asset_store_unavailable" });
+  });
+
+  it("reports a missing creator with its own code", async () => {
     const { client } = createClient(() =>
       rpcResponse({
         jsonrpc: "2.0",
@@ -428,8 +517,8 @@ describe("assetStoreClient", () => {
     );
 
     await expect(
-      client.getAuthorById({ authorId: "Cr8rMissing00001" }),
-    ).rejects.toMatchObject({ code: "asset_author_not_found" });
+      client.getCreatorById({ creatorId: "Cr8rMissing00001" }),
+    ).rejects.toMatchObject({ code: "asset_creator_not_found" });
   });
 
   it("reports a missing pack separately from an unavailable store", async () => {
@@ -467,7 +556,7 @@ describe("assetStoreClient", () => {
               manifestFileId: "FiPackManifest01",
             },
           },
-          author,
+          creator,
           files,
         },
       }),

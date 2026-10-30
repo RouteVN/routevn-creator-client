@@ -10,12 +10,19 @@ const viewSource = readFileSync(
 );
 
 describe("resource-import-dialog.view", () => {
-  it("fills the screen with bounded form content", () => {
+  it("opens as an almost full-screen dialog, full screen on narrow windows", () => {
     expect(viewSource).toContain(
-      'rtgl-dialog#dialog ?open=${open} layout=fixed bare p=none close-button aria-label="${dialogAriaLabel}"',
+      'rtgl-dialog#dialog ?open=${open} sm-layout=fixed md-layout=fixed p=none aria-label="${dialogAriaLabel}"',
+    );
+    // Its own close button sits at the header's right, not the dialog's.
+    expect(viewSource).toContain(
+      'rtgl-button#dialogCloseButton sq v=gh pre=x aria-label="${closeLabel}" title="${closeLabel}"',
     );
     expect(viewSource).toContain(
-      "rtgl-view slot=content d=v w=f h=f bgc=bg overflow=hidden",
+      "rtgl-view#dialogContent slot=content d=v bgc=bg br=md overflow=hidden",
+    );
+    expect(viewSource).toMatch(
+      /'#dialogContent':\n {4}width: min\(1600px, calc\(100vw - 64px\)\)\n {4}height: calc\(100vh - 64px\)/,
     );
     // Check the sticky layout attributes on the form's line, so other
     // attributes can be added to the form without breaking this test.
@@ -28,6 +35,11 @@ describe("resource-import-dialog.view", () => {
       );
     expect(workflowFormLine).toContain(" sticky ");
     expect(workflowFormLine).toContain("w=f h=f");
+    // Choose resources sits in a centered column as wide as the pack page's,
+    // with the form inside it.
+    expect(viewSource).toMatch(
+      /- 'rtgl-view d=v w=f h=1fg ah=c style="min-height: 0;"':\n +- 'rtgl-view#selectionColumn d=v h=f p=lg style="box-sizing: border-box; width: 100%; max-width: 1200px; min-height: 0;"':\n +- rtgl-form#workflowForm /,
+    );
     // Only Import stays in place: Back and the title are in the scrolling
     // header, and the version and description are left to the pack page.
     expect(viewSource).toMatch(
@@ -60,11 +72,11 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("rtgl-text: ${catalog.searchTitle}");
     expect(viewSource).toContain("rtgl-input#storeSearchInput s=sm w=f");
     expect(viewSource).toContain("handler: handleStoreSearchInput");
-    expect(viewSource).toContain("rtgl-text: ${catalog.tagsTitle}");
+    expect(viewSource).toContain("rtgl-text: ${catalog.assetTypesTitle}");
     expect(viewSource).toContain(
-      "rtgl-tag-select#storeTagSelect w=f no-add :ariaLabel=${catalog.tagsTitle} :options=${catalog.tagOptions} :selectedValues=${catalog.selectedTags}",
+      "rtgl-tag-select#storeAssetTypeSelect w=f no-add :ariaLabel=${catalog.assetTypesTitle} :options=${catalog.assetTypeOptions} :selectedValues=${catalog.selectedAssetTypes}",
     );
-    expect(viewSource).toContain("handler: handleStoreTagsChange");
+    expect(viewSource).toContain("handler: handleStoreAssetTypesChange");
     expect(viewSource).toContain("${catalog.noResultsLabel}");
     expect(viewSource).toContain("$for pack in catalog.packs");
     expect(viewSource).toContain(
@@ -74,7 +86,19 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain(
       "rtgl-image src=${pack.coverUrl} w=f h=f of=cov",
     );
-    expect(viewSource).toContain("${pack.assetCountLabel}");
+    // Cards show the total; the pack page lists the counts by type as
+    // bullets, never joined with a separator.
+    expect(viewSource).toContain(
+      "rtgl-text s=sm c=mu-fg: ${pack.assetCountLabel}",
+    );
+    // The summary sits under the title, clamped to two lines.
+    expect(viewSource).toContain(
+      `'rtgl-text s=sm c=mu-fg style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;"': \${pack.summary}`,
+    );
+    // The pack page lists no counts by type, nor the download size.
+    expect(viewSource).not.toContain("assetCountLabels");
+    expect(viewSource).not.toContain("downloadSize");
+    expect(viewSource).not.toContain("assetCountsLabel");
     expect(viewSource).toContain("rtgl-button#catalogRetryButton");
     expect(viewSource).toContain("rtgl-button#loadMorePacksButton");
     expect(viewSource).toContain("handler: handlePackGridClick");
@@ -97,11 +121,11 @@ describe("resource-import-dialog.view", () => {
     );
     expect(viewSource).toContain("$for placeholder in pack.assetPlaceholders:");
     expect(viewSource).toContain("$if pack.isLoadingAssets:");
-    expect(viewSource).toContain(
-      "rvn-asset-pack-gallery :packId=${pack.id} :title=${pack.title} :images=${pack.screenshotUrls}",
-    );
-    // The pack info, with its cover and Import, sits beside the gallery and
-    // the assets, and stays in view while they scroll.
+    // A pack has no screenshot gallery.
+    expect(viewSource).not.toContain("rvn-asset-pack-gallery");
+    expect(viewSource).not.toContain("screenshotUrls");
+    // The pack info, with its cover and Import, sits beside the description
+    // and the assets, and stays in view while they scroll.
     const packInfo = viewSource.slice(viewSource.indexOf("rtgl-view#packInfo"));
     expect(viewSource.indexOf("rtgl-view#packMain")).toBeLessThan(
       viewSource.indexOf("rtgl-view#packAssets"),
@@ -114,7 +138,7 @@ describe("resource-import-dialog.view", () => {
     );
     // The last assets can scroll clear of the bottom edge.
     expect(packInfo).toMatch(
-      /#packImportButton[^\n]*\n {22}- 'rtgl-view#packBottomSpacer h=240 aria-hidden=true style="flex: 0 0 240px;"': null\n {10}- \$if isAuthorStep/,
+      /#packImportButton[^\n]*\n {22}- 'rtgl-view#packBottomSpacer h=240 aria-hidden=true style="flex: 0 0 240px;"': null\n {10}- \$if isCreatorStep/,
     );
     expect(viewSource).toMatch(
       /'#packInfo':\n {4}position: sticky\n {4}top: var\(--spacing-lg\)\n {2}'@media only screen and \(max-width: 1024px\)':\n {4}'#packInfo':\n {6}position: static\n {6}order: -1/,
@@ -122,7 +146,12 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain(
       "rtgl-image src=${pack.coverUrl} w=f h=f of=cov",
     );
-    expect(viewSource).toContain("$for paragraph in pack.description");
+    expect(viewSource).toContain("$for block in pack.description");
+    // The release notes keep their line breaks.
+    expect(viewSource).toContain("$if pack.releaseNotes:");
+    expect(viewSource).toContain(
+      `'rtgl-text style="white-space: pre-line; overflow-wrap: anywhere;"': \${pack.releaseNotes}`,
+    );
     expect(viewSource).toContain("${pack.infoTitle}");
     expect(viewSource).toContain("${pack.released}");
     expect(viewSource).toContain("${pack.updated}");
@@ -131,9 +160,10 @@ describe("resource-import-dialog.view", () => {
       "rtgl-grid cols=4 md-cols=3 sm-cols=2 w=f pt=md pb=sm mb=lg g=md",
     );
     expect(viewSource).toContain("key=pack-${resource.previewSourceId}");
-    // A card shows only the name; the description waits for the preview.
+    // A card shows only the name, and a color its value; the description
+    // waits for the preview.
     expect(viewSource).toMatch(
-      /rtgl-view w=f p=md:\n +- rtgl-text s=xs c=mu-fg ellipsis w=f: \$\{resource\.name\}\n +- 'rtgl-view#packInfo/,
+      /rtgl-view d=v w=f g=xs p=md:\n +- rtgl-text s=xs c=mu-fg ellipsis w=f: \$\{resource\.name\}\n +- \$if resource\.colorHex:\n +- rtgl-text s=xs c=mu-fg: \$\{resource\.colorHex\}\n +- 'rtgl-view#packInfo/,
     );
     expect(viewSource).toContain("handler: handlePackBack");
     expect(viewSource).toContain("handler: handlePackImport");
@@ -173,24 +203,30 @@ describe("resource-import-dialog.view", () => {
     );
   });
 
-  it("links a pack's author to an author page with their packs", () => {
+  it("links a pack's creator to a creator page with their packs", () => {
     expect(viewSource).toContain(
-      'rtgl-view#packAuthorButton role=button tabindex=0 aria-label="${pack.openAuthorLabel}"',
+      'rtgl-view#packCreatorButton role=button tabindex=0 aria-label="${pack.openCreatorLabel}"',
     );
-    expect(viewSource).toContain("$if isAuthorStep && !isBusy:");
+    expect(viewSource).toContain("handler: handlePackCreatorClick");
+    expect(viewSource).toContain("handler: handlePackCreatorKeyDown");
+    expect(viewSource).toContain("$if isCreatorStep && !isBusy:");
     expect(viewSource).toContain(
-      'rtgl-button#authorBackButton sq pre=chevronLeft v=ol aria-label="${author.backLabel}" title="${author.backLabel}"',
+      'rtgl-button#creatorBackButton sq pre=chevronLeft v=ol aria-label="${creator.backLabel}" title="${creator.backLabel}"',
     );
     expect(viewSource).toContain(
-      "rtgl-image src=${author.avatarUrl} w=f h=f of=cov",
+      "rtgl-image src=${creator.avatarUrl} w=f h=f of=cov",
     );
-    expect(viewSource).toContain("$for paragraph in author.description");
-    expect(viewSource).toContain("rtgl-view#authorLinks d=h g=sm wrap");
+    expect(viewSource).toContain("$for paragraph in creator.description");
+    expect(viewSource).toContain("rtgl-view#creatorLinks d=h g=sm wrap");
     expect(viewSource).toContain('data-url="${link.url}"');
     expect(viewSource).toContain(
-      "rtgl-grid#authorPackGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=1 g=lg w=f",
+      "rtgl-grid#creatorPackGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=1 g=lg w=f",
     );
-    expect(viewSource).toContain("$for pack in author.packs");
+    expect(viewSource).toContain("$for pack in creator.packs");
+    // Every pack comes with the profile, so the page has no Load More.
+    expect(viewSource).not.toContain("creatorLoadMoreButton");
+    expect(viewSource).not.toContain("creatorPacksRetryButton");
+    expect(viewSource).not.toMatch(/author/i);
   });
 
   it("renders preview media in bounded 16:9 frames", () => {
