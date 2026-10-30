@@ -11,6 +11,8 @@ import {
   INSERT_LINE_BREAK_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
+  TabNode,
+  TextNode,
   createEditor,
 } from "lexical";
 import { registerRichText } from "@lexical/rich-text";
@@ -148,6 +150,19 @@ const normalizeMentionTargets = (targets = []) => {
 
 const areJsonEqual = (left, right) => {
   return JSON.stringify(left) === JSON.stringify(right);
+};
+
+// Layout text is plain text and variables, so text, tab and variable nodes
+// drop any format or style they get from a shortcut, a paste, a drop or
+// loaded content.
+const $clearTextFormatting = (node) => {
+  if (node.getFormat() !== 0) {
+    node.setFormat(0);
+  }
+
+  if (node.getStyle() !== "") {
+    node.setStyle("");
+  }
 };
 
 const createShell = () => {
@@ -318,6 +333,9 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
     this.unregister = mergeRegister(
       registerRichText(this.editor),
       registerHistory(this.editor, createEmptyHistoryState(), 300),
+      this.editor.registerNodeTransform(TextNode, $clearTextFormatting),
+      this.editor.registerNodeTransform(TabNode, $clearTextFormatting),
+      this.editor.registerNodeTransform(MentionNode, $clearTextFormatting),
       this.editor.registerUpdateListener(({ editorState }) => {
         this.syncFromEditorState(editorState);
       }),
