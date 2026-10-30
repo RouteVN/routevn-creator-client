@@ -124,7 +124,7 @@ afterEach(() => {
 });
 
 describe("resource-import-dialog rendering", () => {
-  it("renders store packs as cards with their cover, summary, creator and asset count", () => {
+  it("renders store packs as cards with their cover, summary and creator", () => {
     const dialog = document.createElement(
       "rvn-resource-import-dialog-render-test",
     );
@@ -186,10 +186,11 @@ describe("resource-import-dialog rendering", () => {
       "Coverless Pack",
       "Creator One",
     ]);
-    // A card shows the pack's total; its page lists the counts by type.
-    expect(cards[0].textContent).toContain("42 assets");
+    // A card shows no asset count.
+    expect(texts(cards[0])).toHaveLength(3);
+    expect(cards[0].textContent).not.toContain("42");
     expect(cards[0].querySelector("[role=listitem]")).toBeNull();
-    expect(cards[1].textContent).toContain("3 assets");
+    expect(cards[1].textContent).not.toContain("3 assets");
     expect(
       cards[0].querySelector(
         'rtgl-image[src="https://files.example/cover.png"]',

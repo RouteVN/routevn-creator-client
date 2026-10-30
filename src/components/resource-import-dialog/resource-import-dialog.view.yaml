@@ -178,11 +178,11 @@ template:
                                               - $if pack.creatorAvatarUrl:
                                                   - rtgl-image wh=20 br=f of=cov src=${pack.creatorAvatarUrl}: null
                                               - rtgl-text s=sm c=mu-fg: ${pack.creatorName}
-                                          - rtgl-text s=sm c=mu-fg: ${pack.assetCountLabel}
+                      # In the middle of the panel, with Try Again under it.
                       - $if catalog.isCatalogFailed:
-                          - rtgl-view w=f d=v g=md p=md bgc=de br=md role=alert:
-                              - rtgl-text c=de-fg: ${catalog.catalogFailedLabel}
-                              - rtgl-button#catalogRetryButton v=se s=sm: ${catalog.retryLabel}
+                          - rtgl-view w=f h=1fg d=v av=c ah=c g=md role=alert:
+                              - rtgl-text c=mu-fg ta=c: ${catalog.catalogFailedLabel}
+                              - rtgl-button#catalogRetryButton v=se: ${catalog.retryLabel}
                       - $if catalog.isLoadingMorePacks:
                           - rtgl-view w=f ah=c p=md role=status aria-live=polite:
                               - rtgl-text c=mu-fg: ${catalog.catalogLoadingLabel}
@@ -295,9 +295,9 @@ template:
                           - rtgl-view w=f h=180 av=c ah=c role=status aria-live=polite:
                               - rtgl-text c=mu-fg: ${creator.loadingLabel}
                       - $if creator.isFailed:
-                          - rtgl-view w=f d=v g=md p=md bgc=de br=md role=alert:
-                              - rtgl-text c=de-fg: ${creator.errorMessage}
-                              - rtgl-button#creatorRetryButton v=se s=sm: ${creator.retryLabel}
+                          - rtgl-view w=f h=180 d=v av=c ah=c g=md role=alert:
+                              - rtgl-text c=mu-fg ta=c: ${creator.errorMessage}
+                              - rtgl-button#creatorRetryButton v=se: ${creator.retryLabel}
                       - $if creator.isReady:
                           - rtgl-view d=h sm-d=v w=f g=lg av=s:
                               - 'rtgl-view w=96 h=96 av=c ah=c br=f bgc=mu overflow=hidden style="flex: 0 0 auto;"':
@@ -334,7 +334,6 @@ template:
                                                       - $if pack.creatorAvatarUrl:
                                                           - rtgl-image wh=20 br=f of=cov src=${pack.creatorAvatarUrl}: null
                                                       - rtgl-text s=sm c=mu-fg: ${pack.creatorName}
-                                                  - rtgl-text s=sm c=mu-fg: ${pack.assetCountLabel}
           - $if isPackStep && assetPreview:
               - rtgl-dialog#assetPreviewDialog open layout=fixed bare p=none:
                   - rtgl-view#assetPreviewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

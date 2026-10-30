@@ -2823,8 +2823,6 @@ resourceImport:
   storeLoadFailed: "The asset store could not be loaded. Check your connection and try again."
   retryButton: "Try Again"
   loadMoreButton: "Load More"
-  assetCount_one: "{count} asset"
-  assetCount_other: "{count} assets"
   openPackLabel: "Open {name}"
   packAssetsLoading: "Loading assets"
   packInfoTitle: "Pack info"

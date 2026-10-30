@@ -2823,8 +2823,6 @@ resourceImport:
   storeLoadFailed: "アセットストアを読み込めませんでした。接続を確認して、もう一度お試しください。"
   retryButton: "再試行"
   loadMoreButton: "さらに表示"
-  assetCount_one: "{count}件のアセット"
-  assetCount_other: "{count}件のアセット"
   openPackLabel: "{name}を開く"
   packAssetsLoading: "アセットを読み込んでいます"
   packInfoTitle: "パッケージ情報"

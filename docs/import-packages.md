@@ -171,8 +171,7 @@ edge and at most 1600 px wide, or full screen in windows up to 768 px wide, unde
 place with its title and a close button at its right: a sidebar with Search and Asset
 types fields, and free packs, newest first, 20 at a time, each card with its
 cover, title, summary (at most two lines, ending in an ellipsis when cut, and
-left out when the pack has none), creator and total asset count, such as
-"50 assets". Search matches pack titles and creator names once
+left out when the pack has none) and creator. Search matches pack titles and creator names once
 typing pauses for 300 ms. A pack's asset types are the kinds of resources it
 holds, such as Images or Sounds, and use the resource types' names. The Asset
 types field shows the chosen types; clicking it lists every type, and saving the

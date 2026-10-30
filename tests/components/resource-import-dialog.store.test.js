@@ -152,7 +152,6 @@ describe("resource-import-dialog.store", () => {
         coverUrl: "https://files.example/cover.png",
         creatorName: "Creator One",
         creatorAvatarUrl: "https://files.example/avatar.png",
-        assetCountLabel: "42 assets",
         openLabel: "View Pack One",
       },
     ]);
@@ -169,48 +168,6 @@ describe("resource-import-dialog.store", () => {
       hasMorePacks: false,
     });
     expect(state.catalog.packs).toHaveLength(1);
-  });
-
-  it("shows a card's total asset count in the locale's plural form", () => {
-    const state = createInitialState();
-    startCatalogLoad({ state }, { requestId: "request-1" });
-    const pack = (id, images, sounds) => ({
-      id,
-      title: "Pack One",
-      assetCounts: [
-        { assetType: "IMAGES", count: images },
-        ...(sounds ? [{ assetType: "SOUNDS", count: sounds }] : []),
-      ],
-      assetCount: images + sounds,
-      creator: { id: "creator-1", name: "Creator One" },
-    });
-    setCatalogPage(
-      { state },
-      {
-        packs: [
-          pack("pack-1", 1, 0),
-          pack("pack-2", 2, 1),
-          pack("pack-3", 5, 21),
-        ],
-      },
-    );
-    const labels = (i18n) =>
-      selectViewData({ state, i18n }).catalog.packs.map(
-        (card) => card.assetCountLabel,
-      );
-
-    expect(labels({})).toEqual(["1 asset", "3 assets", "26 assets"]);
-    expect(
-      labels({
-        dateTime: { pluralRulesLocale: "ru" },
-        resourceImport: {
-          assetCount_one: "{count} ресурс",
-          assetCount_few: "{count} ресурса",
-          assetCount_many: "{count} ресурсов",
-          assetCount_other: "{count} ресурса",
-        },
-      }),
-    ).toEqual(["1 ресурс", "3 ресурса", "26 ресурсов"]);
   });
 
   it("shows the empty and failed store states", () => {
@@ -623,7 +580,6 @@ describe("resource-import-dialog.store", () => {
           coverUrl: "https://files.example/cover.png",
           creatorName: "Creator One",
           creatorAvatarUrl: "https://files.example/avatar.png",
-          assetCountLabel: "1 asset",
           openLabel: "Open Pack One",
         },
       ],

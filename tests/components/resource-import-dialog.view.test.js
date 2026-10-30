@@ -86,11 +86,8 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain(
       "rtgl-image src=${pack.coverUrl} w=f h=f of=cov",
     );
-    // Cards show the total; the pack page lists the counts by type as
-    // bullets, never joined with a separator.
-    expect(viewSource).toContain(
-      "rtgl-text s=sm c=mu-fg: ${pack.assetCountLabel}",
-    );
+    // Cards show no asset count.
+    expect(viewSource).not.toContain("assetCountLabel");
     // The summary sits under the title, clamped to two lines.
     expect(viewSource).toContain(
       `'rtgl-text s=sm c=mu-fg style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;"': \${pack.summary}`,
@@ -100,6 +97,17 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).not.toContain("downloadSize");
     expect(viewSource).not.toContain("assetCountsLabel");
     expect(viewSource).toContain("rtgl-button#catalogRetryButton");
+    // A failed catalog or creator page says so in the middle, in muted text,
+    // without a red box.
+    expect(viewSource).toContain(
+      "rtgl-view w=f h=1fg d=v av=c ah=c g=md role=alert:\n                              - rtgl-text c=mu-fg ta=c: ${catalog.catalogFailedLabel}",
+    );
+    expect(viewSource).toContain(
+      "rtgl-text c=mu-fg ta=c: ${creator.errorMessage}",
+    );
+    expect(viewSource).not.toContain(
+      "rtgl-text c=de-fg: ${catalog.catalogFailedLabel}",
+    );
     expect(viewSource).toContain("rtgl-button#loadMorePacksButton");
     expect(viewSource).toContain("handler: handlePackGridClick");
     expect(viewSource).toContain("handler: handlePackGridKeyDown");
@@ -232,7 +240,7 @@ describe("resource-import-dialog.view", () => {
   it("renders preview media in bounded 16:9 frames", () => {
     expect(viewSource).toContain("rvn-resource-import-preview-media");
     expect(viewSource).toContain(
-      "rtgl-view w=f av=c ah=c bgc=mu pos=rel overflow=hidden style=\"aspect-ratio: 16 / 9;\"",
+      'rtgl-view w=f av=c ah=c bgc=mu pos=rel overflow=hidden style="aspect-ratio: 16 / 9;"',
     );
     expect(viewSource).toContain("sourceFileId=${resource.previewSourceId}");
     expect(viewSource).toContain("?lazy=true");
@@ -276,7 +284,7 @@ describe("resource-import-dialog.view", () => {
     // preview. A selected one shows a check on the preview's top right; an
     // unselected one shows nothing.
     expect(viewSource).toContain(
-      "rtgl-grid cols=4 md-cols=3 sm-cols=2 g=md w=f style=\"padding-left: ${group.indent}px;",
+      'rtgl-grid cols=4 md-cols=3 sm-cols=2 g=md w=f style="padding-left: ${group.indent}px;',
     );
     expect(viewSource).toMatch(
       /- \$if resource\.selected:\n +- 'rtgl-view d=h av=c g=xs pos=abs aria-hidden=true style="top: 8px; right: 8px;"':\n +- \$if resource\.required:\n +- rtgl-tag s=sm v=mu: \$\{resource\.selectionStatus\}\n +- rtgl-view wh=24 av=c ah=c br=f bgc=pr:\n +- rtgl-svg svg=check wh=16 c=pr-fg: null\n/,

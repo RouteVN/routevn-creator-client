@@ -2823,8 +2823,6 @@ resourceImport:
   storeLoadFailed: "โหลดร้านค้าทรัพยากรไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
   retryButton: "ลองอีกครั้ง"
   loadMoreButton: "โหลดเพิ่ม"
-  assetCount_one: "ทรัพยากร {count} รายการ"
-  assetCount_other: "ทรัพยากร {count} รายการ"
   openPackLabel: "เปิด {name}"
   packAssetsLoading: "กำลังโหลดทรัพยากร"
   packInfoTitle: "ข้อมูลแพ็กเกจ"

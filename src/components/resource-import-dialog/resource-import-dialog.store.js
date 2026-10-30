@@ -1,7 +1,4 @@
-import {
-  formatI18nCopy,
-  formatPluralCopy,
-} from "../../internal/ui/i18nCopy.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { formatCalendarDate, formatPercent } from "../../internal/dates.js";
 import { generateId } from "../../internal/id.js";
 
@@ -571,35 +568,20 @@ export const selectCreatorId = ({ state }) => state.creator.id;
 export const selectCreatorStatus = ({ state }) => state.creator.status;
 export const selectCreatorRequestId = ({ state }) => state.creator.requestId;
 
-// A pack's total asset count, such as "50 assets".
-const formatAssetCount = ({ count, copy, dateTime }) =>
-  formatPluralCopy(
-    {
-      assetCount_one: "{count} asset",
-      assetCount_other: "{count} assets",
-      ...copy,
-    },
-    "assetCount",
-    count,
-    { dateTime },
-  );
-
-// One pack card, the same in the store list and on a creator page. A card
-// shows the pack's total; its page lists the counts by type.
-const getPackCardViewData = ({ pack, copy, dateTime }) => ({
+// One pack card, the same in the store list and on a creator page.
+const getPackCardViewData = ({ pack, copy }) => ({
   id: pack.id,
   title: pack.title,
   summary: pack.summary ?? "",
   coverUrl: pack.coverUrl,
   creatorName: pack.creator.name,
   creatorAvatarUrl: pack.creator.avatarUrl,
-  assetCountLabel: formatAssetCount({ count: pack.assetCount, copy, dateTime }),
   openLabel: formatI18nCopy(copy.openPackLabel ?? "Open {name}", {
     name: pack.title,
   }),
 });
 
-const getCreatorViewData = ({ state, copy, dateTime }) => {
+const getCreatorViewData = ({ state, copy }) => {
   const { creator } = state;
   return {
     isLoading: creator.status === "loading",
@@ -616,13 +598,11 @@ const getCreatorViewData = ({ state, copy, dateTime }) => {
     packsTitle: copy.creatorPacksTitle ?? "Asset packs",
     noPacksLabel: copy.creatorNoPacks ?? "This creator has no asset packs yet.",
     hasNoPacks: creator.status === "ready" && creator.packs.length === 0,
-    packs: creator.packs.map((pack) =>
-      getPackCardViewData({ pack, copy, dateTime }),
-    ),
+    packs: creator.packs.map((pack) => getPackCardViewData({ pack, copy })),
   };
 };
 
-const getCatalogViewData = ({ state, copy, resourceTypeCopy, dateTime }) => {
+const getCatalogViewData = ({ state, copy, resourceTypeCopy }) => {
   const { catalog } = state;
   const isFiltered = catalog.query !== "" || catalog.assetTypes.length > 0;
   return {
@@ -656,9 +636,7 @@ const getCatalogViewData = ({ state, copy, resourceTypeCopy, dateTime }) => {
       !catalog.loadingMore,
     isLoadingMorePacks: catalog.loadingMore,
     loadMoreLabel: copy.loadMoreButton ?? "Load More",
-    packs: catalog.packs.map((pack) =>
-      getPackCardViewData({ pack, copy, dateTime }),
-    ),
+    packs: catalog.packs.map((pack) => getPackCardViewData({ pack, copy })),
   };
 };
 // The pack page groups its assets the way resource pages do: the type's own
@@ -842,7 +820,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     isStoreStep: state.step === STORE_STEP,
     isPackStep: state.step === PACK_STEP,
     isCreatorStep: state.step === CREATOR_STEP,
-    creator: getCreatorViewData({ state, copy, dateTime: i18n.dateTime }),
+    creator: getCreatorViewData({ state, copy }),
     isSelectionStep,
     allResourcesSelected,
     selectionToggleAllLabel: allResourcesSelected
@@ -859,7 +837,6 @@ export const selectViewData = ({ state, i18n = {} }) => {
       state,
       copy,
       resourceTypeCopy: i18n.resourceTypes ?? {},
-      dateTime: i18n.dateTime,
     }),
     pack: getPackViewData({ state, copy, dateTime: i18n.dateTime }),
     isAssetPreviewOpen: previewResource !== undefined,
