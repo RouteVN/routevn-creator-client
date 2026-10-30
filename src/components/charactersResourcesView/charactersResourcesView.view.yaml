@@ -64,6 +64,9 @@ refs:
       click:
         handler: handleSpritesButtonClick
 styles:
+  # Filter tags are chips: outlined when unselected, filled when selected.
+  "#tagFilterPopover rtgl-tag::part(surface)":
+    border-color: var(--border)
   '[data-long-press="true"]':
     user-select: none
     "-webkit-user-select": none

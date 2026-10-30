@@ -12,7 +12,7 @@
         "@lexical/utils": "0.22.0",
         "@noble/hashes": "2.4.0",
         "@rettangoli/fe": "1.6.1",
-        "@rettangoli/ui": "1.31.0",
+        "@rettangoli/ui": "1.32.0",
         "@rettangoli/vt": "1.1.0",
         "@routevn/creator-model": "1.17.0",
         "@sentry/browser": "10.44.0",
@@ -299,7 +299,7 @@
 
     "@rettangoli/sites": ["@rettangoli/sites@1.5.0", "", { "dependencies": { "gray-matter": "^4.0.3", "jempl": "^0.3.1-rc1", "js-yaml": "^4.1.0", "markdown-it": "^14.1.0", "shiki": "^3.13.0", "ws": "^8.18.0", "yahtml": "0.0.4" } }, "sha512-BGHNk46WbOoUb82WnHw4xhBEyzB5oYiYK4/IowzeRAiunIsPvfd4JkW+hD2IgarJ/5c0PryvKd0wRd9bbGJwIw=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.31.0", "", { "dependencies": { "@rettangoli/fe": "1.6.1", "jempl": "1.0.1" } }, "sha512-uH7aVTkNBWYXZ9BTfNxN5b3YSNQRDwkqUa651qD9lUoktUakVcSMiZamjcEa9aaV/LfacNkNNi6P6Zh9Xp2BzA=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.32.0", "", { "dependencies": { "@rettangoli/fe": "1.6.1", "jempl": "1.0.1" } }, "sha512-Zfu2Wk2LtOmjUbc1eoEX0bJxtNuVkZBpNXYZSC/jqCUHP8BS6stCDvH2SS4OTms3zCNGw5mmSpLNEb+7jrX+Hg=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.1.0", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "parse5": "^7.3.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-0sT8M7hKH/S+IHzogpwUS6o59Q6Fdd6JswQLAn0ANGVHQDvDYsh4jMeXhXhMUXfa4tFQ9epvNDwS5eFRtuFmZw=="],
 
