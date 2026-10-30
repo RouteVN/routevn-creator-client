@@ -133,6 +133,8 @@ export const createCommandApiShared = ({
   storyScenePartitionFor,
   scenePartitionFor,
   resourceTypePartitionFor,
+  // Records the step a change is at, for the report of a slow change.
+  markChangeStep = () => {},
 }) => {
   const createId = () => {
     if (typeof idGenerator === "function") {
@@ -152,11 +154,23 @@ export const createCommandApiShared = ({
   const filePartitionFor = (projectId) =>
     resourceTypePartitionFor(projectId, "files");
 
+  // The first change of a session also loads the project's history, which
+  // takes longest in a large project: a change that names a scene, section or
+  // line can load it while it reads its context, any other loads it while it
+  // is applied.
+  const markHistoryStep = (step, repository) => {
+    markChangeStep(
+      repository.isHistoryLoadPending() ? `${step}-loading-history` : step,
+      repository,
+    );
+  };
+
   const ensureCommandContext = async ({
     sceneIds = [],
     sectionIds = [],
     lineIds = [],
   } = {}) => {
+    markChangeStep("open-repository");
     let repository;
     try {
       repository = getCachedRepository();
@@ -164,6 +178,7 @@ export const createCommandApiShared = ({
       repository = await getCurrentRepository();
     }
 
+    markHistoryStep("read-context", repository);
     const contextState = await repository.getContextState({
       sceneIds,
       sectionIds,
@@ -178,6 +193,7 @@ export const createCommandApiShared = ({
     assertSupportedProjectState(state);
 
     const projectId = currentProjectId;
+    markChangeStep("open-session", repository);
     const session = await ensureCommandSessionForProject(currentProjectId);
     const actor = session.getActor() ?? getOrCreateLocalActor(currentProjectId);
 
@@ -362,17 +378,20 @@ export const createCommandApiShared = ({
       return validationResult;
     }
 
+    markChangeStep("save", context.repository);
     const submitResult = await context.session.submitCommand(command);
     if (submitResult?.valid === false) {
       return submitResult;
     }
 
+    markHistoryStep("apply", context.repository);
     const applyResult = await applyCommandToRepository({
       repository: context.repository,
       command,
       projectId: context.projectId,
     });
 
+    markChangeStep("save-checkpoint", context.repository);
     await flushRepositoryMainCheckpointBestEffort({
       repository: context.repository,
       projectId: context.projectId,
@@ -428,6 +447,7 @@ export const createCommandApiShared = ({
     const localApplyCommands = structuredClone(normalizedCommands);
     let submitted = false;
     try {
+      markChangeStep("save", context.repository);
       const submitResult =
         await context.session.submitCommands(normalizedCommands);
       if (submitResult?.valid === false) {
@@ -435,12 +455,14 @@ export const createCommandApiShared = ({
       }
       submitted = true;
 
+      markHistoryStep("apply", context.repository);
       const applyResult = await applyCommandsToRepository({
         repository: context.repository,
         commands: localApplyCommands,
         projectId: context.projectId,
       });
 
+      markChangeStep("save-checkpoint", context.repository);
       await flushRepositoryMainCheckpointBestEffort({
         repository: context.repository,
         projectId: context.projectId,

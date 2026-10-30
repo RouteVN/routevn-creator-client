@@ -2702,6 +2702,7 @@ commandLinePage:
   incrementSaveLoadPageDescription: "Passa para a página seguinte de jogos guardados."
   decrementSaveLoadPageDescription: "Volta à página anterior de jogos guardados."
   slotIdDescription: "Deixe vazio para usar o slot automático ou use um valor fixo, como 1, ${slot.slotId} ou _event.slotId"
+  autoSlotOutsideSlotContainer: "O automático só funciona dentro de um container (slot de jogo guardado). Introduza um ID do slot."
   "Missing audio effect ({id})": "Efeito de áudio não encontrado ({id})"
   "Runtime Action": "Alterar estado do jogo"
   "{action}: {value}": "{action}: {value}"

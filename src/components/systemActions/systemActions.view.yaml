@@ -315,13 +315,13 @@ template:
                     $elif mode == "rollbackByOffset":
                       - rvn-command-line-rollback-by-offset#commandLineRollbackByOffset :rollbackByOffset=${actions.rollbackByOffset}: null
                     $elif mode == "showConfirmDialog":
-                      - rvn-command-line-show-confirm-dialog#commandLineShowConfirmDialog :layouts=${confirmDialogLayouts} :showConfirmDialog=${actions.showConfirmDialog}: null
+                      - rvn-command-line-show-confirm-dialog#commandLineShowConfirmDialog :layouts=${confirmDialogLayouts} :showConfirmDialog=${actions.showConfirmDialog} :allowAutoSlot=${allowAutoSlot}: null
                     $elif mode == "hideConfirmDialog":
                       - rvn-command-line-hide-confirm-dialog#commandLineHideConfirmDialog :hideConfirmDialog=${actions.hideConfirmDialog}: null
                     $elif mode == "saveSlot":
-                      - rvn-command-line-save-slot#commandLineSaveSlot :saveSlot=${actions.saveSlot}: null
+                      - rvn-command-line-save-slot#commandLineSaveSlot :saveSlot=${actions.saveSlot} :allowAutoSlot=${allowAutoSlot}: null
                     $elif mode == "loadSlot":
-                      - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot}: null
+                      - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot} :allowAutoSlot=${allowAutoSlot}: null
                     $elif mode == "visual":
                       - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
                     $elif mode == "setNextLineConfig":

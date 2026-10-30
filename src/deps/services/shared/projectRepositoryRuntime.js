@@ -340,6 +340,13 @@ const canSkipDuplicateResourceCreateDuringReplay = ({
   );
 };
 
+// A file or resource create whose id the state already has, with the same
+// data, is already applied. A save that ran twice, for example, stored the
+// second copy of its creates too.
+export const canSkipDuplicateCreateDuringReplay = (params) =>
+  canSkipDuplicateFileCreateDuringReplay(params) ||
+  canSkipDuplicateResourceCreateDuringReplay(params);
+
 const canAttemptDuplicateCreateReplayRecovery = ({ events, error } = {}) => {
   const replayEvents = Array.isArray(events) ? events : [];
   const failedIndex = getReplayFailedCommandIndex(error);
@@ -397,17 +404,7 @@ const replayEventsSkippingDuplicateCreates = ({
           });
         } catch (eventError) {
           if (
-            canSkipDuplicateFileCreateDuringReplay({
-              repositoryState: state,
-              event,
-              error: eventError,
-            })
-          ) {
-            return state;
-          }
-
-          if (
-            canSkipDuplicateResourceCreateDuringReplay({
+            canSkipDuplicateCreateDuringReplay({
               repositoryState: state,
               event,
               error: eventError,
@@ -1856,6 +1853,9 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     getFileRecord,
+
+    // Whether the next added event first loads the history.
+    isHistoryLoadPending: isEventHistoryPending,
 
     getRevision(untilEventIndex) {
       if (untilEventIndex === undefined || untilEventIndex === null) {
