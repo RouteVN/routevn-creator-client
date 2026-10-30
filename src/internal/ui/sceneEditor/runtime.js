@@ -1974,8 +1974,12 @@ const restoreSceneEditorCanvas = async (deps) => {
   );
 
   const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
+  // The editor canvas never plays audio transitions, and another render may
+  // already have painted the same audio, so a strict engine would send its
+  // transition as an enter on a node that exists.
   initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
     enableGlobalKeyboardBindings: false,
+    audioEffectsMode: "snapshot",
     onRenderState,
   });
 

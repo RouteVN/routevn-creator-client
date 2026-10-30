@@ -2999,3 +2999,67 @@ describe("scene editor canvas transition loop", () => {
     });
   });
 });
+
+describe("scene editor return from the full-screen preview", () => {
+  it("starts the engine in snapshot audio mode", async () => {
+    // Another render may already have painted the selected line's audio, and
+    // the editor canvas never plays audio transitions. A strict engine would
+    // send the transition as an enter on that existing node and fail.
+    const stop = new Error("Engine stopped for the test");
+    const initRouteEngine = vi.fn(() => {
+      throw stop;
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const canvasRoot = { isConnected: true };
+    const reportError = vi.fn();
+
+    try {
+      await restoreSceneEditorFromPreview({
+        subject: { dispatch: vi.fn() },
+        graphicsService: {
+          init: vi.fn(async () => {}),
+          initRouteEngine,
+        },
+        appService: {
+          reportError,
+          showAlertWhenIdle: vi.fn(),
+        },
+        i18n: {
+          resourcePages: { errorTitle: "Error title" },
+          scenesPage: {},
+          sceneEditorPage: {
+            errorDetailsLabel: "Details label:",
+            failedRenderCanvas: "Canvas message",
+          },
+        },
+        refs: { previewCanvasHost: { getCanvasRoot: () => canvasRoot } },
+        render: vi.fn(),
+        store: {
+          hidePreviewScene: vi.fn(),
+          selectSceneId: () => "scene-1",
+          selectSelectedSectionId: () => "section-1",
+          selectSelectedLineId: () => "line-1",
+          selectProjectData: () => createProjectData(),
+          selectIsScenePageLoading: () => false,
+          selectIsSceneAssetLoading: () => false,
+          setCanvasAudioPreviewKey: vi.fn(),
+          setScenePageLoading: vi.fn(),
+          setSceneAssetLoading: vi.fn(),
+          setSceneLoadingProgress: vi.fn(),
+        },
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect(reportError).toHaveBeenCalledWith(stop, {
+      operation: "sceneEditor.restoreFromPreview",
+    });
+    expect(initRouteEngine).toHaveBeenCalledOnce();
+    expect(initRouteEngine.mock.calls[0][1]).toMatchObject({
+      audioEffectsMode: "snapshot",
+    });
+  });
+});
