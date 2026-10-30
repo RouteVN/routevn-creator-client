@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createUrlPackageSource } from "../../src/deps/clients/importPackageClient.js";
 import { createResourcePackageImportService } from "../../src/deps/services/shared/resourcePackageImportService.js";
 import { ASSET_PACKAGE_KIND } from "../../src/internal/assetPackageResources.js";
 
@@ -167,6 +168,11 @@ const createService = ({
       contentType: "image/png",
     })),
   };
+  // A manifest URL's source reads through fetchManifest and downloadFile, as
+  // the real client's does.
+  importClient.openPackage = vi.fn(({ url }) =>
+    createUrlPackageSource({ client: importClient, url }),
+  );
   const assetService = {
     validateResourceImportFile: vi.fn(async () => {}),
     stageResourceImportFile: vi.fn(
@@ -390,6 +396,49 @@ describe("resourcePackageImportService", () => {
       manifestUrl: "http://localhost:4179/manifests/assets.json",
       signal: expect.any(AbortSignal),
     });
+  });
+
+  it("reads a published package's manifest and previews through its own source", async () => {
+    const { service, importClient } = createService();
+    const zip = {
+      url: "https://files.example/asset-store/PackageFile00001",
+      size: 1000,
+      directoryOffset: 900,
+      directorySize: 100,
+    };
+    const source = {
+      readManifest: vi.fn(async () => ({
+        manifest: assetManifest(),
+        manifestUrl: zip.url,
+      })),
+      readFile: vi.fn(async ({ descriptor }) => ({
+        bytes: new Uint8Array([1, 2, 3]),
+        byteLength: 3,
+        contentType: descriptor.mimeType,
+      })),
+    };
+    importClient.openPackage.mockReturnValue(source);
+
+    const planned = await service.createResourceImportPlan({ zip });
+    expect(importClient.openPackage).toHaveBeenCalledWith({
+      url: undefined,
+      zip,
+    });
+    const video = planned.plan.resources.find(
+      (resource) => resource.resourceType === "videos",
+    );
+    const result = await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: video.previewSourceId,
+    });
+
+    expect(result).toMatchObject({ valid: true });
+    expect(source.readFile).toHaveBeenCalledWith({
+      descriptor:
+        assetManifest().repository.files.items["file.video-thumbnail"],
+      signal: expect.any(AbortSignal),
+    });
+    expect(importClient.downloadFile).not.toHaveBeenCalled();
   });
 
   it("loads a sound's audio for its full-screen preview", async () => {

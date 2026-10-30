@@ -2897,6 +2897,8 @@ resourceImportErrors:
     manifest_server_error: "เซิร์ฟเวอร์แพ็กเกจไม่สามารถโหลดแพ็กเกจนี้ได้"
     manifest_request_failed: "ไม่สามารถโหลดแพ็กเกจได้"
     file_not_found: "ไม่พบไฟล์แพ็กเกจ"
+    package_invalid: "ไม่สามารถอ่านแพ็กเกจทรัพยากรได้"
+    range_unsupported: "เซิร์ฟเวอร์ของแพ็กเกจไม่รองรับการขอข้อมูลเป็นช่วงไบต์"
     file_server_error: "เซิร์ฟเวอร์แพ็กเกจไม่สามารถโหลดไฟล์ได้"
     file_request_failed: "ไม่สามารถดาวน์โหลดไฟล์แพ็กเกจได้"
     file_timeout: "คำขอไฟล์แพ็กเกจหมดเวลา"

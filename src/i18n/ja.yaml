@@ -2897,6 +2897,8 @@ resourceImportErrors:
     manifest_server_error: "パッケージサーバーでこのパッケージを読み込めませんでした。"
     manifest_request_failed: "パッケージを読み込めませんでした。"
     file_not_found: "パッケージファイルが見つかりません。"
+    package_invalid: "アセットパッケージを読み込めませんでした。"
+    range_unsupported: "パッケージのサーバーがバイト範囲の取得に対応していません。"
     file_server_error: "パッケージサーバーでファイルを読み込めませんでした。"
     file_request_failed: "パッケージファイルをダウンロードできませんでした。"
     file_timeout: "パッケージファイルのリクエストがタイムアウトしました。"

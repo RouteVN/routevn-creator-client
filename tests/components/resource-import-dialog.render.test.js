@@ -9,6 +9,14 @@ import * as handlers from "../../src/components/resource-import-dialog/resource-
 import * as store from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
 import Subject from "../../src/deps/subject.js";
 
+// A pack's published package, as the store client reads it.
+const packagePlace = (url) => ({
+  url,
+  size: 1000,
+  directoryOffset: 900,
+  directorySize: 100,
+});
+
 const readYaml = (path) =>
   yaml.load(readFileSync(new URL(path, import.meta.url), "utf8"));
 
@@ -244,7 +252,7 @@ describe("resource-import-dialog rendering", () => {
       ],
       versionName: "1.0.0",
       releaseNotes: "Adds masks.\nFixes fades.",
-      importUrl: "https://files.example/manifest.json",
+      package: packagePlace("https://files.example/pack.zip"),
     });
     await settle();
 

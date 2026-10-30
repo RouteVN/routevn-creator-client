@@ -2897,6 +2897,8 @@ resourceImportErrors:
     manifest_server_error: "资源包服务器无法加载此资源包。"
     manifest_request_failed: "无法加载资源包。"
     file_not_found: "找不到资源包文件。"
+    package_invalid: "无法读取资源包。"
+    range_unsupported: "资源包服务器不支持按字节范围读取。"
     file_server_error: "资源包服务器无法加载文件。"
     file_request_failed: "无法下载资源包文件。"
     file_timeout: "资源包文件请求超时。"

@@ -212,7 +212,7 @@ with the `X-RouteVN-RPC: 1` header and no credentials:
 | Method                        | Params                                                            | Used for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `assetStore.listAssetPacks`   | `{query, pricingType: "FREE", assetTypes, page: {cursor, limit}}` | Pack cards. Each item carries `data`, with the title, `summary` (one line of 0 to 300 characters, trimmed; `""` when missing or not text), cover, pricing, `assetCounts` and listing date, and its `creator`; `files` maps cover and avatar IDs to URLs. `assetTypes` is `null` or a list of asset types, such as `IMAGES`. `assetCounts` maps each asset type the pack has to its count, such as `{"IMAGES": 30, "SOUNDS": 20}`; types the app does not know and counts that are not positive are left out. |
-| `assetStore.getAssetPackById` | `{assetPackId}`                                                   | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update, and the import link, which is the `files` URL of `data.manifestFileId`. The description shows as plain paragraphs and its images, each by its `files` URL.                                                                                                                                                                                             |
+| `assetStore.getAssetPackById` | `{assetPackId}`                                                   | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update, and `data.package`: `{fileId, size, directoryOffset, directorySize}`, the published package's ZIP (its `files` URL), its byte size, and where its central directory starts and how long it is. The description shows as plain paragraphs and its images, each by its `files` URL.                                                                      |
 | `assetStore.getCreatorById`   | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                           |
 
 Development builds call `http://127.0.0.1:3100/asset-store/rpc` instead. Set
@@ -221,10 +221,33 @@ local API. A list that fails to load shows Try Again, and a pack or creator that
 is no longer listed shows its own message. Images whose IDs `files` does not
 map to a usable URL are left out.
 
+## Reading a published package
+
+The asset store publishes each pack's package as the ZIP its publisher
+uploaded, and the app reads it in place: never downloading it whole and never
+unpacking it on a server. Every entry is stored (uncompressed); the API refuses
+anything else at upload. The app reads:
+
+1. the central directory, the ZIP's table of contents, with one byte range at
+   the `directoryOffset` and `directorySize` the API sends;
+2. `asset-package.json`, the manifest, as one more range: its local header and
+   data;
+3. each file it needs, a preview as its card scrolls into view or a file Import
+   downloads, as one range per file: the entry named by the file's
+   `source.url` without its leading `./`, such as `files/<id>`. A second range
+   follows only when an entry's local header is longer than its directory
+   record says.
+
+Every request names both ends of its range (`Range: bytes=<start>-<end>`), so a
+cross-origin read needs no CORS preflight, and nothing depends on reading the
+response's `Content-Range`. A server that answers with the whole file instead
+of a 206 range is refused. Size limits and `sha256` checks apply as they do to
+files fetched by URL.
+
 ## Import flow
 
-1. Choose a pack in the asset store, then load and strictly validate its
-   manifest.
+1. Choose a pack in the asset store, then read and strictly validate the
+   manifest inside its package.
 2. Show a selection page when the package contains multiple resources.
 3. Keep required dependencies selected and locked.
 4. Let the user review and edit each selected resource's name and description.
@@ -237,8 +260,8 @@ A one-resource package skips the selection page.
 
 ## Publisher requirements
 
-Production import links from the asset store and every redirected manifest or
-file URL must use HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
+Production package URLs from the asset store, and any manifest or file URL,
+must use HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
 testing.
 
 Publishers should:
@@ -263,6 +286,7 @@ references, mismatched media types, and packages with no resources.
 Current limits are:
 
 - 2 MiB per manifest
+- 4 MiB per package central directory
 - 2,000 package files
 - 50 MiB per file
 - 200 MiB total per import

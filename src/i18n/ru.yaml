@@ -2925,6 +2925,8 @@ resourceImportErrors:
     manifest_server_error: "Серверу пакета не удалось загрузить этот пакет."
     manifest_request_failed: "Не удалось получить пакет."
     file_not_found: "Файл пакета не найден."
+    package_invalid: "Не удалось прочитать пакет ресурсов."
+    range_unsupported: "Сервер пакета не поддерживает диапазоны байтов."
     file_server_error: "Серверу пакета не удалось загрузить файл."
     file_request_failed: "Не удалось скачать файл пакета."
     file_timeout: "Истекло время ожидания запроса файла пакета."

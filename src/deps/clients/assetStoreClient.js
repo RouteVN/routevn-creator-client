@@ -65,6 +65,8 @@ const isObject = (value) =>
 
 const isText = (value) => typeof value === "string" && value.length > 0;
 
+const isByteCount = (value) => Number.isSafeInteger(value) && value >= 0;
+
 const isTimestamp = (value) => Number.isInteger(value) && value > 0;
 
 const runText = (runs) =>
@@ -124,6 +126,25 @@ const readFileUrls = (files) => {
     }
   }
   return urls;
+};
+
+// The published package Import reads in place: its ZIP's URL, its size, and
+// where its central directory is. Undefined when any of them is missing.
+const readPackage = (data, fileUrls) => {
+  if (!isObject(data)) return undefined;
+  const url = fileUrls.get(data.fileId);
+  const { size, directoryOffset, directorySize } = data;
+  if (
+    !url ||
+    !isByteCount(size) ||
+    !isByteCount(directoryOffset) ||
+    !isByteCount(directorySize) ||
+    directorySize === 0 ||
+    directoryOffset + directorySize > size
+  ) {
+    return undefined;
+  }
+  return { url, size, directoryOffset, directorySize };
 };
 
 const readCreator = (creator, fileUrls) => {
@@ -285,9 +306,9 @@ export const createAssetStoreClient = ({
       pack.updatedAt = isTimestamp(data.lastUpdatedAt)
         ? data.lastUpdatedAt
         : undefined;
-      pack.importUrl = fileUrls.get(data.manifestFileId);
-      if (!pack.importUrl) {
-        throw unavailable(new Error("The asset pack has no import link."));
+      pack.package = readPackage(data.package, fileUrls);
+      if (!pack.package) {
+        throw unavailable(new Error("The asset pack has no package."));
       }
       return pack;
     },

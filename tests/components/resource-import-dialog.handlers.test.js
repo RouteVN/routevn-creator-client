@@ -30,6 +30,14 @@ import {
 } from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 import * as dialogStore from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
 
+// A pack's published package, as the store client reads it.
+const packagePlace = (url) => ({
+  url,
+  size: 1000,
+  directoryOffset: 900,
+  directorySize: 100,
+});
+
 const createDeps = () => {
   const plan = {
     planId: "plan-1",
@@ -444,7 +452,7 @@ describe("resource-import-dialog asset store", () => {
       ...storePack("pack-1"),
       description: [{ text: "About the pack." }],
       versionName: "1.0.0",
-      importUrl: "https://files.example/manifest.json",
+      package: packagePlace("https://files.example/pack.zip"),
     };
     const details = deferred();
     const planned = deferred();
@@ -490,7 +498,7 @@ describe("resource-import-dialog asset store", () => {
       versionName: "1.0.0",
     });
     expect(deps.projectService.createResourceImportPlan).toHaveBeenCalledWith({
-      url: "https://files.example/manifest.json",
+      zip: packagePlace("https://files.example/pack.zip"),
       operationId: state.operationId,
     });
 
@@ -527,7 +535,10 @@ describe("resource-import-dialog asset store", () => {
     });
     expect(state.step).toBe("store");
 
-    details.resolve({ ...storePack("pack-1"), importUrl: "https://x.test/m" });
+    details.resolve({
+      ...storePack("pack-1"),
+      package: packagePlace("https://x.test/pack.zip"),
+    });
     await opening;
     expect(state.step).toBe("store");
     expect(deps.projectService.createResourceImportPlan).not.toHaveBeenCalled();
@@ -542,7 +553,7 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
       description: [],
-      importUrl: "https://files.example/manifest.json",
+      package: packagePlace("https://files.example/pack.zip"),
     });
     deps.appService.getAssetStoreCreator.mockResolvedValue({
       creator: {
@@ -579,7 +590,7 @@ describe("resource-import-dialog asset store", () => {
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      importUrl: "https://files.example/manifest.json",
+      package: packagePlace("https://files.example/pack.zip"),
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,
@@ -636,7 +647,7 @@ describe("resource-import-dialog asset store", () => {
       packs: [storePack("pack-1")],
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
-      importUrl: "https://files.example/manifest.json",
+      package: packagePlace("https://files.example/pack.zip"),
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: false,
@@ -853,7 +864,7 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack(packId),
       description: [],
-      importUrl: `https://files.example/${packId}.json`,
+      package: packagePlace(`https://files.example/${packId}.zip`),
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,

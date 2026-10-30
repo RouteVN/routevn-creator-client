@@ -2897,6 +2897,8 @@ resourceImportErrors:
     manifest_server_error: "O servidor do pacote não conseguiu carregar este pacote."
     manifest_request_failed: "Não foi possível carregar o pacote."
     file_not_found: "Um arquivo do pacote não foi encontrado."
+    package_invalid: "Não foi possível ler o pacote de recursos."
+    range_unsupported: "O servidor do pacote não oferece intervalos de bytes."
     file_server_error: "O servidor do pacote não conseguiu carregar um arquivo."
     file_request_failed: "Não foi possível fazer o download de um arquivo do pacote."
     file_timeout: "O pedido de um arquivo do pacote excedeu o tempo limite."

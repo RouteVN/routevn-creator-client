@@ -2897,6 +2897,8 @@ resourceImportErrors:
     manifest_server_error: "The package server could not load this package."
     manifest_request_failed: "Package could not be loaded."
     file_not_found: "A package file was not found."
+    package_invalid: "The asset package could not be read."
+    range_unsupported: "The package server does not serve byte ranges."
     file_server_error: "The package server could not load a file."
     file_request_failed: "A package file could not be downloaded."
     file_timeout: "A package file request timed out."

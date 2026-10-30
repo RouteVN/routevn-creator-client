@@ -2897,6 +2897,8 @@ resourceImportErrors:
     manifest_server_error: "Le serveur qui héberge le paquet n’a pas pu le charger."
     manifest_request_failed: "Impossible de charger le paquet."
     file_not_found: "Un fichier du paquet est introuvable."
+    package_invalid: "Le paquet de ressources n'a pas pu être lu."
+    range_unsupported: "Le serveur du paquet ne prend pas en charge les plages d'octets."
     file_server_error: "Le serveur qui héberge le paquet n’a pas pu charger l’un de ses fichiers."
     file_request_failed: "Impossible de télécharger un fichier du paquet."
     file_timeout: "Délai d’attente dépassé lors du téléchargement d’un fichier du paquet."

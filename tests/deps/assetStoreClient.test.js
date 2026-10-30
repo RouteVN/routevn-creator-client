@@ -39,8 +39,16 @@ const packCounts = {
 const files = [
   { fileId: "FiPackCover00001", url: "https://files.example/FiPackCover00001" },
   { fileId: "FiCreatorAvatar1", url: "https://files.example/FiCreatorAvatar1" },
-  { fileId: "FiPackManifest01", url: "https://files.example/FiPackManifest01" },
+  { fileId: "FiPackPackage001", url: "https://files.example/FiPackPackage001" },
 ];
+
+// Where a pack's published package is: its ZIP's file, size and directory.
+const packagePlace = {
+  fileId: "FiPackPackage001",
+  size: 40_234_531,
+  directoryOffset: 40_228_607,
+  directorySize: 5902,
+};
 
 const rpcResponse = (body, init) =>
   new Response(JSON.stringify(body), {
@@ -241,7 +249,7 @@ describe("assetStoreClient", () => {
     ]);
   });
 
-  it("returns a pack with the import link from its manifest file", async () => {
+  it("returns a pack with its published package's location", async () => {
     const { client, fetchImpl } = createClient(() =>
       rpcResponse({
         jsonrpc: "2.0",
@@ -251,7 +259,7 @@ describe("assetStoreClient", () => {
             id: "AsPkPackOne00001",
             data: {
               ...packItem("AsPkPackOne00001").data,
-              manifestFileId: "FiPackManifest01",
+              package: packagePlace,
             },
           },
           creator,
@@ -271,7 +279,12 @@ describe("assetStoreClient", () => {
     expect(pack).toMatchObject({
       id: "AsPkPackOne00001",
       summary: "Hand-drawn forest backgrounds.",
-      importUrl: "https://files.example/FiPackManifest01",
+      package: {
+        url: "https://files.example/FiPackPackage001",
+        size: 40_234_531,
+        directoryOffset: 40_228_607,
+        directorySize: 5902,
+      },
       releaseNotes: "",
       creator: { name: "Creator One" },
     });
@@ -287,7 +300,7 @@ describe("assetStoreClient", () => {
             id: "AsPkPackOne00001",
             data: {
               ...packItem("AsPkPackOne00001").data,
-              manifestFileId: "FiPackManifest01",
+              package: packagePlace,
               versionName: "1.0.0",
               releaseNotes: "  Adds masks.\nFixes fades.\n",
               lastUpdatedAt: 1786579200000,
@@ -542,6 +555,30 @@ describe("assetStoreClient", () => {
     ).rejects.toMatchObject({ code: "asset_pack_not_found" });
   });
 
+  it("treats a pack without a readable package as unavailable", async () => {
+    const { client } = createClient(() =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          assetPack: {
+            id: "AsPkPackOne00001",
+            data: {
+              ...packItem("AsPkPackOne00001").data,
+              package: { ...packagePlace, directoryOffset: 40_234_000 },
+            },
+          },
+          creator,
+          files,
+        },
+      }),
+    );
+
+    await expect(
+      client.getAssetPackById({ assetPackId: "AsPkPackOne00001" }),
+    ).rejects.toMatchObject({ code: "asset_store_unavailable" });
+  });
+
   it("treats a pack it may not show as missing", async () => {
     const { client } = createClient(() =>
       rpcResponse({
@@ -553,7 +590,7 @@ describe("assetStoreClient", () => {
             data: {
               ...packItem("AsPkPaidPack0001").data,
               pricing: { type: "PAID", amountMinor: 499, currency: "USD" },
-              manifestFileId: "FiPackManifest01",
+              package: packagePlace,
             },
           },
           creator,

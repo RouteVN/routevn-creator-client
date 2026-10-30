@@ -137,8 +137,9 @@ export const handleLoadMorePacks = (deps) => {
 };
 
 // Opens the pack page at once from the pack's card, then loads the pack's
-// details, with its description, and, from its manifest, the import plan
-// whose assets the page lists. Reopening the pack whose plan is loaded keeps
+// details, with its description, and, from the manifest inside its published
+// package, the import plan whose assets the page lists. Reopening the pack
+// whose plan is loaded keeps
 // the choices made for it. A response for a pack the user has left is
 // dropped.
 const openPack = async (deps, packId) => {
@@ -175,7 +176,7 @@ const openPack = async (deps, packId) => {
   render();
 
   const result = await projectService.createResourceImportPlan({
-    url: pack.importUrl,
+    zip: pack.package,
     operationId,
   });
   if (store.selectOperationId() !== operationId) return;
