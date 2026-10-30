@@ -2739,9 +2739,10 @@ audioPlayerPage:
 aboutPage:
   allSocialMediaButton: "Todas as redes sociais"
   appVersionText: "RouteVN Creator {appVersion}"
+  chatSupportTitle: "Suporte por chat"
   checkForUpdatesButton: "Procurar atualizações"
   communityTitle: "Comunidade"
-  contactButton: "Enviar mensagem"
+  contactButton: "Formulário de contato"
   contactDescription: "Tem uma opinião ou um comentário, encontrou um erro ou quer sugerir uma funcionalidade? Envie-nos uma mensagem."
   contactTitle: "Enviar mensagem"
   title: "Sobre"

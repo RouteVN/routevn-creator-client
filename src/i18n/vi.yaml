@@ -2739,9 +2739,10 @@ audioPlayerPage:
 aboutPage:
   allSocialMediaButton: "Tất cả mạng xã hội"
   appVersionText: "RouteVN Creator {appVersion}"
+  chatSupportTitle: "Hỗ trợ qua chat"
   checkForUpdatesButton: "Kiểm tra bản cập nhật"
   communityTitle: "Cộng đồng"
-  contactButton: "Liên hệ"
+  contactButton: "Biểu mẫu liên hệ"
   contactDescription: "Bạn muốn góp ý, báo lỗi hoặc đề xuất tính năng? Hãy liên hệ với chúng tôi."
   contactTitle: "Liên hệ"
   title: "Giới thiệu"
