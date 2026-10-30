@@ -8,6 +8,7 @@ import {
   $isRangeSelection,
   $isTextNode,
   COMMAND_PRIORITY_HIGH,
+  FORMAT_TEXT_COMMAND,
   INSERT_LINE_BREAK_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
@@ -336,6 +337,12 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
       this.editor.registerNodeTransform(TextNode, $clearTextFormatting),
       this.editor.registerNodeTransform(TabNode, $clearTextFormatting),
       this.editor.registerNodeTransform(MentionNode, $clearTextFormatting),
+      // Formatting shortcuts do nothing, so they leave no empty undo step.
+      this.editor.registerCommand(
+        FORMAT_TEXT_COMMAND,
+        () => true,
+        COMMAND_PRIORITY_HIGH,
+      ),
       this.editor.registerUpdateListener(({ editorState }) => {
         this.syncFromEditorState(editorState);
       }),

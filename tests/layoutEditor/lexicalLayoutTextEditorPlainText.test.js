@@ -104,6 +104,40 @@ describe("lexical layout text editor plain text", () => {
     expect(editorElement.querySelector("strong, em, u")).toBeNull();
   });
 
+  it("leaves the undo history alone on a formatting shortcut", async () => {
+    const element = mountEditor([
+      { text: "Hello " },
+      { reference: { resourceId: "playerName" } },
+    ]);
+    const editorElement = getEditorElement(element);
+    runAtEnd(element, CONTROLLED_TEXT_INSERTION_COMMAND, " end");
+    element.editor.update(
+      () => {
+        const paragraph = $getRoot().getFirstChild();
+        paragraph.select(0, paragraph.getChildrenSize());
+      },
+      { discrete: true },
+    );
+
+    editorElement.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "b",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    await Promise.resolve();
+    element.editor.dispatchCommand(UNDO_COMMAND);
+    await Promise.resolve();
+
+    // One Undo takes back the typing, the last change the user can see.
+    expect(element.getContent()).toEqual([
+      { text: "Hello " },
+      { reference: { resourceId: "playerName" } },
+    ]);
+  });
+
   it("pastes formatted text as plain text", async () => {
     const element = mountEditor([{ text: "Hi " }]);
 
