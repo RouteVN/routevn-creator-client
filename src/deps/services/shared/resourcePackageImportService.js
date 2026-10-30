@@ -228,6 +228,8 @@ export const createResourcePackageImportService = ({
   logEvent = () => {},
 } = {}) => {
   const plans = new Map();
+  // Each plan's package source, which reads the files the plan lists.
+  const sources = new Map();
   const operations = new Map();
   const previewDownloadsByPlan = new Map();
 
@@ -246,6 +248,7 @@ export const createResourcePackageImportService = ({
   const endOperation = (id) => operations.delete(id);
   const deletePlan = (planId) => {
     plans.delete(planId);
+    sources.delete(planId);
     previewDownloadsByPlan.delete(planId);
   };
   const recordEvent = (event, details = {}) => {
@@ -257,18 +260,20 @@ export const createResourcePackageImportService = ({
   };
 
   return {
-    async createResourceImportPlan({ url, operationId } = {}) {
+    // `url` is a manifest whose files resolve against it; `zip` is a
+    // published package read in place (see importPackageClient.openPackage).
+    async createResourceImportPlan({ url, zip, operationId } = {}) {
       let operation;
       try {
         recordEvent("plan.started");
         operation = beginOperation(operationId);
-        const source = await importClient.fetchManifest({
-          url,
+        const source = importClient.openPackage({ url, zip });
+        const { manifest, manifestUrl } = await source.readManifest({
           signal: operation.controller.signal,
         });
         const plan = createAssetImportPlan({
-          manifest: source.manifest,
-          manifestUrl: source.manifestUrl,
+          manifest,
+          manifestUrl,
           projectId: getCurrentProjectId?.(),
           repositoryState: getRepositoryState(),
           repositoryRevision: getRepositoryRevision(),
@@ -281,6 +286,7 @@ export const createResourcePackageImportService = ({
           );
         }
         plans.set(plan.planId, plan);
+        sources.set(plan.planId, source);
         recordEvent("plan.completed", {
           planId: plan.planId,
           resourceCount: plan.resources.length,
@@ -321,9 +327,14 @@ export const createResourcePackageImportService = ({
           });
         }
         const mimeType = previewFile.descriptor.mimeType.toLowerCase();
+        const isAudio = isAssetPackageFileMimeTypeAllowed({
+          validationKind: "audio",
+          mimeType,
+        });
         if (
           !PREVIEW_IMAGE_MIME_TYPES.has(mimeType) &&
-          !PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+          !PREVIEW_VIDEO_MIME_TYPES.has(mimeType) &&
+          !isAudio
         ) {
           fail(
             "preview_type_unsupported",
@@ -343,9 +354,8 @@ export const createResourcePackageImportService = ({
         }
 
         operation = beginOperation(operationId);
-        const download = await importClient.downloadFile({
+        const download = await sources.get(planId).readFile({
           descriptor: previewFile.descriptor,
-          manifestUrl: plan.manifestUrl,
           signal: operation.controller.signal,
         });
         if (
@@ -361,7 +371,11 @@ export const createResourcePackageImportService = ({
           sourceFileId,
           bytes: download.bytes,
           mimeType,
-          kind: PREVIEW_VIDEO_MIME_TYPES.has(mimeType) ? "video" : "image",
+          kind: isAudio
+            ? "audio"
+            : PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+              ? "video"
+              : "image",
         };
         previewState.downloadedBytes += download.byteLength;
         previewState.results.set(sourceFileId, preview);
@@ -476,9 +490,8 @@ export const createResourcePackageImportService = ({
         const downloaded = await processWithConcurrency(
           neededFiles,
           async (filePlan) => {
-            const result = await importClient.downloadFile({
+            const result = await sources.get(planId).readFile({
               descriptor: filePlan.descriptor,
-              manifestUrl: plan.manifestUrl,
               signal: operation.controller.signal,
             });
             downloadedBytes += result.byteLength;

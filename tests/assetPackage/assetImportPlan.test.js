@@ -494,6 +494,39 @@ describe("asset import plan", () => {
     expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
       "file-waveform-preview",
     );
+    // The full-screen preview plays the sound itself.
+    expect(sound.largePreviewSourceId).toBe("file-sound");
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file-sound",
+    );
+  });
+
+  it("previews colors as swatches of their value", () => {
+    const manifest = createManifest();
+    manifest.repository.colors.items["color-2"] = {
+      id: "color-2",
+      type: "color",
+      name: "Highlight",
+      hex: "#ffd84d",
+    };
+    manifest.repository.colors.tree[0].children.push({ id: "color-2" });
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      manifestUrl: "https://example.com/asset-package.json",
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+      resolveFileUrl: ({ descriptor, manifestUrl }) =>
+        new URL(descriptor.source.url, manifestUrl).href,
+    });
+
+    const resource = (sourceId) =>
+      plan.resources.find((item) => item.sourceId === sourceId);
+    expect(resource("colors:color-1").colorHex).toBe("#112233");
+    expect(resource("colors:color-2").colorHex).toBe("#FFD84D");
+    expect(resource("colors:color-2").previewSourceId).toBeUndefined();
+    expect(resource("fonts:font-1")).not.toHaveProperty("colorHex");
   });
 
   it("accepts package-only WebM previews", () => {
@@ -547,6 +580,10 @@ describe("asset import plan", () => {
     );
     expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
       "file-particle-thumbnail",
+    );
+    expect(particle.largePreviewSourceId).toBe("file-particle-preview");
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file-particle-preview",
     );
   });
 });

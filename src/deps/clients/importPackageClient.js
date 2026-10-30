@@ -1,5 +1,11 @@
+import { ImportPackageClientError } from "./importPackageErrors.js";
+import { openRemoteZip } from "./remoteZip.js";
+
+export { ImportPackageClientError };
+
 const DEFAULT_LIMITS = Object.freeze({
   manifestBytes: 2 * 1024 * 1024,
+  directoryBytes: 4 * 1024 * 1024,
   fileBytes: 50 * 1024 * 1024,
   totalBytes: 200 * 1024 * 1024,
   manifestTimeoutMs: 15_000,
@@ -15,16 +21,6 @@ const JSON_CONTENT_TYPES = Object.freeze([
 ]);
 
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
-
-export class ImportPackageClientError extends Error {
-  constructor(code, message, { retryable = false, details } = {}) {
-    super(message);
-    this.name = "ImportPackageClientError";
-    this.code = code;
-    this.retryable = retryable;
-    this.details = details;
-  }
-}
 
 const createClientError = (code, message, options) =>
   new ImportPackageClientError(code, message, options);
@@ -183,11 +179,12 @@ const request = async ({
   signal,
   timeoutMs,
   headers,
+  cache = "no-store",
 }) => {
   const timed = createTimedSignal({ signal, timeoutMs });
   try {
     const response = await fetchImpl(url, {
-      cache: "no-store",
+      cache,
       headers,
       signal: timed.signal,
     });
@@ -286,7 +283,51 @@ export const createImportPackageClient = ({
 } = {}) => {
   const resolvedLimits = { ...DEFAULT_LIMITS, ...limits };
 
-  return {
+  // Exactly the bytes `start` through `end` of `url`, inclusive. The range
+  // names both ends, so a cross-origin read needs no CORS preflight.
+  const readRange = async ({ url, start, end, kind, signal }) => {
+    const requestResult = await request({
+      fetchImpl,
+      url,
+      kind,
+      signal,
+      timeoutMs:
+        kind === "manifest"
+          ? resolvedLimits.manifestTimeoutMs
+          : resolvedLimits.fileTimeoutMs,
+      headers: { Range: `bytes=${start}-${end}` },
+      cache: "default",
+    });
+    try {
+      const { response } = requestResult;
+      if (response.status !== 206) {
+        throw createClientError(
+          "range_unsupported",
+          "The package server does not serve byte ranges.",
+        );
+      }
+      const length = end - start + 1;
+      const bytes = await readBoundedBytes({
+        response,
+        maxBytes: length,
+        signal: requestResult.signal,
+        limitCode: "package_invalid",
+      });
+      if (bytes.byteLength !== length) {
+        throw createClientError(
+          "package_invalid",
+          "The asset package could not be read.",
+        );
+      }
+      return bytes;
+    } catch (error) {
+      throw mapBodyReadError(error, requestResult, kind);
+    } finally {
+      requestResult.dispose();
+    }
+  };
+
+  const client = {
     limits: resolvedLimits,
 
     async fetchManifest({ url, signal } = {}) {
@@ -401,6 +442,155 @@ export const createImportPackageClient = ({
       } finally {
         requestResult.dispose();
       }
+    },
+
+    /**
+     * One asset package's source: `readManifest()` first, then `readFile()`
+     * for each file it lists. `url` is a manifest whose files resolve against
+     * it; `zip` is a published package read in place with byte ranges,
+     * `{url, size, directoryOffset, directorySize}`.
+     */
+    openPackage({ url, zip } = {}) {
+      return zip
+        ? createZipPackageSource({ client, zip, readRange, cryptoImpl })
+        : createUrlPackageSource({ client, url });
+    },
+  };
+  return client;
+};
+
+/** A manifest at `url` whose files are fetched relative to it. */
+export const createUrlPackageSource = ({ client, url }) => {
+  let manifestUrl;
+  return {
+    async readManifest({ signal } = {}) {
+      const result = await client.fetchManifest({ url, signal });
+      manifestUrl = result.manifestUrl;
+      return result;
+    },
+    readFile: ({ descriptor, signal } = {}) =>
+      client.downloadFile({ descriptor, manifestUrl, signal }),
+  };
+};
+
+const MANIFEST_ENTRY = "asset-package.json";
+
+const isByteCount = (value) => Number.isSafeInteger(value) && value >= 0;
+
+// A file's entry in the package: its `source.url` inside the package, such
+// as `./files/<id>`, without the leading `./`.
+const packageEntryName = (descriptor) => {
+  const sourceUrl = `${descriptor?.source?.url ?? descriptor?.url ?? ""}`;
+  const name = sourceUrl.replace(/^\.\//, "");
+  if (
+    !name ||
+    name.startsWith("/") ||
+    /^[a-z][a-z\d+.-]*:/i.test(name) ||
+    name.split("/").some((part) => part === "" || part === "." || part === "..")
+  ) {
+    throw createClientError("file_not_found", "A package file was not found.");
+  }
+  return name;
+};
+
+/** A published package read in place: its manifest and files are entries. */
+const createZipPackageSource = ({ client, zip, readRange, cryptoImpl }) => {
+  const url = resolveImportUrl(zip?.url);
+  const { size, directoryOffset, directorySize } = zip;
+  if (
+    !isByteCount(size) ||
+    !isByteCount(directoryOffset) ||
+    !isByteCount(directorySize) ||
+    directorySize === 0 ||
+    directoryOffset + directorySize > size
+  ) {
+    throw createClientError(
+      "package_invalid",
+      "The asset package could not be read.",
+    );
+  }
+  if (directorySize > client.limits.directoryBytes) {
+    throw createClientError(
+      "manifest_too_large",
+      "Import data exceeds the allowed size.",
+    );
+  }
+  const read = (start, end, { signal, kind }) =>
+    readRange({ url, start, end, kind, signal });
+  let opened;
+
+  return {
+    async readManifest({ signal } = {}) {
+      opened = await openRemoteZip({
+        directoryOffset,
+        directorySize,
+        readRange: read,
+        signal,
+      });
+      const bytes = await opened.readEntry(MANIFEST_ENTRY, {
+        signal,
+        maxBytes: client.limits.manifestBytes,
+        kind: "manifest",
+      });
+      let manifest;
+      try {
+        manifest = JSON.parse(new TextDecoder().decode(bytes));
+      } catch {
+        throw createClientError(
+          "manifest_invalid_json",
+          "Import URL did not return valid JSON.",
+        );
+      }
+      return {
+        manifest,
+        manifestUrl: url.href,
+        byteLength: bytes.byteLength,
+      };
+    },
+
+    async readFile({ descriptor, signal } = {}) {
+      if (!opened) {
+        throw createClientError(
+          "package_invalid",
+          "The asset package could not be read.",
+        );
+      }
+      const name = packageEntryName(descriptor);
+      if (
+        Number.isFinite(descriptor?.size) &&
+        descriptor.size > client.limits.fileBytes
+      ) {
+        throw createClientError(
+          "file_too_large",
+          "A package file exceeds the allowed size.",
+        );
+      }
+      if (
+        Number.isFinite(descriptor?.size) &&
+        opened.has(name) &&
+        opened.sizeOf(name) !== descriptor.size
+      ) {
+        throw createClientError(
+          "integrity_mismatch",
+          "A package file failed integrity validation.",
+        );
+      }
+      const bytes = await opened.readEntry(name, {
+        signal,
+        maxBytes: client.limits.fileBytes,
+        kind: "file",
+      });
+      await verifySha256({
+        bytes,
+        expectedSha256: descriptor?.sha256,
+        cryptoImpl,
+      });
+      return {
+        bytes,
+        byteLength: bytes.byteLength,
+        contentType: descriptor?.mimeType || "application/octet-stream",
+        resolvedUrl: `${url.href}#${name}`,
+      };
     },
   };
 };

@@ -3,14 +3,7 @@ import {
   handleAfterMount,
   handleBeforeMount,
   handleVisible,
-  handleVideoCanPlay,
 } from "../../src/components/resource-import-preview-media/resource-import-preview-media.handlers.js";
-
-const createVideo = () => ({
-  defaultMuted: false,
-  muted: false,
-  play: vi.fn(() => Promise.resolve()),
-});
 
 describe("resource-import-preview-media.handlers", () => {
   it("loads preview bytes through the project service", async () => {
@@ -58,14 +51,16 @@ describe("resource-import-preview-media.handlers", () => {
 
   it("cancels loading and revokes its object URL when unmounted", () => {
     const projectService = { cancelResourceImport: vi.fn() };
+    const audioService = { stop: vi.fn() };
     const store = {
       selectOperationId: vi.fn(() => "operation-1"),
       selectSrc: vi.fn(() => "blob:preview"),
+      selectKind: vi.fn(() => "image"),
       cancelLoading: vi.fn(),
     };
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
 
-    const cleanup = handleBeforeMount({ projectService, store });
+    const cleanup = handleBeforeMount({ projectService, audioService, store });
     cleanup();
 
     expect(projectService.cancelResourceImport).toHaveBeenCalledWith({
@@ -73,6 +68,28 @@ describe("resource-import-preview-media.handlers", () => {
     });
     expect(store.cancelLoading).toHaveBeenCalledTimes(1);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+    expect(audioService.stop).not.toHaveBeenCalled();
+  });
+
+  it("stops a sound when its preview is unmounted", () => {
+    const audioService = { stop: vi.fn() };
+    const store = {
+      selectOperationId: vi.fn(),
+      selectSrc: vi.fn(() => "blob:sound"),
+      selectKind: vi.fn(() => "audio"),
+      cancelLoading: vi.fn(),
+    };
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    const cleanup = handleBeforeMount({
+      projectService: { cancelResourceImport: vi.fn() },
+      audioService,
+      store,
+    });
+    cleanup();
+
+    expect(audioService.stop).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:sound");
   });
 
   it("waits until a lazy preview is visible before loading it", async () => {
@@ -112,13 +129,5 @@ describe("resource-import-preview-media.handlers", () => {
 
     await handleVisible(deps);
     expect(projectService.loadResourceImportPreview).toHaveBeenCalledTimes(1);
-  });
-
-  it("retries muted playback when the video can play", () => {
-    const video = createVideo();
-    handleVideoCanPlay({}, { _event: { currentTarget: video } });
-
-    expect(video.muted).toBe(true);
-    expect(video.play).toHaveBeenCalledTimes(1);
   });
 });

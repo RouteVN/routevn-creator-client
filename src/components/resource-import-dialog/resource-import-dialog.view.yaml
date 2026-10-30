@@ -7,10 +7,89 @@ refs:
     eventListeners:
       form-action:
         handler: handleFormAction
-  assetStoreLink:
+  storeSearchInput:
+    eventListeners:
+      value-input:
+        handler: handleStoreSearchInput
+  storeAssetTypeSelect:
+    eventListeners:
+      value-change:
+        handler: handleStoreAssetTypesChange
+  packGrid:
     eventListeners:
       click:
-        handler: handleAssetStoreLink
+        handler: handlePackGridClick
+      keydown:
+        handler: handlePackGridKeyDown
+  packBackButton:
+    eventListeners:
+      click:
+        handler: handlePackBack
+  selectionBackButton:
+    eventListeners:
+      click:
+        handler: handleSelectionBack
+  packImportButton:
+    eventListeners:
+      click:
+        handler: handlePackImport
+  packAssets:
+    eventListeners:
+      click:
+        handler: handlePackAssetClick
+      keydown:
+        handler: handlePackAssetKeyDown
+  packGroupToggle*:
+    eventListeners:
+      click:
+        handler: handlePackGroupToggle
+      keydown:
+        handler: handlePackGroupKeyDown
+  assetPreviewDialog:
+    eventListeners:
+      close:
+        handler: handleAssetPreviewClose
+        stopPropagation: true
+  assetPreviewOverlay:
+    eventListeners:
+      click:
+        handler: handleAssetPreviewOverlayClick
+      # A sound's player closes with its close button or Escape.
+      audio-player-close:
+        handler: handleAssetPreviewClose
+        stopPropagation: true
+  packCreatorButton:
+    eventListeners:
+      click:
+        handler: handlePackCreatorClick
+      keydown:
+        handler: handlePackCreatorKeyDown
+  creatorBackButton:
+    eventListeners:
+      click:
+        handler: handleCreatorBack
+  creatorRetryButton:
+    eventListeners:
+      click:
+        handler: handleCreatorRetry
+  creatorLinks:
+    eventListeners:
+      click:
+        handler: handleCreatorLinkClick
+  creatorPackGrid:
+    eventListeners:
+      click:
+        handler: handlePackGridClick
+      keydown:
+        handler: handlePackGridKeyDown
+  catalogRetryButton:
+    eventListeners:
+      click:
+        handler: handleCatalogRetry
+  loadMorePacksButton:
+    eventListeners:
+      click:
+        handler: handleLoadMorePacks
   resourceSelectionGrid:
     eventListeners:
       click:
@@ -25,32 +104,272 @@ refs:
     eventListeners:
       click:
         handler: handleCancelProgress
+  dialogCloseButton:
+    eventListeners:
+      click:
+        handler: handleDialogClose
+styles:
+  # An almost full-screen dialog: 32 px from each window edge, at most
+  # 1600 px wide. Up to 768 px wide it fills the window (md-layout=fixed).
+  '#dialogContent':
+    width: min(1600px, calc(100vw - 64px))
+    height: calc(100vh - 64px)
+  '@supports (width: 100dvw)':
+    '#dialogContent':
+      width: min(1600px, calc(100dvw - 64px))
+      height: calc(100dvh - 64px)
+  '@media only screen and (max-width: 768px)':
+    '#dialogContent':
+      width: 100%
+      height: 100%
+  '#packInfo':
+    position: sticky
+    top: var(--spacing-lg)
+  '@media only screen and (max-width: 1024px)':
+    '#packInfo':
+      position: static
+      order: -1
 template:
-  - 'rtgl-dialog#dialog ?open=${open} s=lg md-layout=fixed-top aria-label="${dialogAriaLabel}"':
-      - rtgl-view slot=content d=v w=f h=f g=md overflow=hidden:
+  - 'rtgl-dialog#dialog ?open=${open} sm-layout=fixed md-layout=fixed p=none aria-label="${dialogAriaLabel}"':
+      - rtgl-view#dialogContent slot=content d=v bgc=bg br=md overflow=hidden:
+          # The header stays in place while the page under it scrolls, with
+          # the dialog's own close button at its right.
+          - 'rtgl-view d=h w=f av=c g=md ph=lg pv=md bwb=xs bc=bo style="box-sizing: border-box; flex: 0 0 auto;"':
+              - rtgl-text s=lg w=1fg: ${catalog.storeTitle}
+              - 'rtgl-button#dialogCloseButton sq v=gh pre=x aria-label="${closeLabel}" title="${closeLabel}"': null
           - $if errorMessage:
-              - rtgl-view w=f p=md bgc=de br=md role=alert aria-live=assertive:
-                  - rtgl-text c=de-fg: ${errorMessage}
-          - $if isBusy && isSourceStep:
-              - rtgl-view w=f h=180 av=c ah=c d=v g=md:
-                  - rtgl-text: ${progressLabel}
-          - $if !isBusy && !isProgressStep:
-              - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} sticky sbv=touch w=f h=f:
-                  - $if isSourceStep:
-                      - rtgl-view slot=source-description d=h w=f g=xs av=c wrap:
-                          - rtgl-text s=sm c=mu-fg: ${sourceDescription}
-                          - 'rtgl-text#assetStoreLink href=${assetStoreUrl} new-tab s=sm c=pr': ${assetStoreLinkLabel}
-                  - $if isSelectionStep:
-                      - $if hasPackageSummary:
-                          - rtgl-view slot=package-summary d=v w=f g=md:
+              - 'rtgl-view w=f ph=lg pt=md style="box-sizing: border-box;"':
+                  - rtgl-view w=f p=md bgc=de br=md role=alert aria-live=assertive:
+                      - rtgl-text c=de-fg: ${errorMessage}
+          - $if isStoreStep && !isBusy:
+              - 'rtgl-view d=h md-d=v w=f h=1fg style="min-height: 0;"':
+                  - 'rtgl-view d=v w=280 md-w=f g=lg p=lg sv style="flex: 0 0 auto; box-sizing: border-box;"':
+                      - rtgl-view d=v w=f g=sm:
+                          - rtgl-text: ${catalog.searchTitle}
+                          - 'rtgl-input#storeSearchInput s=sm w=f placeholder="${catalog.searchLabel}" aria-label="${catalog.searchLabel}" value=${catalog.searchText}': null
+                      - rtgl-view d=v w=f g=sm:
+                          - rtgl-text: ${catalog.assetTypesTitle}
+                          - rtgl-tag-select#storeAssetTypeSelect w=f no-add :ariaLabel=${catalog.assetTypesTitle} :options=${catalog.assetTypeOptions} :selectedValues=${catalog.selectedAssetTypes} :placeholder=${catalog.assetTypesPlaceholder}: null
+                  - 'rtgl-view d=v w=1fg md-w=f h=f md-h=1fg sv sbv=touch g=lg p=lg bwl=xs bc=bo style="min-width: 0; min-height: 0; box-sizing: border-box;"':
+                      - $if catalog.isCatalogLoading:
+                          - rtgl-view w=f h=180 av=c ah=c role=status aria-live=polite:
+                              - rtgl-text c=mu-fg: ${catalog.catalogLoadingLabel}
+                      - $if catalog.isCatalogEmpty:
+                          - rtgl-view w=f h=180 av=c ah=c:
+                              - rtgl-text c=mu-fg: ${catalog.catalogEmptyLabel}
+                      - $if catalog.isNoResults:
+                          - rtgl-view w=f h=180 av=c ah=c:
+                              - rtgl-text c=mu-fg: ${catalog.noResultsLabel}
+                      - $if catalog.packs.length > 0:
+                          - rtgl-grid#packGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=1 g=lg w=f:
+                              - $for pack in catalog.packs:
+                                  - 'rtgl-view role=button tabindex=0 data-pack-id="${pack.id}" aria-label="${pack.openLabel}" d=v w=f bgc=bg bw=xs bc=bo h-bc=ac br=md cur=pointer overflow=hidden':
+                                      - 'rtgl-view w=f av=c ah=c bgc=mu style="aspect-ratio: 16 / 9;"':
+                                          - $if pack.coverUrl:
+                                              - rtgl-image src=${pack.coverUrl} w=f h=f of=cov: null
+                                            $else:
+                                              - rtgl-svg svg=image wh=24 c=mu-fg: null
+                                      - rtgl-view d=v w=f g=xs p=md:
+                                          - rtgl-text s=md: ${pack.title}
+                                          # The summary, at most two lines.
+                                          - $if pack.summary:
+                                              - 'rtgl-text s=sm c=mu-fg style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;"': ${pack.summary}
+                                          - rtgl-view d=h av=c g=xs:
+                                              - $if pack.creatorAvatarUrl:
+                                                  - rtgl-image wh=20 br=f of=cov src=${pack.creatorAvatarUrl}: null
+                                              - rtgl-text s=sm c=mu-fg: ${pack.creatorName}
+                      # In the middle of the panel, with Try Again under it.
+                      - $if catalog.isCatalogFailed:
+                          - rtgl-view w=f h=1fg d=v av=c ah=c g=md role=alert:
+                              - rtgl-text c=mu-fg ta=c: ${catalog.catalogFailedLabel}
+                              - rtgl-button#catalogRetryButton v=se: ${catalog.retryLabel}
+                      - $if catalog.isLoadingMorePacks:
+                          - rtgl-view w=f ah=c p=md role=status aria-live=polite:
+                              - rtgl-text c=mu-fg: ${catalog.catalogLoadingLabel}
+                      - $if catalog.hasMorePacks:
+                          - rtgl-view w=f ah=c:
+                              - rtgl-button#loadMorePacksButton v=se: ${catalog.loadMoreLabel}
+          - $if isPackStep && !isBusy:
+              - 'rtgl-view d=v w=f h=1fg ah=c sv sbv=touch style="min-height: 0;"':
+                  - 'rtgl-view d=v g=xl p=lg style="box-sizing: border-box; width: 100%; max-width: 1200px;"':
+                      - rtgl-view d=h w=f av=c g=md:
+                          - 'rtgl-button#packBackButton sq pre=chevronLeft v=ol aria-label="${pack.backLabel}" title="${pack.backLabel}"': null
+                          - rtgl-text s=h3 w=1fg: ${pack.title}
+                      # The pack info, with Import, stays in view beside the
+                      # description and the assets (see styles); narrower
+                      # windows stack it above them.
+                      - rtgl-view d=h lg-d=v w=f g=xl av=s:
+                          - 'rtgl-view#packMain d=v w=1fg lg-w=f g=xl style="min-width: 0;"':
+                              - $if pack.description.length > 0:
+                                  - rtgl-view d=v w=f g=md:
+                                      # An image keeps its shape and never
+                                      # shows larger than it is.
+                                      - $for block in pack.description:
+                                          - $if block.imageUrl:
+                                              - 'rtgl-view w=f br=md overflow=hidden style="aspect-ratio: ${block.width} / ${block.height}; max-width: ${block.width}px;"':
+                                                  - 'rtgl-image src=${block.imageUrl} alt="${block.alt}" w=f h=f of=con': null
+                                            $else:
+                                              - rtgl-text: ${block.text}
+                              # The current version's release notes, as written.
+                              - $if pack.releaseNotes:
+                                  - rtgl-view#packReleaseNotes d=v w=f g=md:
+                                      - rtgl-text s=lg: ${pack.releaseNotesTitle}
+                                      - 'rtgl-text style="white-space: pre-line; overflow-wrap: anywhere;"': ${pack.releaseNotes}
+                              - rtgl-view#packAssets d=v w=f g=md:
+                                  - rtgl-text s=lg: ${pack.assetsTitle}
+                                  # Folders and cards as on the resource pages.
+                                  - $if pack.isLoadingAssets:
+                                      - 'rtgl-grid cols=4 md-cols=3 sm-cols=2 w=f pt=md g=md role=status aria-label="${pack.assetsLoadingLabel}"':
+                                          - $for placeholder in pack.assetPlaceholders:
+                                              - rtgl-view w=f bw=xs bc=bo br=md overflow=hidden:
+                                                  - 'rtgl-view w=f bgc=mu style="aspect-ratio: 16 / 9;"': null
+                                                  - rtgl-view w=f p=md:
+                                                      - 'rtgl-view h=12 bgc=mu br=sm style="width: 60%;"': null
+                                  - $for group, gIndex in packGroups:
+                                      - rtgl-view w=f pos=rel:
+                                          - 'rtgl-view d=h w=f av=c bgc=bg z=100 pv=sm style="position: sticky; top: 0px;"':
+                                              - 'rtgl-view#packGroupToggle${gIndex} data-group-key="${group.key}" role=button tabindex=0 aria-expanded="${group.expanded}" d=h av=c g=md cur=pointer':
+                                                  - $if group.isCollapsed:
+                                                      - rtgl-svg wh=16 svg=folderArrowRight: null
+                                                    $else:
+                                                      - rtgl-svg wh=16 svg=folderArrowDown: null
+                                                  - rtgl-svg wh=16 svg=folder: null
+                                                  - rtgl-text: ${group.label}
+                                          - $if !group.isCollapsed:
+                                              - rtgl-grid cols=4 md-cols=3 sm-cols=2 w=f pt=md pb=sm mb=lg g=md:
+                                                  - $for resource in group.resources:
+                                                      - 'rtgl-view role=button tabindex=0 data-asset-source-id="${resource.sourceId}" data-preview-hover=true aria-label="${resource.previewLabel}" w=f bw=xs bc=bo h-bc=ac br=md cur=pointer':
+                                                          - rtgl-view w=f br=md pos=rel overflow=hidden:
+                                                              # Clipped, as on the Images page, so a tall image can't stretch the
+                                                              # card past 16:9.
+                                                              - 'rtgl-view w=f av=c ah=c bgc=mu overflow=hidden style="aspect-ratio: 16 / 9;"':
+                                                                  - $if resource.previewSourceId:
+                                                                      - 'rvn-resource-import-preview-media key=pack-${resource.previewSourceId} planId=${planId} sourceFileId=${resource.previewSourceId} label="${resource.name}" ?lazy=true ?hover=true ?paused=${isAssetPreviewOpen}': null
+                                                                    $elif resource.colorHex:
+                                                                      # A color is a swatch of its value, named below.
+                                                                      - 'rtgl-view w=f h=f style="background-color: ${resource.colorHex};"': null
+                                                                    $else:
+                                                                      - rtgl-svg svg=image wh=24 c=mu-fg: null
+                                                              - rtgl-view d=v w=f g=xs p=md:
+                                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${resource.name}
+                                                                  - $if resource.colorHex:
+                                                                      - rtgl-text s=xs c=mu-fg: ${resource.colorHex}
+                          - 'rtgl-view#packInfo d=v lg-d=h sm-d=v w=320 lg-w=f g=lg p=lg bw=xs bc=bo br=md bgc=bg style="flex: 0 0 auto; box-sizing: border-box;"':
+                              # Between phone and desktop widths the cover sits beside the details.
+                              - 'rtgl-view w=f lg-w=280 sm-w=f av=c ah=c br=md bgc=mu overflow=hidden style="flex: 0 0 auto; aspect-ratio: 16 / 9;"':
+                                  - $if pack.coverUrl:
+                                      - rtgl-image src=${pack.coverUrl} w=f h=f of=cov: null
+                                    $else:
+                                      - rtgl-svg svg=image wh=32 c=mu-fg: null
+                              - 'rtgl-view d=v w=f lg-w=1fg sm-w=f g=lg style="min-width: 0;"':
+                                  # The summary sits under the cover.
+                                  - $if pack.summary:
+                                      - rtgl-text#packSummary c=mu-fg: ${pack.summary}
+                                  - rtgl-text s=lg: ${pack.infoTitle}
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: ${pack.creatorLabel}
+                                      - 'rtgl-view#packCreatorButton role=button tabindex=0 aria-label="${pack.openCreatorLabel}" d=h av=c g=xs cur=pointer':
+                                          - $if pack.creatorAvatarUrl:
+                                              - rtgl-image wh=20 br=f of=cov src=${pack.creatorAvatarUrl}: null
+                                          - rtgl-text c=pr: ${pack.creatorName}
+                                  - $if pack.versionName:
+                                      - rtgl-view d=v g=xs:
+                                          - rtgl-text s=sm c=mu-fg: ${pack.versionLabel}
+                                          - rtgl-text: ${pack.versionName}
+                                  - $if pack.released:
+                                      - rtgl-view d=v g=xs:
+                                          - rtgl-text s=sm c=mu-fg: ${pack.releasedLabel}
+                                          - rtgl-text: ${pack.released}
+                                  - $if pack.updated:
+                                      - rtgl-view d=v g=xs:
+                                          - rtgl-text s=sm c=mu-fg: ${pack.updatedLabel}
+                                          - rtgl-text: ${pack.updated}
+                                  - rtgl-button#packImportButton v=pr w=f ?disabled=${pack.importDisabled}: ${pack.importLabel}
+                      - 'rtgl-view#packBottomSpacer h=240 aria-hidden=true style="flex: 0 0 240px;"': null
+          - $if isCreatorStep && !isBusy:
+              - 'rtgl-view d=v w=f h=1fg ah=c sv sbv=touch style="min-height: 0;"':
+                  - 'rtgl-view d=v g=xl p=lg style="box-sizing: border-box; width: 100%; max-width: 1200px;"':
+                      - rtgl-view d=h w=f av=c:
+                          - 'rtgl-button#creatorBackButton sq pre=chevronLeft v=ol aria-label="${creator.backLabel}" title="${creator.backLabel}"': null
+                      - $if creator.isLoading:
+                          - rtgl-view w=f h=180 av=c ah=c role=status aria-live=polite:
+                              - rtgl-text c=mu-fg: ${creator.loadingLabel}
+                      - $if creator.isFailed:
+                          - rtgl-view w=f h=180 d=v av=c ah=c g=md role=alert:
+                              - rtgl-text c=mu-fg ta=c: ${creator.errorMessage}
+                              - rtgl-button#creatorRetryButton v=se: ${creator.retryLabel}
+                      - $if creator.isReady:
+                          - rtgl-view d=h sm-d=v w=f g=lg av=s:
+                              - 'rtgl-view w=96 h=96 av=c ah=c br=f bgc=mu overflow=hidden style="flex: 0 0 auto;"':
+                                  - $if creator.avatarUrl:
+                                      - rtgl-image src=${creator.avatarUrl} w=f h=f of=cov: null
+                                    $else:
+                                      - rtgl-svg svg=image wh=32 c=mu-fg: null
+                              - 'rtgl-view d=v w=1fg sm-w=f g=sm style="min-width: 0;"':
+                                  - rtgl-text s=h3: ${creator.name}
+                                  - $for paragraph in creator.description:
+                                      - rtgl-text c=mu-fg: ${paragraph}
+                                  - $if creator.links.length > 0:
+                                      - rtgl-view#creatorLinks d=h g=sm wrap:
+                                          - $for link in creator.links:
+                                              - 'rtgl-button v=ol s=sm data-url="${link.url}"': ${link.label}
+                          - rtgl-view d=v w=f g=lg:
+                              - rtgl-text s=lg: ${creator.packsTitle}
+                              - $if creator.hasNoPacks:
+                                  - rtgl-text c=mu-fg: ${creator.noPacksLabel}
+                              - $if creator.packs.length > 0:
+                                  - rtgl-grid#creatorPackGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=1 g=lg w=f:
+                                      - $for pack in creator.packs:
+                                          - 'rtgl-view role=button tabindex=0 data-pack-id="${pack.id}" aria-label="${pack.openLabel}" d=v w=f bgc=bg bw=xs bc=bo h-bc=ac br=md cur=pointer overflow=hidden':
+                                              - 'rtgl-view w=f av=c ah=c bgc=mu style="aspect-ratio: 16 / 9;"':
+                                                  - $if pack.coverUrl:
+                                                      - rtgl-image src=${pack.coverUrl} w=f h=f of=cov: null
+                                                    $else:
+                                                      - rtgl-svg svg=image wh=24 c=mu-fg: null
+                                              - rtgl-view d=v w=f g=xs p=md:
+                                                  - rtgl-text s=md: ${pack.title}
+                                                  - $if pack.summary:
+                                                      - 'rtgl-text s=sm c=mu-fg style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;"': ${pack.summary}
+                                                  - rtgl-view d=h av=c g=xs:
+                                                      - $if pack.creatorAvatarUrl:
+                                                          - rtgl-image wh=20 br=f of=cov src=${pack.creatorAvatarUrl}: null
+                                                      - rtgl-text s=sm c=mu-fg: ${pack.creatorName}
+          - $if isPackStep && assetPreview:
+              - rtgl-dialog#assetPreviewDialog open layout=fixed bare p=none:
+                  - rtgl-view#assetPreviewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
+                      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+                      - rtgl-view pos=fix edge=f ah=c av=c d=v g=md p=xl z=3001:
+                          - 'rtgl-view av=c ah=c br=md bgc=mu overflow=hidden style="width: min(1280px, 90vw, calc((100vh - 200px) * 16 / 9)); aspect-ratio: 16 / 9;"':
+                              - $if assetPreview.sourceFileId:
+                                  - 'rvn-resource-import-preview-media key=large-${assetPreview.sourceFileId} planId=${planId} sourceFileId=${assetPreview.sourceFileId} label="${assetPreview.name}"': null
+                                $elif assetPreview.colorHex:
+                                  - 'rtgl-view#assetPreviewSwatch w=f h=f br=md bw=xs bc=bo style="box-sizing: border-box; background-color: ${assetPreview.colorHex};"': null
+                                $else:
+                                  - rtgl-svg svg=image wh=32 c=mu-fg: null
+                          - 'rtgl-view d=v ah=c g=xs style="max-width: min(720px, 90vw);"':
+                              - rtgl-text s=lg: ${assetPreview.name}
+                              - $if assetPreview.colorHex:
+                                  - rtgl-text c=mu-fg: ${assetPreview.colorHex}
+                              - rtgl-text s=sm c=mu-fg: ${assetPreview.typeLabel}
+                              - $if assetPreview.description:
+                                  - 'rtgl-text s=sm c=mu-fg ta=c style="white-space: pre-line;"': ${assetPreview.description}
+          - $if isSelectionStep && !isBusy:
+              # A centered column as wide as the pack page's; the form inside keeps
+              # Import in place while its resources scroll.
+              - 'rtgl-view d=v w=f h=1fg ah=c style="min-height: 0;"':
+                  - 'rtgl-view#selectionColumn d=v h=f p=lg style="box-sizing: border-box; width: 100%; max-width: 1200px; min-height: 0;"':
+                      - rtgl-form#workflowForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${formContext} sticky sbv=touch w=f h=f:
+                          # The title and Back scroll with the resources; only
+                          # Import stays in place. The pack page shows the version
+                          # and description.
+                          - rtgl-view slot=selection-header d=v w=f g=md:
+                              - rtgl-view d=h w=f av=c g=md:
+                                  - 'rtgl-button#selectionBackButton sq pre=chevronLeft v=ol aria-label="${selectionBackLabel}" title="${selectionBackLabel}"': null
+                                  - rtgl-text s=lg w=1fg: ${selectionTitle}
                               - $if hasPackageMetadata:
                                   - rtgl-view d=v w=f g=xs:
                                       - $if packageName:
                                           - rtgl-text s=lg: ${packageName}
-                                      - $if packageVersion:
-                                          - rtgl-text c=mu-fg: ${packageVersion}
-                                      - $if packageDescription:
-                                          - rtgl-text: ${packageDescription}
                                       - $if packagePublisher:
                                           - 'rtgl-text s=sm c=mu-fg': ${packagePublisherText}
                                       - $if packageSource:
@@ -60,37 +379,45 @@ template:
                                       - rtgl-text c=wa-fg: ${warningsLabel}
                                       - $for warning, i in warnings:
                                           - rtgl-text s=sm c=wa-fg: ${warning.message}
-                  - $if isSelectionStep:
-                      - rtgl-view slot=selection-controls d=h w=f ah=e:
-                          - 'rtgl-button#selectionToggleAllButton v=se s=sm data-all-selected=${allResourcesSelected}': ${selectionToggleAllLabel}
-                      - rtgl-view#resourceSelectionGrid slot=resource-selection-grid d=v w=f g=xl:
-                          - $for section in resourceSections:
-                              - rtgl-view d=v w=f g=lg:
-                                  - rtgl-text s=lg: ${section.typeLabel}
-                                  - $for group in section.groups:
-                                      - $if group.kind == 'folder':
-                                          - 'rtgl-view d=h w=f av=c g=xs style="padding-left: ${group.indent}px;"':
-                                              - rtgl-svg svg=folder wh=16 c=mu-fg: null
-                                              - rtgl-text s=md: ${group.name}
-                                        $else:
-                                          - 'rtgl-grid cols=3 xl-cols=2 md-cols=1 g=lg w=f style="padding-left: ${group.indent}px; box-sizing: border-box;"':
-                                              - $for resource in group.resources:
-                                                  - 'rtgl-view#resourceSelectionCard${resource.planResourceIndex} role=button tabindex=0 data-resource-index=${resource.planResourceIndex} data-resource-source-id="${resource.sourceId}" data-selected=${resource.selected} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" d=h w=f av=s g=md p=md bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=pointer style="box-sizing: border-box;"':
-                                                      - 'rtgl-view w=160 h=90 av=c ah=c br=md bgc=mu overflow=hidden style="flex: 0 0 160px;"':
-                                                          - $if resource.previewSourceId:
-                                                              - 'rvn-resource-import-preview-media key=${resource.previewSourceId} planId=${planId} sourceFileId=${resource.previewSourceId} label="${resource.name}" ?lazy=true': null
-                                                            $else:
-                                                              - rtgl-svg svg=image wh=24 c=mu-fg: null
-                                                      - 'rtgl-view d=v w=1fg g=xs pv=sm style="box-sizing: border-box;"':
-                                                          - rtgl-view d=h av=c g=xs:
-                                                              - rtgl-text s=md: ${resource.name}
-                                                          - rtgl-text s=sm c=mu-fg: ${resource.typeLabel}
-                                                          - $if resource.description:
-                                                              - rtgl-text s=sm c=mu-fg: ${resource.description}
-                                                      - 'rtgl-view d=h av=c ah=e style="align-self: center; flex: 0 0 auto;"':
-                                                          - rtgl-text s=sm c=${resource.selectionStatusColor}: ${resource.selectionStatus}
+                          - rtgl-view slot=selection-controls d=h w=f ah=e:
+                              - 'rtgl-button#selectionToggleAllButton v=se data-all-selected=${allResourcesSelected}': ${selectionToggleAllLabel}
+                          - rtgl-view#resourceSelectionGrid slot=resource-selection-grid d=v w=f g=xl:
+                              - $for section in resourceSections:
+                                  - rtgl-view d=v w=f g=lg:
+                                      - rtgl-text s=lg: ${section.typeLabel}
+                                      - $for group in section.groups:
+                                          - $if group.kind == 'folder':
+                                              - 'rtgl-view d=h w=f av=c g=xs style="padding-left: ${group.indent}px;"':
+                                                  - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                                  - rtgl-text s=md: ${group.name}
+                                            $else:
+                                              # Cards as on the pack page: the preview, then the name. The
+                                              # section and folder headers already give the type.
+                                              - 'rtgl-grid cols=4 md-cols=3 sm-cols=2 g=md w=f style="padding-left: ${group.indent}px; box-sizing: border-box;"':
+                                                  - $for resource in group.resources:
+                                                      - 'rtgl-view#resourceSelectionCard${resource.planResourceIndex} role=button tabindex=0 data-resource-index=${resource.planResourceIndex} data-resource-source-id="${resource.sourceId}" data-preview-hover=true data-selected=${resource.selected} aria-label="${resource.selectionLabel}" aria-pressed="${resource.selected}" w=f bgc=bg bw=xs bc=${resource.selectionBorderColor} h-bc=${resource.selectionHoverBorderColor} br=md cur=pointer overflow=hidden':
+                                                          - 'rtgl-view w=f av=c ah=c bgc=mu pos=rel overflow=hidden style="aspect-ratio: 16 / 9;"':
+                                                              - $if resource.previewSourceId:
+                                                                  - 'rvn-resource-import-preview-media key=${resource.previewSourceId} planId=${planId} sourceFileId=${resource.previewSourceId} label="${resource.name}" ?lazy=true ?hover=true': null
+                                                                $elif resource.colorHex:
+                                                                  - 'rtgl-view w=f h=f style="background-color: ${resource.colorHex};"': null
+                                                                $else:
+                                                                  - rtgl-svg svg=image wh=24 c=mu-fg: null
+                                                              # A selected resource shows a filled check on the preview's top
+                                                              # right, and Required beside it when another one needs it; an
+                                                              # unselected one shows nothing.
+                                                              - $if resource.selected:
+                                                                  - 'rtgl-view d=h av=c g=xs pos=abs aria-hidden=true style="top: 8px; right: 8px;"':
+                                                                      - $if resource.required:
+                                                                          - rtgl-tag s=sm v=mu: ${resource.selectionStatus}
+                                                                      - rtgl-view wh=24 av=c ah=c br=f bgc=pr:
+                                                                          - rtgl-svg svg=check wh=16 c=pr-fg: null
+                                                          - rtgl-view d=v w=f g=xs p=md:
+                                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${resource.name}
+                                                              - $if resource.colorHex:
+                                                                  - rtgl-text s=xs c=mu-fg: ${resource.colorHex}
           - $if isProgressStep:
-              - rtgl-view w=f h=220 av=c ah=c d=v g=md role=status aria-live=polite:
+              - rtgl-view w=f h=1fg av=c ah=c d=v g=md role=status aria-live=polite:
                   - rtgl-text s=lg: ${progressLabel}
                   - rtgl-text c=mu-fg: ${progressCountLabel} (${progressPercentLabel})
                   - rtgl-button#cancelProgressButton v=se: ${cancelButton}

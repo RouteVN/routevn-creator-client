@@ -7,8 +7,6 @@ export const ROUTEVN_CREATOR_PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.routevn.creator";
 // Direct Android builds only open update downloads on this domain or its subdomains.
 export const ROUTEVN_DOWNLOAD_DOMAIN = "routevn.com";
-export const ROUTEVN_ASSET_STORE_URL =
-  "https://routevn.com/en/creator/asset-store/";
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;
 export const ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/page-index/`;
 export const ROUTEVN_CREATOR_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials/`;

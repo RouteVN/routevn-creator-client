@@ -10,4 +10,8 @@ propsSchema:
       type: string
     lazy:
       type: boolean
+    paused:
+      type: boolean
+    hover:
+      type: boolean
   required: [planId, sourceFileId]

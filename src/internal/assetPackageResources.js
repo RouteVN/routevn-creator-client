@@ -5,6 +5,7 @@ const configs = [
     commandType: "image.create",
     idField: "imageId",
     previewFileFields: ["thumbnailFileId", "fileId"],
+    largePreviewFileFields: ["fileId", "thumbnailFileId"],
     importPriority: 10,
   },
   {
@@ -13,6 +14,7 @@ const configs = [
     commandType: "sound.create",
     idField: "soundId",
     previewFileFields: ["previewMediaFileId"],
+    largePreviewFileFields: ["fileId", "previewMediaFileId"],
     importPriority: 20,
   },
   {
@@ -21,6 +23,7 @@ const configs = [
     commandType: "video.create",
     idField: "videoId",
     previewFileFields: ["thumbnailFileId", "fileId"],
+    largePreviewFileFields: ["fileId", "thumbnailFileId"],
     importPriority: 30,
   },
   {
@@ -37,6 +40,7 @@ const configs = [
     commandType: "transform.create",
     idField: "transformId",
     previewFileFields: ["thumbnailFileId", "previewFileId"],
+    largePreviewFileFields: ["previewFileId", "thumbnailFileId"],
     importPriority: 80,
   },
   {
@@ -47,6 +51,11 @@ const configs = [
     previewFileFields: [
       "thumbnailMediaFileId",
       "previewMediaFileId",
+      "thumbnailFileId",
+    ],
+    largePreviewFileFields: [
+      "previewMediaFileId",
+      "thumbnailMediaFileId",
       "thumbnailFileId",
     ],
     importPriority: 90,
@@ -69,6 +78,11 @@ const configs = [
       "previewMediaFileId",
       "thumbnailFileId",
     ],
+    largePreviewFileFields: [
+      "previewMediaFileId",
+      "thumbnailMediaFileId",
+      "thumbnailFileId",
+    ],
     importPriority: 100,
   },
   {
@@ -79,6 +93,12 @@ const configs = [
     previewFileFields: [
       "thumbnailMediaFileId",
       "previewMediaFileId",
+      "thumbnailFileId",
+      "fileId",
+    ],
+    largePreviewFileFields: [
+      "previewMediaFileId",
+      "thumbnailMediaFileId",
       "thumbnailFileId",
       "fileId",
     ],
