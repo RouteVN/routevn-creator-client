@@ -1953,14 +1953,6 @@ const restoreSceneEditorCanvas = async (deps) => {
   });
   store.setCanvasAudioPreviewKey?.({ previewKey: undefined });
 
-  const initialProjectData = createProjectDataWithSelectedEntryPoint(
-    projectData,
-    {
-      sceneId,
-      sectionId: store.selectSelectedSectionId(),
-      lineId: store.selectSelectedLineId(),
-    },
-  );
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
 
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
@@ -1973,16 +1965,10 @@ const restoreSceneEditorCanvas = async (deps) => {
     Object.keys(projectData?.resources?.layouts || {}),
   );
 
-  const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
-  // The editor canvas never plays audio transitions, and another render may
-  // already have painted the same audio, so a strict engine would send its
-  // transition as an enter on a node that exists.
-  initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
-    enableGlobalKeyboardBindings: false,
-    audioEffectsMode: "snapshot",
-    onRenderState,
-  });
-
+  // The editor's render starts the engine for the current selection. A render
+  // queued while the assets loaded may already have painted that line's audio,
+  // so the restore starts no engine of its own: a strict one would send the
+  // audio's transition as an enter on a node that exists, and fail.
   await renderSceneEditorState(deps);
 };
 

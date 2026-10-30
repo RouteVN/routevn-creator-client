@@ -3001,10 +3001,11 @@ describe("scene editor canvas transition loop", () => {
 });
 
 describe("scene editor return from the full-screen preview", () => {
-  it("starts the engine in snapshot audio mode", async () => {
-    // Another render may already have painted the selected line's audio, and
-    // the editor canvas never plays audio transitions. A strict engine would
-    // send the transition as an enter on that existing node and fail.
+  it("leaves the engine to the editor's render", async () => {
+    // A render queued while the assets load may already have painted the
+    // selected line's audio. The first engine after the preview must be the
+    // editor's own, which drops transition phases that no longer apply
+    // instead of failing on them.
     const stop = new Error("Engine stopped for the test");
     const initRouteEngine = vi.fn(() => {
       throw stop;
@@ -3042,6 +3043,7 @@ describe("scene editor return from the full-screen preview", () => {
           selectSelectedSectionId: () => "section-1",
           selectSelectedLineId: () => "line-1",
           selectProjectData: () => createProjectData(),
+          selectIsMuted: () => false,
           selectIsScenePageLoading: () => false,
           selectIsSceneAssetLoading: () => false,
           setCanvasAudioPreviewKey: vi.fn(),
@@ -3060,6 +3062,7 @@ describe("scene editor return from the full-screen preview", () => {
     expect(initRouteEngine).toHaveBeenCalledOnce();
     expect(initRouteEngine.mock.calls[0][1]).toMatchObject({
       audioEffectsMode: "snapshot",
+      suppressRenderEffects: true,
     });
   });
 });
