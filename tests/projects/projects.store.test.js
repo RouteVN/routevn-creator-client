@@ -295,11 +295,11 @@ describe("projects.store addProject", () => {
             },
             {
               value: "fr",
-              label: "Français (bêta)",
+              label: "Français (Beta)",
             },
             {
               value: "vi",
-              label: "Tiếng Việt (beta)",
+              label: "Tiếng Việt (Beta)",
             },
           ],
         },
