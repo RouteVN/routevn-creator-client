@@ -8,6 +8,43 @@ import {
 } from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.handlers.js";
 
 describe("layoutEditorMutations", () => {
+  it("keeps an Input element's field name when it is cleared", () => {
+    const item = { id: "input-1", type: "input", field: "email" };
+
+    for (const value of ["", "   ", null, undefined]) {
+      const updatedItem = applyLayoutItemFieldChange({
+        item,
+        name: "field",
+        value,
+      });
+
+      expect(updatedItem.field).toBe("email");
+    }
+
+    expect(
+      applyLayoutItemFieldChange({ item, name: "field", value: "username" })
+        .field,
+    ).toBe("username");
+  });
+
+  it("still clears an Input element's text style", () => {
+    const item = {
+      id: "input-1",
+      type: "input",
+      field: "email",
+      textStyleId: "text-style-1",
+    };
+
+    const updatedItem = applyLayoutItemFieldChange({
+      item,
+      name: "textStyleId",
+      value: "",
+    });
+
+    expect(updatedItem.textStyleId).toBeUndefined();
+    expect(updatedItem.field).toBe("email");
+  });
+
   it("updates nested fields without replacing sibling data", () => {
     const item = {
       id: "text-1",

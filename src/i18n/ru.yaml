@@ -1823,6 +1823,7 @@ layoutEditPanel:
   indicatorLabel: "Индикатор"
   indicatorTitle: "Индикатор"
   initialLabel: "Начальное"
+  inputFieldRequired: "Укажите имя поля."
   inputSection: "Поле ввода"
   interactionChange: "Изменение"
   interactionClick: "Нажатие"

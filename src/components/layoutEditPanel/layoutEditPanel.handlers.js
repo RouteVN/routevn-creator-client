@@ -1618,8 +1618,15 @@ const submitPopoverValue = (deps, typedValue) => {
   });
 };
 
+// A popover form that validates on Submit, such as the Input field name, stays
+// open with its message while a value is missing.
 export const handleFormActions = (deps, payload) => {
-  submitPopoverValue(deps, payload._event.detail.values.value);
+  const { values, valid } = payload._event.detail;
+  if (valid === false) {
+    return;
+  }
+
+  submitPopoverValue(deps, values.value);
 };
 
 export const handlePopoverSubmitClick = (deps) => {
@@ -2366,14 +2373,21 @@ export const handlePopoverFormChange = async (deps, payload) => {
   const values = { ..._event.detail.values };
   values.value = clampPopoverValue(deps, { name, value: values.value });
 
-  store.updatePopoverFormContext({
-    values,
-    name,
-    projectResolution: props.projectResolution,
-    copy: selectCopy(deps),
-    dateTime: i18n.dateTime,
-  });
-  render();
+  // Only a slider popover's form is rebuilt to show the committed value. A
+  // rebuild would drop the message a form shows when its validation fails on
+  // Submit, which a click follows this change by a few milliseconds.
+  if (isSliderPopoverField(name)) {
+    store.updatePopoverFormContext({
+      values,
+      name,
+      projectResolution: props.projectResolution,
+      copy: selectCopy(deps),
+      dateTime: i18n.dateTime,
+    });
+    render();
+  } else {
+    store.setPopoverFormValue({ value: values.value });
+  }
   emitPanelPreview(deps, { name, value: values.value });
 };
 

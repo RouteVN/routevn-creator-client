@@ -32,15 +32,24 @@ scalePopoverForm: &scalePopoverForm
         variant: pr
         label: Submit
 
-textPopoverForm: &textPopoverForm
+# An Input element's field name cannot be empty or blank. Submit validates the
+# form and the popover stays open with the message while the name is missing.
+inputFieldPopoverForm: &inputFieldPopoverForm
   fields:
     - name: value
       type: input-text
+      required:
+        message: Field name is required.
+      rules:
+        - rule: pattern
+          value: "\\S"
+          message: Field name is required.
   actions:
     buttons:
       - id: submit
         variant: pr
         label: Submit
+        validate: true
 
 transformSections:
   - label: Transform
@@ -466,7 +475,7 @@ layoutSections:
             label: Field
             name: field
             value: "${values.field}"
-            popoverForm: *textPopoverForm
+            popoverForm: *inputFieldPopoverForm
   - "$when": "supportsTextEditing"
     label: Text
     items:

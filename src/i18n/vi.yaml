@@ -1819,6 +1819,7 @@ layoutEditPanel:
   indicatorLabel: "Chỉ báo"
   indicatorTitle: "Chỉ báo"
   initialLabel: "Giá trị ban đầu"
+  inputFieldRequired: "Vui lòng nhập tên cho ô nhập."
   inputSection: "Ô nhập văn bản"
   interactionChange: "Thay đổi giá trị"
   interactionClick: "Bấm"

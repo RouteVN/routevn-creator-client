@@ -1819,6 +1819,7 @@ layoutEditPanel:
   indicatorLabel: "Indicator"
   indicatorTitle: "Indicator"
   initialLabel: "Initial"
+  inputFieldRequired: "Field name is required."
   inputSection: "Input"
   interactionChange: "Change"
   interactionClick: "Click"

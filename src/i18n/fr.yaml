@@ -1819,6 +1819,7 @@ layoutEditPanel:
   indicatorLabel: "Indicateur"
   indicatorTitle: "Indicateur"
   initialLabel: "Valeur initiale"
+  inputFieldRequired: "Le nom du champ est obligatoire."
   inputSection: "Champ de texte"
   interactionChange: "Changement de valeur"
   interactionClick: "Clic"
