@@ -134,6 +134,7 @@ const STATIC_LABEL_COPY_KEYS = {
   Effect: "effectLabel",
   Enabled: "enabledOption",
   Field: "fieldLabel",
+  "Field name is required.": "inputFieldRequired",
   Fixed: "fixedOption",
   Format: "formatLabel",
   Fragment: "fragmentLabel",
@@ -222,6 +223,30 @@ const localizeOptions = (options, copy = {}) => {
     return nextOption;
   });
 };
+
+// A field's required rule is true, or an object with its own message.
+const localizeFieldRequired = (required, copy = {}) => {
+  if (!required?.message) {
+    return required;
+  }
+
+  return {
+    ...required,
+    message: localizeStaticLabel(required.message, copy),
+  };
+};
+
+const localizeFieldRules = (rules, copy = {}) => {
+  if (!Array.isArray(rules)) {
+    return rules;
+  }
+
+  return rules.map((rule) => ({
+    ...rule,
+    message: localizeStaticLabel(rule.message, copy),
+  }));
+};
+
 const localizeForm = (form, copy = {}) => {
   if (!form || typeof form !== "object") {
     return form;
@@ -241,6 +266,8 @@ const localizeForm = (form, copy = {}) => {
           ? localizeStaticLabel(field.label, copy)
           : field.label,
       options: localizeOptions(field.options, copy),
+      required: localizeFieldRequired(field.required, copy),
+      rules: localizeFieldRules(field.rules, copy),
     }));
   }
   if (nextForm.actions && typeof nextForm.actions === "object") {

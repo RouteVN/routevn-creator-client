@@ -1819,6 +1819,7 @@ layoutEditPanel:
   indicatorLabel: "指示器"
   indicatorTitle: "指示器"
   initialLabel: "初始值"
+  inputFieldRequired: "字段名称为必填项。"
   inputSection: "输入"
   interactionChange: "更改"
   interactionClick: "点击"

@@ -1819,6 +1819,7 @@ layoutEditPanel:
   indicatorLabel: "ตัวบ่งชี้"
   indicatorTitle: "ตัวบ่งชี้"
   initialLabel: "ค่าตั้งต้น"
+  inputFieldRequired: "ต้องระบุชื่อฟิลด์"
   inputSection: "การป้อนข้อความ"
   interactionChange: "เปลี่ยนค่า"
   interactionClick: "คลิก"

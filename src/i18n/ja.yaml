@@ -1819,6 +1819,7 @@ layoutEditPanel:
   indicatorLabel: "インジケーター"
   indicatorTitle: "インジケーター"
   initialLabel: "初期値"
+  inputFieldRequired: "フィールド名は必須です。"
   inputSection: "入力"
   interactionChange: "変更"
   interactionClick: "クリック"
