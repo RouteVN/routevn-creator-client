@@ -388,7 +388,7 @@ describe("commandLineDialogueBox.store", () => {
     });
 
     expect(jaViewData.form.fields[2].action.label).toBe("オプションを追加");
-    expect(zhHansViewData.form.fields[2].action.label).toBe("添加选项");
+    expect(zhHansViewData.form.fields[2].action.label).toBe("添加设置项");
   });
 
   it("shows ADV and NVL layouts together with right-side mode labels", () => {
