@@ -2807,6 +2807,10 @@ assetPackagePage:
   videoMenuItem: "Vídeo"
   videosSectionTitle: "Vídeos"
   zipFileTypeName: "Arquivo ZIP"
+  comesWithHint: "O que você escolheu usa estes recursos, então o pacote os inclui. A Loja de recursos mostra só o que você escolheu, e a importação os adiciona a uma pasta própria."
+  comesWithTitle: "Inclui também"
+  usedByLabel: "Usado por {names}"
+  usedByMore: "mais {count}"
 resourceImport:
   assetPackageImported_one: "{count} recurso importado do pacote."
   assetPackageImported_other: "{count} recursos importados do pacote."

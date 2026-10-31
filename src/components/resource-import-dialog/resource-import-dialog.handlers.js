@@ -178,6 +178,7 @@ const openPack = async (deps, packId) => {
   const result = await projectService.createResourceImportPlan({
     zip: pack.package,
     operationId,
+    dependencyFolderName: pack.title,
   });
   if (store.selectOperationId() !== operationId) return;
   if (result.valid === false) {

@@ -2807,6 +2807,10 @@ assetPackagePage:
   videoMenuItem: "Video"
   videosSectionTitle: "Videos"
   zipFileTypeName: "ZIP Archive"
+  comesWithHint: "Your picks use these, so the package includes them. The Asset Store lists only your picks, and importing adds these to a folder of their own."
+  comesWithTitle: "Comes with"
+  usedByLabel: "Used by {names}"
+  usedByMore: "{count} more"
 resourceImport:
   assetPackageImported_one: "Imported {count} resource from the asset package."
   assetPackageImported_other: "Imported {count} resources from the asset package."

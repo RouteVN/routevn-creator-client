@@ -16,7 +16,7 @@ The manifest is a partial RouteVN repository:
 
 ```json
 {
-  "schema": "routevn.import-pack.v1",
+  "schema": "routevn.import-pack.v2",
   "package": {
     "kind": "routevn.creator.asset-package"
   },
@@ -52,14 +52,47 @@ The manifest is a partial RouteVN repository:
           "children": [{ "id": "image.spark" }]
         }
       ]
+    },
+    "textStyles": {
+      "items": {
+        "textStyle.title": {
+          "id": "textStyle.title",
+          "type": "textStyle",
+          "name": "Title",
+          "fontId": ["font.serif"]
+        }
+      },
+      "tree": [{ "id": "textStyle.title" }]
+    }
+  },
+  "dependencies": {
+    "fonts": {
+      "items": {
+        "font.serif": {
+          "id": "font.serif",
+          "type": "font",
+          "name": "Serif",
+          "fileId": "file.serif"
+        }
+      }
     }
   }
 }
 ```
 
-Only included repository collections are imported. Each collection uses the
-normal `{ items, tree }` shape, and folders are regular items with
-`type: "folder"`.
+`repository` holds the resources the pack's author picked. Each collection
+uses the normal `{ items, tree }` shape, and folders are regular items with
+`type: "folder"`. `dependencies` holds the resources the picks use that the
+author did not pick: the same collection keys, each `{ items }` with no tree
+and no folders. It is left out when the picks use nothing else.
+
+A resource is in one section only. Every dependency is used by a pick,
+directly or through other dependencies, and picks and dependencies may
+reference each other. `repository.files` holds the files of both sections.
+
+`routevn.import-pack.v1` packages have no `dependencies`: everything is in
+`repository`, and the importer treats every resource as a pick. The creator
+exports v2.
 
 The creator exports only `package.kind`. Catalog metadata such as package id,
 name, version, description, publisher, or source may be supplied by a publishing
@@ -101,13 +134,21 @@ against the owning resource type before staging.
 ## Folder trees and dependencies
 
 The creator lets users choose top-level folders. Selecting a folder includes its
-complete subtree and preserves folder and item order. Export also includes
-transitive resource and file dependencies, even when their source folders were
-not explicitly selected.
+complete subtree and preserves folder and item order; everything in the chosen
+folders is a pick. Export adds what the picks use, directly or through each
+other, to `dependencies`, without the folders it sits in. A resource in a
+chosen folder stays a pick even when another pick uses it, so an author shows
+a color or font on the pack page by choosing its folder too. Below the chosen
+folders, the export page lists these dependencies under "Comes with", by type,
+each with the picks that use it.
 
 Import recreates the selected resources' complete package folder ancestry in
 the matching project collections, after the project's own folders and
-resources, in package order. It does not ask for replacement destination
+resources, in package order. The dependencies the selected picks use come
+along: each type's go into one new top-level folder after the pack's own,
+named after the pack, and numbered ("Fantasy UI 2") when the project or the
+pack already has a top-level folder by that name. A dependency no selected
+pick uses is not imported. Import does not ask for replacement destination
 folders or media substitutions.
 
 Files, folders, and resources are committed in one atomic command batch. A
@@ -180,7 +221,7 @@ opens the store with that resource type chosen, such as Images on the Images
 page; character sprites and layouts open with no type. Choosing a pack opens its
 page: its description, the current
 version's release notes under "What's new", with their line breaks, when it has
-any, and every asset in the pack, read from its manifest. Assets are grouped as on the resource pages: a group for each
+any, and every asset in the pack, read from its manifest. Only the author's picks show; dependencies do not. Assets are grouped as on the resource pages: a group for each
 type's own assets and one for each folder, labelled with its path such as
 Images > Masks, collapsible, with each asset on a card that shows its name.
 Beside them, a pack info panel holds the cover, the summary under it, the
@@ -247,15 +288,16 @@ files fetched by URL.
 
 1. Choose a pack in the asset store, then read and strictly validate the
    manifest inside its package.
-2. Show a selection page when the package contains multiple resources.
-3. Keep required dependencies selected and locked.
+2. Show a selection page when the package contains multiple picks.
+3. Keep the picks that selected picks use, directly or through dependencies,
+   selected and locked; add the dependencies they use without listing them.
 4. Let the user review and edit each selected resource's name and description.
 5. Lazily load the current resource preview.
 6. Download and validate only the selected resources' required files.
 7. Remap package-local ids.
 8. Commit the selected folder trees and resources atomically.
 
-A one-resource package skips the selection page.
+A package with one pick skips the selection page.
 
 ## Publisher requirements
 
@@ -289,7 +331,7 @@ Current limits are:
 - 2,000 package files
 - 50 MiB per file
 - 200 MiB total per import
-- 500 resources per collection
+- 500 resources per type, picks and dependencies together
 - 32 folder-tree levels
 - three parallel downloads
 - 15-second manifest timeout

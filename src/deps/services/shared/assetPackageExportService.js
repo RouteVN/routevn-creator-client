@@ -33,6 +33,13 @@ const generatePreviewStage = async ({ label, generate }) => {
   }
 };
 
+// One type's items in both sections, the picks and their dependencies, so
+// every resource gets its preview. Previews are written onto these items.
+const packageItems = (manifest, resourceType) => ({
+  ...manifest.repository?.[resourceType]?.items,
+  ...manifest.dependencies?.[resourceType]?.items,
+});
+
 const getPackageFilePath = (fileId) => `files/${encodeURIComponent(fileId)}`;
 
 const readProjectFile = async ({ fileId, getFileContent, fetchImpl }) => {
@@ -157,7 +164,7 @@ const addSoundWaveformPreviews = async ({
   renderWaveformThumbnail,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
-  const sounds = manifest.repository?.sounds?.items ?? {};
+  const sounds = packageItems(manifest, "sounds");
 
   for (const [soundId, sound] of Object.entries(sounds)) {
     if (sound.type !== "sound" || !sound.waveformDataFileId) {
@@ -189,7 +196,7 @@ const addSpritesheetPreviews = async ({
   renderPreview,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
-  const spritesheets = manifest.repository?.spritesheets?.items ?? {};
+  const spritesheets = packageItems(manifest, "spritesheets");
   for (const [spritesheetId, spritesheet] of Object.entries(spritesheets)) {
     if (
       spritesheet.type !== "spritesheet" ||
@@ -242,7 +249,7 @@ const addFontPreviews = async ({
   renderPreview,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
-  const fonts = manifest.repository?.fonts?.items ?? {};
+  const fonts = packageItems(manifest, "fonts");
   for (const [fontId, font] of Object.entries(fonts)) {
     if (font.type !== "font" || !font.fileId) {
       continue;
@@ -288,7 +295,7 @@ const addTextStylePreviews = async ({
   renderPreview,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
-  const textStyles = manifest.repository?.textStyles?.items ?? {};
+  const textStyles = packageItems(manifest, "textStyles");
   const sourceFonts = sourceRepository.fonts?.items ?? {};
   const sourceColors = sourceRepository.colors?.items ?? {};
   for (const [textStyleId, textStyle] of Object.entries(textStyles)) {
@@ -389,7 +396,7 @@ const addAnimationPreviews = async ({
   renderPreviews,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
-  const animations = manifest.repository?.animations?.items ?? {};
+  const animations = packageItems(manifest, "animations");
   const imageItems = sourceRepository.images?.items ?? {};
   const imagesByFileId = new Map(
     Object.values(imageItems)
@@ -462,7 +469,7 @@ const addParticlePreviews = async ({
   renderPreview,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
-  const particles = manifest.repository?.particles?.items ?? {};
+  const particles = packageItems(manifest, "particles");
   const imageItems = sourceRepository.images?.items ?? {};
   for (const [particleId, particle] of Object.entries(particles)) {
     if (particle.type !== "particle") {

@@ -2831,6 +2831,10 @@ assetPackagePage:
   videoMenuItem: "Видео"
   videosSectionTitle: "Видео"
   zipFileTypeName: "ZIP-архив"
+  comesWithHint: "Выбранные ресурсы используют эти, поэтому они входят в пакет. В Магазине ресурсов видны только выбранные, а при импорте эти добавляются в отдельную папку."
+  comesWithTitle: "Также входит"
+  usedByLabel: "Используется в: {names}"
+  usedByMore: "ещё {count}"
 resourceImport:
   assetPackageImported_one: "Из пакета импортирован {count} ресурс."
   assetPackageImported_few: "Из пакета импортировано {count} ресурса."

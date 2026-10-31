@@ -109,9 +109,21 @@ const selectPlanResources = ({ plan, selectedResourceIds }) => {
       }
     }
   }
-  return plan.resources.filter((resource) =>
+  const selectedPicks = plan.resources.filter((resource) =>
     selectedIds.has(resource.sourceId),
   );
+  // A v2 package's dependencies come along with the picks that use them.
+  const dependencySourceIds = new Set(
+    selectedPicks.flatMap(
+      (resource) => resource.packageDependencySourceIds ?? [],
+    ),
+  );
+  return [
+    ...selectedPicks,
+    ...(plan.dependencies ?? []).filter((resource) =>
+      dependencySourceIds.has(resource.sourceId),
+    ),
+  ];
 };
 
 const selectPackageEntries = ({
@@ -262,7 +274,13 @@ export const createResourcePackageImportService = ({
   return {
     // `url` is a manifest whose files resolve against it; `zip` is a
     // published package read in place (see importPackageClient.openPackage).
-    async createResourceImportPlan({ url, zip, operationId } = {}) {
+    // A v2 package's dependencies go into folders named `dependencyFolderName`.
+    async createResourceImportPlan({
+      url,
+      zip,
+      operationId,
+      dependencyFolderName,
+    } = {}) {
       let operation;
       try {
         recordEvent("plan.started");
@@ -278,6 +296,7 @@ export const createResourcePackageImportService = ({
           repositoryState: getRepositoryState(),
           repositoryRevision: getRepositoryRevision(),
           createId: idGenerator,
+          dependencyFolderName,
         });
         if (plan.knownDownloadBytes > importClient.limits.totalBytes) {
           throw new ImportPackageClientError(

@@ -203,6 +203,87 @@ describe("asset package export service", () => {
     );
   });
 
+  it("generates previews for a v2 package's dependencies too", async () => {
+    // A text style the author picked, using a font that comes as a dependency.
+    const manifest = createManifest();
+    manifest.schema = "routevn.import-pack.v2";
+    manifest.repository.files.items["file-font"] = {
+      id: "file-font",
+      mimeType: "font/woff2",
+      source: { url: "./files/file-font" },
+    };
+    manifest.repository.textStyles = {
+      items: {
+        "text-style.title": {
+          id: "text-style.title",
+          type: "textStyle",
+          name: "Title",
+          fontId: ["font.serif"],
+          fontSize: 48,
+          lineHeight: 1.2,
+          fontWeight: "700",
+        },
+      },
+      tree: [{ id: "text-style.title" }],
+    };
+    manifest.dependencies = {
+      fonts: {
+        items: {
+          "font.serif": {
+            id: "font.serif",
+            type: "font",
+            name: "Serif",
+            fileId: "file-font",
+            fontFamily: "Serif",
+          },
+        },
+      },
+    };
+    const sourceRepository = {
+      ...structuredClone(manifest.repository),
+      fonts: structuredClone(manifest.dependencies.fonts),
+    };
+    const renderFontPreview = vi.fn(async () => ({
+      previewBlob: new Blob(["font-image"], { type: "image/png" }),
+      thumbnailBlob: new Blob(["font-thumbnail"], { type: "image/png" }),
+    }));
+    const renderTextStylePreview = vi.fn(async () => ({
+      previewBlob: new Blob(["text-style-image"], { type: "image/png" }),
+      thumbnailBlob: new Blob(["text-style-thumbnail"], { type: "image/png" }),
+    }));
+    const service = createAssetPackageExportService({
+      getFileContent: vi.fn(async (fileId) => ({
+        url: `project-file://${fileId}`,
+        revoke: vi.fn(),
+      })),
+      getRepositoryState: () => sourceRepository,
+      fetchImpl: vi.fn(async (url) => ({
+        ok: true,
+        arrayBuffer: async () => new TextEncoder().encode(url).buffer,
+      })),
+      renderFontPreview,
+      renderTextStylePreview,
+    });
+
+    const bundle = await service.createAssetPackageBundle({ manifest });
+
+    const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
+    const exported = JSON.parse(
+      await zip.file("asset-package.json").async("string"),
+    );
+    const font = exported.dependencies.fonts.items["font.serif"];
+    expect(font.previewMediaFileId).toBe("font-preview.font.serif.png");
+    expect(font.thumbnailMediaFileId).toBe("font-thumbnail.font.serif.png");
+    expect(exported.repository.files.items).toHaveProperty(
+      "font-preview.font.serif.png",
+    );
+    expect(zip.file("files/font-preview.font.serif.png")).not.toBeNull();
+    expect(
+      exported.repository.textStyles.items["text-style.title"]
+        .previewMediaFileId,
+    ).toBe("text-style-preview.text-style.title.png");
+  });
+
   it("generates export-only previews for visual resource types", async () => {
     const manifest = createManifest();
     manifest.repository.files.items["file-spritesheet"] = {

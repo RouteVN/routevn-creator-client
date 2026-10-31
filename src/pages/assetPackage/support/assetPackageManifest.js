@@ -1,4 +1,4 @@
-import { IMPORT_PACK_SCHEMA } from "../../../internal/importPackages.js";
+import { IMPORT_PACK_SCHEMA_V2 } from "../../../internal/importPackages.js";
 import {
   ASSET_PACKAGE_KIND,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
@@ -177,46 +177,75 @@ const indexSourceResources = (resourceDataByType) => {
   return sourceById;
 };
 
-const includeTransitiveDependencies = ({ includedIdsByType, sourceById }) => {
-  const pending = [];
-  for (const [resourceType, includedIds] of Object.entries(includedIdsByType)) {
-    for (const itemId of includedIds) {
-      const source = sourceById.get(itemId);
-      if (source?.resourceType === resourceType) {
-        pending.push(source);
+// What the picks use, directly or through each other, that is not a pick,
+// with the picks that use each. A pick's own dependencies count for that
+// pick, so the walk stops at picks.
+const collectDependencies = ({ pickedIdsByType, sourceById }) => {
+  const dependencies = new Map();
+  for (const [resourceType, pickedIds] of Object.entries(pickedIdsByType)) {
+    for (const pickId of pickedIds) {
+      const pick = sourceById.get(pickId);
+      if (pick?.resourceType !== resourceType) {
+        continue;
+      }
+      const visited = new Set([pickId]);
+      const pending = [pick];
+      while (pending.length > 0) {
+        const { item, itemId } = pending.pop();
+        visitAssetPackageReferences(
+          item,
+          ({ fieldName, kind, required, value }) => {
+            if (kind === "project") {
+              throw new Error(
+                `Resource '${itemId}' contains unsupported project reference '${fieldName}'.`,
+              );
+            }
+            if (kind !== "resource") {
+              return;
+            }
+            const source = sourceById.get(value);
+            if (!source) {
+              if (required) {
+                throw new Error(`Referenced resource '${value}' is missing.`);
+              }
+              return;
+            }
+            if (
+              pickedIdsByType[source.resourceType].has(source.itemId) ||
+              visited.has(source.itemId)
+            ) {
+              return;
+            }
+            visited.add(source.itemId);
+            const dependency = dependencies.get(source.itemId) ?? {
+              ...source,
+              usedBy: new Set(),
+            };
+            dependency.usedBy.add(pickId);
+            dependencies.set(source.itemId, dependency);
+            pending.push(source);
+          },
+        );
       }
     }
   }
+  return dependencies;
+};
 
-  for (let index = 0; index < pending.length; index += 1) {
-    const { item, itemId } = pending[index];
-    visitAssetPackageReferences(
-      item,
-      ({ fieldName, kind, required, value }) => {
-        if (kind === "project") {
-          throw new Error(
-            `Resource '${itemId}' contains unsupported project reference '${fieldName}'.`,
-          );
-        }
-        if (kind !== "resource") {
-          return;
-        }
-        const dependency = sourceById.get(value);
-        if (!dependency) {
-          if (required) {
-            throw new Error(`Referenced resource '${value}' is missing.`);
-          }
-          return;
-        }
-        const includedIds = includedIdsByType[dependency.resourceType];
-        if (includedIds.has(dependency.itemId)) {
-          return;
-        }
-        includedIds.add(dependency.itemId);
-        pending.push(dependency);
-      },
-    );
-  }
+// A type's dependencies, in the order they appear in the project.
+const selectDependencyItems = (resourceData, dependencyIds) => {
+  const items = {};
+  const visit = (nodes) => {
+    for (const node of nodes) {
+      const sourceItem = resourceData.items[node.id];
+      if (sourceItem?.type !== "folder" && dependencyIds.has(node.id)) {
+        items[node.id] = sanitizePackageItem(sourceItem, node.id);
+      }
+      visit(node.children ?? []);
+    }
+  };
+  visit(resourceData.tree);
+  return items;
 };
 
 const selectIncludedResourceData = (
@@ -261,53 +290,106 @@ const selectIncludedResourceData = (
   };
 };
 
-export const createAssetPackageRepository = ({
+const getOrderedResourceTypes = (resourceTypeOrder = []) => [
+  ...resourceTypeOrder,
+  ...ASSET_PACKAGE_RESOURCE_TYPES.filter(
+    (resourceType) => !resourceTypeOrder.includes(resourceType),
+  ),
+];
+
+const collectPickedIdsByType = ({
+  resourceDataByType,
+  selectedFolderIdsByType,
+}) =>
+  Object.fromEntries(
+    ASSET_PACKAGE_RESOURCE_TYPES.map((resourceType) => [
+      resourceType,
+      collectSelectedResourceIds(
+        selectNestedResourceData(
+          resourceDataByType[resourceType],
+          selectedFolderIdsByType[resourceType] ?? [],
+        ),
+      ),
+    ]),
+  );
+
+// The package's two sections: `repository`, the picks (every resource in the
+// chosen folders) in their folders, and `dependencies`, what the picks use
+// that is not a pick, without folders.
+export const createAssetPackageContents = ({
   filesData,
   resourceDataByType,
   selectedFolderIdsByType,
   resourceTypeOrder,
 }) => {
-  const orderedResourceTypes = [
-    ...resourceTypeOrder,
-    ...ASSET_PACKAGE_RESOURCE_TYPES.filter(
-      (resourceType) => !resourceTypeOrder.includes(resourceType),
-    ),
-  ];
-  const includedIdsByType = Object.fromEntries(
-    ASSET_PACKAGE_RESOURCE_TYPES.map((resourceType) => {
-      const selectedCollection = selectNestedResourceData(
-        resourceDataByType[resourceType],
-        selectedFolderIdsByType[resourceType] ?? [],
-      );
-      return [resourceType, collectSelectedResourceIds(selectedCollection)];
-    }),
-  );
-  const sourceById = indexSourceResources(resourceDataByType);
-  includeTransitiveDependencies({ includedIdsByType, sourceById });
-
-  const collectionByType = Object.fromEntries(
-    ASSET_PACKAGE_RESOURCE_TYPES.map((resourceType) => [
-      resourceType,
-      selectIncludedResourceData(
-        resourceDataByType[resourceType],
-        includedIdsByType[resourceType],
-        selectedFolderIdsByType[resourceType] ?? [],
-      ),
-    ]),
-  );
-  const collections = Object.values(collectionByType).filter(
-    (collection) => collection.tree.length > 0,
-  );
-  const repository = {
-    files: createPackageFiles({ filesData, collections }),
-  };
-  for (const resourceType of orderedResourceTypes) {
-    const collection = collectionByType[resourceType];
-    if (collection.tree.length > 0) {
-      repository[resourceType] = collection;
+  const pickedIdsByType = collectPickedIdsByType({
+    resourceDataByType,
+    selectedFolderIdsByType,
+  });
+  const dependencies = collectDependencies({
+    pickedIdsByType,
+    sourceById: indexSourceResources(resourceDataByType),
+  });
+  const collections = [];
+  const repository = {};
+  const packageDependencies = {};
+  for (const resourceType of getOrderedResourceTypes(resourceTypeOrder)) {
+    const resourceData = resourceDataByType[resourceType];
+    const picks = selectIncludedResourceData(
+      resourceData,
+      pickedIdsByType[resourceType],
+      selectedFolderIdsByType[resourceType] ?? [],
+    );
+    if (picks.tree.length > 0) {
+      repository[resourceType] = picks;
+      collections.push(picks);
+    }
+    const dependencyIds = new Set(
+      [...dependencies.values()]
+        .filter((dependency) => dependency.resourceType === resourceType)
+        .map((dependency) => dependency.itemId),
+    );
+    if (dependencyIds.size > 0) {
+      const items = selectDependencyItems(resourceData, dependencyIds);
+      packageDependencies[resourceType] = { items };
+      collections.push({ items });
     }
   }
-  return repository;
+  return {
+    repository: {
+      files: createPackageFiles({ filesData, collections }),
+      ...repository,
+    },
+    dependencies: packageDependencies,
+  };
+};
+
+// The dependencies the export page lists: each with its type and the picks
+// that use it, by type in the page's order, then in project order.
+export const listAssetPackageDependencies = ({
+  resourceDataByType,
+  selectedFolderIdsByType,
+  resourceTypeOrder,
+}) => {
+  const dependencies = collectDependencies({
+    pickedIdsByType: collectPickedIdsByType({
+      resourceDataByType,
+      selectedFolderIdsByType,
+    }),
+    sourceById: indexSourceResources(resourceDataByType),
+  });
+  return getOrderedResourceTypes(resourceTypeOrder).flatMap((resourceType) => {
+    const items = selectDependencyItems(
+      resourceDataByType[resourceType],
+      new Set(dependencies.keys()),
+    );
+    return Object.keys(items).map((itemId) => ({
+      resourceType,
+      itemId,
+      name: resourceDataByType[resourceType].items[itemId].name,
+      usedBy: [...dependencies.get(itemId).usedBy],
+    }));
+  });
 };
 
 export class AssetPackageManifestError extends Error {
@@ -318,7 +400,7 @@ export class AssetPackageManifestError extends Error {
   }
 }
 
-export const createAssetPackageManifest = ({ repository }) => {
+export const createAssetPackageManifest = ({ repository, dependencies }) => {
   const resourceCount = ASSET_PACKAGE_RESOURCE_TYPES.reduce(
     (count, resourceType) => {
       const itemType =
@@ -339,9 +421,13 @@ export const createAssetPackageManifest = ({ repository }) => {
     );
   }
 
-  return {
-    schema: IMPORT_PACK_SCHEMA,
+  const manifest = {
+    schema: IMPORT_PACK_SCHEMA_V2,
     package: { kind: ASSET_PACKAGE_KIND },
     repository: structuredClone(repository),
   };
+  if (Object.keys(dependencies ?? {}).length > 0) {
+    manifest.dependencies = structuredClone(dependencies);
+  }
+  return manifest;
 };

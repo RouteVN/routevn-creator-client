@@ -2807,6 +2807,10 @@ assetPackagePage:
   videoMenuItem: "วิดีโอ"
   videosSectionTitle: "วิดีโอ"
   zipFileTypeName: "ไฟล์ ZIP"
+  comesWithHint: "รายการที่คุณเลือกใช้ทรัพยากรเหล่านี้ แพ็กเกจจึงรวมไว้ด้วย ร้านค้าทรัพยากรจะแสดงเฉพาะรายการที่คุณเลือก และการนำเข้าจะเพิ่มทรัพยากรเหล่านี้ไว้ในโฟลเดอร์แยก"
+  comesWithTitle: "มาพร้อมกับ"
+  usedByLabel: "ใช้โดย {names}"
+  usedByMore: "อีก {count} รายการ"
 resourceImport:
   assetPackageImported_one: "นำเข้าทรัพยากร {count} รายการจากแพ็กเกจทรัพยากรแล้ว"
   assetPackageImported_other: "นำเข้าทรัพยากร {count} รายการจากแพ็กเกจทรัพยากรแล้ว"

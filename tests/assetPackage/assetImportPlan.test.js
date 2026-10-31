@@ -587,3 +587,280 @@ describe("asset import plan", () => {
     );
   });
 });
+
+// A v2 pack: a layout the author picked, using a text style that comes as a
+// dependency; the text style uses a font, also a dependency, and a color the
+// author picked.
+const createV2Manifest = () => ({
+  schema: "routevn.import-pack.v2",
+  package: { kind: ASSET_PACKAGE_KIND, name: "Package Name" },
+  repository: {
+    files: {
+      items: {
+        "file-font": {
+          id: "file-font",
+          mimeType: "font/woff2",
+          source: { url: "./files/file-font" },
+        },
+      },
+    },
+    colors: {
+      items: {
+        "color-1": {
+          id: "color-1",
+          type: "color",
+          name: "Ink",
+          hex: "#112233",
+        },
+      },
+      tree: [{ id: "color-1" }],
+    },
+    layouts: {
+      items: {
+        "folder-menus": { id: "folder-menus", type: "folder", name: "Menus" },
+        "layout-1": {
+          id: "layout-1",
+          type: "layout",
+          name: "Title Menu",
+          layoutType: "general",
+          elements: {
+            items: {
+              title: {
+                id: "title",
+                type: "text",
+                name: "Title",
+                text: "Title",
+                textStyleId: "text-style-1",
+              },
+            },
+            tree: [{ id: "title" }],
+          },
+        },
+      },
+      tree: [{ id: "folder-menus", children: [{ id: "layout-1" }] }],
+    },
+  },
+  dependencies: {
+    fonts: {
+      items: {
+        "font-1": {
+          id: "font-1",
+          type: "font",
+          name: "Serif",
+          fileId: "file-font",
+          fontFamily: "Serif",
+        },
+      },
+    },
+    textStyles: {
+      items: {
+        "text-style-1": {
+          id: "text-style-1",
+          type: "textStyle",
+          name: "Title",
+          fontId: ["font-1"],
+          colorId: "color-1",
+          fontSize: 48,
+          lineHeight: 1.2,
+          fontWeight: "700",
+        },
+      },
+    },
+  },
+});
+
+const planV2 = (manifest, options = {}) => {
+  let id = 0;
+  return createAssetImportPlan({
+    manifest,
+    manifestUrl: "https://example.com/pack/asset-package.json",
+    projectId: "project-1",
+    repositoryRevision: 1,
+    createId: () => `generated-${++id}`,
+    dependencyFolderName: "Fantasy UI",
+    ...options,
+  });
+};
+
+describe("asset import plan for v2 packages", () => {
+  it("lists only the author's picks and brings their dependencies into folders named after the pack", () => {
+    const plan = planV2(createV2Manifest());
+
+    expect(plan.resources.map((resource) => resource.name)).toEqual([
+      "Ink",
+      "Title Menu",
+    ]);
+    expect(plan.reviewSections.map((section) => section.resourceType)).toEqual([
+      "colors",
+      "layouts",
+    ]);
+    expect(plan.dependencies.map((resource) => resource.name).sort()).toEqual([
+      "Serif",
+      "Title",
+    ]);
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    // The color is a pick the layout reaches through its text style, so the
+    // review keeps it selected with the layout.
+    expect(layout.dependencySourceIds).toEqual(["colors:color-1"]);
+    expect([...layout.packageDependencySourceIds].sort()).toEqual([
+      "fonts:font-1",
+      "textStyles:text-style-1",
+    ]);
+
+    const folders = plan.entries.filter(
+      (entry) => entry.folder && entry.dependency,
+    );
+    expect(
+      folders.map((entry) => [entry.resourceType, entry.data.name]),
+    ).toEqual(
+      expect.arrayContaining([
+        ["fonts", "Fantasy UI"],
+        ["textStyles", "Fantasy UI"],
+      ]),
+    );
+    const destinationOf = (sourceId) =>
+      plan.entries.find((entry) => entry.sourceId === sourceId).destinationId;
+    const textStyle = plan.dependencies.find(
+      (resource) => resource.name === "Title",
+    );
+    expect(textStyle.parentDestinationId).toBe(
+      destinationOf("dependencies:textStyles"),
+    );
+    expect(layout.data.elements.items.title.textStyleId).toBe(
+      textStyle.destinationId,
+    );
+    expect(textStyle.data.fontId).toEqual([destinationOf("fonts:font-1")]);
+    expect(textStyle.data.colorId).toBe(destinationOf("colors:color-1"));
+    expect(plan.files.map((file) => file.sourceId)).toEqual(["file-font"]);
+  });
+
+  it("numbers a dependency folder whose name the project or the pack already uses", () => {
+    // The pack's own colors sit in a top-level "Fantasy UI" folder, and the
+    // text style uses a second color that comes as a dependency.
+    const manifest = createV2Manifest();
+    manifest.repository.colors = {
+      items: {
+        "folder-colors": {
+          id: "folder-colors",
+          type: "folder",
+          name: "Fantasy UI",
+        },
+        "color-1": manifest.repository.colors.items["color-1"],
+      },
+      tree: [{ id: "folder-colors", children: [{ id: "color-1" }] }],
+    };
+    manifest.dependencies.colors = {
+      items: {
+        "color-2": {
+          id: "color-2",
+          type: "color",
+          name: "Gold",
+          hex: "#FFD84D",
+        },
+      },
+    };
+    manifest.dependencies.textStyles.items["text-style-1"].colorId = "color-2";
+    const plan = planV2(manifest, {
+      repositoryState: {
+        fonts: {
+          items: { mine: { id: "mine", type: "folder", name: "fantasy ui" } },
+          tree: [{ id: "mine" }],
+        },
+      },
+    });
+
+    const folderName = (resourceType) =>
+      plan.entries.find(
+        (entry) => entry.sourceId === `dependencies:${resourceType}`,
+      ).data.name;
+    expect(folderName("fonts")).toBe("Fantasy UI 2");
+    expect(folderName("colors")).toBe("Fantasy UI 2");
+    expect(folderName("textStyles")).toBe("Fantasy UI");
+
+    const unnamed = planV2(createV2Manifest(), {
+      dependencyFolderName: undefined,
+    });
+    expect(
+      unnamed.entries.find((entry) => entry.sourceId === "dependencies:fonts")
+        .data.name,
+    ).toBe("Package Name");
+  });
+
+  it.each([
+    [
+      "a v1 package with dependencies",
+      (manifest) => {
+        manifest.schema = "routevn.import-pack.v1";
+      },
+      "unsupported_field",
+    ],
+    [
+      "a dependency folder",
+      (manifest) => {
+        manifest.dependencies.fonts.items["font-1"].type = "folder";
+      },
+      "unsupported_resource",
+    ],
+    [
+      "a dependency tree",
+      (manifest) => {
+        manifest.dependencies.fonts.tree = [{ id: "font-1" }];
+      },
+      "unsupported_field",
+    ],
+    [
+      "a resource that is both picked and a dependency",
+      (manifest) => {
+        manifest.dependencies.colors = {
+          items: {
+            "color-1": {
+              id: "color-1",
+              type: "color",
+              name: "Ink",
+              hex: "#112233",
+            },
+          },
+        };
+      },
+      "duplicate_resource_id",
+    ],
+    [
+      "a dependency nothing uses",
+      (manifest) => {
+        manifest.dependencies.colors = {
+          items: {
+            "color-2": {
+              id: "color-2",
+              type: "color",
+              name: "Spare",
+              hex: "#445566",
+            },
+          },
+        };
+      },
+      "unused_dependency",
+    ],
+    [
+      "more than 500 picks and dependencies of one type",
+      (manifest) => {
+        for (let index = 0; index < 500; index += 1) {
+          manifest.dependencies.colors ??= { items: {} };
+          manifest.dependencies.colors.items[`spare-${index}`] = {
+            id: `spare-${index}`,
+            type: "color",
+            name: `Spare ${index}`,
+            hex: "#445566",
+          };
+        }
+      },
+      "too_many_resources",
+    ],
+  ])("rejects %s", (_name, edit, code) => {
+    const manifest = createV2Manifest();
+    edit(manifest);
+    expect(() => planV2(manifest)).toThrow(expect.objectContaining({ code }));
+  });
+});

@@ -2807,6 +2807,10 @@ assetPackagePage:
   videoMenuItem: "视频"
   videosSectionTitle: "视频"
   zipFileTypeName: "ZIP 文件"
+  comesWithHint: "你选择的资源会用到这些，因此资源包会包含它们。资源商店只显示你选择的资源，导入时这些会放进单独的文件夹。"
+  comesWithTitle: "随附资源"
+  usedByLabel: "使用者：{names}"
+  usedByMore: "另外 {count} 个"
 resourceImport:
   assetPackageImported_one: "已从资源包导入{count}个资源。"
   assetPackageImported_other: "已从资源包导入{count}个资源。"

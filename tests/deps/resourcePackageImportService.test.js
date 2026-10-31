@@ -357,6 +357,131 @@ describe("resourcePackageImportService", () => {
     ]);
   });
 
+  it("imports a v2 pick with the dependencies it uses, in folders named after the pack", async () => {
+    // The author picked a text style and an image; the text style's font and
+    // color come as dependencies.
+    const v2Manifest = () => {
+      const manifest = assetManifest();
+      manifest.schema = "routevn.import-pack.v2";
+      manifest.repository.files.items["file.font"] = {
+        id: "file.font",
+        mimeType: "font/woff2",
+        size: 3,
+        source: { url: "../files/serif.woff2" },
+      };
+      manifest.repository.textStyles = {
+        items: {
+          "folder.styles": {
+            id: "folder.styles",
+            type: "folder",
+            name: "Styles",
+          },
+          "style.title": {
+            id: "style.title",
+            type: "textStyle",
+            name: "Title",
+            fontId: ["font.serif"],
+            colorId: "color.gold",
+            fontSize: 48,
+            lineHeight: 1.2,
+            fontWeight: "700",
+          },
+        },
+        tree: [{ id: "folder.styles", children: [{ id: "style.title" }] }],
+      };
+      manifest.dependencies = {
+        fonts: {
+          items: {
+            "font.serif": {
+              id: "font.serif",
+              type: "font",
+              name: "Serif",
+              fileId: "file.font",
+              fontFamily: "Serif",
+            },
+          },
+        },
+        colors: {
+          items: {
+            "color.gold": {
+              id: "color.gold",
+              type: "color",
+              name: "Gold",
+              hex: "#FFD84D",
+            },
+          },
+        },
+      };
+      return manifest;
+    };
+    const importWith = async (pickName) => {
+      const { service, importClient, commandApi } = createService();
+      importClient.fetchManifest.mockResolvedValue({
+        manifest: v2Manifest(),
+        manifestUrl: "http://localhost:4179/manifests/assets.json",
+      });
+      importClient.downloadFile.mockImplementation(async ({ descriptor }) => ({
+        bytes: new Uint8Array([1, 2, 3]),
+        byteLength: 3,
+        contentType: descriptor.mimeType,
+      }));
+      const planned = await service.createResourceImportPlan({
+        url: "http://localhost:4179/manifests/assets.json",
+        dependencyFolderName: "Fantasy UI",
+      });
+      expect(planned.plan.resources.map((resource) => resource.name)).toEqual([
+        "City",
+        "Theme",
+        "Intro",
+        "Title",
+      ]);
+      const pick = planned.plan.resources.find(
+        (resource) => resource.name === pickName,
+      );
+      const result = await service.executeResourceImportPlan({
+        planId: planned.plan.planId,
+        selectedResourceIds: [pick.sourceId],
+      });
+      return {
+        result,
+        entries: commandApi.commitAssetImportPackage.mock.calls[0][0].entries,
+      };
+    };
+
+    const styled = await importWith("Title");
+    expect(styled.result).toMatchObject({ valid: true, importedCount: 3 });
+    const names = (entries) =>
+      entries.map((entry) => `${entry.resourceType}/${entry.data.name}`);
+    expect(names(styled.entries).sort()).toEqual([
+      "colors/Fantasy UI",
+      "colors/Gold",
+      "fonts/Fantasy UI",
+      "fonts/Serif",
+      "textStyles/Styles",
+      "textStyles/Title",
+    ]);
+    const byName = (resourceType, name) =>
+      styled.entries.find(
+        (entry) =>
+          entry.resourceType === resourceType && entry.data.name === name,
+      );
+    expect(byName("fonts", "Serif").parentDestinationId).toBe(
+      byName("fonts", "Fantasy UI").destinationId,
+    );
+    expect(byName("textStyles", "Title").data).toMatchObject({
+      fontId: [byName("fonts", "Serif").destinationId],
+      colorId: byName("colors", "Gold").destinationId,
+    });
+
+    const image = await importWith("City");
+    expect(image.result).toMatchObject({ valid: true, importedCount: 1 });
+    expect(names(image.entries)).toEqual([
+      "images/Images",
+      "images/City",
+      "images/City",
+    ]);
+  });
+
   it("downloads package previews through the bounded import client", async () => {
     const { service, importClient } = createService();
     importClient.fetchManifest.mockResolvedValue({

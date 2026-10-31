@@ -9,9 +9,14 @@ import {
   mapAssetPackageReferences,
   visitAssetPackageReferences,
 } from "./assetPackageResources.js";
-import { IMPORT_PACK_SCHEMA, isPlainObject } from "./importPackages.js";
+import {
+  IMPORT_PACK_SCHEMA,
+  IMPORT_PACK_SCHEMA_V2,
+  isPlainObject,
+} from "./importPackages.js";
 
 const ENVELOPE_KEYS = new Set(["schema", "package", "repository"]);
+const ENVELOPE_KEYS_V2 = new Set([...ENVELOPE_KEYS, "dependencies"]);
 const PACKAGE_KEYS = new Set([
   "kind",
   "id",
@@ -258,14 +263,79 @@ const validateAssetCollection = ({ collection, resourceType, config }) => {
   }
 };
 
+// A v2 package's `dependencies`: the resources its picks use that its author
+// did not pick, by type, each `{items}` without a tree or folders. The
+// resource limit counts a type's picks and dependencies together.
+const validateDependencyCollections = (manifest) => {
+  const { dependencies } = manifest;
+  assertPlainObject(dependencies, "package.dependencies");
+  assertAllowedKeys(
+    dependencies,
+    new Set(ASSET_PACKAGE_RESOURCE_TYPES),
+    "package.dependencies",
+  );
+  for (const [resourceType, collection] of Object.entries(dependencies)) {
+    const path = `dependencies.${resourceType}`;
+    const config = ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE[resourceType];
+    const pickedItems = manifest.repository[resourceType]?.items ?? {};
+    assertPlainObject(collection, path);
+    assertAllowedKeys(collection, new Set(["items"]), path);
+    assertPlainObject(collection.items, `${path}.items`);
+    if (
+      Object.keys(collection.items).length + Object.keys(pickedItems).length >
+      MAX_RESOURCE_COUNT
+    ) {
+      fail(
+        "too_many_resources",
+        `${resourceType} contains too many resources.`,
+        {
+          path,
+        },
+      );
+    }
+    for (const [itemId, item] of Object.entries(collection.items)) {
+      const itemPath = `${path}.items.${itemId}`;
+      assertPlainObject(item, itemPath);
+      if (item.id !== itemId) {
+        fail("item_id_mismatch", `${itemPath}.id must match its item key.`, {
+          path: `${itemPath}.id`,
+          resourceId: itemId,
+        });
+      }
+      if (item.type !== config.itemType) {
+        fail(
+          "unsupported_resource",
+          `${itemPath}.type is not supported in ${path}.`,
+          { path: `${itemPath}.type`, resourceId: itemId },
+        );
+      }
+      if (Object.hasOwn(pickedItems, itemId)) {
+        fail(
+          "duplicate_resource_id",
+          `Resource id '${itemId}' is both picked and a dependency.`,
+          { resourceId: itemId },
+        );
+      }
+      if ((item.tagIds?.length ?? 0) > 0) {
+        fail(
+          "unsupported_tag_scope",
+          "Asset package tags are not supported yet.",
+          { resourceId: itemId },
+        );
+      }
+    }
+  }
+};
+
 const validateManifest = (manifest) => {
   assertPlainObject(manifest, "package");
-  assertAllowedKeys(manifest, ENVELOPE_KEYS, "package");
-  if (manifest.schema !== IMPORT_PACK_SCHEMA) {
+  const v2 = manifest.schema === IMPORT_PACK_SCHEMA_V2;
+  if (!v2 && manifest.schema !== IMPORT_PACK_SCHEMA) {
     fail("unsupported_schema", "This package format is not supported.", {
       path: "schema",
     });
   }
+  assertAllowedKeys(manifest, v2 ? ENVELOPE_KEYS_V2 : ENVELOPE_KEYS, "package");
   assertPlainObject(manifest.package, "package.package");
   assertAllowedKeys(manifest.package, PACKAGE_KEYS, "package.package");
   if (manifest.package.kind !== ASSET_PACKAGE_KIND) {
@@ -301,14 +371,21 @@ const validateManifest = (manifest) => {
   if (resourceCount === 0) {
     fail("no_matching_resources", "No matching resources were found.");
   }
+  if (manifest.dependencies !== undefined) {
+    validateDependencyCollections(manifest);
+  }
 };
+
+// Every resource item in both sections, the picks and their dependencies.
+const listPackageItems = (manifest, resourceType) => [
+  ...Object.values(manifest.repository[resourceType]?.items ?? {}),
+  ...Object.values(manifest.dependencies?.[resourceType]?.items ?? {}),
+];
 
 const collectReferencedFiles = (manifest) => {
   const referencesByFileId = new Map();
   for (const resourceType of ASSET_PACKAGE_RESOURCE_TYPES) {
-    for (const item of Object.values(
-      manifest.repository[resourceType]?.items ?? {},
-    )) {
+    for (const item of listPackageItems(manifest, resourceType)) {
       if (item.type === "folder") continue;
       visitAssetPackageReferences(item, ({ fieldName, kind, value }) => {
         if (kind === "project") {
@@ -577,6 +654,61 @@ const createReviewSections = ({ manifest, resources }) => {
   return sections;
 };
 
+// The top-level folder a type's dependencies go into: the pack's name,
+// numbered when the project or the pack already has a top-level folder by
+// that name in that type.
+const getDependencyFolderName = ({
+  baseName,
+  resourceType,
+  repositoryState,
+  manifest,
+}) => {
+  const takenNames = new Set();
+  for (const collection of [
+    repositoryState?.[resourceType],
+    manifest.repository[resourceType],
+  ]) {
+    for (const node of collection?.tree ?? []) {
+      const item = collection.items?.[node.id];
+      if (item?.type === "folder" && typeof item.name === "string") {
+        takenNames.add(item.name.trim().toLocaleLowerCase());
+      }
+    }
+  }
+  let name = baseName;
+  for (let number = 2; takenNames.has(name.toLocaleLowerCase()); number += 1) {
+    name = `${baseName} ${number}`;
+  }
+  return name;
+};
+
+// For the review, a pick needs the picks it uses, directly or through
+// dependencies; the dependencies it reaches come along when it is imported.
+const linkPickDependencies = (resources) => {
+  const resourceBySourceId = new Map(
+    resources.map((resource) => [resource.sourceId, resource]),
+  );
+  for (const pick of resources.filter((resource) => !resource.dependency)) {
+    const pickSourceIds = new Set();
+    const dependencySourceIds = new Set();
+    const pending = [...pick.dependencySourceIds];
+    while (pending.length > 0) {
+      const sourceId = pending.pop();
+      const resource = resourceBySourceId.get(sourceId);
+      if (!resource) continue;
+      if (!resource.dependency) {
+        pickSourceIds.add(sourceId);
+        continue;
+      }
+      if (dependencySourceIds.has(sourceId)) continue;
+      dependencySourceIds.add(sourceId);
+      pending.push(...resource.dependencySourceIds);
+    }
+    pick.dependencySourceIds = [...pickSourceIds];
+    pick.packageDependencySourceIds = [...dependencySourceIds];
+  }
+};
+
 export const createAssetImportPlan = ({
   manifest,
   manifestUrl,
@@ -584,6 +716,7 @@ export const createAssetImportPlan = ({
   repositoryState,
   repositoryRevision,
   createId,
+  dependencyFolderName,
 } = {}) => {
   validateManifest(manifest);
   const planId = createId();
@@ -617,10 +750,17 @@ export const createAssetImportPlan = ({
 
   const entries = [];
   const entryByPackageSourceId = new Map();
+  const dependencyFolderBaseName =
+    [
+      dependencyFolderName,
+      manifest.package.defaultFolderName,
+      manifest.package.name,
+    ]
+      .find((name) => typeof name === "string" && name.trim())
+      ?.trim() ?? "Asset pack";
   for (const config of ASSET_PACKAGE_IMPORT_CONFIGS) {
     const { resourceType } = config;
     const collection = manifest.repository[resourceType];
-    if (!collection) continue;
     const visit = (nodes, parentEntry) => {
       nodes.forEach((node, index) => {
         const item = collection.items[node.id];
@@ -654,7 +794,58 @@ export const createAssetImportPlan = ({
         entryByPackageSourceId.set(node.id, entry);
       });
     };
-    visit(collection.tree, undefined);
+    if (collection) visit(collection.tree, undefined);
+
+    // Dependencies go into a folder of their own, after the pack's own
+    // top-level folders and resources.
+    const dependencyItems = manifest.dependencies?.[resourceType]?.items ?? {};
+    const dependencyIds = Object.keys(dependencyItems);
+    if (dependencyIds.length === 0) continue;
+    const folderEntry = {
+      sourceId: `dependencies:${resourceType}`,
+      destinationId: createId(),
+      commandId: createId(),
+      resourceType,
+      index: collection?.tree.length ?? 0,
+      folder: true,
+      dependency: true,
+      item: {
+        type: "folder",
+        name: getDependencyFolderName({
+          baseName: dependencyFolderBaseName,
+          resourceType,
+          repositoryState,
+          manifest,
+        }),
+      },
+      config,
+    };
+    entries.push(folderEntry);
+    dependencyIds.forEach((itemId, index) => {
+      if (entryByPackageSourceId.has(itemId)) {
+        fail(
+          "duplicate_resource_id",
+          `Resource id '${itemId}' is used by more than one resource type.`,
+          { resourceId: itemId },
+        );
+      }
+      const entry = {
+        sourceId: `${resourceType}:${itemId}`,
+        packageSourceId: itemId,
+        destinationId: createId(),
+        commandId: createId(),
+        resourceType,
+        parentSourceId: folderEntry.sourceId,
+        parentDestinationId: folderEntry.destinationId,
+        index,
+        folder: false,
+        dependency: true,
+        item: dependencyItems[itemId],
+        config,
+      };
+      entries.push(entry);
+      entryByPackageSourceId.set(itemId, entry);
+    });
   }
 
   const destinationResourceIdBySourceId = new Map(
@@ -692,6 +883,7 @@ export const createAssetImportPlan = ({
       parentDestinationId: entry.parentDestinationId,
       index: entry.index,
       folder: entry.folder,
+      ...(entry.dependency ? { dependency: true } : {}),
       dependencySourceIds,
       fileDestinationIds: entry.folder
         ? []
@@ -705,8 +897,9 @@ export const createAssetImportPlan = ({
   for (const entry of orderedEntries) {
     if (entry.folder) continue;
     const config = ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE[entry.resourceType];
-    const item =
-      manifest.repository[entry.resourceType].items[entry.packageSourceId];
+    const item = (
+      entry.dependency ? manifest.dependencies : manifest.repository
+    )[entry.resourceType].items[entry.packageSourceId];
     const resource = {
       ...entry,
       type: config.itemType,
@@ -726,6 +919,9 @@ export const createAssetImportPlan = ({
     const colorHex = getColorHex(item);
     if (colorHex) resource.colorHex = colorHex;
     resources.push(resource);
+    // Dependencies go into their own folder, so a name they share with the
+    // project's resources is expected.
+    if (entry.dependency) continue;
     const hasNameConflict = Object.values(
       repositoryState?.[entry.resourceType]?.items ?? {},
     ).some(
@@ -743,6 +939,23 @@ export const createAssetImportPlan = ({
     }
   }
 
+  linkPickDependencies(resources);
+  const picks = resources.filter((resource) => !resource.dependency);
+  const dependencies = resources.filter((resource) => resource.dependency);
+  const usedDependencySourceIds = new Set(
+    picks.flatMap((pick) => pick.packageDependencySourceIds),
+  );
+  const unusedDependency = dependencies.find(
+    (dependency) => !usedDependencySourceIds.has(dependency.sourceId),
+  );
+  if (unusedDependency) {
+    fail(
+      "unused_dependency",
+      `Dependency '${unusedDependency.packageSourceId}' is not used by any resource in the package.`,
+      { resourceId: unusedDependency.packageSourceId },
+    );
+  }
+
   const previewFiles = [
     ...new Set(
       resources
@@ -756,7 +969,7 @@ export const createAssetImportPlan = ({
     sourceId,
     descriptor: structuredClone(manifest.repository.files.items[sourceId]),
   }));
-  const reviewSections = createReviewSections({ manifest, resources });
+  const reviewSections = createReviewSections({ manifest, resources: picks });
 
   return deepFreeze({
     planId,
@@ -765,7 +978,8 @@ export const createAssetImportPlan = ({
     repositoryRevision,
     package: structuredClone(manifest.package),
     entries: orderedEntries,
-    resources,
+    resources: picks,
+    dependencies,
     reviewSections,
     files,
     previewFiles,

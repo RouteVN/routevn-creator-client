@@ -5,8 +5,9 @@ import {
 } from "../../internal/assetPackageResources.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
-  createAssetPackageRepository,
+  createAssetPackageContents,
   isTopLevelFolder,
+  listAssetPackageDependencies,
   selectTopLevelFolders,
 } from "./support/assetPackageManifest.js";
 
@@ -291,7 +292,7 @@ export const confirmResourceFolderSelection = ({ state }) => {
 };
 
 export const selectAssetPackageData = ({ state }) =>
-  createAssetPackageRepository({
+  createAssetPackageContents({
     filesData: state.filesData,
     resourceDataByType: state.resourceDataByType,
     selectedFolderIdsByType: state.selectedFolderIdsByType,
@@ -305,6 +306,59 @@ export const selectAssetPackage = ({ state }) => ({
     folderIds: [...state.selectedFolderIdsByType[resourceType]],
   })),
 });
+
+const MAX_LISTED_USERS = 3;
+
+// "Comes with": what the picks use that is not a pick, by type. A selection
+// that cannot be exported lists nothing; Export reports why.
+const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
+  let dependencies;
+  try {
+    dependencies = listAssetPackageDependencies({
+      resourceDataByType: state.resourceDataByType,
+      selectedFolderIdsByType: state.selectedFolderIdsByType,
+      resourceTypeOrder: state.resourceTypeOrder,
+    });
+  } catch {
+    dependencies = [];
+  }
+  const nameById = new Map(
+    Object.values(state.resourceDataByType).flatMap((resourceData) =>
+      Object.entries(resourceData.items).map(([id, item]) => [id, item.name]),
+    ),
+  );
+  const groups = [];
+  for (const dependency of dependencies) {
+    let group = groups.at(-1);
+    if (group?.resourceType !== dependency.resourceType) {
+      group = {
+        resourceType: dependency.resourceType,
+        label:
+          resourceTypesCopy[dependency.resourceType] ?? dependency.resourceType,
+        items: [],
+      };
+      groups.push(group);
+    }
+    const users = dependency.usedBy.map((id) => nameById.get(id) ?? id);
+    let names = users.slice(0, MAX_LISTED_USERS).join(", ");
+    if (users.length > MAX_LISTED_USERS) {
+      names = `${names}, ${formatI18nCopy(copy.usedByMore, {
+        count: users.length - MAX_LISTED_USERS,
+      })}`;
+    }
+    group.items.push({
+      id: dependency.itemId,
+      name: dependency.name,
+      usedBy: formatI18nCopy(copy.usedByLabel, { names }),
+    });
+  }
+  return {
+    isVisible: groups.length > 0,
+    title: copy.comesWithTitle,
+    hint: copy.comesWithHint,
+    groups,
+  };
+};
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = i18n.assetPackagePage;
@@ -382,6 +436,7 @@ export const selectViewData = ({ state, i18n }) => {
       items: contextMenuItems,
     },
     folderOptions: activeFolderViewData.folderOptions,
+    comesWith: buildComesWithViewData({ state, copy, resourceTypesCopy }),
     resourceFolderPickerOpen:
       state.folderPicker.isOpen &&
       activeFolderViewData.folderOptions.length > 0,

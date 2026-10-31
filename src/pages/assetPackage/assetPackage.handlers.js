@@ -143,8 +143,7 @@ export const handleDownloadAssetPackageButtonClick = async (deps) => {
   const copy = i18n.assetPackagePage;
   let manifest;
   try {
-    const repository = store.selectAssetPackageData();
-    manifest = createAssetPackageManifest({ repository });
+    manifest = createAssetPackageManifest(store.selectAssetPackageData());
   } catch (error) {
     console.error("[asset-package] Asset package export is invalid.", error);
     let message = copy.failedDownloadAssetPackage;

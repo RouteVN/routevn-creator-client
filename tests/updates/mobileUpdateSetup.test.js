@@ -289,26 +289,29 @@ describe("Android API update setup", () => {
       projectService: { createAssetPackageBundle },
       store: {
         selectAssetPackageData: () => ({
-          files: {
-            items: {
-              "file-1": {
-                id: "file-1",
-                mimeType: "image/png",
-                source: { url: "./files/file-1" },
+          repository: {
+            files: {
+              items: {
+                "file-1": {
+                  id: "file-1",
+                  mimeType: "image/png",
+                  source: { url: "./files/file-1" },
+                },
               },
             },
-          },
-          images: {
-            items: {
-              "image-1": {
-                id: "image-1",
-                type: "image",
-                name: "Image One",
-                fileId: "file-1",
+            images: {
+              items: {
+                "image-1": {
+                  id: "image-1",
+                  type: "image",
+                  name: "Image One",
+                  fileId: "file-1",
+                },
               },
+              tree: [{ id: "image-1" }],
             },
-            tree: [{ id: "image-1" }],
           },
+          dependencies: {},
         }),
       },
     });

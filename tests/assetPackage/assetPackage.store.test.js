@@ -19,6 +19,7 @@ import {
   toggleResourceFolderSelection,
 } from "../../src/pages/assetPackage/assetPackage.store.js";
 import { createAssetPackageManifest } from "../../src/pages/assetPackage/support/assetPackageManifest.js";
+import { visitAssetPackageReferences } from "../../src/internal/assetPackageResources.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const IMAGES_DATA = {
@@ -192,15 +193,21 @@ const createResourceDataByType = () => {
       { items: {}, tree: [] },
     ]),
   );
-  resourceDataByType.images = IMAGES_DATA;
-  resourceDataByType.sounds = SOUNDS_DATA;
-  resourceDataByType.videos = VIDEOS_DATA;
-  resourceDataByType.audioEffects = AUDIO_EFFECTS_DATA;
-  resourceDataByType.characters = CHARACTERS_DATA;
-  resourceDataByType.colors = COLORS_DATA;
-  resourceDataByType.fonts = FONTS_DATA;
-  resourceDataByType.textStyles = TEXT_STYLES_DATA;
-  resourceDataByType.layouts = LAYOUTS_DATA;
+  // Copies, so a test that edits its data leaves the next test's intact.
+  Object.assign(
+    resourceDataByType,
+    structuredClone({
+      images: IMAGES_DATA,
+      sounds: SOUNDS_DATA,
+      videos: VIDEOS_DATA,
+      audioEffects: AUDIO_EFFECTS_DATA,
+      characters: CHARACTERS_DATA,
+      colors: COLORS_DATA,
+      fonts: FONTS_DATA,
+      textStyles: TEXT_STYLES_DATA,
+      layouts: LAYOUTS_DATA,
+    }),
+  );
   return resourceDataByType;
 };
 
@@ -451,7 +458,7 @@ describe("asset package store", () => {
     state.selectedFolderIdsByType.characters = ["character-folder"];
     moveResourceType({ state }, { resourceType: "characters", offset: -1 });
 
-    const repository = selectAssetPackageData({ state });
+    const { repository } = selectAssetPackageData({ state });
 
     expect(Object.keys(repository)).toEqual(["files", "characters", "images"]);
 
@@ -500,7 +507,7 @@ describe("asset package store", () => {
     );
     state.selectedFolderIdsByType.audioEffects = ["audio-effect-folder"];
 
-    const repository = selectAssetPackageData({ state });
+    const { repository } = selectAssetPackageData({ state });
 
     expect(repository.audioEffects.tree).toEqual([
       {
@@ -517,7 +524,7 @@ describe("asset package store", () => {
     });
   });
 
-  it("includes transitive resources required by selected folders", () => {
+  it("puts what the picks use in dependencies, without its folders", () => {
     const state = createInitialState();
     setFilesData({ state }, { filesData: FILES_DATA });
     setResourceData(
@@ -526,14 +533,74 @@ describe("asset package store", () => {
     );
     state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
 
-    const repository = selectAssetPackageData({ state });
+    const { repository, dependencies } = selectAssetPackageData({ state });
 
+    expect(Object.keys(repository)).toEqual(["files", "textStyles"]);
     expect(repository.textStyles.items).toHaveProperty("text-style-1");
-    expect(repository.fonts.items).toHaveProperty("font-1");
-    expect(repository.fonts.items).toHaveProperty("font-folder");
-    expect(repository.colors.items).toHaveProperty("color-1");
-    expect(repository.colors.items).toHaveProperty("color-folder");
+    expect(Object.keys(dependencies)).toEqual(["colors", "fonts"]);
+    expect(Object.keys(dependencies.fonts.items)).toEqual(["font-1"]);
+    expect(dependencies.fonts).not.toHaveProperty("tree");
+    expect(Object.keys(dependencies.colors.items)).toEqual(["color-1"]);
     expect(repository.files.items).toHaveProperty("file-font-1");
+  });
+
+  it("lists what the picks use under Comes with, with the picks that use it", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N }).comesWith.isVisible).toBe(
+      false,
+    );
+
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+    const { comesWith } = selectViewData({ state, i18n: EN_I18N });
+
+    expect(comesWith).toMatchObject({
+      isVisible: true,
+      title: "Comes with",
+      groups: [
+        {
+          resourceType: "colors",
+          items: [{ name: "Body Color", usedBy: "Used by Body" }],
+        },
+        {
+          resourceType: "fonts",
+          items: [{ name: "Body Font", usedBy: "Used by Body" }],
+        },
+      ],
+    });
+  });
+
+  it("lists nothing under Comes with when the selection cannot be exported", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    delete resourceDataByType.fonts.items["font-1"];
+    resourceDataByType.fonts.tree[0].children = [];
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+
+    expect(selectViewData({ state, i18n: EN_I18N }).comesWith.isVisible).toBe(
+      false,
+    );
+  });
+
+  it("keeps a resource the author picked as a pick when another pick uses it", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+    state.selectedFolderIdsByType.colors = ["color-folder"];
+
+    const { repository, dependencies } = selectAssetPackageData({ state });
+
+    expect(repository.colors.items).toHaveProperty("color-1");
+    expect(Object.keys(dependencies)).toEqual(["fonts"]);
   });
 
   it("rejects a selected resource with a missing dependency", () => {
@@ -595,12 +662,15 @@ describe("asset package store", () => {
     state.selectedFolderIdsByType.images = ["folder-3", "folder-1"];
     state.selectedFolderIdsByType.sounds = ["sound-folder"];
     state.selectedFolderIdsByType.videos = ["video-folder"];
-    const manifest = createAssetPackageManifest({
-      repository: selectAssetPackageData({ state }),
-    });
+    const manifest = createAssetPackageManifest(
+      selectAssetPackageData({ state }),
+    );
+    expect(manifest.schema).toBe("routevn.import-pack.v2");
     expect(manifest.package).toEqual({
       kind: "routevn.creator.asset-package",
     });
+    // Nothing the picks use is left out, so there is no dependencies section.
+    expect(manifest).not.toHaveProperty("dependencies");
     let id = 0;
 
     const plan = createAssetImportPlan({
@@ -621,5 +691,61 @@ describe("asset package store", () => {
       { type: "video", name: "Intro", resourceType: "videos" },
     ]);
     expect(plan.files).toHaveLength(5);
+  });
+  it("round-trips: every reference an import commits points to something it commits", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    // Saved characters never keep an empty name variable; the project model
+    // removes it.
+    const resourceDataByType = createResourceDataByType();
+    delete resourceDataByType.characters.items["character-1"].nameVariableId;
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.images = ["folder-1"];
+    state.selectedFolderIdsByType.characters = ["character-folder"];
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+    state.selectedFolderIdsByType.audioEffects = ["audio-effect-folder"];
+    const manifest = createAssetPackageManifest(
+      selectAssetPackageData({ state }),
+    );
+    expect(Object.keys(manifest.dependencies)).toEqual(["colors", "fonts"]);
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      manifestUrl: "https://example.com/asset-package/asset-package.json",
+      projectId: "project-1",
+      repositoryState: createResourceDataByType(),
+      repositoryRevision: 1,
+      createId: () => `generated-${++id}`,
+      dependencyFolderName: "Pack",
+    });
+
+    const imported = [...plan.resources, ...plan.dependencies];
+    const resourceIds = new Set(
+      imported.map((resource) => resource.destinationId),
+    );
+    const fileIds = new Set(plan.files.map((file) => file.destinationId));
+    const dangling = [];
+    for (const resource of imported) {
+      visitAssetPackageReferences(resource.data, ({ kind, value }) => {
+        const known = kind === "file" ? fileIds : resourceIds;
+        if (!known.has(value)) dangling.push(`${resource.name}: ${value}`);
+      });
+    }
+    expect(dangling).toEqual([]);
+    // Picks keep their own folders; dependencies sit in the pack's folders.
+    expect(
+      plan.resources.map((resource) => resource.resourceType),
+    ).not.toContain("fonts");
+    const folderIds = new Set(
+      plan.entries
+        .filter((entry) => entry.folder && entry.dependency)
+        .map((entry) => entry.destinationId),
+    );
+    expect(
+      plan.dependencies.every((resource) =>
+        folderIds.has(resource.parentDestinationId),
+      ),
+    ).toBe(true);
   });
 });

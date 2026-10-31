@@ -500,6 +500,8 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.projectService.createResourceImportPlan).toHaveBeenCalledWith({
       zip: packagePlace("https://files.example/pack.zip"),
       operationId: state.operationId,
+      // The pack's dependencies go into a folder named after it.
+      dependencyFolderName: expect.any(String),
     });
 
     planned.resolve({ valid: true, plan });

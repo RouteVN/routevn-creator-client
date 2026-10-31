@@ -68,6 +68,19 @@ template:
                                               - rtgl-view w=f d=h av=c g=sm p=sm:
                                                   - rtgl-svg svg=folder wh=16 c=mu-fg: null
                                                   - rtgl-text s=sm: ${folder.label}
+                              # What the picks use comes along; the store does not show it.
+                              - $if comesWith.isVisible:
+                                  - rtgl-view w=f d=v g=sm pt=lg:
+                                      - rtgl-view w=f d=v g=xs ph=sm:
+                                          - rtgl-text s=md: ${comesWith.title}
+                                          - rtgl-text s=sm c=mu-fg: ${comesWith.hint}
+                                      - $for group, groupIndex in comesWith.groups:
+                                          - rtgl-view w=f d=v g=xs:
+                                              - rtgl-text s=sm c=mu-fg ph=sm: ${group.label}
+                                              - $for item, itemIndex in group.items:
+                                                  - rtgl-view w=f d=h av=c g=sm p=sm:
+                                                      - 'rtgl-text s=sm w=1fg ellipsis style="min-width: 0;"': ${item.name}
+                                                      - 'rtgl-text s=xs c=mu-fg ellipsis style="min-width: 0; max-width: 60%;"': ${item.usedBy}
   - rtgl-dropdown-menu#resourceTypeMenu :items=${resourceTypeMenuItems} ?open=${resourceTypeMenu.isOpen} x=${resourceTypeMenu.x} y=${resourceTypeMenu.y}: null
   - rtgl-dropdown-menu#resourceTypeContextMenu :items=${resourceTypeContextMenu.items} ?open=${resourceTypeContextMenu.isOpen} x=${resourceTypeContextMenu.x} y=${resourceTypeContextMenu.y}: null
   - rtgl-popover#resourceFolderPicker ?open=${resourceFolderPickerOpen} x=${folderPicker.x} y=${folderPicker.y} place=be content-w=320 content-g=sm content-ph=md content-pv=md:

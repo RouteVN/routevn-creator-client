@@ -93,7 +93,10 @@ const createDeps = () => ({
     moveResourceType: vi.fn(),
     selectResourceTypeContextMenuResourceType: vi.fn(() => "sounds"),
     selectResourceTypeMenuPosition: vi.fn(() => ({ x: 20, y: 60 })),
-    selectAssetPackageData: vi.fn(() => ASSET_PACKAGE_REPOSITORY),
+    selectAssetPackageData: vi.fn(() => ({
+      repository: ASSET_PACKAGE_REPOSITORY,
+      dependencies: {},
+    })),
     selectAssetPackage: vi.fn(() => SAVED_ASSET_PACKAGE),
     setFilesData: vi.fn(),
     setAssetPackage: vi.fn(),
@@ -284,7 +287,7 @@ describe("asset package handlers", () => {
     expect(progressDialog.waitForPaint).toHaveBeenCalledOnce();
     expect(deps.projectService.createAssetPackageBundle).toHaveBeenCalledWith({
       manifest: {
-        schema: "routevn.import-pack.v1",
+        schema: "routevn.import-pack.v2",
         package: {
           kind: "routevn.creator.asset-package",
         },
@@ -322,7 +325,10 @@ describe("asset package handlers", () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
-    deps.store.selectAssetPackageData.mockReturnValue({ files: { items: {} } });
+    deps.store.selectAssetPackageData.mockReturnValue({
+      repository: { files: { items: {} } },
+      dependencies: {},
+    });
 
     try {
       await handleDownloadAssetPackageButtonClick(deps);

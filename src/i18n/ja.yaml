@@ -2807,6 +2807,10 @@ assetPackagePage:
   videoMenuItem: "動画"
   videosSectionTitle: "動画"
   zipFileTypeName: "ZIPファイル"
+  comesWithHint: "選んだリソースがこれらを使うため、パッケージに含まれます。アセットストアには選んだリソースだけが表示され、インポートするとこれらは専用のフォルダーに追加されます。"
+  comesWithTitle: "同梱されるリソース"
+  usedByLabel: "使用元: {names}"
+  usedByMore: "他 {count} 件"
 resourceImport:
   assetPackageImported_one: "アセットパッケージから{count}件のリソースをインポートしました。"
   assetPackageImported_other: "アセットパッケージから{count}件のリソースをインポートしました。"
