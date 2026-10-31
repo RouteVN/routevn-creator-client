@@ -435,7 +435,6 @@ describe("resource-import-dialog.store", () => {
       updated: undefined,
       releaseNotes: "Adds masks.\nFixes fades.",
       releaseNotesTitle: "What's new",
-      infoTitle: "Pack info",
       assetsTitle: "Assets in this pack",
       isLoadingAssets: true,
       importDisabled: true,

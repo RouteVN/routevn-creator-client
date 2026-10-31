@@ -2825,7 +2825,6 @@ resourceImport:
   loadMoreButton: "Load More"
   openPackLabel: "Open {name}"
   packAssetsLoading: "Loading assets"
-  packInfoTitle: "Pack info"
   creatorLabel: "Creator"
   versionLabel: "Version"
   releasedLabel: "Released"

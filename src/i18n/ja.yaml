@@ -2825,7 +2825,6 @@ resourceImport:
   loadMoreButton: "さらに表示"
   openPackLabel: "{name}を開く"
   packAssetsLoading: "アセットを読み込んでいます"
-  packInfoTitle: "パッケージ情報"
   creatorLabel: "クリエイター"
   versionLabel: "バージョン"
   releasedLabel: "公開日"

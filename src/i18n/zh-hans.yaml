@@ -2825,7 +2825,6 @@ resourceImport:
   loadMoreButton: "加载更多"
   openPackLabel: "打开{name}"
   packAssetsLoading: "正在加载资源"
-  packInfoTitle: "资源包信息"
   creatorLabel: "创作者"
   versionLabel: "版本"
   releasedLabel: "发布日期"

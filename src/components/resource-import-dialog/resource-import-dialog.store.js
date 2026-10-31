@@ -706,7 +706,6 @@ const getPackViewData = ({ state, copy, dateTime }) => {
     releaseNotesTitle: copy.releaseNotesTitle ?? "What's new",
     backLabel: copy.backButton ?? "Back",
     importLabel: copy.importButton ?? "Import",
-    infoTitle: copy.packInfoTitle ?? "Pack info",
     creatorLabel: copy.creatorLabel ?? "Creator",
     openCreatorLabel: formatI18nCopy(copy.openCreatorLabel ?? "View {name}", {
       name: pack.creator.name,

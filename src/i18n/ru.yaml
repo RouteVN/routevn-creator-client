@@ -2851,7 +2851,6 @@ resourceImport:
   loadMoreButton: "Показать ещё"
   openPackLabel: "Открыть {name}"
   packAssetsLoading: "Загрузка ресурсов"
-  packInfoTitle: "О пакете"
   creatorLabel: "Создатель"
   versionLabel: "Версия"
   releasedLabel: "Выпущен"

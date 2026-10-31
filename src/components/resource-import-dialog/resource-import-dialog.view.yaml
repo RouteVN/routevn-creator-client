@@ -265,7 +265,6 @@ template:
                                   # The summary sits under the cover.
                                   - $if pack.summary:
                                       - rtgl-text#packSummary c=mu-fg: ${pack.summary}
-                                  - rtgl-text s=lg: ${pack.infoTitle}
                                   - rtgl-view d=v g=xs:
                                       - rtgl-text s=sm c=mu-fg: ${pack.creatorLabel}
                                       - 'rtgl-view#packCreatorButton role=button tabindex=0 aria-label="${pack.openCreatorLabel}" d=h av=c g=xs cur=pointer':

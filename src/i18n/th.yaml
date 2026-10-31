@@ -2825,7 +2825,6 @@ resourceImport:
   loadMoreButton: "โหลดเพิ่ม"
   openPackLabel: "เปิด {name}"
   packAssetsLoading: "กำลังโหลดทรัพยากร"
-  packInfoTitle: "ข้อมูลแพ็กเกจ"
   creatorLabel: "ผู้สร้าง"
   versionLabel: "เวอร์ชัน"
   releasedLabel: "เผยแพร่เมื่อ"

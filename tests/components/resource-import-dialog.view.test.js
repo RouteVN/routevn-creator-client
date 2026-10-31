@@ -160,7 +160,7 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain(
       `'rtgl-text style="white-space: pre-line; overflow-wrap: anywhere;"': \${pack.releaseNotes}`,
     );
-    expect(viewSource).toContain("${pack.infoTitle}");
+    expect(viewSource).not.toContain("${pack.infoTitle}");
     expect(viewSource).toContain("${pack.released}");
     expect(viewSource).toContain("${pack.updated}");
     expect(viewSource).toContain("${pack.assetsTitle}");
