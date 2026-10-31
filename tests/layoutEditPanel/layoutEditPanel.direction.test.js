@@ -75,10 +75,10 @@ describe("layoutEditPanel direction", () => {
       value: "horizontal",
       options: [
         {
-          label: "絶対配置",
+          label: "自由配置",
           svg: "layout-direction-absolute",
-          ariaLabel: "絶対配置",
-          tooltip: "絶対配置",
+          ariaLabel: "自由配置",
+          tooltip: "自由配置",
           value: "absolute",
         },
         {
