@@ -14,6 +14,7 @@ import {
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   CUT_COMMAND,
+  FORMAT_TEXT_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   PASTE_COMMAND,
@@ -1025,6 +1026,14 @@ const COMPOSITION_DELETE_INPUT_TYPES = new Set([
   "deleteHardLineForward",
 ]);
 
+// The formats a browser's formatting controls, such as the iPad keyboard's
+// B/I/U buttons, can apply to dialogue.
+const TEXT_FORMAT_BY_INPUT_TYPE = new Map([
+  ["formatBold", "bold"],
+  ["formatItalic", "italic"],
+  ["formatUnderline", "underline"],
+]);
+
 const getEventTimestamp = (event) => {
   const timestamp = Number(event?.timeStamp);
   // iPadOS 17 software-keyboard events can report 0. Use the page clock
@@ -1434,6 +1443,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.editor.registerCommand(
         KEY_ENTER_COMMAND,
         (event) => this.handleLexicalEnterCommand(event),
+        COMMAND_PRIORITY_HIGH,
+      ),
+      this.editor.registerCommand(
+        FORMAT_TEXT_COMMAND,
+        () => {
+          // In WebKit the page selection inside the shadow root reads as a
+          // point outside the editor, so Lexical's own selection is missing
+          // or stale. Format the range selected on the page instead.
+          if (this.refs.editor.contains(window.getSelection()?.anchorNode)) {
+            return false;
+          }
+          const nativeLineRangeSelection =
+            this.getNativeLineRangeSelectionContext();
+          if (nativeLineRangeSelection) {
+            this.applyNativeLineSelection({
+              nativeSelection: this.getNativeLineSelectionContext(),
+              nativeLineRangeSelection,
+            });
+          }
+          // Rich text formats the selection.
+          return false;
+        },
         COMMAND_PRIORITY_HIGH,
       ),
       this.editor.registerCommand(
@@ -5137,6 +5168,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (event.defaultPrevented) {
       this.clearPendingTextInputFallback();
+      return;
+    }
+
+    // WebKit reports no selection inside the editor's shadow root, so Lexical
+    // leaves a format input to the browser. The browser restyles the line
+    // itself, and Lexical then rebuilds it from the changed text node, which
+    // drops the text before the selection. Format through the editor instead.
+    if (inputType.startsWith("format")) {
+      this.clearPendingTextInputFallback();
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+      const format = TEXT_FORMAT_BY_INPUT_TYPE.get(inputType);
+      if (format) {
+        this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
+      }
       return;
     }
 
