@@ -2141,7 +2141,7 @@ variablesPage:
   noVariablesFoundMessage: "未找到变量"
   noVariablesInGroupMessage: "此分组中没有变量"
   scopeAccountLabel: "账号"
-  scopeContextLabel: "上下文"
+  scopeContextLabel: "存档"
   scopeDeviceLabel: "设备"
   scopeLabel: "作用范围"
   searchVariablesPlaceholder: "搜索变量……"
@@ -2326,7 +2326,7 @@ commandLinePage:
   "Add Visual": "添加视觉素材"
   "Animation": "动画"
   "Append to previous line": "追加到上一行"
-  "Apply Mode": "生效范围"
+  "Apply Mode": "生效方式"
   "Audio Selection": "音频选择"
   "Audio": "音频"
   "Audio Effect": "音频效果"
@@ -2668,10 +2668,10 @@ commandLinePage:
   "Sprite": "立绘"
   "Select which overlay layout to display": "选择要显示的覆盖层布局"
   "Use a negative number to go back by that many lines": "使用负数可后退相应的行数"
-  nextLineConfigModeTooltip: "“单行”只对下一行生效。“持续”会让此配置一直生效，直到再次更改"
+  nextLineConfigModeTooltip: "“单行”只对下一行生效。“持续”会让此配置一直生效，直到再次更改。"
   "When enabled, the player can click to advance to the next line": "启用后，玩家可以点击前进到下一行"
   "When enabled, the game will automatically advance to the next line after a delay": "启用后，游戏会在延迟后自动前进到下一行"
-  autoAdvanceTimerStartTooltip: "自动前进计时器开始计时的时机。“文本显示完毕”会先等待文本动画结束，“行开始时”会在该行开始时立即开始计时"
+  autoAdvanceTimerStartTooltip: "自动前进计时器开始计时的时机。“文本显示完毕”会先等待文本动画结束，“行开始时”会在该行开始时立即开始计时。"
   "Time in milliseconds to wait before auto-advancing to the next line": "自动前进到下一行前的等待时间（毫秒）"
   "Select which confirm dialog layout to show": "选择要显示的确认对话框布局"
   "Decrement by": "减少"
@@ -2896,7 +2896,7 @@ resourceImportErrors:
     unsupported_field: "素材包包含不支持的字段。"
     unsupported_resource: "素材包包含不支持的素材。"
     unsupported_resource_type: "无法导入这种类型的素材。"
-    unsupported_tag_scope: "素材包包含不支持的标签作用域。"
+    unsupported_tag_scope: "素材包包含不支持的标签作用范围。"
     no_matching_resources: "未找到匹配的素材。"
     no_resources_selected: "请至少选择一个要导入的素材。"
     resource_name_required: "导入的素材名称不能为空。"
@@ -2946,7 +2946,7 @@ androidBackupSetup:
   stopWarning: 新的更改将不再备份。如果卸载此应用或清除应用数据，应用内的所有项目都会丢失。现有备份会保留，但可能不包含最新更改。
   stopError: 无法停止本地备份。请重试。
   skip: 暂时跳过
-  skipTitle: 不备份，继续使用？
+  skipTitle: "要跳过备份继续使用吗？"
   skipWarning: 如果卸载此应用或清除应用数据，应用内的所有项目都会丢失。请设置备份文件夹来保护项目。
   skipConfirm: 不备份，继续使用
   cancel: 取消
