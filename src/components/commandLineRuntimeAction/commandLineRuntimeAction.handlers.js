@@ -5,11 +5,13 @@ import {
 
 const syncFormValues = (deps) => {
   const { refs, store } = deps;
-  const { mode, action } = store.selectSubmitData();
+  const { mode, action, allowCurrentValue } = store.selectSubmitData();
 
   refs.form.reset();
   refs.form.setValues({
-    values: createRuntimeActionDefaultValues(mode, action),
+    values: createRuntimeActionDefaultValues(mode, action, {
+      allowCurrentValue,
+    }),
   });
 };
 
@@ -17,6 +19,7 @@ export const handleBeforeMount = (deps) => {
   const { props, store } = deps;
   store.setMode({ mode: props?.mode });
   store.setAction({ action: props?.action });
+  store.setAllowCurrentValue({ allowCurrentValue: props?.allowCurrentValue });
   store.setFormValues({
     values: undefined,
   });
@@ -32,6 +35,9 @@ export const handleOnUpdate = (deps, payload) => {
 
   store.setMode({ mode: newProps.mode });
   store.setAction({ action: newProps.action });
+  store.setAllowCurrentValue({
+    allowCurrentValue: newProps.allowCurrentValue,
+  });
   store.setFormValues({
     values: undefined,
   });

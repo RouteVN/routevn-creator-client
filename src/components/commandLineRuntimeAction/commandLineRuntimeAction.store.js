@@ -13,6 +13,7 @@ import {
 export const createInitialState = () => ({
   mode: "",
   action: {},
+  allowCurrentValue: false,
   formValues: {},
 });
 
@@ -24,6 +25,10 @@ export const setAction = ({ state }, { action } = {}) => {
   state.action = action ?? {};
 };
 
+export const setAllowCurrentValue = ({ state }, { allowCurrentValue } = {}) => {
+  state.allowCurrentValue = allowCurrentValue === true;
+};
+
 export const setFormValues = ({ state }, { values } = {}) => {
   state.formValues = values ?? {};
 };
@@ -31,6 +36,7 @@ export const setFormValues = ({ state }, { values } = {}) => {
 export const selectSubmitData = ({ state }) => ({
   mode: state.mode,
   action: state.action,
+  allowCurrentValue: state.allowCurrentValue,
   formValues: state.formValues,
 });
 
@@ -38,7 +44,9 @@ export const selectSubmitData = ({ state }) => ({
 // it hides, so a field that shows again, such as the predefined value after
 // Custom, still has a value.
 export const selectResolvedFormValues = ({ state }) => ({
-  ...createRuntimeActionDefaultValues(state.mode, state.action),
+  ...createRuntimeActionDefaultValues(state.mode, state.action, {
+    allowCurrentValue: state.allowCurrentValue,
+  }),
   ...state.formValues,
 });
 
@@ -58,7 +66,9 @@ export const selectViewData = ({ state, i18n }) => {
 
   const defaultValues = selectResolvedFormValues({ state });
   const valueSource = defaultValues.valueSource ?? "fixed";
-  const form = createRuntimeActionForm(state.mode);
+  const form = createRuntimeActionForm(state.mode, {
+    allowCurrentValue: state.allowCurrentValue,
+  });
   const submitButton = form?.actions?.buttons?.find(
     (button) => button.id === "submit",
   );

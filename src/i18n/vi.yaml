@@ -2702,7 +2702,7 @@ commandLinePage:
   runtimeValueSourceTooltip: "“Giá trị cụ thể” cho phép nhập một giá trị. “Giá trị hiện tại” lấy giá trị từ phần tử đã kích hoạt hành động, chẳng hạn từ thanh trượt."
   incrementSaveLoadPageDescription: "Chuyển sang trang bản lưu tiếp theo."
   decrementSaveLoadPageDescription: "Quay lại trang bản lưu trước."
-  slotIdDescription: "Để trống để chọn ô tự động. Có thể dùng giá trị cố định như 1, ${slot.slotId} hoặc _event.slotId"
+  slotIdDescription: "Để trống để chọn ô tự động. Có thể dùng giá trị cố định như 1 hoặc ${slot.slotId}"
   autoSlotOutsideSlotContainer: "Chế độ tự động chỉ dùng được bên trong vùng chứa ô lưu. Hãy nhập ID ô lưu."
   "Missing audio effect ({id})": "Không tìm thấy điều chỉnh âm thanh ({id})"
   "Runtime Action": "Hành động thay đổi trạng thái trò chơi"

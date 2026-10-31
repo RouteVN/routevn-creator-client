@@ -4,6 +4,7 @@ import {
   selectResolvedFormValues,
   selectSubmitData,
   setAction,
+  setAllowCurrentValue,
   setFormValues,
   setMode,
 } from "../../src/components/commandLineRuntimeAction/commandLineRuntimeAction.store.js";
@@ -18,6 +19,7 @@ import {
 const createStore = (state) => ({
   setMode: (payload) => setMode({ state }, payload),
   setAction: (payload) => setAction({ state }, payload),
+  setAllowCurrentValue: (payload) => setAllowCurrentValue({ state }, payload),
   setFormValues: (payload) => setFormValues({ state }, payload),
   selectSubmitData: () => selectSubmitData({ state }),
   selectResolvedFormValues: () => selectResolvedFormValues({ state }),
@@ -44,11 +46,7 @@ describe("commandLineRuntimeAction.handlers", () => {
           value: 80,
         },
       },
-      store: {
-        setMode: (payload) => setMode({ state }, payload),
-        setAction: (payload) => setAction({ state }, payload),
-        setFormValues: (payload) => setFormValues({ state }, payload),
-      },
+      store: createStore(state),
     });
 
     expect(state.mode).toBe("setDialogueTextSpeed");
@@ -99,6 +97,36 @@ describe("commandLineRuntimeAction.handlers", () => {
           ...extra,
         },
       });
+    },
+  );
+
+  it.each([
+    [true, { valueSource: "event", value: 50 }],
+    [false, { valueSource: "fixed", value: 50 }],
+  ])(
+    "hydrates a saved Current Value when the trigger has a value: %s",
+    (allowCurrentValue, values) => {
+      const state = createInitialState();
+      const store = createStore(state);
+      const form = {
+        reset: vi.fn(),
+        setValues: vi.fn(),
+      };
+
+      handleBeforeMount({
+        props: {
+          mode: "setMusicVolume",
+          action: { value: "_event.value" },
+          allowCurrentValue,
+        },
+        store,
+      });
+      handleAfterMount({
+        refs: { form },
+        store,
+      });
+
+      expect(form.setValues).toHaveBeenCalledWith({ values });
     },
   );
 

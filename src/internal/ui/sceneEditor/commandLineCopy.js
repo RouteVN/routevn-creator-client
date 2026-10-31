@@ -53,7 +53,7 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
     "decrementSaveLoadPageDescription",
   "Increment the current save/load pagination page.":
     "incrementSaveLoadPageDescription",
-  "Leave empty for auto, or use a fixed value like 1, ${slot.slotId}, or _event.slotId":
+  "Leave empty for auto, or use a fixed value like 1 or ${slot.slotId}":
     "slotIdDescription",
   "Auto only works inside a Save/Load Slot container. Enter a slot id.":
     "autoSlotOutsideSlotContainer",

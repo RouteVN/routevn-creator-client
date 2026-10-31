@@ -3,6 +3,7 @@ import {
   createInitialState,
   selectViewData,
   setAction,
+  setAllowCurrentValue,
   setFormValues,
   setMode,
 } from "../../src/components/commandLineRuntimeAction/commandLineRuntimeAction.store.js";
@@ -38,20 +39,14 @@ describe("commandLineRuntimeAction.store", () => {
       valueSource: "fixed",
       value: 65,
     });
-    expect(viewData.form.fields).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: "valueSource",
-          type: "segmented-control",
-        }),
-        expect.objectContaining({
-          name: "value",
-          type: "input-number",
-          min: 0,
-          step: 1,
-        }),
-      ]),
-    );
+    expect(viewData.form.fields).toEqual([
+      expect.objectContaining({
+        name: "value",
+        type: "input-number",
+        min: 0,
+        step: 1,
+      }),
+    ]);
     expect(viewData.formKey).toBe("setDialogueTextSpeed-fixed");
   });
 
@@ -59,6 +54,7 @@ describe("commandLineRuntimeAction.store", () => {
     const state = createInitialState();
 
     setMode({ state }, { mode: "setMusicVolume" });
+    setAllowCurrentValue({ state }, { allowCurrentValue: true });
     setAction(
       { state },
       {
@@ -78,6 +74,10 @@ describe("commandLineRuntimeAction.store", () => {
       values: eventViewData.defaultValues,
     });
     expect(eventViewData.formKey).toBe("setMusicVolume-event");
+    expect(eventViewData.form.fields[0]).toMatchObject({
+      name: "valueSource",
+      type: "segmented-control",
+    });
 
     setFormValues(
       { state },

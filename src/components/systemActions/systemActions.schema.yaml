@@ -53,6 +53,8 @@ propsSchema:
       type: boolean
     allowAutoSlot:
       type: boolean
+    allowCurrentValue:
+      type: boolean
 events:
   actions-dialog-open:
     type: object

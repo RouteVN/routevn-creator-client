@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  selectViewData,
   setActionsEditorActions,
   setActiveInteractionType,
   setValues,
@@ -11,6 +14,51 @@ import {
   handleActionsChange,
   handleActionsDelete,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import { EN_I18N } from "../support/i18n.js";
+
+const EMPTY_TREE = { items: {}, tree: [] };
+const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
+  readFileSync(
+    new URL(
+      "../../src/components/layoutEditPanel/layoutEditPanel.constants.yaml",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
+
+describe("layoutEditPanel Current Value", () => {
+  it.each([
+    ["slider", "change", true],
+    ["sprite", "click", false],
+    ["sprite", "rightClick", false],
+    ["sprite", "scrollDown", false],
+  ])(
+    "offers Current Value for a %s's %s actions: %s",
+    (itemType, interactionType, allowCurrentValue) => {
+      const state = createInitialState();
+      setValues({ state }, { values: { type: itemType, name: "Element One" } });
+      setActiveInteractionType({ state }, { interactionType });
+
+      const viewData = selectViewData({
+        state,
+        props: {
+          itemType,
+          layoutType: "general",
+          resourceType: "layouts",
+          layoutsData: EMPTY_TREE,
+          charactersData: EMPTY_TREE,
+          isInsideSaveLoadSlot: false,
+          isInsideDirectedContainer: false,
+        },
+        constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+        i18n: EN_I18N,
+      });
+
+      expect(viewData.allowCurrentValue).toBe(allowCurrentValue);
+    },
+  );
+});
 
 describe("layoutEditPanel actions", () => {
   it("keeps existing click actions when adding another action", () => {
