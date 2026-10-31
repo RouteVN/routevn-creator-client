@@ -436,6 +436,34 @@ describe("prepareRuntimeInteractionActions", () => {
   });
 });
 
+describe("prepareRuntimeInteractionActions with a typed slot binding", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fills _event.slotId in a confirm dialog's actions from the clicked slot, as Auto does", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const actions = {
+      showConfirmDialog: {
+        resourceId: "confirm-layout",
+        confirmActions: { saveSlot: { slotId: "_event.slotId" } },
+      },
+    };
+
+    const slotClick = prepareRuntimeInteractionActions(actions, { slotId: 3 });
+    expect(slotClick.showConfirmDialog.confirmActions).toEqual({
+      saveSlot: { slotId: 3 },
+    });
+    // The click on the dialog's button has no slot; the save keeps slot 3.
+    expect(
+      prepareRuntimeInteractionActions(
+        slotClick.showConfirmDialog.confirmActions,
+        { id: "confirm-button" },
+      ),
+    ).toEqual({ saveSlot: { slotId: 3 } });
+  });
+});
+
 describe("prepareRuntimeInteractionActions without a slot", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -726,7 +754,7 @@ describe("prepareRuntimeInteractionActions with event values", () => {
         slotId: 2,
         label: null,
       }),
-    ).toEqual(actions);
+    ).toEqual({ ...actions, saveSlot: { slotId: 2 } });
   });
 
   it("leaves a confirm dialog's actions for the click on its button", () => {
@@ -776,6 +804,62 @@ describe("prepareRuntimeInteractionActions with event values", () => {
         _event: clickEvent,
       }),
     ).not.toThrow();
+  });
+
+  it("checks the actions Route Engine runs from inside an action with the same event", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const innerActions = {
+      setMusicVolume: { value: "_event.value" },
+      setSoundVolume: { value: 20 },
+    };
+    const clickEvent = { id: "button-1" };
+    const variants = {
+      conditional: { conditional: { branches: [{ actions: innerActions }] } },
+      random: {
+        random: {
+          distribution: {
+            type: "weighted",
+            outcomes: [{ weight: 1, actions: innerActions }],
+          },
+        },
+      },
+    };
+
+    for (const actions of Object.values(variants)) {
+      expect(() =>
+        startRouteEngine().handleActions(structuredClone(actions), {
+          _event: clickEvent,
+        }),
+      ).toThrow(
+        'Action template binding "_event.value" could not be resolved from "_event".',
+      );
+
+      const clickEngine = startRouteEngine();
+      runInteraction(clickEngine, actions, clickEvent);
+      expect(clickEngine.selectSystemState().global).toMatchObject({
+        musicVolume: 50,
+        soundVolume: 20,
+      });
+
+      const sliderEngine = startRouteEngine();
+      runInteraction(sliderEngine, actions, { id: "slider-1", value: 30 });
+      expect(sliderEngine.selectSystemState().global).toMatchObject({
+        musicVolume: 30,
+        soundVolume: 20,
+      });
+    }
+
+    expect(
+      prepareRuntimeInteractionActions(
+        { submitForm: { formKey: "form-1", actions: innerActions } },
+        clickEvent,
+      ),
+    ).toEqual({
+      submitForm: {
+        formKey: "form-1",
+        actions: { setSoundVolume: { value: 20 } },
+      },
+    });
   });
 
   it("lets Route Engine run a click whose saved action uses Current Value", () => {
