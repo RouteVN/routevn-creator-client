@@ -472,62 +472,18 @@ export const createResourcePackageImportService = ({
         });
         let downloadedBytes =
           previewDownloadsByPlan.get(planId)?.downloadedBytes ?? 0;
-        let completedDownloads = 0;
-        const downloaded = await processWithConcurrency(
-          neededFiles,
-          async (filePlan) => {
-            const result = await importClient.downloadFile({
-              descriptor: filePlan.descriptor,
-              manifestUrl: plan.manifestUrl,
-              signal: operation.controller.signal,
-            });
-            downloadedBytes += result.byteLength;
-            if (downloadedBytes > importClient.limits.totalBytes) {
-              throw new ImportPackageClientError(
-                "download_too_large",
-                "The package exceeds the total download limit.",
-              );
-            }
-            completedDownloads += 1;
-            emitProgress(onProgress, {
-              phase: "downloading",
-              completed: completedDownloads,
-              total: neededFiles.length,
-              downloadedBytes,
-            });
-            return { filePlan, download: result };
-          },
-          {
-            concurrency: importClient.limits.downloadConcurrency,
-            stopOnError: true,
-          },
-        );
-
-        const downloadBySourceId = new Map(
-          downloaded.map((entry) => [entry.filePlan.sourceId, entry]),
-        );
         const stageResults = new Map();
-        const fileRecords = [];
-        const fileCommandIds = {};
-        emitProgress(onProgress, {
-          phase: "processing",
-          completed: 0,
-          total: neededFiles.length,
-        });
-        let completedStages = 0;
-        for (const filePlan of neededFiles) {
+        const stageFile = async ({ filePlan, download }) => {
           if (operation.controller.signal.aborted) {
             throw new ImportPackageClientError(
               "cancelled",
               "Import cancelled.",
             );
           }
-          const entry = downloadBySourceId.get(filePlan.sourceId);
-          const mimeType =
-            filePlan.descriptor.mimeType ?? entry.download.contentType;
+          const mimeType = filePlan.descriptor.mimeType ?? download.contentType;
           assertFileMimeTypes({ filePlan, mimeType });
           const file = createFile({
-            bytes: entry.download.bytes,
+            bytes: download.bytes,
             name: getFileName(filePlan.descriptor, filePlan.sourceId),
             mimeType,
           });
@@ -556,15 +512,53 @@ export const createResourcePackageImportService = ({
           stageResults.set(filePlan.sourceId, stageResult);
           for (const record of stageResult.fileRecords ?? []) {
             stagedFileIds.add(record.id);
-            fileRecords.push(record);
           }
+        };
+        // Each file is staged as soon as it downloads, one at a time, so an
+        // import holds at most `downloadConcurrency` files in memory however
+        // large the package is. A failed file stops the files queued behind it.
+        let staging = Promise.resolve();
+        let completedFiles = 0;
+        await processWithConcurrency(
+          neededFiles,
+          async (filePlan) => {
+            const download = await importClient.downloadFile({
+              descriptor: filePlan.descriptor,
+              manifestUrl: plan.manifestUrl,
+              signal: operation.controller.signal,
+            });
+            downloadedBytes += download.byteLength;
+            if (downloadedBytes > importClient.limits.totalBytes) {
+              throw new ImportPackageClientError(
+                "download_too_large",
+                "The package exceeds the total download limit.",
+              );
+            }
+            const staged = staging.then(() =>
+              stageFile({ filePlan, download }),
+            );
+            staging = staged;
+            await staged;
+            completedFiles += 1;
+            emitProgress(onProgress, {
+              phase: "downloading",
+              completed: completedFiles,
+              total: neededFiles.length,
+              downloadedBytes,
+            });
+          },
+          {
+            concurrency: importClient.limits.downloadConcurrency,
+            stopOnError: true,
+          },
+        );
+
+        const fileRecords = neededFiles.flatMap(
+          (filePlan) => stageResults.get(filePlan.sourceId).fileRecords ?? [],
+        );
+        const fileCommandIds = {};
+        for (const filePlan of neededFiles) {
           fileCommandIds[filePlan.destinationId] = filePlan.commandId;
-          completedStages += 1;
-          emitProgress(onProgress, {
-            phase: "processing",
-            completed: completedStages,
-            total: neededFiles.length,
-          });
         }
 
         const actualFileIds = new Map(

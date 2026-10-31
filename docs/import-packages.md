@@ -180,10 +180,11 @@ Current limits are:
 - 2 MiB per manifest
 - 2,000 package files
 - 50 MiB per file
-- 200 MiB total per import
+- 2 GiB total per import
 - 500 resources per collection
 - 32 folder-tree levels
-- three parallel downloads
+- three parallel downloads; each file is staged as soon as it downloads, so an
+  import holds at most three files in memory
 - 15-second manifest timeout
 - 30-second file timeout
 

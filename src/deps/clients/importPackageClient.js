@@ -1,7 +1,7 @@
 const DEFAULT_LIMITS = Object.freeze({
   manifestBytes: 2 * 1024 * 1024,
   fileBytes: 50 * 1024 * 1024,
-  totalBytes: 200 * 1024 * 1024,
+  totalBytes: 2 * 1024 * 1024 * 1024,
   manifestTimeoutMs: 15_000,
   fileTimeoutMs: 30_000,
   downloadConcurrency: 3,

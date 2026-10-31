@@ -421,6 +421,37 @@ describe("resourcePackageImportService", () => {
     });
   });
 
+  it("stages each file before the remaining files download", async () => {
+    const { service, importClient, assetService } = createService();
+    const events = [];
+    importClient.downloadFile.mockImplementation(async ({ descriptor }) => {
+      events.push("download");
+      return {
+        bytes: new Uint8Array([1, 2, 3]),
+        byteLength: 3,
+        contentType: descriptor.mimeType,
+      };
+    });
+    const stage = assetService.stageResourceImportFile.getMockImplementation();
+    assetService.stageResourceImportFile.mockImplementation(async (input) => {
+      events.push("stage");
+      return stage(input);
+    });
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(events.filter((event) => event === "stage")).toHaveLength(4);
+    expect(events.indexOf("stage")).toBeLessThan(
+      events.lastIndexOf("download"),
+    );
+  });
+
   it("rejects corrupt generalized media before staging", async () => {
     const { service, importClient, assetService, commandApi } = createService();
     importClient.fetchManifest.mockResolvedValue({
@@ -574,9 +605,7 @@ describe("resourcePackageImportService", () => {
     } = createService();
     const unknownOutcome = new Error("confirmation interrupted");
     unknownOutcome.commitOutcome = "unknown";
-    commandApi.commitAssetImportPackage.mockRejectedValueOnce(
-      unknownOutcome,
-    );
+    commandApi.commitAssetImportPackage.mockRejectedValueOnce(unknownOutcome);
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
     });
