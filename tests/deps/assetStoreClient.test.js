@@ -85,6 +85,32 @@ describe("assetStoreClient", () => {
     ).toBe("https://api1.routevn.com/asset-store/rpc");
   });
 
+  it("never uses the production API from a page on a dev server", () => {
+    for (const page of [
+      "http://localhost:3001/project/images",
+      "http://127.0.0.1:3001/",
+      "http://192.168.1.20:3001/",
+    ]) {
+      expect(resolveAssetStoreRpcUrl({ page: new URL(page) })).toBe(RPC_URL);
+      expect(
+        resolveAssetStoreRpcUrl({
+          page: new URL(page),
+          override: "http://127.0.0.1:3000/asset-store/rpc",
+        }),
+      ).toBe("http://127.0.0.1:3000/asset-store/rpc");
+    }
+    // Release apps load from their own scheme or a domain.
+    for (const page of [
+      "tauri://localhost/project/images",
+      "http://tauri.localhost/",
+      "https://creator.example.com/",
+    ]) {
+      expect(resolveAssetStoreRpcUrl({ page: new URL(page) })).toBe(
+        "https://api1.routevn.com/asset-store/rpc",
+      );
+    }
+  });
+
   it("lists free packs as JSON-RPC with the RPC header", async () => {
     const { client, fetchImpl } = createClient(() =>
       rpcResponse({

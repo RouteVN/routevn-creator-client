@@ -1,29 +1,9 @@
+import { isDebugHost } from "../../internal/debugHost.js";
+
 const MOBILE_UPDATE_PATH = "/system/updates/v1/routevn-creator/mobile";
 const LOCAL_UPDATE_URL = `http://127.0.0.1:8787${MOBILE_UPDATE_PATH}`;
 const PRODUCTION_UPDATE_URL = `https://api1.routevn.com${MOBILE_UPDATE_PATH}`;
 const MAX_RESPONSE_BYTES = 64 * 1024;
-
-const isDebugHost = (hostname) => {
-  const host = hostname.replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host === "::1" || host.endsWith(".local"))
-    return true;
-  if (host.includes(":") && (host.startsWith("fc") || host.startsWith("fd")))
-    return true;
-  const parts = host.split(".");
-  if (parts.some((part) => !/^(?:0|[1-9][0-9]{0,2})$/.test(part))) return false;
-  const octets = parts.map(Number);
-  if (
-    octets.length !== 4 ||
-    octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)
-  )
-    return false;
-  return (
-    octets[0] === 10 ||
-    octets[0] === 127 ||
-    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
-    (octets[0] === 192 && octets[1] === 168)
-  );
-};
 
 export const resolveMobileUpdateUrl = ({ debug = false, override } = {}) => {
   let value = PRODUCTION_UPDATE_URL;
