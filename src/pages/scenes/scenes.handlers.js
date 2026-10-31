@@ -861,7 +861,15 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 };
 
 const refreshScenesData = async (deps) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
+
+  // An action that was running when the user left the project, such as
+  // creating a scene, ends with a refresh. The project is closed or no longer
+  // the route's by then, and there is no page left to show it on.
+  const openProjectId = projectService.getEnsuredProjectId();
+  if (!openProjectId || openProjectId !== getCurrentProjectId(appService)) {
+    return;
+  }
 
   cancelDeferredWhiteboardWork(store);
   setInitialWhiteboardHydrationState({ store });
