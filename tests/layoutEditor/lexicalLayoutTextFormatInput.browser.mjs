@@ -78,13 +78,14 @@ wrapper.attachShadow({mode:'open'}).append(window.owner);
             .boundingBox();
           await page.mouse.click(box.x + box.width - 4, box.y + box.height / 2);
           await page.keyboard.press("End");
-          if (scenario === "last-word") {
-            await page.keyboard.down("Shift");
-            for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowLeft");
-            await page.keyboard.up("Shift");
-          } else {
-            await page.keyboard.press("Shift+Home");
+          // The last word, or "o ", the variable and " there", so the text
+          // before the selection is what a browser's restyle would drop.
+          await page.keyboard.down("Shift");
+          const selectedLength = scenario === "last-word" ? 5 : 9;
+          for (let i = 0; i < selectedLength; i++) {
+            await page.keyboard.press("ArrowLeft");
           }
+          await page.keyboard.up("Shift");
           // Lexical takes the browser's text changes into its state only
           // when the last key was more than 100 ms earlier, as with a tap.
           await page.waitForTimeout(150);
