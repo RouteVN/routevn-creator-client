@@ -53,6 +53,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
     projectService: {
       ensureRepository: vi.fn(async () => {}),
       getEnsuredProjectId: vi.fn(() => projectId),
+      getEnsuredProjectPath: vi.fn(() => ""),
       getCurrentProjectInfo: vi.fn(async () => ({ language: "en" })),
       deleteSceneIfUnused: vi.fn(async () => ({
         deleted: true,
@@ -887,6 +888,65 @@ describe("scenes.handlers config keys", () => {
 
       expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
       expect(deps.store.setItems).toHaveBeenCalled();
+    });
+
+    it("does not read the project when the route opens another folder of the same project", async () => {
+      const deps = createDeps();
+      deps.appService.getPayload.mockReturnValue({
+        p: "project-1",
+        lp: "/projects/one",
+      });
+      deps.projectService.getEnsuredProjectPath.mockReturnValue(
+        "/projects/one",
+      );
+      deps.projectService.createSceneWithInitialContent.mockImplementation(
+        async () => {
+          deps.appService.getPayload.mockReturnValue({
+            p: "project-1",
+            lp: "/projects/one-copy",
+          });
+          return { valid: true, sceneId: "scene-2" };
+        },
+      );
+
+      await expect(submitSceneForm(deps)).resolves.toBeUndefined();
+
+      expect(deps.store.setItems).not.toHaveBeenCalled();
+    });
+
+    it("refreshes the scenes when the route names the open folder", async () => {
+      const deps = createDeps();
+      deps.appService.getPayload.mockReturnValue({
+        p: "project-1",
+        lp: "/projects/one",
+      });
+      deps.projectService.getEnsuredProjectPath.mockReturnValue(
+        "/projects/one",
+      );
+
+      await submitSceneForm(deps);
+
+      expect(deps.store.setItems).toHaveBeenCalled();
+    });
+
+    it("records the new scene as recent in the project it was created in", async () => {
+      const deps = createDeps();
+      deps.projectService.createSceneWithInitialContent.mockImplementation(
+        async () => {
+          deps.appService.getPayload.mockReturnValue({ p: "project-2" });
+          return { valid: true, sceneId: "scene-2" };
+        },
+      );
+
+      await submitSceneForm(deps);
+
+      const recentScenesCall = deps.appService.setUserConfig.mock.calls.find(
+        ([key]) => key === "sceneEditor.recentSceneIdsByProject",
+      );
+      expect(Object.keys(recentScenesCall[1])).toEqual(["project-1"]);
+      expect(recentScenesCall[1]["project-1"]).toEqual([
+        expect.stringMatching(/^scene-/),
+      ]);
     });
   });
 
