@@ -2702,7 +2702,7 @@ commandLinePage:
   runtimeValueSourceTooltip: "“ค่าที่กำหนด” ให้คุณป้อนค่าเอง “ค่าปัจจุบัน” จะใช้ค่าจากตัวควบคุมที่ทริกเกอร์"
   incrementSaveLoadPageDescription: "เลื่อนไปยังหน้าบันทึก/โหลดถัดไป"
   decrementSaveLoadPageDescription: "เลื่อนกลับไปยังหน้าบันทึก/โหลดก่อนหน้า"
-  slotIdDescription: "เว้นว่างไว้เพื่อใช้ค่าอัตโนมัติ หรือใช้ค่าคงที่ เช่น 1, ${slot.slotId} หรือ _event.slotId"
+  slotIdDescription: "เว้นว่างไว้เพื่อใช้ค่าอัตโนมัติ หรือใช้ค่าคงที่ เช่น 1 หรือ ${slot.slotId}"
   autoSlotOutsideSlotContainer: "ค่าอัตโนมัติใช้ได้เฉพาะภายในคอนเทนเนอร์ (ช่องบันทึก/โหลด) เท่านั้น โปรดใส่ ID ช่อง"
   "Missing audio effect ({id})": "ไม่พบเอฟเฟกต์เสียง ({id})"
   "Runtime Action": "แอ็กชันรันไทม์"

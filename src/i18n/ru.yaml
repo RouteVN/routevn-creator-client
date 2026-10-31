@@ -2726,7 +2726,7 @@ commandLinePage:
   runtimeValueSourceTooltip: "«Заданное значение» — вы вводите значение сами. «Текущее значение» — берётся значение элемента управления, который вызвал действие."
   incrementSaveLoadPageDescription: "Переключает на следующую страницу сохранений."
   decrementSaveLoadPageDescription: "Переключает на предыдущую страницу сохранений."
-  slotIdDescription: "Оставьте пустым для автоматического выбора или укажите значение, например 1, ${slot.slotId} или _event.slotId"
+  slotIdDescription: "Оставьте пустым для автоматического выбора или укажите значение, например 1 или ${slot.slotId}"
   autoSlotOutsideSlotContainer: "Автоматический выбор работает только внутри контейнера (слот сохранения). Укажите ID слота."
   "Missing audio effect ({id})": "Аудиоэффект не найден ({id})"
   "Runtime Action": "Изменение состояния игры"

@@ -2702,7 +2702,7 @@ commandLinePage:
   runtimeValueSourceTooltip: "“Valor específico” te permite introducir un valor. “Valor actual” usa el valor del control que lo activó."
   incrementSaveLoadPageDescription: "Avanza la página actual de guardado/carga."
   decrementSaveLoadPageDescription: "Retrocede la página actual de guardado/carga."
-  slotIdDescription: "Déjalo vacío para usar el automático, o usa un valor fijo como 1, ${slot.slotId} o _event.slotId"
+  slotIdDescription: "Déjalo vacío para usar el automático, o usa un valor fijo como 1 o ${slot.slotId}"
   autoSlotOutsideSlotContainer: "El automático solo funciona dentro de un contenedor (ranura de guardado/carga). Introduce un ID de ranura."
   "Missing audio effect ({id})": "Efecto de audio no encontrado ({id})"
   "Runtime Action": "Acción de tiempo de ejecución"

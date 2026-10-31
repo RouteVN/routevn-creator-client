@@ -2702,7 +2702,7 @@ commandLinePage:
   runtimeValueSourceTooltip: "Specific Value lets you enter a value. Current Value uses the value from the triggering control."
   incrementSaveLoadPageDescription: "Increment the current save/load pagination page."
   decrementSaveLoadPageDescription: "Decrement the current save/load pagination page."
-  slotIdDescription: "Leave empty for auto, or use a fixed value like 1, ${slot.slotId}, or _event.slotId"
+  slotIdDescription: "Leave empty for auto, or use a fixed value like 1 or ${slot.slotId}"
   autoSlotOutsideSlotContainer: "Auto only works inside a Save/Load Slot container. Enter a slot id."
   "Missing audio effect ({id})": "Missing audio effect ({id})"
   "Runtime Action": "Runtime Action"

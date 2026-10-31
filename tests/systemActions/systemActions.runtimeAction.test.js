@@ -41,6 +41,33 @@ describe("systemActions runtime action editor", () => {
     ).toEqual({ value });
   });
 
+  it("offers Current Value to the runtime action editor only when the trigger has a value", () => {
+    const allowCurrentValue = (props) =>
+      selectViewData({ state: createInitialState(), props, i18n: EN_I18N })
+        .allowCurrentValue;
+    const readView = (path) =>
+      readFileSync(
+        new URL(`../../src/components/${path}`, import.meta.url),
+        "utf8",
+      );
+
+    expect(allowCurrentValue({})).toBe(false);
+    expect(allowCurrentValue({ allowCurrentValue: true })).toBe(true);
+    expect(readView("systemActions/systemActions.view.yaml")).toContain(
+      "rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${runtimeAction} :allowCurrentValue=${allowCurrentValue}",
+    );
+    expect(readView("layoutEditPanel/layoutEditPanel.view.yaml")).toContain(
+      ":allowAutoSlot=${allowAutoSlot} :allowCurrentValue=${allowCurrentValue}",
+    );
+    // A confirm dialog's actions run on the click on its button, which has no
+    // value.
+    expect(
+      readView(
+        "commandLineShowConfirmDialog/commandLineShowConfirmDialog.view.yaml",
+      ),
+    ).not.toContain("allowCurrentValue");
+  });
+
   it("passes the selected action through a direct template binding", () => {
     const view = readFileSync(
       new URL(

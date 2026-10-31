@@ -2702,7 +2702,7 @@ commandLinePage:
   runtimeValueSourceTooltip: "“指定值”可让你输入一个值。“当前值”会使用触发该动作的控件的值。"
   incrementSaveLoadPageDescription: "将当前存档/读档页码加一。"
   decrementSaveLoadPageDescription: "将当前存档/读档页码减一。"
-  slotIdDescription: "留空则自动分配，或使用固定值，例如 1、${slot.slotId} 或 _event.slotId"
+  slotIdDescription: "留空则自动分配，或使用固定值，例如 1 或 ${slot.slotId}"
   autoSlotOutsideSlotContainer: "自动分配仅在“容器（存档位）”内可用。请输入存档位 ID。"
   "Missing audio effect ({id})": "缺失的音频效果（{id}）"
   "Runtime Action": "运行时动作"
