@@ -43,6 +43,14 @@ refs:
     eventListeners:
       click:
         handler: handleDownloadAssetPackageButtonClick
+styles:
+  # The picker fills the window's height, whichever type it shows; its lists
+  # scroll.
+  '#pickerContent':
+    height: calc(100vh - 96px)
+  '@supports (height: 100dvh)':
+    '#pickerContent':
+      height: calc(100dvh - 96px)
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -114,7 +122,7 @@ template:
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.usedBy}
   # One type's folders at a time, to tick or untick; ticking saves at once.
   - rtgl-dialog#pickerDialog ?open=${isPickerOpen} s=lg md-layout=fixed-top:
-      - 'rtgl-view slot=content d=v w=f h=f g=md style="min-height: 0;"':
+      - 'rtgl-view#pickerContent slot=content d=v w=f g=md style="min-height: 0;"':
           - rtgl-view w=f d=v g=xs:
               - rtgl-text s=lg: ${pickerTitle}
               - rtgl-text s=sm c=mu-fg: ${pickerHint}
@@ -123,7 +131,7 @@ template:
           - $if hasPickerTypes:
               - 'rtgl-view w=f h=1fg d=h sm-d=v g=md style="min-height: 0;"':
                   # The types; the picked count shows beside each.
-                  - 'rtgl-view w=180 sm-w=f d=v sm-d=h g=xs sv sm-sh style="flex: 0 0 auto;"':
+                  - 'rtgl-view w=180 sm-w=f d=v sm-d=h g=xs sv sm-sh style="flex: 0 0 auto; align-self: stretch; min-height: 0;"':
                       - $for type, typeIndex in pickerTypes:
                           - $if type.isCurrent:
                               - 'rtgl-view#pickerType${typeIndex} data-resource-type="${type.resourceType}" d=h av=c g=sm h=32 ph=sm br=sm cur=pointer bgc=mu aria-current="true" style="flex: 0 0 auto; align-self: stretch;"':
@@ -135,7 +143,7 @@ template:
                                   - rtgl-text s=sm c=mu-fg w=1fg: ${type.label}
                                   - $if type.selectedCount:
                                       - rtgl-text s=sm c=mu-fg: ${type.selectedCount}
-                  - 'rtgl-view w=1fg h=f d=v g=sm sv style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view w=1fg sm-w=f h=f d=v g=sm sv style="min-width: 0; min-height: 0;"':
                       - $if pickerSection.hasNoFolders:
                           - rtgl-text s=sm c=mu-fg ph=sm: ${pickerSection.noFoldersHint}
                       - $for folder, folderIndex in pickerSection.folders:
