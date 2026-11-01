@@ -1,9 +1,19 @@
 import { readFileSync } from "node:fs";
+import { load } from "js-yaml";
 import { describe, expect, it } from "vitest";
 
 const readView = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 describe("asset package view", () => {
+  it("parses as YAML", () => {
+    for (const path of [
+      "../../src/pages/assetPackage/assetPackage.view.yaml",
+      "../../src/components/assetPackagePreviewTile/assetPackagePreviewTile.view.yaml",
+    ]) {
+      expect(() => load(readView(path))).not.toThrow();
+    }
+  });
+
   it("lists the picked folders and their dependencies, with a picker for the rest", () => {
     const assetPackageView = readView(
       "../../src/pages/assetPackage/assetPackage.view.yaml",

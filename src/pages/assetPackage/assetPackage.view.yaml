@@ -114,7 +114,7 @@ template:
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.usedBy}
   # Every folder, to tick or untick; ticking saves at once.
   - rtgl-dialog#pickerDialog ?open=${isPickerOpen} s=md md-layout=fixed-top:
-      - rtgl-view slot=content d=v w=f h=f g=md style="min-height: 0;":
+      - 'rtgl-view slot=content d=v w=f h=f g=md style="min-height: 0;"':
           - rtgl-view w=f d=v g=xs:
               - rtgl-text s=lg: ${pickerTitle}
               - rtgl-text s=sm c=mu-fg: ${pickerHint}
