@@ -7,6 +7,7 @@ import {
   openPicker,
   selectAssetPackage,
   selectAssetPackageData,
+  selectPickerResourceType,
   selectViewData,
   setFilesData,
   setAssetPackage,
@@ -14,7 +15,6 @@ import {
   setUiConfig,
   toggleFolder,
   toggleFolderExpanded,
-  toggleResourceTypeCollapsed,
 } from "../../src/pages/assetPackage/assetPackage.store.js";
 import { createAssetPackageManifest } from "../../src/pages/assetPackage/support/assetPackageManifest.js";
 import { visitAssetPackageReferences } from "../../src/internal/assetPackageResources.js";
@@ -218,7 +218,7 @@ describe("asset package store", () => {
       showExplorerPanel: true,
       contentLeftPadding: "sm",
       hasPicks: false,
-      pickerSections: [],
+      pickerTypes: [],
       exportDisabled: true,
     });
 
@@ -227,12 +227,9 @@ describe("asset package store", () => {
       { resourceDataByType: createResourceDataByType() },
     );
     openPicker({ state });
-    const { pickerSections: sections } = selectViewData({
-      state,
-      i18n: EN_I18N,
-    });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
     // Layouts are not offered yet; types without resources are left out.
-    expect(sections.map((section) => section.resourceType)).toEqual([
+    expect(viewData.pickerTypes.map((type) => type.resourceType)).toEqual([
       "images",
       "sounds",
       "videos",
@@ -242,7 +239,15 @@ describe("asset package store", () => {
       "fonts",
       "textStyles",
     ]);
-    expect(sections[0].folders).toMatchObject([
+    // The picker opens on the first type with folders and shows only it.
+    expect(viewData.pickerTypes[0]).toMatchObject({
+      resourceType: "images",
+      label: "Images",
+      isCurrent: true,
+      selectedCount: "",
+    });
+    expect(viewData.pickerSection.resourceType).toBe("images");
+    expect(viewData.pickerSection.folders).toMatchObject([
       {
         folderId: "folder-1",
         name: "Backgrounds",
@@ -279,7 +284,8 @@ describe("asset package store", () => {
     ]);
     openPicker({ state });
     let viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.pickerSections[0].selectedLabel).toBe("2 folders picked");
+    expect(viewData.pickerSection.selectedLabel).toBe("2 folders picked");
+    expect(viewData.pickerTypes[0].selectedCount).toBe("2");
     // The page lists only what is picked.
     expect(
       viewData.pickedSections[0].folders.map((folder) => folder.folderId),
@@ -306,14 +312,25 @@ describe("asset package store", () => {
     });
 
     // The picker expands its folders on its own.
-    expect(viewData.pickerSections[0].folders[0].isExpanded).toBe(false);
+    expect(viewData.pickerSection.folders[0].isExpanded).toBe(false);
 
-    toggleResourceTypeCollapsed({ state }, { resourceType: "images" });
+    // Choosing another type shows only its folders; an unknown one is ignored.
+    selectPickerResourceType({ state }, { resourceType: "sounds" });
+    selectPickerResourceType({ state }, { resourceType: "layouts" });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.pickerSection.resourceType).toBe("sounds");
     expect(
-      selectViewData({ state, i18n: EN_I18N }).pickerSections[0],
-    ).toMatchObject({ isCollapsed: true, folders: [] });
+      viewData.pickerTypes
+        .filter((type) => type.isCurrent)
+        .map((type) => type.resourceType),
+    ).toEqual(["sounds"]);
     closePicker({ state });
-    expect(selectViewData({ state, i18n: EN_I18N }).pickerSections).toEqual([]);
+    expect(selectViewData({ state, i18n: EN_I18N }).pickerTypes).toEqual([]);
+    // Reopening shows the type shown last.
+    openPicker({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).pickerSection.resourceType,
+    ).toBe("sounds");
   });
 
   it("shows a folder's first six previews and counts the rest", () => {
@@ -341,10 +358,8 @@ describe("asset package store", () => {
     setResourceData({ state }, { resourceDataByType });
 
     openPicker({ state });
-    const colors = selectViewData({
-      state,
-      i18n: EN_I18N,
-    }).pickerSections.find((section) => section.resourceType === "colors");
+    selectPickerResourceType({ state }, { resourceType: "colors" });
+    const colors = selectViewData({ state, i18n: EN_I18N }).pickerSection;
     expect(colors.folders[0]).toMatchObject({
       countLabel: "8 resources",
       moreLabel: "+2",
@@ -363,13 +378,11 @@ describe("asset package store", () => {
       { resourceDataByType: createResourceDataByType() },
     );
     openPicker({ state });
-    const { pickerSections: sections } = selectViewData({
-      state,
-      i18n: EN_I18N,
-    });
-    const stripOf = (resourceType) =>
-      sections.find((section) => section.resourceType === resourceType)
-        .folders[0].strip[0];
+    const stripOf = (resourceType) => {
+      selectPickerResourceType({ state }, { resourceType });
+      return selectViewData({ state, i18n: EN_I18N }).pickerSection.folders[0]
+        .strip[0];
+    };
 
     expect(stripOf("fonts")).toMatchObject({
       kind: "font",

@@ -42,10 +42,10 @@ const persistAssetPackage = async (deps) => {
   }
 };
 
-export const handleResourceTypeHeaderClick = (deps, payload) => {
+export const handlePickerTypeClick = (deps, payload) => {
   const { render, store } = deps;
   const { resourceType } = payload._event.currentTarget.dataset;
-  store.toggleResourceTypeCollapsed({ resourceType });
+  store.selectPickerResourceType({ resourceType });
   render();
 };
 

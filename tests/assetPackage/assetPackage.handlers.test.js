@@ -9,7 +9,7 @@ import {
   handleFolderExpandClick,
   handlePickerClose,
   handleRemoveFolderClick,
-  handleResourceTypeHeaderClick,
+  handlePickerTypeClick,
 } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -93,7 +93,7 @@ const createDeps = () => ({
     openPicker: vi.fn(),
     toggleFolder: vi.fn(),
     toggleFolderExpanded: vi.fn(),
-    toggleResourceTypeCollapsed: vi.fn(),
+    selectPickerResourceType: vi.fn(),
   },
   uiConfig: { id: "desktop" },
 });
@@ -234,18 +234,18 @@ describe("asset package handlers", () => {
     });
   });
 
-  it("expands a folder and collapses a type without saving", () => {
+  it("expands a folder and switches the picker's type without saving", () => {
     const deps = createDeps();
 
     handleFolderExpandClick(deps, folderEvent());
-    handleResourceTypeHeaderClick(deps, folderEvent());
+    handlePickerTypeClick(deps, folderEvent());
 
     expect(deps.store.toggleFolderExpanded).toHaveBeenCalledWith({
       resourceType: "images",
       folderId: "image-folder-1",
       inPicker: false,
     });
-    expect(deps.store.toggleResourceTypeCollapsed).toHaveBeenCalledWith({
+    expect(deps.store.selectPickerResourceType).toHaveBeenCalledWith({
       resourceType: "images",
     });
     expect(

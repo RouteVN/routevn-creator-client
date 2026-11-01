@@ -48,11 +48,12 @@ describe("asset package view", () => {
     expect(assetPackageView).toContain(
       "rtgl-dialog#pickerDialog ?open=${isPickerOpen}",
     );
+    expect(assetPackageView).toContain("$for type, typeIndex in pickerTypes");
     expect(assetPackageView).toContain(
-      "$for section, sectionIndex in pickerSections",
+      "$for folder, folderIndex in pickerSection.folders",
     );
     expect(assetPackageView).toContain(
-      "rtgl-checkbox#folderCheckbox${sectionIndex}x${folderIndex}",
+      "rtgl-checkbox#folderCheckbox${folderIndex}",
     );
     expect(assetPackageView).toContain("handler: handleFolderCheckboxChange");
     expect(assetPackageView).toContain(
