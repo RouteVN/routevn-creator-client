@@ -54,8 +54,6 @@ template:
                   - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                       - rtgl-view w=f d=h av=c g=md:
                           - rtgl-text w=1fg: ${i18n.assetPackagePage.title}
-                          - $if pickedSummary:
-                              - rtgl-text s=sm c=mu-fg: ${pickedSummary}
                           - rtgl-button#downloadAssetPackageButton v=pr pre=download ?disabled=${exportDisabled}: ${i18n.assetPackagePage.downloadAssetPackageButton}
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
                       - 'rtgl-view d=v g=md w=f ph=md pt=md style="min-width: 0; padding-bottom: 32vh; box-sizing: border-box;"':
@@ -75,7 +73,6 @@ template:
                                                   - rtgl-view w=f d=h av=c g=sm:
                                                       - rtgl-svg svg=folder wh=16 c=mu-fg: null
                                                       - rtgl-text s=sm: ${folder.name}
-                                                      - rtgl-text s=sm c=mu-fg: ${folder.countLabel}
                                                       - rtgl-view w=1fg: null
                                                       - 'rtgl-button#removeFolderButton${sectionIndex}x${folderIndex} data-resource-type="${section.resourceType}" data-folder-id="${folder.folderId}" sq v=gh s=sm pre=cross aria-label="${folder.removeLabel}" title="${folder.removeLabel}"': null
                                                   - $if folder.resourceCount:
@@ -133,7 +130,6 @@ template:
                                   # A picked folder's place in the pack.
                                   - $if folder.pickOrder:
                                       - rtgl-tag s=sm v=pr: ${folder.pickOrder}
-                                  - rtgl-text s=sm c=mu-fg: ${folder.countLabel}
                               - $if folder.resourceCount:
                                   - div.assetPackageFolderGrid:
                                       - $for tile, tileIndex in folder.items:

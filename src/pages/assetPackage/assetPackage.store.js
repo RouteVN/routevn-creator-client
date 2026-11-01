@@ -307,12 +307,6 @@ const buildSectionsViewData = ({
             removeLabel: formatI18nCopy(copy.removeFolderLabel, {
               name: folder.name,
             }),
-            countLabel: formatPluralCopy(
-              copy,
-              "folderResourceCount",
-              resources.length,
-              { dateTime: i18n.dateTime },
-            ),
             items: resources.map(({ itemId }) =>
               previewOf(state, resourceType, itemId, { showName: true }),
             ),
@@ -391,12 +385,6 @@ export const selectViewData = ({ state, i18n }) => {
     pickerTypes,
     pickerSection: pickerSection ?? { folders: [] },
     comesWith,
-    pickedSummary:
-      pickedCount > 0
-        ? formatPluralCopy(copy, "pickedSummary", pickedCount, {
-            dateTime: i18n.dateTime,
-          })
-        : "",
     exportDisabled: pickedCount === 0 || comesWith.isInvalid,
   };
 };

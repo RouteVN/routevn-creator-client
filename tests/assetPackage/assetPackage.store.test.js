@@ -253,7 +253,6 @@ describe("asset package store", () => {
         name: "Backgrounds",
         selected: false,
         pickOrder: "",
-        countLabel: "1 resource",
         items: [
           {
             id: "image-1",
@@ -264,7 +263,7 @@ describe("asset package store", () => {
           },
         ],
       },
-      { folderId: "folder-3", name: "Characters", countLabel: "1 resource" },
+      { folderId: "folder-3", name: "Characters" },
     ]);
 
     setUiConfig({ state }, { uiConfig: { id: "touch" } });
@@ -317,7 +316,6 @@ describe("asset package store", () => {
       removeLabel: "Remove Backgrounds",
       items: [{ id: "image-1", name: "City", showName: true }],
     });
-    expect(viewData.pickedSummary).toBe("2 resources picked");
     expect(viewData.exportDisabled).toBe(false);
 
     toggleFolder(
@@ -407,7 +405,6 @@ describe("asset package store", () => {
     openPicker({ state });
     setPickerResourceType({ state }, { resourceType: "colors" });
     const colors = selectViewData({ state, i18n: EN_I18N }).pickerSection;
-    expect(colors.folders[0]).toMatchObject({ countLabel: "8 resources" });
     expect(colors.folders[0].items).toHaveLength(8);
     expect(colors.folders[0].items[7]).toMatchObject({
       kind: "color",

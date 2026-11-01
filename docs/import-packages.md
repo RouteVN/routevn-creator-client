@@ -134,8 +134,8 @@ against the owning resource type before staging.
 ## Folder trees and dependencies
 
 The creator's Asset Package page has two sections. Picked resources lists only
-the top-level folders in the pack, by type, each with its count, every
-resource in it with its name, and a button that removes it. Previews are drawn
+the top-level folders in the pack, by type, each with every resource in it
+with its name, and a button that removes it. Previews are drawn
 as on the type's own page: images and thumbnails on the transparency grid,
 sound waveforms, font glyphs, text style samples and color swatches, or the
 type's icon. Dependencies lists what the picks use (see below). Add folders
@@ -148,8 +148,7 @@ Types follow the store's order. Within a type, the picker lists folders in
 the project's order, and the page and the pack keep them in the order they
 were picked: a newly ticked folder goes last, and the picker shows each
 ticked folder's place. Resources outside a folder
-cannot be picked. The header shows how
-many resources are picked; Export stays disabled until something is, or while
+cannot be picked. Export stays disabled until a resource is picked, or while
 the selection uses a resource that no longer exists or a story scene.
 
 Selecting a folder includes its complete subtree and preserves folder and item
