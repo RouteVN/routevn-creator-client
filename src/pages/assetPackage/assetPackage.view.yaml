@@ -126,12 +126,12 @@ template:
                   - 'rtgl-view w=180 sm-w=f d=v sm-d=h g=xs sv sm-sh style="flex: 0 0 auto;"':
                       - $for type, typeIndex in pickerTypes:
                           - $if type.isCurrent:
-                              - 'rtgl-view#pickerType${typeIndex} data-resource-type="${type.resourceType}" d=h av=c g=sm h=32 ph=sm br=sm cur=pointer bgc=mu aria-current="true" style="flex: 0 0 auto;"':
+                              - 'rtgl-view#pickerType${typeIndex} data-resource-type="${type.resourceType}" d=h av=c g=sm h=32 ph=sm br=sm cur=pointer bgc=mu aria-current="true" style="flex: 0 0 auto; align-self: stretch;"':
                                   - rtgl-text s=sm w=1fg: ${type.label}
                                   - $if type.selectedCount:
                                       - rtgl-text s=sm c=mu-fg: ${type.selectedCount}
                             $else:
-                              - 'rtgl-view#pickerType${typeIndex} data-resource-type="${type.resourceType}" d=h av=c g=sm h=32 ph=sm br=sm cur=pointer h-bgc=mu style="flex: 0 0 auto;"':
+                              - 'rtgl-view#pickerType${typeIndex} data-resource-type="${type.resourceType}" d=h av=c g=sm h=32 ph=sm br=sm cur=pointer h-bgc=mu style="flex: 0 0 auto; align-self: stretch;"':
                                   - rtgl-text s=sm c=mu-fg w=1fg: ${type.label}
                                   - $if type.selectedCount:
                                       - rtgl-text s=sm c=mu-fg: ${type.selectedCount}

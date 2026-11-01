@@ -93,7 +93,7 @@ const createDeps = () => ({
     openPicker: vi.fn(),
     toggleFolder: vi.fn(),
     toggleFolderExpanded: vi.fn(),
-    selectPickerResourceType: vi.fn(),
+    setPickerResourceType: vi.fn(),
   },
   uiConfig: { id: "desktop" },
 });
@@ -245,7 +245,7 @@ describe("asset package handlers", () => {
       folderId: "image-folder-1",
       inPicker: false,
     });
-    expect(deps.store.selectPickerResourceType).toHaveBeenCalledWith({
+    expect(deps.store.setPickerResourceType).toHaveBeenCalledWith({
       resourceType: "images",
     });
     expect(

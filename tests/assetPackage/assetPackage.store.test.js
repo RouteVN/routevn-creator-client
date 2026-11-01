@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../src/internal/assetPackageResources.js";
 import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
+import * as assetPackageStore from "../../src/pages/assetPackage/assetPackage.store.js";
 import {
   closePicker,
   createInitialState,
   openPicker,
   selectAssetPackage,
   selectAssetPackageData,
-  selectPickerResourceType,
+  setPickerResourceType,
   selectViewData,
   setFilesData,
   setAssetPackage,
@@ -315,8 +316,8 @@ describe("asset package store", () => {
     expect(viewData.pickerSection.folders[0].isExpanded).toBe(false);
 
     // Choosing another type shows only its folders; an unknown one is ignored.
-    selectPickerResourceType({ state }, { resourceType: "sounds" });
-    selectPickerResourceType({ state }, { resourceType: "layouts" });
+    setPickerResourceType({ state }, { resourceType: "sounds" });
+    setPickerResourceType({ state }, { resourceType: "layouts" });
     viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.pickerSection.resourceType).toBe("sounds");
     expect(
@@ -331,6 +332,35 @@ describe("asset package store", () => {
     expect(
       selectViewData({ state, i18n: EN_I18N }).pickerSection.resourceType,
     ).toBe("sounds");
+  });
+
+  // The store runs exports named select* on read-only state, so an action
+  // named so would throw on its first write.
+  it("only reads the state in its select* exports", () => {
+    const state = createInitialState();
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    openPicker({ state });
+    const freeze = (value) => {
+      if (value && typeof value === "object" && !Object.isFrozen(value)) {
+        Object.values(value).forEach(freeze);
+        Object.freeze(value);
+      }
+      return value;
+    };
+    freeze(state);
+
+    const selectors = Object.entries(assetPackageStore).filter(([name]) =>
+      name.startsWith("select"),
+    );
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const [, selector] of selectors) {
+      expect(() =>
+        selector({ state, i18n: EN_I18N }, { resourceType: "sounds" }),
+      ).not.toThrow();
+    }
   });
 
   it("shows a folder's first six previews and counts the rest", () => {
@@ -358,7 +388,7 @@ describe("asset package store", () => {
     setResourceData({ state }, { resourceDataByType });
 
     openPicker({ state });
-    selectPickerResourceType({ state }, { resourceType: "colors" });
+    setPickerResourceType({ state }, { resourceType: "colors" });
     const colors = selectViewData({ state, i18n: EN_I18N }).pickerSection;
     expect(colors.folders[0]).toMatchObject({
       countLabel: "8 resources",
@@ -379,7 +409,7 @@ describe("asset package store", () => {
     );
     openPicker({ state });
     const stripOf = (resourceType) => {
-      selectPickerResourceType({ state }, { resourceType });
+      setPickerResourceType({ state }, { resourceType });
       return selectViewData({ state, i18n: EN_I18N }).pickerSection.folders[0]
         .strip[0];
     };

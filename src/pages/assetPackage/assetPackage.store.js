@@ -179,7 +179,7 @@ export const openPicker = ({ state }) => {
   state.isPickerOpen = true;
 };
 
-export const selectPickerResourceType = ({ state }, { resourceType } = {}) => {
+export const setPickerResourceType = ({ state }, { resourceType } = {}) => {
   if (listPickerResourceTypes(state).includes(resourceType)) {
     state.pickerResourceType = resourceType;
   }

@@ -45,7 +45,7 @@ const persistAssetPackage = async (deps) => {
 export const handlePickerTypeClick = (deps, payload) => {
   const { render, store } = deps;
   const { resourceType } = payload._event.currentTarget.dataset;
-  store.selectPickerResourceType({ resourceType });
+  store.setPickerResourceType({ resourceType });
   render();
 };
 
