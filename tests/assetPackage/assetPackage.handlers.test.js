@@ -5,7 +5,7 @@ import {
   handleAfterMount,
   handleBeforeMount,
   handleDownloadAssetPackageButtonClick,
-  handleFolderCheckboxChange,
+  handlePickerFolderClick,
   handlePickerClose,
   handleRemoveFolderClick,
   handlePickerTypeClick,
@@ -156,21 +156,16 @@ describe("asset package handlers", () => {
     },
   });
 
-  it("ticks a folder and saves the selection at once", async () => {
+  it("ticks or unticks a folder from its box and saves the selection at once", async () => {
     const deps = createDeps();
 
-    await handleFolderCheckboxChange(deps, folderEvent({ value: true }));
-    await handleFolderCheckboxChange(deps, folderEvent({ value: false }));
+    await handlePickerFolderClick(deps, folderEvent());
+    await handlePickerFolderClick(deps, folderEvent());
 
-    expect(deps.store.toggleFolder).toHaveBeenNthCalledWith(1, {
+    expect(deps.store.toggleFolder).toHaveBeenCalledTimes(2);
+    expect(deps.store.toggleFolder).toHaveBeenCalledWith({
       resourceType: "images",
       folderId: "image-folder-1",
-      selected: true,
-    });
-    expect(deps.store.toggleFolder).toHaveBeenNthCalledWith(2, {
-      resourceType: "images",
-      folderId: "image-folder-1",
-      selected: false,
     });
     expect(deps.projectService.updateCurrentAssetPackage).toHaveBeenCalledWith(
       SAVED_ASSET_PACKAGE,
@@ -184,7 +179,7 @@ describe("asset package handlers", () => {
       new Error("Storage unavailable"),
     );
 
-    await handleFolderCheckboxChange(deps, folderEvent({ value: true }));
+    await handlePickerFolderClick(deps, folderEvent());
 
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Could not save the asset package. Please try again.",

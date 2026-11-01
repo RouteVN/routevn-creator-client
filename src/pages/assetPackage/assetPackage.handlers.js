@@ -49,15 +49,12 @@ export const handlePickerTypeClick = (deps, payload) => {
   render();
 };
 
-// Ticking a folder saves the selection at once.
-export const handleFolderCheckboxChange = async (deps, payload) => {
+// Clicking a folder's box in the picker, or pressing Space on its checkbox,
+// ticks or unticks it and saves the selection at once.
+export const handlePickerFolderClick = async (deps, payload) => {
   const { render, store } = deps;
   const { resourceType, folderId } = payload._event.currentTarget.dataset;
-  store.toggleFolder({
-    resourceType,
-    folderId,
-    selected: payload._event.detail.value === true,
-  });
+  store.toggleFolder({ resourceType, folderId });
   render();
   await persistAssetPackage(deps);
 };

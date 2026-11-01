@@ -19,10 +19,10 @@ refs:
     eventListeners:
       click:
         handler: handlePickerTypeClick
-  folderCheckbox*:
+  pickerFolder*:
     eventListeners:
-      value-change:
-        handler: handleFolderCheckboxChange
+      click:
+        handler: handlePickerFolderClick
   downloadAssetPackageButton:
     eventListeners:
       click:
@@ -124,17 +124,25 @@ template:
                       - $if pickerSection.hasNoFolders:
                           - rtgl-text s=sm c=mu-fg ph=sm: ${pickerSection.noFoldersHint}
                       - $for folder, folderIndex in pickerSection.folders:
-                          # The checkbox at the left, centered on the folder: its name,
-                          # as on the page, and its resources under it.
-                          - rtgl-view w=f d=h av=c g=md p=sm br=md bw=xs bc=bo:
-                              - 'rtgl-checkbox#folderCheckbox${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" ?checked=${folder.selected} aria-label="${folder.name}"': null
-                              - 'rtgl-view w=1fg d=v g=sm style="min-width: 0;"':
-                                  - rtgl-view w=f d=h av=c g=sm:
-                                      - rtgl-svg svg=folder wh=16 c=mu-fg: null
-                                      - rtgl-text s=sm: ${folder.name}
-                                      # A picked folder's place in the pack.
+                          # The whole box ticks the folder. At its left, the picked
+                          # folder's place in the pack at the top and the checkbox
+                          # centered on the folder; then its name, as on the page,
+                          # and its resources under it. The checkbox takes no clicks
+                          # of its own, so a click counts once; Space on it still
+                          # reaches the box.
+                          - 'rtgl-view#pickerFolder${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" w=f d=h g=md p=sm br=md bw=xs bc=bo cur=pointer h-bgc=mu':
+                              - 'rtgl-view d=v ah=c g=xs style="align-self: stretch; flex: 0 0 auto; min-width: 24px;"':
+                                  - rtgl-view h=20 av=c ah=c:
                                       - $if folder.pickOrder:
                                           - rtgl-tag s=sm v=pr: ${folder.pickOrder}
+                                  - rtgl-view h=1fg: null
+                                  - 'rtgl-checkbox#folderCheckbox${folderIndex} ?checked=${folder.selected} aria-label="${folder.name}" style="pointer-events: none;"': null
+                                  - rtgl-view h=1fg: null
+                                  - rtgl-view h=20: null
+                              - 'rtgl-view w=1fg d=v g=sm style="min-width: 0;"':
+                                  - rtgl-view w=f d=h av=c g=sm h=20:
+                                      - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                      - rtgl-text s=sm: ${folder.name}
                                   - $if folder.resourceCount:
                                       - div.assetPackageFolderGrid:
                                           - $for tile, tileIndex in folder.items:
