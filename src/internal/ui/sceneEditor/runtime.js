@@ -1953,14 +1953,6 @@ const restoreSceneEditorCanvas = async (deps) => {
   });
   store.setCanvasAudioPreviewKey?.({ previewKey: undefined });
 
-  const initialProjectData = createProjectDataWithSelectedEntryPoint(
-    projectData,
-    {
-      sceneId,
-      sectionId: store.selectSelectedSectionId(),
-      lineId: store.selectSelectedLineId(),
-    },
-  );
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
 
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
@@ -1973,12 +1965,10 @@ const restoreSceneEditorCanvas = async (deps) => {
     Object.keys(projectData?.resources?.layouts || {}),
   );
 
-  const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
-  initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
-    enableGlobalKeyboardBindings: false,
-    onRenderState,
-  });
-
+  // The editor's render starts the engine for the current selection. A render
+  // queued while the assets loaded may already have painted that line's audio,
+  // so the restore starts no engine of its own: a strict one would send the
+  // audio's transition as an enter on a node that exists, and fail.
   await renderSceneEditorState(deps);
 };
 
@@ -2075,6 +2065,18 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
   await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {
     showLoading: false,
   });
+  // Leaving the page, or the project, while the assets load removes the
+  // canvas, and the project may be closed by now.
+  if (!mountedCanvasRoot.isConnected) {
+    if (timingEnabled) {
+      emitSceneEditorTiming("runtime.render-canvas.skipped", {
+        durationMs: getDebugDurationMs(canvasStartedAt),
+        reason: "canvas-removed-during-asset-load",
+        skipRender: payload?.skipRender === true,
+      });
+    }
+    return;
+  }
   const sceneAssetLoadDurationMs = shouldMeasure
     ? getDebugDurationMs(sceneAssetLoadStartedAt)
     : undefined;
@@ -2494,9 +2496,17 @@ const alertCanvasRenderFailure = (deps, error) => {
 
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
+  // A render or canvas input still running when the page unmounts, for
+  // example when the user leaves the project, can fail on the closed project.
+  // The user is on another page by then, so the failure is not theirs to see.
+  let mounted = true;
   // Edits keep re-rendering the canvas, so alert once until a render succeeds.
   let canvasFailureAlerted = false;
   const handleCanvasRenderFailure = (error) => {
+    if (!mounted) {
+      console.warn("[sceneEditor] Canvas render failed after leaving", error);
+      return;
+    }
     reportCanvasRenderFailure(deps, error);
     if (!canvasFailureAlerted) {
       canvasFailureAlerted = true;
@@ -2766,6 +2776,7 @@ export const mountSceneEditorSubscriptions = (deps) => {
 
   const active = streams.map((stream) => stream.subscribe());
   return () => {
+    mounted = false;
     disposeSceneLoadingDetails(deps.store);
     active.forEach((subscription) => subscription?.unsubscribe?.());
   };

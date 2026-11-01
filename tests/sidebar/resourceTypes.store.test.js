@@ -167,7 +167,7 @@ describe("resource type navigation", () => {
       .flatMap((section) => section.items)
       .find((item) => item.id === "assetPackage");
 
-    expect(assetPackageItem.label).toBe("アセットパッケージ");
+    expect(assetPackageItem.label).toBe("素材パッケージ");
   });
 
   it.each([false, true])(

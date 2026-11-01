@@ -3264,6 +3264,59 @@ describe("animationEditor.handlers", () => {
     }
   });
 
+  it("reports and explains a preview that fails to render on Play", async () => {
+    const error = new Error(
+      "animations[0].tween.y.keyframes[1].value must be a number.",
+    );
+    const emptyState = { elements: [], animations: [] };
+    let activePlaybackRequestId;
+    const store = {
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      selectAnimationResetState: vi.fn(() => emptyState),
+      selectAnimationRenderStateWithAnimations: vi.fn(() => emptyState),
+      selectPreviewDurationMs: vi.fn(() => 1000),
+      selectPreviewPlayheadTimeMs: vi.fn(() => 0),
+      selectPreviewPlaying: vi.fn(() => false),
+      startPreviewPlayback: vi.fn(),
+      setPreviewPlaybackRequestId: vi.fn(({ requestId }) => {
+        activePlaybackRequestId = requestId;
+      }),
+      selectPreviewPlaybackRequestId: vi.fn(() => activePlaybackRequestId),
+    };
+    const graphicsService = {
+      loadAssets: vi.fn(),
+      render: vi.fn(async () => {
+        throw error;
+      }),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
+    };
+    const appService = {
+      reportError: vi.fn(),
+      showAlert: vi.fn(),
+    };
+
+    await handleReplayAnimation({
+      appService,
+      graphicsService,
+      i18n: EN_I18N,
+      projectService: {},
+      render: vi.fn(),
+      store,
+    });
+
+    expect(store.startPreviewPlayback).not.toHaveBeenCalled();
+    expect(appService.reportError).toHaveBeenCalledWith(error, {
+      operation: "animationEditor.playPreview",
+    });
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      title: "Error",
+      message:
+        "Failed to render animation preview.\n\nDetails:\nanimations[0].tween.y.keyframes[1].value must be a number.",
+    });
+  });
+
   it("restarts preview time while loop is enabled and stops after it is disabled", async () => {
     const flushAsyncWork = async () => {
       for (let index = 0; index < 8; index += 1) {

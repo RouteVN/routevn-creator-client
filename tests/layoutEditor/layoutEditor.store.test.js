@@ -606,6 +606,63 @@ describe("layoutEditor.store", () => {
     expect(viewData.detailPanelSelectedItemId).toBe("panel-item");
   });
 
+  it("allows an Auto save or load slot only where a clicked slot can fill it", () => {
+    const createState = (layout) => {
+      const state = createInitialState();
+      syncRepositoryState(
+        { state },
+        {
+          projectResolution: { width: 1920, height: 1080 },
+          layoutId: "layout-1",
+          layout: {
+            id: "layout-1",
+            layoutType: "save-load",
+            ...layout,
+          },
+          layoutData: {
+            items: {
+              "slot-container": {
+                type: "container-ref-save-load-slot",
+                name: "Slot",
+              },
+              "slot-child": {
+                type: "container",
+                name: "Slot Button",
+              },
+              "back-button": {
+                type: "container",
+                name: "Back",
+              },
+            },
+            tree: [
+              {
+                id: "slot-container",
+                children: [{ id: "slot-child" }],
+              },
+              { id: "back-button" },
+            ],
+          },
+        },
+      );
+      return state;
+    };
+    const allowAutoSlotFor = (itemId, layout) => {
+      const state = createState(layout);
+      setSelectedItemId({ state }, { itemId });
+      setDetailPanelSelectedItemId({ state }, { itemId });
+      return selectViewData({
+        state,
+        constants: TEST_CONSTANTS,
+        i18n: EN_I18N,
+      }).allowAutoSlot;
+    };
+
+    expect(allowAutoSlotFor("slot-container")).toBe(true);
+    expect(allowAutoSlotFor("slot-child")).toBe(true);
+    expect(allowAutoSlotFor("back-button")).toBe(false);
+    expect(allowAutoSlotFor("back-button", { isFragment: true })).toBe(true);
+  });
+
   it("shows the selected node detail in place of the preview on touch layouts", () => {
     const state = createInitialState();
 

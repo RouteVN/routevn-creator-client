@@ -49,6 +49,7 @@ const createDeps = () => {
       "ru",
       "pt",
       "fr",
+      "vi",
     ]),
     current: vi.fn(() => currentLocale),
     set: vi.fn(async (nextLocale) => {

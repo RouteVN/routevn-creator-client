@@ -738,11 +738,14 @@ const TYPE_RULES = {
     },
   },
   input: {
-    normalizeFieldValue: ({ name, value }) => {
-      if (
-        (name === "field" || name === "textStyleId") &&
-        (value === null || value === "")
-      ) {
+    normalizeFieldValue: ({ item, name, value }) => {
+      // An Input element always has a field name, so a blank one keeps the
+      // current name.
+      if (name === "field" && String(value ?? "").trim() === "") {
+        return item.field;
+      }
+
+      if (name === "textStyleId" && (value === null || value === "")) {
         return undefined;
       }
 

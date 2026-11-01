@@ -119,11 +119,17 @@ describe("asset load feedback", () => {
         },
         { previewBlocked: true },
       );
+      const labelValue = (label, value) =>
+        i18n.resourcePages.labelValue
+          .replace("{label}", label)
+          .replace("{value}", value);
       expect(message(deps)).toContain(i18n.assetLoadFeedback.previewBlocked);
       expect(message(deps)).toContain(
-        `${i18n.resourceTypes.images}: Image One`,
+        labelValue(i18n.resourceTypes.images, "Image One"),
       );
-      expect(message(deps)).toContain(`${i18n.resourceTypes.fonts}: Font One`);
+      expect(message(deps)).toContain(
+        labelValue(i18n.resourceTypes.fonts, "Font One"),
+      );
       expect(message(deps)).toContain(
         i18n.assetLoadFeedback.file.replace("{fileId}", "unknown-file"),
       );

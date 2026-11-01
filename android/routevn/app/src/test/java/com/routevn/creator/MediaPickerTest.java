@@ -45,6 +45,11 @@ public class MediaPickerTest {
         assertTrue(intent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE, false));
         assertArrayEquals(new String[]{"image/jpeg", "image/png"}, intent.getStringArrayExtra(Intent.EXTRA_MIME_TYPES));
     }
+    @Test public void soundFiltersIncludeTheTypesAndroidReportsForWavAndOgg() {
+        Intent intent = open("files", ".mp3,.wav,.ogg", true);
+        assertEquals("*/*", intent.getType());
+        assertArrayEquals(new String[]{"audio/mpeg", "audio/wav", "audio/x-wav", "audio/ogg", "application/ogg"}, intent.getStringArrayExtra(Intent.EXTRA_MIME_TYPES));
+    }
     @Test public void gallerySourcePrefersGalleryOverFileManagerAndCanCancel() {
         Intent pick = new Intent(Intent.ACTION_PICK).setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/png");
         addHandler(pick, "example.files", "FilesPicker");

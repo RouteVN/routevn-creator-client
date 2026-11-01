@@ -3,12 +3,14 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { ROUTEVN_CONTACT_URL } from "../../src/internal/routevnUrls.js";
 import {
+  handleClickChatSupportButton,
   handleClickContactButton,
   handleCheckForUpdates,
   handleBeforeMount,
 } from "../../src/pages/about/about.handlers.js";
 import {
   createInitialState,
+  selectChatSupport,
   selectViewData,
 } from "../../src/pages/about/about.store.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -90,13 +92,32 @@ describe("about handlers", () => {
       allow.some(({ url }) =>
         url.endsWith("*") ? href.startsWith(url.slice(0, -1)) : href === url,
       );
-    const { social } = selectViewData({
+    const { social, chatSupport } = selectViewData({
       state: createInitialState(),
       i18n: EN_I18N,
     });
 
     expect(
-      social.map(({ href }) => href).filter((href) => !isAllowed(href)),
+      [...social, ...chatSupport]
+        .map(({ href }) => href)
+        .filter((href) => !isAllowed(href)),
     ).toEqual([]);
+  });
+
+  it("opens the chat support link for the clicked button", () => {
+    const appService = {
+      openUrl: vi.fn(),
+    };
+    const store = {
+      selectChatSupport: ({ id }) =>
+        selectChatSupport({ state: createInitialState() }, { id }),
+    };
+
+    handleClickChatSupportButton(
+      { appService, store },
+      { _event: { currentTarget: { dataset: { id: "telegram" } } } },
+    );
+
+    expect(appService.openUrl).toHaveBeenCalledWith("https://t.me/routevn");
   });
 });

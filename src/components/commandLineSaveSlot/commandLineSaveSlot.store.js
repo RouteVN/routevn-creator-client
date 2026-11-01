@@ -39,7 +39,7 @@ export const selectDefaultValues = ({ state }) => {
   return state.defaultValues;
 };
 
-export const selectViewData = ({ state, i18n }) => {
+export const selectViewData = ({ state, props, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
   const breadcrumb = [
     {
@@ -52,10 +52,23 @@ export const selectViewData = ({ state, i18n }) => {
     },
   ];
 
+  const form = localizeCommandLineForm(state.form, copy);
+
+  // Auto takes the slot from the save/load slot item that was clicked, so
+  // anywhere else the action needs its own slot. Blank text counts as Auto.
+  if (props.allowAutoSlot !== true) {
+    const message = localizeCommandLineText(
+      "Auto only works inside a Save/Load Slot container. Enter a slot id.",
+      copy,
+    );
+    form.fields[0].required = { message };
+    form.fields[0].rules = [{ rule: "pattern", value: "\\S", message }];
+  }
+
   return {
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
-    form: localizeCommandLineForm(state.form, copy),
+    form,
     defaultValues: state.defaultValues,
   };
 };
