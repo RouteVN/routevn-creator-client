@@ -80,6 +80,18 @@ describe.each(slotActions)(
       );
     });
 
+    it("suggests Auto, not _event.slotId, for the slot of the clicked item", () => {
+      const viewData = storeModule.selectViewData({
+        state: storeModule.createInitialState(),
+        props: { allowAutoSlot: true },
+        i18n: EN_I18N,
+      });
+
+      expect(viewData.form.fields[0].description).toBe(
+        "Leave empty for auto, or use a fixed value like 1 or ${slot.slotId}",
+      );
+    });
+
     it("allows Auto where the clicked slot fills it", () => {
       const viewData = storeModule.selectViewData({
         state: storeModule.createInitialState(),

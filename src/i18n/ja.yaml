@@ -2702,7 +2702,7 @@ commandLinePage:
   runtimeValueSourceTooltip: "「指定値」では値を入力します。「現在の値」は、操作されたコントロールの値を使います。"
   incrementSaveLoadPageDescription: "現在のセーブ/ロードページを1つ進めます。"
   decrementSaveLoadPageDescription: "現在のセーブ/ロードページを1つ戻します。"
-  slotIdDescription: "自動にする場合は空のままにします。1、${slot.slotId}、_event.slotIdなどの固定値も指定できます。"
+  slotIdDescription: "自動にする場合は空のままにします。1、${slot.slotId}などの固定値も指定できます。"
   autoSlotOutsideSlotContainer: "「自動」は「コンテナー（セーブ/ロードスロット）」の中でのみ使えます。スロットIDを入力してください。"
   "Missing audio effect ({id})": "見つからないオーディオエフェクト（{id}）"
   "Runtime Action": "システムアクション"

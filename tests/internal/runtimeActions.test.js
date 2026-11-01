@@ -59,7 +59,9 @@ describe("runtimeActions", () => {
   });
 
   it("offers the default template's menu pages as predefined values, or a custom one", () => {
-    const fields = createRuntimeActionForm("setMenuPage").fields;
+    const fields = createRuntimeActionForm("setMenuPage", {
+      allowCurrentValue: true,
+    }).fields;
     expect(fields.map(({ name, type }) => [name, type])).toEqual([
       ["valueSource", "segmented-control"],
       ["valueChoice", "segmented-control"],
@@ -134,8 +136,10 @@ describe("runtimeActions", () => {
     ).toMatchObject({ valueText: "settings" });
   });
 
-  it("shows a value source segmented control for runtime value actions", () => {
-    expect(createRuntimeActionForm("setMusicVolume")).toMatchObject({
+  it("shows a value source segmented control on a trigger that has a value", () => {
+    expect(
+      createRuntimeActionForm("setMusicVolume", { allowCurrentValue: true }),
+    ).toMatchObject({
       fields: [
         {
           name: "valueSource",
@@ -155,14 +159,54 @@ describe("runtimeActions", () => {
     });
   });
 
+  it("offers only a Specific Value on a trigger without a value", () => {
+    expect(
+      createRuntimeActionForm("setMusicVolume").fields.map(
+        ({ name, type, $when }) => [name, type, $when],
+      ),
+    ).toEqual([["value", "input-number", undefined]]);
+    expect(
+      createRuntimeActionForm("setMenuPage").fields.map(({ name, $when }) => [
+        name,
+        $when,
+      ]),
+    ).toEqual([
+      ["valueChoice", undefined],
+      ["presetValue", "values.valueChoice == 'predefined'"],
+      ["value", "values.valueChoice == 'custom'"],
+    ]);
+  });
+
   it("defaults event-bound runtime actions to event value mode", () => {
-    const defaultValues = createRuntimeActionDefaultValues("setMusicVolume", {
-      value: "_event.value",
-    });
+    const defaultValues = createRuntimeActionDefaultValues(
+      "setMusicVolume",
+      { value: "_event.value" },
+      { allowCurrentValue: true },
+    );
 
     expect(defaultValues).toEqual({
       valueSource: "event",
       value: getRuntimeActionDefinition("setMusicVolume").defaultValue,
+    });
+  });
+
+  it("opens a saved Current Value as the default Specific Value on a trigger without a value", () => {
+    expect(
+      createRuntimeActionDefaultValues("setMusicVolume", {
+        value: "_event.value",
+      }),
+    ).toEqual({
+      valueSource: "fixed",
+      value: getRuntimeActionDefinition("setMusicVolume").defaultValue,
+    });
+    expect(
+      createRuntimeActionDefaultValues("setMenuPage", {
+        value: "_event.value",
+      }),
+    ).toMatchObject({
+      valueSource: "fixed",
+      valueChoice: "predefined",
+      presetValue: "options",
     });
   });
 

@@ -16,7 +16,7 @@ export const createInitialState = () => ({
         type: "input-text",
         label: "Slot Id",
         description:
-          "Leave empty for auto, or use a fixed value like 1, ${slot.slotId}, or _event.slotId",
+          "Leave empty for auto, or use a fixed value like 1 or ${slot.slotId}",
         required: false,
         placeholder: "Auto",
       },

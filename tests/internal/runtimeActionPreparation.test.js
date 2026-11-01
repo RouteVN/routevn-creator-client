@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import createRouteEngine from "route-engine-js";
+import { constructProjectData } from "../../src/internal/project/projection.js";
 import {
   captureCanvasImage,
   captureCanvasThumbnailImage,
@@ -434,6 +436,34 @@ describe("prepareRuntimeInteractionActions", () => {
   });
 });
 
+describe("prepareRuntimeInteractionActions with a typed slot binding", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("fills _event.slotId in a confirm dialog's actions from the clicked slot, as Auto does", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const actions = {
+      showConfirmDialog: {
+        resourceId: "confirm-layout",
+        confirmActions: { saveSlot: { slotId: "_event.slotId" } },
+      },
+    };
+
+    const slotClick = prepareRuntimeInteractionActions(actions, { slotId: 3 });
+    expect(slotClick.showConfirmDialog.confirmActions).toEqual({
+      saveSlot: { slotId: 3 },
+    });
+    // The click on the dialog's button has no slot; the save keeps slot 3.
+    expect(
+      prepareRuntimeInteractionActions(
+        slotClick.showConfirmDialog.confirmActions,
+        { id: "confirm-button" },
+      ),
+    ).toEqual({ saveSlot: { slotId: 3 } });
+  });
+});
+
 describe("prepareRuntimeInteractionActions without a slot", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -619,6 +649,247 @@ describe("preloadRuntimeSaveSlotImages", () => {
     expect(result).toEqual({
       attempted: 2,
       failed: 0,
+    });
+  });
+});
+
+const createTreeCollection = (items = {}) => ({
+  items,
+  tree: Object.keys(items).map((id) => ({ id })),
+});
+
+const startRouteEngine = () => {
+  const projectData = constructProjectData({
+    project: { resolution: { width: 1920, height: 1080 } },
+    story: { initialSceneId: "scene-1" },
+    scenes: createTreeCollection({
+      "scene-1": {
+        id: "scene-1",
+        type: "scene",
+        name: "Scene One",
+        sections: createTreeCollection({
+          "section-1": {
+            id: "section-1",
+            name: "Section One",
+            lines: createTreeCollection({
+              "line-1": { id: "line-1", actions: {} },
+            }),
+          },
+        }),
+      },
+    }),
+  });
+  let engine;
+  engine = createRouteEngine({
+    handlePendingEffects(effects) {
+      for (const effect of effects) {
+        if (effect.name === "handleLineActions") {
+          engine.handleLineActions();
+        }
+      }
+    },
+  });
+  engine.init({ initialState: { global: {}, projectData } });
+  return engine;
+};
+
+// Runs an interaction the way the scene editor, the preview, and the exported
+// player do: the actions are prepared for the event, then Route Engine runs
+// them with it.
+const runInteraction = (engine, actions, eventData) => {
+  engine.handleActions(prepareRuntimeInteractionActions(actions, eventData), {
+    _event: eventData,
+  });
+};
+
+describe("prepareRuntimeInteractionActions with event values", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("leaves out actions that use a value the event does not have", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const actions = {
+      setMusicVolume: { value: "_event.value" },
+      saveSlot: { slotId: "_event.slotId" },
+      updateVariable: {
+        id: "update-1",
+        operations: [{ variableId: "var-1", op: "set", value: "_event.value" }],
+      },
+      toggleAutoMode: {},
+    };
+
+    expect(
+      prepareRuntimeInteractionActions(actions, { id: "button-1" }),
+    ).toEqual({ toggleAutoMode: {} });
+    expect(warn).toHaveBeenCalledTimes(3);
+    expect(warn).toHaveBeenCalledWith(
+      "[runtime] Skipped setMusicVolume: the event that ran it has no _event.value.",
+    );
+    expect(actions.setMusicVolume).toEqual({ value: "_event.value" });
+    expect(
+      prepareRuntimeInteractionActions(
+        { setMusicVolume: { value: "_event.value" } },
+        undefined,
+      ),
+    ).toEqual({});
+  });
+
+  it("keeps actions whose values the event has", () => {
+    const actions = {
+      setMusicVolume: { value: "_event.value" },
+      saveSlot: { slotId: "_event.slotId" },
+      updateVariable: {
+        id: "update-1",
+        operations: [
+          { variableId: "var-1", op: "set", value: "_event" },
+          { variableId: "var-2", op: "set", value: "_event.label" },
+        ],
+      },
+    };
+
+    expect(
+      prepareRuntimeInteractionActions(actions, {
+        value: 30,
+        slotId: 2,
+        label: null,
+      }),
+    ).toEqual({ ...actions, saveSlot: { slotId: 2 } });
+  });
+
+  it("leaves a confirm dialog's actions for the click on its button", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const showConfirmDialog = {
+      resourceId: "confirm-layout",
+      confirmActions: { setMusicVolume: { value: "_event.value" } },
+    };
+
+    expect(
+      prepareRuntimeInteractionActions(
+        { showConfirmDialog },
+        { id: "button-1" },
+      ),
+    ).toEqual({ showConfirmDialog });
+    expect(
+      prepareRuntimeInteractionActions(
+        {
+          hideConfirmDialog: {},
+          setMusicVolume: { value: "_event.value" },
+        },
+        { id: "confirm-button" },
+      ),
+    ).toEqual({ hideConfirmDialog: {} });
+  });
+
+  it("keeps presentation actions, which Route Engine runs as they are", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const dialogue = { content: [{ text: "_event.value" }] };
+    const clickEvent = { id: "button-1" };
+
+    // Only a music action's audio effects are resolved from the event.
+    expect(
+      prepareRuntimeInteractionActions(
+        {
+          dialogue,
+          bgm: {
+            resourceId: "bgm-1",
+            audioEffects: { resourceId: "_event.value" },
+          },
+        },
+        clickEvent,
+      ),
+    ).toEqual({ dialogue });
+    expect(() =>
+      startRouteEngine().handleActions(structuredClone({ dialogue }), {
+        _event: clickEvent,
+      }),
+    ).not.toThrow();
+  });
+
+  it("checks the actions Route Engine runs from inside an action with the same event", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const innerActions = {
+      setMusicVolume: { value: "_event.value" },
+      setSoundVolume: { value: 20 },
+    };
+    const clickEvent = { id: "button-1" };
+    const variants = {
+      conditional: { conditional: { branches: [{ actions: innerActions }] } },
+      random: {
+        random: {
+          distribution: {
+            type: "weighted",
+            outcomes: [{ weight: 1, actions: innerActions }],
+          },
+        },
+      },
+    };
+
+    for (const actions of Object.values(variants)) {
+      expect(() =>
+        startRouteEngine().handleActions(structuredClone(actions), {
+          _event: clickEvent,
+        }),
+      ).toThrow(
+        'Action template binding "_event.value" could not be resolved from "_event".',
+      );
+
+      const clickEngine = startRouteEngine();
+      runInteraction(clickEngine, actions, clickEvent);
+      expect(clickEngine.selectSystemState().global).toMatchObject({
+        musicVolume: 50,
+        soundVolume: 20,
+      });
+
+      const sliderEngine = startRouteEngine();
+      runInteraction(sliderEngine, actions, { id: "slider-1", value: 30 });
+      expect(sliderEngine.selectSystemState().global).toMatchObject({
+        musicVolume: 30,
+        soundVolume: 20,
+      });
+    }
+
+    expect(
+      prepareRuntimeInteractionActions(
+        { submitForm: { formKey: "form-1", actions: innerActions } },
+        clickEvent,
+      ),
+    ).toEqual({
+      submitForm: {
+        formKey: "form-1",
+        actions: { setSoundVolume: { value: 20 } },
+      },
+    });
+  });
+
+  it("lets Route Engine run a click whose saved action uses Current Value", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const actions = {
+      setMusicVolume: { value: "_event.value" },
+      setSoundVolume: { value: 20 },
+    };
+    const clickEvent = { id: "button-1" };
+
+    expect(() =>
+      startRouteEngine().handleActions(structuredClone(actions), {
+        _event: clickEvent,
+      }),
+    ).toThrow(
+      'Action template binding "_event.value" could not be resolved from "_event".',
+    );
+
+    const clickEngine = startRouteEngine();
+    runInteraction(clickEngine, actions, clickEvent);
+    expect(clickEngine.selectSystemState().global).toMatchObject({
+      musicVolume: 50,
+      soundVolume: 20,
+    });
+
+    const sliderEngine = startRouteEngine();
+    runInteraction(sliderEngine, actions, { id: "slider-1", value: 30 });
+    expect(sliderEngine.selectSystemState().global).toMatchObject({
+      musicVolume: 30,
+      soundVolume: 20,
     });
   });
 });

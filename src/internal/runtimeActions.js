@@ -242,13 +242,25 @@ const createPreviewValue = (definition, value) => {
   return { valueText: value === undefined ? "" : String(value) };
 };
 
-const getRuntimeActionValueSource = (value) => {
-  return value === EVENT_VALUE_BINDING ? "event" : "fixed";
+// Current Value is the value of the control that ran the action, such as a
+// slider's new value. Only a trigger that has one, a Change, offers it.
+const getRuntimeActionValueSource = (value, allowCurrentValue) => {
+  return allowCurrentValue && value === EVENT_VALUE_BINDING ? "event" : "fixed";
 };
 
-const createFixedValueField = (definition) => {
+// A Specific Value's fields show while it is chosen. Without Current Value it
+// is the only choice, and they always show.
+const FIXED_VALUE_CONDITION = "values.valueSource == 'fixed'";
+const PREDEFINED_VALUE_CONDITION = "values.valueChoice == 'predefined'";
+const CUSTOM_VALUE_CONDITION = "values.valueChoice == 'custom'";
+
+const joinConditions = (conditions) => {
+  return conditions.filter(Boolean).join(" && ");
+};
+
+const createFixedValueField = (definition, fixedCondition) => {
   const baseField = {
-    $when: `values.valueSource == 'fixed'`,
+    $when: fixedCondition,
     name: "value",
     label: definition.valueLabel,
   };
@@ -274,14 +286,14 @@ const createFixedValueField = (definition) => {
 
 // With predefined values, a Specific Value is either one of them, from a
 // select, or Custom, typed in as any other value is.
-const createFixedValueFields = (definition) => {
+const createFixedValueFields = (definition, fixedCondition) => {
   if (!definition.presetValues) {
-    return [createFixedValueField(definition)];
+    return [createFixedValueField(definition, fixedCondition)];
   }
 
   return [
     {
-      $when: `values.valueSource == 'fixed'`,
+      $when: fixedCondition,
       name: "valueChoice",
       type: "segmented-control",
       label: definition.valueLabel,
@@ -289,7 +301,7 @@ const createFixedValueFields = (definition) => {
       options: VALUE_CHOICE_OPTIONS,
     },
     {
-      $when: `values.valueSource == 'fixed' && values.valueChoice == 'predefined'`,
+      $when: joinConditions([fixedCondition, PREDEFINED_VALUE_CONDITION]),
       name: "presetValue",
       type: "select",
       clearable: false,
@@ -297,7 +309,7 @@ const createFixedValueFields = (definition) => {
       description: definition.description,
     },
     {
-      $when: `values.valueSource == 'fixed' && values.valueChoice == 'custom'`,
+      $when: joinConditions([fixedCondition, CUSTOM_VALUE_CONDITION]),
       name: "value",
       type: "input-text",
       description: definition.description,
@@ -305,7 +317,10 @@ const createFixedValueFields = (definition) => {
   ];
 };
 
-export const createRuntimeActionForm = (mode) => {
+export const createRuntimeActionForm = (
+  mode,
+  { allowCurrentValue = false } = {},
+) => {
   const definition = getRuntimeActionDefinition(mode);
   if (!definition) {
     return undefined;
@@ -329,19 +344,24 @@ export const createRuntimeActionForm = (mode) => {
     };
   }
 
+  const fields = createFixedValueFields(
+    definition,
+    allowCurrentValue ? FIXED_VALUE_CONDITION : undefined,
+  );
+  if (allowCurrentValue) {
+    fields.unshift({
+      name: "valueSource",
+      type: "segmented-control",
+      label: "Set To",
+      options: VALUE_SOURCE_OPTIONS,
+      description:
+        "Specific Value lets you enter a value. Current Value uses the value from the triggering control.",
+    });
+  }
+
   return {
     title: definition.label,
-    fields: [
-      {
-        name: "valueSource",
-        type: "segmented-control",
-        label: "Set To",
-        options: VALUE_SOURCE_OPTIONS,
-        description:
-          "Specific Value lets you enter a value. Current Value uses the value from the triggering control.",
-      },
-      ...createFixedValueFields(definition),
-    ],
+    fields,
     actions: {
       layout: "",
       buttons: [
@@ -355,7 +375,13 @@ export const createRuntimeActionForm = (mode) => {
   };
 };
 
-export const createRuntimeActionDefaultValues = (mode, action = {}) => {
+// A saved Current Value on a trigger without one, such as a click, opens as
+// the default Specific Value.
+export const createRuntimeActionDefaultValues = (
+  mode,
+  action = {},
+  { allowCurrentValue = false } = {},
+) => {
   const definition = getRuntimeActionDefinition(mode);
   if (!definition) {
     return {};
@@ -365,11 +391,14 @@ export const createRuntimeActionDefaultValues = (mode, action = {}) => {
     return {};
   }
 
-  const valueSource = getRuntimeActionValueSource(action.value);
+  const valueSource = getRuntimeActionValueSource(
+    action.value,
+    allowCurrentValue,
+  );
   const value =
-    valueSource === "fixed"
-      ? (action.value ?? definition.defaultValue)
-      : definition.defaultValue;
+    action.value === EVENT_VALUE_BINDING
+      ? definition.defaultValue
+      : (action.value ?? definition.defaultValue);
   const defaultValues = { valueSource, value };
 
   // A value that is not one of the predefined ones is Custom; a new action
