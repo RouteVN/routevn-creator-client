@@ -22,7 +22,7 @@ template:
               - rvn-waveform-visualizer waveformDataFileId=${waveformDataFileId} w=f h=f: null
         $elif kind == 'font':
           - 'rtgl-view w=f style="aspect-ratio: 16 / 9; overflow: hidden;"':
-              - rvn-font-preview mode=thumbnail :fontFamily=${fontFamily} previewText="Aa" fileId=${fontFileId} :fontWeightDescriptor=${fontWeightDescriptor} fontWeight=${fontWeight} fontSize=32 width=f height=f padding=4 av=c ah=c: null
+              - rvn-font-preview mode=thumbnail :fontFamily=${fontFamily} previewText="Aa" fileId=${fontFileId} :fontWeightDescriptor=${fontWeightDescriptor} fontWeight=${fontWeight} fontSize=22 width=f height=f padding=4 av=c ah=c: null
         $elif kind == 'textStyle':
           - 'rtgl-view w=f style="aspect-ratio: 16 / 9; overflow: hidden;"':
               - rvn-font-preview mode=thumbnail :fontFamilies=${fontFamilies} previewText="${previewText}" :fileIds=${fontFileIds} :fontWeightDescriptors=${fontWeightDescriptors} fontSize=${textStyleFontSize} lineHeight=${lineHeight} color=${color} strokeColor=${strokeColor} strokeWidth=${strokeWidth} fontWeight=${fontWeight} shadowColor=${shadowColor} shadowAlpha=${shadowAlpha} shadowBlur=${shadowBlur} shadowOffsetX=${shadowOffsetX} shadowOffsetY=${shadowOffsetY} width=f height=f padding=4 showBorder=false: null

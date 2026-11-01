@@ -28,6 +28,12 @@ refs:
       click:
         handler: handleDownloadAssetPackageButtonClick
 styles:
+  # A folder's resources as small tiles, as many to a row as fit.
+  ".assetPackageFolderGrid":
+    display: grid
+    grid-template-columns: repeat(auto-fill, 80px)
+    gap: var(--spacing-sm)
+    width: 100%
   # The picker fills the window's height, whichever type it shows; its lists
   # scroll.
   '#pickerContent':
@@ -73,7 +79,7 @@ template:
                                                       - rtgl-view w=1fg: null
                                                       - 'rtgl-button#removeFolderButton${sectionIndex}x${folderIndex} data-resource-type="${section.resourceType}" data-folder-id="${folder.folderId}" sq v=gh s=sm pre=cross aria-label="${folder.removeLabel}" title="${folder.removeLabel}"': null
                                                   - $if folder.resourceCount:
-                                                      - rtgl-grid cols=6 md-cols=4 sm-cols=2 w=f g=sm:
+                                                      - div.assetPackageFolderGrid:
                                                           - $for tile, tileIndex in folder.items:
                                                               - rvn-asset-package-preview-tile :preview=${tile}: null
                               # What the picks use comes along; the store does not show it.
@@ -126,7 +132,7 @@ template:
                                   - 'rtgl-checkbox#folderCheckbox${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" ?checked=${folder.selected}': ${folder.name}
                                   - rtgl-text s=sm c=mu-fg: ${folder.countLabel}
                               - $if folder.resourceCount:
-                                  - rtgl-grid cols=5 sm-cols=2 w=f g=sm:
+                                  - div.assetPackageFolderGrid:
                                       - $for tile, tileIndex in folder.items:
                                           - rvn-asset-package-preview-tile :preview=${tile}: null
           - rtgl-view w=f d=h ah=e:

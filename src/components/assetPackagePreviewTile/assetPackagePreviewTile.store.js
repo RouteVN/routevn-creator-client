@@ -4,7 +4,7 @@
 export const createInitialState = () => ({});
 
 // Text styles keep their look at tile size: large sizes are scaled down.
-const MAX_TEXT_STYLE_FONT_SIZE = 28;
+const MAX_TEXT_STYLE_FONT_SIZE = 14;
 
 export const selectViewData = ({ props }) => {
   const preview = props.preview ?? {};

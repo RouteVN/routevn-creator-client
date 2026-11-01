@@ -40,6 +40,9 @@ describe("asset package view", () => {
     expect(assetPackageView).not.toContain("ExpandButton");
     expect(assetPackageView).not.toContain("Strip");
     expect(assetPackageView).toContain("$for tile, tileIndex in folder.items");
+    // As small tiles, as many to a row as fit.
+    expect(assetPackageView).toContain("div.assetPackageFolderGrid");
+    expect(assetPackageView).toContain("repeat(auto-fill, 80px)");
     expect(assetPackageView).toContain(
       "rtgl-button#addFoldersButton v=ol pre=plus",
     );
