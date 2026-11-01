@@ -28,12 +28,10 @@ const ASSET_PACKAGE_CREATOR_RESOURCE_TYPES = new Set(
   ),
 );
 // A pack lists its types in this order, and each type's folders in the
-// order the project has them.
+// order they were picked.
 const RESOURCE_TYPE_ORDER = ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(
   ({ resourceType }) => resourceType,
 );
-// A folder row shows its first few previews; expanding it shows them all.
-const STRIP_SIZE = 6;
 const MAX_LISTED_USERS = 3;
 
 const createEmptyResourceData = () => ({
@@ -57,22 +55,12 @@ const createSelectedFolderIdsByType = () =>
     ]),
   );
 
-const sortByProjectOrder = (resourceData, folderIds) =>
-  resourceData.tree
-    .map((node) => node.id)
-    .filter(
-      (folderId) =>
-        folderIds.includes(folderId) &&
-        isTopLevelFolder(resourceData, folderId),
-    );
-
-const toFolderKey = (resourceType, folderId, inPicker = false) =>
-  `${inPicker ? "picker:" : ""}${resourceType}:${folderId}`;
-
-const toggleListValue = (values, value) =>
-  values.includes(value)
-    ? values.filter((entry) => entry !== value)
-    : [...values, value];
+// The saved folders in their saved order, without those the project no
+// longer has at its top level.
+const keepTopLevelFolders = (resourceData, folderIds) =>
+  [...new Set(folderIds)].filter((folderId) =>
+    isTopLevelFolder(resourceData, folderId),
+  );
 
 export const createInitialState = () => ({
   resourceCategory: "releases",
@@ -81,7 +69,6 @@ export const createInitialState = () => ({
   filesData: { items: {} },
   resourceDataByType: createResourceDataByType(),
   selectedFolderIdsByType: createSelectedFolderIdsByType(),
-  expandedFolderKeys: [],
   isPickerOpen: false,
   pickerResourceType: undefined,
 });
@@ -109,7 +96,7 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
     if (!ASSET_PACKAGE_CREATOR_RESOURCE_TYPES.has(resourceType)) {
       continue;
     }
-    selectedFolderIdsByType[resourceType] = sortByProjectOrder(
+    selectedFolderIdsByType[resourceType] = keepTopLevelFolders(
       state.resourceDataByType[resourceType],
       folderIds,
     );
@@ -118,7 +105,7 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
 };
 
 // Ticks or unticks a top-level folder; `selected` says which, or the folder
-// flips.
+// flips. A ticked folder goes after those picked before it.
 export const toggleFolder = (
   { state },
   { resourceType, folderId, selected } = {},
@@ -132,23 +119,14 @@ export const toggleFolder = (
     return;
   }
   const selectedIds = state.selectedFolderIdsByType[resourceType];
-  const nextSelected = selected ?? !selectedIds.includes(folderId);
-  const otherIds = selectedIds.filter((id) => id !== folderId);
-  state.selectedFolderIdsByType[resourceType] = sortByProjectOrder(
-    resourceData,
-    nextSelected ? [...otherIds, folderId] : otherIds,
-  );
-};
-
-// The page and the picker expand folders separately.
-export const toggleFolderExpanded = (
-  { state },
-  { resourceType, folderId, inPicker = false } = {},
-) => {
-  state.expandedFolderKeys = toggleListValue(
-    state.expandedFolderKeys,
-    toFolderKey(resourceType, folderId, inPicker),
-  );
+  const isSelected = selectedIds.includes(folderId);
+  const nextSelected = selected ?? !isSelected;
+  if (nextSelected === isSelected) {
+    return;
+  }
+  state.selectedFolderIdsByType[resourceType] = nextSelected
+    ? [...selectedIds, folderId]
+    : selectedIds.filter((id) => id !== folderId);
 };
 
 const hasResources = (resourceData) =>
@@ -273,9 +251,10 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   };
 };
 
-// Types and their top-level folders, each with its count and previews. The
-// page lists only the picked folders; the picker lists every folder of the
-// type it shows, and says so when the type has no folders.
+// Types and their top-level folders, each with its count and every
+// resource's preview. The page lists only the picked folders, in the order
+// they were picked; the picker lists every folder of the type it shows, in
+// project order, and says so when the type has no folders.
 const buildSectionsViewData = ({
   state,
   copy,
@@ -287,9 +266,14 @@ const buildSectionsViewData = ({
   resourceTypes.flatMap((resourceType) => {
     const resourceData = state.resourceDataByType[resourceType];
     const selectedIds = state.selectedFolderIdsByType[resourceType];
-    const folders = selectTopLevelFolders(resourceData).filter(
-      (folder) => inPicker || selectedIds.includes(folder.id),
-    );
+    const topLevelFolders = selectTopLevelFolders(resourceData);
+    const folders = inPicker
+      ? topLevelFolders
+      : selectedIds
+          .map((folderId) =>
+            topLevelFolders.find((folder) => folder.id === folderId),
+          )
+          .filter(Boolean);
     if (!inPicker && folders.length === 0) {
       return [];
     }
@@ -311,18 +295,7 @@ const buildSectionsViewData = ({
         hasNoFolders: folders.length === 0,
         noFoldersHint: copy.noFoldersHint,
         folders: folders.map((folder) => {
-          const isExpanded = state.expandedFolderKeys.includes(
-            toFolderKey(resourceType, folder.id, inPicker),
-          );
           const resources = collectFolderResources(resourceData, folder.id);
-          const previews = (
-            isExpanded ? resources : resources.slice(0, STRIP_SIZE)
-          ).map(({ itemId }) =>
-            previewOf(state, resourceType, itemId, {
-              showName: isExpanded,
-            }),
-          );
-          const hiddenCount = resources.length - STRIP_SIZE;
           return {
             folderId: folder.id,
             name: folder.name,
@@ -336,19 +309,9 @@ const buildSectionsViewData = ({
               resources.length,
               { dateTime: i18n.dateTime },
             ),
-            canExpand: resources.length > 0,
-            isExpanded,
-            expandIcon: isExpanded ? "folderArrowDown" : "folderArrowRight",
-            expandLabel: isExpanded
-              ? copy.collapseFolderLabel
-              : copy.expandFolderLabel,
-            strip: isExpanded ? [] : previews,
-            hasStrip: !isExpanded && previews.length > 0,
-            moreLabel:
-              !isExpanded && hiddenCount > 0
-                ? formatI18nCopy(copy.moreCount, { count: hiddenCount })
-                : "",
-            items: isExpanded ? previews : [],
+            items: resources.map(({ itemId }) =>
+              previewOf(state, resourceType, itemId, { showName: true }),
+            ),
             resourceCount: resources.length,
           };
         }),

@@ -6,7 +6,6 @@ import {
   handleBeforeMount,
   handleDownloadAssetPackageButtonClick,
   handleFolderCheckboxChange,
-  handleFolderExpandClick,
   handlePickerClose,
   handleRemoveFolderClick,
   handlePickerTypeClick,
@@ -92,7 +91,6 @@ const createDeps = () => ({
     closePicker: vi.fn(),
     openPicker: vi.fn(),
     toggleFolder: vi.fn(),
-    toggleFolderExpanded: vi.fn(),
     setPickerResourceType: vi.fn(),
   },
   uiConfig: { id: "desktop" },
@@ -220,38 +218,18 @@ describe("asset package handlers", () => {
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
-  it("expands a folder in the picker on its own", () => {
-    const deps = createDeps();
-    const event = folderEvent();
-    event._event.currentTarget.dataset.picker = "true";
-
-    handleFolderExpandClick(deps, event);
-
-    expect(deps.store.toggleFolderExpanded).toHaveBeenCalledWith({
-      resourceType: "images",
-      folderId: "image-folder-1",
-      inPicker: true,
-    });
-  });
-
-  it("expands a folder and switches the picker's type without saving", () => {
+  it("switches the picker's type without saving", () => {
     const deps = createDeps();
 
-    handleFolderExpandClick(deps, folderEvent());
     handlePickerTypeClick(deps, folderEvent());
 
-    expect(deps.store.toggleFolderExpanded).toHaveBeenCalledWith({
-      resourceType: "images",
-      folderId: "image-folder-1",
-      inPicker: false,
-    });
     expect(deps.store.setPickerResourceType).toHaveBeenCalledWith({
       resourceType: "images",
     });
     expect(
       deps.projectService.updateCurrentAssetPackage,
     ).not.toHaveBeenCalled();
-    expect(deps.render).toHaveBeenCalledTimes(2);
+    expect(deps.render).toHaveBeenCalledOnce();
   });
 
   it("chooses the path before exporting and reports completion", async () => {

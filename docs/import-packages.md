@@ -134,18 +134,20 @@ against the owning resource type before staging.
 ## Folder trees and dependencies
 
 The creator's Asset Package page has two sections. Picked resources lists only
-the top-level folders in the pack, by type, each with its count, a strip of its
-first six previews and a button that removes it. Previews are drawn as on the
-type's own page: images and thumbnails on the transparency grid, sound
-waveforms, font glyphs, text style samples and color swatches, or the type's
-icon. Clicking a strip, or its arrow, shows the whole folder. Dependencies
-lists what the picks use (see below). Add folders opens a picker that shows one resource type at a time: a list
-of the types with resources, each with how many of its folders are picked,
-and the chosen type's top-level folders, the same way, each with a checkbox. A
-type with no folders says so. The picker opens on the type it showed last, or
-the first type with folders. Ticking or removing a folder
-saves the selection at once. Types follow the store's order and folders the
-project's; resources outside a folder cannot be picked. The header shows how
+the top-level folders in the pack, by type, each with its count, every
+resource in it with its name, and a button that removes it. Previews are drawn
+as on the type's own page: images and thumbnails on the transparency grid,
+sound waveforms, font glyphs, text style samples and color swatches, or the
+type's icon. Dependencies lists what the picks use (see below). Add folders
+opens a picker that shows one resource type at a time: a list of the types
+with resources, each with how many of its folders are picked, and the chosen
+type's top-level folders, the same way, each with a checkbox. A type with no
+folders says so. The picker opens on the type it showed last, or the first
+type with folders. Ticking or removing a folder saves the selection at once.
+Types follow the store's order. Within a type, the picker lists folders in
+the project's order, and the page and the pack keep them in the order they
+were picked: a newly ticked folder goes last. Resources outside a folder
+cannot be picked. The header shows how
 many resources are picked; Export stays disabled until something is, or while
 the selection uses a resource that no longer exists or a story scene.
 

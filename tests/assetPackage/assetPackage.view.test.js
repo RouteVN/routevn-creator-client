@@ -36,12 +36,10 @@ describe("asset package view", () => {
     expect(assetPackageView).toContain(
       "rtgl-button#removeFolderButton${sectionIndex}x${folderIndex}",
     );
-    expect(assetPackageView).toContain(
-      "rtgl-view#folderStrip${sectionIndex}x${folderIndex}",
-    );
-    expect(assetPackageView).toContain(
-      "rtgl-button#folderExpandButton${sectionIndex}x${folderIndex}",
-    );
+    // Each folder shows all its resources; nothing expands or collapses.
+    expect(assetPackageView).not.toContain("ExpandButton");
+    expect(assetPackageView).not.toContain("Strip");
+    expect(assetPackageView).toContain("$for tile, tileIndex in folder.items");
     expect(assetPackageView).toContain(
       "rtgl-button#addFoldersButton v=ol pre=plus",
     );

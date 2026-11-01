@@ -7,14 +7,6 @@ refs:
     eventListeners:
       click:
         handler: handleRemoveFolderClick
-  folderExpandButton*:
-    eventListeners:
-      click:
-        handler: handleFolderExpandClick
-  folderStrip*:
-    eventListeners:
-      click:
-        handler: handleFolderExpandClick
   pickerDialog:
     eventListeners:
       close:
@@ -31,14 +23,6 @@ refs:
     eventListeners:
       value-change:
         handler: handleFolderCheckboxChange
-  pickerExpandButton*:
-    eventListeners:
-      click:
-        handler: handleFolderExpandClick
-  pickerStrip*:
-    eventListeners:
-      click:
-        handler: handleFolderExpandClick
   downloadAssetPackageButton:
     eventListeners:
       click:
@@ -87,18 +71,8 @@ template:
                                                       - rtgl-text s=sm: ${folder.name}
                                                       - rtgl-text s=sm c=mu-fg: ${folder.countLabel}
                                                       - rtgl-view w=1fg: null
-                                                      - $if folder.canExpand:
-                                                          - 'rtgl-button#folderExpandButton${sectionIndex}x${folderIndex} data-resource-type="${section.resourceType}" data-folder-id="${folder.folderId}" sq v=gh s=sm pre=${folder.expandIcon} aria-label="${folder.expandLabel}" title="${folder.expandLabel}"': null
                                                       - 'rtgl-button#removeFolderButton${sectionIndex}x${folderIndex} data-resource-type="${section.resourceType}" data-folder-id="${folder.folderId}" sq v=gh s=sm pre=cross aria-label="${folder.removeLabel}" title="${folder.removeLabel}"': null
-                                                  # The first previews; clicking them shows the whole folder.
-                                                  - $if folder.hasStrip:
-                                                      - 'rtgl-view#folderStrip${sectionIndex}x${folderIndex} data-resource-type="${section.resourceType}" data-folder-id="${folder.folderId}" w=f d=h av=c g=sm cur=pointer title="${folder.expandLabel}"':
-                                                          - $for tile, tileIndex in folder.strip:
-                                                              - rtgl-view w=96:
-                                                                  - rvn-asset-package-preview-tile :preview=${tile}: null
-                                                          - $if folder.moreLabel:
-                                                              - rtgl-text s=sm c=mu-fg: ${folder.moreLabel}
-                                                  - $if folder.isExpanded:
+                                                  - $if folder.resourceCount:
                                                       - rtgl-grid cols=6 md-cols=4 sm-cols=2 w=f g=sm:
                                                           - $for tile, tileIndex in folder.items:
                                                               - rvn-asset-package-preview-tile :preview=${tile}: null
@@ -151,17 +125,7 @@ template:
                               - rtgl-view w=f d=h av=c g=sm:
                                   - 'rtgl-checkbox#folderCheckbox${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" ?checked=${folder.selected}': ${folder.name}
                                   - rtgl-text s=sm c=mu-fg: ${folder.countLabel}
-                                  - rtgl-view w=1fg: null
-                                  - $if folder.canExpand:
-                                      - 'rtgl-button#pickerExpandButton${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" data-picker="true" sq v=gh s=sm pre=${folder.expandIcon} aria-label="${folder.expandLabel}" title="${folder.expandLabel}"': null
-                              - $if folder.hasStrip:
-                                  - 'rtgl-view#pickerStrip${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" data-picker="true" w=f d=h av=c g=sm cur=pointer title="${folder.expandLabel}"':
-                                      - $for tile, tileIndex in folder.strip:
-                                          - rtgl-view w=80:
-                                              - rvn-asset-package-preview-tile :preview=${tile}: null
-                                      - $if folder.moreLabel:
-                                          - rtgl-text s=sm c=mu-fg: ${folder.moreLabel}
-                              - $if folder.isExpanded:
+                              - $if folder.resourceCount:
                                   - rtgl-grid cols=5 sm-cols=2 w=f g=sm:
                                       - $for tile, tileIndex in folder.items:
                                           - rvn-asset-package-preview-tile :preview=${tile}: null

@@ -62,18 +62,6 @@ export const handleFolderCheckboxChange = async (deps, payload) => {
   await persistAssetPackage(deps);
 };
 
-export const handleFolderExpandClick = (deps, payload) => {
-  const { render, store } = deps;
-  const { resourceType, folderId, picker } =
-    payload._event.currentTarget.dataset;
-  store.toggleFolderExpanded({
-    resourceType,
-    folderId,
-    inPicker: picker === "true",
-  });
-  render();
-};
-
 export const handleRemoveFolderClick = async (deps, payload) => {
   const { render, store } = deps;
   const { resourceType, folderId } = payload._event.currentTarget.dataset;
