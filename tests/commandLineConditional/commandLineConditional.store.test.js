@@ -69,9 +69,9 @@ describe("commandLineConditional.store", () => {
       { value: true, label: "Verdadeiro" },
       { value: false, label: "Falso" },
     ]);
-    expect(
-      selectViewData({ state, i18n: JA_I18N }).branches[0].summary,
-    ).toMatch(/真$/);
+    expect(selectViewData({ state, i18n: JA_I18N }).branches[0].summary).toBe(
+      "Activeが真と等しい",
+    );
     expect(
       selectViewData({ state, i18n: FR_I18N }).branches.map(
         (branch) => branch.summary,

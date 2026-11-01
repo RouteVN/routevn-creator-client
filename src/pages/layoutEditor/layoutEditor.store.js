@@ -33,7 +33,10 @@ import {
   moveEditHistoryStep as moveHistoryStep,
   recordEditHistoryStep as recordHistoryStep,
 } from "../../internal/editHistory.js";
-import { restoreLayoutElementSnapshot } from "../../internal/project/layout.js";
+import {
+  isFragmentLayout,
+  restoreLayoutElementSnapshot,
+} from "../../internal/project/layout.js";
 
 const normalizePreviewData = (previewData) => {
   return previewData && typeof previewData === "object"
@@ -941,6 +944,13 @@ export const selectViewData = ({ state, constants, i18n }) => {
     canvasDisableInteraction:
       selectedItemIsEffectivelyHidden || isCanvasSelectionDisabled,
     isInsideSaveLoadSlot: detailPanelIsInsideSaveLoadSlot,
+    // An Auto Save/Load Slot takes its slot from the clicked save/load slot
+    // container, so it works on that container, inside it, and in a fragment
+    // that may be placed inside one.
+    allowAutoSlot:
+      isFragmentLayout(state.layout) ||
+      item?.type === "container-ref-save-load-slot" ||
+      detailPanelIsInsideSaveLoadSlot,
     isInsideDirectedContainer: detailPanelIsInsideDirectedContainer,
     isTouchMode: state.isTouchMode,
     showExplorerPanel: !state.isTouchMode,

@@ -8,6 +8,7 @@ import {
   isNonEmptyString,
   resolveSceneIdForPartition,
 } from "../projectRepositoryViews/shared.js";
+import { canSkipDuplicateCreateDuringReplay } from "../projectRepositoryRuntime.js";
 
 export const DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE = "snapshot_archive";
 const PROJECT_CREATE_TYPE = "project.create";
@@ -495,12 +496,19 @@ export const loadRepositoryEventsFromClientStore = async ({
   // A draft replayed before any project.create replays onto an empty project
   // rather than the one it was made in, as in desktop history backed by a main
   // checkpoint, so it may fail there and still be part of the project. A draft
-  // that repeats a committed event is already in the committed history.
-  // Neither is reported as missing.
+  // that repeats a committed event is already in the committed history, and
+  // one that creates a file or resource the project already has, with the
+  // same data, is already applied. None of them is reported as missing.
   const isProjectCreate = (event) => event?.type === PROJECT_CREATE_TYPE;
   const committedEventIds = new Set(committed.map((event) => event?.id));
-  const isMissingFromProject = (failedDraft) =>
-    events.some(isProjectCreate) && !committedEventIds.has(failedDraft.id);
+  const isMissingFromProject = ({ failedDraft, repositoryState, error }) =>
+    events.some(isProjectCreate) &&
+    !committedEventIds.has(failedDraft.id) &&
+    !canSkipDuplicateCreateDuringReplay({
+      repositoryState,
+      event: failedDraft,
+      error,
+    });
 
   // Appends the drafts that apply to `events` and leaves out the ones that do
   // not, one at a time.
@@ -551,7 +559,7 @@ export const loadRepositoryEventsFromClientStore = async ({
         failedDraft,
         error,
       });
-      if (isMissingFromProject(failedDraft)) {
+      if (isMissingFromProject({ failedDraft, repositoryState, error })) {
         onSkippedDraft({
           draftId: failedDraft.id,
           type: failedDraft.type,

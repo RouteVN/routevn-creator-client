@@ -15,3 +15,5 @@ propsSchema:
       type: array
       items:
         type: object
+    allowAutoSlot:
+      type: boolean

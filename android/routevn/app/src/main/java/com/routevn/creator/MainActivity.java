@@ -5193,6 +5193,7 @@ public class MainActivity extends Activity {
         String fileId = safePathSegment("file-" + index);
         String displayName = resolveContentDisplayName(uri, fileId);
         String mimeType = resolveContentMimeType(uri, displayName);
+        displayName = ensureAudioFileExtension(displayName, mimeType);
         long size = writePickerFileBytes(requestId, fileId, uri, mimeType);
 
         JSONObject file = new JSONObject();
@@ -5272,6 +5273,41 @@ public class MainActivity extends Activity {
         return normalizeMimeType(guessedMimeType);
     }
 
+    // Android 10 and earlier name audio documents after their title tag, which
+    // has no file extension. Sound uploads check the extension, so add it.
+    private String ensureAudioFileExtension(String displayName, String mimeType) {
+        String extension = resolveAudioFileExtension(mimeType);
+        String lowerCaseName = displayName.toLowerCase(Locale.ROOT);
+        if (
+            extension == null ||
+            lowerCaseName.endsWith(".mp3") ||
+            lowerCaseName.endsWith(".wav") ||
+            lowerCaseName.endsWith(".ogg")
+        ) {
+            return displayName;
+        }
+
+        return displayName + "." + extension;
+    }
+
+    private String resolveAudioFileExtension(String mimeType) {
+        switch (mimeType.trim().toLowerCase(Locale.ROOT)) {
+            case "audio/mpeg":
+            case "audio/mp3":
+            case "audio/x-mpeg":
+                return "mp3";
+            case "audio/wav":
+            case "audio/wave":
+            case "audio/x-wav":
+                return "wav";
+            case "audio/ogg":
+            case "application/ogg":
+                return "ogg";
+            default:
+                return null;
+        }
+    }
+
     private String[] resolveAcceptedMimeTypes(String accept) {
         String normalizedAccept = accept == null ? "" : accept;
         String[] tokens = normalizedAccept.split(",");
@@ -5288,15 +5324,14 @@ public class MainActivity extends Activity {
                 continue;
             }
 
-            boolean exists = false;
-            for (int index = 0; index < mimeTypes.length(); index += 1) {
-                if (mimeType.equals(mimeTypes.optString(index))) {
-                    exists = true;
-                    break;
-                }
-            }
-            if (!exists) {
-                mimeTypes.put(mimeType);
+            addAcceptedMimeType(mimeTypes, mimeType);
+            // Android reports WAV files as audio/x-wav, and up to Android 10 its
+            // Audio section reports OGG files as application/ogg. The picker
+            // greys out files whose type is not listed.
+            if ("audio/wav".equals(mimeType)) {
+                addAcceptedMimeType(mimeTypes, "audio/x-wav");
+            } else if ("audio/ogg".equals(mimeType)) {
+                addAcceptedMimeType(mimeTypes, "application/ogg");
             }
         }
 
@@ -5309,6 +5344,15 @@ public class MainActivity extends Activity {
             result[index] = mimeTypes.optString(index);
         }
         return result;
+    }
+
+    private void addAcceptedMimeType(JSONArray mimeTypes, String mimeType) {
+        for (int index = 0; index < mimeTypes.length(); index += 1) {
+            if (mimeType.equals(mimeTypes.optString(index))) {
+                return;
+            }
+        }
+        mimeTypes.put(mimeType);
     }
 
     private String mapAcceptedValueToMimeType(String value) {

@@ -24,8 +24,16 @@ export const handleFormChange = (deps, payload) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent, store } = deps;
-  const rawSlotId = store.selectDefaultValues().slotId;
+  const { dispatchEvent, refs } = deps;
+  const { form } = refs;
+
+  if (!form.validate().valid) {
+    return;
+  }
+
+  // Read the form itself: form-change only fires once the field commits, so
+  // a slot typed just before Submit may not have reached the store yet.
+  const rawSlotId = form.getValues().slotId;
   const slotId =
     typeof rawSlotId === "string" ? rawSlotId.trim() : String(rawSlotId ?? "");
   const detail = {

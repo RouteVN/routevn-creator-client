@@ -55,6 +55,8 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
     "incrementSaveLoadPageDescription",
   "Leave empty for auto, or use a fixed value like 1, ${slot.slotId}, or _event.slotId":
     "slotIdDescription",
+  "Auto only works inside a Save/Load Slot container. Enter a slot id.":
+    "autoSlotOutsideSlotContainer",
   "Pop the current overlay and return to the previous view.":
     "popOverlayDescription",
   "Single Line applies only to the next line. Persistent keeps this config active until changed":

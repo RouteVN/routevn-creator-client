@@ -4,3 +4,5 @@ propsSchema:
   properties:
     saveSlot:
       type: object
+    allowAutoSlot:
+      type: boolean

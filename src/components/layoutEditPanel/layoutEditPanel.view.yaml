@@ -543,7 +543,7 @@ template:
                                       - rtgl-text key=${part.key} s=sm: ${part.text}
   - $if showTrailingDivider:
       - rtgl-view h=1 w=f bgc=mu mv=lg: null
-  - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
+  - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes} :allowAutoSlot=${allowAutoSlot}: null
   - 'rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y} content-style="max-width: calc(100vw - 16px);"':
       - $if popover.open:
           - $if popover.context.isSliderPopover:

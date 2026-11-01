@@ -933,6 +933,82 @@ describe("animationEditor.store", () => {
     });
   });
 
+  it("keeps a keyframe value when the edit dialog submits a cleared field", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.y = {
+      keyframes: [
+        { duration: 500, easing: "linear", value: 10 },
+        { duration: 500, easing: "linear", value: 100 },
+      ],
+    };
+
+    for (const value of [null, "", "-"]) {
+      updateKeyframe(
+        { state },
+        {
+          side: "update",
+          property: "y",
+          index: 1,
+          keyframe: {
+            delay: 0,
+            duration: 500,
+            easing: "linear",
+            relative: false,
+            value,
+          },
+        },
+      );
+      expect(state.tweenBySection.update.y.keyframes[1].value).toBe(100);
+    }
+
+    updateKeyframe(
+      { state },
+      {
+        side: "update",
+        property: "y",
+        index: 1,
+        keyframe: {
+          delay: 0,
+          duration: 500,
+          easing: "linear",
+          relative: false,
+          value: "-12.5",
+        },
+      },
+    );
+    expect(state.tweenBySection.update.y.keyframes[1].value).toBe(-12.5);
+
+    const [animation] = selectAnimationRenderStateWithAnimations({
+      state,
+    }).animations;
+    expect(
+      animation.tween.y.keyframes.map((keyframe) => keyframe.value),
+    ).toEqual([10, -12.5]);
+  });
+
+  it("adds a keyframe with the default value when its field was cleared", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    state.tweenBySection.update.y = {
+      keyframes: [{ duration: 500, easing: "linear", value: 10 }],
+    };
+
+    addKeyframe(
+      { state },
+      {
+        side: "update",
+        property: "y",
+        duration: 500,
+        easing: "linear",
+        relative: false,
+        value: null,
+      },
+    );
+
+    expect(state.tweenBySection.update.y.keyframes[1].value).toBe(0);
+  });
+
   it("offsets the following delay when a keyframe moves", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "update" });

@@ -53,6 +53,13 @@ export const handleClickSocialButton = async (deps, payload) => {
   appService.openUrl(social.href);
 };
 
+export const handleClickChatSupportButton = (deps, payload) => {
+  const { appService, store } = deps;
+  const { id } = payload._event.currentTarget.dataset;
+  const chat = store.selectChatSupport({ id });
+  appService.openUrl(chat.href);
+};
+
 export const handleClickContactButton = (deps) => {
   const { appService } = deps;
   appService.openUrl(ROUTEVN_CONTACT_URL);
