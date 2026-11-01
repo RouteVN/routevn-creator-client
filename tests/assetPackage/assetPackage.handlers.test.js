@@ -1,18 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { ASSET_PACKAGE_RESOURCE_TYPES } from "../../src/internal/assetPackageResources.js";
 import {
-  handleAddResourceTypeButtonClick,
   handleAfterMount,
   handleBeforeMount,
-  handleConfirmResourceFolders,
   handleDownloadAssetPackageButtonClick,
-  handleEditResourceFoldersButtonClick,
-  handleResourceFolderOptionClick,
-  handleResourceFolderPickerClose,
-  handleResourceTypeContextMenuClose,
-  handleResourceTypeContextMenuItemClick,
-  handleResourceTypeHeadingContextMenu,
-  handleResourceTypeMenuItemClick,
+  handleFolderCheckboxChange,
+  handleFolderExpandClick,
+  handleResourceTypeHeaderClick,
 } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -83,16 +77,6 @@ const createDeps = () => ({
   refs: {},
   render: vi.fn(),
   store: {
-    closeResourceFolderPicker: vi.fn(),
-    closeResourceTypeContextMenu: vi.fn(),
-    closeResourceTypeMenu: vi.fn(),
-    confirmResourceFolderSelection: vi.fn(),
-    openResourceFolderPicker: vi.fn(),
-    openResourceTypeContextMenu: vi.fn(),
-    openResourceTypeMenu: vi.fn(),
-    moveResourceType: vi.fn(),
-    selectResourceTypeContextMenuResourceType: vi.fn(() => "sounds"),
-    selectResourceTypeMenuPosition: vi.fn(() => ({ x: 20, y: 60 })),
     selectAssetPackageData: vi.fn(() => ({
       repository: ASSET_PACKAGE_REPOSITORY,
       dependencies: {},
@@ -102,7 +86,9 @@ const createDeps = () => ({
     setAssetPackage: vi.fn(),
     setResourceData: vi.fn(),
     setUiConfig: vi.fn(),
-    toggleResourceFolderSelection: vi.fn(),
+    toggleFolder: vi.fn(),
+    toggleFolderExpanded: vi.fn(),
+    toggleResourceTypeCollapsed: vi.fn(),
   },
   uiConfig: { id: "desktop" },
 });
@@ -158,57 +144,35 @@ describe("asset package handlers", () => {
     });
   });
 
-  it("opens the menu and generic folder picker for any resource type", () => {
-    const deps = createDeps();
-    const buttonPayload = {
-      _event: {
-        currentTarget: {
-          dataset: { resourceType: "textStyles" },
-          getBoundingClientRect: () => ({ left: 20, bottom: 60 }),
-        },
+  const folderEvent = (detail) => ({
+    _event: {
+      currentTarget: {
+        dataset: { resourceType: "images", folderId: "image-folder-1" },
       },
-    };
-
-    handleAddResourceTypeButtonClick(deps, buttonPayload);
-    handleResourceTypeMenuItemClick(deps, {
-      _event: { detail: { item: { value: "particles" } } },
-    });
-    handleEditResourceFoldersButtonClick(deps, buttonPayload);
-
-    expect(deps.store.openResourceTypeMenu).toHaveBeenCalledWith({
-      x: 20,
-      y: 60,
-    });
-    expect(deps.store.openResourceFolderPicker).toHaveBeenNthCalledWith(1, {
-      resourceType: "particles",
-      x: 20,
-      y: 60,
-    });
-    expect(deps.store.openResourceFolderPicker).toHaveBeenNthCalledWith(2, {
-      resourceType: "textStyles",
-      x: 20,
-      y: 60,
-    });
+      detail,
+    },
   });
 
-  it("toggles, confirms, persists, and closes generic folder selection", async () => {
+  it("ticks a folder and saves the selection at once", async () => {
     const deps = createDeps();
 
-    handleResourceFolderOptionClick(deps, {
-      _event: { currentTarget: { dataset: { folderId: "folder-1" } } },
-    });
-    await handleConfirmResourceFolders(deps);
-    handleResourceFolderPickerClose(deps);
+    await handleFolderCheckboxChange(deps, folderEvent({ value: true }));
+    await handleFolderCheckboxChange(deps, folderEvent({ value: false }));
 
-    expect(deps.store.toggleResourceFolderSelection).toHaveBeenCalledWith({
-      folderId: "folder-1",
+    expect(deps.store.toggleFolder).toHaveBeenNthCalledWith(1, {
+      resourceType: "images",
+      folderId: "image-folder-1",
+      selected: true,
     });
-    expect(deps.store.confirmResourceFolderSelection).toHaveBeenCalledOnce();
+    expect(deps.store.toggleFolder).toHaveBeenNthCalledWith(2, {
+      resourceType: "images",
+      folderId: "image-folder-1",
+      selected: false,
+    });
     expect(deps.projectService.updateCurrentAssetPackage).toHaveBeenCalledWith(
       SAVED_ASSET_PACKAGE,
     );
-    expect(deps.store.closeResourceFolderPicker).toHaveBeenCalledOnce();
-    expect(deps.render).toHaveBeenCalledTimes(3);
+    expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
   it("shows feedback when the asset package cannot be saved", async () => {
@@ -217,7 +181,7 @@ describe("asset package handlers", () => {
       new Error("Storage unavailable"),
     );
 
-    await handleConfirmResourceFolders(deps);
+    await handleFolderCheckboxChange(deps, folderEvent({ value: true }));
 
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Could not save the asset package. Please try again.",
@@ -225,40 +189,23 @@ describe("asset package handlers", () => {
     });
   });
 
-  it("opens the resource type context menu and persists the moved section", async () => {
+  it("expands a folder and collapses a type without saving", () => {
     const deps = createDeps();
-    const preventDefault = vi.fn();
 
-    handleResourceTypeHeadingContextMenu(deps, {
-      _event: {
-        currentTarget: { dataset: { resourceType: "sounds" } },
-        clientX: 30,
-        clientY: 40,
-        preventDefault,
-      },
-    });
-    expect(preventDefault).toHaveBeenCalledOnce();
-    expect(deps.store.openResourceTypeContextMenu).toHaveBeenCalledWith({
-      resourceType: "sounds",
-      x: 30,
-      y: 40,
-    });
+    handleFolderExpandClick(deps, folderEvent());
+    handleResourceTypeHeaderClick(deps, folderEvent());
 
-    await handleResourceTypeContextMenuItemClick(deps, {
-      _event: { detail: { item: { value: "move-up" } } },
+    expect(deps.store.toggleFolderExpanded).toHaveBeenCalledWith({
+      resourceType: "images",
+      folderId: "image-folder-1",
     });
-    expect(deps.store.closeResourceTypeContextMenu).toHaveBeenCalledOnce();
-    expect(deps.store.moveResourceType).toHaveBeenCalledWith({
-      resourceType: "sounds",
-      offset: -1,
+    expect(deps.store.toggleResourceTypeCollapsed).toHaveBeenCalledWith({
+      resourceType: "images",
     });
-    expect(deps.projectService.updateCurrentAssetPackage).toHaveBeenCalledWith(
-      SAVED_ASSET_PACKAGE,
-    );
-
-    handleResourceTypeContextMenuClose(deps);
-    expect(deps.store.closeResourceTypeContextMenu).toHaveBeenCalledTimes(2);
-    expect(deps.render).toHaveBeenCalledTimes(3);
+    expect(
+      deps.projectService.updateCurrentAssetPackage,
+    ).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
   it("chooses the path before exporting and reports completion", async () => {

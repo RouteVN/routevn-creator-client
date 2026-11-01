@@ -3,13 +3,20 @@ import {
   ASSET_PACKAGE_SCHEMA_VERSION,
   normalizeAssetPackage,
 } from "../../internal/assetPackageResources.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  formatI18nCopy,
+  formatPluralCopy,
+} from "../../internal/ui/i18nCopy.js";
 import {
   createAssetPackageContents,
   isTopLevelFolder,
   listAssetPackageDependencies,
   selectTopLevelFolders,
 } from "./support/assetPackageManifest.js";
+import {
+  collectFolderResources,
+  createResourcePreview,
+} from "./support/assetPackagePreviews.js";
 
 const ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS =
   ASSET_PACKAGE_RESOURCE_CONFIGS.filter(
@@ -20,6 +27,14 @@ const ASSET_PACKAGE_CREATOR_RESOURCE_TYPES = new Set(
     ({ resourceType }) => resourceType,
   ),
 );
+// A pack lists its types in this order, and each type's folders in the
+// order the project has them.
+const RESOURCE_TYPE_ORDER = ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(
+  ({ resourceType }) => resourceType,
+);
+// A folder row shows its first few previews; expanding it shows them all.
+const STRIP_SIZE = 6;
+const MAX_LISTED_USERS = 3;
 
 const createEmptyResourceData = () => ({
   items: {},
@@ -42,65 +57,21 @@ const createSelectedFolderIdsByType = () =>
     ]),
   );
 
-const createResourceTypeOrder = () =>
-  ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(
-    ({ resourceType }) => resourceType,
-  );
-
-const createResourceTypeContextMenu = () => ({
-  isOpen: false,
-  x: 0,
-  y: 0,
-  resourceType: undefined,
-});
-
-const createFolderPicker = () => ({
-  resourceType: undefined,
-  isOpen: false,
-  x: 0,
-  y: 0,
-  draftSelectedFolderIds: [],
-});
-
-const buildFolderViewData = ({ resourceData, folderPicker, selectedIds }) => {
-  const folders = selectTopLevelFolders(resourceData);
-  const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
-  const folderOptions = folders.map((folder) => {
-    const selectedIndex = folderPicker.draftSelectedFolderIds.indexOf(
-      folder.id,
+const sortByProjectOrder = (resourceData, folderIds) =>
+  resourceData.tree
+    .map((node) => node.id)
+    .filter(
+      (folderId) =>
+        folderIds.includes(folderId) &&
+        isTopLevelFolder(resourceData, folderId),
     );
-    const selected = selectedIndex !== -1;
-    const selectionOrder = selected ? selectedIndex + 1 : undefined;
-    return {
-      id: folder.id,
-      label: folder.name,
-      selected,
-      selectionOrder,
-      icon: "folder",
-      buttonVariant: selected ? "se" : "gh",
-    };
-  });
-  const selectedFolders = selectedIds
-    .map((folderId) => {
-      const folder = foldersById.get(folderId);
-      if (!folder) {
-        return undefined;
-      }
 
-      return {
-        id: folder.id,
-        label: folder.name,
-      };
-    })
-    .filter(Boolean);
+const toFolderKey = (resourceType, folderId) => `${resourceType}:${folderId}`;
 
-  return { folderOptions, selectedFolders };
-};
-
-const selectOrderedSelectedResourceTypes = (state) =>
-  state.resourceTypeOrder.filter(
-    (resourceType) => state.selectedFolderIdsByType[resourceType].length > 0,
-  );
+const toggleListValue = (values, value) =>
+  values.includes(value)
+    ? values.filter((entry) => entry !== value)
+    : [...values, value];
 
 export const createInitialState = () => ({
   resourceCategory: "releases",
@@ -109,14 +80,8 @@ export const createInitialState = () => ({
   filesData: { items: {} },
   resourceDataByType: createResourceDataByType(),
   selectedFolderIdsByType: createSelectedFolderIdsByType(),
-  resourceTypeOrder: createResourceTypeOrder(),
-  resourceTypeMenu: {
-    isOpen: false,
-    x: 0,
-    y: 0,
-  },
-  resourceTypeContextMenu: createResourceTypeContextMenu(),
-  folderPicker: createFolderPicker(),
+  expandedFolderKeys: [],
+  collapsedResourceTypes: [],
 });
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
@@ -138,157 +103,59 @@ export const setResourceData = ({ state }, { resourceDataByType } = {}) => {
 export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
   const normalizedAssetPackage = normalizeAssetPackage(assetPackage);
   const selectedFolderIdsByType = createSelectedFolderIdsByType();
-  const selectedResourceTypes = [];
-
   for (const { resourceType, folderIds } of normalizedAssetPackage.resources) {
     if (!ASSET_PACKAGE_CREATOR_RESOURCE_TYPES.has(resourceType)) {
       continue;
     }
-
-    const resourceData = state.resourceDataByType[resourceType];
-    const validFolderIds = folderIds.filter((folderId) =>
-      isTopLevelFolder(resourceData, folderId),
+    selectedFolderIdsByType[resourceType] = sortByProjectOrder(
+      state.resourceDataByType[resourceType],
+      folderIds,
     );
-    if (validFolderIds.length === 0) {
-      continue;
-    }
-
-    selectedFolderIdsByType[resourceType] = validFolderIds;
-    selectedResourceTypes.push(resourceType);
   }
-
   state.selectedFolderIdsByType = selectedFolderIdsByType;
-  state.resourceTypeOrder = [
-    ...selectedResourceTypes,
-    ...createResourceTypeOrder().filter(
-      (resourceType) => !selectedResourceTypes.includes(resourceType),
-    ),
-  ];
 };
 
-export const openResourceTypeMenu = ({ state }, { x, y } = {}) => {
-  state.resourceTypeMenu.isOpen = true;
-  state.resourceTypeMenu.x = x;
-  state.resourceTypeMenu.y = y;
-};
-
-export const closeResourceTypeMenu = ({ state }) => {
-  state.resourceTypeMenu.isOpen = false;
-};
-
-export const selectResourceTypeMenuPosition = ({ state }) => ({
-  x: state.resourceTypeMenu.x,
-  y: state.resourceTypeMenu.y,
-});
-
-export const openResourceTypeContextMenu = (
+// Ticks or unticks a top-level folder; `selected` says which, or the folder
+// flips.
+export const toggleFolder = (
   { state },
-  { resourceType, x, y } = {},
-) => {
-  const selectedResourceTypes = selectOrderedSelectedResourceTypes(state);
-  if (
-    selectedResourceTypes.length < 2 ||
-    !selectedResourceTypes.includes(resourceType)
-  ) {
-    state.resourceTypeContextMenu = createResourceTypeContextMenu();
-    return;
-  }
-
-  state.resourceTypeContextMenu.isOpen = true;
-  state.resourceTypeContextMenu.x = x;
-  state.resourceTypeContextMenu.y = y;
-  state.resourceTypeContextMenu.resourceType = resourceType;
-};
-
-export const closeResourceTypeContextMenu = ({ state }) => {
-  state.resourceTypeContextMenu = createResourceTypeContextMenu();
-};
-
-export const selectResourceTypeContextMenuResourceType = ({ state }) =>
-  state.resourceTypeContextMenu.resourceType;
-
-export const moveResourceType = ({ state }, { resourceType, offset } = {}) => {
-  const selectedResourceTypes = selectOrderedSelectedResourceTypes(state);
-  const selectedIndex = selectedResourceTypes.indexOf(resourceType);
-  const targetSelectedIndex = selectedIndex + offset;
-  if (
-    selectedIndex === -1 ||
-    targetSelectedIndex < 0 ||
-    targetSelectedIndex >= selectedResourceTypes.length
-  ) {
-    return;
-  }
-
-  const targetResourceType = selectedResourceTypes[targetSelectedIndex];
-  const resourceIndex = state.resourceTypeOrder.indexOf(resourceType);
-  const targetResourceIndex =
-    state.resourceTypeOrder.indexOf(targetResourceType);
-  state.resourceTypeOrder[resourceIndex] = targetResourceType;
-  state.resourceTypeOrder[targetResourceIndex] = resourceType;
-};
-
-export const openResourceFolderPicker = (
-  { state },
-  { resourceType, x, y } = {},
+  { resourceType, folderId, selected } = {},
 ) => {
   const resourceData = state.resourceDataByType[resourceType];
   if (
     !ASSET_PACKAGE_CREATOR_RESOURCE_TYPES.has(resourceType) ||
     !resourceData ||
-    selectTopLevelFolders(resourceData).length === 0
+    !isTopLevelFolder(resourceData, folderId)
   ) {
-    state.folderPicker.resourceType = undefined;
-    state.folderPicker.isOpen = false;
-    state.folderPicker.draftSelectedFolderIds = [];
     return;
   }
-
-  state.folderPicker.resourceType = resourceType;
-  state.folderPicker.isOpen = true;
-  state.folderPicker.x = x;
-  state.folderPicker.y = y;
-  state.folderPicker.draftSelectedFolderIds = [
-    ...state.selectedFolderIdsByType[resourceType],
-  ];
+  const selectedIds = state.selectedFolderIdsByType[resourceType];
+  const nextSelected = selected ?? !selectedIds.includes(folderId);
+  const otherIds = selectedIds.filter((id) => id !== folderId);
+  state.selectedFolderIdsByType[resourceType] = sortByProjectOrder(
+    resourceData,
+    nextSelected ? [...otherIds, folderId] : otherIds,
+  );
 };
 
-export const closeResourceFolderPicker = ({ state }) => {
-  const { resourceType } = state.folderPicker;
-  state.folderPicker.isOpen = false;
-  state.folderPicker.draftSelectedFolderIds = resourceType
-    ? [...state.selectedFolderIdsByType[resourceType]]
-    : [];
+export const toggleFolderExpanded = (
+  { state },
+  { resourceType, folderId } = {},
+) => {
+  state.expandedFolderKeys = toggleListValue(
+    state.expandedFolderKeys,
+    toFolderKey(resourceType, folderId),
+  );
 };
 
-export const toggleResourceFolderSelection = ({ state }, { folderId } = {}) => {
-  const { resourceType } = state.folderPicker;
-  const resourceData = state.resourceDataByType[resourceType];
-  if (!resourceData || !isTopLevelFolder(resourceData, folderId)) {
-    return;
-  }
-
-  const selectedIndex =
-    state.folderPicker.draftSelectedFolderIds.indexOf(folderId);
-  if (selectedIndex === -1) {
-    state.folderPicker.draftSelectedFolderIds.push(folderId);
-    return;
-  }
-
-  state.folderPicker.draftSelectedFolderIds.splice(selectedIndex, 1);
-};
-
-export const confirmResourceFolderSelection = ({ state }) => {
-  const { resourceType } = state.folderPicker;
-  const resourceData = state.resourceDataByType[resourceType];
-  if (!resourceData) {
-    return;
-  }
-
-  state.selectedFolderIdsByType[resourceType] =
-    state.folderPicker.draftSelectedFolderIds.filter((folderId) =>
-      isTopLevelFolder(resourceData, folderId),
-    );
-  state.folderPicker.isOpen = false;
+export const toggleResourceTypeCollapsed = (
+  { state },
+  { resourceType } = {},
+) => {
+  state.collapsedResourceTypes = toggleListValue(
+    state.collapsedResourceTypes,
+    resourceType,
+  );
 };
 
 export const selectAssetPackageData = ({ state }) =>
@@ -296,31 +163,43 @@ export const selectAssetPackageData = ({ state }) =>
     filesData: state.filesData,
     resourceDataByType: state.resourceDataByType,
     selectedFolderIdsByType: state.selectedFolderIdsByType,
-    resourceTypeOrder: state.resourceTypeOrder,
+    resourceTypeOrder: RESOURCE_TYPE_ORDER,
   });
 
 export const selectAssetPackage = ({ state }) => ({
   schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
-  resources: selectOrderedSelectedResourceTypes(state).map((resourceType) => ({
+  resources: RESOURCE_TYPE_ORDER.filter(
+    (resourceType) => state.selectedFolderIdsByType[resourceType].length > 0,
+  ).map((resourceType) => ({
     resourceType,
     folderIds: [...state.selectedFolderIdsByType[resourceType]],
   })),
 });
 
-const MAX_LISTED_USERS = 3;
+const previewOf = (state, resourceType, itemId, extra = {}) => ({
+  ...createResourcePreview({
+    resourceType,
+    itemId,
+    item: state.resourceDataByType[resourceType].items[itemId],
+    resourceDataByType: state.resourceDataByType,
+  }),
+  ...extra,
+});
 
 // "Comes with": what the picks use that is not a pick, by type. A selection
-// that cannot be exported lists nothing; Export reports why.
+// that cannot be exported lists nothing and says so.
 const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   let dependencies;
+  let isInvalid = false;
   try {
     dependencies = listAssetPackageDependencies({
       resourceDataByType: state.resourceDataByType,
       selectedFolderIdsByType: state.selectedFolderIdsByType,
-      resourceTypeOrder: state.resourceTypeOrder,
+      resourceTypeOrder: RESOURCE_TYPE_ORDER,
     });
   } catch {
     dependencies = [];
+    isInvalid = true;
   }
   const nameById = new Map(
     Object.values(state.resourceDataByType).flatMap((resourceData) =>
@@ -350,95 +229,137 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
       id: dependency.itemId,
       name: dependency.name,
       usedBy: formatI18nCopy(copy.usedByLabel, { names }),
+      preview: previewOf(state, dependency.resourceType, dependency.itemId),
     });
   }
   return {
     isVisible: groups.length > 0,
+    isInvalid,
+    invalidMessage: copy.selectionInvalid,
     title: copy.comesWithTitle,
     hint: copy.comesWithHint,
     groups,
   };
 };
 
+// The checklist: each type with resources, and its top-level folders, each
+// with its count and previews.
+const buildSectionsViewData = ({ state, copy, resourceTypesCopy, i18n }) =>
+  RESOURCE_TYPE_ORDER.flatMap((resourceType) => {
+    const resourceData = state.resourceDataByType[resourceType];
+    const resourceCount = Object.values(resourceData.items).filter(
+      (item) => item.type !== "folder",
+    ).length;
+    const folders = selectTopLevelFolders(resourceData);
+    if (folders.length === 0 && resourceCount === 0) {
+      return [];
+    }
+    const isCollapsed = state.collapsedResourceTypes.includes(resourceType);
+    const selectedIds = state.selectedFolderIdsByType[resourceType];
+    return [
+      {
+        resourceType,
+        label: resourceTypesCopy[resourceType] ?? resourceType,
+        isCollapsed,
+        headerIcon: isCollapsed ? "folderArrowRight" : "folderArrowDown",
+        selectedLabel:
+          selectedIds.length > 0
+            ? formatPluralCopy(
+                copy,
+                "selectedFolderCount",
+                selectedIds.length,
+                {
+                  dateTime: i18n.dateTime,
+                },
+              )
+            : "",
+        hasNoFolders: folders.length === 0,
+        noFoldersHint: copy.noFoldersHint,
+        folders: isCollapsed
+          ? []
+          : folders.map((folder) => {
+              const isExpanded = state.expandedFolderKeys.includes(
+                toFolderKey(resourceType, folder.id),
+              );
+              const resources = collectFolderResources(resourceData, folder.id);
+              const previews = (
+                isExpanded ? resources : resources.slice(0, STRIP_SIZE)
+              ).map(({ itemId }) =>
+                previewOf(state, resourceType, itemId, {
+                  showName: isExpanded,
+                }),
+              );
+              const hiddenCount = resources.length - STRIP_SIZE;
+              return {
+                folderId: folder.id,
+                name: folder.name,
+                selected: selectedIds.includes(folder.id),
+                countLabel: formatPluralCopy(
+                  copy,
+                  "folderResourceCount",
+                  resources.length,
+                  { dateTime: i18n.dateTime },
+                ),
+                canExpand: resources.length > 0,
+                isExpanded,
+                expandIcon: isExpanded ? "folderArrowDown" : "folderArrowRight",
+                expandLabel: isExpanded
+                  ? copy.collapseFolderLabel
+                  : copy.expandFolderLabel,
+                strip: isExpanded ? [] : previews,
+                hasStrip: !isExpanded && previews.length > 0,
+                moreLabel:
+                  !isExpanded && hiddenCount > 0
+                    ? formatI18nCopy(copy.moreCount, { count: hiddenCount })
+                    : "",
+                items: isExpanded ? previews : [],
+                resourceCount: resources.length,
+              };
+            }),
+      },
+    ];
+  });
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = i18n.assetPackagePage;
   const resourceTypesCopy = i18n.resourceTypes;
-  const resourceTypeMenuItems = [];
-  const selectedResourceSections = [];
-
-  for (const resourceType of state.resourceTypeOrder) {
-    const label = resourceTypesCopy[resourceType] ?? resourceType;
-    const { folderOptions, selectedFolders } = buildFolderViewData({
-      resourceData: state.resourceDataByType[resourceType],
-      folderPicker: createFolderPicker(),
-      selectedIds: state.selectedFolderIdsByType[resourceType],
-    });
-    if (selectedFolders.length === 0) {
-      if (folderOptions.length > 0) {
-        resourceTypeMenuItems.push({
-          label,
-          type: "item",
-          value: resourceType,
-        });
-      }
-      continue;
-    }
-    selectedResourceSections.push({
-      resourceType,
-      label,
-      selectedFolders,
-      editButtonLabel: formatI18nCopy(copy.editResourceFoldersButtonLabel, {
-        resourceType: label,
-      }),
-    });
-  }
-
-  const contextMenuResourceType = state.resourceTypeContextMenu.resourceType;
-  const contextMenuResourceIndex = selectedResourceSections.findIndex(
-    ({ resourceType }) => resourceType === contextMenuResourceType,
+  const sections = buildSectionsViewData({
+    state,
+    copy,
+    resourceTypesCopy,
+    i18n,
+  });
+  const comesWith = buildComesWithViewData({ state, copy, resourceTypesCopy });
+  const pickedCount = RESOURCE_TYPE_ORDER.reduce(
+    (count, resourceType) =>
+      count +
+      state.selectedFolderIdsByType[resourceType].reduce(
+        (folderCount, folderId) =>
+          folderCount +
+          collectFolderResources(
+            state.resourceDataByType[resourceType],
+            folderId,
+          ).length,
+        0,
+      ),
+    0,
   );
-  const contextMenuItems = [];
-  if (contextMenuResourceIndex > 0) {
-    contextMenuItems.push({
-      label: i18n.resourcePages.moveUpMenuItem,
-      type: "item",
-      value: "move-up",
-    });
-  }
-  if (
-    contextMenuResourceIndex >= 0 &&
-    contextMenuResourceIndex < selectedResourceSections.length - 1
-  ) {
-    contextMenuItems.push({
-      label: i18n.resourcePages.moveDownMenuItem,
-      type: "item",
-      value: "move-down",
-    });
-  }
-
-  const activeResourceType = state.folderPicker.resourceType;
-  const activeFolderViewData = activeResourceType
-    ? buildFolderViewData({
-        resourceData: state.resourceDataByType[activeResourceType],
-        folderPicker: state.folderPicker,
-        selectedIds: state.selectedFolderIdsByType[activeResourceType],
-      })
-    : { folderOptions: [], selectedFolders: [] };
 
   return {
     ...state,
     showExplorerPanel: !state.isTouchMode,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
-    resourceTypeMenuItems,
-    selectedResourceSections,
-    resourceTypeContextMenu: {
-      ...state.resourceTypeContextMenu,
-      items: contextMenuItems,
-    },
-    folderOptions: activeFolderViewData.folderOptions,
-    comesWith: buildComesWithViewData({ state, copy, resourceTypesCopy }),
-    resourceFolderPickerOpen:
-      state.folderPicker.isOpen &&
-      activeFolderViewData.folderOptions.length > 0,
+    introHint: copy.introHint,
+    hasSections: sections.length > 0,
+    emptyProjectMessage: copy.emptyProjectMessage,
+    sections,
+    comesWith,
+    pickedSummary:
+      pickedCount > 0
+        ? formatPluralCopy(copy, "pickedSummary", pickedCount, {
+            dateTime: i18n.dateTime,
+          })
+        : "",
+    exportDisabled: pickedCount === 0 || comesWith.isInvalid,
   };
 };

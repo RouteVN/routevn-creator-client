@@ -42,100 +42,31 @@ const persistAssetPackage = async (deps) => {
   }
 };
 
-export const handleAddResourceTypeButtonClick = (deps, payload) => {
-  const { render, store } = deps;
-  const rect = payload._event.currentTarget.getBoundingClientRect();
-  store.openResourceTypeMenu({ x: rect.left, y: rect.bottom });
-  render();
-};
-
-export const handleResourceTypeMenuClose = (deps) => {
-  const { render, store } = deps;
-  store.closeResourceTypeMenu();
-  render();
-};
-
-export const handleResourceTypeMenuItemClick = (deps, payload) => {
-  const { render, store } = deps;
-  const { item } = payload._event.detail;
-  const position = store.selectResourceTypeMenuPosition();
-  store.closeResourceTypeMenu();
-  store.openResourceFolderPicker({
-    resourceType: item.value,
-    ...position,
-  });
-  render();
-};
-
-export const handleResourceTypeHeadingContextMenu = (deps, payload) => {
+export const handleResourceTypeHeaderClick = (deps, payload) => {
   const { render, store } = deps;
   const { resourceType } = payload._event.currentTarget.dataset;
-  payload._event.preventDefault();
-  store.openResourceTypeContextMenu({
+  store.toggleResourceTypeCollapsed({ resourceType });
+  render();
+};
+
+// Ticking a folder saves the selection at once.
+export const handleFolderCheckboxChange = async (deps, payload) => {
+  const { render, store } = deps;
+  const { resourceType, folderId } = payload._event.currentTarget.dataset;
+  store.toggleFolder({
     resourceType,
-    x: payload._event.clientX,
-    y: payload._event.clientY,
+    folderId,
+    selected: payload._event.detail.value === true,
   });
-  render();
-};
-
-export const handleResourceTypeContextMenuClose = (deps) => {
-  const { render, store } = deps;
-  store.closeResourceTypeContextMenu();
-  render();
-};
-
-export const handleResourceTypeContextMenuItemClick = async (deps, payload) => {
-  const { render, store } = deps;
-  const { item } = payload._event.detail;
-  const resourceType = store.selectResourceTypeContextMenuResourceType();
-  store.closeResourceTypeContextMenu();
-  let moved = false;
-
-  if (item.value === "move-up") {
-    store.moveResourceType({ resourceType, offset: -1 });
-    moved = true;
-  }
-  if (item.value === "move-down") {
-    store.moveResourceType({ resourceType, offset: 1 });
-    moved = true;
-  }
-  render();
-  if (moved) {
-    await persistAssetPackage(deps);
-  }
-};
-
-export const handleEditResourceFoldersButtonClick = (deps, payload) => {
-  const { render, store } = deps;
-  const { resourceType } = payload._event.currentTarget.dataset;
-  const rect = payload._event.currentTarget.getBoundingClientRect();
-  store.openResourceFolderPicker({
-    resourceType,
-    x: rect.left,
-    y: rect.bottom,
-  });
-  render();
-};
-
-export const handleResourceFolderPickerClose = (deps) => {
-  const { render, store } = deps;
-  store.closeResourceFolderPicker();
-  render();
-};
-
-export const handleResourceFolderOptionClick = (deps, payload) => {
-  const { render, store } = deps;
-  const { folderId } = payload._event.currentTarget.dataset;
-  store.toggleResourceFolderSelection({ folderId });
-  render();
-};
-
-export const handleConfirmResourceFolders = async (deps) => {
-  const { render, store } = deps;
-  store.confirmResourceFolderSelection();
   render();
   await persistAssetPackage(deps);
+};
+
+export const handleFolderExpandClick = (deps, payload) => {
+  const { render, store } = deps;
+  const { resourceType, folderId } = payload._event.currentTarget.dataset;
+  store.toggleFolderExpanded({ resourceType, folderId });
+  render();
 };
 
 export const handleDownloadAssetPackageButtonClick = async (deps) => {

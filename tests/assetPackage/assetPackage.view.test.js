@@ -1,78 +1,65 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+const readView = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+
 describe("asset package view", () => {
-  it("renders release actions in the page header and confirmed resource sections", () => {
-    const assetPackageView = readFileSync(
-      new URL(
-        "../../src/pages/assetPackage/assetPackage.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
+  it("renders a folder checklist with previews, Comes with, and Export in the header", () => {
+    const assetPackageView = readView(
+      "../../src/pages/assetPackage/assetPackage.view.yaml",
     );
 
     expect(assetPackageView).toContain("rvn-resource-types");
-    expect(assetPackageView).not.toContain("packageMetadata");
     expect(assetPackageView).toContain(
       'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"',
     );
     expect(assetPackageView).toContain(
-      "rtgl-text w=1fg: ${i18n.assetPackagePage.title}",
+      "rtgl-button#downloadAssetPackageButton v=pr pre=download ?disabled=${exportDisabled}",
+    );
+    // One checklist: no menu, folder picker or ordering.
+    expect(assetPackageView).not.toContain("addResourceTypeButton");
+    expect(assetPackageView).not.toContain("rtgl-popover");
+    expect(assetPackageView).not.toContain("rtgl-dropdown-menu");
+    expect(assetPackageView).toContain(
+      "$for section, sectionIndex in sections",
     );
     expect(assetPackageView).toContain(
-      "rtgl-button#addResourceTypeButton v=pr pre=plus",
+      "rtgl-checkbox#folderCheckbox${sectionIndex}x${folderIndex}",
+    );
+    expect(assetPackageView).toContain("handler: handleFolderCheckboxChange");
+    expect(assetPackageView).toContain(
+      "rtgl-view#folderStrip${sectionIndex}x${folderIndex}",
     );
     expect(assetPackageView).toContain(
-      "rtgl-button#downloadAssetPackageButton v=pr pre=download",
-    );
-    expect(assetPackageView).not.toContain("addResourceTypeButton s=sm");
-    expect(assetPackageView).not.toContain("downloadAssetPackageButton s=sm");
-    expect(
-      assetPackageView.indexOf("rtgl-button#addResourceTypeButton"),
-    ).toBeLessThan(
-      assetPackageView.indexOf(
-        "$for section, sectionIndex in selectedResourceSections",
-      ),
+      "rtgl-button#folderExpandButton${sectionIndex}x${folderIndex}",
     );
     expect(assetPackageView).toContain(
-      "rtgl-dropdown-menu#resourceTypeMenu :items=${resourceTypeMenuItems}",
+      "rvn-asset-package-preview-tile :preview=${tile}",
     );
     expect(assetPackageView).toContain(
-      "$for section, sectionIndex in selectedResourceSections",
+      "rvn-asset-package-preview-tile :preview=${item.preview}",
     );
-    expect(assetPackageView).toContain(
-      "rtgl-button#editResourceFoldersButton${sectionIndex}",
+    expect(assetPackageView).toContain("$if comesWith.isVisible:");
+  });
+
+  it("draws each preview as the resource pages do", () => {
+    const tileView = readView(
+      "../../src/components/assetPackagePreviewTile/assetPackagePreviewTile.view.yaml",
     );
-    expect(assetPackageView).toContain(
-      "rtgl-text#resourceTypeHeading${sectionIndex}",
+
+    expect(tileView).toContain(
+      "rvn-file-image w=f h=f fileId=${fileId} originalFileId=${originalFileId} lazy",
     );
-    expect(assetPackageView).toContain(
-      "rtgl-view d=h av=c w=1fg h=32 ph=sm br=sm h-bgc=mu",
+    expect(tileView).toContain(
+      "rvn-waveform-visualizer waveformDataFileId=${waveformDataFileId}",
     );
-    expect(assetPackageView).not.toContain("cur=context-menu");
-    expect(assetPackageView).toContain(
-      "handler: handleResourceTypeHeadingContextMenu",
+    expect(tileView).toContain("rvn-font-preview mode=thumbnail :fontFamily=");
+    expect(tileView).toContain(
+      "rvn-font-preview mode=thumbnail :fontFamilies=${fontFamilies}",
     );
-    expect(assetPackageView).toContain(
-      "rtgl-dropdown-menu#resourceTypeContextMenu :items=${resourceTypeContextMenu.items}",
-    );
-    expect(assetPackageView).toContain(
-      'data-resource-type="${section.resourceType}"',
-    );
-    expect(assetPackageView).toContain(
-      "$for folder, folderIndex in section.selectedFolders",
-    );
-    expect(assetPackageView).toContain(
-      "rtgl-text s=sm ta=s w=1fg: ${folder.label}",
-    );
-    expect(assetPackageView).toContain(
-      "rtgl-text s=sm c=mu-fg: ${folder.selectionOrder}",
-    );
-    expect(assetPackageView).toContain("rtgl-svg svg=folder wh=16 c=mu-fg");
-    expect(assetPackageView).toContain("rtgl-popover#resourceFolderPicker");
-    expect(assetPackageView).not.toContain("${folderPickerTitle}");
-    expect(assetPackageView).toContain("$for folder, i in folderOptions");
-    expect(assetPackageView).toContain("rtgl-button#resourceFolderOption${i}");
-    expect(assetPackageView).toContain("rtgl-button#confirmResourceFolders");
+    expect(tileView).toContain("background-color: ${hex};");
+    expect(tileView).toContain("rtgl-svg svg=${icon}");
+    // Images sit on the same transparency grid as on the Images page.
+    expect(tileView).toContain("div.assetPackageTileTransparencyGrid");
   });
 });

@@ -133,14 +133,24 @@ against the owning resource type before staging.
 
 ## Folder trees and dependencies
 
-The creator lets users choose top-level folders. Selecting a folder includes its
-complete subtree and preserves folder and item order; everything in the chosen
-folders is a pick. Export adds what the picks use, directly or through each
+The creator's Asset Package page lists every resource type with resources, and
+under each its top-level folders, with a checkbox, a count, and a strip of the
+folder's first six previews, drawn as on the type's own page: images and
+thumbnails on the transparency grid, sound waveforms, font glyphs, text style
+samples and color swatches, or the type's icon. Clicking a strip, or its
+arrow, shows the whole folder. Ticking a folder saves the selection at once.
+Types follow the store's order and folders the project's; resources outside a
+folder cannot be picked, and a type with no folders says so. The header shows
+how many resources are picked; Export stays disabled until something is, or
+while the selection uses a resource that no longer exists or a story scene.
+
+Selecting a folder includes its complete subtree and preserves folder and item
+order; everything in the chosen folders is a pick. Export adds what the picks use, directly or through each
 other, to `dependencies`, without the folders it sits in. A resource in a
 chosen folder stays a pick even when another pick uses it, so an author shows
-a color or font on the pack page by choosing its folder too. Below the chosen
-folders, the export page lists these dependencies under "Comes with", by type,
-each with the picks that use it.
+a color or font on the pack page by choosing its folder too. Below the folders,
+the export page lists these dependencies under "Comes with", by type, each with
+its preview and the picks that use it.
 
 Import recreates the selected resources' complete package folder ancestry in
 the matching project collections, after the project's own folders and
