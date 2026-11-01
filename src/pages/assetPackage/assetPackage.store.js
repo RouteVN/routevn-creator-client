@@ -300,6 +300,10 @@ const buildSectionsViewData = ({
             folderId: folder.id,
             name: folder.name,
             selected: selectedIds.includes(folder.id),
+            // Where a picked folder goes among its type's picks.
+            pickOrder: selectedIds.includes(folder.id)
+              ? String(selectedIds.indexOf(folder.id) + 1)
+              : "",
             removeLabel: formatI18nCopy(copy.removeFolderLabel, {
               name: folder.name,
             }),

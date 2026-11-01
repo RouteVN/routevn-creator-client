@@ -146,7 +146,8 @@ folders says so. The picker opens on the type it showed last, or the first
 type with folders. Ticking or removing a folder saves the selection at once.
 Types follow the store's order. Within a type, the picker lists folders in
 the project's order, and the page and the pack keep them in the order they
-were picked: a newly ticked folder goes last. Resources outside a folder
+were picked: a newly ticked folder goes last, and the picker shows each
+ticked folder's place. Resources outside a folder
 cannot be picked. The header shows how
 many resources are picked; Export stays disabled until something is, or while
 the selection uses a resource that no longer exists or a story scene.

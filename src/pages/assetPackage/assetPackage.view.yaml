@@ -130,6 +130,9 @@ template:
                           - rtgl-view w=f d=v g=sm p=sm br=md bw=xs bc=bo:
                               - rtgl-view w=f d=h av=c g=sm:
                                   - 'rtgl-checkbox#folderCheckbox${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" ?checked=${folder.selected}': ${folder.name}
+                                  # A picked folder's place in the pack.
+                                  - $if folder.pickOrder:
+                                      - rtgl-tag s=sm v=pr: ${folder.pickOrder}
                                   - rtgl-text s=sm c=mu-fg: ${folder.countLabel}
                               - $if folder.resourceCount:
                                   - div.assetPackageFolderGrid:

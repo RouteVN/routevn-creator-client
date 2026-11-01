@@ -252,6 +252,7 @@ describe("asset package store", () => {
         folderId: "folder-1",
         name: "Backgrounds",
         selected: false,
+        pickOrder: "",
         countLabel: "1 resource",
         items: [
           {
@@ -304,8 +305,14 @@ describe("asset package store", () => {
       viewData.pickedSections[0].folders.map((folder) => folder.folderId),
     ).toEqual(["folder-3", "folder-1"]);
     expect(
-      viewData.pickerSection.folders.map((folder) => folder.folderId),
-    ).toEqual(["folder-1", "folder-3"]);
+      viewData.pickerSection.folders.map((folder) => [
+        folder.folderId,
+        folder.pickOrder,
+      ]),
+    ).toEqual([
+      ["folder-1", "2"],
+      ["folder-3", "1"],
+    ]);
     expect(viewData.pickedSections[0].folders[1]).toMatchObject({
       removeLabel: "Remove Backgrounds",
       items: [{ id: "image-1", name: "City", showName: true }],
