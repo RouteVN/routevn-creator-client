@@ -52,6 +52,8 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
     i18n: EN_I18N,
     projectService: {
       ensureRepository: vi.fn(async () => {}),
+      getEnsuredProjectId: vi.fn(() => projectId),
+      getEnsuredProjectPath: vi.fn(() => ""),
       getCurrentProjectInfo: vi.fn(async () => ({ language: "en" })),
       deleteSceneIfUnused: vi.fn(async () => ({
         deleted: true,
@@ -779,6 +781,173 @@ describe("scenes.handlers config keys", () => {
       "sceneEditor.recentSceneIdsByProject",
       expect.anything(),
     );
+  });
+
+  describe("when the user leaves the project during an action", () => {
+    const submitSceneForm = (deps) =>
+      handleSceneFormAction(deps, {
+        _event: {
+          detail: {
+            actionId: "submit",
+            values: { name: "Scene 2", folderId: "" },
+          },
+        },
+      });
+
+    // Like the project service, reading the project fails once the route has
+    // left it, whether or not the project is closed yet.
+    const leaveProject = (deps, { closed }) => {
+      deps.appService.getPayload.mockReturnValue({});
+      if (closed) {
+        deps.projectService.getEnsuredProjectId.mockReturnValue(undefined);
+      }
+      const readClosedProject = () => {
+        throw new Error(
+          "Repository not initialized. Call ensureRepository() first.",
+        );
+      };
+      deps.projectService.getRepositoryState.mockImplementation(
+        readClosedProject,
+      );
+      deps.projectService.getDomainState.mockImplementation(readClosedProject);
+    };
+
+    it.each([true, false])(
+      "does not read the project after a scene is created (project closed: %s)",
+      async (closed) => {
+        const deps = createDeps();
+        deps.projectService.createSceneWithInitialContent.mockImplementation(
+          async () => {
+            leaveProject(deps, { closed });
+            return { valid: true, sceneId: "scene-2" };
+          },
+        );
+
+        await expect(submitSceneForm(deps)).resolves.toBeUndefined();
+
+        expect(deps.appService.showAlert).not.toHaveBeenCalled();
+        expect(deps.store.setItems).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([true, false])(
+      "still reports a scene that could not be created, without reading the project (project closed: %s)",
+      async (closed) => {
+        const deps = createDeps();
+        deps.projectService.createSceneWithInitialContent.mockImplementation(
+          async () => {
+            leaveProject(deps, { closed });
+            throw new Error("Project change was not applied");
+          },
+        );
+
+        await expect(submitSceneForm(deps)).resolves.toBeUndefined();
+
+        expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+        expect(deps.appService.showAlert).toHaveBeenCalledWith({
+          message:
+            "Failed to create scene.\n\nDetails:\nProject change was not applied",
+        });
+        expect(deps.store.addWhiteboardItem).not.toHaveBeenCalled();
+        expect(deps.store.setItems).not.toHaveBeenCalled();
+      },
+    );
+
+    it("does not read the project after a scene is deleted", async () => {
+      const deps = createDeps();
+      deps.projectService.deleteSceneIfUnused.mockImplementation(async () => {
+        leaveProject(deps, { closed: true });
+        return { deleted: true };
+      });
+
+      await expect(
+        handleWhiteboardItemDelete(deps, {
+          _event: { detail: { itemId: "scene-1" } },
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(deps.store.setItems).not.toHaveBeenCalled();
+    });
+
+    it("refreshes the scenes after a scene is created while the project is open", async () => {
+      const deps = createDeps();
+
+      await submitSceneForm(deps);
+
+      expect(deps.appService.showAlert).not.toHaveBeenCalled();
+      expect(deps.store.setItems).toHaveBeenCalled();
+    });
+
+    it("refreshes the scenes after a failed create while the project is open", async () => {
+      const deps = createDeps();
+      deps.projectService.createSceneWithInitialContent.mockRejectedValue(
+        new Error("Project change was not applied"),
+      );
+
+      await submitSceneForm(deps);
+
+      expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+      expect(deps.store.setItems).toHaveBeenCalled();
+    });
+
+    it("does not read the project when the route opens another folder of the same project", async () => {
+      const deps = createDeps();
+      deps.appService.getPayload.mockReturnValue({
+        p: "project-1",
+        lp: "/projects/one",
+      });
+      deps.projectService.getEnsuredProjectPath.mockReturnValue(
+        "/projects/one",
+      );
+      deps.projectService.createSceneWithInitialContent.mockImplementation(
+        async () => {
+          deps.appService.getPayload.mockReturnValue({
+            p: "project-1",
+            lp: "/projects/one-copy",
+          });
+          return { valid: true, sceneId: "scene-2" };
+        },
+      );
+
+      await expect(submitSceneForm(deps)).resolves.toBeUndefined();
+
+      expect(deps.store.setItems).not.toHaveBeenCalled();
+    });
+
+    it("refreshes the scenes when the route names the open folder", async () => {
+      const deps = createDeps();
+      deps.appService.getPayload.mockReturnValue({
+        p: "project-1",
+        lp: "/projects/one",
+      });
+      deps.projectService.getEnsuredProjectPath.mockReturnValue(
+        "/projects/one",
+      );
+
+      await submitSceneForm(deps);
+
+      expect(deps.store.setItems).toHaveBeenCalled();
+    });
+
+    it("records the new scene as recent in the project it was created in", async () => {
+      const deps = createDeps();
+      deps.projectService.createSceneWithInitialContent.mockImplementation(
+        async () => {
+          deps.appService.getPayload.mockReturnValue({ p: "project-2" });
+          return { valid: true, sceneId: "scene-2" };
+        },
+      );
+
+      await submitSceneForm(deps);
+
+      const recentScenesCall = deps.appService.setUserConfig.mock.calls.find(
+        ([key]) => key === "sceneEditor.recentSceneIdsByProject",
+      );
+      expect(Object.keys(recentScenesCall[1])).toEqual(["project-1"]);
+      expect(recentScenesCall[1]["project-1"]).toEqual([
+        expect.stringMatching(/^scene-/),
+      ]);
+    });
   });
 
   it("puts a scene back and shows the details when moving it fails", async () => {
