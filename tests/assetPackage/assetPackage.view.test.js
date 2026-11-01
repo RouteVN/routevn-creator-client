@@ -53,8 +53,9 @@ describe("asset package view", () => {
     expect(assetPackageView).toContain(
       "$for folder, folderIndex in pickerSection.folders",
     );
+    // The picker's checkbox sits left of the folder, named after it.
     expect(assetPackageView).toContain(
-      "rtgl-checkbox#folderCheckbox${folderIndex}",
+      '?checked=${folder.selected} aria-label="${folder.name}"\': null',
     );
     expect(assetPackageView).toContain("handler: handleFolderCheckboxChange");
     expect(assetPackageView).toContain(

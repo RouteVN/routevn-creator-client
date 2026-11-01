@@ -124,15 +124,20 @@ template:
                       - $if pickerSection.hasNoFolders:
                           - rtgl-text s=sm c=mu-fg ph=sm: ${pickerSection.noFoldersHint}
                       - $for folder, folderIndex in pickerSection.folders:
-                          - rtgl-view w=f d=v g=sm p=sm br=md bw=xs bc=bo:
-                              - rtgl-view w=f d=h av=c g=sm:
-                                  - 'rtgl-checkbox#folderCheckbox${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" ?checked=${folder.selected}': ${folder.name}
-                                  # A picked folder's place in the pack.
-                                  - $if folder.pickOrder:
-                                      - rtgl-tag s=sm v=pr: ${folder.pickOrder}
-                              - $if folder.resourceCount:
-                                  - div.assetPackageFolderGrid:
-                                      - $for tile, tileIndex in folder.items:
-                                          - rvn-asset-package-preview-tile :preview=${tile}: null
+                          # The checkbox at the left, centered on the folder: its name,
+                          # as on the page, and its resources under it.
+                          - rtgl-view w=f d=h av=c g=md p=sm br=md bw=xs bc=bo:
+                              - 'rtgl-checkbox#folderCheckbox${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" ?checked=${folder.selected} aria-label="${folder.name}"': null
+                              - 'rtgl-view w=1fg d=v g=sm style="min-width: 0;"':
+                                  - rtgl-view w=f d=h av=c g=sm:
+                                      - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                      - rtgl-text s=sm: ${folder.name}
+                                      # A picked folder's place in the pack.
+                                      - $if folder.pickOrder:
+                                          - rtgl-tag s=sm v=pr: ${folder.pickOrder}
+                                  - $if folder.resourceCount:
+                                      - div.assetPackageFolderGrid:
+                                          - $for tile, tileIndex in folder.items:
+                                              - rvn-asset-package-preview-tile :preview=${tile}: null
           - rtgl-view w=f d=h ah=e:
               - rtgl-button#pickerDoneButton v=pr: ${pickerDoneLabel}
