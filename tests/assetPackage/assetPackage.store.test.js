@@ -313,7 +313,7 @@ describe("asset package store", () => {
       ["folder-3", "1"],
     ]);
     expect(viewData.pickedSections[0].folders[1]).toMatchObject({
-      removeLabel: "Remove Backgrounds",
+      name: "Backgrounds",
       items: [{ id: "image-1", name: "City", showName: true }],
     });
     expect(viewData.exportDisabled).toBe(false);

@@ -2820,7 +2820,6 @@ assetPackagePage:
   pickedTitle: "Recursos escolhidos"
   addFoldersButton: "Adicionar pastas"
   nothingPicked: "Nada foi escolhido ainda. Adicione as pastas que vão para o seu pacote."
-  removeFolderLabel: "Remover {name}"
   pickerTitle: "Adicionar pastas"
   doneButton: "Concluir"
 resourceImport:

@@ -7,7 +7,6 @@ import {
   handleDownloadAssetPackageButtonClick,
   handlePickerFolderClick,
   handlePickerClose,
-  handleRemoveFolderClick,
   handlePickerTypeClick,
 } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -185,21 +184,6 @@ describe("asset package handlers", () => {
       message: "Could not save the asset package. Please try again.",
       status: "error",
     });
-  });
-
-  it("removes a picked folder and saves the selection", async () => {
-    const deps = createDeps();
-
-    await handleRemoveFolderClick(deps, folderEvent());
-
-    expect(deps.store.toggleFolder).toHaveBeenCalledWith({
-      resourceType: "images",
-      folderId: "image-folder-1",
-      selected: false,
-    });
-    expect(deps.projectService.updateCurrentAssetPackage).toHaveBeenCalledWith(
-      SAVED_ASSET_PACKAGE,
-    );
   });
 
   it("opens and closes the folder picker", () => {

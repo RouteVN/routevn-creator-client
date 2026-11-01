@@ -2846,7 +2846,6 @@ assetPackagePage:
   pickedTitle: "Выбранные ресурсы"
   addFoldersButton: "Добавить папки"
   nothingPicked: "Пока ничего не выбрано. Добавьте папки, которые войдут в пакет."
-  removeFolderLabel: "Убрать «{name}»"
   pickerTitle: "Добавить папки"
   doneButton: "Готово"
 resourceImport:

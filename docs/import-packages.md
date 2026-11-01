@@ -135,7 +135,7 @@ against the owning resource type before staging.
 
 The creator's Asset Package page has two sections. Picked resources lists only
 the top-level folders in the pack, by type, each with every resource in it
-with its name, and a button that removes it. Previews are drawn
+with its name; folders are added and removed in the picker. Previews are drawn
 as on the type's own page: images and thumbnails on the transparency grid,
 sound waveforms, font glyphs, text style samples and color swatches, or the
 type's icon. Dependencies lists what the picks use (see below). Add folders

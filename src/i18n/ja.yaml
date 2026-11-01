@@ -2820,7 +2820,6 @@ assetPackagePage:
   pickedTitle: "選んだ素材"
   addFoldersButton: "フォルダーを追加"
   nothingPicked: "まだ何も選んでいません。パッケージに入れるフォルダーを追加してください。"
-  removeFolderLabel: "「{name}」を外す"
   pickerTitle: "フォルダーを追加"
   doneButton: "完了"
 resourceImport:

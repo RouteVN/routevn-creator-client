@@ -59,14 +59,6 @@ export const handlePickerFolderClick = async (deps, payload) => {
   await persistAssetPackage(deps);
 };
 
-export const handleRemoveFolderClick = async (deps, payload) => {
-  const { render, store } = deps;
-  const { resourceType, folderId } = payload._event.currentTarget.dataset;
-  store.toggleFolder({ resourceType, folderId, selected: false });
-  render();
-  await persistAssetPackage(deps);
-};
-
 export const handleAddFoldersClick = (deps) => {
   const { render, store } = deps;
   store.openPicker();

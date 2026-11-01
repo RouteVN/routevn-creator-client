@@ -33,9 +33,8 @@ describe("asset package view", () => {
     expect(assetPackageView).toContain(
       "$for section, sectionIndex in pickedSections",
     );
-    expect(assetPackageView).toContain(
-      "rtgl-button#removeFolderButton${sectionIndex}x${folderIndex}",
-    );
+    // Folders are removed in the picker; the page has no remove button.
+    expect(assetPackageView).not.toContain("removeFolderButton");
     // Each folder shows all its resources; nothing expands or collapses.
     expect(assetPackageView).not.toContain("ExpandButton");
     expect(assetPackageView).not.toContain("Strip");

@@ -304,9 +304,6 @@ const buildSectionsViewData = ({
             pickOrder: selectedIds.includes(folder.id)
               ? String(selectedIds.indexOf(folder.id) + 1)
               : "",
-            removeLabel: formatI18nCopy(copy.removeFolderLabel, {
-              name: folder.name,
-            }),
             items: resources.map(({ itemId }) =>
               previewOf(state, resourceType, itemId, { showName: true }),
             ),
