@@ -144,7 +144,8 @@ with resources, each with how many of its folders are picked, and the chosen
 type's top-level folders, the same way, each with a checkbox;
 clicking anywhere on a folder ticks or unticks it. A type with no
 folders says so. The picker opens on the type it showed last, or the first
-type with folders. Ticking or removing a folder saves the selection at once.
+type with folders. Ticks apply to the page, and are saved, when Done is pressed;
+closing the picker otherwise leaves the selection as it was.
 Types follow the store's order. Within a type, the picker lists folders in
 the project's order, and the page and the pack keep them in the order they
 were picked: a newly ticked folder goes last, and the picker shows each

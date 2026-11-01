@@ -58,6 +58,7 @@ describe("asset package view", () => {
     );
     // The whole box ticks a folder; the checkbox only shows it.
     expect(assetPackageView).toContain("handler: handlePickerFolderClick");
+    expect(assetPackageView).toContain("handler: handlePickerDoneClick");
     expect(assetPackageView).toContain(
       "rtgl-view#pickerFolder${folderIndex} data-resource-type=",
     );

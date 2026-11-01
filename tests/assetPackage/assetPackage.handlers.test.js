@@ -7,6 +7,7 @@ import {
   handleDownloadAssetPackageButtonClick,
   handlePickerFolderClick,
   handlePickerClose,
+  handlePickerDoneClick,
   handlePickerTypeClick,
 } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -90,6 +91,7 @@ const createDeps = () => ({
     closePicker: vi.fn(),
     openPicker: vi.fn(),
     toggleFolder: vi.fn(),
+    applyPicker: vi.fn(),
     setPickerResourceType: vi.fn(),
   },
   uiConfig: { id: "desktop" },
@@ -155,21 +157,34 @@ describe("asset package handlers", () => {
     },
   });
 
-  it("ticks or unticks a folder from its box and saves the selection at once", async () => {
+  it("ticks or unticks a folder from its box without saving", () => {
     const deps = createDeps();
 
-    await handlePickerFolderClick(deps, folderEvent());
-    await handlePickerFolderClick(deps, folderEvent());
+    handlePickerFolderClick(deps, folderEvent());
+    handlePickerFolderClick(deps, folderEvent());
 
     expect(deps.store.toggleFolder).toHaveBeenCalledTimes(2);
     expect(deps.store.toggleFolder).toHaveBeenCalledWith({
       resourceType: "images",
       folderId: "image-folder-1",
     });
+    expect(
+      deps.projectService.updateCurrentAssetPackage,
+    ).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("applies the picker's ticks and saves them on Done", async () => {
+    const deps = createDeps();
+
+    await handlePickerDoneClick(deps);
+
+    expect(deps.store.applyPicker).toHaveBeenCalledOnce();
+    expect(deps.store.closePicker).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledOnce();
     expect(deps.projectService.updateCurrentAssetPackage).toHaveBeenCalledWith(
       SAVED_ASSET_PACKAGE,
     );
-    expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
   it("shows feedback when the asset package cannot be saved", async () => {
@@ -178,7 +193,7 @@ describe("asset package handlers", () => {
       new Error("Storage unavailable"),
     );
 
-    await handlePickerFolderClick(deps, folderEvent());
+    await handlePickerDoneClick(deps);
 
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Could not save the asset package. Please try again.",
@@ -186,7 +201,7 @@ describe("asset package handlers", () => {
     });
   });
 
-  it("opens and closes the folder picker", () => {
+  it("opens the folder picker, and closes it without saving", () => {
     const deps = createDeps();
 
     handleAddFoldersClick(deps);
@@ -194,6 +209,10 @@ describe("asset package handlers", () => {
 
     expect(deps.store.openPicker).toHaveBeenCalledOnce();
     expect(deps.store.closePicker).toHaveBeenCalledOnce();
+    expect(deps.store.applyPicker).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.updateCurrentAssetPackage,
+    ).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 

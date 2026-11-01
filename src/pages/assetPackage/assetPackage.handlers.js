@@ -50,11 +50,18 @@ export const handlePickerTypeClick = (deps, payload) => {
 };
 
 // Clicking a folder's box in the picker, or pressing Space on its checkbox,
-// ticks or unticks it and saves the selection at once.
-export const handlePickerFolderClick = async (deps, payload) => {
+// ticks or unticks it in the picker only; Done applies the ticks.
+export const handlePickerFolderClick = (deps, payload) => {
   const { render, store } = deps;
   const { resourceType, folderId } = payload._event.currentTarget.dataset;
   store.toggleFolder({ resourceType, folderId });
+  render();
+};
+
+// Done applies the picker's ticks to the page and saves them.
+export const handlePickerDoneClick = async (deps) => {
+  const { render, store } = deps;
+  store.applyPicker();
   render();
   await persistAssetPackage(deps);
 };
@@ -65,6 +72,7 @@ export const handleAddFoldersClick = (deps) => {
   render();
 };
 
+// Escape or a click outside closes the picker without applying its ticks.
 export const handlePickerClose = (deps) => {
   const { render, store } = deps;
   store.closePicker();

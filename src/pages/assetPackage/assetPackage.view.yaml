@@ -10,7 +10,7 @@ refs:
   pickerDoneButton:
     eventListeners:
       click:
-        handler: handlePickerClose
+        handler: handlePickerDoneClick
   pickerType*:
     eventListeners:
       click:
@@ -91,7 +91,7 @@ template:
                                                       - 'rtgl-view w=1fg d=v g=xs style="min-width: 0;"':
                                                           - rtgl-text s=sm ellipsis w=f: ${item.name}
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.usedBy}
-  # One type's folders at a time, to tick or untick; ticking saves at once.
+  # One type's folders at a time, to tick or untick; Done applies the ticks.
   - rtgl-dialog#pickerDialog ?open=${isPickerOpen} s=lg md-layout=fixed-top:
       - 'rtgl-view#pickerContent slot=content d=v w=f g=md style="min-height: 0;"':
           - rtgl-view w=f d=v g=xs:

@@ -62,6 +62,14 @@ const keepTopLevelFolders = (resourceData, folderIds) =>
     isTopLevelFolder(resourceData, folderId),
   );
 
+const copyFolderIdsByType = (folderIdsByType) =>
+  Object.fromEntries(
+    Object.entries(folderIdsByType).map(([resourceType, folderIds]) => [
+      resourceType,
+      [...folderIds],
+    ]),
+  );
+
 export const createInitialState = () => ({
   resourceCategory: "releases",
   selectedResourceId: "assetPackage",
@@ -69,6 +77,8 @@ export const createInitialState = () => ({
   filesData: { items: {} },
   resourceDataByType: createResourceDataByType(),
   selectedFolderIdsByType: createSelectedFolderIdsByType(),
+  // The picker ticks a copy of the selection, applied by Done.
+  pickerFolderIdsByType: createSelectedFolderIdsByType(),
   isPickerOpen: false,
   pickerResourceType: undefined,
 });
@@ -104,8 +114,8 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
   state.selectedFolderIdsByType = selectedFolderIdsByType;
 };
 
-// Ticks or unticks a top-level folder; `selected` says which, or the folder
-// flips. A ticked folder goes after those picked before it.
+// Ticks or unticks a top-level folder in the picker; `selected` says which,
+// or the folder flips. A ticked folder goes after those picked before it.
 export const toggleFolder = (
   { state },
   { resourceType, folderId, selected } = {},
@@ -118,13 +128,13 @@ export const toggleFolder = (
   ) {
     return;
   }
-  const selectedIds = state.selectedFolderIdsByType[resourceType];
+  const selectedIds = state.pickerFolderIdsByType[resourceType];
   const isSelected = selectedIds.includes(folderId);
   const nextSelected = selected ?? !isSelected;
   if (nextSelected === isSelected) {
     return;
   }
-  state.selectedFolderIdsByType[resourceType] = nextSelected
+  state.pickerFolderIdsByType[resourceType] = nextSelected
     ? [...selectedIds, folderId]
     : selectedIds.filter((id) => id !== folderId);
 };
@@ -143,7 +153,7 @@ const listPickerResourceTypes = (state) =>
   });
 
 // The picker shows one type at a time: the one shown last, or else the first
-// with folders.
+// with folders. It starts from the current selection.
 export const openPicker = ({ state }) => {
   const resourceTypes = listPickerResourceTypes(state);
   if (!resourceTypes.includes(state.pickerResourceType)) {
@@ -154,6 +164,9 @@ export const openPicker = ({ state }) => {
           0,
       ) ?? resourceTypes[0];
   }
+  state.pickerFolderIdsByType = copyFolderIdsByType(
+    state.selectedFolderIdsByType,
+  );
   state.isPickerOpen = true;
 };
 
@@ -163,7 +176,19 @@ export const setPickerResourceType = ({ state }, { resourceType } = {}) => {
   }
 };
 
+// Done: the picker's ticks become the selection.
+export const applyPicker = ({ state }) => {
+  state.selectedFolderIdsByType = copyFolderIdsByType(
+    state.pickerFolderIdsByType,
+  );
+  state.isPickerOpen = false;
+};
+
+// Closing the picker any other way leaves the selection as it was.
 export const closePicker = ({ state }) => {
+  state.pickerFolderIdsByType = copyFolderIdsByType(
+    state.selectedFolderIdsByType,
+  );
   state.isPickerOpen = false;
 };
 
@@ -254,7 +279,8 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
 // Types and their top-level folders, each with its count and every
 // resource's preview. The page lists only the picked folders, in the order
 // they were picked; the picker lists every folder of the type it shows, in
-// project order, and says so when the type has no folders.
+// project order, ticked as in its own copy of the selection, and says so when
+// the type has no folders.
 const buildSectionsViewData = ({
   state,
   copy,
@@ -265,7 +291,9 @@ const buildSectionsViewData = ({
 }) =>
   resourceTypes.flatMap((resourceType) => {
     const resourceData = state.resourceDataByType[resourceType];
-    const selectedIds = state.selectedFolderIdsByType[resourceType];
+    const selectedIds = (
+      inPicker ? state.pickerFolderIdsByType : state.selectedFolderIdsByType
+    )[resourceType];
     const topLevelFolders = selectTopLevelFolders(resourceData);
     const folders = inPicker
       ? topLevelFolders
@@ -335,8 +363,8 @@ export const selectViewData = ({ state, i18n }) => {
     label: resourceTypesCopy[resourceType] ?? resourceType,
     isCurrent: resourceType === state.pickerResourceType,
     selectedCount:
-      state.selectedFolderIdsByType[resourceType].length > 0
-        ? String(state.selectedFolderIdsByType[resourceType].length)
+      state.pickerFolderIdsByType[resourceType].length > 0
+        ? String(state.pickerFolderIdsByType[resourceType].length)
         : "",
   }));
   const [pickerSection] = pickerResourceTypes.includes(state.pickerResourceType)

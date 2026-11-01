@@ -3,6 +3,7 @@ import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../src/internal/assetPackageR
 import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
 import * as assetPackageStore from "../../src/pages/assetPackage/assetPackage.store.js";
 import {
+  applyPicker,
   closePicker,
   createInitialState,
   openPicker,
@@ -274,13 +275,14 @@ describe("asset package store", () => {
     });
   });
 
-  it("ticks folders in the order they are picked", () => {
+  it("ticks folders in the picker, in the order picked, and applies them on Done", () => {
     const state = createInitialState();
     setResourceData(
       { state },
       { resourceDataByType: createResourceDataByType() },
     );
 
+    openPicker({ state });
     toggleFolder({ state }, { resourceType: "images", folderId: "folder-3" });
     toggleFolder({ state }, { resourceType: "images", folderId: "folder-1" });
     // Only top-level folders can be picked.
@@ -290,19 +292,9 @@ describe("asset package store", () => {
       { state },
       { resourceType: "images", folderId: "folder-3", selected: true },
     );
-    expect(state.selectedFolderIdsByType.images).toEqual([
-      "folder-3",
-      "folder-1",
-    ]);
-    openPicker({ state });
+    // The picker shows its ticks; the page waits for Done.
     let viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.pickerSection.selectedLabel).toBe("2 folders picked");
     expect(viewData.pickerTypes[0].selectedCount).toBe("2");
-    // The page lists only what is picked, in the order picked; the picker
-    // keeps the project's order.
-    expect(
-      viewData.pickedSections[0].folders.map((folder) => folder.folderId),
-    ).toEqual(["folder-3", "folder-1"]);
     expect(
       viewData.pickerSection.folders.map((folder) => [
         folder.folderId,
@@ -312,23 +304,55 @@ describe("asset package store", () => {
       ["folder-1", "2"],
       ["folder-3", "1"],
     ]);
+    expect(viewData.pickedSections).toEqual([]);
+    expect(viewData.exportDisabled).toBe(true);
+
+    applyPicker({ state });
+    expect(state.isPickerOpen).toBe(false);
+    expect(state.selectedFolderIdsByType.images).toEqual([
+      "folder-3",
+      "folder-1",
+    ]);
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    // The page lists only what is picked, in the order picked.
+    expect(
+      viewData.pickedSections[0].folders.map((folder) => folder.folderId),
+    ).toEqual(["folder-3", "folder-1"]);
     expect(viewData.pickedSections[0].folders[1]).toMatchObject({
       name: "Backgrounds",
       items: [{ id: "image-1", name: "City", showName: true }],
     });
     expect(viewData.exportDisabled).toBe(false);
 
+    // Closing the picker without Done drops its ticks.
+    openPicker({ state });
     toggleFolder(
       { state },
       { resourceType: "images", folderId: "folder-3", selected: false },
     );
-    expect(state.selectedFolderIdsByType.images).toEqual(["folder-1"]);
-    // Ticked again, it goes after the folders picked before it.
+    closePicker({ state });
+    expect(state.selectedFolderIdsByType.images).toEqual([
+      "folder-3",
+      "folder-1",
+    ]);
+    openPicker({ state });
+    expect(state.pickerFolderIdsByType.images).toEqual([
+      "folder-3",
+      "folder-1",
+    ]);
+
+    // Unticked and ticked again, a folder goes after those picked before it.
+    toggleFolder(
+      { state },
+      { resourceType: "images", folderId: "folder-3", selected: false },
+    );
     toggleFolder({ state }, { resourceType: "images", folderId: "folder-3" });
+    applyPicker({ state });
     expect(state.selectedFolderIdsByType.images).toEqual([
       "folder-1",
       "folder-3",
     ]);
+    openPicker({ state });
 
     // Choosing another type shows only its folders; an unknown one is ignored.
     setPickerResourceType({ state }, { resourceType: "sounds" });
