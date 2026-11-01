@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../src/internal/assetPackageResources.js";
 import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
 import {
+  closePicker,
   createInitialState,
+  openPicker,
   selectAssetPackage,
   selectAssetPackageData,
   selectViewData,
@@ -215,7 +217,8 @@ describe("asset package store", () => {
       selectedResourceId: "assetPackage",
       showExplorerPanel: true,
       contentLeftPadding: "sm",
-      hasSections: false,
+      hasPicks: false,
+      pickerSections: [],
       exportDisabled: true,
     });
 
@@ -223,7 +226,11 @@ describe("asset package store", () => {
       { state },
       { resourceDataByType: createResourceDataByType() },
     );
-    const { sections } = selectViewData({ state, i18n: EN_I18N });
+    openPicker({ state });
+    const { pickerSections: sections } = selectViewData({
+      state,
+      i18n: EN_I18N,
+    });
     // Layouts are not offered yet; types without resources are left out.
     expect(sections.map((section) => section.resourceType)).toEqual([
       "images",
@@ -270,8 +277,13 @@ describe("asset package store", () => {
       "folder-1",
       "folder-3",
     ]);
+    openPicker({ state });
     let viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.sections[0].selectedLabel).toBe("2 folders picked");
+    expect(viewData.pickerSections[0].selectedLabel).toBe("2 folders picked");
+    // The page lists only what is picked.
+    expect(
+      viewData.pickedSections[0].folders.map((folder) => folder.folderId),
+    ).toEqual(["folder-1", "folder-3"]);
     expect(viewData.pickedSummary).toBe("2 resources picked");
     expect(viewData.exportDisabled).toBe(false);
 
@@ -286,17 +298,22 @@ describe("asset package store", () => {
       { resourceType: "images", folderId: "folder-1" },
     );
     viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.sections[0].folders[0]).toMatchObject({
+    expect(viewData.pickedSections[0].folders[0]).toMatchObject({
       isExpanded: true,
       hasStrip: false,
+      removeLabel: "Remove Backgrounds",
       items: [{ id: "image-1", name: "City", showName: true }],
     });
 
+    // The picker expands its folders on its own.
+    expect(viewData.pickerSections[0].folders[0].isExpanded).toBe(false);
+
     toggleResourceTypeCollapsed({ state }, { resourceType: "images" });
-    expect(selectViewData({ state, i18n: EN_I18N }).sections[0]).toMatchObject({
-      isCollapsed: true,
-      folders: [],
-    });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).pickerSections[0],
+    ).toMatchObject({ isCollapsed: true, folders: [] });
+    closePicker({ state });
+    expect(selectViewData({ state, i18n: EN_I18N }).pickerSections).toEqual([]);
   });
 
   it("shows a folder's first six previews and counts the rest", () => {
@@ -323,9 +340,11 @@ describe("asset package store", () => {
     };
     setResourceData({ state }, { resourceDataByType });
 
-    const colors = selectViewData({ state, i18n: EN_I18N }).sections.find(
-      (section) => section.resourceType === "colors",
-    );
+    openPicker({ state });
+    const colors = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).pickerSections.find((section) => section.resourceType === "colors");
     expect(colors.folders[0]).toMatchObject({
       countLabel: "8 resources",
       moreLabel: "+2",
@@ -343,7 +362,11 @@ describe("asset package store", () => {
       { state },
       { resourceDataByType: createResourceDataByType() },
     );
-    const { sections } = selectViewData({ state, i18n: EN_I18N });
+    openPicker({ state });
+    const { pickerSections: sections } = selectViewData({
+      state,
+      i18n: EN_I18N,
+    });
     const stripOf = (resourceType) =>
       sections.find((section) => section.resourceType === resourceType)
         .folders[0].strip[0];
@@ -521,7 +544,7 @@ describe("asset package store", () => {
 
     expect(comesWith).toMatchObject({
       isVisible: true,
-      title: "Comes with",
+      title: "Dependencies",
       groups: [
         {
           resourceType: "colors",

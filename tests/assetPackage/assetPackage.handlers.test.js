@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { ASSET_PACKAGE_RESOURCE_TYPES } from "../../src/internal/assetPackageResources.js";
 import {
+  handleAddFoldersClick,
   handleAfterMount,
   handleBeforeMount,
   handleDownloadAssetPackageButtonClick,
   handleFolderCheckboxChange,
   handleFolderExpandClick,
+  handlePickerClose,
+  handleRemoveFolderClick,
   handleResourceTypeHeaderClick,
 } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
@@ -86,6 +89,8 @@ const createDeps = () => ({
     setAssetPackage: vi.fn(),
     setResourceData: vi.fn(),
     setUiConfig: vi.fn(),
+    closePicker: vi.fn(),
+    openPicker: vi.fn(),
     toggleFolder: vi.fn(),
     toggleFolderExpanded: vi.fn(),
     toggleResourceTypeCollapsed: vi.fn(),
@@ -189,6 +194,46 @@ describe("asset package handlers", () => {
     });
   });
 
+  it("removes a picked folder and saves the selection", async () => {
+    const deps = createDeps();
+
+    await handleRemoveFolderClick(deps, folderEvent());
+
+    expect(deps.store.toggleFolder).toHaveBeenCalledWith({
+      resourceType: "images",
+      folderId: "image-folder-1",
+      selected: false,
+    });
+    expect(deps.projectService.updateCurrentAssetPackage).toHaveBeenCalledWith(
+      SAVED_ASSET_PACKAGE,
+    );
+  });
+
+  it("opens and closes the folder picker", () => {
+    const deps = createDeps();
+
+    handleAddFoldersClick(deps);
+    handlePickerClose(deps);
+
+    expect(deps.store.openPicker).toHaveBeenCalledOnce();
+    expect(deps.store.closePicker).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("expands a folder in the picker on its own", () => {
+    const deps = createDeps();
+    const event = folderEvent();
+    event._event.currentTarget.dataset.picker = "true";
+
+    handleFolderExpandClick(deps, event);
+
+    expect(deps.store.toggleFolderExpanded).toHaveBeenCalledWith({
+      resourceType: "images",
+      folderId: "image-folder-1",
+      inPicker: true,
+    });
+  });
+
   it("expands a folder and collapses a type without saving", () => {
     const deps = createDeps();
 
@@ -198,6 +243,7 @@ describe("asset package handlers", () => {
     expect(deps.store.toggleFolderExpanded).toHaveBeenCalledWith({
       resourceType: "images",
       folderId: "image-folder-1",
+      inPicker: false,
     });
     expect(deps.store.toggleResourceTypeCollapsed).toHaveBeenCalledWith({
       resourceType: "images",

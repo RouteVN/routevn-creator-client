@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 const readView = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 describe("asset package view", () => {
-  it("renders a folder checklist with previews, Comes with, and Export in the header", () => {
+  it("lists the picked folders and their dependencies, with a picker for the rest", () => {
     const assetPackageView = readView(
       "../../src/pages/assetPackage/assetPackage.view.yaml",
     );
@@ -16,23 +16,35 @@ describe("asset package view", () => {
     expect(assetPackageView).toContain(
       "rtgl-button#downloadAssetPackageButton v=pr pre=download ?disabled=${exportDisabled}",
     );
-    // One checklist: no menu, folder picker or ordering.
+    // The page lists the picked folders; the picker holds the rest.
     expect(assetPackageView).not.toContain("addResourceTypeButton");
     expect(assetPackageView).not.toContain("rtgl-popover");
     expect(assetPackageView).not.toContain("rtgl-dropdown-menu");
     expect(assetPackageView).toContain(
-      "$for section, sectionIndex in sections",
+      "$for section, sectionIndex in pickedSections",
     );
     expect(assetPackageView).toContain(
-      "rtgl-checkbox#folderCheckbox${sectionIndex}x${folderIndex}",
+      "rtgl-button#removeFolderButton${sectionIndex}x${folderIndex}",
     );
-    expect(assetPackageView).toContain("handler: handleFolderCheckboxChange");
     expect(assetPackageView).toContain(
       "rtgl-view#folderStrip${sectionIndex}x${folderIndex}",
     );
     expect(assetPackageView).toContain(
       "rtgl-button#folderExpandButton${sectionIndex}x${folderIndex}",
     );
+    expect(assetPackageView).toContain(
+      "rtgl-button#addFoldersButton v=ol pre=plus",
+    );
+    expect(assetPackageView).toContain(
+      "rtgl-dialog#pickerDialog ?open=${isPickerOpen}",
+    );
+    expect(assetPackageView).toContain(
+      "$for section, sectionIndex in pickerSections",
+    );
+    expect(assetPackageView).toContain(
+      "rtgl-checkbox#folderCheckbox${sectionIndex}x${folderIndex}",
+    );
+    expect(assetPackageView).toContain("handler: handleFolderCheckboxChange");
     expect(assetPackageView).toContain(
       "rvn-asset-package-preview-tile :preview=${tile}",
     );

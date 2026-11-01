@@ -66,7 +66,8 @@ const sortByProjectOrder = (resourceData, folderIds) =>
         isTopLevelFolder(resourceData, folderId),
     );
 
-const toFolderKey = (resourceType, folderId) => `${resourceType}:${folderId}`;
+const toFolderKey = (resourceType, folderId, inPicker = false) =>
+  `${inPicker ? "picker:" : ""}${resourceType}:${folderId}`;
 
 const toggleListValue = (values, value) =>
   values.includes(value)
@@ -82,6 +83,7 @@ export const createInitialState = () => ({
   selectedFolderIdsByType: createSelectedFolderIdsByType(),
   expandedFolderKeys: [],
   collapsedResourceTypes: [],
+  isPickerOpen: false,
 });
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
@@ -138,14 +140,23 @@ export const toggleFolder = (
   );
 };
 
+// The page and the picker expand folders separately.
 export const toggleFolderExpanded = (
   { state },
-  { resourceType, folderId } = {},
+  { resourceType, folderId, inPicker = false } = {},
 ) => {
   state.expandedFolderKeys = toggleListValue(
     state.expandedFolderKeys,
-    toFolderKey(resourceType, folderId),
+    toFolderKey(resourceType, folderId, inPicker),
   );
+};
+
+export const openPicker = ({ state }) => {
+  state.isPickerOpen = true;
+};
+
+export const closePicker = ({ state }) => {
+  state.isPickerOpen = false;
 };
 
 export const toggleResourceTypeCollapsed = (
@@ -242,20 +253,34 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   };
 };
 
-// The checklist: each type with resources, and its top-level folders, each
-// with its count and previews.
-const buildSectionsViewData = ({ state, copy, resourceTypesCopy, i18n }) =>
+// Each type and its top-level folders, each with its count and previews. The
+// page lists only the picked folders; the picker lists every folder, with
+// types that have resources but no folders saying so.
+const buildSectionsViewData = ({
+  state,
+  copy,
+  resourceTypesCopy,
+  i18n,
+  inPicker,
+}) =>
   RESOURCE_TYPE_ORDER.flatMap((resourceType) => {
     const resourceData = state.resourceDataByType[resourceType];
     const resourceCount = Object.values(resourceData.items).filter(
       (item) => item.type !== "folder",
     ).length;
-    const folders = selectTopLevelFolders(resourceData);
-    if (folders.length === 0 && resourceCount === 0) {
+    const selectedIds = state.selectedFolderIdsByType[resourceType];
+    const folders = selectTopLevelFolders(resourceData).filter(
+      (folder) => inPicker || selectedIds.includes(folder.id),
+    );
+    if (
+      inPicker
+        ? folders.length === 0 && resourceCount === 0
+        : folders.length === 0
+    ) {
       return [];
     }
-    const isCollapsed = state.collapsedResourceTypes.includes(resourceType);
-    const selectedIds = state.selectedFolderIdsByType[resourceType];
+    const isCollapsed =
+      inPicker && state.collapsedResourceTypes.includes(resourceType);
     return [
       {
         resourceType,
@@ -279,7 +304,7 @@ const buildSectionsViewData = ({ state, copy, resourceTypesCopy, i18n }) =>
           ? []
           : folders.map((folder) => {
               const isExpanded = state.expandedFolderKeys.includes(
-                toFolderKey(resourceType, folder.id),
+                toFolderKey(resourceType, folder.id, inPicker),
               );
               const resources = collectFolderResources(resourceData, folder.id);
               const previews = (
@@ -294,6 +319,9 @@ const buildSectionsViewData = ({ state, copy, resourceTypesCopy, i18n }) =>
                 folderId: folder.id,
                 name: folder.name,
                 selected: selectedIds.includes(folder.id),
+                removeLabel: formatI18nCopy(copy.removeFolderLabel, {
+                  name: folder.name,
+                }),
                 countLabel: formatPluralCopy(
                   copy,
                   "folderResourceCount",
@@ -323,12 +351,23 @@ const buildSectionsViewData = ({ state, copy, resourceTypesCopy, i18n }) =>
 export const selectViewData = ({ state, i18n }) => {
   const copy = i18n.assetPackagePage;
   const resourceTypesCopy = i18n.resourceTypes;
-  const sections = buildSectionsViewData({
+  const pickedSections = buildSectionsViewData({
     state,
     copy,
     resourceTypesCopy,
     i18n,
+    inPicker: false,
   });
+  // The picker's folders are built only while it is open.
+  const pickerSections = state.isPickerOpen
+    ? buildSectionsViewData({
+        state,
+        copy,
+        resourceTypesCopy,
+        i18n,
+        inPicker: true,
+      })
+    : [];
   const comesWith = buildComesWithViewData({ state, copy, resourceTypesCopy });
   const pickedCount = RESOURCE_TYPE_ORDER.reduce(
     (count, resourceType) =>
@@ -349,10 +388,17 @@ export const selectViewData = ({ state, i18n }) => {
     ...state,
     showExplorerPanel: !state.isTouchMode,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
-    introHint: copy.introHint,
-    hasSections: sections.length > 0,
+    pickedTitle: copy.pickedTitle,
+    addFoldersLabel: copy.addFoldersButton,
+    hasPicks: pickedSections.length > 0,
+    nothingPickedMessage: copy.nothingPicked,
+    pickedSections,
+    pickerTitle: copy.pickerTitle,
+    pickerHint: copy.introHint,
+    pickerDoneLabel: copy.doneButton,
+    hasPickerSections: pickerSections.length > 0,
     emptyProjectMessage: copy.emptyProjectMessage,
-    sections,
+    pickerSections,
     comesWith,
     pickedSummary:
       pickedCount > 0
