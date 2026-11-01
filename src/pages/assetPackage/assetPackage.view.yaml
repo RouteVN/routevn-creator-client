@@ -131,10 +131,12 @@ template:
                           # of its own, so a click counts once; Space on it still
                           # reaches the box.
                           - 'rtgl-view#pickerFolder${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" w=f d=h g=md p=sm br=md bw=xs bc=bo cur=pointer h-bgc=mu':
-                              - 'rtgl-view d=v ah=c g=xs style="align-self: stretch; flex: 0 0 auto; min-width: 24px;"':
+                              # A fixed column, so the number never moves anything.
+                              - 'rtgl-view w=18 d=v ah=c g=xs style="align-self: stretch; flex: 0 0 auto;"':
                                   - rtgl-view h=20 av=c ah=c:
                                       - $if folder.pickOrder:
-                                          - rtgl-tag s=sm v=pr: ${folder.pickOrder}
+                                          - rtgl-view wh=18 br=sm bgc=pr av=c ah=c:
+                                              - rtgl-text s=xs c=pr-fg: ${folder.pickOrder}
                                   - rtgl-view h=1fg: null
                                   - 'rtgl-checkbox#folderCheckbox${folderIndex} ?checked=${folder.selected} aria-label="${folder.name}" style="pointer-events: none;"': null
                                   - rtgl-view h=1fg: null

@@ -64,7 +64,7 @@ describe("asset package view", () => {
     );
     expect(assetPackageView).not.toContain("handleFolderCheckboxChange");
     expect(assetPackageView).toContain(
-      "rtgl-tag s=sm v=pr: ${folder.pickOrder}",
+      "rtgl-text s=xs c=pr-fg: ${folder.pickOrder}",
     );
     expect(assetPackageView).toContain(
       "rvn-asset-package-preview-tile :preview=${tile}",
