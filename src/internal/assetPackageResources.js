@@ -437,10 +437,10 @@ export const mapAssetPackageReferences = (value, mapper, fieldName) => {
   );
 };
 
-// Story links: a pack's jumps into the story (to a section or a scene) point
-// at an entry of its `storyLinks` instead of the author's story, and the
-// importer chooses where each goes in theirs. Jumps to a line stay
-// unsupported.
+// Links: a pack's jumps into the story (to a section or a scene), and its
+// actions that open a layout it does not carry, point at an entry of its
+// `links` instead, and the importer chooses their own for each. Jumps to a
+// line stay unsupported.
 const STORY_LINK_KIND_BY_FIELD = Object.freeze({
   sectionId: "section",
   sectionIds: "section",
@@ -451,19 +451,27 @@ const STORY_LINK_KIND_BY_FIELD = Object.freeze({
 export const getAssetPackageStoryLinkKind = (fieldName) =>
   STORY_LINK_KIND_BY_FIELD[fieldName];
 
-const UNSET_STORY_LINK = Symbol("unset story link");
+// The field an action names the layout it opens with, as `pushOverlay` and
+// `showConfirmDialog` do.
+export const ASSET_PACKAGE_LAYOUT_LINK_FIELD = "resourceId";
 
-const mapStoryLinksInner = (value, resolve, fieldName, isRoot) => {
+const isLinkField = (fieldName) =>
+  Boolean(getAssetPackageStoryLinkKind(fieldName)) ||
+  fieldName === ASSET_PACKAGE_LAYOUT_LINK_FIELD;
+
+const UNSET_LINK = Symbol("unset link");
+
+const mapLinksInner = (value, resolve, fieldName, isRoot) => {
   if (Array.isArray(value)) {
     return value
-      .map((item) => mapStoryLinksInner(item, resolve, fieldName, false))
-      .filter((item) => item !== UNSET_STORY_LINK);
+      .map((item) => mapLinksInner(item, resolve, fieldName, false))
+      .filter((item) => item !== UNSET_LINK);
   }
   if (typeof value === "string") {
-    if (value === "" || !getAssetPackageStoryLinkKind(fieldName)) {
+    if (value === "" || !isLinkField(fieldName)) {
       return value;
     }
-    return resolve(value, fieldName) || UNSET_STORY_LINK;
+    return resolve(value, fieldName) || UNSET_LINK;
   }
   if (!value || typeof value !== "object") {
     return value;
@@ -474,11 +482,11 @@ const mapStoryLinksInner = (value, resolve, fieldName, isRoot) => {
       mapped[childFieldName] = item;
       continue;
     }
-    const mappedItem = mapStoryLinksInner(item, resolve, childFieldName, false);
-    if (mappedItem === UNSET_STORY_LINK) {
+    const mappedItem = mapLinksInner(item, resolve, childFieldName, false);
+    if (mappedItem === UNSET_LINK) {
       // A jump with no destination goes, with the action that holds it.
       if (typeof item === "string" && !isRoot) {
-        return UNSET_STORY_LINK;
+        return UNSET_LINK;
       }
       continue;
     }
@@ -487,11 +495,12 @@ const mapStoryLinksInner = (value, resolve, fieldName, isRoot) => {
   return mapped;
 };
 
-// Replaces each story reference (a section or scene id) with what `resolve`
-// returns for it. One that resolves to nothing is removed with the action
-// that holds it: the object around it, or its entry in a list.
-export const mapAssetPackageStoryLinks = (value, resolve) =>
-  mapStoryLinksInner(value, resolve, undefined, true);
+// Passes each section, scene and opened-layout reference through `resolve`,
+// which returns the value to keep or put in its place. One it resolves to
+// nothing is removed with the action that holds it: the object around it, or
+// its entry in a list.
+export const mapAssetPackageLinks = (value, resolve) =>
+  mapLinksInner(value, resolve, undefined, true);
 
 const ASSET_PACKAGE_KEYS = new Set(["schemaVersion", "metadata", "resources"]);
 const ASSET_PACKAGE_METADATA_KEYS = new Set([

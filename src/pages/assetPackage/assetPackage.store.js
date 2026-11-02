@@ -11,7 +11,7 @@ import {
   createAssetPackageContents,
   isTopLevelFolder,
   listAssetPackageDependencies,
-  listAssetPackageStoryLinks,
+  listAssetPackageLinks,
   selectTopLevelFolders,
 } from "./support/assetPackageManifest.js";
 import {
@@ -240,18 +240,27 @@ const formatUsedBy = ({ copy, nameById, ids }) => {
   return formatI18nCopy(copy.usedByLabel, { names });
 };
 
-const formatStoryLinkLabel = ({ copy, storyLink }) => {
-  if (!storyLink.name) {
-    return storyLink.kind === "scene"
-      ? copy.storyLinkUnknownScene
-      : copy.storyLinkUnknownSection;
+const LINK_ICONS = Object.freeze({
+  section: "section",
+  scene: "scene",
+  layout: "layout",
+});
+const UNKNOWN_LINK_COPY_KEYS = Object.freeze({
+  section: "linkUnknownSection",
+  scene: "linkUnknownScene",
+  layout: "linkUnknownLayout",
+});
+
+const formatLinkLabel = ({ copy, link }) => {
+  if (!link.name) {
+    return copy[UNKNOWN_LINK_COPY_KEYS[link.kind]];
   }
-  return storyLink.sceneName
-    ? formatI18nCopy(copy.storyLinkSectionLabel, {
-        scene: storyLink.sceneName,
-        section: storyLink.name,
+  return link.sceneName
+    ? formatI18nCopy(copy.linkSectionLabel, {
+        scene: link.sceneName,
+        section: link.name,
       })
-    : storyLink.name;
+    : link.name;
 };
 
 const describeInvalidSelection = ({
@@ -274,11 +283,11 @@ const describeInvalidSelection = ({
 };
 
 // "Comes with": what the picks use that is not a pick, by type, and the
-// places in the story they jump to. A selection that cannot be exported
+// links: the places in the story they jump to and the layouts they open. A selection that cannot be exported
 // lists nothing and says so.
 const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   let dependencies;
-  let storyLinks;
+  let links;
   let isInvalid = false;
   let invalidMessage = copy.selectionInvalid;
   try {
@@ -287,14 +296,14 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
       selectedFolderIdsByType: state.selectedFolderIdsByType,
       resourceTypeOrder: RESOURCE_TYPE_ORDER,
     });
-    storyLinks = listAssetPackageStoryLinks({
+    links = listAssetPackageLinks({
       resourceDataByType: state.resourceDataByType,
       selectedFolderIdsByType: state.selectedFolderIdsByType,
       scenesData: state.scenesData,
     });
   } catch (error) {
     dependencies = [];
-    storyLinks = [];
+    links = [];
     isInvalid = true;
     invalidMessage = describeInvalidSelection({
       state,
@@ -336,15 +345,15 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
     title: copy.comesWithTitle,
     hint: copy.comesWithHint,
     groups,
-    storyLinks: {
-      isVisible: storyLinks.length > 0,
-      title: copy.storyLinksTitle,
-      hint: copy.storyLinksHint,
-      items: storyLinks.map((storyLink) => ({
-        id: storyLink.id,
-        icon: storyLink.kind === "scene" ? "scene" : "section",
-        label: formatStoryLinkLabel({ copy, storyLink }),
-        usedBy: formatUsedBy({ copy, nameById, ids: storyLink.usedBy }),
+    links: {
+      isVisible: links.length > 0,
+      title: copy.linksTitle,
+      hint: copy.linksHint,
+      items: links.map((link) => ({
+        id: link.id,
+        icon: LINK_ICONS[link.kind],
+        label: formatLinkLabel({ copy, link }),
+        usedBy: formatUsedBy({ copy, nameById, ids: link.usedBy }),
       })),
     },
   };

@@ -183,34 +183,45 @@ const sameName = (left, right) =>
   (left ?? "").trim().toLocaleLowerCase() ===
   (right ?? "").trim().toLocaleLowerCase();
 
-const formatStoryLinkLabel = ({ copy, kind, name, sceneName }) => {
+const UNNAMED_LINK_COPY = Object.freeze({
+  section: ["linkUnnamedSection", "Unnamed section"],
+  scene: ["linkUnnamedScene", "Unnamed scene"],
+  layout: ["linkUnnamedLayout", "Unnamed layout"],
+});
+
+const formatLinkLabel = ({ copy, kind, name, sceneName }) => {
   if (!name) {
-    return kind === "scene"
-      ? (copy.storyLinkUnnamedScene ?? "Unnamed scene")
-      : (copy.storyLinkUnnamedSection ?? "Unnamed section");
+    const [copyKey, fallback] = UNNAMED_LINK_COPY[kind];
+    return copy[copyKey] ?? fallback;
   }
   return sceneName
-    ? formatI18nCopy(copy.storyLinkSectionLabel ?? "{scene} / {section}", {
+    ? formatI18nCopy(copy.linkSectionLabel ?? "{scene} / {section}", {
         scene: sceneName,
         section: name,
       })
     : name;
 };
 
-// Where a story link starts: the project's section of the same scene and
-// section names, or its scene of the same name; else unset.
-const getDefaultStoryTarget = ({ storyLink, storyTargets }) => {
-  const target =
-    storyLink.kind === "scene"
-      ? storyTargets.scenes.find((scene) =>
-          sameName(scene.name, storyLink.name),
-        )
-      : storyTargets.sections.find(
-          (section) =>
-            sameName(section.name, storyLink.name) &&
-            (storyLink.sceneName === undefined ||
-              sameName(section.sceneName, storyLink.sceneName)),
-        );
+// The project's sections, scenes or layouts a link can go to; a layout link
+// offers the layouts of its layout's type.
+const listLinkTargets = ({ link, linkTargetOptions }) => {
+  if (link.kind === "section") return linkTargetOptions.sections;
+  if (link.kind === "scene") return linkTargetOptions.scenes;
+  return linkTargetOptions.layouts.filter(
+    (layout) =>
+      link.layoutType === undefined || layout.layoutType === link.layoutType,
+  );
+};
+
+// Where a link starts: the project's section of the same scene and section
+// names, its scene or layout of the same name; else unset.
+const getDefaultLinkTarget = ({ link, linkTargetOptions }) => {
+  const target = listLinkTargets({ link, linkTargetOptions }).find(
+    (option) =>
+      sameName(option.name, link.name) &&
+      (link.sceneName === undefined ||
+        sameName(option.sceneName, link.sceneName)),
+  );
   return target?.value ?? "";
 };
 
@@ -231,27 +242,26 @@ const listImportedResources = ({ plan, values }) => {
   ];
 };
 
-// A select for each story link the selection jumps through, to choose where
-// it goes in this project's story; one left unset drops its jumps.
-const createStoryLinkFields = ({ plan, values, copy, storyTargets }) => {
-  if (!plan || (plan.storyLinks ?? []).length === 0) return [];
+// A select for each link the selection jumps through or opens, to choose
+// where it goes in this project; one left unset drops its actions.
+const createLinkFields = ({ plan, values, copy, linkTargetOptions }) => {
+  if (!plan || (plan.links ?? []).length === 0) return [];
   const importedResources = listImportedResources({ plan, values });
-  return plan.storyLinks.flatMap((storyLink, index) => {
+  return plan.links.flatMap((link, index) => {
     const users = importedResources.filter((resource) =>
-      (resource.storyLinkIds ?? []).includes(storyLink.id),
+      (resource.linkIds ?? []).includes(link.id),
     );
     if (users.length === 0) return [];
-    const targets =
-      storyLink.kind === "scene" ? storyTargets.scenes : storyTargets.sections;
+    const targets = listLinkTargets({ link, linkTargetOptions });
     return [
       {
-        name: `storyLink_${index}`,
+        name: `link_${index}`,
         type: "select",
-        label: formatStoryLinkLabel({ copy, ...storyLink }),
-        description: formatI18nCopy(copy.storyLinkUsedBy ?? "Used by {names}", {
+        label: formatLinkLabel({ copy, ...link }),
+        description: formatI18nCopy(copy.linkUsedBy ?? "Used by {names}", {
           names: users.map((resource) => resource.name).join(", "),
         }),
-        placeholder: copy.storyLinkNotSet ?? "Not set",
+        placeholder: copy.linkNotSet ?? "Not set",
         searchable: targets.length > 8,
         options: targets.map(({ value, label }) => ({ value, label })),
       },
@@ -262,14 +272,14 @@ const createStoryLinkFields = ({ plan, values, copy, storyTargets }) => {
 // The title and Back are in the selection-header slot, so they scroll with
 // the resources and only Import stays in place. Story links follow the
 // resources.
-const selectionForm = ({ copy, storyLinkFields = [] }) => {
+const selectionForm = ({ copy, linkFields = [] }) => {
   return {
     fields: [
       { type: "slot", slot: "selection-header" },
       { type: "slot", slot: "selection-controls" },
       { type: "slot", slot: "resource-selection-grid" },
-      ...(storyLinkFields.length > 0
-        ? [{ type: "slot", slot: "story-links-header" }, ...storyLinkFields]
+      ...(linkFields.length > 0
+        ? [{ type: "slot", slot: "links-header" }, ...linkFields]
         : []),
     ],
     actions: {
@@ -285,25 +295,26 @@ const selectionForm = ({ copy, storyLinkFields = [] }) => {
   };
 };
 
-// Nothing starts selected: the creator picks what to import. Each story link
-// starts at the project's section or scene of the same name, if any.
-const createReviewValues = (plan, storyTargets) => {
+// Nothing starts selected: the creator picks what to import. Each link starts
+// at the project's section, scene or layout of the same name, if any.
+const createReviewValues = (plan, linkTargetOptions) => {
   const values = {};
   plan.resources.forEach((resource, index) => {
     values[`resource_${index}_include`] = false;
     values[`resource_${index}_name`] = resource.name;
     values[`resource_${index}_description`] = resource.description ?? "";
   });
-  (plan.storyLinks ?? []).forEach((storyLink, index) => {
-    values[`storyLink_${index}`] = getDefaultStoryTarget({
-      storyLink,
-      storyTargets,
-    });
+  (plan.links ?? []).forEach((link, index) => {
+    values[`link_${index}`] = getDefaultLinkTarget({ link, linkTargetOptions });
   });
   return values;
 };
 
-const createStoryTargets = () => ({ sections: [], scenes: [] });
+const createLinkTargetOptions = () => ({
+  sections: [],
+  scenes: [],
+  layouts: [],
+});
 
 export const createInitialState = () => ({
   // Tells this dialog's search events apart from another mounted dialog's.
@@ -326,8 +337,8 @@ export const createInitialState = () => ({
   previewAssetSourceId: undefined,
   reviewValues: {},
   plan: undefined,
-  // The project's sections and scenes a story link can go to.
-  storyTargets: createStoryTargets(),
+  // The project's sections, scenes and layouts a link can go to.
+  linkTargetOptions: createLinkTargetOptions(),
   error: undefined,
   isBusy: false,
   operationId: undefined,
@@ -353,7 +364,7 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
     state.previewAssetSourceId = undefined;
     state.reviewValues = {};
     state.plan = undefined;
-    state.storyTargets = createStoryTargets();
+    state.linkTargetOptions = createLinkTargetOptions();
     state.error = undefined;
     state.isBusy = false;
     state.operationId = undefined;
@@ -448,11 +459,11 @@ export const setPackLoadError = ({ state }, { error } = {}) => {
   state.packStatus = "failed";
 };
 
-export const setPlan = ({ state }, { plan, storyTargets } = {}) => {
+export const setPlan = ({ state }, { plan, linkTargetOptions } = {}) => {
   state.plan = plan;
-  state.storyTargets = storyTargets ?? createStoryTargets();
+  state.linkTargetOptions = linkTargetOptions ?? createLinkTargetOptions();
   state.previewAssetSourceId = undefined;
-  state.reviewValues = createReviewValues(plan, state.storyTargets);
+  state.reviewValues = createReviewValues(plan, state.linkTargetOptions);
   state.step = SELECTION_STEP;
   state.isBusy = false;
   state.operationId = undefined;
@@ -463,11 +474,11 @@ export const setPlan = ({ state }, { plan, storyTargets } = {}) => {
 // The pack's assets, read from its manifest, finish the pack page. Import then
 // opens the selection without another request. The step stays as it is, so
 // a page the user moved on to, such as the creator's, stays open.
-export const setPackPage = ({ state }, { plan, storyTargets } = {}) => {
+export const setPackPage = ({ state }, { plan, linkTargetOptions } = {}) => {
   state.plan = plan;
-  state.storyTargets = storyTargets ?? createStoryTargets();
+  state.linkTargetOptions = linkTargetOptions ?? createLinkTargetOptions();
   state.planPackId = state.pack.id;
-  state.reviewValues = createReviewValues(plan, state.storyTargets);
+  state.reviewValues = createReviewValues(plan, state.linkTargetOptions);
   state.operationId = undefined;
   state.packStatus = "ready";
   state.formKey += 1;
@@ -930,18 +941,18 @@ export const selectViewData = ({ state, i18n = {} }) => {
     form: isSelectionStep
       ? selectionForm({
           copy,
-          storyLinkFields: createStoryLinkFields({
+          linkFields: createLinkFields({
             plan,
             values: state.reviewValues,
             copy,
-            storyTargets: state.storyTargets,
+            linkTargetOptions: state.linkTargetOptions,
           }),
         })
       : undefined,
-    storyLinksTitle: copy.storyLinksTitle ?? "Story links",
-    storyLinksHint:
-      copy.storyLinksHint ??
-      "These resources jump to places in the pack author's story. Choose where each goes in yours; a jump left unset is removed.",
+    linksTitle: copy.linksTitle ?? "Links",
+    linksHint:
+      copy.linksHint ??
+      "These resources jump to places in the pack author's story, or open their layouts. Choose your own for each; one left unset is removed from its buttons.",
     defaultValues: state.reviewValues,
     formContext: state.reviewValues,
     errorMessage: state.error?.message,

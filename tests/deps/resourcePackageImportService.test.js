@@ -521,7 +521,7 @@ describe("resourcePackageImportService", () => {
                 click: {
                   payload: {
                     actions: {
-                      resetStoryAtSection: { sectionId: "storyLink.start" },
+                      resetStoryAtSection: { sectionId: "link.start" },
                     },
                   },
                 },
@@ -533,9 +533,9 @@ describe("resourcePackageImportService", () => {
       },
       tree: [{ id: "folder.menus", children: [{ id: "layout.title" }] }],
     };
-    manifest.storyLinks = {
+    manifest.links = {
       items: {
-        "storyLink.start": {
+        "link.start": {
           kind: "section",
           name: "Start",
           sceneName: "Title",
@@ -549,9 +549,9 @@ describe("resourcePackageImportService", () => {
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
     });
-    expect(planned.plan.storyLinks).toEqual([
+    expect(planned.plan.links).toEqual([
       {
-        id: "storyLink.start",
+        id: "link.start",
         kind: "section",
         name: "Start",
         sceneName: "Title",
@@ -566,17 +566,17 @@ describe("resourcePackageImportService", () => {
       service.validateResourceImportPlan({
         planId: planned.plan.planId,
         selectedResourceIds: [layout.sourceId],
-        storyLinkTargets: { "storyLink.start": "section-gone" },
+        linkTargets: { "link.start": "section-gone" },
       }),
     ).toMatchObject({
       valid: false,
-      error: { code: "story_link_target_missing" },
+      error: { code: "link_target_missing" },
     });
 
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
       selectedResourceIds: [layout.sourceId],
-      storyLinkTargets: { "storyLink.start": "section-1" },
+      linkTargets: { "link.start": "section-1" },
     });
     expect(result).toMatchObject({ valid: true });
     const committed =

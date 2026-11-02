@@ -870,7 +870,7 @@ describe("asset import plan for v2 packages", () => {
 
 // A v2 package whose Title Menu has a Start button jumping into the story
 // through a story link.
-const createStoryLinkManifest = () => {
+const createLinkManifest = () => {
   const manifest = createV2Manifest();
   manifest.repository.layouts.items["layout-1"].elements.items.start = {
     id: "start",
@@ -883,7 +883,7 @@ const createStoryLinkManifest = () => {
     click: {
       payload: {
         actions: {
-          resetStoryAtSection: { sectionId: "storyLink.start" },
+          resetStoryAtSection: { sectionId: "link.start" },
           nextLine: {},
         },
       },
@@ -892,9 +892,9 @@ const createStoryLinkManifest = () => {
   manifest.repository.layouts.items["layout-1"].elements.tree.push({
     id: "start",
   });
-  manifest.storyLinks = {
+  manifest.links = {
     items: {
-      "storyLink.start": {
+      "link.start": {
         kind: "section",
         name: "Start",
         sceneName: "Title",
@@ -904,13 +904,13 @@ const createStoryLinkManifest = () => {
   return manifest;
 };
 
-describe("story links in v2 packages", () => {
+describe("links in v2 packages", () => {
   it("lists the story links the resources jump through", () => {
-    const plan = planV2(createStoryLinkManifest());
+    const plan = planV2(createLinkManifest());
 
-    expect(plan.storyLinks).toEqual([
+    expect(plan.links).toEqual([
       {
-        id: "storyLink.start",
+        id: "link.start",
         kind: "section",
         name: "Start",
         sceneName: "Title",
@@ -919,49 +919,97 @@ describe("story links in v2 packages", () => {
     const titleMenu = plan.resources.find(
       (resource) => resource.name === "Title Menu",
     );
-    expect(titleMenu.storyLinkIds).toEqual(["storyLink.start"]);
+    expect(titleMenu.linkIds).toEqual(["link.start"]);
   });
 
   it("sends a story link where the importer chose, or drops its jump when unset", () => {
-    const plan = planV2(createStoryLinkManifest());
+    const plan = planV2(createLinkManifest());
     const titleMenu = plan.resources.find(
       (resource) => resource.name === "Title Menu",
     );
-    const actionsOf = (storyLinkTargets) =>
+    const actionsOf = (linkTargets) =>
       rewriteAssetImportPlanReferences({
         resources: [titleMenu],
-        storyLinkTargets,
+        linkTargets,
       })[0].data.elements.items.start.click.payload.actions;
 
-    expect(actionsOf({ "storyLink.start": "section-9" })).toEqual({
+    expect(actionsOf({ "link.start": "section-9" })).toEqual({
       resetStoryAtSection: { sectionId: "section-9" },
       nextLine: {},
     });
     // The jump goes; the button's other actions stay.
-    expect(actionsOf({ "storyLink.start": "" })).toEqual({ nextLine: {} });
+    expect(actionsOf({ "link.start": "" })).toEqual({ nextLine: {} });
   });
 
   it("rejects a jump without a story link, or through one of the wrong kind", () => {
-    const withoutLink = createStoryLinkManifest();
-    delete withoutLink.storyLinks;
+    const withoutLink = createLinkManifest();
+    delete withoutLink.links;
     expect(() => planV2(withoutLink)).toThrow(
       "Project reference 'sectionId' is not supported",
     );
 
-    const wrongKind = createStoryLinkManifest();
-    wrongKind.storyLinks.items["storyLink.start"].kind = "scene";
+    const wrongKind = createLinkManifest();
+    wrongKind.links.items["link.start"].kind = "scene";
     expect(() => planV2(wrongKind)).toThrow(
       "Project reference 'sectionId' is not supported",
     );
   });
 
   it("rejects story links that are not a section or a scene", () => {
-    const manifest = createStoryLinkManifest();
-    manifest.storyLinks.items["storyLink.start"].kind = "line";
-    expect(() => planV2(manifest)).toThrow("must be section or scene");
+    const manifest = createLinkManifest();
+    manifest.links.items["link.start"].kind = "line";
+    expect(() => planV2(manifest)).toThrow("must be section, scene or layout");
 
-    const extraField = createStoryLinkManifest();
-    extraField.storyLinks.items["storyLink.start"].sectionId = "section-1";
+    const extraField = createLinkManifest();
+    extraField.links.items["link.start"].sectionId = "section-1";
     expect(() => planV2(extraField)).toThrow("is not supported");
+  });
+
+  it("opens a layout through a link, or drops the open action when unset", () => {
+    const manifest = createLinkManifest();
+    manifest.repository.layouts.items["layout-1"].elements.items.start.click = {
+      payload: { actions: { pushOverlay: { resourceId: "link.menu" } } },
+    };
+    manifest.links.items = {
+      "link.menu": { kind: "layout", name: "Menu Page", layoutType: "general" },
+    };
+    const plan = planV2(manifest);
+    expect(plan.links).toEqual([
+      {
+        id: "link.menu",
+        kind: "layout",
+        name: "Menu Page",
+        layoutType: "general",
+      },
+    ]);
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(titleMenu.linkIds).toEqual(["link.menu"]);
+    // The opened layout is not a dependency.
+    expect(titleMenu.dependencySourceIds).not.toContain("layouts:link.menu");
+    const actionsOf = (linkTargets) =>
+      rewriteAssetImportPlanReferences({
+        resources: [titleMenu],
+        linkTargets,
+      })[0].data.elements.items.start.click.payload.actions;
+    expect(actionsOf({ "link.menu": "layout-9" })).toEqual({
+      pushOverlay: { resourceId: "layout-9" },
+    });
+    expect(actionsOf({ "link.menu": "" })).toEqual({});
+
+    // A layout neither carried nor linked is still missing.
+    delete manifest.links;
+    expect(() => planV2(manifest)).toThrow(
+      "Referenced resource 'link.menu' is missing.",
+    );
+  });
+
+  it("rejects a link id that is also a resource id", () => {
+    const manifest = createLinkManifest();
+    manifest.links.items["color-1"] = { kind: "scene", name: "Title" };
+    expect(() => planV2(manifest)).toThrow(
+      "Link id 'color-1' is also a resource id.",
+    );
   });
 });

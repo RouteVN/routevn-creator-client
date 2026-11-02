@@ -14,20 +14,24 @@ const mapErrorMessage = (error, i18n = {}) => {
   };
 };
 
-// The project's sections and scenes, in story order, that a pack's story
-// links can go to. A section's label names its scene.
-const createStoryTargets = ({ scenesData, i18n = {} }) => {
+// The project's sections and scenes, in story order, and its layouts, in
+// project order, that a pack's links can go to. A section's label names its
+// scene.
+const createLinkTargetOptions = ({ repositoryState, i18n = {} }) => {
   const copy = i18n.resourceImport ?? {};
-  const sceneIds = [];
-  const visit = (nodes) => {
-    for (const node of nodes ?? []) {
-      if (scenesData?.items?.[node.id]?.type === "scene")
-        sceneIds.push(node.id);
-      visit(node.children);
-    }
+  const listIds = (collection, type) => {
+    const ids = [];
+    const visit = (nodes) => {
+      for (const node of nodes ?? []) {
+        if (collection?.items?.[node.id]?.type === type) ids.push(node.id);
+        visit(node.children);
+      }
+    };
+    visit(collection?.tree);
+    return ids;
   };
-  visit(scenesData?.tree);
-  const scenes = sceneIds.map((sceneId) => ({
+  const scenesData = repositoryState?.scenes;
+  const scenes = listIds(scenesData, "scene").map((sceneId) => ({
     value: sceneId,
     label: scenesData.items[sceneId].name ?? "",
     name: scenesData.items[sceneId].name ?? "",
@@ -41,7 +45,7 @@ const createStoryTargets = ({ scenesData, i18n = {} }) => {
       const name = sectionsData.items[sectionId].name ?? "";
       return {
         value: sectionId,
-        label: (copy.storyLinkSectionLabel ?? "{scene} / {section}")
+        label: (copy.linkSectionLabel ?? "{scene} / {section}")
           .replace("{scene}", scene.name)
           .replace("{section}", name),
         name,
@@ -49,7 +53,14 @@ const createStoryTargets = ({ scenesData, i18n = {} }) => {
       };
     });
   });
-  return { sections, scenes };
+  const layoutsData = repositoryState?.layouts;
+  const layouts = listIds(layoutsData, "layout").map((layoutId) => ({
+    value: layoutId,
+    label: layoutsData.items[layoutId].name ?? "",
+    name: layoutsData.items[layoutId].name ?? "",
+    layoutType: layoutsData.items[layoutId].layoutType,
+  }));
+  return { sections, scenes, layouts };
 };
 
 const syncFromProps = (deps, props, { reset = false } = {}) => {
@@ -226,8 +237,8 @@ const openPack = async (deps, packId) => {
   }
   store.setPackPage({
     plan: result.plan,
-    storyTargets: createStoryTargets({
-      scenesData: projectService.getRepositoryState?.()?.scenes,
+    linkTargetOptions: createLinkTargetOptions({
+      repositoryState: projectService.getRepositoryState?.(),
       i18n: deps.i18n,
     }),
   });
@@ -407,18 +418,18 @@ const buildReviewPayload = ({ plan, values }) => {
         values[`resource_${index}_description`];
     }
   });
-  // Where each story link goes; empty leaves it unset.
-  const storyLinkTargets = Object.fromEntries(
-    (plan.storyLinks ?? []).map((storyLink, index) => [
-      storyLink.id,
-      values[`storyLink_${index}`] ?? "",
+  // Where each link goes; empty leaves it unset.
+  const linkTargets = Object.fromEntries(
+    (plan.links ?? []).map((link, index) => [
+      link.id,
+      values[`link_${index}`] ?? "",
     ]),
   );
   return {
     selectedResourceIds,
     resourceNames,
     resourceDescriptions,
-    storyLinkTargets,
+    linkTargets,
   };
 };
 

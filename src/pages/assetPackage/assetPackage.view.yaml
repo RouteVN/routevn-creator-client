@@ -91,19 +91,19 @@ template:
                                                   - $for item, itemIndex in group.items:
                                                       - 'rtgl-view w=f title="${item.usedBy}"':
                                                           - rvn-asset-package-preview-tile :preview=${item.preview}: null
-                              # Where the picks jump into the story; the importer chooses
-                              # where each goes in theirs.
-                              - $if comesWith.storyLinks.isVisible:
+                              # Where the picks jump into the story, and the layouts they
+                              # open; the importer chooses their own for each.
+                              - $if comesWith.links.isVisible:
                                   - rtgl-view w=f d=v g=md:
                                       - rtgl-view w=f d=v g=xs:
-                                          - rtgl-text s=lg: ${comesWith.storyLinks.title}
-                                          - rtgl-text s=sm c=mu-fg: ${comesWith.storyLinks.hint}
-                                      - $for storyLink, storyLinkIndex in comesWith.storyLinks.items:
+                                          - rtgl-text s=lg: ${comesWith.links.title}
+                                          - rtgl-text s=sm c=mu-fg: ${comesWith.links.hint}
+                                      - $for link, linkIndex in comesWith.links.items:
                                           - rtgl-view w=f d=h av=c g=sm:
-                                              - rtgl-svg svg=${storyLink.icon} wh=16 c=mu-fg: null
+                                              - rtgl-svg svg=${link.icon} wh=16 c=mu-fg: null
                                               - 'rtgl-view w=1fg d=v style="min-width: 0;"':
-                                                  - rtgl-text s=sm: ${storyLink.label}
-                                                  - rtgl-text s=xs c=mu-fg: ${storyLink.usedBy}
+                                                  - rtgl-text s=sm: ${link.label}
+                                                  - rtgl-text s=xs c=mu-fg: ${link.usedBy}
   # One type's folders at a time, to tick or untick; Done applies the ticks.
   - rtgl-dialog#pickerDialog ?open=${isPickerOpen} s=lg md-layout=fixed-top:
       - 'rtgl-view#pickerContent slot=content d=v w=f g=md style="min-height: 0;"':

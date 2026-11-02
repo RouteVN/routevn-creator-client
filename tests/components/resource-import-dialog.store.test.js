@@ -503,33 +503,39 @@ describe("resource-import-dialog.store", () => {
     expect(state.operationId).toBeUndefined();
   });
 
-  it("asks where each story link of the selection goes, starting at a section of the same name", () => {
+  it("asks where each link of the selection goes, starting at a target of the same name", () => {
     const state = createInitialState();
     const plan = createMultiResourcePlan();
-    plan.resources[0].storyLinkIds = ["storyLink.start"];
-    plan.resources[1].storyLinkIds = [];
+    plan.resources[0].linkIds = ["link.start", "link.menu"];
+    plan.resources[1].linkIds = [];
     plan.resources[1].packageDependencySourceIds = ["dependency.menu"];
     plan.dependencies = [
       {
         sourceId: "dependency.menu",
         name: "Menu Page",
-        storyLinkIds: ["storyLink.title"],
+        linkIds: ["link.title"],
       },
     ];
-    plan.storyLinks = [
+    plan.links = [
       {
-        id: "storyLink.start",
+        id: "link.start",
         kind: "section",
         name: "Start",
         sceneName: "Title",
       },
-      { id: "storyLink.title", kind: "scene", name: "Elsewhere" },
+      { id: "link.title", kind: "scene", name: "Elsewhere" },
+      {
+        id: "link.menu",
+        kind: "layout",
+        name: "Menu Page",
+        layoutType: "general",
+      },
     ];
     setPlan(
       { state },
       {
         plan,
-        storyTargets: {
+        linkTargetOptions: {
           sections: [
             {
               value: "section-1",
@@ -545,27 +551,42 @@ describe("resource-import-dialog.store", () => {
             },
           ],
           scenes: [{ value: "scene-1", label: "Title", name: "Title" }],
+          layouts: [
+            {
+              value: "layout-1",
+              label: "Menu Page",
+              name: "Menu Page",
+              layoutType: "general",
+            },
+            {
+              value: "layout-2",
+              label: "Confirm",
+              name: "Confirm",
+              layoutType: "confirmDialog",
+            },
+          ],
         },
       },
     );
-    const storyLinkFields = () =>
+    const linkFields = () =>
       selectViewData({ state, i18n: {} }).form.fields.filter((field) =>
-        field.name?.startsWith("storyLink_"),
+        field.name?.startsWith("link_"),
       );
 
-    // Nothing selected uses a story link yet.
-    expect(storyLinkFields()).toEqual([]);
-    // The section of the same scene and section names starts selected; a
-    // scene with no match starts unset.
+    // Nothing selected uses a link yet.
+    expect(linkFields()).toEqual([]);
+    // The section of the same scene and section names, and the layout of the
+    // same name, start selected; a scene with no match starts unset.
     expect(state.reviewValues).toMatchObject({
-      storyLink_0: "section-2",
-      storyLink_1: "",
+      link_0: "section-2",
+      link_1: "",
+      link_2: "layout-1",
     });
 
     setResourceSelected({ state }, { sourceId: "source.one", selected: true });
-    expect(storyLinkFields()).toEqual([
+    expect(linkFields()).toEqual([
       expect.objectContaining({
-        name: "storyLink_0",
+        name: "link_0",
         type: "select",
         label: "Title / Start",
         description: "Used by Transform One",
@@ -575,15 +596,22 @@ describe("resource-import-dialog.store", () => {
           { value: "section-2", label: "Title / Start" },
         ],
       }),
+      // A layout link offers the layouts of its layout's type.
+      expect.objectContaining({
+        name: "link_2",
+        label: "Menu Page",
+        options: [{ value: "layout-1", label: "Menu Page" }],
+      }),
     ]);
 
     // A dependency's link shows with the pick that brings it.
     setResourceSelected({ state }, { sourceId: "source.two", selected: true });
-    expect(storyLinkFields().map((field) => field.name)).toEqual([
-      "storyLink_0",
-      "storyLink_1",
+    expect(linkFields().map((field) => field.name)).toEqual([
+      "link_0",
+      "link_1",
+      "link_2",
     ]);
-    expect(storyLinkFields()[1]).toMatchObject({
+    expect(linkFields()[1]).toMatchObject({
       label: "Elsewhere",
       description: "Used by Menu Page",
       options: [{ value: "scene-1", label: "Title" }],

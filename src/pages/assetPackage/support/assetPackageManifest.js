@@ -3,8 +3,9 @@ import {
   ASSET_PACKAGE_KIND,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
+  ASSET_PACKAGE_LAYOUT_LINK_FIELD,
   getAssetPackageStoryLinkKind,
-  mapAssetPackageStoryLinks,
+  mapAssetPackageLinks,
   visitAssetPackageReferences,
 } from "../../../internal/assetPackageResources.js";
 
@@ -199,12 +200,18 @@ const dropSectionJumpScenes = (value) => {
 };
 
 // What the picks use, directly or through each other, that is not a pick,
-// with the picks that use each; and the story sections and scenes they jump
-// to, with the resources that jump there. A pick's own dependencies count for
-// that pick, so the walk stops at picks.
+// with the picks that use each; and the links: the story sections and scenes
+// they jump to, and the layouts they open that the pack does not carry, with
+// the resources that do so. A pick's own dependencies count for that pick, so
+// the walk stops at picks, and at a layout an action only opens.
 const collectDependencies = ({ pickedIdsByType, sourceById }) => {
   const dependencies = new Map();
-  const storyLinks = new Map();
+  const links = new Map();
+  const addLink = ({ targetId, kind, itemId }) => {
+    const link = links.get(targetId) ?? { kind, usedBy: new Set() };
+    link.usedBy.add(itemId);
+    links.set(targetId, link);
+  };
   for (const [resourceType, pickedIds] of Object.entries(pickedIdsByType)) {
     for (const pickId of pickedIds) {
       const pick = sourceById.get(pickId);
@@ -227,12 +234,7 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
                   { itemId },
                 );
               }
-              const storyLink = storyLinks.get(value) ?? {
-                kind: linkKind,
-                usedBy: new Set(),
-              };
-              storyLink.usedBy.add(itemId);
-              storyLinks.set(value, storyLink);
+              addLink({ targetId: value, kind: linkKind, itemId });
               return;
             }
             if (kind !== "resource") {
@@ -249,10 +251,17 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
               }
               return;
             }
+            if (pickedIdsByType[source.resourceType].has(source.itemId)) {
+              return;
+            }
             if (
-              pickedIdsByType[source.resourceType].has(source.itemId) ||
-              visited.has(source.itemId)
+              fieldName === ASSET_PACKAGE_LAYOUT_LINK_FIELD &&
+              source.resourceType === "layouts"
             ) {
+              addLink({ targetId: source.itemId, kind: "layout", itemId });
+              return;
+            }
+            if (visited.has(source.itemId)) {
               return;
             }
             visited.add(source.itemId);
@@ -268,25 +277,46 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
       }
     }
   }
-  return { dependencies, storyLinks };
+  // A layout the pack carries anyway, as something else draws it, is opened
+  // as itself.
+  for (const [targetId, link] of links) {
+    if (link.kind === "layout" && dependencies.has(targetId)) {
+      links.delete(targetId);
+    }
+  }
+  return { dependencies, links };
 };
 
-// A story link's name: its section's and that section's scene's, or its
-// scene's; empty when the story no longer has it.
-const describeStoryTarget = ({ scenesData, kind, targetId }) => {
-  const scenes = Object.values(scenesData?.items ?? {}).filter(
-    (item) => item?.type === "scene",
-  );
-  if (kind === "scene") {
+// A link's name: its section's and that section's scene's, its scene's, or
+// its layout's, with the layout's type; empty when the project no longer has
+// it.
+const describeLinkTarget = ({
+  resourceDataByType,
+  scenesData,
+  link,
+  targetId,
+}) => {
+  if (link.kind === "layout") {
+    const layout = resourceDataByType.layouts?.items?.[targetId];
+    return {
+      name: layout?.name ?? "",
+      ...(typeof layout?.layoutType === "string"
+        ? { layoutType: layout.layoutType }
+        : {}),
+    };
+  }
+  if (link.kind === "scene") {
     return { name: scenesData?.items?.[targetId]?.name ?? "" };
   }
-  const scene = scenes.find((item) => item.sections?.items?.[targetId]);
+  const scene = Object.values(scenesData?.items ?? {}).find(
+    (item) => item?.type === "scene" && item.sections?.items?.[targetId],
+  );
   return scene
     ? { name: scene.sections.items[targetId].name ?? "", sceneName: scene.name }
     : { name: "" };
 };
 
-const toStoryLinkId = (targetId) => `storyLink.${targetId}`;
+const toLinkId = (targetId) => `link.${targetId}`;
 
 // A type's dependencies, in the order they appear in the project.
 const selectDependencyItems = (resourceData, dependencyIds) => {
@@ -383,7 +413,7 @@ export const createAssetPackageContents = ({
     resourceDataByType,
     selectedFolderIdsByType,
   });
-  const { dependencies, storyLinks } = collectDependencies({
+  const { dependencies, links } = collectDependencies({
     pickedIdsByType,
     sourceById: indexSourceResources(resourceDataByType),
   });
@@ -412,13 +442,18 @@ export const createAssetPackageContents = ({
       collections.push({ items });
     }
   }
-  // Jumps into the story point at the pack's story links instead.
+  // Jumps into the story, and layouts opened that the pack does not carry,
+  // point at the pack's links instead.
+  const resolveLink = (value, fieldName) =>
+    getAssetPackageStoryLinkKind(fieldName) || links.has(value)
+      ? toLinkId(value)
+      : value;
   for (const collection of collections) {
     for (const [itemId, item] of Object.entries(collection.items)) {
       if (item.type === "folder") continue;
-      collection.items[itemId] = mapAssetPackageStoryLinks(
+      collection.items[itemId] = mapAssetPackageLinks(
         dropSectionJumpScenes(item),
-        toStoryLinkId,
+        resolveLink,
       );
     }
   }
@@ -428,15 +463,16 @@ export const createAssetPackageContents = ({
       ...repository,
     },
     dependencies: packageDependencies,
-    storyLinks: {
+    links: {
       items: Object.fromEntries(
-        [...storyLinks].map(([targetId, storyLink]) => [
-          toStoryLinkId(targetId),
+        [...links].map(([targetId, link]) => [
+          toLinkId(targetId),
           {
-            kind: storyLink.kind,
-            ...describeStoryTarget({
+            kind: link.kind,
+            ...describeLinkTarget({
+              resourceDataByType,
               scenesData,
-              kind: storyLink.kind,
+              link,
               targetId,
             }),
           },
@@ -474,25 +510,25 @@ export const listAssetPackageDependencies = ({
   });
 };
 
-// The story links the export page lists: each with its name and the
-// resources that jump there, in the order the picks reach them.
-export const listAssetPackageStoryLinks = ({
+// The links the export page lists: each with its name and the resources that
+// jump there or open it, in the order the picks reach them.
+export const listAssetPackageLinks = ({
   resourceDataByType,
   selectedFolderIdsByType,
   scenesData,
 }) => {
-  const { storyLinks } = collectDependencies({
+  const { links } = collectDependencies({
     pickedIdsByType: collectPickedIdsByType({
       resourceDataByType,
       selectedFolderIdsByType,
     }),
     sourceById: indexSourceResources(resourceDataByType),
   });
-  return [...storyLinks].map(([targetId, storyLink]) => ({
-    id: toStoryLinkId(targetId),
-    kind: storyLink.kind,
-    ...describeStoryTarget({ scenesData, kind: storyLink.kind, targetId }),
-    usedBy: [...storyLink.usedBy],
+  return [...links].map(([targetId, link]) => ({
+    id: toLinkId(targetId),
+    kind: link.kind,
+    ...describeLinkTarget({ resourceDataByType, scenesData, link, targetId }),
+    usedBy: [...link.usedBy],
   }));
 };
 
@@ -509,7 +545,7 @@ export class AssetPackageManifestError extends Error {
 export const createAssetPackageManifest = ({
   repository,
   dependencies,
-  storyLinks,
+  links,
 }) => {
   const resourceCount = ASSET_PACKAGE_RESOURCE_TYPES.reduce(
     (count, resourceType) => {
@@ -539,8 +575,8 @@ export const createAssetPackageManifest = ({
   if (Object.keys(dependencies ?? {}).length > 0) {
     manifest.dependencies = structuredClone(dependencies);
   }
-  if (Object.keys(storyLinks?.items ?? {}).length > 0) {
-    manifest.storyLinks = structuredClone(storyLinks);
+  if (Object.keys(links?.items ?? {}).length > 0) {
+    manifest.links = structuredClone(links);
   }
   return manifest;
 };

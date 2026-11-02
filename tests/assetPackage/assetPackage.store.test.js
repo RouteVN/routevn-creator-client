@@ -694,7 +694,7 @@ describe("asset package store", () => {
     );
   });
 
-  it("exports a story jump, even a dependency's, as a story link", () => {
+  it("exports a story jump, even a dependency's, as a link", () => {
     const state = createInitialState();
     const resourceDataByType = createResourceDataByType();
     resourceDataByType.layouts = {
@@ -762,37 +762,98 @@ describe("asset package store", () => {
       contents.dependencies.layouts.items["layout-1"].elements.items["button-1"]
         .click.payload.actions,
     ).toEqual({
-      resetStoryAtSection: { sectionId: "storyLink.section-1" },
-      sectionTransition: { sectionId: "storyLink.section-1" },
+      resetStoryAtSection: { sectionId: "link.section-1" },
+      sectionTransition: { sectionId: "link.section-1" },
     });
-    expect(contents.storyLinks).toEqual({
+    expect(contents.links).toEqual({
       items: {
-        "storyLink.section-1": {
+        "link.section-1": {
           kind: "section",
           name: "Start",
           sceneName: "Title",
         },
       },
     });
-    expect(createAssetPackageManifest(contents).storyLinks).toEqual(
-      contents.storyLinks,
-    );
+    expect(createAssetPackageManifest(contents).links).toEqual(contents.links);
 
     // The page lists the link with the layout that jumps there.
     const { comesWith } = selectViewData({ state, i18n: EN_I18N });
     expect(comesWith.isInvalid).toBe(false);
-    expect(comesWith.storyLinks).toMatchObject({
+    expect(comesWith.links).toMatchObject({
       isVisible: true,
-      title: "Story links",
+      title: "Links",
       items: [
         {
-          id: "storyLink.section-1",
+          id: "link.section-1",
           icon: "section",
           label: "Title / Start",
           usedBy: "Used by Menu",
         },
       ],
     });
+  });
+
+  it("exports a layout an action opens as a link, unless the pack carries it", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.layouts = {
+      items: {
+        "title-folder": { type: "folder", name: "Title" },
+        "menu-folder": { type: "folder", name: "Menus" },
+        title: {
+          type: "layout",
+          name: "Title",
+          layoutType: "general",
+          elements: {
+            items: {
+              options: {
+                click: {
+                  payload: { actions: { pushOverlay: { resourceId: "menu" } } },
+                },
+              },
+            },
+          },
+        },
+        menu: {
+          type: "layout",
+          name: "Menu Page",
+          layoutType: "general",
+          elements: { items: { background: { imageId: "image-1" } } },
+        },
+      },
+      tree: [
+        { id: "title-folder", children: [{ id: "title" }] },
+        { id: "menu-folder", children: [{ id: "menu" }] },
+      ],
+    };
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.layouts = ["title-folder"];
+
+    // Title opens Menu Page, which the pack does not carry, nor what it uses.
+    let contents = selectAssetPackageData({ state });
+    expect(
+      contents.repository.layouts.items.title.elements.items.options.click
+        .payload.actions.pushOverlay,
+    ).toEqual({ resourceId: "link.menu" });
+    expect(contents.dependencies).toEqual({});
+    expect(contents.links.items).toEqual({
+      "link.menu": { kind: "layout", name: "Menu Page", layoutType: "general" },
+    });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).comesWith.links.items,
+    ).toMatchObject([
+      { icon: "layout", label: "Menu Page", usedBy: "Used by Title" },
+    ]);
+
+    // Picked too, Menu Page is opened as itself.
+    state.selectedFolderIdsByType.layouts = ["title-folder", "menu-folder"];
+    contents = selectAssetPackageData({ state });
+    expect(
+      contents.repository.layouts.items.title.elements.items.options.click
+        .payload.actions.pushOverlay,
+    ).toEqual({ resourceId: "menu" });
+    expect(contents.links.items).toEqual({});
   });
 
   it("rejects a jump to a line of the story", () => {
