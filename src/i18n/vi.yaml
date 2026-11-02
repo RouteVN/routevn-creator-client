@@ -891,6 +891,7 @@ assetPacksPage:
   title: "Gói tài nguyên"
   addTitle: "Thêm gói tài nguyên"
   editTitle: "Sửa gói tài nguyên"
+  exportButton: "Xuất"
   createButton: "Tạo"
   updateButton: "Cập nhật"
   failedCreateAssetPack: "Không tạo được gói tài nguyên."

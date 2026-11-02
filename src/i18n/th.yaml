@@ -891,6 +891,7 @@ assetPacksPage:
   title: "แพ็กเกจทรัพยากร"
   addTitle: "เพิ่มแพ็กเกจทรัพยากร"
   editTitle: "แก้ไขแพ็กเกจทรัพยากร"
+  exportButton: "ส่งออก"
   createButton: "สร้าง"
   updateButton: "อัปเดต"
   failedCreateAssetPack: "สร้างแพ็กเกจทรัพยากรไม่สำเร็จ"

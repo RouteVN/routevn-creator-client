@@ -259,6 +259,7 @@ export const selectViewData = ({ state, props, i18n = {} }) => {
     showFilter: mobileLayout && showTagFilter,
     i18n,
   });
+  const showImport = parseBooleanProp(props.showImport, true);
   const scrollBottomPadding = resolveResourceScrollBottomPadding({
     mobileLayout,
     scrollBottomPadding: props.scrollBottomPadding,
@@ -391,6 +392,9 @@ export const selectViewData = ({ state, props, i18n = {} }) => {
     },
     showTagFilter: showTagFilter && !mobileLayout,
     resourceImportMenuItems,
+    showImport,
+    // The three-dot menu, shown while it has something to offer.
+    showResourceImportAction: showImport || resourceImportMenuItems.length > 0,
     hasActiveTagFilter,
     tagFilterButtonVariant: hasActiveFilter ? "pr" : "ol",
     itemsPerRow,

@@ -79,6 +79,9 @@ template:
                                                       - div.assetPackageFolderGrid:
                                                           - $for tile, tileIndex in folder.items:
                                                               - rvn-asset-package-preview-tile :preview=${tile}: null
+                              # A line between the picks, what comes with them and the links.
+                              - $if comesWith.isInvalid || comesWith.isVisible:
+                                  - rtgl-view h=1 w=f bgc=bo: null
                               # What the picks use comes along; the store does not show it.
                               - $if comesWith.isInvalid:
                                   - rtgl-text s=sm c=de: ${comesWith.invalidMessage}
@@ -99,6 +102,7 @@ template:
                               # Where the picks jump into the story, and the layouts they
                               # open; the importer chooses their own for each.
                               - $if comesWith.links.isVisible:
+                                  - rtgl-view h=1 w=f bgc=bo: null
                                   - rtgl-view w=f d=v g=md:
                                       - rtgl-view w=f d=v g=xs:
                                           - rtgl-text s=lg: ${comesWith.links.title}

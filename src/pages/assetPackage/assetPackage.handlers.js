@@ -4,8 +4,7 @@ import {
   getAssetPackEditorBackPath,
   resolveAssetPackEditorPayload,
 } from "../../internal/assetPackEditorRoute.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-import { createAssetPackageManifest } from "./support/assetPackageManifest.js";
+import { exportAssetPack } from "../../internal/ui/assetPackExport.js";
 
 // The editor edits the asset pack the address names (`ap`).
 export const handleBeforeMount = (deps) => {
@@ -59,17 +58,28 @@ export const handleBackClick = (deps) => {
 };
 
 const persistAssetPackage = async (deps) => {
-  const { appService, i18n, projectService, store } = deps;
+  const { appService, i18n, projectService, render, store } = deps;
+  const assetPackId = store.selectAssetPackId();
   let result;
   try {
-    result = await projectService.updateAssetPack({
-      assetPackId: store.selectAssetPackId(),
-      data: { resources: store.selectAssetPackage().resources },
+    result = await projectService.updateAssetPackResources({
+      assetPackId,
+      resources: store.selectAssetPackage().resources,
     });
   } catch {
     result = { valid: false };
   }
   if (result?.valid === false) {
+    // The picks are saved together or not at all, so the page goes back to
+    // the saved ones.
+    const assetPack =
+      projectService.getRepositoryState()?.assetPacks?.items?.[assetPackId];
+    store.setAssetPack({
+      assetPackId,
+      name: assetPack?.name,
+      resources: assetPack?.resources,
+    });
+    render();
     appService.showToast({
       message: i18n.assetPackagePage.failedSaveAssetPackage,
       status: "error",
@@ -78,10 +88,6 @@ const persistAssetPackage = async (deps) => {
   }
   return true;
 };
-
-// The pack's name, as a file name.
-const toZipFileName = (name) =>
-  `${(name ?? "").trim().replace(/[\\/:*?"<>|]+/g, "-") || "asset-package"}.zip`;
 
 export const handlePickerTypeClick = (deps, payload) => {
   const { render, store } = deps;
@@ -122,71 +128,11 @@ export const handlePickerClose = (deps) => {
 
 export const handleDownloadAssetPackageButtonClick = async (deps) => {
   const { appService, i18n, projectService, store } = deps;
-  const copy = i18n.assetPackagePage;
-  let manifest;
-  try {
-    manifest = createAssetPackageManifest(store.selectAssetPackageData());
-  } catch (error) {
-    console.error("[asset-package] Asset package export is invalid.", error);
-    let message = copy.failedDownloadAssetPackage;
-    if (error.code === "no_resources") {
-      message = copy.selectResourcesBeforeExport;
-    }
-    appService.showToast({
-      message,
-      status: "error",
-    });
-    return;
-  }
-
-  let outputPath;
-  try {
-    outputPath = await appService.saveFilePicker({
-      title: copy.saveAssetPackageTitle,
-      defaultPath: toZipFileName(store.selectAssetPackName()),
-      filters: [{ name: copy.zipFileTypeName, extensions: ["zip"] }],
-    });
-  } catch (error) {
-    console.error("[asset-package] Failed to choose an export path.", error);
-    appService.showToast({
-      message: copy.failedDownloadAssetPackage,
-      status: "error",
-    });
-    return;
-  }
-
-  if (!outputPath) {
-    return;
-  }
-
-  const progressDialog = appService.showProgressDialog({
-    title: copy.exportInProgressTitle,
-    message: copy.exportInProgressMessage,
-    status: copy.exportPreparingStatus,
-    progress: {},
+  await exportAssetPack({
+    appService,
+    i18n,
+    projectService,
+    getContents: () => store.selectAssetPackageData(),
+    name: store.selectAssetPackName(),
   });
-
-  try {
-    await progressDialog.waitForPaint();
-    const bundle = await projectService.createAssetPackageBundle({ manifest });
-    progressDialog.update({
-      status: copy.exportSavingStatus,
-      progress: {},
-    });
-    const savedPath = await appService.writeFile(outputPath, bundle);
-    progressDialog.close();
-    appService.showAlert({
-      title: copy.exportCompletedTitle,
-      message: formatI18nCopy(copy.exportCompletedMessage, {
-        path: savedPath ?? outputPath,
-      }),
-    });
-  } catch (error) {
-    progressDialog.close();
-    console.error("[asset-package] Failed to export asset package.", error);
-    appService.showToast({
-      message: copy.failedDownloadAssetPackage,
-      status: "error",
-    });
-  }
 };

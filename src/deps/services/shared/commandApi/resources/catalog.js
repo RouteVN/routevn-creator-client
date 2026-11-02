@@ -468,6 +468,70 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idValue: assetPackId,
       data,
     }),
+  // Saves an asset pack's picks as `resources`, the types in order, in one
+  // batch with a command for each type that changed: types no longer picked
+  // are deleted, changed ones updated, and new ones placed after the type
+  // before them. Types it keeps stay where they are in the pack.
+  async updateAssetPackResources({ assetPackId, resources }) {
+    const context = await shared.ensureCommandContext();
+    const savedResources =
+      context.state?.assetPacks?.items?.[assetPackId]?.resources ?? [];
+    const savedFolderIdsByType = new Map(
+      savedResources.map(({ resourceType, folderIds }) => [
+        resourceType,
+        folderIds,
+      ]),
+    );
+    const nextResourceTypes = new Set(
+      resources.map(({ resourceType }) => resourceType),
+    );
+    const basePartition = shared.resourceTypePartitionFor(
+      context.projectId,
+      "assetPacks",
+    );
+    const commands = [];
+    const addCommand = (type, payload) => {
+      commands.push({ scope: "resources", basePartition, type, payload });
+    };
+
+    const removedResourceTypes = [...savedFolderIdsByType.keys()].filter(
+      (resourceType) => !nextResourceTypes.has(resourceType),
+    );
+    if (removedResourceTypes.length > 0) {
+      addCommand(COMMAND_TYPES.ASSETPACK_RESOURCE_DELETE, {
+        assetPackId,
+        resourceTypes: removedResourceTypes,
+      });
+    }
+
+    resources.forEach(({ resourceType, folderIds }, index) => {
+      const savedFolderIds = savedFolderIdsByType.get(resourceType);
+      const payload = {
+        assetPackId,
+        resourceType,
+        data: { folderIds: [...folderIds] },
+      };
+      if (!savedFolderIds) {
+        if (index === 0) {
+          payload.position = "first";
+        } else {
+          payload.position = "after";
+          payload.positionTargetResourceType =
+            resources[index - 1].resourceType;
+        }
+        addCommand(COMMAND_TYPES.ASSETPACK_RESOURCE_CREATE, payload);
+        return;
+      }
+      const unchanged =
+        savedFolderIds.length === folderIds.length &&
+        savedFolderIds.every((folderId, i) => folderId === folderIds[i]);
+      if (!unchanged) {
+        addCommand(COMMAND_TYPES.ASSETPACK_RESOURCE_UPDATE, payload);
+      }
+    });
+
+    return shared.submitCommandsWithContext({ context, commands });
+  },
   moveAssetPack: async ({
     assetPackId,
     parentId,

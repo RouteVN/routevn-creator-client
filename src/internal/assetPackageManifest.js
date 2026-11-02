@@ -1,13 +1,14 @@
-import { IMPORT_PACK_SCHEMA_V2 } from "../../../internal/importPackages.js";
+import { IMPORT_PACK_SCHEMA_V2 } from "./importPackages.js";
 import {
   ASSET_PACKAGE_KIND,
+  ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
   getAssetPackageStoryLinkKind,
   isAssetPackageLayoutOpenReference,
   mapAssetPackageLinks,
   visitAssetPackageReferences,
-} from "../../../internal/assetPackageResources.js";
+} from "./assetPackageResources.js";
 
 const OMITTED_PACKAGE_ITEM_KEYS = new Set([
   "parentId",
@@ -582,4 +583,38 @@ export const createAssetPackageManifest = ({
     manifest.links = structuredClone(links);
   }
   return manifest;
+};
+
+// What exporting a saved asset pack carries: its folders, read from the
+// project's state, in the order the editor exports them.
+export const createSavedAssetPackContents = ({
+  repositoryState,
+  assetPackId,
+}) => {
+  const resourceTypeOrder = ASSET_PACKAGE_RESOURCE_CONFIGS.map(
+    ({ resourceType }) => resourceType,
+  );
+  const resourceDataByType = {};
+  const selectedFolderIdsByType = {};
+  for (const resourceType of resourceTypeOrder) {
+    resourceDataByType[resourceType] = repositoryState[resourceType] ?? {
+      items: {},
+      tree: [],
+    };
+    selectedFolderIdsByType[resourceType] = [];
+  }
+  const resources =
+    repositoryState.assetPacks?.items?.[assetPackId]?.resources ?? [];
+  for (const { resourceType, folderIds } of resources) {
+    if (selectedFolderIdsByType[resourceType]) {
+      selectedFolderIdsByType[resourceType] = [...folderIds];
+    }
+  }
+  return createAssetPackageContents({
+    filesData: repositoryState.files ?? { items: {} },
+    resourceDataByType,
+    selectedFolderIdsByType,
+    resourceTypeOrder,
+    scenesData: repositoryState.scenes ?? { items: {}, tree: [] },
+  });
 };

@@ -12,13 +12,17 @@ import {
   setPickerResourceType,
   selectViewData,
   setFilesData,
+  setAssetPack,
   setAssetPackage,
   setResourceData,
   setScenesData,
   setUiConfig,
   toggleFolder,
 } from "../../src/pages/assetPackage/assetPackage.store.js";
-import { createAssetPackageManifest } from "../../src/pages/assetPackage/support/assetPackageManifest.js";
+import {
+  createAssetPackageManifest,
+  createSavedAssetPackContents,
+} from "../../src/internal/assetPackageManifest.js";
 import { visitAssetPackageReferences } from "../../src/internal/assetPackageResources.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -375,6 +379,72 @@ describe("asset package store", () => {
     ).toBe("sounds");
   });
 
+  it("leaves empty folders out of the picker, unless they are picked", () => {
+    const resourceDataByType = createResourceDataByType();
+    // An empty folder, and one holding only an empty folder.
+    Object.assign(resourceDataByType.images.items, {
+      "folder-empty": { type: "folder", name: "Empty" },
+      "folder-nested-empty": { type: "folder", name: "Nested Empty" },
+      "folder-inner-empty": { type: "folder", name: "Inner Empty" },
+    });
+    resourceDataByType.images.tree.push(
+      { id: "folder-empty", children: [] },
+      {
+        id: "folder-nested-empty",
+        children: [{ id: "folder-inner-empty", children: [] }],
+      },
+    );
+    // A type with only an empty folder.
+    resourceDataByType.colors = {
+      items: { "color-folder": { type: "folder", name: "Palette" } },
+      tree: [{ id: "color-folder", children: [] }],
+    };
+    const state = createInitialState();
+    setResourceData({ state }, { resourceDataByType });
+
+    openPicker({ state });
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.pickerSection.resourceType).toBe("images");
+    expect(
+      viewData.pickerSection.folders.map((folder) => folder.folderId),
+    ).toEqual(["folder-1", "folder-3"]);
+    expect(viewData.pickerTypes.map((type) => type.resourceType)).not.toContain(
+      "colors",
+    );
+    setPickerResourceType({ state }, { resourceType: "colors" });
+    expect(state.pickerResourceType).toBe("images");
+    closePicker({ state });
+
+    // A picked folder that is now empty stays, so it can be unticked.
+    setAssetPackage(
+      { state },
+      {
+        assetPackage: {
+          schemaVersion: 1,
+          resources: [{ resourceType: "images", folderIds: ["folder-empty"] }],
+        },
+      },
+    );
+    openPicker({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(
+      viewData.pickerSection.folders.map((folder) => [
+        folder.folderId,
+        folder.selected,
+      ]),
+    ).toEqual([
+      ["folder-1", false],
+      ["folder-3", false],
+      ["folder-empty", true],
+    ]);
+    toggleFolder(
+      { state },
+      { resourceType: "images", folderId: "folder-empty", selected: false },
+    );
+    applyPicker({ state });
+    expect(state.selectedFolderIdsByType.images).toEqual([]);
+  });
+
   // The store runs exports named select* on read-only state, so an action
   // named so would throw on its first write.
   it("only reads the state in its select* exports", () => {
@@ -513,6 +583,37 @@ describe("asset package store", () => {
         { resourceType: "layouts", folderIds: ["layout-folder"] },
       ],
     });
+  });
+
+  it("exports a saved pack from the project's state as its editor does", () => {
+    const resourceDataByType = createResourceDataByType();
+    const resources = [
+      { resourceType: "sounds", folderIds: ["sound-folder"] },
+      { resourceType: "images", folderIds: ["folder-3", "folder-1"] },
+    ];
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData({ state }, { resourceDataByType });
+    setAssetPack({ state }, { assetPackId: "pack-1", name: "Pack", resources });
+
+    const repositoryState = {
+      ...structuredClone(resourceDataByType),
+      files: FILES_DATA,
+      assetPacks: {
+        items: {
+          "pack-1": {
+            id: "pack-1",
+            type: "assetPack",
+            name: "Pack",
+            resources,
+          },
+        },
+        tree: [{ id: "pack-1" }],
+      },
+    };
+    expect(
+      createSavedAssetPackContents({ repositoryState, assetPackId: "pack-1" }),
+    ).toEqual(selectAssetPackageData({ state }));
   });
 
   it("exports selected folders from any resource type and nested file references", () => {

@@ -49,6 +49,31 @@ describe("catalogResourcesView.store", () => {
     ]);
   });
 
+  it("hides the three-dot menu when Import is off and it has nothing else", () => {
+    const groups = [{ id: "folder-1", children: [] }];
+    const viewDataFor = (props) =>
+      selectViewData({ state: createInitialState({ props }), props });
+
+    expect(viewDataFor({ groups })).toMatchObject({
+      showImport: true,
+      showResourceImportAction: true,
+    });
+    expect(viewDataFor({ groups, showImport: "false" })).toMatchObject({
+      showImport: false,
+      showResourceImportAction: false,
+    });
+    // On mobile the menu also holds Zoom, so it stays without Import.
+    expect(
+      viewDataFor({
+        groups,
+        showImport: "false",
+        mobileLayout: true,
+        showZoomControls: true,
+        zoomControlMode: "columns",
+      }),
+    ).toMatchObject({ showImport: false, showResourceImportAction: true });
+  });
+
   it("uses a two-column mobile default with a six-column maximum", () => {
     const props = {
       mobileLayout: true,

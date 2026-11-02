@@ -13,7 +13,7 @@ import {
   listAssetPackageDependencies,
   listAssetPackageLinks,
   selectTopLevelFolders,
-} from "./support/assetPackageManifest.js";
+} from "../../internal/assetPackageManifest.js";
 import {
   collectFolderResources,
   createResourcePreview,
@@ -165,26 +165,35 @@ export const toggleFolder = (
 const hasResources = (resourceData) =>
   Object.values(resourceData.items).some((item) => item.type !== "folder");
 
-// The types the picker offers: those with resources or folders.
+// The folders the picker offers for a type, in project order: those with
+// resources, at any depth, and those already picked, so a picked folder that
+// was emptied can still be unticked.
+const listPickerFolders = (state, resourceType) => {
+  const resourceData = state.resourceDataByType[resourceType];
+  const selectedIds = state.selectedFolderIdsByType[resourceType];
+  return selectTopLevelFolders(resourceData).filter(
+    (folder) =>
+      selectedIds.includes(folder.id) ||
+      collectFolderResources(resourceData, folder.id).length > 0,
+  );
+};
+
+// The types the picker offers: those with resources or folders to offer.
 const listPickerResourceTypes = (state) =>
-  RESOURCE_TYPE_ORDER.filter((resourceType) => {
-    const resourceData = state.resourceDataByType[resourceType];
-    return (
-      hasResources(resourceData) ||
-      selectTopLevelFolders(resourceData).length > 0
-    );
-  });
+  RESOURCE_TYPE_ORDER.filter(
+    (resourceType) =>
+      hasResources(state.resourceDataByType[resourceType]) ||
+      listPickerFolders(state, resourceType).length > 0,
+  );
 
 // The picker shows one type at a time: the one shown last, or else the first
-// with folders. It starts from the current selection.
+// with folders to offer. It starts from the current selection.
 export const openPicker = ({ state }) => {
   const resourceTypes = listPickerResourceTypes(state);
   if (!resourceTypes.includes(state.pickerResourceType)) {
     state.pickerResourceType =
       resourceTypes.find(
-        (resourceType) =>
-          selectTopLevelFolders(state.resourceDataByType[resourceType]).length >
-          0,
+        (resourceType) => listPickerFolders(state, resourceType).length > 0,
       ) ?? resourceTypes[0];
   }
   state.pickerFolderIdsByType = copyFolderIdsByType(
@@ -385,9 +394,9 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
 
 // Types and their top-level folders, each with its count and every
 // resource's preview. The page lists only the picked folders, in the order
-// they were picked; the picker lists every folder of the type it shows, in
-// project order, ticked as in its own copy of the selection, and says so when
-// the type has no folders.
+// they were picked; the picker lists the folders it offers for the type it
+// shows, ticked as in its own copy of the selection, and says so when it
+// offers none.
 const buildSectionsViewData = ({
   state,
   copy,
@@ -403,7 +412,7 @@ const buildSectionsViewData = ({
     )[resourceType];
     const topLevelFolders = selectTopLevelFolders(resourceData);
     const folders = inPicker
-      ? topLevelFolders
+      ? listPickerFolders(state, resourceType)
       : selectedIds
           .map((folderId) =>
             topLevelFolders.find((folder) => folder.id === folderId),

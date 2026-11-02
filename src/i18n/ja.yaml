@@ -891,6 +891,7 @@ assetPacksPage:
   title: "素材パッケージ"
   addTitle: "素材パッケージを追加"
   editTitle: "素材パッケージを編集"
+  exportButton: "出力"
   createButton: "作成"
   updateButton: "更新"
   failedCreateAssetPack: "素材パッケージを作成できませんでした。"

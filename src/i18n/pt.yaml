@@ -891,6 +891,7 @@ assetPacksPage:
   title: "Pacotes de recursos"
   addTitle: "Adicionar pacote de recursos"
   editTitle: "Editar pacote de recursos"
+  exportButton: "Exportar"
   createButton: "Criar"
   updateButton: "Atualizar"
   failedCreateAssetPack: "Não foi possível criar o pacote de recursos."

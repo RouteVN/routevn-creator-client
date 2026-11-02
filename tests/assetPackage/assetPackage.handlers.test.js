@@ -87,7 +87,7 @@ const createDeps = () => ({
     createAssetPackageBundle: vi.fn(
       async () => new Blob(["asset-package"], { type: "application/zip" }),
     ),
-    updateAssetPack: vi.fn(async () => ({ valid: true })),
+    updateAssetPackResources: vi.fn(async () => ({ valid: true })),
   },
   refs: {},
   render: vi.fn(),
@@ -196,7 +196,7 @@ describe("asset package handlers", () => {
       resourceType: "images",
       folderId: "image-folder-1",
     });
-    expect(deps.projectService.updateAssetPack).not.toHaveBeenCalled();
+    expect(deps.projectService.updateAssetPackResources).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
@@ -208,21 +208,28 @@ describe("asset package handlers", () => {
     expect(deps.store.applyPicker).toHaveBeenCalledOnce();
     expect(deps.store.closePicker).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledOnce();
-    expect(deps.projectService.updateAssetPack).toHaveBeenCalledWith({
+    expect(deps.projectService.updateAssetPackResources).toHaveBeenCalledWith({
       assetPackId: "pack-1",
-      data: { resources: SAVED_ASSET_PACKAGE.resources },
+      resources: SAVED_ASSET_PACKAGE.resources,
     });
+    expect(deps.store.setAssetPack).not.toHaveBeenCalled();
   });
 
-  it("shows feedback when the asset package cannot be saved", async () => {
+  it("goes back to the saved picks and says so when they cannot be saved", async () => {
     const deps = createDeps();
-    deps.projectService.updateAssetPack.mockResolvedValue({
+    deps.projectService.updateAssetPackResources.mockResolvedValue({
       valid: false,
       error: { message: "Storage unavailable" },
     });
 
     await handlePickerDoneClick(deps);
 
+    expect(deps.store.setAssetPack).toHaveBeenCalledWith({
+      assetPackId: "pack-1",
+      name: "Fantasy UI",
+      resources: SAVED_ASSET_PACKAGE.resources,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(2);
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Could not save the asset package. Please try again.",
       status: "error",
@@ -238,7 +245,7 @@ describe("asset package handlers", () => {
     expect(deps.store.openPicker).toHaveBeenCalledOnce();
     expect(deps.store.closePicker).toHaveBeenCalledOnce();
     expect(deps.store.applyPicker).not.toHaveBeenCalled();
-    expect(deps.projectService.updateAssetPack).not.toHaveBeenCalled();
+    expect(deps.projectService.updateAssetPackResources).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
@@ -250,7 +257,7 @@ describe("asset package handlers", () => {
     expect(deps.store.setPickerResourceType).toHaveBeenCalledWith({
       resourceType: "images",
     });
-    expect(deps.projectService.updateAssetPack).not.toHaveBeenCalled();
+    expect(deps.projectService.updateAssetPackResources).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledOnce();
   });
 

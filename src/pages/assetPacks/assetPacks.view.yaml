@@ -61,6 +61,10 @@ refs:
     eventListeners:
       click:
         handler: handleMobileDetailOpenClick
+  detailExportButton:
+    eventListeners:
+      click:
+        handler: handleDetailExportClick
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -118,9 +122,9 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} :showMenuButton=${showMobileMenuButton} menu-button-placement=trailing progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} :showMenuButton=${showMobileMenuButton} menu-button-placement=trailing show-import=false progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} progressive-render progressive-hydration-delay-frame-count=4 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-import=false progressive-render progressive-hydration-delay-frame-count=4 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -132,7 +136,9 @@ template:
                                       - rtgl-svg svg=edit wh=16: null
                                   - $if selectedItemId:
                                       - rtgl-view d=v w=f h=1fg p=md g=md sv:
-                                          - rtgl-button#detailOpenButton w=f v=se pre=chevronRight: ${openButton}
+                                          - rtgl-view d=h w=f g=sm:
+                                              - rtgl-button#detailOpenButton w=1fg v=se pre=chevronRight: ${openButton}
+                                              - rtgl-button#detailExportButton w=1fg v=se pre=download ?disabled=${selectedItemExportDisabled}: ${exportButton}
                                           - $if selectedItemDescription:
                                               - rtgl-view d=v w=f g=xs:
                                                   - rtgl-text c=mu-fg: ${descriptionLabel}

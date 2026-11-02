@@ -120,6 +120,9 @@ const {
     selectedItemDescription: selectedItem?.description ?? "",
     descriptionLabel: copy.descriptionLabel ?? "Description",
     openButton: copy.openButton ?? "Open",
+    exportButton: copy.exportButton ?? "Export",
+    // A pack with nothing picked has nothing to export.
+    selectedItemExportDisabled: (selectedItem?.resources?.length ?? 0) === 0,
   }),
 });
 

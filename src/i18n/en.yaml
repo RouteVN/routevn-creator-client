@@ -891,6 +891,7 @@ assetPacksPage:
   title: "Asset Packs"
   addTitle: "Add Asset Pack"
   editTitle: "Edit Asset Pack"
+  exportButton: "Export"
   createButton: "Create"
   updateButton: "Update"
   failedCreateAssetPack: "Failed to create asset pack."

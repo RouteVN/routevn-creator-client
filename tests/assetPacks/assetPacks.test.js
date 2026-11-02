@@ -5,8 +5,15 @@ import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
 import {
   handleAddFormAction,
   handleAssetPackItemDoubleClick,
+  handleDetailExportClick,
   handleFileExplorerAction,
 } from "../../src/pages/assetPacks/assetPacks.handlers.js";
+import {
+  createInitialState,
+  selectViewData,
+  setItems,
+  setSelectedItemId,
+} from "../../src/pages/assetPacks/assetPacks.store.js";
 import { prepareAssetPacks } from "../../src/pages/assetPacks/support/prepareAssetPacks.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -43,6 +50,118 @@ describe("asset packs", () => {
       "utf8",
     );
     expect(() => load(view)).not.toThrow();
+  });
+
+  it("offers Export beside Open, unless the pack has nothing picked", () => {
+    const state = createInitialState();
+    setItems(
+      { state },
+      {
+        data: {
+          items: {
+            "pack-1": {
+              id: "pack-1",
+              type: "assetPack",
+              name: "Pack One",
+              resources: [{ resourceType: "images", folderIds: ["folder-1"] }],
+            },
+            "pack-2": {
+              id: "pack-2",
+              type: "assetPack",
+              name: "Pack Two",
+              resources: [],
+            },
+          },
+          tree: [{ id: "pack-1" }, { id: "pack-2" }],
+        },
+      },
+    );
+    const viewDataFor = (itemId) => {
+      setSelectedItemId({ state }, { itemId });
+      return selectViewData({ state, i18n: EN_I18N });
+    };
+
+    expect(viewDataFor("pack-1")).toMatchObject({
+      exportButton: "Export",
+      selectedItemExportDisabled: false,
+    });
+    expect(viewDataFor("pack-2").selectedItemExportDisabled).toBe(true);
+  });
+
+  it("exports the selected asset pack as it is saved", async () => {
+    const appService = {
+      saveFilePicker: vi.fn(async () => "/exports/Pack One.zip"),
+      showProgressDialog: vi.fn(() => ({
+        waitForPaint: vi.fn(async () => {}),
+        update: vi.fn(),
+        close: vi.fn(),
+      })),
+      writeFile: vi.fn(async (path) => path),
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const projectService = {
+      getRepositoryState: vi.fn(() => ({
+        files: { items: {} },
+        colors: {
+          items: {
+            "color-folder": {
+              id: "color-folder",
+              type: "folder",
+              name: "Palette",
+            },
+            "color-1": {
+              id: "color-1",
+              type: "color",
+              name: "Red",
+              hex: "#ff0000",
+            },
+          },
+          tree: [{ id: "color-folder", children: [{ id: "color-1" }] }],
+        },
+        assetPacks: {
+          items: {
+            "pack-1": {
+              id: "pack-1",
+              type: "assetPack",
+              name: "Pack One",
+              resources: [
+                { resourceType: "colors", folderIds: ["color-folder"] },
+              ],
+            },
+          },
+          tree: [{ id: "pack-1" }],
+        },
+      })),
+      createAssetPackageBundle: vi.fn(async () => new Blob(["zip"])),
+    };
+    const store = {
+      selectSelectedItemId: vi.fn(() => "pack-1"),
+      selectSelectedItem: vi.fn(() => ({ id: "pack-1", name: "Pack One" })),
+    };
+
+    await handleDetailExportClick({
+      appService,
+      i18n: EN_I18N,
+      projectService,
+      store,
+    });
+
+    expect(appService.showToast).not.toHaveBeenCalled();
+    expect(appService.saveFilePicker).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultPath: "Pack One.zip" }),
+    );
+    const { manifest } =
+      projectService.createAssetPackageBundle.mock.calls[0][0];
+    expect(Object.keys(manifest.repository.colors.items).sort()).toEqual([
+      "color-1",
+      "color-folder",
+    ]);
+    expect(appService.writeFile).toHaveBeenCalledWith(
+      "/exports/Pack One.zip",
+      expect.any(Blob),
+    );
+    expect(appService.showAlert).toHaveBeenCalledOnce();
   });
 
   it("creates an empty asset pack in the chosen folder", async () => {

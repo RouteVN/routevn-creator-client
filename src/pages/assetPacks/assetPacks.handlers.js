@@ -1,8 +1,10 @@
+import { createSavedAssetPackContents } from "../../internal/assetPackageManifest.js";
 import { generateId } from "../../internal/id.js";
 import {
   ASSET_PACK_EDITOR_PATH,
   createAssetPackEditorPayload,
 } from "../../internal/assetPackEditorRoute.js";
+import { exportAssetPack } from "../../internal/ui/assetPackExport.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -329,6 +331,26 @@ export const handleMobileDetailOpenClick = (deps, payload) => {
   if (itemId) {
     navigateToEditor({ appService, assetPackId: itemId });
   }
+};
+
+// Exports the selected asset pack as it is saved, as its editor's Export does.
+export const handleDetailExportClick = async (deps) => {
+  const { appService, i18n, projectService, store } = deps;
+  const assetPackId = store.selectSelectedItemId();
+  if (!assetPackId) {
+    return;
+  }
+  await exportAssetPack({
+    appService,
+    i18n,
+    projectService,
+    getContents: () =>
+      createSavedAssetPackContents({
+        repositoryState: projectService.getRepositoryState(),
+        assetPackId,
+      }),
+    name: store.selectSelectedItem()?.name,
+  });
 };
 
 export const handleMobileDetailDuplicateClick = async (deps, payload) => {

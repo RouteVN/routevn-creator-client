@@ -891,6 +891,7 @@ assetPacksPage:
   title: "素材包"
   addTitle: "添加素材包"
   editTitle: "编辑素材包"
+  exportButton: "导出"
   createButton: "创建"
   updateButton: "更新"
   failedCreateAssetPack: "无法创建素材包。"
