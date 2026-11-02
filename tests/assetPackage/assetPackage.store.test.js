@@ -229,7 +229,7 @@ describe("asset package store", () => {
     );
     openPicker({ state });
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    // Layouts are not offered yet; types without resources are left out.
+    // Types without resources are left out.
     expect(viewData.pickerTypes.map((type) => type.resourceType)).toEqual([
       "images",
       "sounds",
@@ -239,6 +239,7 @@ describe("asset package store", () => {
       "colors",
       "fonts",
       "textStyles",
+      "layouts",
     ]);
     // The picker opens on the first type with folders and shows only it.
     expect(viewData.pickerTypes[0]).toMatchObject({
@@ -356,7 +357,7 @@ describe("asset package store", () => {
 
     // Choosing another type shows only its folders; an unknown one is ignored.
     setPickerResourceType({ state }, { resourceType: "sounds" });
-    setPickerResourceType({ state }, { resourceType: "layouts" });
+    setPickerResourceType({ state }, { resourceType: "scenes" });
     viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.pickerSection.resourceType).toBe("sounds");
     expect(
@@ -508,6 +509,7 @@ describe("asset package store", () => {
       resources: [
         { resourceType: "images", folderIds: ["folder-3", "folder-1"] },
         { resourceType: "videos", folderIds: ["video-folder"] },
+        { resourceType: "layouts", folderIds: ["layout-folder"] },
       ],
     });
   });

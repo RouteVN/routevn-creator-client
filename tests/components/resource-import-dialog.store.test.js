@@ -252,6 +252,7 @@ describe("resource-import-dialog.store", () => {
       "COLORS",
       "FONTS",
       "TEXT_STYLES",
+      "LAYOUTS",
       "VARIABLES",
       "CONTROLS",
     ]);

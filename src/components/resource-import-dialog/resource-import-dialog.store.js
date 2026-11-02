@@ -52,6 +52,7 @@ const STORE_ASSET_TYPES = Object.freeze([
     resourceType: "textStyles",
     path: "/project/text-styles",
   },
+  { assetType: "LAYOUTS", resourceType: "layouts", path: "/project/layouts" },
   {
     assetType: "VARIABLES",
     resourceType: "variables",

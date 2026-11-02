@@ -18,20 +18,12 @@ import {
   createResourcePreview,
 } from "./support/assetPackagePreviews.js";
 
-const ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS =
-  ASSET_PACKAGE_RESOURCE_CONFIGS.filter(
-    ({ resourceType }) => resourceType !== "layouts",
-  );
-const ASSET_PACKAGE_CREATOR_RESOURCE_TYPES = new Set(
-  ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(
-    ({ resourceType }) => resourceType,
-  ),
-);
 // A pack lists its types in this order, and each type's folders in the
 // order they were picked.
-const RESOURCE_TYPE_ORDER = ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(
+const RESOURCE_TYPE_ORDER = ASSET_PACKAGE_RESOURCE_CONFIGS.map(
   ({ resourceType }) => resourceType,
 );
+const RESOURCE_TYPES = new Set(RESOURCE_TYPE_ORDER);
 const MAX_LISTED_USERS = 3;
 
 const createEmptyResourceData = () => ({
@@ -49,7 +41,7 @@ const createResourceDataByType = () =>
 
 const createSelectedFolderIdsByType = () =>
   Object.fromEntries(
-    ASSET_PACKAGE_CREATOR_RESOURCE_CONFIGS.map(({ resourceType }) => [
+    ASSET_PACKAGE_RESOURCE_CONFIGS.map(({ resourceType }) => [
       resourceType,
       [],
     ]),
@@ -103,7 +95,7 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
   const normalizedAssetPackage = normalizeAssetPackage(assetPackage);
   const selectedFolderIdsByType = createSelectedFolderIdsByType();
   for (const { resourceType, folderIds } of normalizedAssetPackage.resources) {
-    if (!ASSET_PACKAGE_CREATOR_RESOURCE_TYPES.has(resourceType)) {
+    if (!RESOURCE_TYPES.has(resourceType)) {
       continue;
     }
     selectedFolderIdsByType[resourceType] = keepTopLevelFolders(
@@ -122,7 +114,7 @@ export const toggleFolder = (
 ) => {
   const resourceData = state.resourceDataByType[resourceType];
   if (
-    !ASSET_PACKAGE_CREATOR_RESOURCE_TYPES.has(resourceType) ||
+    !RESOURCE_TYPES.has(resourceType) ||
     !resourceData ||
     !isTopLevelFolder(resourceData, folderId)
   ) {
