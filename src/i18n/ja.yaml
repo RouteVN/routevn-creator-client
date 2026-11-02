@@ -2818,9 +2818,9 @@ assetPackagePage:
   selectedFolderCount_other: "{count}個のフォルダーを選択"
   selectionInvalid: "この選択は出力できません。存在しない素材か、ストーリーのシーンを使っているものがあります。"
   pickedTitle: "選んだ素材"
-  addFoldersButton: "フォルダーを追加"
-  nothingPicked: "まだ何も選んでいません。パッケージに入れるフォルダーを追加してください。"
-  pickerTitle: "フォルダーを追加"
+  pickResourcesButton: "素材を選ぶ"
+  nothingPicked: "まだ何も選んでいません。パッケージに入れるフォルダーを選んでください。"
+  pickerTitle: "素材を選ぶ"
   doneButton: "完了"
 resourceImport:
   assetPackageImported_one: "素材パッケージから{count}件の素材を取り込みました。"

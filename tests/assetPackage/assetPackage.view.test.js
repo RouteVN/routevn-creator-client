@@ -43,7 +43,7 @@ describe("asset package view", () => {
     expect(assetPackageView).toContain("div.assetPackageFolderGrid");
     expect(assetPackageView).toContain("repeat(auto-fill, 80px)");
     expect(assetPackageView).toContain(
-      "rtgl-button#addFoldersButton v=ol pre=plus",
+      "rtgl-button#pickResourcesButton v=ol pre=edit",
     );
     expect(assetPackageView).toContain(
       "rtgl-dialog#pickerDialog ?open=${isPickerOpen}",

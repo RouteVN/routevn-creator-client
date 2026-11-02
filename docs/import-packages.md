@@ -137,7 +137,7 @@ the top-level folders in the pack, by type, each with every resource in it
 with its name; folders are added and removed in the picker. Previews are drawn
 as on the type's own page: images and thumbnails on the transparency grid,
 sound waveforms, font glyphs, text style samples and color swatches, or the
-type's icon. Dependencies lists what the picks use (see below). Add folders
+type's icon. Dependencies lists what the picks use (see below). Pick resources
 opens a picker that shows one resource type at a time: a list of the types
 with resources, each with how many of its folders are picked, and the chosen
 type's top-level folders, the same way, each with a checkbox;

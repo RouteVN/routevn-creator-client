@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ASSET_PACKAGE_RESOURCE_TYPES } from "../../src/internal/assetPackageResources.js";
 import {
-  handleAddFoldersClick,
+  handlePickResourcesClick,
   handleAfterMount,
   handleBeforeMount,
   handleDownloadAssetPackageButtonClick,
@@ -204,7 +204,7 @@ describe("asset package handlers", () => {
   it("opens the folder picker, and closes it without saving", () => {
     const deps = createDeps();
 
-    handleAddFoldersClick(deps);
+    handlePickResourcesClick(deps);
     handlePickerClose(deps);
 
     expect(deps.store.openPicker).toHaveBeenCalledOnce();

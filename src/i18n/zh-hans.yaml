@@ -2818,9 +2818,9 @@ assetPackagePage:
   selectedFolderCount_other: "已选 {count} 个文件夹"
   selectionInvalid: "无法导出所选内容：其中有内容用到了已不存在的素材或故事场景。"
   pickedTitle: "已选素材"
-  addFoldersButton: "添加文件夹"
-  nothingPicked: "还没有选择任何内容。请添加要放进素材包的文件夹。"
-  pickerTitle: "添加文件夹"
+  pickResourcesButton: "选择素材"
+  nothingPicked: "还没有选择任何内容。请选择要放进素材包的文件夹。"
+  pickerTitle: "选择素材"
   doneButton: "完成"
 resourceImport:
   assetPackageImported_one: "已从素材包导入 {count} 个素材。"

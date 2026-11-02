@@ -2818,9 +2818,9 @@ assetPackagePage:
   selectedFolderCount_other: "{count} dossiers choisis"
   selectionInvalid: "Cette sélection ne peut pas être exportée : un élément utilise une ressource qui n'existe plus ou une scène de l'histoire."
   pickedTitle: "Ressources choisies"
-  addFoldersButton: "Ajouter des dossiers"
-  nothingPicked: "Rien n'est encore choisi. Ajoutez les dossiers à mettre dans votre paquet."
-  pickerTitle: "Ajouter des dossiers"
+  pickResourcesButton: "Choisir des ressources"
+  nothingPicked: "Rien n'est encore choisi. Choisissez les dossiers à mettre dans votre paquet."
+  pickerTitle: "Choisir des ressources"
   doneButton: "Terminé"
 resourceImport:
   assetPackageImported_one: "{count} ressource importée depuis le paquet."

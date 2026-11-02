@@ -392,7 +392,7 @@ export const selectViewData = ({ state, i18n }) => {
     showExplorerPanel: !state.isTouchMode,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
     pickedTitle: copy.pickedTitle,
-    addFoldersLabel: copy.addFoldersButton,
+    pickResourcesLabel: copy.pickResourcesButton,
     hasPicks: pickedSections.length > 0,
     nothingPickedMessage: copy.nothingPicked,
     pickedSections,

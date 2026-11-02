@@ -2818,9 +2818,9 @@ assetPackagePage:
   selectedFolderCount_other: "Đã chọn {count} thư mục"
   selectionInvalid: "Không xuất được lựa chọn này: có mục đang dùng một tài nguyên không còn tồn tại hoặc một cảnh trong truyện."
   pickedTitle: "Tài nguyên đã chọn"
-  addFoldersButton: "Thêm thư mục"
-  nothingPicked: "Chưa chọn gì. Hãy thêm các thư mục cần đưa vào gói."
-  pickerTitle: "Thêm thư mục"
+  pickResourcesButton: "Chọn tài nguyên"
+  nothingPicked: "Chưa chọn gì. Hãy chọn các thư mục cần đưa vào gói."
+  pickerTitle: "Chọn tài nguyên"
   doneButton: "Xong"
 resourceImport:
   assetPackageImported_one: "Đã nhập {count} tài nguyên từ gói tài nguyên."

@@ -66,7 +66,7 @@ export const handlePickerDoneClick = async (deps) => {
   await persistAssetPackage(deps);
 };
 
-export const handleAddFoldersClick = (deps) => {
+export const handlePickResourcesClick = (deps) => {
   const { render, store } = deps;
   store.openPicker();
   render();

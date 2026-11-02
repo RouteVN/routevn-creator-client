@@ -1,8 +1,8 @@
 refs:
-  addFoldersButton:
+  pickResourcesButton:
     eventListeners:
       click:
-        handler: handleAddFoldersClick
+        handler: handlePickResourcesClick
   pickerDialog:
     eventListeners:
       close:
@@ -58,7 +58,7 @@ template:
                               - rtgl-view w=f d=v g=md:
                                   - rtgl-view w=f d=h av=c g=sm:
                                       - rtgl-text s=lg w=1fg: ${pickedTitle}
-                                      - rtgl-button#addFoldersButton v=ol pre=plus: ${addFoldersLabel}
+                                      - rtgl-button#pickResourcesButton v=ol pre=edit: ${pickResourcesLabel}
                                   - $if !hasPicks:
                                       - rtgl-text s=sm c=mu-fg: ${nothingPickedMessage}
                                   # No box around a folder: its name, then its tiles.
