@@ -374,10 +374,17 @@ export const isAssetPackageFileMimeTypeAllowed = ({
     mimeType?.trim().toLowerCase(),
   ) === true;
 
-export const visitAssetPackageReferences = (value, visitor, fieldName) => {
+// The visitor also gets `parentFieldName`, the key of the object holding the
+// field, such as the action a `resourceId` belongs to.
+export const visitAssetPackageReferences = (
+  value,
+  visitor,
+  fieldName,
+  parentFieldName,
+) => {
   if (Array.isArray(value)) {
     for (const item of value) {
-      visitAssetPackageReferences(item, visitor, fieldName);
+      visitAssetPackageReferences(item, visitor, fieldName, parentFieldName);
     }
     return;
   }
@@ -389,6 +396,7 @@ export const visitAssetPackageReferences = (value, visitor, fieldName) => {
     if (reference) {
       visitor({
         fieldName,
+        parentFieldName,
         kind: reference.kind,
         required: reference.required,
         value: reference.resourceId,
@@ -400,7 +408,7 @@ export const visitAssetPackageReferences = (value, visitor, fieldName) => {
     if (isOpaqueReferenceValue(childFieldName, item)) {
       continue;
     }
-    visitAssetPackageReferences(item, visitor, childFieldName);
+    visitAssetPackageReferences(item, visitor, childFieldName, fieldName);
   }
 };
 
@@ -451,24 +459,31 @@ const STORY_LINK_KIND_BY_FIELD = Object.freeze({
 export const getAssetPackageStoryLinkKind = (fieldName) =>
   STORY_LINK_KIND_BY_FIELD[fieldName];
 
-// The field an action names the layout it opens with, as `pushOverlay` and
-// `showConfirmDialog` do.
-export const ASSET_PACKAGE_LAYOUT_LINK_FIELD = "resourceId";
+// The actions that open a layout, which they name with `resourceId`. Only
+// these may point at a layout link.
+const LAYOUT_OPEN_ACTIONS = new Set(["pushOverlay", "showConfirmDialog"]);
 
-const isLinkField = (fieldName) =>
+export const isAssetPackageLayoutOpenReference = ({
+  fieldName,
+  parentFieldName,
+}) => fieldName === "resourceId" && LAYOUT_OPEN_ACTIONS.has(parentFieldName);
+
+const isLinkField = (fieldName, parentFieldName) =>
   Boolean(getAssetPackageStoryLinkKind(fieldName)) ||
-  fieldName === ASSET_PACKAGE_LAYOUT_LINK_FIELD;
+  isAssetPackageLayoutOpenReference({ fieldName, parentFieldName });
 
 const UNSET_LINK = Symbol("unset link");
 
-const mapLinksInner = (value, resolve, fieldName, isRoot) => {
+const mapLinksInner = (value, resolve, fieldName, parentFieldName, isRoot) => {
   if (Array.isArray(value)) {
     return value
-      .map((item) => mapLinksInner(item, resolve, fieldName, false))
+      .map((item) =>
+        mapLinksInner(item, resolve, fieldName, parentFieldName, false),
+      )
       .filter((item) => item !== UNSET_LINK);
   }
   if (typeof value === "string") {
-    if (value === "" || !isLinkField(fieldName)) {
+    if (value === "" || !isLinkField(fieldName, parentFieldName)) {
       return value;
     }
     return resolve(value, fieldName) || UNSET_LINK;
@@ -482,7 +497,13 @@ const mapLinksInner = (value, resolve, fieldName, isRoot) => {
       mapped[childFieldName] = item;
       continue;
     }
-    const mappedItem = mapLinksInner(item, resolve, childFieldName, false);
+    const mappedItem = mapLinksInner(
+      item,
+      resolve,
+      childFieldName,
+      fieldName,
+      false,
+    );
     if (mappedItem === UNSET_LINK) {
       // A jump with no destination goes, with the action that holds it.
       if (typeof item === "string" && !isRoot) {
@@ -500,7 +521,7 @@ const mapLinksInner = (value, resolve, fieldName, isRoot) => {
 // nothing is removed with the action that holds it: the object around it, or
 // its entry in a list.
 export const mapAssetPackageLinks = (value, resolve) =>
-  mapLinksInner(value, resolve, undefined, true);
+  mapLinksInner(value, resolve, undefined, undefined, true);
 
 const ASSET_PACKAGE_KEYS = new Set(["schemaVersion", "metadata", "resources"]);
 const ASSET_PACKAGE_METADATA_KEYS = new Set([

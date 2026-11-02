@@ -522,6 +522,7 @@ describe("resourcePackageImportService", () => {
                   payload: {
                     actions: {
                       resetStoryAtSection: { sectionId: "link.start" },
+                      pushOverlay: { resourceId: "link.menu" },
                     },
                   },
                 },
@@ -535,12 +536,23 @@ describe("resourcePackageImportService", () => {
     };
     manifest.links = {
       items: {
-        "link.start": {
-          kind: "section",
-          name: "Start",
-          sceneName: "Title",
+        "link.start": { kind: "section", name: "Start", sceneName: "Title" },
+        "link.menu": {
+          kind: "layout",
+          name: "Menu Page",
+          layoutType: "general",
         },
       },
+    };
+    currentRepositoryState.layouts = {
+      items: {
+        "layout.confirm": {
+          type: "layout",
+          name: "Confirm",
+          layoutType: "confirmDialog",
+        },
+      },
+      tree: [{ id: "layout.confirm" }],
     };
     importClient.fetchManifest.mockResolvedValue({
       manifest,
@@ -549,13 +561,9 @@ describe("resourcePackageImportService", () => {
     const planned = await service.createResourceImportPlan({
       url: "http://localhost:4179/manifests/assets.json",
     });
-    expect(planned.plan.links).toEqual([
-      {
-        id: "link.start",
-        kind: "section",
-        name: "Start",
-        sceneName: "Title",
-      },
+    expect(planned.plan.links.map((link) => link.id)).toEqual([
+      "link.start",
+      "link.menu",
     ]);
     const layout = planned.plan.resources.find(
       (resource) => resource.name === "Title Menu",
@@ -573,10 +581,23 @@ describe("resourcePackageImportService", () => {
       error: { code: "link_target_missing" },
     });
 
+    // A layout link takes a layout of its layout's type only.
+    expect(
+      service.validateResourceImportPlan({
+        planId: planned.plan.planId,
+        selectedResourceIds: [layout.sourceId],
+        linkTargets: { "link.menu": "layout.confirm" },
+      }),
+    ).toMatchObject({
+      valid: false,
+      error: { code: "link_target_missing" },
+    });
+
+    // The section is set; the unset layout link drops its open action.
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
       selectedResourceIds: [layout.sourceId],
-      linkTargets: { "link.start": "section-1" },
+      linkTargets: { "link.start": "section-1", "link.menu": "" },
     });
     expect(result).toMatchObject({ valid: true });
     const committed =

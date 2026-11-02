@@ -95,11 +95,11 @@ a title menu's Start button going to a section, and the layouts their actions
 open (`pushOverlay`, `showConfirmDialog`) that the pack does not carry. Each
 item is `{ kind, name, sceneName, layoutType }`: `kind` is `section`, `scene`
 or `layout`; `name` is its name; a section also gives its scene's name, and a
-layout its layout type. Fields that jump into the story (`sectionId`,
+layout its layout type; each text is at most 200 characters. Fields that jump into the story (`sectionId`,
 `sceneId` and their lists), and the `resourceId` of an action that opens such
 a layout, hold link keys, such as `"sectionId": "link.oivTjWAhhYG1"`, instead
 of the author's ids. A jump to a section leaves out its `sceneId`, as the
-section gives the scene. A layout the pack carries, because it is picked or
+section gives the scene; import rejects a section jump that names a scene. A layout the pack carries, because it is picked or
 something draws it, is opened as itself. `links` is left out when there are
 none.
 
@@ -139,8 +139,7 @@ dependencies remain selected and cannot be deselected while a selected resource
 requires them. Missing required dependencies reject the package.
 
 Scene, section, and line ids are project-owned. In a v2 package, a scene or
-section reference must name one of the package's links, of the same kind, and
-so may an action's `resourceId` naming a layout link; import sets each to the
+section reference must name one of the package's links, of the same kind, and so may the `resourceId` of a `pushOverlay` or `showConfirmDialog` action naming a layout link; import sets each to the
 section, scene or layout the user chose, or removes the action holding it when
 the user left the link unset. Other references to scenes or sections, and any
 `lineId` or `lineIds`, reject the package.
@@ -212,8 +211,7 @@ Choose Resources lists each under Links, with the resources that use it and a
 choice of the project's sections, scenes or layouts; a layout link offers the
 layouts of its layout's type. A link starts at the project's section with the
 same section and scene names, or its scene or layout with the same name, and
-otherwise unset. Import writes the choice into every jump or open action
-through the link; a link left unset removes those actions, so their buttons
+otherwise unset. Import checks that each choice still exists and, for a layout, has the link's layout type, writes it into every jump or open action through the link, and checks each resource again; a link left unset removes those actions, so their buttons
 do the rest of what they do.
 
 Files, folders, and resources are committed in one atomic command batch. A

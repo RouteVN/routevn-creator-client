@@ -5,9 +5,9 @@ import {
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
   getAssetPackageFileValidationKind,
-  ASSET_PACKAGE_LAYOUT_LINK_FIELD,
   getAssetPackageStoryLinkKind,
   isAssetPackageFileMimeTypeAllowed,
+  isAssetPackageLayoutOpenReference,
   mapAssetPackageReferences,
   mapAssetPackageLinks,
   visitAssetPackageReferences,
@@ -22,6 +22,7 @@ const ENVELOPE_KEYS = new Set(["schema", "package", "repository"]);
 const ENVELOPE_KEYS_V2 = new Set([...ENVELOPE_KEYS, "dependencies", "links"]);
 const LINK_KEYS = new Set(["kind", "name", "sceneName", "layoutType"]);
 const LINK_KINDS = new Set(["section", "scene", "layout"]);
+const MAX_LINK_TEXT_LENGTH = 200;
 const PACKAGE_KEYS = new Set([
   "kind",
   "id",
@@ -358,9 +359,14 @@ const validateLinks = (manifest) => {
         },
       );
     }
-    assertOptionalString(link.name, `${path}.name`);
-    assertOptionalString(link.sceneName, `${path}.sceneName`);
-    assertOptionalString(link.layoutType, `${path}.layoutType`);
+    for (const key of ["name", "sceneName", "layoutType"]) {
+      assertOptionalString(link[key], `${path}.${key}`);
+      if ((link[key]?.length ?? 0) > MAX_LINK_TEXT_LENGTH) {
+        fail("invalid_package", `${path}.${key} is too long.`, {
+          path: `${path}.${key}`,
+        });
+      }
+    }
     const isResourceId = ASSET_PACKAGE_RESOURCE_TYPES.some(
       (resourceType) =>
         Object.hasOwn(manifest.repository[resourceType]?.items ?? {}, linkId) ||
@@ -397,9 +403,15 @@ const assertStoryLinkReference = ({
   }
 };
 
-// A layout an action opens, when the package does not carry it.
-const isLayoutLinkReference = ({ manifest, fieldName, value }) =>
-  fieldName === ASSET_PACKAGE_LAYOUT_LINK_FIELD &&
+// A layout an action that opens layouts opens, when the package does not
+// carry it.
+const isLayoutLinkReference = ({
+  manifest,
+  fieldName,
+  parentFieldName,
+  value,
+}) =>
+  isAssetPackageLayoutOpenReference({ fieldName, parentFieldName }) &&
   manifest.links?.items?.[value]?.kind === "layout";
 
 const validateManifest = (manifest) => {
@@ -594,14 +606,33 @@ const deepFreeze = (value) => {
   return value;
 };
 
+// A section jump takes its scene from its section, so a package may not give
+// it a scene of its own, which could be another scene's.
+const hasSceneBesideSection = (value) => {
+  if (Array.isArray(value)) return value.some(hasSceneBesideSection);
+  if (!value || typeof value !== "object") return false;
+  if (typeof value.sectionId === "string" && value.sceneId !== undefined) {
+    return true;
+  }
+  return Object.values(value).some(hasSceneBesideSection);
+};
+
 const collectResourceDependencySourceIds = ({
   data,
   entryByPackageSourceId,
   sourceId,
   manifest,
 }) => {
+  if (hasSceneBesideSection(data)) {
+    fail(
+      "project_reference_unsupported",
+      "A section jump in an asset package cannot name a scene.",
+      { resourceId: sourceId },
+    );
+  }
   const dependencySourceIds = new Set();
-  visitAssetPackageReferences(data, ({ fieldName, kind, required, value }) => {
+  visitAssetPackageReferences(data, (reference) => {
+    const { fieldName, kind, required, value } = reference;
     if (kind === "project") {
       assertStoryLinkReference({
         manifest,
@@ -614,7 +645,7 @@ const collectResourceDependencySourceIds = ({
     if (kind !== "resource") {
       return;
     }
-    if (isLayoutLinkReference({ manifest, fieldName, value })) {
+    if (isLayoutLinkReference({ manifest, ...reference })) {
       return;
     }
     const dependency = entryByPackageSourceId.get(value);
@@ -638,12 +669,12 @@ const collectResourceDependencySourceIds = ({
 // The links a resource jumps through or opens.
 const collectResourceLinkIds = ({ data, manifest }) => {
   const linkIds = new Set();
-  visitAssetPackageReferences(data, ({ fieldName, kind, value }) => {
+  visitAssetPackageReferences(data, (reference) => {
     if (
-      kind === "project" ||
-      isLayoutLinkReference({ manifest, fieldName, value })
+      reference.kind === "project" ||
+      isLayoutLinkReference({ manifest, ...reference })
     ) {
-      linkIds.add(value);
+      linkIds.add(reference.value);
     }
   });
   return [...linkIds];
@@ -1106,7 +1137,8 @@ export const createAssetImportPlan = ({
 };
 
 // `linkTargets` gives each link the section, scene or layout the importer
-// chose; a jump or open action through a link left unset is removed.
+// chose; a jump or open action through a link left unset is removed. Each
+// resource is checked again once its links are set, before it is imported.
 export const rewriteAssetImportPlanReferences = ({
   resources,
   resourceNames = {},
@@ -1129,5 +1161,11 @@ export const rewriteAssetImportPlanReferences = ({
     if (resourceDescriptions[resource.sourceId] !== undefined) {
       data.description = resourceDescriptions[resource.sourceId].trim();
     }
+    validateResourcePayload({
+      config: ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE[resource.resourceType],
+      data,
+      destinationId: resource.destinationId,
+      resourceId: resource.packageSourceId,
+    });
     return { ...resource, data };
   });

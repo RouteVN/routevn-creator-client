@@ -1005,6 +1005,54 @@ describe("links in v2 packages", () => {
     );
   });
 
+  it("accepts a layout link only where an action opens a layout", () => {
+    const manifest = createLinkManifest();
+    manifest.repository.layouts.items["layout-1"].elements.items.start.click = {
+      payload: { actions: { playSound: { resourceId: "link.menu" } } },
+    };
+    manifest.links.items = {
+      "link.menu": { kind: "layout", name: "Menu Page" },
+    };
+    expect(() => planV2(manifest)).toThrow(
+      "Referenced resource 'link.menu' is missing.",
+    );
+  });
+
+  it("rejects a section jump that names a scene, and overlong link text", () => {
+    const withScene = createLinkManifest();
+    withScene.repository.layouts.items[
+      "layout-1"
+    ].elements.items.start.click.payload.actions = {
+      sectionTransition: { sectionId: "link.start", sceneId: "link.title" },
+    };
+    withScene.links.items["link.title"] = { kind: "scene", name: "Title" };
+    expect(() => planV2(withScene)).toThrow(
+      "A section jump in an asset package cannot name a scene.",
+    );
+
+    const longName = createLinkManifest();
+    longName.links.items["link.start"].name = "x".repeat(201);
+    expect(() => planV2(longName)).toThrow("is too long");
+  });
+
+  it("checks each resource again once its links are set", () => {
+    const plan = planV2(createLinkManifest());
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    let error;
+    try {
+      rewriteAssetImportPlanReferences({
+        resources: [titleMenu],
+        linkTargets: { "link.start": "section-9" },
+        resourceNames: { [titleMenu.sourceId]: "   " },
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error?.code).toBe("resource_validation_failed");
+  });
+
   it("rejects a link id that is also a resource id", () => {
     const manifest = createLinkManifest();
     manifest.links.items["color-1"] = { kind: "scene", name: "Title" };

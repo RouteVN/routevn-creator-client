@@ -3,8 +3,8 @@ import {
   ASSET_PACKAGE_KIND,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
-  ASSET_PACKAGE_LAYOUT_LINK_FIELD,
   getAssetPackageStoryLinkKind,
+  isAssetPackageLayoutOpenReference,
   mapAssetPackageLinks,
   visitAssetPackageReferences,
 } from "../../../internal/assetPackageResources.js";
@@ -224,7 +224,7 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
         const { item, itemId } = pending.pop();
         visitAssetPackageReferences(
           dropSectionJumpScenes(item),
-          ({ fieldName, kind, required, value }) => {
+          ({ fieldName, parentFieldName, kind, required, value }) => {
             if (kind === "project") {
               const linkKind = getAssetPackageStoryLinkKind(fieldName);
               if (!linkKind) {
@@ -255,7 +255,10 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
               return;
             }
             if (
-              fieldName === ASSET_PACKAGE_LAYOUT_LINK_FIELD &&
+              isAssetPackageLayoutOpenReference({
+                fieldName,
+                parentFieldName,
+              }) &&
               source.resourceType === "layouts"
             ) {
               addLink({ targetId: source.itemId, kind: "layout", itemId });

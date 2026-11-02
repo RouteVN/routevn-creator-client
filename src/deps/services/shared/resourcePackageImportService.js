@@ -212,7 +212,8 @@ const validateReviewChoices = ({
 };
 
 // Each link the importer set goes to a section, scene or layout the project
-// still has, of the link's kind; an unset link is fine.
+// still has, of the link's kind, and a layout of the link's layout type; an
+// unset link is fine.
 const validateLinkTargets = ({ plan, linkTargets, repositoryState }) => {
   const linkById = new Map((plan.links ?? []).map((link) => [link.id, link]));
   const scenes = Object.entries(repositoryState?.scenes?.items ?? {}).filter(
@@ -222,13 +223,18 @@ const validateLinkTargets = ({ plan, linkTargets, repositoryState }) => {
     section: (targetId) =>
       scenes.some(([, scene]) => scene.sections?.items?.[targetId]),
     scene: (targetId) => scenes.some(([sceneId]) => sceneId === targetId),
-    layout: (targetId) =>
-      repositoryState?.layouts?.items?.[targetId]?.type === "layout",
+    layout: (targetId, link) => {
+      const layout = repositoryState?.layouts?.items?.[targetId];
+      return (
+        layout?.type === "layout" &&
+        (link.layoutType === undefined || layout.layoutType === link.layoutType)
+      );
+    },
   };
   for (const [linkId, targetId] of Object.entries(linkTargets ?? {})) {
     if (!targetId) continue;
     const link = linkById.get(linkId);
-    if (!link || !targetExists[link.kind]?.(targetId)) {
+    if (!link || !targetExists[link.kind]?.(targetId, link)) {
       fail(
         "link_target_missing",
         "A section, scene or layout chosen for a link no longer exists.",
