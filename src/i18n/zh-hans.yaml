@@ -2807,7 +2807,7 @@ assetPackagePage:
   videoMenuItem: "视频"
   videosSectionTitle: "视频"
   zipFileTypeName: "ZIP 文件"
-  comesWithHint: "你选择的素材会用到这些，因此素材包会包含它们。素材商店只显示你选择的素材，导入时这些会放进单独的文件夹。"
+  comesWithHint: "因为你选择的素材会用到它们，所以一并包含。它们不会显示在素材商店中。"
   comesWithTitle: "依赖素材"
   usedByLabel: "使用者：{names}"
   usedByMore: "另外 {count} 个"

@@ -2807,7 +2807,7 @@ assetPackagePage:
   videoMenuItem: "Vídeo"
   videosSectionTitle: "Vídeos"
   zipFileTypeName: "Arquivo ZIP"
-  comesWithHint: "O que você escolheu usa estes recursos, então o pacote os inclui. A Loja de recursos mostra só o que você escolheu, e a importação os adiciona a uma pasta própria."
+  comesWithHint: "Incluídos porque o que você escolheu os usa. Não aparecem na Loja de recursos."
   comesWithTitle: "Dependências"
   usedByLabel: "Usado por {names}"
   usedByMore: "mais {count}"

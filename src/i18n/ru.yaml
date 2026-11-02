@@ -2831,7 +2831,7 @@ assetPackagePage:
   videoMenuItem: "Видео"
   videosSectionTitle: "Видео"
   zipFileTypeName: "ZIP-архив"
-  comesWithHint: "Выбранные ресурсы используют эти, поэтому они входят в пакет. В Магазине ресурсов видны только выбранные, а при импорте эти добавляются в отдельную папку."
+  comesWithHint: "Входят в пакет, потому что их используют выбранные ресурсы. В Магазине ресурсов не показываются."
   comesWithTitle: "Зависимости"
   usedByLabel: "Используется в: {names}"
   usedByMore: "ещё {count}"

@@ -2807,7 +2807,7 @@ assetPackagePage:
   videoMenuItem: "Video"
   videosSectionTitle: "Video"
   zipFileTypeName: "Tệp nén ZIP"
-  comesWithHint: "Các tài nguyên bạn chọn dùng đến những tài nguyên này, nên gói sẽ có cả chúng. Cửa hàng tài nguyên chỉ hiện những gì bạn chọn, và khi nhập, các tài nguyên này được thêm vào một thư mục riêng."
+  comesWithHint: "Được kèm theo vì các tài nguyên bạn chọn dùng đến chúng. Chúng không hiện trong cửa hàng tài nguyên."
   comesWithTitle: "Tài nguyên phụ thuộc"
   usedByLabel: "Được dùng bởi {names}"
   usedByMore: "{count} mục khác"

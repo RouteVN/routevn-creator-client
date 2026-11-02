@@ -2807,7 +2807,7 @@ assetPackagePage:
   videoMenuItem: "Video"
   videosSectionTitle: "Videos"
   zipFileTypeName: "ZIP Archive"
-  comesWithHint: "Your picks use these, so the package includes them. The Asset Store lists only your picks, and importing adds these to a folder of their own."
+  comesWithHint: "Included because your picks use them. They aren't listed in the Asset Store."
   comesWithTitle: "Dependencies"
   usedByLabel: "Used by {names}"
   usedByMore: "{count} more"

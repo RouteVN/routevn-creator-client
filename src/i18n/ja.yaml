@@ -2807,7 +2807,7 @@ assetPackagePage:
   videoMenuItem: "動画"
   videosSectionTitle: "動画"
   zipFileTypeName: "ZIPファイル"
-  comesWithHint: "選んだ素材がこれらを使うため、パッケージに含まれます。素材ストアには選んだ素材だけが表示され、取り込むとこれらは専用のフォルダーに追加されます。"
+  comesWithHint: "選んだ素材が使うため含まれます。素材ストアには表示されません。"
   comesWithTitle: "依存する素材"
   usedByLabel: "使用元: {names}"
   usedByMore: "ほか{count}件"
