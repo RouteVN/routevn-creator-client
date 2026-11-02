@@ -628,7 +628,13 @@ describe("asset package store", () => {
       groups: [
         {
           resourceType: "colors",
-          items: [{ name: "Body Color", usedBy: "Used by Body" }],
+          items: [
+            {
+              name: "Body Color",
+              usedBy: "Used by Body",
+              preview: { kind: "color", name: "Body Color", showName: true },
+            },
+          ],
         },
         {
           resourceType: "fonts",

@@ -73,6 +73,10 @@ describe("asset package view", () => {
       "rvn-asset-package-preview-tile :preview=${item.preview}",
     );
     expect(assetPackageView).toContain("$if comesWith.isVisible:");
+    // Dependencies show as tiles, as the picks do, with their users on hover.
+    expect(assetPackageView).toContain(
+      "'rtgl-view w=f title=\"${item.usedBy}\"':",
+    );
   });
 
   it("draws each preview as the resource pages do", () => {

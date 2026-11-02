@@ -263,7 +263,9 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
       id: dependency.itemId,
       name: dependency.name,
       usedBy: formatI18nCopy(copy.usedByLabel, { names }),
-      preview: previewOf(state, dependency.resourceType, dependency.itemId),
+      preview: previewOf(state, dependency.resourceType, dependency.itemId, {
+        showName: true,
+      }),
     });
   }
   return {

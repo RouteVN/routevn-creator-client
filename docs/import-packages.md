@@ -158,8 +158,8 @@ order; everything in the chosen folders is a pick. Export adds what the picks us
 other, to `dependencies`, without the folders it sits in. A resource in a
 chosen folder stays a pick even when another pick uses it, so an author shows
 a color or font on the pack page by choosing its folder too. The export page
-lists these under Dependencies, by type, each with its preview and the picks
-that use it.
+lists these under Dependencies, laid out as the picks: each type's in one box
+of tiles, with the picks that use each in its tooltip.
 
 Import recreates the selected resources' complete package folder ancestry in
 the matching project collections, after the project's own folders and

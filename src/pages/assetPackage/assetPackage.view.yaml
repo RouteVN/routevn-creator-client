@@ -77,20 +77,20 @@ template:
                               - $if comesWith.isInvalid:
                                   - rtgl-text s=sm c=de: ${comesWith.invalidMessage}
                               - $if comesWith.isVisible:
+                                  # Laid out as the picks: each type's in one box of tiles,
+                                  # with the picks that use each in its tooltip.
                                   - rtgl-view w=f d=v g=md:
                                       - rtgl-view w=f d=v g=xs:
                                           - rtgl-text s=lg: ${comesWith.title}
                                           - rtgl-text s=sm c=mu-fg: ${comesWith.hint}
                                       - $for group, groupIndex in comesWith.groups:
-                                          - rtgl-view w=f d=v g=xs:
+                                          - rtgl-view w=f d=v g=sm:
                                               - rtgl-text s=sm c=mu-fg ph=sm: ${group.label}
-                                              - $for item, itemIndex in group.items:
-                                                  - rtgl-view w=f d=h av=c g=md p=sm:
-                                                      - rtgl-view w=72:
-                                                          - rvn-asset-package-preview-tile :preview=${item.preview}: null
-                                                      - 'rtgl-view w=1fg d=v g=xs style="min-width: 0;"':
-                                                          - rtgl-text s=sm ellipsis w=f: ${item.name}
-                                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.usedBy}
+                                              - rtgl-view w=f d=v g=sm p=sm br=md bw=xs bc=bo:
+                                                  - div.assetPackageFolderGrid:
+                                                      - $for item, itemIndex in group.items:
+                                                          - 'rtgl-view w=f title="${item.usedBy}"':
+                                                              - rvn-asset-package-preview-tile :preview=${item.preview}: null
   # One type's folders at a time, to tick or untick; Done applies the ticks.
   - rtgl-dialog#pickerDialog ?open=${isPickerOpen} s=lg md-layout=fixed-top:
       - 'rtgl-view#pickerContent slot=content d=v w=f g=md style="min-height: 0;"':
