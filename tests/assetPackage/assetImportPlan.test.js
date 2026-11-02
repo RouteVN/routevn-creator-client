@@ -4,7 +4,10 @@ import {
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_RESOURCE_TYPES,
 } from "../../src/internal/assetPackageResources.js";
-import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
+import {
+  createAssetImportPlan,
+  rewriteAssetImportPlanReferences,
+} from "../../src/internal/assetImportPlan.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 
 const createCollection = (resourceType) => {
@@ -862,5 +865,103 @@ describe("asset import plan for v2 packages", () => {
     const manifest = createV2Manifest();
     edit(manifest);
     expect(() => planV2(manifest)).toThrow(expect.objectContaining({ code }));
+  });
+});
+
+// A v2 package whose Title Menu has a Start button jumping into the story
+// through a story link.
+const createStoryLinkManifest = () => {
+  const manifest = createV2Manifest();
+  manifest.repository.layouts.items["layout-1"].elements.items.start = {
+    id: "start",
+    type: "container",
+    name: "Start",
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    click: {
+      payload: {
+        actions: {
+          resetStoryAtSection: { sectionId: "storyLink.start" },
+          nextLine: {},
+        },
+      },
+    },
+  };
+  manifest.repository.layouts.items["layout-1"].elements.tree.push({
+    id: "start",
+  });
+  manifest.storyLinks = {
+    items: {
+      "storyLink.start": {
+        kind: "section",
+        name: "Start",
+        sceneName: "Title",
+      },
+    },
+  };
+  return manifest;
+};
+
+describe("story links in v2 packages", () => {
+  it("lists the story links the resources jump through", () => {
+    const plan = planV2(createStoryLinkManifest());
+
+    expect(plan.storyLinks).toEqual([
+      {
+        id: "storyLink.start",
+        kind: "section",
+        name: "Start",
+        sceneName: "Title",
+      },
+    ]);
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(titleMenu.storyLinkIds).toEqual(["storyLink.start"]);
+  });
+
+  it("sends a story link where the importer chose, or drops its jump when unset", () => {
+    const plan = planV2(createStoryLinkManifest());
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    const actionsOf = (storyLinkTargets) =>
+      rewriteAssetImportPlanReferences({
+        resources: [titleMenu],
+        storyLinkTargets,
+      })[0].data.elements.items.start.click.payload.actions;
+
+    expect(actionsOf({ "storyLink.start": "section-9" })).toEqual({
+      resetStoryAtSection: { sectionId: "section-9" },
+      nextLine: {},
+    });
+    // The jump goes; the button's other actions stay.
+    expect(actionsOf({ "storyLink.start": "" })).toEqual({ nextLine: {} });
+  });
+
+  it("rejects a jump without a story link, or through one of the wrong kind", () => {
+    const withoutLink = createStoryLinkManifest();
+    delete withoutLink.storyLinks;
+    expect(() => planV2(withoutLink)).toThrow(
+      "Project reference 'sectionId' is not supported",
+    );
+
+    const wrongKind = createStoryLinkManifest();
+    wrongKind.storyLinks.items["storyLink.start"].kind = "scene";
+    expect(() => planV2(wrongKind)).toThrow(
+      "Project reference 'sectionId' is not supported",
+    );
+  });
+
+  it("rejects story links that are not a section or a scene", () => {
+    const manifest = createStoryLinkManifest();
+    manifest.storyLinks.items["storyLink.start"].kind = "line";
+    expect(() => planV2(manifest)).toThrow("must be section or scene");
+
+    const extraField = createStoryLinkManifest();
+    extraField.storyLinks.items["storyLink.start"].sectionId = "section-1";
+    expect(() => planV2(extraField)).toThrow("is not supported");
   });
 });

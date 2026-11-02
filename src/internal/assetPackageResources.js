@@ -437,6 +437,62 @@ export const mapAssetPackageReferences = (value, mapper, fieldName) => {
   );
 };
 
+// Story links: a pack's jumps into the story (to a section or a scene) point
+// at an entry of its `storyLinks` instead of the author's story, and the
+// importer chooses where each goes in theirs. Jumps to a line stay
+// unsupported.
+const STORY_LINK_KIND_BY_FIELD = Object.freeze({
+  sectionId: "section",
+  sectionIds: "section",
+  sceneId: "scene",
+  sceneIds: "scene",
+});
+
+export const getAssetPackageStoryLinkKind = (fieldName) =>
+  STORY_LINK_KIND_BY_FIELD[fieldName];
+
+const UNSET_STORY_LINK = Symbol("unset story link");
+
+const mapStoryLinksInner = (value, resolve, fieldName, isRoot) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => mapStoryLinksInner(item, resolve, fieldName, false))
+      .filter((item) => item !== UNSET_STORY_LINK);
+  }
+  if (typeof value === "string") {
+    if (value === "" || !getAssetPackageStoryLinkKind(fieldName)) {
+      return value;
+    }
+    return resolve(value, fieldName) || UNSET_STORY_LINK;
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  const mapped = {};
+  for (const [childFieldName, item] of Object.entries(value)) {
+    if (isOpaqueReferenceValue(childFieldName, item)) {
+      mapped[childFieldName] = item;
+      continue;
+    }
+    const mappedItem = mapStoryLinksInner(item, resolve, childFieldName, false);
+    if (mappedItem === UNSET_STORY_LINK) {
+      // A jump with no destination goes, with the action that holds it.
+      if (typeof item === "string" && !isRoot) {
+        return UNSET_STORY_LINK;
+      }
+      continue;
+    }
+    mapped[childFieldName] = mappedItem;
+  }
+  return mapped;
+};
+
+// Replaces each story reference (a section or scene id) with what `resolve`
+// returns for it. One that resolves to nothing is removed with the action
+// that holds it: the object around it, or its entry in a list.
+export const mapAssetPackageStoryLinks = (value, resolve) =>
+  mapStoryLinksInner(value, resolve, undefined, true);
+
 const ASSET_PACKAGE_KEYS = new Set(["schemaVersion", "metadata", "resources"]);
 const ASSET_PACKAGE_METADATA_KEYS = new Set([
   "id",

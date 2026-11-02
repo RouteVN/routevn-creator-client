@@ -14,6 +14,7 @@ import {
   setFilesData,
   setAssetPackage,
   setResourceData,
+  setScenesData,
   setUiConfig,
   toggleFolder,
 } from "../../src/pages/assetPackage/assetPackage.store.js";
@@ -693,7 +694,7 @@ describe("asset package store", () => {
     );
   });
 
-  it("rejects transitive layouts with project-only references", () => {
+  it("exports a story jump, even a dependency's, as a story link", () => {
     const state = createInitialState();
     const resourceDataByType = createResourceDataByType();
     resourceDataByType.layouts = {
@@ -701,9 +702,23 @@ describe("asset package store", () => {
         "layout-folder": { type: "folder", name: "Layouts" },
         "layout-1": {
           type: "layout",
-          name: "Dialogue",
-          interaction: {
-            resetStoryAtSection: { sectionId: "section-1" },
+          name: "Menu",
+          elements: {
+            items: {
+              "button-1": {
+                click: {
+                  payload: {
+                    actions: {
+                      resetStoryAtSection: { sectionId: "section-1" },
+                      sectionTransition: {
+                        sceneId: "scene-1",
+                        sectionId: "section-1",
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -721,16 +736,89 @@ describe("asset package store", () => {
       tree: [{ id: "control-folder", children: [{ id: "control-1" }] }],
     };
     setResourceData({ state }, { resourceDataByType });
+    setScenesData(
+      { state },
+      {
+        scenesData: {
+          items: {
+            "scene-1": {
+              type: "scene",
+              name: "Title",
+              sections: {
+                items: { "section-1": { name: "Start" } },
+                tree: [{ id: "section-1" }],
+              },
+            },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      },
+    );
     state.selectedFolderIdsByType.controls = ["control-folder"];
 
-    expect(() => selectAssetPackageData({ state })).toThrow(
-      "Resource 'layout-1' contains unsupported project reference 'sectionId'.",
+    const contents = selectAssetPackageData({ state });
+    // The jump points at the link; a section jump drops its scene.
+    expect(
+      contents.dependencies.layouts.items["layout-1"].elements.items["button-1"]
+        .click.payload.actions,
+    ).toEqual({
+      resetStoryAtSection: { sectionId: "storyLink.section-1" },
+      sectionTransition: { sectionId: "storyLink.section-1" },
+    });
+    expect(contents.storyLinks).toEqual({
+      items: {
+        "storyLink.section-1": {
+          kind: "section",
+          name: "Start",
+          sceneName: "Title",
+        },
+      },
+    });
+    expect(createAssetPackageManifest(contents).storyLinks).toEqual(
+      contents.storyLinks,
     );
-    // The page names the layout that links into the story, not the pick.
+
+    // The page lists the link with the layout that jumps there.
+    const { comesWith } = selectViewData({ state, i18n: EN_I18N });
+    expect(comesWith.isInvalid).toBe(false);
+    expect(comesWith.storyLinks).toMatchObject({
+      isVisible: true,
+      title: "Story links",
+      items: [
+        {
+          id: "storyLink.section-1",
+          icon: "section",
+          label: "Title / Start",
+          usedBy: "Used by Menu",
+        },
+      ],
+    });
+  });
+
+  it("rejects a jump to a line of the story", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.layouts = {
+      items: {
+        "layout-folder": { type: "folder", name: "Layouts" },
+        "layout-1": {
+          type: "layout",
+          name: "Dialogue",
+          interaction: { jump: { lineId: "line-1" } },
+        },
+      },
+      tree: [{ id: "layout-folder", children: [{ id: "layout-1" }] }],
+    };
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.layouts = ["layout-folder"];
+
+    expect(() => selectAssetPackageData({ state })).toThrow(
+      "Resource 'layout-1' contains unsupported project reference 'lineId'.",
+    );
     expect(
       selectViewData({ state, i18n: EN_I18N }).comesWith.invalidMessage,
     ).toBe(
-      "“Dialogue” in Layouts links to a story scene or section, so this selection can't be exported.",
+      "“Dialogue” in Layouts jumps to a line of the story, so this selection can't be exported.",
     );
   });
 

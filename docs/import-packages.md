@@ -89,9 +89,30 @@ A resource is in one section only. Every dependency is used by a pick,
 directly or through other dependencies, and picks and dependencies may
 reference each other. `repository.files` holds the files of both sections.
 
-`routevn.import-pack.v1` packages have no `dependencies`: everything is in
-`repository`, and the importer treats every resource as a pick. The creator
-exports v2.
+`storyLinks` holds the places in the author's story that the resources jump
+to, such as a title menu's Start button going to a section. Each item is
+`{ kind, name, sceneName }`: `kind` is `section` or `scene`, `name` is the
+section's or scene's name, and a section also gives its scene's name. Fields
+that jump into the story (`sectionId`, `sceneId` and their lists) hold story
+link keys, such as `"sectionId": "storyLink.oivTjWAhhYG1"`, instead of the
+author's ids. A jump to a section leaves out its `sceneId`, as the section
+gives the scene. `storyLinks` is left out when nothing jumps into the story.
+
+```json
+"storyLinks": {
+  "items": {
+    "storyLink.oivTjWAhhYG1": {
+      "kind": "section",
+      "name": "Section 1",
+      "sceneName": "Title"
+    }
+  }
+}
+```
+
+`routevn.import-pack.v1` packages have no `dependencies` or `storyLinks`:
+everything is in `repository`, and the importer treats every resource as a
+pick. The creator exports v2.
 
 The creator exports only `package.kind`. Catalog metadata such as package id,
 name, version, description, publisher, or source may be supplied by a publishing
@@ -107,9 +128,11 @@ Required resource dependencies must be present. During review, selected
 dependencies remain selected and cannot be deselected while a selected resource
 requires them. Missing required dependencies reject the package.
 
-Scene, section, and line ids are project-owned. Resources containing
-`sceneId`, `sectionId`, `lineId`, or their plural forms are rejected until
-story content can be packaged and remapped.
+Scene, section, and line ids are project-owned. In a v2 package, a scene or
+section reference must name one of the package's story links, of the same
+kind; import sets each to the section or scene the user chose, or removes the
+action holding it when the user left the link unset. Other references to
+scenes or sections, and any `lineId` or `lineIds`, reject the package.
 
 ## Files
 
@@ -150,7 +173,8 @@ the project's order, and the page and the pack keep them in the order they
 were picked: a newly ticked folder goes last, and the picker shows each
 ticked folder's place. Resources outside a folder
 cannot be picked. Export stays disabled until a resource is picked, or while
-the selection uses a resource that no longer exists or a story scene.
+the selection uses a resource that no longer exists or jumps to a line of the
+story; the page names the resource at fault.
 
 Selecting a folder includes its complete subtree and preserves folder and item
 order; everything in the chosen folders is a pick. Export adds what the picks use, directly or through each
@@ -158,7 +182,9 @@ other, to `dependencies`, without the folders it sits in. A resource in a
 chosen folder stays a pick even when another pick uses it, so an author shows
 a color or font on the pack page by choosing its folder too. The export page
 lists these under Dependencies, laid out as the picks: each type's in one box
-of tiles, with the picks that use each in its tooltip.
+of tiles, with the picks that use each in its tooltip. Where the picks, or
+what they use, jump into the story becomes a story link, listed under Story
+links with the resources that jump there.
 
 Import recreates the selected resources' complete package folder ancestry in
 the matching project collections, after the project's own folders and
@@ -168,6 +194,14 @@ named after the pack, and numbered ("Fantasy UI 2") when the project or the
 pack already has a top-level folder by that name. A dependency no selected
 pick uses is not imported. Import does not ask for replacement destination
 folders or media substitutions.
+
+When the selected resources, or the dependencies they bring, jump through
+story links, Choose Resources lists each link under Story links, with the
+resources that use it and a choice of the project's sections, or scenes for a
+scene link. A link starts at the project's section with the same section and
+scene names, or its scene with the same name, and otherwise unset. Import
+writes the chosen section or scene into every jump through the link; a link
+left unset removes those jumps, so their buttons do the rest of their actions.
 
 Files, folders, and resources are committed in one atomic command batch. A
 pre-commit failure discards staged files. If commit confirmation is interrupted,
@@ -309,7 +343,8 @@ files fetched by URL.
 2. Show a selection page when the package contains multiple picks.
 3. Keep the picks that selected picks use, directly or through dependencies,
    selected and locked; add the dependencies they use without listing them.
-4. Let the user review and edit each selected resource's name and description.
+4. Let the user review and edit each selected resource's name and description,
+   and choose where each story link the selection uses goes.
 5. Lazily load the current resource preview.
 6. Download and validate only the selected resources' required files.
 7. Remap package-local ids.

@@ -5,8 +5,10 @@ import {
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
   getAssetPackageFileValidationKind,
+  getAssetPackageStoryLinkKind,
   isAssetPackageFileMimeTypeAllowed,
   mapAssetPackageReferences,
+  mapAssetPackageStoryLinks,
   visitAssetPackageReferences,
 } from "./assetPackageResources.js";
 import {
@@ -16,7 +18,13 @@ import {
 } from "./importPackages.js";
 
 const ENVELOPE_KEYS = new Set(["schema", "package", "repository"]);
-const ENVELOPE_KEYS_V2 = new Set([...ENVELOPE_KEYS, "dependencies"]);
+const ENVELOPE_KEYS_V2 = new Set([
+  ...ENVELOPE_KEYS,
+  "dependencies",
+  "storyLinks",
+]);
+const STORY_LINK_KEYS = new Set(["kind", "name", "sceneName"]);
+const STORY_LINK_KINDS = new Set(["section", "scene"]);
 const PACKAGE_KEYS = new Set([
   "kind",
   "id",
@@ -327,6 +335,53 @@ const validateDependencyCollections = (manifest) => {
   }
 };
 
+// A v2 package's story links: the places in the author's story its jumps
+// went to, each a section (with its scene's name) or a scene.
+const validateStoryLinks = (manifest) => {
+  const { storyLinks } = manifest;
+  assertPlainObject(storyLinks, "package.storyLinks");
+  assertAllowedKeys(storyLinks, new Set(["items"]), "package.storyLinks");
+  assertPlainObject(storyLinks.items, "package.storyLinks.items");
+  if (Object.keys(storyLinks.items).length > MAX_RESOURCE_COUNT) {
+    fail("too_many_story_links", "The package has too many story links.", {
+      path: "package.storyLinks.items",
+    });
+  }
+  for (const [linkId, storyLink] of Object.entries(storyLinks.items)) {
+    const path = `package.storyLinks.items.${linkId}`;
+    assertPlainObject(storyLink, path);
+    assertAllowedKeys(storyLink, STORY_LINK_KEYS, path);
+    if (!STORY_LINK_KINDS.has(storyLink.kind)) {
+      fail("invalid_package", `${path}.kind must be section or scene.`, {
+        path: `${path}.kind`,
+      });
+    }
+    assertOptionalString(storyLink.name, `${path}.name`);
+    assertOptionalString(storyLink.sceneName, `${path}.sceneName`);
+  }
+};
+
+// A jump into the story must go through one of the package's story links, of
+// the kind its field names; a jump to a line is not supported.
+const assertStoryLinkReference = ({
+  manifest,
+  fieldName,
+  value,
+  resourceId,
+}) => {
+  const storyLink = manifest.storyLinks?.items?.[value];
+  if (
+    !storyLink ||
+    storyLink.kind !== getAssetPackageStoryLinkKind(fieldName)
+  ) {
+    fail(
+      "project_reference_unsupported",
+      `Project reference '${fieldName}' is not supported in asset packages.`,
+      { resourceId },
+    );
+  }
+};
+
 const validateManifest = (manifest) => {
   assertPlainObject(manifest, "package");
   const v2 = manifest.schema === IMPORT_PACK_SCHEMA_V2;
@@ -374,6 +429,9 @@ const validateManifest = (manifest) => {
   if (manifest.dependencies !== undefined) {
     validateDependencyCollections(manifest);
   }
+  if (manifest.storyLinks !== undefined) {
+    validateStoryLinks(manifest);
+  }
 };
 
 // Every resource item in both sections, the picks and their dependencies.
@@ -389,11 +447,13 @@ const collectReferencedFiles = (manifest) => {
       if (item.type === "folder") continue;
       visitAssetPackageReferences(item, ({ fieldName, kind, value }) => {
         if (kind === "project") {
-          fail(
-            "project_reference_unsupported",
-            `Project reference '${fieldName}' is not supported in asset packages.`,
-            { resourceId: item.id },
-          );
+          assertStoryLinkReference({
+            manifest,
+            fieldName,
+            value,
+            resourceId: item.id,
+          });
+          return;
         }
         if (kind !== "file") return;
         const validationKind = getAssetPackageFileValidationKind({
@@ -518,15 +578,18 @@ const collectResourceDependencySourceIds = ({
   data,
   entryByPackageSourceId,
   sourceId,
+  manifest,
 }) => {
   const dependencySourceIds = new Set();
   visitAssetPackageReferences(data, ({ fieldName, kind, required, value }) => {
     if (kind === "project") {
-      fail(
-        "project_reference_unsupported",
-        `Project reference '${fieldName}' is not supported in asset packages.`,
-        { resourceId: sourceId },
-      );
+      assertStoryLinkReference({
+        manifest,
+        fieldName,
+        value,
+        resourceId: sourceId,
+      });
+      return;
     }
     if (kind !== "resource") {
       return;
@@ -547,6 +610,15 @@ const collectResourceDependencySourceIds = ({
     }
   });
   return [...dependencySourceIds];
+};
+
+// The story links a resource jumps through.
+const collectResourceStoryLinkIds = (data) => {
+  const storyLinkIds = new Set();
+  visitAssetPackageReferences(data, ({ kind, value }) => {
+    if (kind === "project") storyLinkIds.add(value);
+  });
+  return [...storyLinkIds];
 };
 
 const collectResourceFileDestinationIds = (data) => {
@@ -862,6 +934,7 @@ export const createAssetImportPlan = ({
           data: sourceData,
           entryByPackageSourceId,
           sourceId: entry.sourceId,
+          manifest,
         });
     const data = rewriteMappedReferences(sourceData, {
       fileIdBySourceId: destinationFileIdBySourceId,
@@ -888,6 +961,7 @@ export const createAssetImportPlan = ({
       fileDestinationIds: entry.folder
         ? []
         : collectResourceFileDestinationIds(data),
+      storyLinkIds: entry.folder ? [] : collectResourceStoryLinkIds(data),
       data,
     };
   });
@@ -970,6 +1044,20 @@ export const createAssetImportPlan = ({
     descriptor: structuredClone(manifest.repository.files.items[sourceId]),
   }));
   const reviewSections = createReviewSections({ manifest, resources: picks });
+  // The story links some resource jumps through, in the package's order.
+  const usedStoryLinkIds = new Set(
+    resources.flatMap((resource) => resource.storyLinkIds),
+  );
+  const storyLinks = Object.entries(manifest.storyLinks?.items ?? {})
+    .filter(([linkId]) => usedStoryLinkIds.has(linkId))
+    .map(([linkId, storyLink]) => ({
+      id: linkId,
+      kind: storyLink.kind,
+      name: storyLink.name ?? "",
+      ...(storyLink.sceneName === undefined
+        ? {}
+        : { sceneName: storyLink.sceneName }),
+    }));
 
   return deepFreeze({
     planId,
@@ -980,6 +1068,7 @@ export const createAssetImportPlan = ({
     entries: orderedEntries,
     resources: picks,
     dependencies,
+    storyLinks,
     reviewSections,
     files,
     previewFiles,
@@ -989,17 +1078,23 @@ export const createAssetImportPlan = ({
   });
 };
 
+// `storyLinkTargets` gives each story link the section or scene the importer
+// chose; a jump through a link left unset is removed.
 export const rewriteAssetImportPlanReferences = ({
   resources,
   resourceNames = {},
   resourceDescriptions = {},
   fileIdMap = new Map(),
+  storyLinkTargets = {},
 } = {}) =>
   resources.map((resource) => {
-    const data = rewriteMappedReferences(resource.data, {
-      fileIdBySourceId: fileIdMap,
-      resourceIdBySourceId: new Map(),
-    });
+    const data = mapAssetPackageStoryLinks(
+      rewriteMappedReferences(resource.data, {
+        fileIdBySourceId: fileIdMap,
+        resourceIdBySourceId: new Map(),
+      }),
+      (linkId) => storyLinkTargets[linkId],
+    );
     if (resourceNames[resource.sourceId] !== undefined) {
       data.name = resourceNames[resource.sourceId].trim();
     }

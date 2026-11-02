@@ -14,6 +14,44 @@ const mapErrorMessage = (error, i18n = {}) => {
   };
 };
 
+// The project's sections and scenes, in story order, that a pack's story
+// links can go to. A section's label names its scene.
+const createStoryTargets = ({ scenesData, i18n = {} }) => {
+  const copy = i18n.resourceImport ?? {};
+  const sceneIds = [];
+  const visit = (nodes) => {
+    for (const node of nodes ?? []) {
+      if (scenesData?.items?.[node.id]?.type === "scene")
+        sceneIds.push(node.id);
+      visit(node.children);
+    }
+  };
+  visit(scenesData?.tree);
+  const scenes = sceneIds.map((sceneId) => ({
+    value: sceneId,
+    label: scenesData.items[sceneId].name ?? "",
+    name: scenesData.items[sceneId].name ?? "",
+  }));
+  const sections = scenes.flatMap((scene) => {
+    const sectionsData = scenesData.items[scene.value].sections;
+    const sectionIds = (sectionsData?.tree ?? [])
+      .map((node) => node.id)
+      .filter((sectionId) => sectionsData.items?.[sectionId]);
+    return sectionIds.map((sectionId) => {
+      const name = sectionsData.items[sectionId].name ?? "";
+      return {
+        value: sectionId,
+        label: (copy.storyLinkSectionLabel ?? "{scene} / {section}")
+          .replace("{scene}", scene.name)
+          .replace("{section}", name),
+        name,
+        sceneName: scene.name,
+      };
+    });
+  });
+  return { sections, scenes };
+};
+
 const syncFromProps = (deps, props, { reset = false } = {}) => {
   deps.store.syncFromProps({ props, reset });
 };
@@ -186,7 +224,13 @@ const openPack = async (deps, packId) => {
     render();
     return;
   }
-  store.setPackPage({ plan: result.plan });
+  store.setPackPage({
+    plan: result.plan,
+    storyTargets: createStoryTargets({
+      scenesData: projectService.getRepositoryState?.()?.scenes,
+      i18n: deps.i18n,
+    }),
+  });
   render();
 };
 
@@ -363,10 +407,18 @@ const buildReviewPayload = ({ plan, values }) => {
         values[`resource_${index}_description`];
     }
   });
+  // Where each story link goes; empty leaves it unset.
+  const storyLinkTargets = Object.fromEntries(
+    (plan.storyLinks ?? []).map((storyLink, index) => [
+      storyLink.id,
+      values[`storyLink_${index}`] ?? "",
+    ]),
+  );
   return {
     selectedResourceIds,
     resourceNames,
     resourceDescriptions,
+    storyLinkTargets,
   };
 };
 

@@ -503,6 +503,93 @@ describe("resource-import-dialog.store", () => {
     expect(state.operationId).toBeUndefined();
   });
 
+  it("asks where each story link of the selection goes, starting at a section of the same name", () => {
+    const state = createInitialState();
+    const plan = createMultiResourcePlan();
+    plan.resources[0].storyLinkIds = ["storyLink.start"];
+    plan.resources[1].storyLinkIds = [];
+    plan.resources[1].packageDependencySourceIds = ["dependency.menu"];
+    plan.dependencies = [
+      {
+        sourceId: "dependency.menu",
+        name: "Menu Page",
+        storyLinkIds: ["storyLink.title"],
+      },
+    ];
+    plan.storyLinks = [
+      {
+        id: "storyLink.start",
+        kind: "section",
+        name: "Start",
+        sceneName: "Title",
+      },
+      { id: "storyLink.title", kind: "scene", name: "Elsewhere" },
+    ];
+    setPlan(
+      { state },
+      {
+        plan,
+        storyTargets: {
+          sections: [
+            {
+              value: "section-1",
+              label: "Prologue / Start",
+              name: "Start",
+              sceneName: "Prologue",
+            },
+            {
+              value: "section-2",
+              label: "Title / Start",
+              name: "Start",
+              sceneName: "Title",
+            },
+          ],
+          scenes: [{ value: "scene-1", label: "Title", name: "Title" }],
+        },
+      },
+    );
+    const storyLinkFields = () =>
+      selectViewData({ state, i18n: {} }).form.fields.filter((field) =>
+        field.name?.startsWith("storyLink_"),
+      );
+
+    // Nothing selected uses a story link yet.
+    expect(storyLinkFields()).toEqual([]);
+    // The section of the same scene and section names starts selected; a
+    // scene with no match starts unset.
+    expect(state.reviewValues).toMatchObject({
+      storyLink_0: "section-2",
+      storyLink_1: "",
+    });
+
+    setResourceSelected({ state }, { sourceId: "source.one", selected: true });
+    expect(storyLinkFields()).toEqual([
+      expect.objectContaining({
+        name: "storyLink_0",
+        type: "select",
+        label: "Title / Start",
+        description: "Used by Transform One",
+        placeholder: "Not set",
+        options: [
+          { value: "section-1", label: "Prologue / Start" },
+          { value: "section-2", label: "Title / Start" },
+        ],
+      }),
+    ]);
+
+    // A dependency's link shows with the pick that brings it.
+    setResourceSelected({ state }, { sourceId: "source.two", selected: true });
+    expect(storyLinkFields().map((field) => field.name)).toEqual([
+      "storyLink_0",
+      "storyLink_1",
+    ]);
+    expect(storyLinkFields()[1]).toMatchObject({
+      label: "Elsewhere",
+      description: "Used by Menu Page",
+      options: [{ value: "scene-1", label: "Title" }],
+    });
+  });
+
   it("previews an asset with its full-size file, falling back to its grid preview", () => {
     const state = createInitialState();
     const plan = createMultiResourcePlan();

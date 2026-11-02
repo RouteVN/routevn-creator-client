@@ -11,6 +11,7 @@ export const handleBeforeMount = (deps) => {
   }
   store.setUiConfig({ uiConfig });
   store.setFilesData({ filesData: repositoryState?.files });
+  store.setScenesData({ scenesData: repositoryState?.scenes });
   store.setResourceData({ resourceDataByType });
 };
 

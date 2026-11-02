@@ -415,6 +415,11 @@ template:
                                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${resource.name}
                                                               - $if resource.colorHex:
                                                                   - rtgl-text s=xs c=mu-fg: ${resource.colorHex}
+                          # Above the story link selects, which the form adds after the
+                          # resources.
+                          - rtgl-view slot=story-links-header d=v w=f g=xs pt=lg:
+                              - rtgl-text s=lg: ${storyLinksTitle}
+                              - rtgl-text s=sm c=mu-fg: ${storyLinksHint}
           - $if isProgressStep:
               - rtgl-view w=f h=1fg av=c ah=c d=v g=md role=status aria-live=polite:
                   - rtgl-text s=lg: ${progressLabel}

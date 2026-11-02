@@ -106,6 +106,7 @@ describe("resource-import-dialog.handlers", () => {
       resourceDescriptions: {
         "transform.source": "Updated description",
       },
+      storyLinkTargets: {},
     };
     expect(deps.projectService.validateResourceImportPlan).toHaveBeenCalledWith(
       { planId: "plan-1", ...expectedChoices },
@@ -765,6 +766,13 @@ describe("resource-import-dialog asset store", () => {
 
     closeDialog(deps);
     deps.appService.getPath.mockReturnValue("/project/layouts");
+    openDialog(deps);
+    await settle();
+    expect(state.catalog.assetTypes).toEqual(["LAYOUTS"]);
+
+    // A page with no asset type opens the store unfiltered.
+    closeDialog(deps);
+    deps.appService.getPath.mockReturnValue("/project/scenes");
     openDialog(deps);
     await settle();
     expect(state.catalog.assetTypes).toEqual([]);

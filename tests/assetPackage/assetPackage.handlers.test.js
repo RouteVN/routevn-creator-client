@@ -85,6 +85,7 @@ const createDeps = () => ({
     })),
     selectAssetPackage: vi.fn(() => SAVED_ASSET_PACKAGE),
     setFilesData: vi.fn(),
+    setScenesData: vi.fn(),
     setAssetPackage: vi.fn(),
     setResourceData: vi.fn(),
     setUiConfig: vi.fn(),
@@ -110,6 +111,10 @@ describe("asset package handlers", () => {
     });
     expect(deps.store.setFilesData).toHaveBeenCalledWith({
       filesData: repositoryState.files,
+    });
+    // The scenes name the story links.
+    expect(deps.store.setScenesData).toHaveBeenCalledWith({
+      scenesData: repositoryState.scenes,
     });
     expect(deps.store.setResourceData).toHaveBeenCalledWith({
       resourceDataByType: Object.fromEntries(

@@ -211,6 +211,36 @@ const validateReviewChoices = ({
   }
 };
 
+// Each story link the importer set goes to a section or scene the project
+// still has, of the link's kind; an unset link is fine.
+const validateStoryLinkTargets = ({
+  plan,
+  storyLinkTargets,
+  repositoryState,
+}) => {
+  const storyLinkById = new Map(
+    (plan.storyLinks ?? []).map((storyLink) => [storyLink.id, storyLink]),
+  );
+  const scenes = Object.entries(repositoryState?.scenes?.items ?? {}).filter(
+    ([, item]) => item?.type === "scene",
+  );
+  for (const [linkId, targetId] of Object.entries(storyLinkTargets ?? {})) {
+    if (!targetId) continue;
+    const storyLink = storyLinkById.get(linkId);
+    const exists =
+      storyLink?.kind === "scene"
+        ? scenes.some(([sceneId]) => sceneId === targetId)
+        : scenes.some(([, scene]) => scene.sections?.items?.[targetId]);
+    if (!storyLink || !exists) {
+      fail(
+        "story_link_target_missing",
+        "A section or scene chosen for a story link no longer exists.",
+        { resourceId: linkId },
+      );
+    }
+  }
+};
+
 const assertFileMimeTypes = ({ filePlan, mimeType }) => {
   for (const validationKind of filePlan.validationKinds ?? []) {
     if (!isAssetPackageFileMimeTypeAllowed({ validationKind, mimeType })) {
@@ -411,6 +441,7 @@ export const createResourcePackageImportService = ({
       selectedResourceIds,
       resourceNames = {},
       resourceDescriptions = {},
+      storyLinkTargets = {},
     } = {}) {
       try {
         const plan = plans.get(planId);
@@ -429,6 +460,11 @@ export const createResourcePackageImportService = ({
           resourceNames,
           resourceDescriptions,
         });
+        validateStoryLinkTargets({
+          plan,
+          storyLinkTargets,
+          repositoryState: getRepositoryState(),
+        });
         return { valid: true };
       } catch (error) {
         return toErrorResult(error);
@@ -441,6 +477,7 @@ export const createResourcePackageImportService = ({
       selectedResourceIds,
       resourceNames = {},
       resourceDescriptions = {},
+      storyLinkTargets = {},
       onProgress,
     } = {}) {
       let operation;
@@ -479,6 +516,11 @@ export const createResourcePackageImportService = ({
           selectedResources,
           resourceNames,
           resourceDescriptions,
+        });
+        validateStoryLinkTargets({
+          plan,
+          storyLinkTargets,
+          repositoryState: getRepositoryState(),
         });
 
         const previousCommit = getCommittedPlanResult({
@@ -610,6 +652,7 @@ export const createResourcePackageImportService = ({
           resourceNames,
           resourceDescriptions,
           fileIdMap: actualFileIds,
+          storyLinkTargets,
         });
         emitProgress(onProgress, {
           phase: "committing",

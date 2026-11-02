@@ -482,6 +482,112 @@ describe("resourcePackageImportService", () => {
     ]);
   });
 
+  it("sends a layout's story link to the section the importer chose", async () => {
+    const { service, importClient, commandApi, currentRepositoryState } =
+      createService();
+    currentRepositoryState.scenes = {
+      items: {
+        "scene-1": {
+          type: "scene",
+          name: "Title",
+          sections: {
+            items: { "section-1": { name: "Start" } },
+            tree: [{ id: "section-1" }],
+          },
+        },
+      },
+      tree: [{ id: "scene-1" }],
+    };
+    const manifest = assetManifest();
+    manifest.schema = "routevn.import-pack.v2";
+    manifest.repository.layouts = {
+      items: {
+        "folder.menus": { id: "folder.menus", type: "folder", name: "Menus" },
+        "layout.title": {
+          id: "layout.title",
+          type: "layout",
+          name: "Title Menu",
+          layoutType: "general",
+          elements: {
+            items: {
+              start: {
+                id: "start",
+                type: "container",
+                name: "Start",
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0,
+                click: {
+                  payload: {
+                    actions: {
+                      resetStoryAtSection: { sectionId: "storyLink.start" },
+                    },
+                  },
+                },
+              },
+            },
+            tree: [{ id: "start" }],
+          },
+        },
+      },
+      tree: [{ id: "folder.menus", children: [{ id: "layout.title" }] }],
+    };
+    manifest.storyLinks = {
+      items: {
+        "storyLink.start": {
+          kind: "section",
+          name: "Start",
+          sceneName: "Title",
+        },
+      },
+    };
+    importClient.fetchManifest.mockResolvedValue({
+      manifest,
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    expect(planned.plan.storyLinks).toEqual([
+      {
+        id: "storyLink.start",
+        kind: "section",
+        name: "Start",
+        sceneName: "Title",
+      },
+    ]);
+    const layout = planned.plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+
+    // A section the project does not have is refused.
+    expect(
+      service.validateResourceImportPlan({
+        planId: planned.plan.planId,
+        selectedResourceIds: [layout.sourceId],
+        storyLinkTargets: { "storyLink.start": "section-gone" },
+      }),
+    ).toMatchObject({
+      valid: false,
+      error: { code: "story_link_target_missing" },
+    });
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+      selectedResourceIds: [layout.sourceId],
+      storyLinkTargets: { "storyLink.start": "section-1" },
+    });
+    expect(result).toMatchObject({ valid: true });
+    const committed =
+      commandApi.commitAssetImportPackage.mock.calls[0][0].entries.find(
+        (entry) => entry.data.name === "Title Menu",
+      );
+    expect(committed.data.elements.items.start.click.payload.actions).toEqual({
+      resetStoryAtSection: { sectionId: "section-1" },
+    });
+  });
+
   it("downloads package previews through the bounded import client", async () => {
     const { service, importClient } = createService();
     importClient.fetchManifest.mockResolvedValue({

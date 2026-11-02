@@ -3,6 +3,8 @@ import {
   ASSET_PACKAGE_KIND,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
+  getAssetPackageStoryLinkKind,
+  mapAssetPackageStoryLinks,
   visitAssetPackageReferences,
 } from "../../../internal/assetPackageResources.js";
 
@@ -177,11 +179,32 @@ const indexSourceResources = (resourceDataByType) => {
   return sourceById;
 };
 
+// A jump to a section also names its scene. The section is enough, as the
+// app finds its scene, so the scene is left out and the importer chooses
+// only the section.
+const dropSectionJumpScenes = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(dropSectionJumpScenes);
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  const isSectionJump =
+    typeof value.sectionId === "string" && value.sectionId !== "";
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !(isSectionJump && key === "sceneId"))
+      .map(([key, entry]) => [key, dropSectionJumpScenes(entry)]),
+  );
+};
+
 // What the picks use, directly or through each other, that is not a pick,
-// with the picks that use each. A pick's own dependencies count for that
-// pick, so the walk stops at picks.
+// with the picks that use each; and the story sections and scenes they jump
+// to, with the resources that jump there. A pick's own dependencies count for
+// that pick, so the walk stops at picks.
 const collectDependencies = ({ pickedIdsByType, sourceById }) => {
   const dependencies = new Map();
+  const storyLinks = new Map();
   for (const [resourceType, pickedIds] of Object.entries(pickedIdsByType)) {
     for (const pickId of pickedIds) {
       const pick = sourceById.get(pickId);
@@ -193,14 +216,24 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
       while (pending.length > 0) {
         const { item, itemId } = pending.pop();
         visitAssetPackageReferences(
-          item,
+          dropSectionJumpScenes(item),
           ({ fieldName, kind, required, value }) => {
             if (kind === "project") {
-              throw new AssetPackageManifestError(
-                "story_reference",
-                `Resource '${itemId}' contains unsupported project reference '${fieldName}'.`,
-                { itemId },
-              );
+              const linkKind = getAssetPackageStoryLinkKind(fieldName);
+              if (!linkKind) {
+                throw new AssetPackageManifestError(
+                  "line_reference",
+                  `Resource '${itemId}' contains unsupported project reference '${fieldName}'.`,
+                  { itemId },
+                );
+              }
+              const storyLink = storyLinks.get(value) ?? {
+                kind: linkKind,
+                usedBy: new Set(),
+              };
+              storyLink.usedBy.add(itemId);
+              storyLinks.set(value, storyLink);
+              return;
             }
             if (kind !== "resource") {
               return;
@@ -235,8 +268,25 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
       }
     }
   }
-  return dependencies;
+  return { dependencies, storyLinks };
 };
+
+// A story link's name: its section's and that section's scene's, or its
+// scene's; empty when the story no longer has it.
+const describeStoryTarget = ({ scenesData, kind, targetId }) => {
+  const scenes = Object.values(scenesData?.items ?? {}).filter(
+    (item) => item?.type === "scene",
+  );
+  if (kind === "scene") {
+    return { name: scenesData?.items?.[targetId]?.name ?? "" };
+  }
+  const scene = scenes.find((item) => item.sections?.items?.[targetId]);
+  return scene
+    ? { name: scene.sections.items[targetId].name ?? "", sceneName: scene.name }
+    : { name: "" };
+};
+
+const toStoryLinkId = (targetId) => `storyLink.${targetId}`;
 
 // A type's dependencies, in the order they appear in the project.
 const selectDependencyItems = (resourceData, dependencyIds) => {
@@ -327,12 +377,13 @@ export const createAssetPackageContents = ({
   resourceDataByType,
   selectedFolderIdsByType,
   resourceTypeOrder,
+  scenesData,
 }) => {
   const pickedIdsByType = collectPickedIdsByType({
     resourceDataByType,
     selectedFolderIdsByType,
   });
-  const dependencies = collectDependencies({
+  const { dependencies, storyLinks } = collectDependencies({
     pickedIdsByType,
     sourceById: indexSourceResources(resourceDataByType),
   });
@@ -361,12 +412,37 @@ export const createAssetPackageContents = ({
       collections.push({ items });
     }
   }
+  // Jumps into the story point at the pack's story links instead.
+  for (const collection of collections) {
+    for (const [itemId, item] of Object.entries(collection.items)) {
+      if (item.type === "folder") continue;
+      collection.items[itemId] = mapAssetPackageStoryLinks(
+        dropSectionJumpScenes(item),
+        toStoryLinkId,
+      );
+    }
+  }
   return {
     repository: {
       files: createPackageFiles({ filesData, collections }),
       ...repository,
     },
     dependencies: packageDependencies,
+    storyLinks: {
+      items: Object.fromEntries(
+        [...storyLinks].map(([targetId, storyLink]) => [
+          toStoryLinkId(targetId),
+          {
+            kind: storyLink.kind,
+            ...describeStoryTarget({
+              scenesData,
+              kind: storyLink.kind,
+              targetId,
+            }),
+          },
+        ]),
+      ),
+    },
   };
 };
 
@@ -377,7 +453,7 @@ export const listAssetPackageDependencies = ({
   selectedFolderIdsByType,
   resourceTypeOrder,
 }) => {
-  const dependencies = collectDependencies({
+  const { dependencies } = collectDependencies({
     pickedIdsByType: collectPickedIdsByType({
       resourceDataByType,
       selectedFolderIdsByType,
@@ -398,6 +474,28 @@ export const listAssetPackageDependencies = ({
   });
 };
 
+// The story links the export page lists: each with its name and the
+// resources that jump there, in the order the picks reach them.
+export const listAssetPackageStoryLinks = ({
+  resourceDataByType,
+  selectedFolderIdsByType,
+  scenesData,
+}) => {
+  const { storyLinks } = collectDependencies({
+    pickedIdsByType: collectPickedIdsByType({
+      resourceDataByType,
+      selectedFolderIdsByType,
+    }),
+    sourceById: indexSourceResources(resourceDataByType),
+  });
+  return [...storyLinks].map(([targetId, storyLink]) => ({
+    id: toStoryLinkId(targetId),
+    kind: storyLink.kind,
+    ...describeStoryTarget({ scenesData, kind: storyLink.kind, targetId }),
+    usedBy: [...storyLink.usedBy],
+  }));
+};
+
 // `itemId` names the resource at fault, when there is one.
 export class AssetPackageManifestError extends Error {
   constructor(code, message, { itemId } = {}) {
@@ -408,7 +506,11 @@ export class AssetPackageManifestError extends Error {
   }
 }
 
-export const createAssetPackageManifest = ({ repository, dependencies }) => {
+export const createAssetPackageManifest = ({
+  repository,
+  dependencies,
+  storyLinks,
+}) => {
   const resourceCount = ASSET_PACKAGE_RESOURCE_TYPES.reduce(
     (count, resourceType) => {
       const itemType =
@@ -436,6 +538,9 @@ export const createAssetPackageManifest = ({ repository, dependencies }) => {
   };
   if (Object.keys(dependencies ?? {}).length > 0) {
     manifest.dependencies = structuredClone(dependencies);
+  }
+  if (Object.keys(storyLinks?.items ?? {}).length > 0) {
+    manifest.storyLinks = structuredClone(storyLinks);
   }
   return manifest;
 };

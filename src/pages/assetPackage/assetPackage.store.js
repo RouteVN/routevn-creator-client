@@ -11,6 +11,7 @@ import {
   createAssetPackageContents,
   isTopLevelFolder,
   listAssetPackageDependencies,
+  listAssetPackageStoryLinks,
   selectTopLevelFolders,
 } from "./support/assetPackageManifest.js";
 import {
@@ -67,6 +68,8 @@ export const createInitialState = () => ({
   selectedResourceId: "assetPackage",
   isTouchMode: false,
   filesData: { items: {} },
+  // The project's scenes and sections, which name the story links.
+  scenesData: { items: {}, tree: [] },
   resourceDataByType: createResourceDataByType(),
   selectedFolderIdsByType: createSelectedFolderIdsByType(),
   // The picker ticks a copy of the selection, applied by Done.
@@ -82,6 +85,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 
 export const setFilesData = ({ state }, { filesData } = {}) => {
   state.filesData = filesData ?? { items: {} };
+};
+
+export const setScenesData = ({ state }, { scenesData } = {}) => {
+  state.scenesData = scenesData ?? { items: {}, tree: [] };
 };
 
 export const setResourceData = ({ state }, { resourceDataByType } = {}) => {
@@ -190,6 +197,7 @@ export const selectAssetPackageData = ({ state }) =>
     resourceDataByType: state.resourceDataByType,
     selectedFolderIdsByType: state.selectedFolderIdsByType,
     resourceTypeOrder: RESOURCE_TYPE_ORDER,
+    scenesData: state.scenesData,
   });
 
 export const selectAssetPackage = ({ state }) => ({
@@ -213,12 +221,38 @@ const previewOf = (state, resourceType, itemId, extra = {}) => ({
 });
 
 // Why a selection cannot be exported, naming the resource at fault when the
-// export says which: one that links into the story, or one that uses a
-// resource the project no longer has.
+// export says which: one that jumps to a line of the story, or one that uses
+// a resource the project no longer has.
 const INVALID_SELECTION_COPY_KEYS = Object.freeze({
-  story_reference: "selectionStoryReference",
+  line_reference: "selectionLineReference",
   missing_resource: "selectionMissingResource",
 });
+
+// "Used by A, B, C, 2 more".
+const formatUsedBy = ({ copy, nameById, ids }) => {
+  const users = ids.map((id) => nameById.get(id) ?? id);
+  let names = users.slice(0, MAX_LISTED_USERS).join(", ");
+  if (users.length > MAX_LISTED_USERS) {
+    names = `${names}, ${formatI18nCopy(copy.usedByMore, {
+      count: users.length - MAX_LISTED_USERS,
+    })}`;
+  }
+  return formatI18nCopy(copy.usedByLabel, { names });
+};
+
+const formatStoryLinkLabel = ({ copy, storyLink }) => {
+  if (!storyLink.name) {
+    return storyLink.kind === "scene"
+      ? copy.storyLinkUnknownScene
+      : copy.storyLinkUnknownSection;
+  }
+  return storyLink.sceneName
+    ? formatI18nCopy(copy.storyLinkSectionLabel, {
+        scene: storyLink.sceneName,
+        section: storyLink.name,
+      })
+    : storyLink.name;
+};
 
 const describeInvalidSelection = ({
   state,
@@ -239,10 +273,12 @@ const describeInvalidSelection = ({
   });
 };
 
-// "Comes with": what the picks use that is not a pick, by type. A selection
-// that cannot be exported lists nothing and says so.
+// "Comes with": what the picks use that is not a pick, by type, and the
+// places in the story they jump to. A selection that cannot be exported
+// lists nothing and says so.
 const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   let dependencies;
+  let storyLinks;
   let isInvalid = false;
   let invalidMessage = copy.selectionInvalid;
   try {
@@ -251,8 +287,14 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
       selectedFolderIdsByType: state.selectedFolderIdsByType,
       resourceTypeOrder: RESOURCE_TYPE_ORDER,
     });
+    storyLinks = listAssetPackageStoryLinks({
+      resourceDataByType: state.resourceDataByType,
+      selectedFolderIdsByType: state.selectedFolderIdsByType,
+      scenesData: state.scenesData,
+    });
   } catch (error) {
     dependencies = [];
+    storyLinks = [];
     isInvalid = true;
     invalidMessage = describeInvalidSelection({
       state,
@@ -278,17 +320,10 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
       };
       groups.push(group);
     }
-    const users = dependency.usedBy.map((id) => nameById.get(id) ?? id);
-    let names = users.slice(0, MAX_LISTED_USERS).join(", ");
-    if (users.length > MAX_LISTED_USERS) {
-      names = `${names}, ${formatI18nCopy(copy.usedByMore, {
-        count: users.length - MAX_LISTED_USERS,
-      })}`;
-    }
     group.items.push({
       id: dependency.itemId,
       name: dependency.name,
-      usedBy: formatI18nCopy(copy.usedByLabel, { names }),
+      usedBy: formatUsedBy({ copy, nameById, ids: dependency.usedBy }),
       preview: previewOf(state, dependency.resourceType, dependency.itemId, {
         showName: true,
       }),
@@ -301,6 +336,17 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
     title: copy.comesWithTitle,
     hint: copy.comesWithHint,
     groups,
+    storyLinks: {
+      isVisible: storyLinks.length > 0,
+      title: copy.storyLinksTitle,
+      hint: copy.storyLinksHint,
+      items: storyLinks.map((storyLink) => ({
+        id: storyLink.id,
+        icon: storyLink.kind === "scene" ? "scene" : "section",
+        label: formatStoryLinkLabel({ copy, storyLink }),
+        usedBy: formatUsedBy({ copy, nameById, ids: storyLink.usedBy }),
+      })),
+    },
   };
 };
 
