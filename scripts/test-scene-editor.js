@@ -22,6 +22,7 @@ const checks = [
   [process.execPath, ["tests/sceneEditor/lexicalImeConfirmation.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalImeComposition.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalEmptyLineBackspace.browser.mjs"]],
+  [process.execPath, ["tests/sceneEditor/lexicalFirstLineBackspace.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalReplaceLines.browser.mjs"]],
   [process.execPath, ["tests/sceneEditor/lexicalFormatInput.browser.mjs"]],
   [process.execPath, ["tests/layoutEditor/lexicalLayoutTextFormatInput.browser.mjs"]],
