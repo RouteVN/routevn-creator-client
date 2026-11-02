@@ -2843,6 +2843,8 @@ assetPackagePage:
   selectedFolderCount_many: "Выбрано {count} папок"
   selectedFolderCount_other: "Выбрано {count} папки"
   selectionInvalid: "Этот выбор нельзя экспортировать: что-то в нём использует удалённый ресурс или сцену истории."
+  selectionStoryReference: "«{name}» ({type}) ссылается на сцену или раздел истории, поэтому этот выбор нельзя экспортировать."
+  selectionMissingResource: "«{name}» ({type}) использует удалённый ресурс, поэтому этот выбор нельзя экспортировать."
   pickedTitle: "Выбранные ресурсы"
   pickResourcesButton: "Выбрать ресурсы"
   nothingPicked: "Пока ничего не выбрано. Выберите папки, которые войдут в пакет."

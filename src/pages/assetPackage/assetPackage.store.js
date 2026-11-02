@@ -212,20 +212,54 @@ const previewOf = (state, resourceType, itemId, extra = {}) => ({
   ...extra,
 });
 
+// Why a selection cannot be exported, naming the resource at fault when the
+// export says which: one that links into the story, or one that uses a
+// resource the project no longer has.
+const INVALID_SELECTION_COPY_KEYS = Object.freeze({
+  story_reference: "selectionStoryReference",
+  missing_resource: "selectionMissingResource",
+});
+
+const describeInvalidSelection = ({
+  state,
+  copy,
+  resourceTypesCopy,
+  error,
+}) => {
+  const copyKey = INVALID_SELECTION_COPY_KEYS[error?.code];
+  const resourceType = RESOURCE_TYPE_ORDER.find(
+    (type) => state.resourceDataByType[type].items[error?.itemId],
+  );
+  if (!copyKey || !resourceType) {
+    return copy.selectionInvalid;
+  }
+  return formatI18nCopy(copy[copyKey], {
+    name: state.resourceDataByType[resourceType].items[error.itemId].name,
+    type: resourceTypesCopy[resourceType] ?? resourceType,
+  });
+};
+
 // "Comes with": what the picks use that is not a pick, by type. A selection
 // that cannot be exported lists nothing and says so.
 const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   let dependencies;
   let isInvalid = false;
+  let invalidMessage = copy.selectionInvalid;
   try {
     dependencies = listAssetPackageDependencies({
       resourceDataByType: state.resourceDataByType,
       selectedFolderIdsByType: state.selectedFolderIdsByType,
       resourceTypeOrder: RESOURCE_TYPE_ORDER,
     });
-  } catch {
+  } catch (error) {
     dependencies = [];
     isInvalid = true;
+    invalidMessage = describeInvalidSelection({
+      state,
+      copy,
+      resourceTypesCopy,
+      error,
+    });
   }
   const nameById = new Map(
     Object.values(state.resourceDataByType).flatMap((resourceData) =>
@@ -263,7 +297,7 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   return {
     isVisible: groups.length > 0,
     isInvalid,
-    invalidMessage: copy.selectionInvalid,
+    invalidMessage,
     title: copy.comesWithTitle,
     hint: copy.comesWithHint,
     groups,

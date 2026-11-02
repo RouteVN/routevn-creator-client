@@ -654,9 +654,13 @@ describe("asset package store", () => {
     setResourceData({ state }, { resourceDataByType });
     state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
 
-    expect(selectViewData({ state, i18n: EN_I18N }).comesWith.isVisible).toBe(
-      false,
-    );
+    // It names the resource at fault.
+    expect(selectViewData({ state, i18n: EN_I18N }).comesWith).toMatchObject({
+      isVisible: false,
+      isInvalid: true,
+      invalidMessage:
+        "“Body” in Text Styles uses a resource that no longer exists, so this selection can't be exported.",
+    });
   });
 
   it("keeps a resource the author picked as a pick when another pick uses it", () => {
@@ -721,6 +725,12 @@ describe("asset package store", () => {
 
     expect(() => selectAssetPackageData({ state })).toThrow(
       "Resource 'layout-1' contains unsupported project reference 'sectionId'.",
+    );
+    // The page names the layout that links into the story, not the pick.
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).comesWith.invalidMessage,
+    ).toBe(
+      "“Dialogue” in Layouts links to a story scene or section, so this selection can't be exported.",
     );
   });
 

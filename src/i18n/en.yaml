@@ -2817,6 +2817,8 @@ assetPackagePage:
   selectedFolderCount_one: "{count} folder picked"
   selectedFolderCount_other: "{count} folders picked"
   selectionInvalid: "This selection can't be exported: something in it uses a resource that no longer exists, or a story scene."
+  selectionStoryReference: "“{name}” in {type} links to a story scene or section, so this selection can't be exported."
+  selectionMissingResource: "“{name}” in {type} uses a resource that no longer exists, so this selection can't be exported."
   pickedTitle: "Picked resources"
   pickResourcesButton: "Pick resources"
   nothingPicked: "Nothing picked yet. Pick the folders to put in your pack."

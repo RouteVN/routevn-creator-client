@@ -2817,6 +2817,8 @@ assetPackagePage:
   selectedFolderCount_one: "เลือก {count} โฟลเดอร์"
   selectedFolderCount_other: "เลือก {count} โฟลเดอร์"
   selectionInvalid: "ส่งออกรายการที่เลือกนี้ไม่ได้ เพราะมีบางอย่างใช้ทรัพยากรที่ไม่มีอยู่แล้วหรือฉากในเรื่อง"
+  selectionStoryReference: "“{name}” ใน{type}ลิงก์ไปยังฉากหรือส่วนในเรื่อง จึงส่งออกรายการที่เลือกนี้ไม่ได้"
+  selectionMissingResource: "“{name}” ใน{type}ใช้ทรัพยากรที่ไม่มีอยู่แล้ว จึงส่งออกรายการที่เลือกนี้ไม่ได้"
   pickedTitle: "ทรัพยากรที่เลือก"
   pickResourcesButton: "เลือกทรัพยากร"
   nothingPicked: "ยังไม่ได้เลือกอะไร เลือกโฟลเดอร์ที่จะใส่ในแพ็กเกจ"

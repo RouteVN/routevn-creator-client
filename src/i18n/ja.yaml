@@ -2817,6 +2817,8 @@ assetPackagePage:
   selectedFolderCount_one: "{count}個のフォルダーを選択"
   selectedFolderCount_other: "{count}個のフォルダーを選択"
   selectionInvalid: "この選択は出力できません。存在しない素材か、ストーリーのシーンを使っているものがあります。"
+  selectionStoryReference: "{type}の「{name}」がストーリーのシーンやセクションにつながっているため、この選択は出力できません。"
+  selectionMissingResource: "{type}の「{name}」が存在しない素材を使っているため、この選択は出力できません。"
   pickedTitle: "選んだ素材"
   pickResourcesButton: "素材を選ぶ"
   nothingPicked: "まだ何も選んでいません。パッケージに入れるフォルダーを選んでください。"

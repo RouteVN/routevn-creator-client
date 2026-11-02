@@ -2817,6 +2817,8 @@ assetPackagePage:
   selectedFolderCount_one: "{count} pasta escolhida"
   selectedFolderCount_other: "{count} pastas escolhidas"
   selectionInvalid: "Esta seleção não pode ser exportada: algo nela usa um recurso que não existe mais ou uma cena da história."
+  selectionStoryReference: "“{name}” em {type} leva a uma cena ou parte da história, então esta seleção não pode ser exportada."
+  selectionMissingResource: "“{name}” em {type} usa um recurso que não existe mais, então esta seleção não pode ser exportada."
   pickedTitle: "Recursos escolhidos"
   pickResourcesButton: "Escolher recursos"
   nothingPicked: "Nada foi escolhido ainda. Escolha as pastas que vão para o seu pacote."

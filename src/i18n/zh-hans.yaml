@@ -2817,6 +2817,8 @@ assetPackagePage:
   selectedFolderCount_one: "已选 {count} 个文件夹"
   selectedFolderCount_other: "已选 {count} 个文件夹"
   selectionInvalid: "无法导出所选内容：其中有内容用到了已不存在的素材或故事场景。"
+  selectionStoryReference: "{type}中的“{name}”链接到故事的场景或段落，因此无法导出所选内容。"
+  selectionMissingResource: "{type}中的“{name}”用到了已不存在的素材，因此无法导出所选内容。"
   pickedTitle: "已选素材"
   pickResourcesButton: "选择素材"
   nothingPicked: "还没有选择任何内容。请选择要放进素材包的文件夹。"

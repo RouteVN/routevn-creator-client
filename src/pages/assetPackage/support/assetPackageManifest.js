@@ -196,8 +196,10 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
           item,
           ({ fieldName, kind, required, value }) => {
             if (kind === "project") {
-              throw new Error(
+              throw new AssetPackageManifestError(
+                "story_reference",
                 `Resource '${itemId}' contains unsupported project reference '${fieldName}'.`,
+                { itemId },
               );
             }
             if (kind !== "resource") {
@@ -206,7 +208,11 @@ const collectDependencies = ({ pickedIdsByType, sourceById }) => {
             const source = sourceById.get(value);
             if (!source) {
               if (required) {
-                throw new Error(`Referenced resource '${value}' is missing.`);
+                throw new AssetPackageManifestError(
+                  "missing_resource",
+                  `Referenced resource '${value}' is missing.`,
+                  { itemId },
+                );
               }
               return;
             }
@@ -392,11 +398,13 @@ export const listAssetPackageDependencies = ({
   });
 };
 
+// `itemId` names the resource at fault, when there is one.
 export class AssetPackageManifestError extends Error {
-  constructor(code, message) {
+  constructor(code, message, { itemId } = {}) {
     super(message);
     this.name = "AssetPackageManifestError";
     this.code = code;
+    this.itemId = itemId;
   }
 }
 
