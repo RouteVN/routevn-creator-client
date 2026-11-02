@@ -206,6 +206,14 @@ pack already has a top-level folder by that name. A dependency no selected
 pick uses is not imported. Import does not ask for replacement destination
 folders or media substitutions.
 
+Choose Resources lists, under Dependencies, each dependency the selected
+resources bring, with a choice of the project's resources of its type, and for
+a layout, of its layout type. It starts at the project's resource of the same
+name, or else at the pack's own. A dependency replaced with the project's
+resource is not imported: every reference to it points at that resource
+instead, and what only it used is left out too. Import checks that each
+replacement still exists and is of the dependency's type.
+
 When the selected resources, or the dependencies they bring, use links,
 Choose Resources lists each under Links, with the resources that use it and a
 choice of the project's sections, scenes or layouts; a layout link offers the
@@ -355,7 +363,8 @@ files fetched by URL.
 3. Keep the picks that selected picks use, directly or through dependencies,
    selected and locked; add the dependencies they use without listing them.
 4. Let the user review and edit each selected resource's name and description,
-   and choose where each link the selection uses goes.
+   choose the pack's or the project's resource for each dependency the
+   selection brings, and choose where each link the selection uses goes.
 5. Lazily load the current resource preview.
 6. Download and validate only the selected resources' required files.
 7. Remap package-local ids.

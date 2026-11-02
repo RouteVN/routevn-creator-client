@@ -107,6 +107,7 @@ describe("resource-import-dialog.handlers", () => {
         "transform.source": "Updated description",
       },
       linkTargets: {},
+      dependencyReplacements: {},
     };
     expect(deps.projectService.validateResourceImportPlan).toHaveBeenCalledWith(
       { planId: "plan-1", ...expectedChoices },

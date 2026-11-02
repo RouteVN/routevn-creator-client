@@ -835,6 +835,11 @@ const linkPickDependencies = (resources) => {
       dependencySourceIds.add(sourceId);
       pending.push(...resource.dependencySourceIds);
     }
+    // The dependencies the pick uses itself, from which the importer's
+    // replacements are followed.
+    pick.directPackageDependencySourceIds = pick.dependencySourceIds.filter(
+      (sourceId) => resourceBySourceId.get(sourceId)?.dependency,
+    );
     pick.dependencySourceIds = [...pickSourceIds];
     pick.packageDependencySourceIds = [...dependencySourceIds];
   }
@@ -1136,14 +1141,16 @@ export const createAssetImportPlan = ({
   });
 };
 
-// `linkTargets` gives each link the section, scene or layout the importer
-// chose; a jump or open action through a link left unset is removed. Each
+// `resourceIdMap` points references at the project's resources that replace
+// dependencies. `linkTargets` gives each link the section, scene or layout
+// the importer chose; a jump or open action through a link left unset is removed. Each
 // resource is checked again once its links are set, before it is imported.
 export const rewriteAssetImportPlanReferences = ({
   resources,
   resourceNames = {},
   resourceDescriptions = {},
   fileIdMap = new Map(),
+  resourceIdMap = new Map(),
   linkTargets = {},
 } = {}) =>
   resources.map((resource) => {
@@ -1151,7 +1158,7 @@ export const rewriteAssetImportPlanReferences = ({
     const data = mapAssetPackageLinks(
       rewriteMappedReferences(resource.data, {
         fileIdBySourceId: fileIdMap,
-        resourceIdBySourceId: new Map(),
+        resourceIdBySourceId: resourceIdMap,
       }),
       (value) => (linkIds.has(value) ? linkTargets[value] : value),
     );

@@ -204,19 +204,61 @@ const formatLinkLabel = ({ copy, kind, name, sceneName }) => {
 
 // The project's sections, scenes or layouts a link can go to; a layout link
 // offers the layouts of its layout's type.
-const listLinkTargets = ({ link, linkTargetOptions }) => {
-  if (link.kind === "section") return linkTargetOptions.sections;
-  if (link.kind === "scene") return linkTargetOptions.scenes;
-  return linkTargetOptions.layouts.filter(
+const listLinkTargets = ({ link, projectTargets }) => {
+  if (link.kind === "section") return projectTargets.sections;
+  if (link.kind === "scene") return projectTargets.scenes;
+  return (projectTargets.resourcesByType.layouts ?? []).filter(
     (layout) =>
       link.layoutType === undefined || layout.layoutType === link.layoutType,
   );
 };
 
+// The project's resources that can replace a dependency: those of its type,
+// and for a layout, of its layout type.
+const listReplacementTargets = ({ dependency, projectTargets }) =>
+  (projectTargets.resourcesByType[dependency.resourceType] ?? []).filter(
+    (resource) =>
+      dependency.resourceType !== "layouts" ||
+      resource.layoutType === dependency.data?.layoutType,
+  );
+
+// Where a dependency starts: the project's resource of the same name, else
+// the pack's own.
+const getDefaultReplacement = ({ dependency, projectTargets }) =>
+  listReplacementTargets({ dependency, projectTargets }).find((resource) =>
+    sameName(resource.name, dependency.name),
+  )?.value ?? "";
+
+// A select for each dependency the selection brings: the pack's own, added to
+// a folder named after the pack, or one of the project's of the same type.
+const createDependencyFields = ({ plan, values, copy, projectTargets }) => {
+  if (!plan || (plan.dependencies ?? []).length === 0) return [];
+  const importedSourceIds = new Set(
+    listImportedResources({ plan, values }).map(
+      (resource) => resource.sourceId,
+    ),
+  );
+  return plan.dependencies.flatMap((dependency, index) => {
+    if (!importedSourceIds.has(dependency.sourceId)) return [];
+    const targets = listReplacementTargets({ dependency, projectTargets });
+    return [
+      {
+        name: `dependency_${index}`,
+        type: "select",
+        label: dependency.name,
+        description: getResourceTypeLabel({ resource: dependency, copy }),
+        placeholder: copy.dependencyUsePacks ?? "Use the pack's",
+        searchable: targets.length > 8,
+        options: targets.map(({ value, label }) => ({ value, label })),
+      },
+    ];
+  });
+};
+
 // Where a link starts: the project's section of the same scene and section
 // names, its scene or layout of the same name; else unset.
-const getDefaultLinkTarget = ({ link, linkTargetOptions }) => {
-  const target = listLinkTargets({ link, linkTargetOptions }).find(
+const getDefaultLinkTarget = ({ link, projectTargets }) => {
+  const target = listLinkTargets({ link, projectTargets }).find(
     (option) =>
       sameName(option.name, link.name) &&
       (link.sceneName === undefined ||
@@ -244,7 +286,7 @@ const listImportedResources = ({ plan, values }) => {
 
 // A select for each link the selection jumps through or opens, to choose
 // where it goes in this project; one left unset drops its actions.
-const createLinkFields = ({ plan, values, copy, linkTargetOptions }) => {
+const createLinkFields = ({ plan, values, copy, projectTargets }) => {
   if (!plan || (plan.links ?? []).length === 0) return [];
   const importedResources = listImportedResources({ plan, values });
   return plan.links.flatMap((link, index) => {
@@ -252,7 +294,7 @@ const createLinkFields = ({ plan, values, copy, linkTargetOptions }) => {
       (resource.linkIds ?? []).includes(link.id),
     );
     if (users.length === 0) return [];
-    const targets = listLinkTargets({ link, linkTargetOptions });
+    const targets = listLinkTargets({ link, projectTargets });
     return [
       {
         name: `link_${index}`,
@@ -272,12 +314,15 @@ const createLinkFields = ({ plan, values, copy, linkTargetOptions }) => {
 // The title and Back are in the selection-header slot, so they scroll with
 // the resources and only Import stays in place. Story links follow the
 // resources.
-const selectionForm = ({ copy, linkFields = [] }) => {
+const selectionForm = ({ copy, dependencyFields = [], linkFields = [] }) => {
   return {
     fields: [
       { type: "slot", slot: "selection-header" },
       { type: "slot", slot: "selection-controls" },
       { type: "slot", slot: "resource-selection-grid" },
+      ...(dependencyFields.length > 0
+        ? [{ type: "slot", slot: "dependencies-header" }, ...dependencyFields]
+        : []),
       ...(linkFields.length > 0
         ? [{ type: "slot", slot: "links-header" }, ...linkFields]
         : []),
@@ -295,25 +340,33 @@ const selectionForm = ({ copy, linkFields = [] }) => {
   };
 };
 
-// Nothing starts selected: the creator picks what to import. Each link starts
-// at the project's section, scene or layout of the same name, if any.
-const createReviewValues = (plan, linkTargetOptions) => {
+// Nothing starts selected: the creator picks what to import. Each dependency
+// starts at the project's resource of the same name, else the pack's own, and
+// each link at the project's section, scene or layout of the same name, if
+// any.
+const createReviewValues = (plan, projectTargets) => {
   const values = {};
   plan.resources.forEach((resource, index) => {
     values[`resource_${index}_include`] = false;
     values[`resource_${index}_name`] = resource.name;
     values[`resource_${index}_description`] = resource.description ?? "";
   });
+  (plan.dependencies ?? []).forEach((dependency, index) => {
+    values[`dependency_${index}`] = getDefaultReplacement({
+      dependency,
+      projectTargets,
+    });
+  });
   (plan.links ?? []).forEach((link, index) => {
-    values[`link_${index}`] = getDefaultLinkTarget({ link, linkTargetOptions });
+    values[`link_${index}`] = getDefaultLinkTarget({ link, projectTargets });
   });
   return values;
 };
 
-const createLinkTargetOptions = () => ({
+const createProjectTargets = () => ({
   sections: [],
   scenes: [],
-  layouts: [],
+  resourcesByType: {},
 });
 
 export const createInitialState = () => ({
@@ -338,7 +391,7 @@ export const createInitialState = () => ({
   reviewValues: {},
   plan: undefined,
   // The project's sections, scenes and layouts a link can go to.
-  linkTargetOptions: createLinkTargetOptions(),
+  projectTargets: createProjectTargets(),
   error: undefined,
   isBusy: false,
   operationId: undefined,
@@ -364,7 +417,7 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
     state.previewAssetSourceId = undefined;
     state.reviewValues = {};
     state.plan = undefined;
-    state.linkTargetOptions = createLinkTargetOptions();
+    state.projectTargets = createProjectTargets();
     state.error = undefined;
     state.isBusy = false;
     state.operationId = undefined;
@@ -459,11 +512,11 @@ export const setPackLoadError = ({ state }, { error } = {}) => {
   state.packStatus = "failed";
 };
 
-export const setPlan = ({ state }, { plan, linkTargetOptions } = {}) => {
+export const setPlan = ({ state }, { plan, projectTargets } = {}) => {
   state.plan = plan;
-  state.linkTargetOptions = linkTargetOptions ?? createLinkTargetOptions();
+  state.projectTargets = projectTargets ?? createProjectTargets();
   state.previewAssetSourceId = undefined;
-  state.reviewValues = createReviewValues(plan, state.linkTargetOptions);
+  state.reviewValues = createReviewValues(plan, state.projectTargets);
   state.step = SELECTION_STEP;
   state.isBusy = false;
   state.operationId = undefined;
@@ -474,11 +527,11 @@ export const setPlan = ({ state }, { plan, linkTargetOptions } = {}) => {
 // The pack's assets, read from its manifest, finish the pack page. Import then
 // opens the selection without another request. The step stays as it is, so
 // a page the user moved on to, such as the creator's, stays open.
-export const setPackPage = ({ state }, { plan, linkTargetOptions } = {}) => {
+export const setPackPage = ({ state }, { plan, projectTargets } = {}) => {
   state.plan = plan;
-  state.linkTargetOptions = linkTargetOptions ?? createLinkTargetOptions();
+  state.projectTargets = projectTargets ?? createProjectTargets();
   state.planPackId = state.pack.id;
-  state.reviewValues = createReviewValues(plan, state.linkTargetOptions);
+  state.reviewValues = createReviewValues(plan, state.projectTargets);
   state.operationId = undefined;
   state.packStatus = "ready";
   state.formKey += 1;
@@ -941,14 +994,24 @@ export const selectViewData = ({ state, i18n = {} }) => {
     form: isSelectionStep
       ? selectionForm({
           copy,
+          dependencyFields: createDependencyFields({
+            plan,
+            values: state.reviewValues,
+            copy,
+            projectTargets: state.projectTargets,
+          }),
           linkFields: createLinkFields({
             plan,
             values: state.reviewValues,
             copy,
-            linkTargetOptions: state.linkTargetOptions,
+            projectTargets: state.projectTargets,
           }),
         })
       : undefined,
+    dependenciesTitle: copy.dependenciesTitle ?? "Dependencies",
+    dependenciesHint:
+      copy.dependenciesHint ??
+      "The resources you chose use these. Use the pack's, added to a folder named after the pack, or one of your own.",
     linksTitle: copy.linksTitle ?? "Links",
     linksHint:
       copy.linksHint ??

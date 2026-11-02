@@ -535,7 +535,7 @@ describe("resource-import-dialog.store", () => {
       { state },
       {
         plan,
-        linkTargetOptions: {
+        projectTargets: {
           sections: [
             {
               value: "section-1",
@@ -551,20 +551,22 @@ describe("resource-import-dialog.store", () => {
             },
           ],
           scenes: [{ value: "scene-1", label: "Title", name: "Title" }],
-          layouts: [
-            {
-              value: "layout-1",
-              label: "Menu Page",
-              name: "Menu Page",
-              layoutType: "general",
-            },
-            {
-              value: "layout-2",
-              label: "Confirm",
-              name: "Confirm",
-              layoutType: "confirmDialog",
-            },
-          ],
+          resourcesByType: {
+            layouts: [
+              {
+                value: "layout-1",
+                label: "Menu Page",
+                name: "Menu Page",
+                layoutType: "general",
+              },
+              {
+                value: "layout-2",
+                label: "Confirm",
+                name: "Confirm",
+                layoutType: "confirmDialog",
+              },
+            ],
+          },
         },
       },
     );
@@ -616,6 +618,91 @@ describe("resource-import-dialog.store", () => {
       description: "Used by Menu Page",
       options: [{ value: "scene-1", label: "Title" }],
     });
+  });
+
+  it("offers to replace each dependency of the selection with one of the project's", () => {
+    const state = createInitialState();
+    const plan = createMultiResourcePlan();
+    plan.resources[0].packageDependencySourceIds = ["dependency.font"];
+    plan.resources[1].packageDependencySourceIds = ["dependency.dialog"];
+    plan.dependencies = [
+      {
+        sourceId: "dependency.font",
+        resourceType: "fonts",
+        type: "font",
+        name: "Serif",
+        data: {},
+      },
+      {
+        sourceId: "dependency.dialog",
+        resourceType: "layouts",
+        type: "layout",
+        name: "Confirm",
+        data: { layoutType: "confirmDialog" },
+      },
+    ];
+    setPlan(
+      { state },
+      {
+        plan,
+        projectTargets: {
+          sections: [],
+          scenes: [],
+          resourcesByType: {
+            fonts: [
+              { value: "font-1", label: "Sans", name: "Sans" },
+              { value: "font-2", label: "Serif", name: "Serif" },
+            ],
+            layouts: [
+              {
+                value: "layout-1",
+                label: "Menu",
+                name: "Menu",
+                layoutType: "general",
+              },
+              {
+                value: "layout-2",
+                label: "Quit?",
+                name: "Quit?",
+                layoutType: "confirmDialog",
+              },
+            ],
+          },
+        },
+      },
+    );
+    const dependencyFields = () =>
+      selectViewData({ state, i18n: {} }).form.fields.filter((field) =>
+        field.name?.startsWith("dependency_"),
+      );
+
+    // A resource of the same name starts selected; else the pack's own.
+    expect(state.reviewValues).toMatchObject({
+      dependency_0: "font-2",
+      dependency_1: "",
+    });
+    expect(dependencyFields()).toEqual([]);
+
+    setResourceSelected({ state }, { sourceId: "source.one", selected: true });
+    setResourceSelected({ state }, { sourceId: "source.two", selected: true });
+    expect(dependencyFields()).toEqual([
+      expect.objectContaining({
+        name: "dependency_0",
+        type: "select",
+        label: "Serif",
+        placeholder: "Use the pack's",
+        options: [
+          { value: "font-1", label: "Sans" },
+          { value: "font-2", label: "Serif" },
+        ],
+      }),
+      // A layout is replaced by one of its layout type.
+      expect.objectContaining({
+        name: "dependency_1",
+        label: "Confirm",
+        options: [{ value: "layout-2", label: "Quit?" }],
+      }),
+    ]);
   });
 
   it("previews an asset with its full-size file, falling back to its grid preview", () => {

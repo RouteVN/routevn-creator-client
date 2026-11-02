@@ -1,4 +1,5 @@
 import { debounceTime, filter } from "rxjs";
+import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../internal/assetPackageResources.js";
 import { generateId } from "../../internal/id.js";
 
 const SELECTION_STEP = "selection";
@@ -14,10 +15,10 @@ const mapErrorMessage = (error, i18n = {}) => {
   };
 };
 
-// The project's sections and scenes, in story order, and its layouts, in
-// project order, that a pack's links can go to. A section's label names its
-// scene.
-const createLinkTargetOptions = ({ repositoryState, i18n = {} }) => {
+// What a pack's links and dependencies can go to in the project: its
+// sections and scenes, in story order, and its resources of each type, in
+// project order. A section's label names its scene.
+const createProjectTargets = ({ repositoryState, i18n = {} }) => {
   const copy = i18n.resourceImport ?? {};
   const listIds = (collection, type) => {
     const ids = [];
@@ -53,14 +54,21 @@ const createLinkTargetOptions = ({ repositoryState, i18n = {} }) => {
       };
     });
   });
-  const layoutsData = repositoryState?.layouts;
-  const layouts = listIds(layoutsData, "layout").map((layoutId) => ({
-    value: layoutId,
-    label: layoutsData.items[layoutId].name ?? "",
-    name: layoutsData.items[layoutId].name ?? "",
-    layoutType: layoutsData.items[layoutId].layoutType,
-  }));
-  return { sections, scenes, layouts };
+  const resourcesByType = Object.fromEntries(
+    ASSET_PACKAGE_RESOURCE_CONFIGS.map(({ resourceType, itemType }) => {
+      const collection = repositoryState?.[resourceType];
+      return [
+        resourceType,
+        listIds(collection, itemType).map((itemId) => ({
+          value: itemId,
+          label: collection.items[itemId].name ?? "",
+          name: collection.items[itemId].name ?? "",
+          layoutType: collection.items[itemId].layoutType,
+        })),
+      ];
+    }),
+  );
+  return { sections, scenes, resourcesByType };
 };
 
 const syncFromProps = (deps, props, { reset = false } = {}) => {
@@ -237,7 +245,7 @@ const openPack = async (deps, packId) => {
   }
   store.setPackPage({
     plan: result.plan,
-    linkTargetOptions: createLinkTargetOptions({
+    projectTargets: createProjectTargets({
       repositoryState: projectService.getRepositoryState?.(),
       i18n: deps.i18n,
     }),
@@ -418,6 +426,13 @@ const buildReviewPayload = ({ plan, values }) => {
         values[`resource_${index}_description`];
     }
   });
+  // What replaces each dependency; empty imports the pack's own.
+  const dependencyReplacements = Object.fromEntries(
+    (plan.dependencies ?? []).map((dependency, index) => [
+      dependency.sourceId,
+      values[`dependency_${index}`] ?? "",
+    ]),
+  );
   // Where each link goes; empty leaves it unset.
   const linkTargets = Object.fromEntries(
     (plan.links ?? []).map((link, index) => [
@@ -430,6 +445,7 @@ const buildReviewPayload = ({ plan, values }) => {
     resourceNames,
     resourceDescriptions,
     linkTargets,
+    dependencyReplacements,
   };
 };
 

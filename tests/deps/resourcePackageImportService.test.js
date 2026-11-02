@@ -609,6 +609,131 @@ describe("resourcePackageImportService", () => {
     });
   });
 
+  it("uses the project's resource for a replaced dependency, and leaves out what only it used", async () => {
+    const { service, importClient, commandApi, currentRepositoryState } =
+      createService();
+    currentRepositoryState.textStyles = {
+      items: {
+        "style.own": { type: "textStyle", name: "Heading" },
+      },
+      tree: [{ id: "style.own" }],
+    };
+    currentRepositoryState.colors = {
+      items: { "color.own": { type: "color", name: "Gold", hex: "#FFD84D" } },
+      tree: [{ id: "color.own" }],
+    };
+    const manifest = assetManifest();
+    manifest.schema = "routevn.import-pack.v2";
+    manifest.repository.files.items["file.font"] = {
+      id: "file.font",
+      mimeType: "font/woff2",
+      size: 3,
+      source: { url: "../files/serif.woff2" },
+    };
+    manifest.repository.layouts = {
+      items: {
+        "folder.menus": { id: "folder.menus", type: "folder", name: "Menus" },
+        "layout.title": {
+          id: "layout.title",
+          type: "layout",
+          name: "Title Menu",
+          layoutType: "general",
+          elements: {
+            items: {
+              heading: {
+                id: "heading",
+                type: "text",
+                name: "Heading",
+                text: "Title",
+                textStyleId: "style.title",
+              },
+            },
+            tree: [{ id: "heading" }],
+          },
+        },
+      },
+      tree: [{ id: "folder.menus", children: [{ id: "layout.title" }] }],
+    };
+    manifest.dependencies = {
+      textStyles: {
+        items: {
+          "style.title": {
+            id: "style.title",
+            type: "textStyle",
+            name: "Title",
+            fontId: ["font.serif"],
+            colorId: "color.gold",
+            fontSize: 48,
+            lineHeight: 1.2,
+            fontWeight: "700",
+          },
+        },
+      },
+      fonts: {
+        items: {
+          "font.serif": {
+            id: "font.serif",
+            type: "font",
+            name: "Serif",
+            fileId: "file.font",
+            fontFamily: "Serif",
+          },
+        },
+      },
+      colors: {
+        items: {
+          "color.gold": {
+            id: "color.gold",
+            type: "color",
+            name: "Gold",
+            hex: "#FFD84D",
+          },
+        },
+      },
+    };
+    importClient.fetchManifest.mockResolvedValue({
+      manifest,
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const layout = planned.plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    const dependency = (name) =>
+      planned.plan.dependencies.find((resource) => resource.name === name);
+
+    // A replacement of another type is refused.
+    expect(
+      service.validateResourceImportPlan({
+        planId: planned.plan.planId,
+        selectedResourceIds: [layout.sourceId],
+        dependencyReplacements: { [dependency("Title").sourceId]: "color.own" },
+      }),
+    ).toMatchObject({
+      valid: false,
+      error: { code: "dependency_replacement_missing" },
+    });
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+      selectedResourceIds: [layout.sourceId],
+      dependencyReplacements: { [dependency("Title").sourceId]: "style.own" },
+    });
+    expect(result).toMatchObject({ valid: true, importedCount: 1 });
+    const { entries } = commandApi.commitAssetImportPackage.mock.calls[0][0];
+    // The text style, and the font and color only it used, stay out.
+    expect(
+      entries.map((entry) => `${entry.resourceType}/${entry.data.name}`),
+    ).toEqual(["layouts/Menus", "layouts/Title Menu"]);
+    expect(
+      entries.find((entry) => entry.data.name === "Title Menu").data.elements
+        .items.heading.textStyleId,
+    ).toBe("style.own");
+    expect(importClient.downloadFile).not.toHaveBeenCalled();
+  });
+
   it("downloads package previews through the bounded import client", async () => {
     const { service, importClient } = createService();
     importClient.fetchManifest.mockResolvedValue({

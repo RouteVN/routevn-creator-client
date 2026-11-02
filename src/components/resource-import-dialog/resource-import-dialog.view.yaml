@@ -415,8 +415,11 @@ template:
                                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${resource.name}
                                                               - $if resource.colorHex:
                                                                   - rtgl-text s=xs c=mu-fg: ${resource.colorHex}
-                          # Above the link selects, which the form adds after the
-                          # resources.
+                          # Above the dependency and link selects, which the form adds
+                          # after the resources.
+                          - rtgl-view slot=dependencies-header d=v w=f g=xs pt=lg:
+                              - rtgl-text s=lg: ${dependenciesTitle}
+                              - rtgl-text s=sm c=mu-fg: ${dependenciesHint}
                           - rtgl-view slot=links-header d=v w=f g=xs pt=lg:
                               - rtgl-text s=lg: ${linksTitle}
                               - rtgl-text s=sm c=mu-fg: ${linksHint}

@@ -91,7 +91,11 @@ const emitProgress = (onProgress, progress) => {
   }
 };
 
-const selectPlanResources = ({ plan, selectedResourceIds }) => {
+const selectPlanResources = ({
+  plan,
+  selectedResourceIds,
+  dependencyReplacements = {},
+}) => {
   const selectedIds = new Set(
     selectedResourceIds ?? plan.resources.map((resource) => resource.sourceId),
   );
@@ -112,12 +116,32 @@ const selectPlanResources = ({ plan, selectedResourceIds }) => {
   const selectedPicks = plan.resources.filter((resource) =>
     selectedIds.has(resource.sourceId),
   );
-  // A v2 package's dependencies come along with the picks that use them.
-  const dependencySourceIds = new Set(
-    selectedPicks.flatMap(
-      (resource) => resource.packageDependencySourceIds ?? [],
-    ),
+  // A v2 package's dependencies come along with the picks that use them,
+  // except those the importer replaced with their own, and what only those
+  // use.
+  const dependencyBySourceId = new Map(
+    (plan.dependencies ?? []).map((resource) => [resource.sourceId, resource]),
   );
+  const dependencySourceIds = new Set();
+  const pendingDependencySourceIds = selectedPicks.flatMap(
+    (resource) =>
+      resource.directPackageDependencySourceIds ??
+      resource.packageDependencySourceIds ??
+      [],
+  );
+  while (pendingDependencySourceIds.length > 0) {
+    const sourceId = pendingDependencySourceIds.pop();
+    const dependency = dependencyBySourceId.get(sourceId);
+    if (
+      !dependency ||
+      dependencySourceIds.has(sourceId) ||
+      dependencyReplacements[sourceId]
+    ) {
+      continue;
+    }
+    dependencySourceIds.add(sourceId);
+    pendingDependencySourceIds.push(...(dependency.dependencySourceIds ?? []));
+  }
   return [
     ...selectedPicks,
     ...(plan.dependencies ?? []).filter((resource) =>
@@ -210,6 +234,50 @@ const validateReviewChoices = ({
     }
   }
 };
+
+// Each dependency the importer replaced goes to a resource the project has of
+// the same type, and a layout of the same layout type.
+const validateDependencyReplacements = ({
+  plan,
+  dependencyReplacements,
+  repositoryState,
+}) => {
+  const dependencyBySourceId = new Map(
+    (plan.dependencies ?? []).map((resource) => [resource.sourceId, resource]),
+  );
+  for (const [sourceId, targetId] of Object.entries(
+    dependencyReplacements ?? {},
+  )) {
+    if (!targetId) continue;
+    const dependency = dependencyBySourceId.get(sourceId);
+    const target =
+      repositoryState?.[dependency?.resourceType]?.items?.[targetId];
+    if (
+      !dependency ||
+      target?.type !== dependency.type ||
+      (dependency.resourceType === "layouts" &&
+        target.layoutType !== dependency.data.layoutType)
+    ) {
+      fail(
+        "dependency_replacement_missing",
+        "A resource chosen to replace a dependency no longer exists, or is of another kind.",
+        { resourceId: sourceId },
+      );
+    }
+  }
+};
+
+// The project ids that replace the dependencies the importer replaced, by the
+// ids the package's resources point at them with.
+const createReplacementIdMap = ({ plan, dependencyReplacements }) =>
+  new Map(
+    (plan.dependencies ?? [])
+      .filter((resource) => dependencyReplacements?.[resource.sourceId])
+      .map((resource) => [
+        resource.destinationId,
+        dependencyReplacements[resource.sourceId],
+      ]),
+  );
 
 // Each link the importer set goes to a section, scene or layout the project
 // still has, of the link's kind, and a layout of the link's layout type; an
@@ -445,6 +513,7 @@ export const createResourcePackageImportService = ({
       resourceNames = {},
       resourceDescriptions = {},
       linkTargets = {},
+      dependencyReplacements = {},
     } = {}) {
       try {
         const plan = plans.get(planId);
@@ -457,6 +526,7 @@ export const createResourcePackageImportService = ({
         const selectedResources = selectPlanResources({
           plan,
           selectedResourceIds,
+          dependencyReplacements,
         });
         validateReviewChoices({
           selectedResources,
@@ -466,6 +536,11 @@ export const createResourcePackageImportService = ({
         validateLinkTargets({
           plan,
           linkTargets,
+          repositoryState: getRepositoryState(),
+        });
+        validateDependencyReplacements({
+          plan,
+          dependencyReplacements,
           repositoryState: getRepositoryState(),
         });
         return { valid: true };
@@ -481,6 +556,7 @@ export const createResourcePackageImportService = ({
       resourceNames = {},
       resourceDescriptions = {},
       linkTargets = {},
+      dependencyReplacements = {},
       onProgress,
     } = {}) {
       let operation;
@@ -513,6 +589,7 @@ export const createResourcePackageImportService = ({
         const selectedResources = selectPlanResources({
           plan,
           selectedResourceIds,
+          dependencyReplacements,
         });
         selectedResourcesForCleanup = selectedResources;
         validateReviewChoices({
@@ -523,6 +600,11 @@ export const createResourcePackageImportService = ({
         validateLinkTargets({
           plan,
           linkTargets,
+          repositoryState: getRepositoryState(),
+        });
+        validateDependencyReplacements({
+          plan,
+          dependencyReplacements,
           repositoryState: getRepositoryState(),
         });
 
@@ -656,6 +738,10 @@ export const createResourcePackageImportService = ({
           resourceDescriptions,
           fileIdMap: actualFileIds,
           linkTargets,
+          resourceIdMap: createReplacementIdMap({
+            plan,
+            dependencyReplacements,
+          }),
         });
         emitProgress(onProgress, {
           phase: "committing",
