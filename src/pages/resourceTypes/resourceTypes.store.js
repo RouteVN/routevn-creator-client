@@ -125,9 +125,9 @@ const releaseItems = [
     path: "/project/releases/web-server",
   },
   {
-    id: "assetPackage",
-    name: "Asset Package",
-    path: "/project/asset-package",
+    id: "assetPacks",
+    name: "Asset Packs",
+    path: "/project/asset-packs",
   },
 ];
 
@@ -140,6 +140,7 @@ const resourceParentMapping = {
   "transform-editor": "transforms",
   "particle-editor": "particles",
   "text-style-editor": "textStyles",
+  "asset-pack-editor": "assetPacks",
 };
 
 const resourceCategoryNames = {
@@ -186,7 +187,7 @@ const getCategoryConfig = (resourceCategory) =>
   resourceCategoryNames[resourceCategory] || EMPTY_CATEGORY;
 
 export const selectResourceItem = ({ state = {}, props }, id) => {
-  if (id === "assetPackage" && !state.assetPackageEnabled) {
+  if (id === "assetPacks" && !state.assetPackageEnabled) {
     return undefined;
   }
   const { resourceCategory } = props;
@@ -206,7 +207,7 @@ export const selectViewData = ({ state = {}, props, i18n }) => {
   const resourceItems = categoryConfig.resources.filter(
     (item) =>
       (!item.hidden || item.id === actualSelectedId) &&
-      (item.id !== "assetPackage" || state.assetPackageEnabled),
+      (item.id !== "assetPacks" || state.assetPackageEnabled),
   );
 
   const items = resourceItems.map((item) => {

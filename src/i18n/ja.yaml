@@ -738,7 +738,7 @@ resourceTypes:
   about: "アプリ情報"
   config: "環境設定"
   tutorials: "チュートリアル"
-  assetPackage: "素材パッケージ"
+  assetPacks: "素材パッケージ"
   versions: "バージョン"
   webServer: "Webサーバー"
 colorsPage:
@@ -886,6 +886,20 @@ animationsPage:
   transitionType: "トランジション"
   updateButton: "更新"
   updateType: "更新"
+assetPacksPage:
+  defaultFolderName: "デフォルト"
+  title: "素材パッケージ"
+  addTitle: "素材パッケージを追加"
+  editTitle: "素材パッケージを編集"
+  createButton: "作成"
+  updateButton: "更新"
+  failedCreateAssetPack: "素材パッケージを作成できませんでした。"
+  failedCreateFolder: "素材パッケージのフォルダーを作成できませんでした。"
+  failedDeleteAssetPack: "素材パッケージを削除できませんでした。"
+  failedDuplicateAssetPack: "素材パッケージを複製できませんでした。"
+  failedUpdateAssetPack: "素材パッケージを更新できませんでした。"
+  nameRequired: "素材パッケージの名前を入力してください。"
+  savedPackName: "素材パッケージ"
 audioEffectsPage:
   addTitle: "オーディオエフェクトを追加"
   configurationLabel: "設定"
@@ -2777,6 +2791,7 @@ configPage:
   languageTitle: "言語"
   failedChangeLanguage: "言語を変更できませんでした。もう一度お試しください。"
 assetPackagePage:
+  backButton: "戻る"
   assetPackageDownloaded: "素材パッケージをダウンロードしました。"
   audioMenuItem: "音声"
   audioSectionTitle: "音声"

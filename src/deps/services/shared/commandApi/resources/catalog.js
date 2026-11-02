@@ -439,6 +439,96 @@ export const createCatalogResourceCommandApi = (shared) => ({
       deleteField: "colorIds",
       ids: colorIds,
     }),
+  createAssetPack: async ({
+    assetPackId,
+    data,
+    parentId,
+    position = "last",
+    positionTargetId,
+    index,
+  }) =>
+    submitCreateResourceCommand({
+      shared,
+      resourceType: "assetPacks",
+      type: COMMAND_TYPES.ASSETPACK_CREATE,
+      idField: "assetPackId",
+      idValue: assetPackId,
+      data,
+      parentId,
+      position,
+      positionTargetId,
+      index,
+    }),
+  updateAssetPack: async ({ assetPackId, data }) =>
+    submitUpdateResourceCommand({
+      shared,
+      resourceType: "assetPacks",
+      type: COMMAND_TYPES.ASSETPACK_UPDATE,
+      idField: "assetPackId",
+      idValue: assetPackId,
+      data,
+    }),
+  moveAssetPack: async ({
+    assetPackId,
+    parentId,
+    position = "last",
+    positionTargetId,
+    index,
+  }) =>
+    submitMoveResourceCommand({
+      shared,
+      resourceType: "assetPacks",
+      type: COMMAND_TYPES.ASSETPACK_MOVE,
+      idField: "assetPackId",
+      idValue: assetPackId,
+      parentId,
+      position,
+      positionTargetId,
+      index,
+    }),
+  deleteAssetPacks: async ({ assetPackIds }) =>
+    submitDeleteResourceCommand({
+      shared,
+      resourceType: "assetPacks",
+      type: COMMAND_TYPES.ASSETPACK_DELETE,
+      deleteField: "assetPackIds",
+      ids: assetPackIds,
+    }),
+  async duplicateAssetPack({ assetPackId }) {
+    const context = await shared.ensureCommandContext();
+    const sourceAssetPack = context.state?.assetPacks?.items?.[assetPackId];
+
+    if (!sourceAssetPack || sourceAssetPack.type !== "assetPack") {
+      return {
+        valid: false,
+        error: {
+          message: "Asset pack not found.",
+        },
+      };
+    }
+
+    const nextData = structuredClone(sourceAssetPack);
+    delete nextData.id;
+    delete nextData.parentId;
+    nextData.name = createDuplicateItemName(
+      context.state.assetPacks,
+      assetPackId,
+    );
+
+    return submitCreateResourceCommand({
+      shared,
+      resourceType: "assetPacks",
+      type: COMMAND_TYPES.ASSETPACK_CREATE,
+      idField: "assetPackId",
+      data: nextData,
+      parentId: resolveCatalogResourceParentId(
+        context.state?.assetPacks,
+        assetPackId,
+      ),
+      position: "after",
+      positionTargetId: assetPackId,
+    });
+  },
   createTextStyle: async ({
     textStyleId,
     data,

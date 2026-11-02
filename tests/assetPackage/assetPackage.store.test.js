@@ -216,7 +216,7 @@ describe("asset package store", () => {
     const state = createInitialState();
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       resourceCategory: "releases",
-      selectedResourceId: "assetPackage",
+      selectedResourceId: "asset-pack-editor",
       showExplorerPanel: true,
       contentLeftPadding: "sm",
       hasPicks: false,

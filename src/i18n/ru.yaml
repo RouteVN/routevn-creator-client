@@ -738,7 +738,7 @@ resourceTypes:
   about: "О приложении"
   config: "Параметры приложения"
   tutorials: "Обучение"
-  assetPackage: "Пакет ресурсов"
+  assetPacks: "Пакеты ресурсов"
   versions: "Версии"
   webServer: "Веб-сервер"
 colorsPage:
@@ -886,6 +886,20 @@ animationsPage:
   transitionType: "Переход"
   updateButton: "Сохранить"
   updateType: "Изменение"
+assetPacksPage:
+  defaultFolderName: "По умолчанию"
+  title: "Пакеты ресурсов"
+  addTitle: "Добавить пакет ресурсов"
+  editTitle: "Изменить пакет ресурсов"
+  createButton: "Создать"
+  updateButton: "Сохранить"
+  failedCreateAssetPack: "Не удалось создать пакет ресурсов."
+  failedCreateFolder: "Не удалось создать папку пакетов ресурсов."
+  failedDeleteAssetPack: "Не удалось удалить пакет ресурсов."
+  failedDuplicateAssetPack: "Не удалось дублировать пакет ресурсов."
+  failedUpdateAssetPack: "Не удалось обновить пакет ресурсов."
+  nameRequired: "Введите название пакета ресурсов."
+  savedPackName: "Пакет ресурсов"
 audioEffectsPage:
   addTitle: "Добавить аудиоэффект"
   configurationLabel: "Параметры"
@@ -2801,6 +2815,7 @@ configPage:
   languageTitle: "Язык"
   failedChangeLanguage: "Не удалось сменить язык. Повторите попытку."
 assetPackagePage:
+  backButton: "Назад"
   assetPackageDownloaded: "Пакет ресурсов скачан."
   audioMenuItem: "Аудио"
   audioSectionTitle: "Аудио"

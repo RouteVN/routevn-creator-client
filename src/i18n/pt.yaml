@@ -738,7 +738,7 @@ resourceTypes:
   about: "Sobre"
   config: "Preferências"
   tutorials: "Tutoriais"
-  assetPackage: "Pacote de recursos"
+  assetPacks: "Pacotes de recursos"
   versions: "Versões"
   webServer: "Servidor web"
 colorsPage:
@@ -886,6 +886,20 @@ animationsPage:
   transitionType: "Transição"
   updateButton: "Atualizar"
   updateType: "Alteração"
+assetPacksPage:
+  defaultFolderName: "Padrão"
+  title: "Pacotes de recursos"
+  addTitle: "Adicionar pacote de recursos"
+  editTitle: "Editar pacote de recursos"
+  createButton: "Criar"
+  updateButton: "Atualizar"
+  failedCreateAssetPack: "Não foi possível criar o pacote de recursos."
+  failedCreateFolder: "Não foi possível criar a pasta de pacotes de recursos."
+  failedDeleteAssetPack: "Não foi possível excluir o pacote de recursos."
+  failedDuplicateAssetPack: "Não foi possível duplicar o pacote de recursos."
+  failedUpdateAssetPack: "Não foi possível atualizar o pacote de recursos."
+  nameRequired: "Digite um nome para o pacote de recursos."
+  savedPackName: "Pacote de recursos"
 audioEffectsPage:
   addTitle: "Adicionar efeito de áudio"
   configurationLabel: "Configuração"
@@ -2777,6 +2791,7 @@ configPage:
   languageTitle: "Idioma"
   failedChangeLanguage: "Não foi possível alterar o idioma. Tente novamente."
 assetPackagePage:
+  backButton: "Voltar"
   assetPackageDownloaded: "Download do pacote de recursos concluído."
   audioMenuItem: "Áudio"
   audioSectionTitle: "Áudio"

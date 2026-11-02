@@ -3,6 +3,7 @@ import { ASSET_PACKAGE_RESOURCE_TYPES } from "../../src/internal/assetPackageRes
 import {
   handlePickResourcesClick,
   handleAfterMount,
+  handleBackClick,
   handleBeforeMount,
   handleDownloadAssetPackageButtonClick,
   handlePickerFolderClick,
@@ -48,6 +49,17 @@ const SAVED_ASSET_PACKAGE = {
 const createRepositoryState = () => {
   const state = {
     files: { items: {} },
+    assetPacks: {
+      items: {
+        "pack-1": {
+          id: "pack-1",
+          type: "assetPack",
+          name: "Fantasy UI",
+          resources: SAVED_ASSET_PACKAGE.resources,
+        },
+      },
+      tree: [{ id: "pack-1" }],
+    },
   };
   for (const resourceType of ASSET_PACKAGE_RESOURCE_TYPES) {
     state[resourceType] = { items: {}, tree: [] };
@@ -57,6 +69,8 @@ const createRepositoryState = () => {
 
 const createDeps = () => ({
   appService: {
+    getPayload: vi.fn(() => ({ p: "project-1", ap: "pack-1" })),
+    navigate: vi.fn(),
     saveFilePicker: vi.fn(async () => "/tmp/asset-package.zip"),
     showAlert: vi.fn(),
     showProgressDialog: vi.fn(() => ({
@@ -73,8 +87,7 @@ const createDeps = () => ({
     createAssetPackageBundle: vi.fn(
       async () => new Blob(["asset-package"], { type: "application/zip" }),
     ),
-    getCurrentAssetPackage: vi.fn(async () => SAVED_ASSET_PACKAGE),
-    updateCurrentAssetPackage: vi.fn(async (assetPackage) => assetPackage),
+    updateAssetPack: vi.fn(async () => ({ valid: true })),
   },
   refs: {},
   render: vi.fn(),
@@ -84,6 +97,9 @@ const createDeps = () => ({
       dependencies: {},
     })),
     selectAssetPackage: vi.fn(() => SAVED_ASSET_PACKAGE),
+    selectAssetPackId: vi.fn(() => "pack-1"),
+    selectAssetPackName: vi.fn(() => "Fantasy UI"),
+    setAssetPack: vi.fn(),
     setFilesData: vi.fn(),
     setScenesData: vi.fn(),
     setAssetPackage: vi.fn(),
@@ -124,33 +140,40 @@ describe("asset package handlers", () => {
         ]),
       ),
     });
-  });
-
-  it("loads the saved project asset package after mount", async () => {
-    const deps = createDeps();
-
-    await handleAfterMount(deps);
-
-    expect(deps.projectService.getCurrentAssetPackage).toHaveBeenCalledOnce();
-    expect(deps.store.setAssetPackage).toHaveBeenCalledWith({
-      assetPackage: SAVED_ASSET_PACKAGE,
+    // The address names the asset pack to edit.
+    expect(deps.store.setAssetPack).toHaveBeenCalledWith({
+      assetPackId: "pack-1",
+      name: "Fantasy UI",
+      resources: SAVED_ASSET_PACKAGE.resources,
     });
-    expect(deps.render).toHaveBeenCalledOnce();
   });
 
-  it("shows feedback when the saved asset package cannot be loaded", async () => {
+  it("goes back to the list when the address names no asset pack", () => {
     const deps = createDeps();
-    deps.projectService.getCurrentAssetPackage.mockRejectedValue(
-      new Error("Storage unavailable"),
-    );
+    handleAfterMount(deps);
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
 
-    await handleAfterMount(deps);
-
-    expect(deps.store.setAssetPackage).not.toHaveBeenCalled();
+    deps.store.selectAssetPackId.mockReturnValue(undefined);
+    handleAfterMount(deps);
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Could not load the asset package. Please try again.",
       status: "error",
     });
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/asset-packs",
+      { p: "project-1" },
+      { historyMode: "replace" },
+    );
+  });
+
+  it("goes back to the asset pack list", () => {
+    const deps = createDeps();
+    handleBackClick(deps);
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/asset-packs",
+      { p: "project-1" },
+      { historyMode: "replace" },
+    );
   });
 
   const folderEvent = (detail) => ({
@@ -173,9 +196,7 @@ describe("asset package handlers", () => {
       resourceType: "images",
       folderId: "image-folder-1",
     });
-    expect(
-      deps.projectService.updateCurrentAssetPackage,
-    ).not.toHaveBeenCalled();
+    expect(deps.projectService.updateAssetPack).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
@@ -187,16 +208,18 @@ describe("asset package handlers", () => {
     expect(deps.store.applyPicker).toHaveBeenCalledOnce();
     expect(deps.store.closePicker).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledOnce();
-    expect(deps.projectService.updateCurrentAssetPackage).toHaveBeenCalledWith(
-      SAVED_ASSET_PACKAGE,
-    );
+    expect(deps.projectService.updateAssetPack).toHaveBeenCalledWith({
+      assetPackId: "pack-1",
+      data: { resources: SAVED_ASSET_PACKAGE.resources },
+    });
   });
 
   it("shows feedback when the asset package cannot be saved", async () => {
     const deps = createDeps();
-    deps.projectService.updateCurrentAssetPackage.mockRejectedValue(
-      new Error("Storage unavailable"),
-    );
+    deps.projectService.updateAssetPack.mockResolvedValue({
+      valid: false,
+      error: { message: "Storage unavailable" },
+    });
 
     await handlePickerDoneClick(deps);
 
@@ -215,9 +238,7 @@ describe("asset package handlers", () => {
     expect(deps.store.openPicker).toHaveBeenCalledOnce();
     expect(deps.store.closePicker).toHaveBeenCalledOnce();
     expect(deps.store.applyPicker).not.toHaveBeenCalled();
-    expect(
-      deps.projectService.updateCurrentAssetPackage,
-    ).not.toHaveBeenCalled();
+    expect(deps.projectService.updateAssetPack).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
@@ -229,9 +250,7 @@ describe("asset package handlers", () => {
     expect(deps.store.setPickerResourceType).toHaveBeenCalledWith({
       resourceType: "images",
     });
-    expect(
-      deps.projectService.updateCurrentAssetPackage,
-    ).not.toHaveBeenCalled();
+    expect(deps.projectService.updateAssetPack).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledOnce();
   });
 
@@ -242,7 +261,7 @@ describe("asset package handlers", () => {
 
     expect(deps.appService.saveFilePicker).toHaveBeenCalledWith({
       title: "Save asset package",
-      defaultPath: "asset-package.zip",
+      defaultPath: "Fantasy UI.zip",
       filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
     });
     expect(

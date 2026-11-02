@@ -43,7 +43,11 @@ describe("app view", () => {
     );
 
     expect(appView).toContain(
-      '$elif currentRoutePattern == "/project/asset-package"',
+      '$elif currentRoutePattern == "/project/asset-packs"',
+    );
+    expect(appView).toContain("rvn-asset-packs");
+    expect(appView).toContain(
+      '$elif currentRoutePattern == "/project/asset-pack-editor"',
     );
     expect(appView).toContain("rvn-asset-package");
   });

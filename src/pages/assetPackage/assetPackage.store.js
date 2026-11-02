@@ -65,7 +65,10 @@ const copyFolderIdsByType = (folderIdsByType) =>
 
 export const createInitialState = () => ({
   resourceCategory: "releases",
-  selectedResourceId: "assetPackage",
+  selectedResourceId: "asset-pack-editor",
+  // The asset pack being edited.
+  assetPackId: undefined,
+  assetPackName: "",
   isTouchMode: false,
   filesData: { items: {} },
   // The project's scenes and sections, which name the story links.
@@ -112,6 +115,27 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
   }
   state.selectedFolderIdsByType = selectedFolderIdsByType;
 };
+
+// The asset pack being edited, and its picks.
+export const setAssetPack = (
+  { state },
+  { assetPackId, name, resources } = {},
+) => {
+  state.assetPackId = assetPackId;
+  state.assetPackName = name ?? "";
+  setAssetPackage(
+    { state },
+    {
+      assetPackage: {
+        schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
+        resources: resources ?? [],
+      },
+    },
+  );
+};
+
+export const selectAssetPackId = ({ state }) => state.assetPackId;
+export const selectAssetPackName = ({ state }) => state.assetPackName;
 
 // Ticks or unticks a top-level folder in the picker; `selected` says which,
 // or the folder flips. A ticked folder goes after those picked before it.
@@ -480,6 +504,7 @@ export const selectViewData = ({ state, i18n }) => {
     ...state,
     showExplorerPanel: !state.isTouchMode,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
+    backLabel: copy.backButton ?? "Back",
     pickedTitle: copy.pickedTitle,
     pickResourcesLabel: copy.pickResourcesButton,
     hasPicks: pickedSections.length > 0,

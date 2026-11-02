@@ -738,7 +738,7 @@ resourceTypes:
   about: "About"
   config: "Config"
   tutorials: "Tutorials"
-  assetPackage: "Asset Package"
+  assetPacks: "Asset Packs"
   versions: "Versions"
   webServer: "Web Server"
 colorsPage:
@@ -886,6 +886,20 @@ animationsPage:
   transitionType: "Transition"
   updateButton: "Update"
   updateType: "Update"
+assetPacksPage:
+  defaultFolderName: "Default"
+  title: "Asset Packs"
+  addTitle: "Add Asset Pack"
+  editTitle: "Edit Asset Pack"
+  createButton: "Create"
+  updateButton: "Update"
+  failedCreateAssetPack: "Failed to create asset pack."
+  failedCreateFolder: "Failed to create asset pack folder."
+  failedDeleteAssetPack: "Failed to delete asset pack."
+  failedDuplicateAssetPack: "Failed to duplicate asset pack."
+  failedUpdateAssetPack: "Failed to update asset pack."
+  nameRequired: "Please enter an asset pack name."
+  savedPackName: "Asset Pack"
 audioEffectsPage:
   addTitle: "Add Audio Effect"
   configurationLabel: "Configuration"
@@ -2777,6 +2791,7 @@ configPage:
   languageTitle: "Language"
   failedChangeLanguage: "Could not change the language. Please try again."
 assetPackagePage:
+  backButton: "Back"
   assetPackageDownloaded: "Asset package downloaded."
   audioMenuItem: "Audio"
   audioSectionTitle: "Audio"

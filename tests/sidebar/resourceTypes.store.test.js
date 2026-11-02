@@ -165,13 +165,13 @@ describe("resource type navigation", () => {
     });
     const assetPackageItem = mobileSidebarViewData.sections
       .flatMap((section) => section.items)
-      .find((item) => item.id === "assetPackage");
+      .find((item) => item.id === "assetPacks");
 
     expect(assetPackageItem.label).toBe("素材パッケージ");
   });
 
   it.each([false, true])(
-    "shows Asset Package in both Release menus only when enabled=%s",
+    "shows Asset Packs in both Release menus only when enabled=%s",
     (enabled) => {
       const desktopState = createDesktopResourceTypesInitialState();
       const mobileState = createMobileSidebarInitialState();
@@ -194,8 +194,8 @@ describe("resource type navigation", () => {
       const desktopIds = ["versions", "platformDetails", "webServer"];
       const mobileIds = ["versions", "platformDetails"];
       if (enabled) {
-        desktopIds.push("assetPackage");
-        mobileIds.push("assetPackage");
+        desktopIds.push("assetPacks");
+        mobileIds.push("assetPacks");
       }
       expect(desktopViewData.items.map((item) => item.id)).toEqual(desktopIds);
       expect(
@@ -207,13 +207,13 @@ describe("resource type navigation", () => {
         Boolean(
           selectResourceItem(
             { state: desktopState, props: { resourceCategory: "releases" } },
-            "assetPackage",
+            "assetPacks",
           ),
         ),
       ).toBe(enabled);
       expect(
         Boolean(
-          selectItemById({ state: mobileState }, { itemId: "assetPackage" }),
+          selectItemById({ state: mobileState }, { itemId: "assetPacks" }),
         ),
       ).toBe(enabled);
     },

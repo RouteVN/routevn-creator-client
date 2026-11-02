@@ -527,8 +527,11 @@ describe("app route transitions", () => {
 
   it.each(
     [
+      "/project/asset-packs",
+      "/project/asset-packs/",
+      "/project/asset-pack-editor",
+      // The old single asset package page leads to the list.
       "/project/asset-package",
-      "/project/asset-package/",
       "/project/asset-package///",
     ].flatMap((path) =>
       [undefined, false, true].map((enabled) => ({ path, enabled })),
@@ -538,7 +541,9 @@ describe("app route transitions", () => {
     async ({ path, enabled }) => {
       const state = createAppState();
       const expectedRoute = enabled
-        ? "/project/asset-package"
+        ? path.startsWith("/project/asset-pack-editor")
+          ? "/project/asset-pack-editor"
+          : "/project/asset-packs"
         : "/project/config";
       const appService = {
         getUserConfig: vi.fn(() => enabled),

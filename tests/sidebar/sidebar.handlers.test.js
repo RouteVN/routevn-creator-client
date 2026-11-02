@@ -98,7 +98,7 @@ describe("sidebar.handlers", () => {
     expect(
       selectViewData({
         state,
-        props: { currentRoute: "/project/asset-package" },
+        props: { currentRoute: "/project/asset-pack-editor" },
       }).selectedItemId,
     ).toBe("release");
   });

@@ -165,7 +165,17 @@ against the owning resource type before staging.
 
 ## Folder trees and dependencies
 
-The creator's Asset Package page has two sections. Picked resources lists only
+A project can have several asset packs. They are project resources, in the
+`assetPacks` collection: Releases → Asset Packs lists them with folders, like
+the other resource pages, and opening one shows its editor. A pack is
+`{ type: "assetPack", name, description, resources }`, where `resources` lists,
+for each resource type, the top-level folders picked, in the order picked.
+Folder ids are not checked against their collections, so a pack may keep ids
+of folders since deleted; the editor skips them. A project that kept one asset
+package before packs could be several gets it as its first pack, in a
+"Default" folder, the first time Asset Packs opens.
+
+An asset pack's editor has two sections. Picked resources lists only
 the top-level folders in the pack, by type, each with every resource in it
 with its name; folders are added and removed in the picker. Previews are drawn
 as on the type's own page: images and thumbnails on the transparency grid,

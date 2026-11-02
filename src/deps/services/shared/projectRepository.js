@@ -60,6 +60,7 @@ export const initialProjectData = {
   variables: createTreeCollection(),
   layouts: createTreeCollection(),
   controls: createTreeCollection(),
+  assetPacks: createTreeCollection(),
   scenes: createTreeCollection(),
   tags: createEmptyTagScopes(),
 };

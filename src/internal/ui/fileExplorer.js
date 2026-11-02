@@ -211,6 +211,15 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     idField: "controlId",
     deleteField: "controlIds",
   },
+  assetPacks: {
+    createMethod: "createAssetPack",
+    updateMethod: "updateAssetPack",
+    moveMethod: "moveAssetPack",
+    deleteMethod: "deleteAssetPacks",
+    duplicateMethod: "duplicateAssetPack",
+    idField: "assetPackId",
+    deleteField: "assetPackIds",
+  },
 });
 
 const getDeletionBlockedMessage = ({ itemType, reason } = {}) => {
@@ -357,6 +366,11 @@ const validateResourceDeletion = async ({
     if (textStyleCount - removalCount < 1) {
       return { canDelete: false, reason: "minimum-text-style" };
     }
+  }
+
+  // Nothing in a project points at an asset pack.
+  if (currentItemType === "assetPack") {
+    return { canDelete: true };
   }
 
   let checkTargets = ["scenes", "layouts", "controls"];

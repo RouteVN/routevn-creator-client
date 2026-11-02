@@ -1,9 +1,15 @@
 import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../internal/assetPackageResources.js";
+import {
+  createAssetPackEditorPayload,
+  getAssetPackEditorBackPath,
+  resolveAssetPackEditorPayload,
+} from "../../internal/assetPackEditorRoute.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createAssetPackageManifest } from "./support/assetPackageManifest.js";
 
+// The editor edits the asset pack the address names (`ap`).
 export const handleBeforeMount = (deps) => {
-  const { projectService, store, uiConfig } = deps;
+  const { appService, projectService, store, uiConfig } = deps;
   const repositoryState = projectService.getRepositoryState();
   const resourceDataByType = {};
   for (const { resourceType } of ASSET_PACKAGE_RESOURCE_CONFIGS) {
@@ -13,35 +19,69 @@ export const handleBeforeMount = (deps) => {
   store.setFilesData({ filesData: repositoryState?.files });
   store.setScenesData({ scenesData: repositoryState?.scenes });
   store.setResourceData({ resourceDataByType });
-};
-
-export const handleAfterMount = async (deps) => {
-  const { appService, i18n, projectService, render, store } = deps;
-  try {
-    const assetPackage = await projectService.getCurrentAssetPackage();
-    store.setAssetPackage({ assetPackage });
-    render();
-  } catch {
-    appService.showToast({
-      message: i18n.assetPackagePage.failedLoadAssetPackage,
-      status: "error",
+  const { assetPackId } = resolveAssetPackEditorPayload(
+    appService.getPayload() ?? {},
+  );
+  const assetPack = repositoryState?.assetPacks?.items?.[assetPackId];
+  if (assetPack?.type === "assetPack") {
+    store.setAssetPack({
+      assetPackId,
+      name: assetPack.name,
+      resources: assetPack.resources,
     });
   }
 };
 
+const navigateBack = (deps) => {
+  const { appService } = deps;
+  appService.navigate(
+    getAssetPackEditorBackPath(),
+    createAssetPackEditorPayload({ payload: appService.getPayload() ?? {} }),
+    { historyMode: "replace" },
+  );
+};
+
+// An address naming no asset pack leads back to the list.
+export const handleAfterMount = (deps) => {
+  const { appService, i18n, store } = deps;
+  if (store.selectAssetPackId()) {
+    return;
+  }
+  appService.showToast({
+    message: i18n.assetPackagePage.failedLoadAssetPackage,
+    status: "error",
+  });
+  navigateBack(deps);
+};
+
+export const handleBackClick = (deps) => {
+  navigateBack(deps);
+};
+
 const persistAssetPackage = async (deps) => {
   const { appService, i18n, projectService, store } = deps;
+  let result;
   try {
-    await projectService.updateCurrentAssetPackage(store.selectAssetPackage());
-    return true;
+    result = await projectService.updateAssetPack({
+      assetPackId: store.selectAssetPackId(),
+      data: { resources: store.selectAssetPackage().resources },
+    });
   } catch {
+    result = { valid: false };
+  }
+  if (result?.valid === false) {
     appService.showToast({
       message: i18n.assetPackagePage.failedSaveAssetPackage,
       status: "error",
     });
     return false;
   }
+  return true;
 };
+
+// The pack's name, as a file name.
+const toZipFileName = (name) =>
+  `${(name ?? "").trim().replace(/[\\/:*?"<>|]+/g, "-") || "asset-package"}.zip`;
 
 export const handlePickerTypeClick = (deps, payload) => {
   const { render, store } = deps;
@@ -103,7 +143,7 @@ export const handleDownloadAssetPackageButtonClick = async (deps) => {
   try {
     outputPath = await appService.saveFilePicker({
       title: copy.saveAssetPackageTitle,
-      defaultPath: "asset-package.zip",
+      defaultPath: toZipFileName(store.selectAssetPackName()),
       filters: [{ name: copy.zipFileTypeName, extensions: ["zip"] }],
     });
   } catch (error) {
