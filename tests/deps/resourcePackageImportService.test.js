@@ -438,9 +438,27 @@ describe("resourcePackageImportService", () => {
       const pick = planned.plan.resources.find(
         (resource) => resource.name === pickName,
       );
+      // Without a choice for each dependency, the import is refused.
+      if (pickName === "Title") {
+        expect(
+          service.validateResourceImportPlan({
+            planId: planned.plan.planId,
+            selectedResourceIds: [pick.sourceId],
+          }),
+        ).toMatchObject({
+          valid: false,
+          error: { code: "dependency_choice_required" },
+        });
+      }
       const result = await service.executeResourceImportPlan({
         planId: planned.plan.planId,
         selectedResourceIds: [pick.sourceId],
+        dependencyReplacements: Object.fromEntries(
+          planned.plan.dependencies.map((dependency) => [
+            dependency.sourceId,
+            "pack",
+          ]),
+        ),
       });
       return {
         result,
@@ -551,8 +569,13 @@ describe("resourcePackageImportService", () => {
           name: "Confirm",
           layoutType: "confirmDialog",
         },
+        "layout.menu": {
+          type: "layout",
+          name: "Menu",
+          layoutType: "general",
+        },
       },
-      tree: [{ id: "layout.confirm" }],
+      tree: [{ id: "layout.confirm" }, { id: "layout.menu" }],
     };
     importClient.fetchManifest.mockResolvedValue({
       manifest,
@@ -574,7 +597,10 @@ describe("resourcePackageImportService", () => {
       service.validateResourceImportPlan({
         planId: planned.plan.planId,
         selectedResourceIds: [layout.sourceId],
-        linkTargets: { "link.start": "section-gone" },
+        linkTargets: {
+          "link.start": "section-gone",
+          "link.menu": "layout.menu",
+        },
       }),
     ).toMatchObject({
       valid: false,
@@ -586,18 +612,32 @@ describe("resourcePackageImportService", () => {
       service.validateResourceImportPlan({
         planId: planned.plan.planId,
         selectedResourceIds: [layout.sourceId],
-        linkTargets: { "link.menu": "layout.confirm" },
+        linkTargets: {
+          "link.start": "section-1",
+          "link.menu": "layout.confirm",
+        },
       }),
     ).toMatchObject({
       valid: false,
       error: { code: "link_target_missing" },
     });
 
-    // The section is set; the unset layout link drops its open action.
+    // Every link the selection uses must be set.
+    expect(
+      service.validateResourceImportPlan({
+        planId: planned.plan.planId,
+        selectedResourceIds: [layout.sourceId],
+        linkTargets: { "link.start": "section-1", "link.menu": "" },
+      }),
+    ).toMatchObject({
+      valid: false,
+      error: { code: "link_target_required" },
+    });
+
     const result = await service.executeResourceImportPlan({
       planId: planned.plan.planId,
       selectedResourceIds: [layout.sourceId],
-      linkTargets: { "link.start": "section-1", "link.menu": "" },
+      linkTargets: { "link.start": "section-1", "link.menu": "layout.menu" },
     });
     expect(result).toMatchObject({ valid: true });
     const committed =
@@ -606,6 +646,7 @@ describe("resourcePackageImportService", () => {
       );
     expect(committed.data.elements.items.start.click.payload.actions).toEqual({
       resetStoryAtSection: { sectionId: "section-1" },
+      pushOverlay: { resourceId: "layout.menu" },
     });
   });
 

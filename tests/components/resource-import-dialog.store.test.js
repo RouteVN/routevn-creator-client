@@ -592,7 +592,8 @@ describe("resource-import-dialog.store", () => {
         type: "select",
         label: "Title / Start",
         description: "Used by Transform One",
-        placeholder: "Not set",
+        placeholder: "Choose",
+        required: { message: "Choose where this goes." },
         options: [
           { value: "section-1", label: "Prologue / Start" },
           { value: "section-2", label: "Title / Start" },
@@ -676,7 +677,7 @@ describe("resource-import-dialog.store", () => {
         field.name?.startsWith("dependency_"),
       );
 
-    // A resource of the same name starts selected; else the pack's own.
+    // A resource of the same name starts selected; else nothing, to choose.
     expect(state.reviewValues).toMatchObject({
       dependency_0: "font-2",
       dependency_1: "",
@@ -690,8 +691,11 @@ describe("resource-import-dialog.store", () => {
         name: "dependency_0",
         type: "select",
         label: "Serif",
-        placeholder: "Use the pack's",
+        placeholder: "Choose",
+        required: { message: "Choose the pack's or one of your own." },
+        // The pack's own is a choice like the project's resources.
         options: [
+          { value: "pack", label: "Use the pack's" },
           { value: "font-1", label: "Sans" },
           { value: "font-2", label: "Serif" },
         ],
@@ -700,7 +704,10 @@ describe("resource-import-dialog.store", () => {
       expect.objectContaining({
         name: "dependency_1",
         label: "Confirm",
-        options: [{ value: "layout-2", label: "Quit?" }],
+        options: [
+          { value: "pack", label: "Use the pack's" },
+          { value: "layout-2", label: "Quit?" },
+        ],
       }),
     ]);
   });

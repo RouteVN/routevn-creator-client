@@ -3,6 +3,7 @@ import {
   AssetImportPlanError,
   createAssetImportPlan,
   rewriteAssetImportPlanReferences,
+  USE_PACK_DEPENDENCY,
 } from "../../../internal/assetImportPlan.js";
 import { isAssetPackageFileMimeTypeAllowed } from "../../../internal/assetPackageResources.js";
 import {
@@ -91,6 +92,10 @@ const emitProgress = (onProgress, progress) => {
   }
 };
 
+// A dependency the importer chose one of the project's resources for.
+const isReplacement = (choice) =>
+  typeof choice === "string" && choice !== "" && choice !== USE_PACK_DEPENDENCY;
+
 const selectPlanResources = ({
   plan,
   selectedResourceIds,
@@ -135,7 +140,7 @@ const selectPlanResources = ({
     if (
       !dependency ||
       dependencySourceIds.has(sourceId) ||
-      dependencyReplacements[sourceId]
+      isReplacement(dependencyReplacements[sourceId])
     ) {
       continue;
     }
@@ -235,20 +240,34 @@ const validateReviewChoices = ({
   }
 };
 
-// Each dependency the importer replaced goes to a resource the project has of
-// the same type, and a layout of the same layout type.
+// Each dependency the selection imports was chosen: the package's own, or a
+// resource the project has of the same type, and a layout of the same layout
+// type.
 const validateDependencyReplacements = ({
   plan,
+  selectedResources,
   dependencyReplacements,
   repositoryState,
 }) => {
+  const unchosen = selectedResources.find(
+    (resource) =>
+      resource.dependency &&
+      dependencyReplacements?.[resource.sourceId] !== USE_PACK_DEPENDENCY,
+  );
+  if (unchosen) {
+    fail(
+      "dependency_choice_required",
+      "Choose the package's or one of your own resources for each dependency.",
+      { resourceId: unchosen.sourceId },
+    );
+  }
   const dependencyBySourceId = new Map(
     (plan.dependencies ?? []).map((resource) => [resource.sourceId, resource]),
   );
   for (const [sourceId, targetId] of Object.entries(
     dependencyReplacements ?? {},
   )) {
-    if (!targetId) continue;
+    if (!isReplacement(targetId)) continue;
     const dependency = dependencyBySourceId.get(sourceId);
     const target =
       repositoryState?.[dependency?.resourceType]?.items?.[targetId];
@@ -272,17 +291,32 @@ const validateDependencyReplacements = ({
 const createReplacementIdMap = ({ plan, dependencyReplacements }) =>
   new Map(
     (plan.dependencies ?? [])
-      .filter((resource) => dependencyReplacements?.[resource.sourceId])
+      .filter((resource) =>
+        isReplacement(dependencyReplacements?.[resource.sourceId]),
+      )
       .map((resource) => [
         resource.destinationId,
         dependencyReplacements[resource.sourceId],
       ]),
   );
 
-// Each link the importer set goes to a section, scene or layout the project
-// still has, of the link's kind, and a layout of the link's layout type; an
-// unset link is fine.
-const validateLinkTargets = ({ plan, linkTargets, repositoryState }) => {
+// Each link the selection uses was set, to a section, scene or layout the
+// project still has, of the link's kind, and a layout of the link's layout
+// type.
+const validateLinkTargets = ({
+  plan,
+  selectedResources,
+  linkTargets,
+  repositoryState,
+}) => {
+  const unsetLinkId = selectedResources
+    .flatMap((resource) => resource.linkIds ?? [])
+    .find((linkId) => !linkTargets?.[linkId]);
+  if (unsetLinkId) {
+    fail("link_target_required", "Choose where each link goes.", {
+      resourceId: unsetLinkId,
+    });
+  }
   const linkById = new Map((plan.links ?? []).map((link) => [link.id, link]));
   const scenes = Object.entries(repositoryState?.scenes?.items ?? {}).filter(
     ([, item]) => item?.type === "scene",
@@ -535,11 +569,13 @@ export const createResourcePackageImportService = ({
         });
         validateLinkTargets({
           plan,
+          selectedResources,
           linkTargets,
           repositoryState: getRepositoryState(),
         });
         validateDependencyReplacements({
           plan,
+          selectedResources,
           dependencyReplacements,
           repositoryState: getRepositoryState(),
         });
@@ -599,11 +635,13 @@ export const createResourcePackageImportService = ({
         });
         validateLinkTargets({
           plan,
+          selectedResources,
           linkTargets,
           repositoryState: getRepositoryState(),
         });
         validateDependencyReplacements({
           plan,
+          selectedResources,
           dependencyReplacements,
           repositoryState: getRepositoryState(),
         });
