@@ -1141,6 +1141,10 @@ export const createAssetImportPlan = ({
   });
 };
 
+// The importer's choice that keeps a dependency's own copy from the package,
+// as opposed to one of the project's resources.
+export const USE_PACK_DEPENDENCY = "pack";
+
 // `resourceIdMap` points references at the project's resources that replace
 // dependencies. `linkTargets` gives each link the section, scene or layout
 // the importer chose; a jump or open action through a link left unset is removed. Each

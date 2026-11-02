@@ -1,4 +1,5 @@
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { USE_PACK_DEPENDENCY } from "../../internal/assetImportPlan.js";
 import { formatCalendarDate, formatPercent } from "../../internal/dates.js";
 import { generateId } from "../../internal/id.js";
 
@@ -223,14 +224,15 @@ const listReplacementTargets = ({ dependency, projectTargets }) =>
   );
 
 // Where a dependency starts: the project's resource of the same name, else
-// the pack's own.
+// unchosen.
 const getDefaultReplacement = ({ dependency, projectTargets }) =>
   listReplacementTargets({ dependency, projectTargets }).find((resource) =>
     sameName(resource.name, dependency.name),
   )?.value ?? "";
 
-// A select for each dependency the selection brings: the pack's own, added to
-// a folder named after the pack, or one of the project's of the same type.
+// A select for each dependency the selection brings, which must be chosen:
+// the pack's own, added to a folder named after the pack, or one of the
+// project's of the same type.
 const createDependencyFields = ({ plan, values, copy, projectTargets }) => {
   if (!plan || (plan.dependencies ?? []).length === 0) return [];
   const importedSourceIds = new Set(
@@ -247,9 +249,19 @@ const createDependencyFields = ({ plan, values, copy, projectTargets }) => {
         type: "select",
         label: dependency.name,
         description: getResourceTypeLabel({ resource: dependency, copy }),
-        placeholder: copy.dependencyUsePacks ?? "Use the pack's",
+        placeholder: copy.chooseOption ?? "Choose",
+        required: {
+          message:
+            copy.dependencyRequired ?? "Choose the pack's or one of your own.",
+        },
         searchable: targets.length > 8,
-        options: targets.map(({ value, label }) => ({ value, label })),
+        options: [
+          {
+            value: USE_PACK_DEPENDENCY,
+            label: copy.dependencyUsePacks ?? "Use the pack's",
+          },
+          ...targets.map(({ value, label }) => ({ value, label })),
+        ],
       },
     ];
   });
@@ -284,8 +296,8 @@ const listImportedResources = ({ plan, values }) => {
   ];
 };
 
-// A select for each link the selection jumps through or opens, to choose
-// where it goes in this project; one left unset drops its actions.
+// A select for each link the selection jumps through or opens, which must be
+// chosen: where it goes in this project.
 const createLinkFields = ({ plan, values, copy, projectTargets }) => {
   if (!plan || (plan.links ?? []).length === 0) return [];
   const importedResources = listImportedResources({ plan, values });
@@ -303,7 +315,10 @@ const createLinkFields = ({ plan, values, copy, projectTargets }) => {
         description: formatI18nCopy(copy.linkUsedBy ?? "Used by {names}", {
           names: users.map((resource) => resource.name).join(", "),
         }),
-        placeholder: copy.linkNotSet ?? "Not set",
+        placeholder: copy.chooseOption ?? "Choose",
+        required: {
+          message: copy.linkRequired ?? "Choose where this goes.",
+        },
         searchable: targets.length > 8,
         options: targets.map(({ value, label }) => ({ value, label })),
       },
@@ -341,9 +356,8 @@ const selectionForm = ({ copy, dependencyFields = [], linkFields = [] }) => {
 };
 
 // Nothing starts selected: the creator picks what to import. Each dependency
-// starts at the project's resource of the same name, else the pack's own, and
-// each link at the project's section, scene or layout of the same name, if
-// any.
+// and link starts at the project's resource, section, scene or layout of the
+// same name, if any, and must otherwise be chosen.
 const createReviewValues = (plan, projectTargets) => {
   const values = {};
   plan.resources.forEach((resource, index) => {
@@ -1011,11 +1025,11 @@ export const selectViewData = ({ state, i18n = {} }) => {
     dependenciesTitle: copy.dependenciesTitle ?? "Dependencies",
     dependenciesHint:
       copy.dependenciesHint ??
-      "The resources you chose use these. Use the pack's, added to a folder named after the pack, or one of your own.",
+      "The resources you chose use these. For each, choose the pack's, added to a folder named after the pack, or one of your own.",
     linksTitle: copy.linksTitle ?? "Links",
     linksHint:
       copy.linksHint ??
-      "These resources jump to places in the pack author's story, or open their layouts. Choose your own for each; one left unset is removed from its buttons.",
+      "These resources jump to places in the pack author's story, or open their layouts. Choose your own for each.",
     defaultValues: state.reviewValues,
     formContext: state.reviewValues,
     errorMessage: state.error?.message,

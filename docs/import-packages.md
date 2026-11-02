@@ -218,8 +218,9 @@ folders or media substitutions.
 
 Choose Resources lists, under Dependencies, each dependency the selected
 resources bring, with a choice of the project's resources of its type, and for
-a layout, of its layout type. It starts at the project's resource of the same
-name, or else at the pack's own. A dependency replaced with the project's
+a layout, of its layout type. Each must be chosen, the pack's own or one of the project's: it starts at
+the project's resource of the same name, or else unchosen, and Import is
+refused until every one is chosen. A dependency replaced with the project's
 resource is not imported: every reference to it points at that resource
 instead, and what only it used is left out too. Import checks that each
 replacement still exists and is of the dependency's type.
@@ -229,8 +230,7 @@ Choose Resources lists each under Links, with the resources that use it and a
 choice of the project's sections, scenes or layouts; a layout link offers the
 layouts of its layout's type. A link starts at the project's section with the
 same section and scene names, or its scene or layout with the same name, and
-otherwise unset. Import checks that each choice still exists and, for a layout, has the link's layout type, writes it into every jump or open action through the link, and checks each resource again; a link left unset removes those actions, so their buttons
-do the rest of what they do.
+otherwise unchosen; Import is refused until every one is chosen. Import checks that each choice still exists and, for a layout, has the link's layout type, writes it into every jump or open action through the link, and checks each resource again.
 
 Files, folders, and resources are committed in one atomic command batch. A
 pre-commit failure discards staged files. If commit confirmation is interrupted,

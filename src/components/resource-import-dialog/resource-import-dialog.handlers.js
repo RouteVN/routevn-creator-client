@@ -426,14 +426,15 @@ const buildReviewPayload = ({ plan, values }) => {
         values[`resource_${index}_description`];
     }
   });
-  // What replaces each dependency; empty imports the pack's own.
+  // What replaces each dependency, or "pack" for the pack's own; empty is
+  // unchosen.
   const dependencyReplacements = Object.fromEntries(
     (plan.dependencies ?? []).map((dependency, index) => [
       dependency.sourceId,
       values[`dependency_${index}`] ?? "",
     ]),
   );
-  // Where each link goes; empty leaves it unset.
+  // Where each link goes; empty is unchosen.
   const linkTargets = Object.fromEntries(
     (plan.links ?? []).map((link, index) => [
       link.id,
