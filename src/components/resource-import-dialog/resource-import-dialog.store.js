@@ -1,6 +1,5 @@
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { USE_PACK_DEPENDENCY } from "../../internal/assetImportPlan.js";
-import { ASSET_STORE_HIDDEN_RESOURCE_TYPES } from "../../internal/assetPackageResources.js";
 import { formatCalendarDate, formatPercent } from "../../internal/dates.js";
 import { generateId } from "../../internal/id.js";
 
@@ -10,73 +9,9 @@ const CREATOR_STEP = "creator";
 const SELECTION_STEP = "selection";
 const PROGRESS_STEP = "progress";
 
-// The asset store's asset type filter, in the order it shows them. Each type
-// names a kind of resource a pack holds, takes that resource type's name, and
-// is chosen when the store opens from that resource type's page.
-const STORE_ASSET_TYPES = Object.freeze([
-  { assetType: "IMAGES", resourceType: "images", path: "/project/images" },
-  { assetType: "SOUNDS", resourceType: "sounds", path: "/project/sounds" },
-  { assetType: "VIDEOS", resourceType: "videos", path: "/project/videos" },
-  {
-    assetType: "CHARACTERS",
-    resourceType: "characters",
-    path: "/project/characters",
-  },
-  {
-    assetType: "TRANSFORMS",
-    resourceType: "transforms",
-    path: "/project/transforms",
-  },
-  {
-    assetType: "ANIMATIONS",
-    resourceType: "animations",
-    path: "/project/animations",
-  },
-  {
-    assetType: "AUDIO_EFFECTS",
-    resourceType: "audioEffects",
-    path: "/project/audio-effects",
-  },
-  {
-    assetType: "PARTICLES",
-    resourceType: "particles",
-    path: "/project/particles",
-  },
-  {
-    assetType: "SPRITESHEETS",
-    resourceType: "spritesheets",
-    path: "/project/spritesheets",
-  },
-  { assetType: "COLORS", resourceType: "colors", path: "/project/colors" },
-  { assetType: "FONTS", resourceType: "fonts", path: "/project/fonts" },
-  {
-    assetType: "TEXT_STYLES",
-    resourceType: "textStyles",
-    path: "/project/text-styles",
-  },
-  { assetType: "LAYOUTS", resourceType: "layouts", path: "/project/layouts" },
-  {
-    assetType: "VARIABLES",
-    resourceType: "variables",
-    path: "/project/variables",
-  },
-  {
-    assetType: "CONTROLS",
-    resourceType: "controls",
-    path: "/project/controls",
-  },
-]);
-
-// The types the filter offers: those the store takes for now.
-const OFFERED_STORE_ASSET_TYPES = STORE_ASSET_TYPES.filter(
-  ({ resourceType }) =>
-    !ASSET_STORE_HIDDEN_RESOURCE_TYPES.includes(resourceType),
-);
-
 const createCatalogState = () => ({
   status: "idle",
   query: "",
-  assetTypes: [],
   packs: [],
   nextCursor: undefined,
   requestId: undefined,
@@ -455,19 +390,6 @@ export const setCatalogQuery = ({ state }, { query } = {}) => {
   state.catalog.query = query;
 };
 
-// New asset types reload the store from its first page.
-export const setCatalogAssetTypes = ({ state }, { assetTypes } = {}) => {
-  state.catalog.assetTypes = assetTypes;
-};
-
-// Chooses the asset type of the resource page at `path`, or none.
-export const setCatalogAssetTypesForPath = ({ state }, { path } = {}) => {
-  const pageType = OFFERED_STORE_ASSET_TYPES.find(
-    (storeType) => storeType.path === path,
-  );
-  state.catalog.assetTypes = pageType ? [pageType.assetType] : [];
-};
-
 // A first page replaces the list; a cursor appends the next page to it.
 export const startCatalogLoad = ({ state }, { requestId, cursor } = {}) => {
   state.catalog.status = "loading";
@@ -739,7 +661,6 @@ export const selectOperationId = ({ state }) => state.operationId;
 export const selectReviewValues = ({ state }) => state.reviewValues;
 export const selectInstanceId = ({ state }) => state.instanceId;
 export const selectCatalogQuery = ({ state }) => state.catalog.query;
-export const selectCatalogAssetTypes = ({ state }) => state.catalog.assetTypes;
 export const selectCatalogRequestId = ({ state }) => state.catalog.requestId;
 export const selectCatalogNextCursor = ({ state }) => state.catalog.nextCursor;
 export const selectCatalogFailedCursor = ({ state }) =>
@@ -786,25 +707,15 @@ const getCreatorViewData = ({ state, copy }) => {
   };
 };
 
-const getCatalogViewData = ({ state, copy, resourceTypeCopy }) => {
+const getCatalogViewData = ({ state, copy }) => {
   const { catalog } = state;
-  const isFiltered = catalog.query !== "" || catalog.assetTypes.length > 0;
+  const isFiltered = catalog.query !== "";
   return {
     storeTitle: copy.storeTitle ?? "Asset Store",
     isCatalogLoading: catalog.status === "loading" && !catalog.loadingMore,
     searchTitle: copy.searchTitle ?? "Search",
     searchLabel: copy.searchPlaceholder ?? "Search asset packs",
     searchText: state.searchText,
-    assetTypesTitle: copy.assetTypesTitle ?? "Asset types",
-    assetTypesPlaceholder: copy.assetTypesPlaceholder ?? "Choose asset types",
-    assetTypeOptions: OFFERED_STORE_ASSET_TYPES.map(
-      ({ assetType, resourceType }) => ({
-        value: assetType,
-        label:
-          resourceTypeCopy[resourceType] ?? formatResourceType(resourceType),
-      }),
-    ),
-    selectedAssetTypes: catalog.assetTypes,
     isCatalogEmpty:
       catalog.status === "ready" && catalog.packs.length === 0 && !isFiltered,
     isNoResults:
@@ -1043,11 +954,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     defaultValues: state.reviewValues,
     formContext: state.reviewValues,
     errorMessage: state.error?.message,
-    catalog: getCatalogViewData({
-      state,
-      copy,
-      resourceTypeCopy: i18n.resourceTypes ?? {},
-    }),
+    catalog: getCatalogViewData({ state, copy }),
     pack: getPackViewData({ state, copy, dateTime: i18n.dateTime }),
     isAssetPreviewOpen: previewResource !== undefined,
     assetPreview: previewResource && {

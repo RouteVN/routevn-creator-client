@@ -2871,8 +2871,6 @@ resourceImport:
   storeNoResults: "Không có gói tài nguyên nào khớp với tìm kiếm."
   searchTitle: "Tìm kiếm"
   searchPlaceholder: "Tìm gói tài nguyên"
-  assetTypesTitle: "Loại tài nguyên"
-  assetTypesPlaceholder: "Chọn loại tài nguyên"
   storeLoadFailed: "Không tải được cửa hàng tài nguyên. Hãy kiểm tra kết nối rồi thử lại."
   retryButton: "Thử lại"
   loadMoreButton: "Tải thêm"

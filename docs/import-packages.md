@@ -297,16 +297,12 @@ which the plan already requires of a color, with the value, such as
 
 Import opens the RouteVN asset store in a large dialog, 32 px from each window
 edge and at most 1600 px wide, or full screen in windows up to 768 px wide, under a header that stays in
-place with its title and a close button at its right: a sidebar with Search and Asset
-types fields, and free packs, newest first, 20 at a time, each card with its
+place with its title and a close button at its right: a sidebar with a Search
+field, and free packs, newest first, 20 at a time, each card with its
 cover, title, summary (at most two lines, ending in an ellipsis when cut, and
 left out when the pack has none) and creator. Search matches pack titles and creator names once
-typing pauses for 300 ms. A pack's asset types are the kinds of resources it
-holds, such as Images or Sounds, and use the resource types' names. The Asset
-types field shows the chosen types; clicking it lists every type, and saving the
-choice lists the packs with assets of any of them. Import on a resource page
-opens the store with that resource type chosen, such as Images on the Images
-page; character sprites and layouts open with no type. Choosing a pack opens its
+typing pauses for 300 ms. The store has no asset type filter for now: it
+lists every pack, whichever page Import was opened from. Choosing a pack opens its
 page: its description, the current
 version's release notes under "What's new", with their line breaks, when it has
 any, and every asset in the pack, read from its manifest. Only the author's picks show; dependencies do not. Assets are grouped as on the resource pages: a group for each

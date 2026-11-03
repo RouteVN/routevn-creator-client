@@ -26,7 +26,6 @@ import {
   handleResourceSelectionToggle,
   handleSelectionToggleAll,
   handleStoreSearchInput,
-  handleStoreAssetTypesChange,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 import * as dialogStore from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
 
@@ -388,7 +387,6 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
       cursor: undefined,
       query: "",
-      assetTypes: [],
     });
     expect(state.step).toBe("store");
     expect(state.catalog).toMatchObject({
@@ -420,7 +418,6 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
       cursor: "c2",
       query: "",
-      assetTypes: [],
     });
     expect(state.catalog.status).toBe("ready");
     expect(state.catalog.packs.map((pack) => pack.id)).toEqual([
@@ -721,7 +718,6 @@ describe("resource-import-dialog asset store", () => {
       expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
         cursor: undefined,
         query: "transition",
-        assetTypes: [],
       });
       expect(state.searchText).toBe("transition ");
 
@@ -738,82 +734,24 @@ describe("resource-import-dialog asset store", () => {
     }
   });
 
-  it("opens filtered by the asset type of the resource page it opened from", async () => {
-    const { state, deps } = createStoreDeps();
+  it("opens on every pack, whichever page it opened from", async () => {
+    const { deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({ packs: [] });
-    deps.appService.getPath.mockReturnValue("/project/animations");
 
-    openDialog(deps);
-    await settle();
-    expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
-      cursor: undefined,
-      query: "",
-      assetTypes: ["ANIMATIONS"],
-    });
-
-    await handleStoreAssetTypesChange(deps, {
-      _event: { detail: { value: [] } },
-    });
-    closeDialog(deps);
-    deps.appService.getPath.mockReturnValue("/project/images");
-    openDialog(deps);
-    await settle();
-    expect(state.catalog.assetTypes).toEqual(["IMAGES"]);
-    expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
-      cursor: undefined,
-      query: "",
-      assetTypes: ["IMAGES"],
-    });
-
-    closeDialog(deps);
-    deps.appService.getPath.mockReturnValue("/project/layouts");
-    openDialog(deps);
-    await settle();
-    expect(state.catalog.assetTypes).toEqual(["LAYOUTS"]);
-
-    // A page with no asset type opens the store unfiltered, as does a page
-    // whose type the store does not take for now.
     for (const path of [
+      "/project/images",
+      "/project/layouts",
       "/project/scenes",
-      "/project/audio-effects",
-      "/project/controls",
     ]) {
-      closeDialog(deps);
       deps.appService.getPath.mockReturnValue(path);
       openDialog(deps);
       await settle();
-      expect(state.catalog.assetTypes).toEqual([]);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
+        cursor: undefined,
+        query: "",
+      });
+      closeDialog(deps);
     }
-  });
-
-  it("reloads the first page when saved asset types change, keeping the search", async () => {
-    const { state, deps } = createStoreDeps();
-    deps.appService.listAssetStorePacks.mockResolvedValue({
-      packs: [storePack("pack-1")],
-    });
-    openDialog(deps);
-    await settle();
-    dialogStore.setCatalogQuery({ state }, { query: "fade" });
-    const saveAssetTypes = (value) =>
-      handleStoreAssetTypesChange(deps, { _event: { detail: { value } } });
-
-    await saveAssetTypes(["SOUNDS", "IMAGES"]);
-    expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
-      cursor: undefined,
-      query: "fade",
-      assetTypes: ["SOUNDS", "IMAGES"],
-    });
-    expect(state.catalog.packs).toEqual([storePack("pack-1")]);
-
-    await saveAssetTypes(["IMAGES", "SOUNDS"]);
-    expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(2);
-
-    await saveAssetTypes([]);
-    expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
-      cursor: undefined,
-      query: "fade",
-      assetTypes: [],
-    });
   });
 
   it("collapses and expands a pack folder group by click or key", () => {

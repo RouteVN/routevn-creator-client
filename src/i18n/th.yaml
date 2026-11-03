@@ -2871,8 +2871,6 @@ resourceImport:
   storeNoResults: "ไม่มีแพ็กเกจทรัพยากรที่ตรงกับการค้นหา"
   searchTitle: "ค้นหา"
   searchPlaceholder: "ค้นหาแพ็กเกจทรัพยากร"
-  assetTypesTitle: "ประเภททรัพยากร"
-  assetTypesPlaceholder: "เลือกประเภททรัพยากร"
   storeLoadFailed: "โหลดร้านค้าทรัพยากรไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
   retryButton: "ลองอีกครั้ง"
   loadMoreButton: "โหลดเพิ่ม"

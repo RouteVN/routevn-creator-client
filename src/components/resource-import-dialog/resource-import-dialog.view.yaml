@@ -11,10 +11,6 @@ refs:
     eventListeners:
       value-input:
         handler: handleStoreSearchInput
-  storeAssetTypeSelect:
-    eventListeners:
-      value-change:
-        handler: handleStoreAssetTypesChange
   packGrid:
     eventListeners:
       click:
@@ -147,9 +143,6 @@ template:
                       - rtgl-view d=v w=f g=sm:
                           - rtgl-text: ${catalog.searchTitle}
                           - 'rtgl-input#storeSearchInput s=sm w=f placeholder="${catalog.searchLabel}" aria-label="${catalog.searchLabel}" value=${catalog.searchText}': null
-                      - rtgl-view d=v w=f g=sm:
-                          - rtgl-text: ${catalog.assetTypesTitle}
-                          - rtgl-tag-select#storeAssetTypeSelect w=f no-add :ariaLabel=${catalog.assetTypesTitle} :options=${catalog.assetTypeOptions} :selectedValues=${catalog.selectedAssetTypes} :placeholder=${catalog.assetTypesPlaceholder}: null
                   - 'rtgl-view d=v w=1fg md-w=f h=f md-h=1fg sv sbv=touch g=lg p=lg bwl=xs bc=bo style="min-width: 0; min-height: 0; box-sizing: border-box;"':
                       - $if catalog.isCatalogLoading:
                           - rtgl-view w=f h=180 av=c ah=c role=status aria-live=polite:

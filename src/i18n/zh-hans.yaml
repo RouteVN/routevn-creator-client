@@ -2871,8 +2871,6 @@ resourceImport:
   storeNoResults: "没有与搜索匹配的素材包。"
   searchTitle: "搜索"
   searchPlaceholder: "搜索素材包"
-  assetTypesTitle: "素材类型"
-  assetTypesPlaceholder: "选择素材类型"
   storeLoadFailed: "无法加载素材商店。请检查网络连接后重试。"
   retryButton: "重试"
   loadMoreButton: "加载更多"

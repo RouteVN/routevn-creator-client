@@ -15,7 +15,6 @@ import {
   setCatalogError,
   setCatalogPage,
   setCatalogQuery,
-  setCatalogAssetTypes,
   setPackDetails,
   setPackLoadError,
   setPackPage,
@@ -204,65 +203,9 @@ describe("resource-import-dialog.store", () => {
     });
 
     setCatalogQuery({ state }, { query: "" });
-    setCatalogAssetTypes({ state }, { assetTypes: ["FONTS"] });
-    expect(selectViewData({ state, i18n: {} }).catalog).toMatchObject({
-      isCatalogEmpty: false,
-      isNoResults: true,
-    });
-
-    setCatalogAssetTypes({ state }, { assetTypes: [] });
     expect(selectViewData({ state, i18n: {} }).catalog).toMatchObject({
       isCatalogEmpty: true,
       isNoResults: false,
-    });
-  });
-
-  it("offers every asset type under the resource type's name and shows the chosen ones", () => {
-    const state = createInitialState();
-    setCatalogAssetTypes({ state }, { assetTypes: ["ANIMATIONS"] });
-
-    const { catalog } = selectViewData({
-      state,
-      i18n: {
-        resourceImport: {
-          searchTitle: "検索",
-          assetTypesTitle: "アセットの種類",
-          assetTypesPlaceholder: "アセットの種類を選択",
-        },
-        resourceTypes: { images: "画像", animations: "アニメーション" },
-      },
-    });
-
-    expect(catalog).toMatchObject({
-      searchTitle: "検索",
-      assetTypesTitle: "アセットの種類",
-      assetTypesPlaceholder: "アセットの種類を選択",
-      selectedAssetTypes: ["ANIMATIONS"],
-    });
-    expect(catalog.assetTypeOptions.map((option) => option.value)).toEqual([
-      "IMAGES",
-      "SOUNDS",
-      "VIDEOS",
-      "CHARACTERS",
-      "TRANSFORMS",
-      "ANIMATIONS",
-      "PARTICLES",
-      "SPRITESHEETS",
-      "COLORS",
-      "FONTS",
-      "TEXT_STYLES",
-      "LAYOUTS",
-      "VARIABLES",
-    ]);
-    expect(catalog.assetTypeOptions[0]).toEqual({
-      value: "IMAGES",
-      label: "画像",
-    });
-    expect(catalog.assetTypeOptions[5].label).toBe("アニメーション");
-    // A type without a name in the catalog falls back to its formatted name.
-    expect(catalog.assetTypeOptions[6]).toEqual({
-      value: "PARTICLES",
-      label: "Particles",
     });
   });
 

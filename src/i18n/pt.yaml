@@ -2871,8 +2871,6 @@ resourceImport:
   storeNoResults: "Nenhum pacote de recursos corresponde à pesquisa."
   searchTitle: "Pesquisar"
   searchPlaceholder: "Pesquisar pacotes de recursos"
-  assetTypesTitle: "Tipos de recurso"
-  assetTypesPlaceholder: "Escolher tipos de recurso"
   storeLoadFailed: "Não foi possível carregar a loja de recursos. Tente novamente."
   retryButton: "Tentar novamente"
   loadMoreButton: "Mostrar mais"

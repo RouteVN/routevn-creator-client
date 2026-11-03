@@ -2871,8 +2871,6 @@ resourceImport:
   storeNoResults: "No asset packs match your search."
   searchTitle: "Search"
   searchPlaceholder: "Search asset packs"
-  assetTypesTitle: "Asset types"
-  assetTypesPlaceholder: "Choose asset types"
   storeLoadFailed: "The asset store could not be loaded. Check your connection and try again."
   retryButton: "Try Again"
   loadMoreButton: "Load More"

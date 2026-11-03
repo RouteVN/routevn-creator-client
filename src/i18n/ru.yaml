@@ -2899,8 +2899,6 @@ resourceImport:
   storeNoResults: "Нет пакетов ресурсов по вашему запросу."
   searchTitle: "Поиск"
   searchPlaceholder: "Поиск пакетов ресурсов"
-  assetTypesTitle: "Типы ресурсов"
-  assetTypesPlaceholder: "Выбрать типы ресурсов"
   storeLoadFailed: "Не удалось загрузить магазин ресурсов. Проверьте подключение и повторите попытку."
   retryButton: "Повторить"
   loadMoreButton: "Показать ещё"

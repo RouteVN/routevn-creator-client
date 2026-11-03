@@ -2871,8 +2871,6 @@ resourceImport:
   storeNoResults: "検索に一致する素材パッケージはありません。"
   searchTitle: "検索"
   searchPlaceholder: "素材パッケージを検索"
-  assetTypesTitle: "素材の種類"
-  assetTypesPlaceholder: "素材の種類を選択"
   storeLoadFailed: "素材ストアを読み込めませんでした。接続を確認して、もう一度お試しください。"
   retryButton: "再試行"
   loadMoreButton: "さらに表示"
