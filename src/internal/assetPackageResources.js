@@ -136,6 +136,7 @@ const configs = [
     commandType: "layout.create",
     idField: "layoutId",
     previewFileFields: ["thumbnailFileId"],
+    largePreviewFileFields: ["previewMediaFileId", "thumbnailFileId"],
     importPriority: 130,
   },
   {
@@ -163,6 +164,13 @@ export const ASSET_PACKAGE_RESOURCE_CONFIGS = Object.freeze(
 export const ASSET_PACKAGE_RESOURCE_TYPES = Object.freeze(
   ASSET_PACKAGE_RESOURCE_CONFIGS.map(({ resourceType }) => resourceType),
 );
+
+// Resource types the asset store does not take for now: an asset pack
+// cannot add them.
+export const ASSET_STORE_HIDDEN_RESOURCE_TYPES = Object.freeze([
+  "audioEffects",
+  "controls",
+]);
 
 export const ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE = Object.freeze(
   Object.fromEntries(

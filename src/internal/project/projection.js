@@ -54,6 +54,7 @@ export const createEmptyTagScopes = () => ({
   audioEffects: createResourceCollection(),
   particles: createResourceCollection(),
   spritesheets: createResourceCollection(),
+  assetPacks: createResourceCollection(),
 });
 
 const toFiniteTimestamp = (value, fallback) =>

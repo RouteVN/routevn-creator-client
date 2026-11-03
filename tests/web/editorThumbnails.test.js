@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createOffscreenRenderer,
   mapRenderStateSources,
   releaseThumbnailRenderer,
   renderThumbnailImage,
 } from "../../src/deps/clients/web/editorThumbnails.js";
+import { isRendererStartError } from "../../src/internal/rendererStartError.js";
 import { captureGraphicsThumbnailImage } from "../../src/internal/runtime/graphicsEngineRuntime.js";
 import { createGraphicsService } from "../../src/deps/services/graphicsService.js";
 
@@ -370,5 +372,65 @@ describe("editor thumbnails", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("reports a graphics service that cannot be made or started as a start failure, and draws again later", async () => {
+    stubBrowser();
+    const cause = new Error("No WebGL");
+    const failing = createGraphics();
+    failing.init.mockRejectedValueOnce(new Error("Context lost"));
+    const next = createGraphics();
+    createGraphicsService
+      .mockRejectedValueOnce(cause)
+      .mockResolvedValueOnce(failing)
+      .mockResolvedValueOnce(next);
+
+    const notMade = await draw().catch((error) => error);
+    const notStarted = await draw().catch((error) => error);
+
+    expect(isRendererStartError(notMade)).toBe(true);
+    expect(notMade.cause).toBe(cause);
+    expect(isRendererStartError(notStarted)).toBe(true);
+    expect(failing.destroy).toHaveBeenCalledOnce();
+    await expect(draw()).resolves.toBe(thumbnailImage);
+    expect(next.init).toHaveBeenCalledOnce();
+  });
+
+  it("does not report a failed drawing as a start failure, and keeps its error when freeing fails too", async () => {
+    stubBrowser();
+    const failing = createGraphics();
+    failing.render.mockRejectedValueOnce(new Error("render failed"));
+    failing.destroy.mockRejectedValueOnce(new Error("destroy failed"));
+    createGraphicsService.mockResolvedValueOnce(failing);
+
+    const failure = await draw().catch((error) => error);
+
+    expect(failure.message).toBe("render failed");
+    expect(isRendererStartError(failure)).toBe(false);
+  });
+
+  it("makes renderers of its own, with their own keys and capture", async () => {
+    stubBrowser();
+    const graphics = createGraphics();
+    createGraphicsService.mockResolvedValueOnce(graphics);
+    const capture = vi.fn(async () => "captured");
+    const offscreen = createOffscreenRenderer({ keyPrefix: "other", capture });
+
+    await expect(
+      offscreen.render({
+        width: 640,
+        height: 360,
+        renderState,
+        assets: imageAssets,
+      }),
+    ).resolves.toBe("captured");
+
+    expect(capture).toHaveBeenCalledWith(graphics);
+    for (const key of keysOf(graphics)) {
+      expect(key).toMatch(/^other-\d+-file-[12]$/);
+    }
+    expect(captureGraphicsThumbnailImage).not.toHaveBeenCalled();
+    await offscreen.release();
+    expect(graphics.destroy).toHaveBeenCalledOnce();
   });
 });

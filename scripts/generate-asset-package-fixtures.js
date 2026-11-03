@@ -30,7 +30,7 @@ import {
   setResourceData,
   setScenesData,
 } from "../src/pages/assetPackage/assetPackage.store.js";
-import { createAssetPackageManifest } from "../src/pages/assetPackage/support/assetPackageManifest.js";
+import { createAssetPackageManifest } from "../src/internal/assetPackageManifest.js";
 
 export const ASSET_PACKAGE_FIXTURES_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -1217,10 +1217,114 @@ const LINKS_CASE = {
   },
 };
 
+// Picks at any depth. A folder picked inside one that is not becomes a
+// top-level folder of the package, without the folder it sits in, and what
+// it uses outside it comes as a dependency. A folder picked inside another
+// pick comes with that pick, once, and the picks keep their order.
+const NESTED_PICKS_CASE = {
+  name: "nested-picks",
+  files: [
+    file("file-image-day", "image/png", PNG.red),
+    file("file-image-night", "image/png", PNG.blue),
+    file("file-image-hero", "image/png", PNG.green),
+    file("file-image-hero-smile", "image/png", PNG.gold),
+  ],
+  scenes: [],
+  resources: {
+    images: [
+      folder("folder-backgrounds", "Backgrounds", [
+        item("image-day", {
+          type: "image",
+          name: "Day",
+          fileId: "file-image-day",
+          width: 1,
+          height: 1,
+        }),
+        folder("folder-night", "Night", [
+          item("image-night", {
+            type: "image",
+            name: "Night",
+            fileId: "file-image-night",
+            width: 1,
+            height: 1,
+          }),
+        ]),
+      ]),
+      folder("folder-cast", "Cast", [
+        item("image-hero", {
+          type: "image",
+          name: "Hero",
+          fileId: "file-image-hero",
+          width: 1,
+          height: 1,
+        }),
+        folder("folder-expressions", "Expressions", [
+          item("image-hero-smile", {
+            type: "image",
+            name: "Hero Smile",
+            fileId: "file-image-hero-smile",
+            width: 1,
+            height: 1,
+          }),
+        ]),
+      ]),
+    ],
+    colors: [
+      folder("folder-palette", "Palette", [
+        item("color-base", { type: "color", name: "Base", hex: "#222222" }),
+        folder("folder-palette-ui", "UI", [
+          folder("folder-palette-buttons", "Buttons", [
+            item("color-button", {
+              type: "color",
+              name: "Button",
+              hex: "#3355CC",
+            }),
+          ]),
+        ]),
+      ]),
+    ],
+    variables: [
+      folder("folder-stats", "Stats", [
+        item("variableScore", {
+          type: "variable",
+          variableType: "number",
+          name: "Score",
+          scope: "context",
+          default: 0,
+          value: 0,
+        }),
+        folder("folder-stats-derived", "Derived", [
+          item("variable-rank", {
+            type: "variable",
+            variableType: "string",
+            name: "Rank",
+            computed: {
+              branches: [
+                {
+                  when: { gte: [{ var: "variables.variableScore" }, 3] },
+                  expr: "High",
+                },
+              ],
+              default: { expr: "Low" },
+            },
+          }),
+        ]),
+      ]),
+    ],
+  },
+  picks: {
+    // Expressions comes with Cast, picked after it.
+    images: ["folder-expressions", "folder-night", "folder-cast"],
+    colors: ["folder-palette-buttons"],
+    variables: ["folder-stats-derived"],
+  },
+};
+
 export const ASSET_PACKAGE_FIXTURE_CASES = [
   ALL_TYPES_CASE,
   DEPENDENCIES_CASE,
   LINKS_CASE,
+  NESTED_PICKS_CASE,
 ];
 
 // The order the source projects create their types in, so each resource

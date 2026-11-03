@@ -1,6 +1,7 @@
-import { IMPORT_PACK_SCHEMA_V2 } from "../../../internal/importPackages.js";
+import { IMPORT_PACK_SCHEMA_V2 } from "./importPackages.js";
 import {
   ASSET_PACKAGE_KIND,
+  ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
   getAssetPackageStoryLinkKind,
@@ -9,7 +10,7 @@ import {
   keepAssetPackageCharacterSprites,
   mapAssetPackageLinks,
   visitAssetPackageReferences,
-} from "../../../internal/assetPackageResources.js";
+} from "./assetPackageResources.js";
 
 const OMITTED_PACKAGE_ITEM_KEYS = new Set([
   "parentId",
@@ -21,23 +22,35 @@ const OMITTED_PACKAGE_ITEM_KEYS = new Set([
   "spriteGroups",
 ]);
 
-export const selectTopLevelFolders = (resourceData) => {
-  return resourceData.tree
-    .map((node) => {
-      const item = resourceData.items[node.id];
-      if (item?.type !== "folder") {
-        return undefined;
+// Every folder of a type's tree, at any depth, in tree order: its node, and
+// the folders it sits in, outermost first.
+export const indexResourceFolders = (resourceData) => {
+  const folders = new Map();
+  const visit = (nodes, ancestorIds) => {
+    for (const node of nodes ?? []) {
+      if (resourceData.items[node.id]?.type !== "folder") {
+        continue;
       }
-
-      return { ...item, id: node.id };
-    })
-    .filter(Boolean);
+      folders.set(node.id, { node, ancestorIds });
+      visit(node.children, [...ancestorIds, node.id]);
+    }
+  };
+  visit(resourceData.tree, []);
+  return folders;
 };
 
-export const isTopLevelFolder = (resourceData, folderId) => {
-  return (
-    resourceData.items[folderId]?.type === "folder" &&
-    resourceData.tree.some((node) => node.id === folderId)
+// The picked folders a package carries as its own top-level folders, in pick
+// order: every pick, at any depth, except one inside another pick, which
+// comes with that pick. Ids that name no folder of the type are left out.
+export const selectOutermostFolderIds = (resourceData, folderIds) => {
+  const folders = indexResourceFolders(resourceData);
+  const pickedIds = new Set(folderIds);
+  return [...pickedIds].filter(
+    (folderId) =>
+      folders.has(folderId) &&
+      !folders
+        .get(folderId)
+        .ancestorIds.some((ancestorId) => pickedIds.has(ancestorId)),
   );
 };
 
@@ -84,22 +97,19 @@ const appendResourceSubtree = ({ resourceData, sourceNode, items }) => {
   return node;
 };
 
+// The picked folders' subtrees, each as a top-level folder, without the
+// folders a nested pick sits in.
 const selectNestedResourceData = (resourceData, selectedFolderIds) => {
-  const rootNodesById = new Map(
-    resourceData.tree.map((node) => [node.id, node]),
-  );
+  const folders = indexResourceFolders(resourceData);
   const items = {};
-  const tree = selectedFolderIds
-    .map((folderId) => {
-      if (!isTopLevelFolder(resourceData, folderId)) {
-        return undefined;
-      }
-      return appendResourceSubtree({
+  const tree = selectOutermostFolderIds(resourceData, selectedFolderIds)
+    .map((folderId) =>
+      appendResourceSubtree({
         resourceData,
-        sourceNode: rootNodesById.get(folderId),
+        sourceNode: folders.get(folderId).node,
         items,
-      });
-    })
+      }),
+    )
     .filter(Boolean);
 
   return { items, tree };
@@ -366,18 +376,14 @@ const selectIncludedResourceData = (
     return { id: sourceNode.id, children };
   };
 
-  const rootNodesById = new Map(
-    resourceData.tree.map((node) => [node.id, node]),
-  );
-  const orderedRootNodes = [
-    ...selectedFolderIds
-      .map((folderId) => rootNodesById.get(folderId))
-      .filter(Boolean),
-    ...resourceData.tree.filter((node) => !selectedFolderIds.includes(node.id)),
-  ];
+  // Each pick is a top-level folder of the package, in pick order, without
+  // the folders it sits in; a pick inside another comes with that one.
+  const folders = indexResourceFolders(resourceData);
   return {
     items,
-    tree: orderedRootNodes.map(visit).filter(Boolean),
+    tree: selectOutermostFolderIds(resourceData, selectedFolderIds)
+      .map((folderId) => visit(folders.get(folderId).node))
+      .filter(Boolean),
   };
 };
 
@@ -405,8 +411,9 @@ const collectPickedIdsByType = ({
   );
 
 // The package's two sections: `repository`, the picks (every resource in the
-// chosen folders) in their folders, and `dependencies`, what the picks use
-// that is not a pick, without folders.
+// chosen folders) in their folders, each chosen folder at the top level even
+// when it sits in another folder of the project, and `dependencies`, what the
+// picks use that is not a pick, without folders.
 export const createAssetPackageContents = ({
   filesData,
   resourceDataByType,
@@ -595,4 +602,38 @@ export const createAssetPackageManifest = ({
     manifest.links = structuredClone(links);
   }
   return manifest;
+};
+
+// What exporting a saved asset pack carries: its folders, read from the
+// project's state, in the order the editor exports them.
+export const createSavedAssetPackContents = ({
+  repositoryState,
+  assetPackId,
+}) => {
+  const resourceTypeOrder = ASSET_PACKAGE_RESOURCE_CONFIGS.map(
+    ({ resourceType }) => resourceType,
+  );
+  const resourceDataByType = {};
+  const selectedFolderIdsByType = {};
+  for (const resourceType of resourceTypeOrder) {
+    resourceDataByType[resourceType] = repositoryState[resourceType] ?? {
+      items: {},
+      tree: [],
+    };
+    selectedFolderIdsByType[resourceType] = [];
+  }
+  const resources =
+    repositoryState.assetPacks?.items?.[assetPackId]?.resources ?? [];
+  for (const { resourceType, folderIds } of resources) {
+    if (selectedFolderIdsByType[resourceType]) {
+      selectedFolderIdsByType[resourceType] = [...folderIds];
+    }
+  }
+  return createAssetPackageContents({
+    filesData: repositoryState.files ?? { items: {} },
+    resourceDataByType,
+    selectedFolderIdsByType,
+    resourceTypeOrder,
+    scenesData: repositoryState.scenes ?? { items: {}, tree: [] },
+  });
 };

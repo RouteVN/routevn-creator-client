@@ -868,6 +868,90 @@ describe("asset import plan for v2 packages", () => {
   });
 });
 
+// A v2 package whose Title Menu carries the layout thumbnail the project
+// keeps, and, when `withPreview`, the full-size PNG the creator draws at export.
+const createLayoutPreviewManifest = ({ withPreview }) => {
+  const manifest = createV2Manifest();
+  manifest.repository.files.items["file-layout-thumbnail"] = {
+    id: "file-layout-thumbnail",
+    mimeType: "image/jpeg",
+    source: { url: "./files/file-layout-thumbnail" },
+  };
+  manifest.repository.files.items["file-layout-preview"] = {
+    id: "file-layout-preview",
+    mimeType: "image/png",
+    source: { url: "./files/file-layout-preview" },
+  };
+  const layout = manifest.repository.layouts.items["layout-1"];
+  layout.thumbnailFileId = "file-layout-thumbnail";
+  if (withPreview) {
+    layout.previewMediaFileId = "file-layout-preview";
+  }
+  return manifest;
+};
+
+describe("layout previews in packages", () => {
+  it("shows a layout's full-size preview full screen, and keeps its thumbnail in the grid", () => {
+    const plan = planV2(createLayoutPreviewManifest({ withPreview: true }));
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout).toMatchObject({
+      previewSourceId: "file-layout-thumbnail",
+      previewKind: "image",
+      previewMimeType: "image/jpeg",
+      largePreviewSourceId: "file-layout-preview",
+    });
+    expect(plan.previewFiles.map((file) => file.sourceId)).toEqual(
+      expect.arrayContaining(["file-layout-thumbnail", "file-layout-preview"]),
+    );
+  });
+
+  it("imports the layout's thumbnail, not its package-only preview", () => {
+    const plan = planV2(createLayoutPreviewManifest({ withPreview: true }));
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout.data).not.toHaveProperty("previewMediaFileId");
+    expect(layout.data).not.toHaveProperty("thumbnailMediaFileId");
+    const thumbnail = plan.files.find(
+      (file) => file.sourceId === "file-layout-thumbnail",
+    );
+    expect(layout.data.thumbnailFileId).toBe(thumbnail.destinationId);
+    expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-layout-preview",
+    );
+  });
+
+  it("shows the thumbnail full screen for a layout without a full-size preview", () => {
+    const plan = planV2(createLayoutPreviewManifest({ withPreview: false }));
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout.previewSourceId).toBe("file-layout-thumbnail");
+    expect(layout.largePreviewSourceId).toBe("file-layout-thumbnail");
+    expect(plan.previewFiles.map((file) => file.sourceId)).not.toContain(
+      "file-layout-preview",
+    );
+  });
+
+  it("shows the thumbnail full screen when the full-size preview is not an image", () => {
+    const manifest = createLayoutPreviewManifest({ withPreview: true });
+    manifest.repository.files.items["file-layout-preview"].mimeType =
+      "application/octet-stream";
+
+    const plan = planV2(manifest);
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout.largePreviewSourceId).toBe("file-layout-thumbnail");
+  });
+});
+
 // A v2 package whose Title Menu has a Start button jumping into the story
 // through a story link.
 const createLinkManifest = () => {

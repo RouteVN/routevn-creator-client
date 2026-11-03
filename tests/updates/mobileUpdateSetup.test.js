@@ -288,6 +288,7 @@ describe("Android API update setup", () => {
       i18n: EN_I18N,
       projectService: { createAssetPackageBundle },
       store: {
+        selectAssetPackName: () => "Image Pack",
         selectAssetPackageData: () => ({
           repository: {
             files: {

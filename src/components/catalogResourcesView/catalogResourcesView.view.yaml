@@ -104,7 +104,8 @@ template:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
                   - 'rtgl-button#tagFilterButton sq pre=filter v=${tagFilterButtonVariant} aria-label="${filterButtonLabel}" title="${filterButtonLabel}"': null
-              - rvn-resource-import-action#resourceImportAction :additionalMenuItems=${resourceImportMenuItems}: null
+              - $if showResourceImportAction:
+                  - rvn-resource-import-action#resourceImportAction :additionalMenuItems=${resourceImportMenuItems} :showImport=${showImport}: null
               - $if showTrailingMenuButton:
                   - 'rtgl-button#menuButton sq pre=hamburger v=ol aria-label="${menuButtonLabel}" title="${menuButtonLabel}"': null
       - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0; box-sizing: border-box;"':

@@ -72,11 +72,7 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("rtgl-text: ${catalog.searchTitle}");
     expect(viewSource).toContain("rtgl-input#storeSearchInput s=sm w=f");
     expect(viewSource).toContain("handler: handleStoreSearchInput");
-    expect(viewSource).toContain("rtgl-text: ${catalog.assetTypesTitle}");
-    expect(viewSource).toContain(
-      "rtgl-tag-select#storeAssetTypeSelect w=f no-add :ariaLabel=${catalog.assetTypesTitle} :options=${catalog.assetTypeOptions} :selectedValues=${catalog.selectedAssetTypes}",
-    );
-    expect(viewSource).toContain("handler: handleStoreAssetTypesChange");
+    expect(viewSource).not.toContain("storeAssetTypeSelect");
     expect(viewSource).toContain("${catalog.noResultsLabel}");
     expect(viewSource).toContain("$for pack in catalog.packs");
     expect(viewSource).toContain(

@@ -1,3 +1,4 @@
+import { createRendererStartError } from "../../../internal/rendererStartError.js";
 import { captureGraphicsThumbnailImage } from "../../../internal/runtime/graphicsEngineRuntime.js";
 import { createGraphicsService } from "../../services/graphicsService.js";
 
@@ -61,105 +62,136 @@ export const mapRenderStateSources = (renderState, toKey) => {
 // its loaded files hold.
 const DRAWINGS_PER_RENDERER = 6;
 
+// Shared by every off-screen renderer, so no two have the same keys.
 let rendererCount = 0;
-let renderer;
 
-// Frees the shared renderer, as the thumbnail queue does once it is empty.
-export const releaseThumbnailRenderer = async () => {
-  const current = renderer;
-  renderer = undefined;
-  if (current) {
-    try {
-      await current.graphicsService.destroy();
-    } finally {
-      current.host.remove();
-    }
-  }
-};
-
-const takeRenderer = async ({ width, height }) => {
-  if (
-    renderer &&
-    (renderer.width !== width ||
-      renderer.height !== height ||
-      renderer.drawings >= DRAWINGS_PER_RENDERER)
-  ) {
-    await releaseThumbnailRenderer();
-  }
-  if (!renderer) {
-    rendererCount += 1;
-    const host = document.createElement("div");
-    const graphicsService = await createGraphicsService();
-    renderer = {
-      id: rendererCount,
-      host,
-      graphicsService,
-      width,
-      height,
-      drawings: 0,
-      loadedKeys: new Set(),
-    };
-    await graphicsService.init({ canvas: host, width, height });
-  }
-  renderer.drawings += 1;
-  return renderer;
-};
-
-// Draws `renderState` off screen, on the shared renderer, and returns its
-// thumbnail as a JPEG data URL, at most 400 by 225, scaled straight from the
-// frame's pixels. `assets` maps each file id the state draws to
-// `{ url, type }`, and a font's to its `fontWeightDescriptor` too.
+// A renderer that draws off screen, one drawing at a time, and returns what
+// `capture(graphicsService)` takes of each. `render` takes a state to draw and
+// `assets`, which maps each file id the state draws to `{ url, type }`, and a
+// font's to its `fontWeightDescriptor` too. `release` frees the renderer.
 //
-// Its files load under the renderer's own keys. Assets are cached by key for
-// every renderer, and freeing a renderer unloads the keys it loaded, so a key
-// shared with the page's renderer would take the page's image or font away,
-// or the page leaving would take this one's. A font is named by its key, so
-// keys stay valid font family names.
-export const renderThumbnailImage = async ({
-  width,
-  height,
-  renderState,
-  assets,
-  settleMs = 0,
-}) => {
-  try {
-    const current = await takeRenderer({ width, height });
-    const { graphicsService, loadedKeys } = current;
-    const keys = new Map();
-    const assetsToLoad = {};
-    for (const [fileId, asset] of Object.entries(assets)) {
-      const key = `editor-thumbnail-${current.id}-${fileId}`;
-      keys.set(fileId, key);
-      if (!loadedKeys.has(key)) {
-        assetsToLoad[key] = asset;
+// Its files load under keys of the renderer's own, starting with `keyPrefix`.
+// Assets are cached by key for every renderer, and freeing a renderer unloads
+// the keys it loaded, so a key shared with the page's renderer would take the
+// page's image or font away, or the page leaving would take this one's. A font
+// is named by its key, so keys stay valid font family names.
+//
+// A graphics context that cannot be made or started rejects `render` with an
+// error `isRendererStartError` recognizes; any other rejection is that
+// drawing's own.
+export const createOffscreenRenderer = ({ keyPrefix, capture }) => {
+  let renderer;
+
+  const release = async () => {
+    const current = renderer;
+    renderer = undefined;
+    if (current) {
+      try {
+        await current.graphicsService.destroy();
+      } finally {
+        current.host.remove();
       }
     }
-    // Only the files loaded here are renamed. Built-in particle textures,
-    // such as "circle", and fonts the system has keep their names.
-    const toKey = (fileId) => keys.get(fileId) ?? fileId;
+  };
 
-    // The last drawing goes first, so nothing of it carries over, such as
-    // particles already running.
-    await graphicsService.render({ elements: [], animations: [] });
-    if (Object.keys(assetsToLoad).length > 0) {
-      await graphicsService.loadAssets(assetsToLoad);
-      Object.keys(assetsToLoad).forEach((key) => loadedKeys.add(key));
+  const take = async ({ width, height }) => {
+    if (
+      renderer &&
+      (renderer.width !== width ||
+        renderer.height !== height ||
+        renderer.drawings >= DRAWINGS_PER_RENDERER)
+    ) {
+      await release();
     }
-    await graphicsService.render(mapRenderStateSources(renderState, toKey));
-    await waitForPaint();
-    // Effects that move on the renderer's own clock, such as particles, run
-    // for a while first, so the thumbnail shows them going.
-    if (settleMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, settleMs));
+    if (!renderer) {
+      rendererCount += 1;
+      const host = document.createElement("div");
+      try {
+        const graphicsService = await createGraphicsService();
+        renderer = {
+          id: rendererCount,
+          host,
+          graphicsService,
+          width,
+          height,
+          drawings: 0,
+          loadedKeys: new Set(),
+        };
+        await graphicsService.init({ canvas: host, width, height });
+      } catch (error) {
+        throw createRendererStartError(error);
+      }
     }
+    renderer.drawings += 1;
+    return renderer;
+  };
+
+  const render = async ({
+    width,
+    height,
+    renderState,
+    assets,
+    settleMs = 0,
+  }) => {
+    try {
+      const current = await take({ width, height });
+      const { graphicsService, loadedKeys } = current;
+      const keys = new Map();
+      const assetsToLoad = {};
+      for (const [fileId, asset] of Object.entries(assets)) {
+        const key = `${keyPrefix}-${current.id}-${fileId}`;
+        keys.set(fileId, key);
+        if (!loadedKeys.has(key)) {
+          assetsToLoad[key] = asset;
+        }
+      }
+      // Only the files loaded here are renamed. Built-in particle textures,
+      // such as "circle", and fonts the system has keep their names.
+      const toKey = (fileId) => keys.get(fileId) ?? fileId;
+
+      // The last drawing goes first, so nothing of it carries over, such as
+      // particles already running.
+      await graphicsService.render({ elements: [], animations: [] });
+      if (Object.keys(assetsToLoad).length > 0) {
+        await graphicsService.loadAssets(assetsToLoad);
+        Object.keys(assetsToLoad).forEach((key) => loadedKeys.add(key));
+      }
+      await graphicsService.render(mapRenderStateSources(renderState, toKey));
+      await waitForPaint();
+      // Effects that move on the renderer's own clock, such as particles, run
+      // for a while first, so the capture shows them going.
+      if (settleMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, settleMs));
+      }
+      return await capture(graphicsService);
+    } catch (error) {
+      // A renderer that failed may be left in any state, so it is not reused.
+      // Freeing it must not hide why it failed.
+      await release().catch(() => undefined);
+      throw error;
+    }
+  };
+
+  return { render, release };
+};
+
+const thumbnailRenderer = createOffscreenRenderer({
+  keyPrefix: "editor-thumbnail",
+  capture: async (graphicsService) => {
     const thumbnailImage = await captureGraphicsThumbnailImage(graphicsService);
     if (!thumbnailImage) {
       throw new Error("The canvas returned no thumbnail image.");
     }
     return thumbnailImage;
-  } catch (error) {
-    // A renderer that failed may be left in any state, so it is not reused.
-    await releaseThumbnailRenderer();
-    throw error;
-  }
-};
+  },
+});
+
+// Frees the shared renderer, as the thumbnail queue does once it is empty.
+export const releaseThumbnailRenderer = () => thumbnailRenderer.release();
+
+// Draws `renderState` off screen, on the shared renderer, and returns its
+// thumbnail as a JPEG data URL, at most 400 by 225, scaled straight from the
+// frame's pixels. `assets` maps each file id the state draws to
+// `{ url, type }`, and a font's to its `fontWeightDescriptor` too.
+export const renderThumbnailImage = (options) =>
+  thumbnailRenderer.render(options);

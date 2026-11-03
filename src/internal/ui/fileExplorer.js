@@ -1,4 +1,5 @@
 import { generateId } from "../id.js";
+import { formatI18nCopy } from "./i18nCopy.js";
 import { getResourcePageErrorMessage } from "./resourcePages/resourcePageErrors.js";
 import {
   getFirstTextStyleId,
@@ -211,6 +212,15 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     idField: "controlId",
     deleteField: "controlIds",
   },
+  assetPacks: {
+    createMethod: "createAssetPack",
+    updateMethod: "updateAssetPack",
+    moveMethod: "moveAssetPack",
+    deleteMethod: "deleteAssetPacks",
+    duplicateMethod: "duplicateAssetPack",
+    idField: "assetPackId",
+    deleteField: "assetPackIds",
+  },
 });
 
 const getDeletionBlockedMessage = ({ itemType, reason } = {}) => {
@@ -263,6 +273,21 @@ const getDeletionBlockedCopyMessage = ({
       reason,
     })
   );
+};
+
+// The message for a delete the model refuses. A folder an asset pack picks,
+// or a folder that holds one, cannot be deleted while the pack picks it, and
+// the model's error names the pack.
+const getFailedDeleteMessage = ({ copy, error }) => {
+  const assetPackName = error?.details?.assetPackName;
+  if (assetPackName !== undefined) {
+    return formatI18nCopy(
+      copy.cannotDeleteFolderInAssetPack ??
+        "The asset pack “{assetPackName}” uses this folder or a folder in it. Remove it from the pack, then delete the folder.",
+      { assetPackName },
+    );
+  }
+  return copy.failedDeleteResource ?? "Failed to delete resource.";
 };
 
 const checkResourceUsage = async ({
@@ -357,6 +382,11 @@ const validateResourceDeletion = async ({
     if (textStyleCount - removalCount < 1) {
       return { canDelete: false, reason: "minimum-text-style" };
     }
+  }
+
+  // Nothing in a project points at an asset pack.
+  if (currentItemType === "assetPack") {
+    return { canDelete: true };
   }
 
   let checkTargets = ["scenes", "layouts", "controls"];
@@ -569,8 +599,10 @@ export const createResourceFileExplorerHandlers = ({
         });
         if (deleteResult?.valid === false) {
           appService.showAlert({
-            message:
-              resolvedCopy.failedDeleteResource ?? "Failed to delete resource.",
+            message: getFailedDeleteMessage({
+              copy: resolvedCopy,
+              error: deleteResult.error,
+            }),
           });
           return;
         }
@@ -739,9 +771,18 @@ export const createLayoutsFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.deleteLayoutItem({
+        const deleteResult = await projectService.deleteLayoutItem({
           layoutIds: [itemId],
         });
+        if (deleteResult?.valid === false) {
+          appService.showAlert({
+            message: getFailedDeleteMessage({
+              copy: resolvedCopy,
+              error: deleteResult.error,
+            }),
+          });
+          return;
+        }
       } else if (action === "duplicate-item") {
         if (!itemId || currentItem?.type !== "layout") {
           return;
@@ -881,9 +922,18 @@ export const createControlsFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.deleteControlItem({
+        const deleteResult = await projectService.deleteControlItem({
           controlIds: [itemId],
         });
+        if (deleteResult?.valid === false) {
+          appService.showAlert({
+            message: getFailedDeleteMessage({
+              copy: resolvedCopy,
+              error: deleteResult.error,
+            }),
+          });
+          return;
+        }
       } else {
         return;
       }

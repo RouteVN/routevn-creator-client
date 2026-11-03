@@ -1,6 +1,7 @@
 import {
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_SCHEMA_VERSION,
+  ASSET_STORE_HIDDEN_RESOURCE_TYPES,
   normalizeAssetPackage,
 } from "../../internal/assetPackageResources.js";
 import {
@@ -9,11 +10,11 @@ import {
 } from "../../internal/ui/i18nCopy.js";
 import {
   createAssetPackageContents,
-  isTopLevelFolder,
+  indexResourceFolders,
   listAssetPackageDependencies,
   listAssetPackageLinks,
-  selectTopLevelFolders,
-} from "./support/assetPackageManifest.js";
+  selectOutermostFolderIds,
+} from "../../internal/assetPackageManifest.js";
 import {
   collectFolderResources,
   createResourcePreview,
@@ -26,6 +27,8 @@ const RESOURCE_TYPE_ORDER = ASSET_PACKAGE_RESOURCE_CONFIGS.map(
 );
 const RESOURCE_TYPES = new Set(RESOURCE_TYPE_ORDER);
 const MAX_LISTED_USERS = 3;
+// How far the picker indents a folder for each folder it sits in.
+const PICKER_FOLDER_INDENT = 24;
 
 const createEmptyResourceData = () => ({
   items: {},
@@ -49,10 +52,10 @@ const createSelectedFolderIdsByType = () =>
   );
 
 // The saved folders in their saved order, without those the project no
-// longer has at its top level.
-const keepTopLevelFolders = (resourceData, folderIds) =>
-  [...new Set(folderIds)].filter((folderId) =>
-    isTopLevelFolder(resourceData, folderId),
+// longer has. A pack may pick a folder at any depth, as the model allows.
+const keepExistingFolders = (resourceData, folderIds) =>
+  [...new Set(folderIds)].filter(
+    (folderId) => resourceData.items[folderId]?.type === "folder",
   );
 
 const copyFolderIdsByType = (folderIdsByType) =>
@@ -63,9 +66,21 @@ const copyFolderIdsByType = (folderIdsByType) =>
     ]),
   );
 
+// A pack's `resources`: the types with folders picked, in the page's order.
+const toResources = (folderIdsByType) =>
+  RESOURCE_TYPE_ORDER.filter(
+    (resourceType) => folderIdsByType[resourceType].length > 0,
+  ).map((resourceType) => ({
+    resourceType,
+    folderIds: [...folderIdsByType[resourceType]],
+  }));
+
 export const createInitialState = () => ({
   resourceCategory: "releases",
-  selectedResourceId: "assetPackage",
+  selectedResourceId: "asset-pack-editor",
+  // The asset pack being edited.
+  assetPackId: undefined,
+  assetPackName: "",
   isTouchMode: false,
   filesData: { items: {} },
   // The project's scenes and sections, which name the story links.
@@ -74,6 +89,11 @@ export const createInitialState = () => ({
   selectedFolderIdsByType: createSelectedFolderIdsByType(),
   // The picker ticks a copy of the selection, applied by Done.
   pickerFolderIdsByType: createSelectedFolderIdsByType(),
+  // The picks as last loaded or saved. A save changes only the types picked
+  // differently since, so it leaves the others as they are now.
+  baseFolderIdsByType: createSelectedFolderIdsByType(),
+  // While Done saves the picks, it does nothing more.
+  isSavingPicks: false,
   isPickerOpen: false,
   pickerResourceType: undefined,
 });
@@ -105,29 +125,80 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
     if (!RESOURCE_TYPES.has(resourceType)) {
       continue;
     }
-    selectedFolderIdsByType[resourceType] = keepTopLevelFolders(
+    selectedFolderIdsByType[resourceType] = keepExistingFolders(
       state.resourceDataByType[resourceType],
       folderIds,
     );
   }
   state.selectedFolderIdsByType = selectedFolderIdsByType;
+  state.baseFolderIdsByType = copyFolderIdsByType(selectedFolderIdsByType);
 };
 
-// Ticks or unticks a top-level folder in the picker; `selected` says which,
-// or the folder flips. A ticked folder goes after those picked before it.
+// The asset pack being edited, and its picks.
+export const setAssetPack = (
+  { state },
+  { assetPackId, name, resources } = {},
+) => {
+  state.assetPackId = assetPackId;
+  state.assetPackName = name ?? "";
+  setAssetPackage(
+    { state },
+    {
+      assetPackage: {
+        schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
+        resources: resources ?? [],
+      },
+    },
+  );
+};
+
+export const selectAssetPackId = ({ state }) => state.assetPackId;
+export const selectAssetPackName = ({ state }) => state.assetPackName;
+export const selectIsSavingPicks = ({ state }) => state.isSavingPicks;
+
+// The picks as last loaded or saved, which a save compares its picks with.
+export const selectBaseResources = ({ state }) =>
+  toResources(state.baseFolderIdsByType);
+
+export const startSavingPicks = ({ state }) => {
+  state.isSavingPicks = true;
+};
+
+// A save of the picks ended. After one that succeeded, `savedResources` are
+// what it saved, and the next save starts from them.
+export const finishSavingPicks = ({ state }, { savedResources } = {}) => {
+  state.isSavingPicks = false;
+  if (!savedResources) {
+    return;
+  }
+  const baseFolderIdsByType = createSelectedFolderIdsByType();
+  for (const { resourceType, folderIds } of savedResources) {
+    baseFolderIdsByType[resourceType] = [...folderIds];
+  }
+  state.baseFolderIdsByType = baseFolderIdsByType;
+};
+
+// Ticks or unticks a folder, at any depth, in the picker; `selected` says
+// which, or the folder flips. A ticked folder goes after those picked before
+// it. A folder inside a ticked one comes with it, so it is neither ticked nor
+// unticked on its own; a pick of its own stays for when that one is unticked.
 export const toggleFolder = (
   { state },
   { resourceType, folderId, selected } = {},
 ) => {
-  const resourceData = state.resourceDataByType[resourceType];
+  if (!RESOURCE_TYPES.has(resourceType)) {
+    return;
+  }
+  const folder = indexResourceFolders(
+    state.resourceDataByType[resourceType],
+  ).get(folderId);
+  const selectedIds = state.pickerFolderIdsByType[resourceType];
   if (
-    !RESOURCE_TYPES.has(resourceType) ||
-    !resourceData ||
-    !isTopLevelFolder(resourceData, folderId)
+    !folder ||
+    folder.ancestorIds.some((ancestorId) => selectedIds.includes(ancestorId))
   ) {
     return;
   }
-  const selectedIds = state.pickerFolderIdsByType[resourceType];
   const isSelected = selectedIds.includes(folderId);
   const nextSelected = selected ?? !isSelected;
   if (nextSelected === isSelected) {
@@ -141,26 +212,78 @@ export const toggleFolder = (
 const hasResources = (resourceData) =>
   Object.values(resourceData.items).some((item) => item.type !== "folder");
 
-// The types the picker offers: those with resources or folders.
+// The folders the picker offers for a type, at any depth, in tree order,
+// each with its tree node and the folders it sits in: those with resources in
+// them or in a folder inside them, and those already picked, with the folders
+// they sit in, so a picked folder that was emptied can still be unticked.
+const listPickerFolders = (state, resourceType) => {
+  const resourceData = state.resourceDataByType[resourceType];
+  const pickedIds = new Set(state.selectedFolderIdsByType[resourceType]);
+  const folders = [];
+  // Whether the nodes hold a resource or a folder the picker offers.
+  const visit = (nodes, ancestorIds) => {
+    let offersAny = false;
+    for (const node of nodes ?? []) {
+      const item = resourceData.items[node.id];
+      if (!item) continue;
+      if (item.type !== "folder") {
+        offersAny = true;
+        continue;
+      }
+      const index = folders.push({
+        id: node.id,
+        name: item.name,
+        node,
+        ancestorIds,
+      });
+      const isOffered =
+        visit(node.children, [...ancestorIds, node.id]) ||
+        pickedIds.has(node.id);
+      if (isOffered) {
+        offersAny = true;
+      } else {
+        // Nothing inside it is offered either.
+        folders.length = index - 1;
+      }
+    }
+    return offersAny;
+  };
+  visit(resourceData.tree, []);
+  return folders;
+};
+
+// The types the picker offers: those with resources or folders to offer.
+// A type the asset store does not take is offered only while the pack has
+// folders of it picked, so they can be unticked.
 const listPickerResourceTypes = (state) =>
   RESOURCE_TYPE_ORDER.filter((resourceType) => {
-    const resourceData = state.resourceDataByType[resourceType];
+    if (ASSET_STORE_HIDDEN_RESOURCE_TYPES.includes(resourceType)) {
+      return state.selectedFolderIdsByType[resourceType].length > 0;
+    }
     return (
-      hasResources(resourceData) ||
-      selectTopLevelFolders(resourceData).length > 0
+      hasResources(state.resourceDataByType[resourceType]) ||
+      listPickerFolders(state, resourceType).length > 0
     );
   });
 
+// How many folders of a type the picker has ticked, counting a folder inside
+// a ticked one only with it; empty when none.
+const formatPickedCount = (state, resourceType) => {
+  const count = selectOutermostFolderIds(
+    state.resourceDataByType[resourceType],
+    state.pickerFolderIdsByType[resourceType],
+  ).length;
+  return count > 0 ? String(count) : "";
+};
+
 // The picker shows one type at a time: the one shown last, or else the first
-// with folders. It starts from the current selection.
+// with folders to offer. It starts from the current selection.
 export const openPicker = ({ state }) => {
   const resourceTypes = listPickerResourceTypes(state);
   if (!resourceTypes.includes(state.pickerResourceType)) {
     state.pickerResourceType =
       resourceTypes.find(
-        (resourceType) =>
-          selectTopLevelFolders(state.resourceDataByType[resourceType]).length >
-          0,
+        (resourceType) => listPickerFolders(state, resourceType).length > 0,
       ) ?? resourceTypes[0];
   }
   state.pickerFolderIdsByType = copyFolderIdsByType(
@@ -202,12 +325,7 @@ export const selectAssetPackageData = ({ state }) =>
 
 export const selectAssetPackage = ({ state }) => ({
   schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
-  resources: RESOURCE_TYPE_ORDER.filter(
-    (resourceType) => state.selectedFolderIdsByType[resourceType].length > 0,
-  ).map((resourceType) => ({
-    resourceType,
-    folderIds: [...state.selectedFolderIdsByType[resourceType]],
-  })),
+  resources: toResources(state.selectedFolderIdsByType),
 });
 
 const previewOf = (state, resourceType, itemId, extra = {}) => ({
@@ -359,62 +477,62 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
   };
 };
 
-// Types and their top-level folders, each with its count and every
-// resource's preview. The page lists only the picked folders, in the order
-// they were picked; the picker lists every folder of the type it shows, in
-// project order, ticked as in its own copy of the selection, and says so when
-// the type has no folders.
-const buildSectionsViewData = ({
+// A type's picked folders as the page lists them: in the order picked,
+// without one inside another pick, as that one shows it. A folder that sits
+// in another is named with its path, as the import dialog names a pack's.
+const listPickedFolders = (state, resourceType) => {
+  const resourceData = state.resourceDataByType[resourceType];
+  const folders = indexResourceFolders(resourceData);
+  return selectOutermostFolderIds(
+    resourceData,
+    state.selectedFolderIdsByType[resourceType],
+  ).map((folderId) => {
+    const { node, ancestorIds } = folders.get(folderId);
+    return {
+      id: folderId,
+      name: [...ancestorIds, folderId]
+        .map((id) => resourceData.items[id].name)
+        .join(" > "),
+      node,
+    };
+  });
+};
+
+const formatSelectedLabel = ({ copy, i18n, count }) =>
+  count > 0
+    ? formatPluralCopy(copy, "selectedFolderCount", count, {
+        dateTime: i18n.dateTime,
+      })
+    : "";
+
+// The types with folders picked, each with its picked folders and every
+// resource in them, at any depth, with its preview.
+const buildPickedSectionsViewData = ({
   state,
   copy,
   resourceTypesCopy,
   i18n,
-  inPicker,
-  resourceTypes,
 }) =>
-  resourceTypes.flatMap((resourceType) => {
+  RESOURCE_TYPE_ORDER.flatMap((resourceType) => {
     const resourceData = state.resourceDataByType[resourceType];
-    const selectedIds = (
-      inPicker ? state.pickerFolderIdsByType : state.selectedFolderIdsByType
-    )[resourceType];
-    const topLevelFolders = selectTopLevelFolders(resourceData);
-    const folders = inPicker
-      ? topLevelFolders
-      : selectedIds
-          .map((folderId) =>
-            topLevelFolders.find((folder) => folder.id === folderId),
-          )
-          .filter(Boolean);
-    if (!inPicker && folders.length === 0) {
+    const folders = listPickedFolders(state, resourceType);
+    if (folders.length === 0) {
       return [];
     }
     return [
       {
         resourceType,
         label: resourceTypesCopy[resourceType] ?? resourceType,
-        selectedLabel:
-          selectedIds.length > 0
-            ? formatPluralCopy(
-                copy,
-                "selectedFolderCount",
-                selectedIds.length,
-                {
-                  dateTime: i18n.dateTime,
-                },
-              )
-            : "",
-        hasNoFolders: folders.length === 0,
-        noFoldersHint: copy.noFoldersHint,
+        selectedLabel: formatSelectedLabel({
+          copy,
+          i18n,
+          count: folders.length,
+        }),
         folders: folders.map((folder) => {
-          const resources = collectFolderResources(resourceData, folder.id);
+          const resources = collectFolderResources(resourceData, folder.node);
           return {
             folderId: folder.id,
             name: folder.name,
-            selected: selectedIds.includes(folder.id),
-            // Where a picked folder goes among its type's picks.
-            pickOrder: selectedIds.includes(folder.id)
-              ? String(selectedIds.indexOf(folder.id) + 1)
-              : "",
             items: resources.map(({ itemId }) =>
               previewOf(state, resourceType, itemId, { showName: true }),
             ),
@@ -425,16 +543,71 @@ const buildSectionsViewData = ({
     ];
   });
 
+// The folders the picker offers for the type it shows, in tree order and
+// indented by depth, each with the resources directly in it, so a resource
+// shows once, and ticked as in the picker's own copy of the selection. A
+// folder inside a ticked one shows as included in it. A picked folder shows
+// its place in the pack. It says so when it offers no folders.
+const buildPickerSectionViewData = ({
+  state,
+  copy,
+  resourceTypesCopy,
+  i18n,
+  resourceType,
+}) => {
+  const resourceData = state.resourceDataByType[resourceType];
+  const pickerIds = state.pickerFolderIdsByType[resourceType];
+  const outermostIds = selectOutermostFolderIds(resourceData, pickerIds);
+  const folders = listPickerFolders(state, resourceType);
+  return {
+    resourceType,
+    label: resourceTypesCopy[resourceType] ?? resourceType,
+    selectedLabel: formatSelectedLabel({
+      copy,
+      i18n,
+      count: outermostIds.length,
+    }),
+    hasNoFolders: folders.length === 0,
+    noFoldersHint: copy.noFoldersHint,
+    folders: folders.map((folder) => {
+      const includedInId = folder.ancestorIds.findLast((ancestorId) =>
+        pickerIds.includes(ancestorId),
+      );
+      const isIncluded = includedInId !== undefined;
+      const pickIndex = outermostIds.indexOf(folder.id);
+      const resources = collectFolderResources(resourceData, folder.node, {
+        ownOnly: true,
+      });
+      return {
+        folderId: folder.id,
+        name: folder.name,
+        indent: String(folder.ancestorIds.length * PICKER_FOLDER_INDENT),
+        selected: isIncluded || pickerIds.includes(folder.id),
+        isIncluded,
+        includedHint: isIncluded
+          ? formatI18nCopy(copy.includedInFolderHint, {
+              name: resourceData.items[includedInId].name,
+            })
+          : "",
+        // Where a picked folder goes among its type's picks.
+        pickOrder: pickIndex === -1 ? "" : String(pickIndex + 1),
+        items: resources.map(({ itemId }) =>
+          previewOf(state, resourceType, itemId, { showName: true }),
+        ),
+        resourceCount: resources.length,
+      };
+    }),
+  };
+};
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = i18n.assetPackagePage;
   const resourceTypesCopy = i18n.resourceTypes;
-  const pickedSections = buildSectionsViewData({
+  const pickedSections = buildPickedSectionsViewData({
     state,
     copy,
     resourceTypesCopy,
     i18n,
-    inPicker: false,
-    resourceTypes: RESOURCE_TYPE_ORDER,
   });
   // The picker's types and the folders of the one it shows, built only while
   // it is open.
@@ -445,32 +618,23 @@ export const selectViewData = ({ state, i18n }) => {
     resourceType,
     label: resourceTypesCopy[resourceType] ?? resourceType,
     isCurrent: resourceType === state.pickerResourceType,
-    selectedCount:
-      state.pickerFolderIdsByType[resourceType].length > 0
-        ? String(state.pickerFolderIdsByType[resourceType].length)
-        : "",
+    selectedCount: formatPickedCount(state, resourceType),
   }));
-  const [pickerSection] = pickerResourceTypes.includes(state.pickerResourceType)
-    ? buildSectionsViewData({
+  const pickerSection = pickerResourceTypes.includes(state.pickerResourceType)
+    ? buildPickerSectionViewData({
         state,
         copy,
         resourceTypesCopy,
         i18n,
-        inPicker: true,
-        resourceTypes: [state.pickerResourceType],
+        resourceType: state.pickerResourceType,
       })
-    : [];
+    : { folders: [] };
   const comesWith = buildComesWithViewData({ state, copy, resourceTypesCopy });
-  const pickedCount = RESOURCE_TYPE_ORDER.reduce(
-    (count, resourceType) =>
+  const pickedCount = pickedSections.reduce(
+    (count, section) =>
       count +
-      state.selectedFolderIdsByType[resourceType].reduce(
-        (folderCount, folderId) =>
-          folderCount +
-          collectFolderResources(
-            state.resourceDataByType[resourceType],
-            folderId,
-          ).length,
+      section.folders.reduce(
+        (folderCount, folder) => folderCount + folder.resourceCount,
         0,
       ),
     0,
@@ -480,6 +644,7 @@ export const selectViewData = ({ state, i18n }) => {
     ...state,
     showExplorerPanel: !state.isTouchMode,
     contentLeftPadding: state.isTouchMode ? "0" : "sm",
+    backLabel: copy.backButton ?? "Back",
     pickedTitle: copy.pickedTitle,
     pickResourcesLabel: copy.pickResourcesButton,
     hasPicks: pickedSections.length > 0,
@@ -488,10 +653,11 @@ export const selectViewData = ({ state, i18n }) => {
     pickerTitle: copy.pickerTitle,
     pickerHint: copy.introHint,
     pickerDoneLabel: copy.doneButton,
+    pickerDoneDisabled: state.isSavingPicks,
     hasPickerTypes: pickerTypes.length > 0,
     emptyProjectMessage: copy.emptyProjectMessage,
     pickerTypes,
-    pickerSection: pickerSection ?? { folders: [] },
+    pickerSection,
     comesWith,
     exportDisabled: pickedCount === 0 || comesWith.isInvalid,
   };

@@ -86,7 +86,6 @@ const loadCatalog = async (deps, { cursor } = {}) => {
     const page = await appService.listAssetStorePacks({
       cursor,
       query: store.selectCatalogQuery(),
-      assetTypes: store.selectCatalogAssetTypes(),
     });
     if (store.selectCatalogRequestId() !== requestId) return;
     store.setCatalogPage({ packs: page.packs, nextCursor: page.nextCursor });
@@ -97,13 +96,8 @@ const loadCatalog = async (deps, { cursor } = {}) => {
   render();
 };
 
-// The store opens filtered by the asset type of the resource page it opened
-// from.
-const openStore = (deps) => {
-  const { appService, store } = deps;
-  store.setCatalogAssetTypesForPath({ path: appService.getPath() });
-  return loadCatalog(deps);
-};
+// The store opens on every pack, whichever page it opened from.
+const openStore = (deps) => loadCatalog(deps);
 
 // Typing settles for a moment before the store reloads with the new query.
 const searchCatalog = (deps, value) => {
@@ -165,22 +159,6 @@ export const handleStoreSearchInput = (deps, payload) => {
     instanceId: store.selectInstanceId(),
     value,
   });
-};
-
-// Saving the asset type list reloads the store unless the types are
-// unchanged.
-export const handleStoreAssetTypesChange = (deps, payload) => {
-  const { store } = deps;
-  const assetTypes = payload._event.detail.value;
-  const currentTypes = store.selectCatalogAssetTypes();
-  if (
-    assetTypes.length === currentTypes.length &&
-    assetTypes.every((assetType) => currentTypes.includes(assetType))
-  ) {
-    return;
-  }
-  store.setCatalogAssetTypes({ assetTypes });
-  return loadCatalog(deps);
 };
 
 export const handleCatalogRetry = (deps) => {

@@ -117,9 +117,9 @@ const releaseItems = [
     icon: "info",
   },
   {
-    id: "assetPackage",
-    label: "Asset Package",
-    path: "/project/asset-package",
+    id: "assetPacks",
+    label: "Asset Packs",
+    path: "/project/asset-packs",
     icon: "folder",
   },
 ];
@@ -204,7 +204,8 @@ const sectionsByVariant = {
 
 const resourceParentMapping = {
   "animation-editor": "animations",
-  "asset-package": "assetPackage",
+  "asset-packs": "assetPacks",
+  "asset-pack-editor": "assetPacks",
   "audio-effects-editor": "audioEffects",
   "character-sprites": "characters",
   "layout-editor": "layouts",
@@ -293,8 +294,7 @@ const getNavigationItems = (state) =>
     .flatMap((section) => section.items)
     .filter(
       (item) =>
-        !item.hidden &&
-        (item.id !== "assetPackage" || state.assetPackageEnabled),
+        !item.hidden && (item.id !== "assetPacks" || state.assetPackageEnabled),
     );
 
 const selectCurrentResourceId = () => {
@@ -347,7 +347,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
       .filter(
         (item) =>
           !item.hidden &&
-          (item.id !== "assetPackage" || state.assetPackageEnabled),
+          (item.id !== "assetPacks" || state.assetPackageEnabled),
       )
       .map((item) => ({
         ...item,

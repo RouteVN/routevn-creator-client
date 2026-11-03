@@ -167,6 +167,7 @@ const LEGACY_ROUTE_REDIRECTS = {
   "/project/system-variables": "/project/controls",
   "/project/appearance": "/project/config",
   "/project/language": "/project/config",
+  "/project/asset-package": "/project/asset-packs",
 };
 
 const getCanonicalRoutePath = (path) => {
@@ -306,7 +307,8 @@ export const createRouteTransitionRunner = (
       canonicalPath = appService.resolveProjectFolderSetupRoute(canonicalPath);
     }
     if (
-      canonicalPath === "/project/asset-package" &&
+      (canonicalPath === "/project/asset-packs" ||
+        canonicalPath === "/project/asset-pack-editor") &&
       !isAssetPackageEnabled(appService)
     ) {
       canonicalPath = "/project/config";

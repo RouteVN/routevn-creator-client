@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { describe, expect, it, vi } from "vitest";
 import { createAssetPackageExportService } from "../../src/deps/services/shared/assetPackageExportService.js";
+import { createRendererStartError } from "../../src/internal/rendererStartError.js";
 
 const createManifest = () => ({
   schema: "routevn.import-pack.v1",
@@ -589,5 +590,538 @@ describe("asset package export service", () => {
       exported.repository.files.items["file-animation-target"],
     ).toBeUndefined();
     expect(renderParticlePreview).toHaveBeenCalledOnce();
+  });
+
+  describe("layout previews", () => {
+    const createLayout = ({ id, name, imageIds = ["image.art"] }) => ({
+      id,
+      type: "layout",
+      name,
+      layoutType: "general",
+      thumbnailFileId: "file-thumbnail",
+      elements: {
+        items: Object.fromEntries(
+          imageIds.map((imageId, index) => [
+            `art-${index}`,
+            {
+              id: `art-${index}`,
+              type: "sprite",
+              imageId,
+              x: 0,
+              y: 0,
+              width: 64,
+              height: 64,
+            },
+          ]),
+        ),
+        tree: imageIds.map((_, index) => ({ id: `art-${index}` })),
+      },
+    });
+    const createCollection = (layouts) => ({
+      items: Object.fromEntries(layouts.map((layout) => [layout.id, layout])),
+      tree: layouts.map((layout) => ({ id: layout.id })),
+    });
+    // The project a pack is exported from, and the manifest of the pack:
+    // `picks` are the layouts the author picked and `dependencies` the ones
+    // they use. Both hold the project's layouts, as sanitized clones.
+    const createLayoutExport = ({
+      picks,
+      dependencies = [],
+      missingLayouts = [],
+    }) => {
+      const manifest = createManifest();
+      manifest.schema = "routevn.import-pack.v2";
+      manifest.repository.files.items["file-thumbnail"] = {
+        id: "file-thumbnail",
+        mimeType: "image/jpeg",
+        source: { url: "./files/file-thumbnail" },
+      };
+      manifest.repository.layouts = {
+        items: {
+          "folder.menus": {
+            id: "folder.menus",
+            type: "folder",
+            name: "Menus",
+          },
+          ...createCollection(picks).items,
+        },
+        tree: [
+          {
+            id: "folder.menus",
+            children: picks.map((layout) => ({ id: layout.id })),
+          },
+        ],
+      };
+      if (dependencies.length > 0) {
+        manifest.dependencies = {
+          layouts: createCollection(dependencies),
+        };
+      }
+      const sourceRepository = structuredClone(manifest.repository);
+      sourceRepository.project = { resolution: { width: 1280, height: 720 } };
+      sourceRepository.layouts.items = {
+        ...sourceRepository.layouts.items,
+        ...createCollection(dependencies).items,
+      };
+      // Layouts the pack names that the project no longer has.
+      for (const layout of missingLayouts) {
+        manifest.repository.layouts.items[layout.id] = layout;
+      }
+      sourceRepository.files.items["file-art"] = {
+        id: "file-art",
+        mimeType: "image/png",
+      };
+      sourceRepository.files.items["file-other"] = {
+        id: "file-other",
+        mimeType: "image/png",
+      };
+      sourceRepository.files.items["file-lost"] = {
+        id: "file-lost",
+        mimeType: "image/png",
+      };
+      sourceRepository.images = {
+        items: {
+          "image.art": {
+            id: "image.art",
+            type: "image",
+            fileId: "file-art",
+            width: 64,
+            height: 64,
+          },
+          "image.other": {
+            id: "image.other",
+            type: "image",
+            fileId: "file-other",
+            width: 64,
+            height: 64,
+          },
+          "image.lost": {
+            id: "image.lost",
+            type: "image",
+            fileId: "file-lost",
+            width: 64,
+            height: 64,
+          },
+        },
+        tree: [
+          { id: "image.art" },
+          { id: "image.other" },
+          { id: "image.lost" },
+        ],
+      };
+      return { manifest, sourceRepository };
+    };
+    // The project's files, as `getFileContent` reads them. A file the project
+    // lost cannot be read, and `contents` holds what was read of each file.
+    const createProjectFiles = () => {
+      const contents = {};
+      const getFileContent = vi.fn(async (fileId) => {
+        if (fileId === "file-lost") {
+          throw new Error("The file is gone.");
+        }
+        const content = { url: `project-file://${fileId}`, revoke: vi.fn() };
+        contents[fileId] ??= [];
+        contents[fileId].push(content);
+        return content;
+      });
+      return { getFileContent, contents };
+    };
+    const createService = ({
+      sourceRepository,
+      createLayoutPreviewRenderer,
+      getFileContent = createProjectFiles().getFileContent,
+    }) =>
+      createAssetPackageExportService({
+        getFileContent,
+        getRepositoryState: () => sourceRepository,
+        fetchImpl: vi.fn(async (url) => ({
+          ok: true,
+          arrayBuffer: async () => new TextEncoder().encode(url).buffer,
+        })),
+        createLayoutPreviewRenderer,
+      });
+    const readExportedManifest = async (bundle) => {
+      const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
+      return {
+        zip,
+        exported: JSON.parse(
+          await zip.file("asset-package.json").async("string"),
+        ),
+      };
+    };
+
+    it("adds a full-size preview to picked and dependency layouts, not folders", async () => {
+      const { manifest, sourceRepository } = createLayoutExport({
+        picks: [createLayout({ id: "layout.title", name: "Project One" })],
+        dependencies: [
+          createLayout({ id: "layout.popup", name: "Project Two" }),
+        ],
+      });
+      const render = vi
+        .fn()
+        .mockResolvedValueOnce(new Blob(["title-image"], { type: "image/png" }))
+        .mockResolvedValueOnce(
+          new Blob(["popup-image"], { type: "image/png" }),
+        );
+      const destroy = vi.fn(async () => {});
+      const createLayoutPreviewRenderer = vi.fn(async () => ({
+        render,
+        destroy,
+      }));
+      const { getFileContent, contents } = createProjectFiles();
+      const service = createService({
+        sourceRepository,
+        createLayoutPreviewRenderer,
+        getFileContent,
+      });
+
+      const bundle = await service.createAssetPackageBundle({ manifest });
+
+      const { zip, exported } = await readExportedManifest(bundle);
+      const title = exported.repository.layouts.items["layout.title"];
+      const popup = exported.dependencies.layouts.items["layout.popup"];
+      expect(title.previewMediaFileId).toBe("layout-preview.layout.title.png");
+      expect(popup.previewMediaFileId).toBe("layout-preview.layout.popup.png");
+      expect(title.thumbnailFileId).toBe("file-thumbnail");
+      expect(
+        exported.repository.layouts.items["folder.menus"],
+      ).not.toHaveProperty("previewMediaFileId");
+      expect(
+        exported.repository.files.items["layout-preview.layout.title.png"],
+      ).toMatchObject({
+        type: "image",
+        name: "Project One preview.png",
+        mimeType: "image/png",
+        size: "title-image".length,
+      });
+      expect(
+        await zip.file("files/layout-preview.layout.title.png").async("string"),
+      ).toBe("title-image");
+      expect(
+        await zip.file("files/layout-preview.layout.popup.png").async("string"),
+      ).toBe("popup-image");
+      // The manifest passed in is left as it was.
+      expect(
+        manifest.repository.layouts.items["layout.title"],
+      ).not.toHaveProperty("previewMediaFileId");
+
+      expect(createLayoutPreviewRenderer).toHaveBeenCalledOnce();
+      expect(render).toHaveBeenCalledTimes(2);
+      expect(render).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          width: 1280,
+          height: 720,
+          renderState: expect.objectContaining({
+            elements: [expect.objectContaining({ src: "file-art" })],
+          }),
+          // The renderer gets the URL the project gives for each file, not
+          // its bytes.
+          assets: {
+            "file-art": { url: "project-file://file-art", type: "image/png" },
+          },
+        }),
+      );
+      expect(getFileContent).toHaveBeenCalledWith("file-art", {
+        verifyImageIntegrity: true,
+      });
+      // Each layout's URLs are let go of once it is drawn.
+      expect(contents["file-art"]).toHaveLength(2);
+      for (const content of contents["file-art"]) {
+        expect(content.revoke).toHaveBeenCalledOnce();
+      }
+      expect(destroy).toHaveBeenCalledOnce();
+    });
+
+    it("reads a layout's files at the same time", async () => {
+      const { manifest, sourceRepository } = createLayoutExport({
+        picks: [
+          createLayout({
+            id: "layout.title",
+            name: "Project One",
+            imageIds: ["image.art", "image.other"],
+          }),
+        ],
+      });
+      let reading = 0;
+      let mostReading = 0;
+      const getFileContent = vi.fn(async (fileId, options) => {
+        const content = { url: `project-file://${fileId}`, revoke: vi.fn() };
+        if (options === undefined) {
+          return content;
+        }
+        reading += 1;
+        mostReading = Math.max(mostReading, reading);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        reading -= 1;
+        return content;
+      });
+      const render = vi.fn(
+        async () => new Blob(["title-image"], { type: "image/png" }),
+      );
+      const service = createService({
+        sourceRepository,
+        getFileContent,
+        createLayoutPreviewRenderer: async () => ({
+          render,
+          destroy: async () => {},
+        }),
+      });
+
+      await service.createAssetPackageBundle({ manifest });
+
+      expect(mostReading).toBe(2);
+      expect(render.mock.calls[0][0].assets).toEqual({
+        "file-art": { url: "project-file://file-art", type: "image/png" },
+        "file-other": { url: "project-file://file-other", type: "image/png" },
+      });
+    });
+
+    it("lets go of the files it read when another of the layout cannot be read", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { manifest, sourceRepository } = createLayoutExport({
+        picks: [
+          createLayout({
+            id: "layout.lost",
+            name: "Project One",
+            imageIds: ["image.art", "image.lost"],
+          }),
+        ],
+      });
+      const { getFileContent, contents } = createProjectFiles();
+      const render = vi.fn();
+      const service = createService({
+        sourceRepository,
+        getFileContent,
+        createLayoutPreviewRenderer: async () => ({
+          render,
+          destroy: async () => {},
+        }),
+      });
+
+      const bundle = await service.createAssetPackageBundle({ manifest });
+
+      const { exported } = await readExportedManifest(bundle);
+      expect(
+        exported.repository.layouts.items["layout.lost"],
+      ).not.toHaveProperty("previewMediaFileId");
+      expect(render).not.toHaveBeenCalled();
+      expect(contents["file-art"]).toHaveLength(1);
+      expect(contents["file-art"][0].revoke).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledOnce();
+      warn.mockRestore();
+    });
+
+    it("still exports when a layout cannot be drawn, without that layout's preview", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { manifest, sourceRepository } = createLayoutExport({
+        picks: [
+          createLayout({ id: "layout.broken", name: "Project One" }),
+          createLayout({
+            id: "layout.lost",
+            name: "Project Two",
+            imageIds: ["image.lost"],
+          }),
+          createLayout({ id: "layout.fine", name: "Project Three" }),
+        ],
+      });
+      const render = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("Canvas lost"))
+        .mockResolvedValueOnce(new Blob(["fine-image"], { type: "image/png" }));
+      const destroy = vi.fn(async () => {});
+      const { getFileContent, contents } = createProjectFiles();
+      const service = createService({
+        sourceRepository,
+        getFileContent,
+        createLayoutPreviewRenderer: async () => ({ render, destroy }),
+      });
+
+      const bundle = await service.createAssetPackageBundle({ manifest });
+
+      const { zip, exported } = await readExportedManifest(bundle);
+      const layouts = exported.repository.layouts.items;
+      // The files of the layout that failed to draw are let go of too.
+      for (const content of contents["file-art"]) {
+        expect(content.revoke).toHaveBeenCalledOnce();
+      }
+      expect(layouts["layout.broken"]).not.toHaveProperty("previewMediaFileId");
+      expect(layouts["layout.lost"]).not.toHaveProperty("previewMediaFileId");
+      expect(layouts["layout.fine"].previewMediaFileId).toBe(
+        "layout-preview.layout.fine.png",
+      );
+      expect(Object.keys(exported.repository.files.items).sort()).toEqual([
+        "file image",
+        "file-sound",
+        "file-thumbnail",
+        "layout-preview.layout.fine.png",
+      ]);
+      expect(zip.file("files/layout-preview.layout.broken.png")).toBeNull();
+      // The layout using a lost file is not drawn at all.
+      expect(render).toHaveBeenCalledTimes(2);
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(warn.mock.calls.map(([message]) => message)).toEqual([
+        expect.stringContaining("layout.broken"),
+        expect.stringContaining("layout.lost"),
+      ]);
+      expect(destroy).toHaveBeenCalledOnce();
+      warn.mockRestore();
+    });
+
+    describe("a renderer that cannot start", () => {
+      const createStartFailureExport = () =>
+        createLayoutExport({
+          picks: [
+            createLayout({ id: "layout.first", name: "Project One" }),
+            createLayout({ id: "layout.second", name: "Project Two" }),
+            createLayout({ id: "layout.third", name: "Project Three" }),
+          ],
+        });
+
+      it("exports without previews when the renderer cannot be created", async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const { manifest, sourceRepository } = createStartFailureExport();
+        const failure = new Error("Failed to fetch module");
+        const createLayoutPreviewRenderer = vi.fn(async () => {
+          throw failure;
+        });
+        const service = createService({
+          sourceRepository,
+          createLayoutPreviewRenderer,
+        });
+
+        const bundle = await service.createAssetPackageBundle({ manifest });
+
+        const { zip, exported } = await readExportedManifest(bundle);
+        for (const layout of Object.values(exported.repository.layouts.items)) {
+          expect(layout).not.toHaveProperty("previewMediaFileId");
+        }
+        expect(
+          Object.keys(zip.files).some((path) =>
+            path.includes("layout-preview"),
+          ),
+        ).toBe(false);
+        expect(createLayoutPreviewRenderer).toHaveBeenCalledOnce();
+        expect(warn).toHaveBeenCalledOnce();
+        expect(warn).toHaveBeenCalledWith(expect.any(String), failure);
+        warn.mockRestore();
+      });
+
+      it("stops drawing at the first layout the graphics context cannot be made for", async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const { manifest, sourceRepository } = createStartFailureExport();
+        const failure = createRendererStartError(new Error("No WebGL"));
+        const render = vi.fn().mockRejectedValue(failure);
+        const destroy = vi.fn(async () => {});
+        const service = createService({
+          sourceRepository,
+          createLayoutPreviewRenderer: async () => ({ render, destroy }),
+        });
+
+        const bundle = await service.createAssetPackageBundle({ manifest });
+
+        const { exported } = await readExportedManifest(bundle);
+        for (const layout of Object.values(exported.repository.layouts.items)) {
+          expect(layout).not.toHaveProperty("previewMediaFileId");
+        }
+        expect(render).toHaveBeenCalledOnce();
+        expect(warn).toHaveBeenCalledOnce();
+        expect(warn).toHaveBeenCalledWith(expect.any(String), failure);
+        expect(destroy).toHaveBeenCalledOnce();
+        warn.mockRestore();
+      });
+
+      it("keeps the previews made before the graphics context could not be made again", async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        const { manifest, sourceRepository } = createStartFailureExport();
+        const render = vi
+          .fn()
+          .mockResolvedValueOnce(
+            new Blob(["first-image"], { type: "image/png" }),
+          )
+          .mockRejectedValueOnce(createRendererStartError(new Error("Lost")))
+          .mockResolvedValue(new Blob(["late-image"], { type: "image/png" }));
+        const destroy = vi.fn(async () => {});
+        const service = createService({
+          sourceRepository,
+          createLayoutPreviewRenderer: async () => ({ render, destroy }),
+        });
+
+        const bundle = await service.createAssetPackageBundle({ manifest });
+
+        const { zip, exported } = await readExportedManifest(bundle);
+        const layouts = exported.repository.layouts.items;
+        expect(layouts["layout.first"].previewMediaFileId).toBe(
+          "layout-preview.layout.first.png",
+        );
+        expect(
+          await zip
+            .file("files/layout-preview.layout.first.png")
+            .async("string"),
+        ).toBe("first-image");
+        expect(layouts["layout.second"]).not.toHaveProperty(
+          "previewMediaFileId",
+        );
+        expect(layouts["layout.third"]).not.toHaveProperty(
+          "previewMediaFileId",
+        );
+        // Nothing is drawn after the failure.
+        expect(render).toHaveBeenCalledTimes(2);
+        expect(warn).toHaveBeenCalledOnce();
+        expect(destroy).toHaveBeenCalledOnce();
+        warn.mockRestore();
+      });
+    });
+
+    it("exports with every preview when freeing the renderer fails, and warns", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const { manifest, sourceRepository } = createLayoutExport({
+        picks: [createLayout({ id: "layout.title", name: "Project One" })],
+      });
+      const failure = new Error("Destroy failed");
+      const destroy = vi.fn(async () => {
+        throw failure;
+      });
+      const service = createService({
+        sourceRepository,
+        createLayoutPreviewRenderer: async () => ({
+          render: async () => new Blob(["title-image"], { type: "image/png" }),
+          destroy,
+        }),
+      });
+
+      const bundle = await service.createAssetPackageBundle({ manifest });
+
+      const { exported } = await readExportedManifest(bundle);
+      expect(
+        exported.repository.layouts.items["layout.title"].previewMediaFileId,
+      ).toBe("layout-preview.layout.title.png");
+      expect(destroy).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledWith(expect.any(String), failure);
+      warn.mockRestore();
+    });
+
+    it("does not start a renderer for a package without layouts to draw", async () => {
+      const { manifest, sourceRepository } = createLayoutExport({
+        picks: [],
+        missingLayouts: [
+          createLayout({ id: "layout.gone", name: "Project One" }),
+        ],
+      });
+      const createLayoutPreviewRenderer = vi.fn();
+      const service = createService({
+        sourceRepository,
+        createLayoutPreviewRenderer,
+      });
+
+      const bundle = await service.createAssetPackageBundle({ manifest });
+
+      const { exported } = await readExportedManifest(bundle);
+      expect(createLayoutPreviewRenderer).not.toHaveBeenCalled();
+      expect(
+        exported.repository.layouts.items["layout.gone"],
+      ).not.toHaveProperty("previewMediaFileId");
+    });
   });
 });

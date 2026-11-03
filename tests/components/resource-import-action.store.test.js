@@ -34,6 +34,21 @@ describe("resourceImportAction.store", () => {
     expect(state.isImportDialogOpen).toBe(false);
   });
 
+  it("leaves Import out when the page hides it", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        showImport: false,
+        additionalMenuItems: [{ label: "Zoom", type: "item", value: "zoom" }],
+      },
+      i18n: {},
+    });
+
+    expect(viewData.menu.items.map((item) => item.value)).toEqual(["zoom"]);
+    expect(viewData.menuLabel).toBe("Actions");
+  });
+
   it("renders additional actions before Import", () => {
     const state = createInitialState();
     const viewData = selectViewData({

@@ -63,6 +63,18 @@ describe("asset package view", () => {
       "rtgl-view#pickerFolder${folderIndex} data-resource-type=",
     );
     expect(assetPackageView).not.toContain("handleFolderCheckboxChange");
+    // Folders are indented by depth; one inside a ticked folder shows as
+    // included, with no box to click and its checkbox disabled.
+    expect(assetPackageView).toContain("padding-left: ${folder.indent}px;");
+    expect(assetPackageView).toContain("$if folder.isIncluded:");
+    expect(assetPackageView).toContain(
+      "?checked=${folder.selected} ?disabled=${folder.isIncluded}",
+    );
+    expect(assetPackageView).toContain("${folder.includedHint}");
+    // Done does nothing more while it saves.
+    expect(assetPackageView).toContain(
+      "rtgl-button#pickerDoneButton v=pr ?disabled=${pickerDoneDisabled}",
+    );
     expect(assetPackageView).toContain(
       "rtgl-text s=xs c=pr-fg: ${folder.pickOrder}",
     );
