@@ -1,0 +1,1223 @@
+{
+  "schema": "routevn.import-pack.v2",
+  "package": {
+    "kind": "routevn.creator.asset-package"
+  },
+  "repository": {
+    "files": {
+      "items": {
+        "file-image-one": {
+          "id": "file-image-one",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-image-one"
+          },
+          "size": 69,
+          "sha256": "d0d19ebdbcc1fbacfb1eff0f2cfbc48868b9b831d0672ce63ce93dee9706fb2d"
+        },
+        "file-image-one-thumbnail": {
+          "id": "file-image-one-thumbnail",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-image-one-thumbnail"
+          },
+          "size": 69,
+          "sha256": "e5dd92acd7d1f9550a1848c765289b33b408f0f6c002fd935696ac778965182d"
+        },
+        "file-image-two": {
+          "id": "file-image-two",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-image-two"
+          },
+          "size": 69,
+          "sha256": "378831fd0fde632dd4f6b77598f3f32e71b5d5015a9f1eeff065401c2a9be470"
+        },
+        "file-sound-one": {
+          "id": "file-sound-one",
+          "mimeType": "audio/wav",
+          "source": {
+            "url": "./files/file-sound-one"
+          },
+          "size": 48,
+          "sha256": "a110df89ab9ed9913a45215b7ef35130c4cf4235f5b14738f4458571002f6a3e"
+        },
+        "file-sound-one-waveform": {
+          "id": "file-sound-one-waveform",
+          "mimeType": "application/json",
+          "source": {
+            "url": "./files/file-sound-one-waveform"
+          },
+          "size": 47,
+          "sha256": "897784e43c3f7ab9d946220082a50eff4a3b6f1b68c4764c1ecc8df1d16dbd8f"
+        },
+        "file-video-one": {
+          "id": "file-video-one",
+          "mimeType": "video/mp4",
+          "source": {
+            "url": "./files/file-video-one"
+          },
+          "size": 24,
+          "sha256": "9f76e24fc8542b7fd66f70148f1d785be47486fb0a7ca3f5d2fb16f05e408d88"
+        },
+        "file-video-one-thumbnail": {
+          "id": "file-video-one-thumbnail",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-video-one-thumbnail"
+          },
+          "size": 69,
+          "sha256": "4727f57b8e3eeb47a5c406c0c5628829b448a3257a5bc765fca2a2019f6179e1"
+        },
+        "file-character-one": {
+          "id": "file-character-one",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-character-one"
+          },
+          "size": 69,
+          "sha256": "c7260be10ea6eee0b5d1b82af98a8c6e1f0d4095883db88f010ba714500a6117"
+        },
+        "file-sprite-one": {
+          "id": "file-sprite-one",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-sprite-one"
+          },
+          "size": 69,
+          "sha256": "14643263f8cab271b024302522c2b979ceeaa21f184f8411ced0eac569678090"
+        },
+        "file-thumbnail-one": {
+          "id": "file-thumbnail-one",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-thumbnail-one"
+          },
+          "size": 69,
+          "sha256": "05e71ddeffcc8098e61487e4a7ebc5f38e85b68b1125994d9a6fd6c9b48d2b85"
+        },
+        "file-spritesheet-one": {
+          "id": "file-spritesheet-one",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-spritesheet-one"
+          },
+          "size": 69,
+          "sha256": "49b6421aa202efc6348e09cadd78fe5a61492b1de4ca369552e7a7247d5a4020"
+        },
+        "file-font-one": {
+          "id": "file-font-one",
+          "mimeType": "font/ttf",
+          "source": {
+            "url": "./files/file-font-one"
+          },
+          "size": 20,
+          "sha256": "f9a90260b2989a82ded42fa0d7d240d0f168c48498459cbccf048bde43e4fe4b"
+        },
+        "waveform-preview.sound-one.png": {
+          "id": "waveform-preview.sound-one.png",
+          "type": "image",
+          "name": "Sound One preview.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/waveform-preview.sound-one.png"
+          }
+        },
+        "spritesheet-preview.spritesheet-one.mp4": {
+          "id": "spritesheet-preview.spritesheet-one.mp4",
+          "type": "video",
+          "name": "Spritesheet One preview.mp4",
+          "mimeType": "video/mp4",
+          "size": 24,
+          "source": {
+            "url": "./files/spritesheet-preview.spritesheet-one.mp4"
+          }
+        },
+        "spritesheet-thumbnail.spritesheet-one.png": {
+          "id": "spritesheet-thumbnail.spritesheet-one.png",
+          "type": "image",
+          "name": "Spritesheet One thumbnail.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/spritesheet-thumbnail.spritesheet-one.png"
+          }
+        },
+        "font-preview.font-one.png": {
+          "id": "font-preview.font-one.png",
+          "type": "image",
+          "name": "Font One preview.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/font-preview.font-one.png"
+          }
+        },
+        "font-thumbnail.font-one.png": {
+          "id": "font-thumbnail.font-one.png",
+          "type": "image",
+          "name": "Font One thumbnail.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/font-thumbnail.font-one.png"
+          }
+        },
+        "text-style-preview.text-style-one.png": {
+          "id": "text-style-preview.text-style-one.png",
+          "type": "image",
+          "name": "Text Style One preview.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/text-style-preview.text-style-one.png"
+          }
+        },
+        "text-style-thumbnail.text-style-one.png": {
+          "id": "text-style-thumbnail.text-style-one.png",
+          "type": "image",
+          "name": "Text Style One thumbnail.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/text-style-thumbnail.text-style-one.png"
+          }
+        },
+        "animation-preview.animation-one.mp4": {
+          "id": "animation-preview.animation-one.mp4",
+          "type": "video",
+          "name": "Animation One preview.mp4",
+          "mimeType": "video/mp4",
+          "size": 24,
+          "source": {
+            "url": "./files/animation-preview.animation-one.mp4"
+          }
+        },
+        "animation-thumbnail.animation-one.png": {
+          "id": "animation-thumbnail.animation-one.png",
+          "type": "image",
+          "name": "Animation One thumbnail.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/animation-thumbnail.animation-one.png"
+          }
+        },
+        "particle-preview.particle-one.mp4": {
+          "id": "particle-preview.particle-one.mp4",
+          "type": "video",
+          "name": "Particle One preview.mp4",
+          "mimeType": "video/mp4",
+          "size": 24,
+          "source": {
+            "url": "./files/particle-preview.particle-one.mp4"
+          }
+        },
+        "particle-thumbnail.particle-one.png": {
+          "id": "particle-thumbnail.particle-one.png",
+          "type": "image",
+          "name": "Particle One thumbnail.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/particle-thumbnail.particle-one.png"
+          }
+        },
+        "particle-preview.particle-two.mp4": {
+          "id": "particle-preview.particle-two.mp4",
+          "type": "video",
+          "name": "Particle Two preview.mp4",
+          "mimeType": "video/mp4",
+          "size": 24,
+          "source": {
+            "url": "./files/particle-preview.particle-two.mp4"
+          }
+        },
+        "particle-thumbnail.particle-two.png": {
+          "id": "particle-thumbnail.particle-two.png",
+          "type": "image",
+          "name": "Particle Two thumbnail.png",
+          "mimeType": "image/png",
+          "size": 69,
+          "source": {
+            "url": "./files/particle-thumbnail.particle-two.png"
+          }
+        }
+      }
+    },
+    "images": {
+      "items": {
+        "image-one": {
+          "id": "image-one",
+          "type": "image",
+          "name": "Image One",
+          "description": "A red pixel",
+          "fileId": "file-image-one",
+          "thumbnailFileId": "file-image-one-thumbnail",
+          "width": 1,
+          "height": 1
+        },
+        "image-two": {
+          "id": "image-two",
+          "type": "image",
+          "name": "Image Two",
+          "fileId": "file-image-two",
+          "width": 1,
+          "height": 1
+        },
+        "folder-images-nested": {
+          "id": "folder-images-nested",
+          "type": "folder",
+          "name": "Backgrounds"
+        },
+        "folder-images": {
+          "id": "folder-images",
+          "type": "folder",
+          "name": "Images"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-images",
+          "children": [
+            {
+              "id": "image-one"
+            },
+            {
+              "id": "folder-images-nested",
+              "children": [
+                {
+                  "id": "image-two"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "sounds": {
+      "items": {
+        "sound-one": {
+          "id": "sound-one",
+          "type": "sound",
+          "name": "Sound One",
+          "fileId": "file-sound-one",
+          "waveformDataFileId": "file-sound-one-waveform",
+          "duration": 0.5,
+          "previewMediaFileId": "waveform-preview.sound-one.png"
+        },
+        "folder-sounds": {
+          "id": "folder-sounds",
+          "type": "folder",
+          "name": "Sounds"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-sounds",
+          "children": [
+            {
+              "id": "sound-one"
+            }
+          ]
+        }
+      ]
+    },
+    "videos": {
+      "items": {
+        "video-one": {
+          "id": "video-one",
+          "type": "video",
+          "name": "Video One",
+          "fileId": "file-video-one",
+          "thumbnailFileId": "file-video-one-thumbnail",
+          "width": 1,
+          "height": 1
+        },
+        "folder-videos": {
+          "id": "folder-videos",
+          "type": "folder",
+          "name": "Videos"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-videos",
+          "children": [
+            {
+              "id": "video-one"
+            }
+          ]
+        }
+      ]
+    },
+    "characters": {
+      "items": {
+        "character-one": {
+          "id": "character-one",
+          "type": "character",
+          "name": "Character One",
+          "fileId": "file-character-one",
+          "nameVariableId": "variable-name",
+          "sprites": {
+            "items": {
+              "sprite-folder-one": {
+                "id": "sprite-folder-one",
+                "type": "folder",
+                "name": "Poses"
+              },
+              "sprite-one": {
+                "id": "sprite-one",
+                "type": "image",
+                "name": "Sprite One",
+                "fileId": "file-sprite-one",
+                "width": 1,
+                "height": 1
+              }
+            },
+            "tree": [
+              {
+                "id": "sprite-folder-one",
+                "children": [
+                  {
+                    "id": "sprite-one",
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "folder-characters": {
+          "id": "folder-characters",
+          "type": "folder",
+          "name": "Characters"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-characters",
+          "children": [
+            {
+              "id": "character-one"
+            }
+          ]
+        }
+      ]
+    },
+    "transforms": {
+      "items": {
+        "transform-one": {
+          "id": "transform-one",
+          "type": "transform",
+          "name": "Transform One",
+          "x": 640,
+          "y": 360,
+          "scaleX": 1,
+          "scaleY": 1,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "rotation": 0,
+          "thumbnailFileId": "file-thumbnail-one",
+          "preview": {
+            "background": {
+              "imageId": "image-two"
+            },
+            "target": {
+              "imageId": "image-one"
+            }
+          }
+        },
+        "transform-two": {
+          "id": "transform-two",
+          "type": "transform",
+          "name": "Transform Two",
+          "x": 640,
+          "y": 720,
+          "scaleX": 1,
+          "scaleY": 1,
+          "anchorX": 0.5,
+          "anchorY": 1,
+          "rotation": 0,
+          "preview": {
+            "target": {
+              "characterId": "character-one",
+              "sprites": [
+                {
+                  "id": "sprite-group-body",
+                  "resourceId": "sprite-one"
+                }
+              ]
+            }
+          }
+        },
+        "folder-transforms": {
+          "id": "folder-transforms",
+          "type": "folder",
+          "name": "Transforms"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-transforms",
+          "children": [
+            {
+              "id": "transform-one"
+            },
+            {
+              "id": "transform-two"
+            }
+          ]
+        }
+      ]
+    },
+    "animations": {
+      "items": {
+        "animation-one": {
+          "id": "animation-one",
+          "type": "animation",
+          "name": "Animation One",
+          "preview": {
+            "background": {
+              "imageId": "image-two"
+            },
+            "incoming": {
+              "imageId": "image-one"
+            }
+          },
+          "animation": {
+            "type": "update",
+            "tween": {
+              "alpha": {
+                "keyframes": [
+                  {
+                    "duration": 100,
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          },
+          "previewMediaFileId": "animation-preview.animation-one.mp4",
+          "thumbnailMediaFileId": "animation-thumbnail.animation-one.png"
+        },
+        "folder-animations": {
+          "id": "folder-animations",
+          "type": "folder",
+          "name": "Animations"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-animations",
+          "children": [
+            {
+              "id": "animation-one"
+            }
+          ]
+        }
+      ]
+    },
+    "audioEffects": {
+      "items": {
+        "audio-effect-one": {
+          "id": "audio-effect-one",
+          "type": "audioEffect",
+          "name": "Audio Effect One",
+          "preview": {
+            "outgoing": {
+              "soundId": "sound-one"
+            },
+            "incoming": {
+              "soundId": "sound-one"
+            }
+          },
+          "audioEffect": {
+            "type": "transition",
+            "prev": {
+              "volume": {
+                "initialValue": 100,
+                "keyframes": [
+                  {
+                    "value": 0,
+                    "duration": 200,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            },
+            "next": {
+              "volume": {
+                "initialValue": 0,
+                "keyframes": [
+                  {
+                    "value": 100,
+                    "duration": 200,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "folder-audio-effects": {
+          "id": "folder-audio-effects",
+          "type": "folder",
+          "name": "Audio Effects"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-audio-effects",
+          "children": [
+            {
+              "id": "audio-effect-one"
+            }
+          ]
+        }
+      ]
+    },
+    "particles": {
+      "items": {
+        "particle-one": {
+          "id": "particle-one",
+          "type": "particle",
+          "name": "Particle One",
+          "width": 1280,
+          "height": 720,
+          "modules": {
+            "emission": {
+              "mode": "continuous",
+              "rate": 10,
+              "particleLifetime": {
+                "min": 1,
+                "max": 2
+              },
+              "source": {
+                "kind": "rect",
+                "data": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1280,
+                  "height": 20
+                }
+              }
+            },
+            "appearance": {
+              "texture": "image-one"
+            }
+          },
+          "seed": 7,
+          "preview": {
+            "background": {
+              "imageId": "image-two"
+            }
+          },
+          "previewMediaFileId": "particle-preview.particle-one.mp4",
+          "thumbnailMediaFileId": "particle-thumbnail.particle-one.png"
+        },
+        "particle-two": {
+          "id": "particle-two",
+          "type": "particle",
+          "name": "Particle Two",
+          "width": 1280,
+          "height": 720,
+          "modules": {
+            "emission": {
+              "mode": "continuous",
+              "rate": 5,
+              "particleLifetime": {
+                "min": 1,
+                "max": 2
+              },
+              "source": {
+                "kind": "point",
+                "data": {
+                  "x": 640,
+                  "y": 360
+                }
+              }
+            },
+            "appearance": {
+              "texture": {
+                "items": [
+                  {
+                    "src": "image-one"
+                  },
+                  {
+                    "src": "image-two"
+                  }
+                ]
+              }
+            }
+          },
+          "seed": 11,
+          "previewMediaFileId": "particle-preview.particle-two.mp4",
+          "thumbnailMediaFileId": "particle-thumbnail.particle-two.png"
+        },
+        "folder-particles": {
+          "id": "folder-particles",
+          "type": "folder",
+          "name": "Particles"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-particles",
+          "children": [
+            {
+              "id": "particle-one"
+            },
+            {
+              "id": "particle-two"
+            }
+          ]
+        }
+      ]
+    },
+    "spritesheets": {
+      "items": {
+        "spritesheet-one": {
+          "id": "spritesheet-one",
+          "type": "spritesheet",
+          "name": "Spritesheet One",
+          "fileId": "file-spritesheet-one",
+          "sheetWidth": 2,
+          "sheetHeight": 1,
+          "frameCount": 2,
+          "width": 1,
+          "height": 1,
+          "jsonData": {
+            "frames": {
+              "frame-0": {
+                "frame": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 1,
+                  "h": 1
+                }
+              },
+              "frame-1": {
+                "frame": {
+                  "x": 1,
+                  "y": 0,
+                  "w": 1,
+                  "h": 1
+                }
+              }
+            },
+            "meta": {
+              "image": "spritesheet-one.png",
+              "size": {
+                "w": 2,
+                "h": 1
+              }
+            }
+          },
+          "animations": {
+            "idle": {
+              "frames": [
+                0,
+                1
+              ],
+              "fps": 12,
+              "loop": true
+            }
+          },
+          "previewMediaFileId": "spritesheet-preview.spritesheet-one.mp4",
+          "thumbnailMediaFileId": "spritesheet-thumbnail.spritesheet-one.png"
+        },
+        "folder-spritesheets": {
+          "id": "folder-spritesheets",
+          "type": "folder",
+          "name": "Spritesheets"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-spritesheets",
+          "children": [
+            {
+              "id": "spritesheet-one"
+            }
+          ]
+        }
+      ]
+    },
+    "colors": {
+      "items": {
+        "color-one": {
+          "id": "color-one",
+          "type": "color",
+          "name": "Color One",
+          "hex": "#CC3333"
+        },
+        "color-two": {
+          "id": "color-two",
+          "type": "color",
+          "name": "Color Two",
+          "hex": "#3355CC"
+        },
+        "folder-colors": {
+          "id": "folder-colors",
+          "type": "folder",
+          "name": "Colors"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-colors",
+          "children": [
+            {
+              "id": "color-one"
+            },
+            {
+              "id": "color-two"
+            }
+          ]
+        }
+      ]
+    },
+    "fonts": {
+      "items": {
+        "font-one": {
+          "id": "font-one",
+          "type": "font",
+          "name": "Font One",
+          "fileId": "file-font-one",
+          "fontFamily": "Font One",
+          "previewMediaFileId": "font-preview.font-one.png",
+          "thumbnailMediaFileId": "font-thumbnail.font-one.png"
+        },
+        "folder-fonts": {
+          "id": "folder-fonts",
+          "type": "folder",
+          "name": "Fonts"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-fonts",
+          "children": [
+            {
+              "id": "font-one"
+            }
+          ]
+        }
+      ]
+    },
+    "textStyles": {
+      "items": {
+        "text-style-one": {
+          "id": "text-style-one",
+          "type": "textStyle",
+          "name": "Text Style One",
+          "fontId": [
+            "font-one"
+          ],
+          "colorId": "color-one",
+          "strokeColorId": "color-two",
+          "strokeAlpha": 1,
+          "strokeWidth": 2,
+          "fontSize": 24,
+          "lineHeight": 1.5,
+          "fontWeight": "400",
+          "shadow": {
+            "colorId": "color-two",
+            "alpha": 0.5,
+            "blur": 2,
+            "offsetX": 1,
+            "offsetY": 1
+          },
+          "previewMediaFileId": "text-style-preview.text-style-one.png",
+          "thumbnailMediaFileId": "text-style-thumbnail.text-style-one.png"
+        },
+        "folder-text-styles": {
+          "id": "folder-text-styles",
+          "type": "folder",
+          "name": "Text Styles"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-text-styles",
+          "children": [
+            {
+              "id": "text-style-one"
+            }
+          ]
+        }
+      ]
+    },
+    "layouts": {
+      "items": {
+        "layout-one": {
+          "id": "layout-one",
+          "type": "layout",
+          "name": "Layout One",
+          "layoutType": "general",
+          "thumbnailFileId": "file-thumbnail-one",
+          "preview": {
+            "backgroundImageId": "image-two",
+            "variables": {
+              "variableScore": 2
+            },
+            "dialogue": {
+              "characterId": "character-one",
+              "character": {
+                "name": "Character One",
+                "sprite": {
+                  "transformId": "transform-one",
+                  "items": [
+                    {
+                      "id": "base",
+                      "resourceId": "sprite-one"
+                    }
+                  ]
+                }
+              },
+              "content": [
+                {
+                  "text": "Hello"
+                }
+              ]
+            }
+          },
+          "elements": {
+            "items": {
+              "element-sprite": {
+                "id": "element-sprite",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "sprite",
+                "name": "Button",
+                "imageId": "image-one",
+                "hoverImageId": "image-two",
+                "clickSoundId": "sound-one",
+                "$when": "dialogue.characterId == \"character-one\"",
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "updateVariable": {
+                        "id": "update-score",
+                        "operations": [
+                          {
+                            "id": "operation-one",
+                            "variableId": "variableScore",
+                            "op": "increment",
+                            "value": 1
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "element-title": {
+                "id": "element-title",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "text",
+                "name": "Title",
+                "text": "Title",
+                "textStyleId": "text-style-one",
+                "conditionalOverrides": [
+                  {
+                    "when": {
+                      "target": "variables.variableScore",
+                      "op": "eq",
+                      "value": 3
+                    },
+                    "set": {
+                      "textStyleId": "text-style-one"
+                    }
+                  },
+                  {
+                    "when": {
+                      "target": "dialogue.characterId",
+                      "op": "eq",
+                      "value": "character-one"
+                    },
+                    "set": {
+                      "opacity": 0.5
+                    }
+                  }
+                ]
+              },
+              "element-name": {
+                "id": "element-name",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "text",
+                "name": "Name",
+                "textStyleId": "text-style-one",
+                "$when": "(variables[\"variable-name\"] == \"Ann\") && (variables.variableScore == 3)",
+                "content": [
+                  {
+                    "text": "Hello, "
+                  },
+                  {
+                    "reference": {
+                      "resourceId": "variable-name"
+                    }
+                  }
+                ]
+              },
+              "element-idle": {
+                "id": "element-idle",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "spritesheet-animation",
+                "name": "Idle",
+                "resourceId": "spritesheet-one",
+                "animationName": "idle"
+              },
+              "element-particle": {
+                "id": "element-particle",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "particle",
+                "name": "Sparkles",
+                "particleId": "particle-one"
+              },
+              "element-slider": {
+                "id": "element-slider",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "slider",
+                "name": "Volume",
+                "width": 200,
+                "height": 20,
+                "barImageId": "image-two",
+                "thumbImageId": "image-one",
+                "variableId": "variableScore",
+                "min": 0,
+                "max": 10,
+                "step": 1
+              }
+            },
+            "tree": [
+              {
+                "id": "element-sprite",
+                "children": []
+              },
+              {
+                "id": "element-title",
+                "children": []
+              },
+              {
+                "id": "element-name",
+                "children": []
+              },
+              {
+                "id": "element-idle",
+                "children": []
+              },
+              {
+                "id": "element-particle",
+                "children": []
+              },
+              {
+                "id": "element-slider",
+                "children": []
+              }
+            ]
+          }
+        },
+        "folder-layouts": {
+          "id": "folder-layouts",
+          "type": "folder",
+          "name": "Layouts"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-layouts",
+          "children": [
+            {
+              "id": "layout-one"
+            }
+          ]
+        }
+      ]
+    },
+    "variables": {
+      "items": {
+        "variableScore": {
+          "id": "variableScore",
+          "type": "variable",
+          "variableType": "number",
+          "name": "Score",
+          "scope": "context",
+          "default": 0,
+          "value": 0
+        },
+        "variable-name": {
+          "id": "variable-name",
+          "type": "variable",
+          "variableType": "string",
+          "name": "Player Name",
+          "scope": "context",
+          "default": "",
+          "value": ""
+        },
+        "variable-rank": {
+          "id": "variable-rank",
+          "type": "variable",
+          "variableType": "string",
+          "name": "Rank",
+          "computed": {
+            "branches": [
+              {
+                "when": {
+                  "gte": [
+                    {
+                      "var": "variables.variableScore"
+                    },
+                    3
+                  ]
+                },
+                "expr": "High"
+              }
+            ],
+            "default": {
+              "expr": {
+                "var": "variables[\"variable-name\"]"
+              }
+            },
+            "examples": [
+              {
+                "id": "example-high",
+                "name": "High",
+                "input": {
+                  "variables": {
+                    "variableScore": 5,
+                    "variable-name": "Ann"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "folder-variables": {
+          "id": "folder-variables",
+          "type": "folder",
+          "name": "Variables"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-variables",
+          "children": [
+            {
+              "id": "variableScore"
+            },
+            {
+              "id": "variable-name"
+            },
+            {
+              "id": "variable-rank"
+            }
+          ]
+        }
+      ]
+    },
+    "controls": {
+      "items": {
+        "control-one": {
+          "id": "control-one",
+          "type": "control",
+          "name": "Control One",
+          "thumbnailFileId": "file-thumbnail-one",
+          "keyboard": {
+            "enter": {
+              "payload": {
+                "actions": {
+                  "nextLine": {}
+                }
+              }
+            }
+          },
+          "elements": {
+            "items": {
+              "element-menu": {
+                "id": "element-menu",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "sprite",
+                "name": "Menu",
+                "imageId": "image-one",
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "pushOverlay": {
+                        "resourceId": "layout-one"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "tree": [
+              {
+                "id": "element-menu",
+                "children": []
+              }
+            ]
+          }
+        },
+        "folder-controls": {
+          "id": "folder-controls",
+          "type": "folder",
+          "name": "Controls"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-controls",
+          "children": [
+            {
+              "id": "control-one"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
