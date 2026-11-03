@@ -210,8 +210,8 @@ Picked resources lists the types in the pack's own order, the order of its
 Down, which saves at once and is not offered when the pack has one type. A type
 newly picked goes last, and so does one picked again after it was unpicked; a
 pack saved before types could be moved keeps its order until one is. The
-exported package lists its picked types in this order, so import lists and
-adds them in it too. Within a type, the page and the pack keep folders in the
+exported package lists its picked types in this order, and the import review
+lists them in it too. Within a type, the page and the pack keep folders in the
 order they were picked: a newly ticked folder goes last, and the picker shows
 each ticked folder's place, counting a folder included in another only with
 it. Resources outside a folder cannot be picked. Export stays disabled until a resource is picked, or while
