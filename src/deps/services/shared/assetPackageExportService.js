@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { createWaveformThumbnail } from "../../clients/web/fileProcessors.js";
 import { getFontFaceWeightDescriptor } from "../../../internal/fontCapabilities.js";
 import { toFontIds } from "../../../internal/fontIds.js";
+import { createLayoutThumbnailSource } from "../../../internal/layoutPreview.js";
 import { collectParticleTextureImageIds } from "../../../internal/particles.js";
 
 const renderPreviewWith = async (exportName, options) => {
@@ -21,6 +22,8 @@ const renderDefaultAnimationPreviews = (options) =>
   renderPreviewWith("renderAnimationPreviewVideos", options);
 const renderDefaultParticlePreview = (options) =>
   renderPreviewWith("renderParticlePreviewVideo", options);
+const createDefaultLayoutPreviewRenderer = () =>
+  renderPreviewWith("createLayoutPreviewRenderer");
 
 const generatePreviewStage = async ({ label, generate }) => {
   try {
@@ -348,6 +351,83 @@ const addTextStylePreviews = async ({
   }
 };
 
+// What a layout draws at the project's resolution, with the bytes of every
+// file it draws, for the layout preview renderer.
+const createLayoutRenderInput = async ({
+  layout,
+  sourceRepository,
+  readSourceFile,
+}) => {
+  const source = createLayoutThumbnailSource({
+    item: layout,
+    repositoryState: sourceRepository,
+  });
+  const assets = [];
+  for (const { fileId, fileType, fontWeightDescriptor } of source.assets) {
+    assets.push({
+      fileId,
+      bytes: await readSourceFile(fileId),
+      mimeType: fileType,
+      fontWeightDescriptor,
+    });
+  }
+  return { ...source, assets };
+};
+
+// A layout's full-size picture, which the asset store shows in place of the
+// layout's small thumbnail. A layout that cannot be drawn, such as one using a
+// file the project lost, is left without one, since the pack still carries its
+// thumbnail.
+const addLayoutPreviews = async ({
+  manifest,
+  sourceRepository,
+  fileBytesById,
+  readSourceFile,
+  createRenderer,
+}) => {
+  const files = manifest.repository?.files?.items ?? {};
+  const sourceLayouts = sourceRepository.layouts?.items ?? {};
+  const layouts = Object.entries(packageItems(manifest, "layouts")).filter(
+    ([layoutId, layout]) =>
+      layout.type === "layout" && sourceLayouts[layoutId]?.type === "layout",
+  );
+  if (layouts.length === 0) {
+    return;
+  }
+
+  const renderer = await createRenderer();
+  try {
+    for (const [layoutId, layout] of layouts) {
+      let blob;
+      try {
+        blob = await renderer.render(
+          await createLayoutRenderInput({
+            layout: sourceLayouts[layoutId],
+            sourceRepository,
+            readSourceFile,
+          }),
+        );
+      } catch (error) {
+        console.warn(
+          `[assetPackageExport] Could not render a preview for layout '${layoutId}'.`,
+          error,
+        );
+        continue;
+      }
+      await addGeneratedPreview({
+        blob,
+        files,
+        fileBytesById,
+        item: layout,
+        prefix: "layout-preview",
+        resourceId: layoutId,
+      });
+    }
+  } finally {
+    await renderer.destroy();
+  }
+};
+
 const collectAnimationImageReferences = (animation) => {
   const references = new Set();
   const collectReference = (value) => {
@@ -510,6 +590,7 @@ export const createAssetPackageExportService = ({
   renderTextStylePreview = renderDefaultTextStylePreview,
   renderAnimationPreviews = renderDefaultAnimationPreviews,
   renderParticlePreview = renderDefaultParticlePreview,
+  createLayoutPreviewRenderer = createDefaultLayoutPreviewRenderer,
 }) => ({
   async createAssetPackageBundle({ manifest } = {}) {
     const exportManifest = structuredClone(manifest);
@@ -591,6 +672,17 @@ export const createAssetPackageExportService = ({
           fileBytesById,
           readSourceFile,
           renderPreview: renderParticlePreview,
+        }),
+    });
+    await generatePreviewStage({
+      label: "layout",
+      generate: () =>
+        addLayoutPreviews({
+          manifest: exportManifest,
+          sourceRepository,
+          fileBytesById,
+          readSourceFile,
+          createRenderer: createLayoutPreviewRenderer,
         }),
     });
 

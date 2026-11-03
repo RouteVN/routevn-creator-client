@@ -134,6 +134,7 @@ const configs = [
     commandType: "layout.create",
     idField: "layoutId",
     previewFileFields: ["thumbnailFileId"],
+    largePreviewFileFields: ["previewMediaFileId", "thumbnailFileId"],
     importPriority: 130,
   },
   {

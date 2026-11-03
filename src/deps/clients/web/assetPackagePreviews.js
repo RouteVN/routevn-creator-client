@@ -11,6 +11,7 @@ import {
 } from "../../../internal/spritesheets.js";
 import { createGraphicsService } from "../../services/graphicsService.js";
 import { startCanvasVideoRecording } from "../canvasVideoRecorder.js";
+import { mapRenderStateSources } from "./editorThumbnails.js";
 
 const PREVIEW_WIDTH = 640;
 const PREVIEW_HEIGHT = 360;
@@ -29,6 +30,7 @@ const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
 const ANIMATION_THUMBNAIL_LOAD_TIMEOUT_MS = 10000;
 const ANIMATION_THUMBNAIL_PLAYBACK_GRACE_MS = 5000;
 const PARTICLE_PREVIEW_DURATION_MS = 3000;
+const LAYOUT_PREVIEWS_PER_RENDERER = 6;
 const SPRITESHEET_PREVIEW_PADDING = 16;
 const CHECKERBOARD_CELL_SIZE = 12;
 const CHECKERBOARD_LIGHT_COLOR = "#eef2f7";
@@ -1060,4 +1062,127 @@ export const renderParticlePreviewVideo = async ({
     objectUrls.forEach((url) => URL.revokeObjectURL(url));
     host.remove();
   }
+};
+
+let layoutPreviewRendererCount = 0;
+
+// Draws layouts one after another at the project's resolution, and returns
+// each as a full-size PNG. Every `render` takes what
+// `createLayoutThumbnailSource` returns, with `assets` listing each file the
+// layout draws as `{ fileId, bytes, mimeType, fontWeightDescriptor }`.
+//
+// Layouts share a graphics context, which is made again after a few, since
+// every context a page creates counts against the browser's limit until it is
+// collected and the files a context loads stay with it. A file loads under
+// the context's own key, since assets are cached by key for every renderer
+// and freeing one unloads its keys, so a key shared with the open page's
+// renderer would take that page's image or font away. A font is named by its
+// key, so keys stay valid font family names. `destroy` frees the context.
+export const createLayoutPreviewRenderer = () => {
+  let current;
+
+  const release = async () => {
+    const released = current;
+    current = undefined;
+    if (!released) {
+      return;
+    }
+    try {
+      await released.graphicsService.destroy();
+    } finally {
+      released.host.remove();
+    }
+  };
+
+  const take = async ({ width, height }) => {
+    if (
+      current &&
+      (current.width !== width ||
+        current.height !== height ||
+        current.drawings >= LAYOUT_PREVIEWS_PER_RENDERER)
+    ) {
+      await release();
+    }
+    if (!current) {
+      layoutPreviewRendererCount += 1;
+      const host = document.createElement("div");
+      const graphicsService = await createGraphicsService();
+      current = {
+        id: layoutPreviewRendererCount,
+        host,
+        graphicsService,
+        width,
+        height,
+        drawings: 0,
+        loadedKeys: new Set(),
+      };
+      await graphicsService.init({ canvas: host, width, height });
+    }
+    current.drawings += 1;
+    return current;
+  };
+
+  const render = async ({
+    width,
+    height,
+    renderState,
+    assets,
+    settleMs = 0,
+  }) => {
+    const objectUrls = [];
+    try {
+      const { id, graphicsService, loadedKeys } = await take({
+        width,
+        height,
+      });
+      const keys = new Map();
+      const assetsToLoad = {};
+      for (const asset of assets) {
+        const key = `layout-preview-${id}-${asset.fileId}`;
+        keys.set(asset.fileId, key);
+        if (loadedKeys.has(key)) {
+          continue;
+        }
+        const url = URL.createObjectURL(
+          new Blob([asset.bytes], { type: asset.mimeType }),
+        );
+        objectUrls.push(url);
+        assetsToLoad[key] = { url, type: asset.mimeType };
+        if (asset.fontWeightDescriptor !== undefined) {
+          assetsToLoad[key].fontWeightDescriptor = asset.fontWeightDescriptor;
+        }
+      }
+      // Only the files loaded here are renamed. Built-in particle textures,
+      // such as "circle", and fonts the system has keep their names.
+      const toKey = (fileId) => keys.get(fileId) ?? fileId;
+
+      // The last drawing goes first, so nothing of it carries over, such as
+      // particles already running.
+      await graphicsService.render({ elements: [], animations: [] });
+      if (Object.keys(assetsToLoad).length > 0) {
+        await graphicsService.loadAssets(assetsToLoad);
+        Object.keys(assetsToLoad).forEach((key) => loadedKeys.add(key));
+      }
+      await graphicsService.render(mapRenderStateSources(renderState, toKey));
+      await waitForPaint();
+      // Effects that move on the renderer's own clock, such as particles, run
+      // for a while first, so the image shows them going.
+      if (settleMs > 0) {
+        await wait(settleMs);
+      }
+      const imageDataUrl = await graphicsService.extractBase64();
+      if (!imageDataUrl) {
+        throw new Error("The canvas returned no preview image.");
+      }
+      return dataUrlToBlob(imageDataUrl);
+    } catch (error) {
+      // A renderer that failed may be left in any state, so it is not reused.
+      await release().catch(() => undefined);
+      throw error;
+    } finally {
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    }
+  };
+
+  return { render, destroy: release };
 };

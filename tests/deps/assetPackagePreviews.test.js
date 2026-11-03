@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const renderer = vi.hoisted(() => ({
   destroy: vi.fn(),
@@ -25,6 +25,7 @@ vi.mock("../../src/deps/clients/canvasVideoRecorder.js", () => ({
 }));
 
 import {
+  createLayoutPreviewRenderer,
   renderAnimationPreviewVideos,
   renderAnimationThumbnailVideo,
   renderFontPreviewImage,
@@ -487,5 +488,192 @@ describe("asset package preview client", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith(
       "blob:full-animation-preview",
     );
+  });
+});
+
+describe("layout preview renderer", () => {
+  const createGraphicsServiceMock = () => ({
+    destroy: vi.fn(async () => {}),
+    extractBase64: vi.fn(async () => "data:image/png;base64,cG5n"),
+    init: vi.fn(async () => {}),
+    loadAssets: vi.fn(async () => {}),
+    render: vi.fn(async () => {}),
+  });
+  const createSource = (overrides = {}) => ({
+    width: 1280,
+    height: 720,
+    renderState: {
+      elements: [
+        { id: "art", type: "sprite", src: "file-art", x: 0, y: 0 },
+        {
+          id: "title",
+          type: "text",
+          content: "Project One",
+          textStyle: { fontFamily: "file-font" },
+        },
+      ],
+      animations: [],
+    },
+    assets: [
+      {
+        fileId: "file-art",
+        bytes: new Uint8Array([1, 2, 3]),
+        mimeType: "image/png",
+      },
+      {
+        fileId: "file-font",
+        bytes: new Uint8Array([4, 5]),
+        mimeType: "font/woff2",
+        fontWeightDescriptor: "600",
+      },
+    ],
+    ...overrides,
+  });
+  const mockObjectUrls = () => {
+    let count = 0;
+    const revokeObjectURL = vi.fn();
+    Object.defineProperties(URL, {
+      createObjectURL: {
+        configurable: true,
+        value: vi.fn(() => {
+          count += 1;
+          return `blob:layout-${count}`;
+        }),
+      },
+      revokeObjectURL: { configurable: true, value: revokeObjectURL },
+    });
+    return revokeObjectURL;
+  };
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("draws a layout at its resolution and returns the full-size PNG", async () => {
+    const revokeObjectURL = mockObjectUrls();
+    const graphicsService = createGraphicsServiceMock();
+    createGraphicsService.mockReset();
+    createGraphicsService.mockResolvedValueOnce(graphicsService);
+    const renderer = createLayoutPreviewRenderer();
+
+    const blob = await renderer.render(createSource());
+
+    expect(blob.type).toBe("image/png");
+    expect(blob.size).toBe(3);
+    expect(graphicsService.init).toHaveBeenCalledWith({
+      canvas: expect.any(HTMLDivElement),
+      width: 1280,
+      height: 720,
+    });
+    // The files load under keys of the renderer's own, and the state is
+    // drawn through them, fonts included.
+    const [loadedAssets] = graphicsService.loadAssets.mock.calls[0];
+    const artKey = Object.keys(loadedAssets).find((key) =>
+      key.endsWith("-file-art"),
+    );
+    const fontKey = Object.keys(loadedAssets).find((key) =>
+      key.endsWith("-file-font"),
+    );
+    expect(artKey).toMatch(/^layout-preview-\d+-file-art$/);
+    expect(loadedAssets).toEqual({
+      [artKey]: { url: "blob:layout-1", type: "image/png" },
+      [fontKey]: {
+        url: "blob:layout-2",
+        type: "font/woff2",
+        fontWeightDescriptor: "600",
+      },
+    });
+    expect(graphicsService.render).toHaveBeenCalledTimes(2);
+    expect(graphicsService.render).toHaveBeenNthCalledWith(1, {
+      elements: [],
+      animations: [],
+    });
+    const [drawnState] = graphicsService.render.mock.calls[1];
+    expect(drawnState.animations).toEqual([]);
+    expect(drawnState.elements[0]).toMatchObject({ id: "art", src: artKey });
+    expect(drawnState.elements[1].textStyle.fontFamily).toBe(fontKey);
+    expect(graphicsService.extractBase64).toHaveBeenCalledWith();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:layout-1");
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:layout-2");
+    expect(graphicsService.destroy).not.toHaveBeenCalled();
+
+    await renderer.destroy();
+    expect(graphicsService.destroy).toHaveBeenCalledOnce();
+  });
+
+  it("waits for a layout's effects to run before drawing it", async () => {
+    mockObjectUrls();
+    const graphicsService = createGraphicsServiceMock();
+    createGraphicsService.mockReset();
+    createGraphicsService.mockResolvedValueOnce(graphicsService);
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const renderer = createLayoutPreviewRenderer();
+
+    await renderer.render(createSource({ settleMs: 30 }));
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 30);
+    await renderer.destroy();
+  });
+
+  it("shares one graphics context among layouts, and makes a new one after a few", async () => {
+    mockObjectUrls();
+    const graphicsServices = [
+      createGraphicsServiceMock(),
+      createGraphicsServiceMock(),
+    ];
+    createGraphicsService.mockReset();
+    createGraphicsService
+      .mockResolvedValueOnce(graphicsServices[0])
+      .mockResolvedValueOnce(graphicsServices[1]);
+    const renderer = createLayoutPreviewRenderer();
+
+    for (let drawing = 0; drawing < 6; drawing += 1) {
+      await renderer.render(createSource());
+    }
+
+    // Files already loaded on the context are not loaded again.
+    expect(createGraphicsService).toHaveBeenCalledOnce();
+    expect(graphicsServices[0].loadAssets).toHaveBeenCalledOnce();
+    expect(graphicsServices[0].destroy).not.toHaveBeenCalled();
+
+    await renderer.render(createSource());
+
+    expect(createGraphicsService).toHaveBeenCalledTimes(2);
+    expect(graphicsServices[0].destroy).toHaveBeenCalledOnce();
+    expect(graphicsServices[1].loadAssets).toHaveBeenCalledOnce();
+    expect(
+      Object.keys(graphicsServices[1].loadAssets.mock.calls[0][0]),
+    ).not.toEqual(Object.keys(graphicsServices[0].loadAssets.mock.calls[0][0]));
+
+    await renderer.destroy();
+    expect(graphicsServices[1].destroy).toHaveBeenCalledOnce();
+  });
+
+  it("frees a context that failed, and draws the next layout on a new one", async () => {
+    const revokeObjectURL = mockObjectUrls();
+    const graphicsServices = [
+      createGraphicsServiceMock(),
+      createGraphicsServiceMock(),
+    ];
+    graphicsServices[0].extractBase64.mockResolvedValueOnce(undefined);
+    createGraphicsService.mockReset();
+    createGraphicsService
+      .mockResolvedValueOnce(graphicsServices[0])
+      .mockResolvedValueOnce(graphicsServices[1]);
+    const renderer = createLayoutPreviewRenderer();
+
+    await expect(renderer.render(createSource())).rejects.toThrow(
+      "The canvas returned no preview image.",
+    );
+
+    expect(graphicsServices[0].destroy).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledTimes(2);
+
+    const blob = await renderer.render(createSource());
+
+    expect(blob.type).toBe("image/png");
+    expect(createGraphicsService).toHaveBeenCalledTimes(2);
+    await renderer.destroy();
+    expect(graphicsServices[1].destroy).toHaveBeenCalledOnce();
   });
 });
