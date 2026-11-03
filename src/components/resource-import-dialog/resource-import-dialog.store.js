@@ -689,6 +689,25 @@ export const selectPlanPackId = ({ state }) => state.planPackId;
 export const selectStep = ({ state }) => state.step;
 export const selectOperationId = ({ state }) => state.operationId;
 export const selectReviewValues = ({ state }) => state.reviewValues;
+
+// The dependency and link selects the selection shows, each with the value it
+// starts at.
+export const selectChoiceFieldValues = ({ state }) => {
+  if (!state.plan) return {};
+  const fieldOptions = {
+    plan: state.plan,
+    values: state.reviewValues,
+    copy: {},
+    projectTargets: state.projectTargets,
+  };
+  return Object.fromEntries(
+    [
+      ...createDependencyFields(fieldOptions),
+      ...createLinkFields(fieldOptions),
+    ].map(({ name }) => [name, state.reviewValues[name]]),
+  );
+};
+
 export const selectInstanceId = ({ state }) => state.instanceId;
 export const selectCatalogQuery = ({ state }) => state.catalog.query;
 export const selectCatalogRequestId = ({ state }) => state.catalog.requestId;

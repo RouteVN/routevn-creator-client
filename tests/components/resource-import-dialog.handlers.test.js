@@ -49,10 +49,14 @@ const createDeps = () => {
       render: vi.fn(),
       dispatchEvent: vi.fn(),
       appService: {},
+      refs: {
+        workflowForm: { setValues: vi.fn() },
+      },
       store: {
         selectStep: vi.fn(() => "selection"),
         selectPlan: vi.fn(() => plan),
         selectReviewValues: vi.fn(() => ({})),
+        selectChoiceFieldValues: vi.fn(() => ({})),
         openPackStep: vi.fn(),
         saveReviewValues: vi.fn(),
         setResourceSelected: vi.fn(),
@@ -272,6 +276,66 @@ describe("resource-import-dialog.handlers", () => {
       selected: false,
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts the dependency and link selects a selection adds at their values, keeping the ones shown", () => {
+    const { deps } = createDeps();
+    // The user changed the shown select; the store still has its start.
+    deps.store.selectChoiceFieldValues
+      .mockReturnValueOnce({ dependency_0: "font-2" })
+      .mockReturnValueOnce({
+        dependency_0: "font-2",
+        dependency_1: "",
+        link_0: "section-2",
+      });
+    const card = {
+      dataset: { resourceSourceId: "transform.source" },
+      getAttribute: vi.fn(() => "false"),
+    };
+
+    handleResourceSelectionToggle(deps, {
+      _event: { composedPath: vi.fn(() => [card]) },
+    });
+
+    expect(deps.refs.workflowForm.setValues).toHaveBeenCalledTimes(1);
+    expect(deps.refs.workflowForm.setValues).toHaveBeenCalledWith({
+      values: { dependency_1: "", link_0: "section-2" },
+    });
+    expect(deps.render.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.refs.workflowForm.setValues.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("starts the selects Select All adds at their values", () => {
+    const { deps } = createDeps();
+    deps.store.selectChoiceFieldValues
+      .mockReturnValueOnce({})
+      .mockReturnValueOnce({ dependency_0: "font-2" });
+
+    handleSelectionToggleAll(deps, {
+      _event: { currentTarget: { dataset: { allSelected: "false" } } },
+    });
+
+    expect(deps.refs.workflowForm.setValues).toHaveBeenCalledWith({
+      values: { dependency_0: "font-2" },
+    });
+  });
+
+  it("leaves the form as it is when a selection adds no select", () => {
+    const { deps } = createDeps();
+    deps.store.selectChoiceFieldValues
+      .mockReturnValueOnce({ dependency_0: "font-2" })
+      .mockReturnValueOnce({});
+    const card = {
+      dataset: { resourceSourceId: "transform.source" },
+      getAttribute: vi.fn(() => "true"),
+    };
+
+    handleResourceSelectionToggle(deps, {
+      _event: { composedPath: vi.fn(() => [card]) },
+    });
+
+    expect(deps.refs.workflowForm.setValues).not.toHaveBeenCalled();
   });
 
   it("keeps the selection page open when nothing is checked", async () => {
