@@ -140,6 +140,12 @@ export const getParticleSettleMs = (modules) => {
 // differently, so saved thumbnails are drawn again.
 export const PARTICLE_THUMBNAIL_VERSION = 1;
 
+// The image a particle's Preview draws behind it, when it is still an image.
+export const selectParticlePreviewBackgroundImage = (item, imageItems = {}) => {
+  const background = imageItems[item?.preview?.background?.imageId];
+  return background?.type === "image" ? background : undefined;
+};
+
 // What a saved particle's thumbnail shows: the particle on its saved preview
 // background, as the editor's Preview draws it, at the particle's own size,
 // and the files that draws.
@@ -151,8 +157,10 @@ export const createParticleThumbnailSource = ({ item, repositoryState }) => {
     seed: item.seed,
     modules: item.modules,
   };
-  const background = imageItems[item.preview?.background?.imageId];
-  const backgroundImage = background?.type === "image" ? background : undefined;
+  const backgroundImage = selectParticlePreviewBackgroundImage(
+    item,
+    imageItems,
+  );
   const renderState = createParticlePreviewState(
     createRenderableParticleData(effect, imageItems),
     { backgroundImage },

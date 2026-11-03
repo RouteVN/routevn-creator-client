@@ -363,7 +363,7 @@ describe("particles handlers", () => {
     expect(deps.refs.fileExplorer.clearSelection).toHaveBeenCalledOnce();
   });
 
-  it("plays the selected particle in the detail panel, but not once the page has gone", async () => {
+  it("plays the selected particle on its preview background in the detail panel, but not once the page has gone", async () => {
     const page = await createPage();
     const { deps, repositoryState } = page;
     repositoryState.images = {
@@ -402,9 +402,13 @@ describe("particles handlers", () => {
     });
     const [[renderState]] = deps.graphicsService.render.mock.calls;
     expect(renderState.elements.map(({ type }) => type)).toEqual([
-      "rect",
+      "sprite",
       "particles",
     ]);
+    expect(renderState.elements[0]).toMatchObject({
+      id: "particle-preview-bg",
+      src: "file-1",
+    });
 
     // A double click opens the editor while the texture loads. The editor
     // has the shared renderer by then, so the panel does not draw there.
