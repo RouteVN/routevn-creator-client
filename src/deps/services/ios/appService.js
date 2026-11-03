@@ -200,6 +200,9 @@ export const createAppService = (params) => {
         nextEntries.push(entry);
       }
     }
+    // Native lists folders by project id, which is random. Show projects in
+    // the order they were added, oldest first, as desktop and Android do.
+    nextEntries.sort((first, second) => first.createdAt - second.createdAt);
 
     await appDb.set("projectEntries", nextEntries);
   };
