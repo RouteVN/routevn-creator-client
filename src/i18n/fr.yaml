@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "Ajouter une étiquette"
   addTagPlaceholder: "Ajouter une étiquette"
   addText: "Ajouter"
+  cannotDeleteFolderInAssetPack: "Le paquet de ressources « {assetPackName} » utilise ce dossier ou un dossier qu’il contient. Retirez-le du paquet, puis supprimez le dossier."
   cannotDeleteFolderInUse: "Impossible de supprimer le dossier. Certains de ses éléments sont utilisés."
   cannotDeleteResourceInUse: "Impossible de supprimer la ressource, car elle est actuellement utilisée."
   cancelButton: "Annuler"

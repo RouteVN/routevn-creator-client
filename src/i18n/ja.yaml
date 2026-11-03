@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "タグを追加"
   addTagPlaceholder: "タグを追加"
   addText: "追加"
+  cannotDeleteFolderInAssetPack: "素材パッケージ「{assetPackName}」がこのフォルダー、またはその中のフォルダーを使用しています。パッケージから外してから、フォルダーを削除してください。"
   cannotDeleteFolderInUse: "フォルダーを削除できません。使用中の項目があります。"
   cannotDeleteResourceInUse: "この項目は使用中のため削除できません。"
   cancelButton: "キャンセル"

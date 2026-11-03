@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "Adicionar etiqueta"
   addTagPlaceholder: "Adicionar etiqueta"
   addText: "Adicionar"
+  cannotDeleteFolderInAssetPack: "O pacote de recursos “{assetPackName}” usa esta pasta ou uma pasta dentro dela. Remova-a do pacote e depois apague a pasta."
   cannotDeleteFolderInUse: "Não é possível apagar a pasta. Há itens em uso."
   cannotDeleteResourceInUse: "Não é possível apagar o recurso, porque está em uso."
   cancelButton: "Cancelar"

@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "Add tag"
   addTagPlaceholder: "Add tag"
   addText: "Add"
+  cannotDeleteFolderInAssetPack: "The asset pack “{assetPackName}” uses this folder or a folder in it. Remove it from the pack, then delete the folder."
   cannotDeleteFolderInUse: "Cannot delete folder. There are items in use."
   cannotDeleteResourceInUse: "Cannot delete resource, it is currently in use."
   cancelButton: "Cancel"

@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "Добавить тег"
   addTagPlaceholder: "Добавить тег"
   addText: "Добавить"
+  cannotDeleteFolderInAssetPack: "Пакет ресурсов «{assetPackName}» использует эту папку или вложенную в неё папку. Уберите её из пакета, а затем удалите папку."
   cannotDeleteFolderInUse: "Не удаётся удалить папку: некоторые элементы в ней используются."
   cannotDeleteResourceInUse: "Не удаётся удалить ресурс: он сейчас используется."
   cancelButton: "Отмена"

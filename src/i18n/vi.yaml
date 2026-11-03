@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "Thêm thẻ"
   addTagPlaceholder: "Thêm thẻ"
   addText: "Thêm"
+  cannotDeleteFolderInAssetPack: "Gói tài nguyên “{assetPackName}” đang dùng thư mục này hoặc một thư mục bên trong nó. Hãy gỡ thư mục khỏi gói rồi xóa."
   cannotDeleteFolderInUse: "Không thể xóa thư mục vì bên trong có mục đang được dùng."
   cannotDeleteResourceInUse: "Không thể xóa tài nguyên này vì đang được dùng."
   cancelButton: "Hủy"

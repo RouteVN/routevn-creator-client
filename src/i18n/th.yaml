@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "เพิ่มแท็ก"
   addTagPlaceholder: "เพิ่มแท็ก"
   addText: "เพิ่ม"
+  cannotDeleteFolderInAssetPack: "แพ็กเกจทรัพยากร “{assetPackName}” ใช้โฟลเดอร์นี้หรือโฟลเดอร์ที่อยู่ข้างใน นำออกจากแพ็กเกจก่อน แล้วจึงลบโฟลเดอร์"
   cannotDeleteFolderInUse: "ไม่สามารถลบโฟลเดอร์ได้ มีรายการที่กำลังใช้งานอยู่"
   cannotDeleteResourceInUse: "ไม่สามารถลบทรัพยากรได้เนื่องจากกำลังใช้งานอยู่"
   cancelButton: "ยกเลิก"

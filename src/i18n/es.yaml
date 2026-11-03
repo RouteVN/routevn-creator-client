@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "Añadir etiqueta"
   addTagPlaceholder: "Añadir etiqueta"
   addText: "Añadir"
+  cannotDeleteFolderInAssetPack: "El paquete de recursos “{assetPackName}” usa esta carpeta o una carpeta dentro de ella. Quítala del paquete y luego elimina la carpeta."
   cannotDeleteFolderInUse: "No se puede eliminar la carpeta. Hay elementos en uso."
   cannotDeleteResourceInUse: "No se puede eliminar el recurso porque está en uso."
   cancelButton: "Cancelar"

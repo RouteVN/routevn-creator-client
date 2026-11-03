@@ -629,6 +629,7 @@ resourcePages:
   addTagOption: "添加标签"
   addTagPlaceholder: "添加标签"
   addText: "添加"
+  cannotDeleteFolderInAssetPack: "素材包“{assetPackName}”使用了此文件夹或其中的文件夹。请先将其从素材包中移除，再删除文件夹。"
   cannotDeleteFolderInUse: "无法删除文件夹，其中有正在使用的内容。"
   cannotDeleteResourceInUse: "该项正在使用中，无法删除。"
   cancelButton: "取消"
