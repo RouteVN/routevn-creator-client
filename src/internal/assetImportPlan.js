@@ -6,8 +6,10 @@ import {
   ASSET_PACKAGE_RESOURCE_TYPES,
   getAssetPackageFileValidationKind,
   getAssetPackageStoryLinkKind,
+  isAssetPackageCharacterSprite,
   isAssetPackageFileMimeTypeAllowed,
   isAssetPackageLayoutOpenReference,
+  keepAssetPackageCharacterSprites,
   mapAssetPackageReferences,
   mapAssetPackageLinks,
   visitAssetPackageReferences,
@@ -1149,6 +1151,8 @@ export const USE_PACK_DEPENDENCY = "pack";
 // dependencies. `linkTargets` gives each link the section, scene or layout
 // the importer chose; a jump or open action through a link left unset is removed. Each
 // resource is checked again once its links are set, before it is imported.
+// A character that replaces one of the package's keeps only the sprites
+// previews pick of it that it has, from `repositoryState`.
 export const rewriteAssetImportPlanReferences = ({
   resources,
   resourceNames = {},
@@ -1156,15 +1160,26 @@ export const rewriteAssetImportPlanReferences = ({
   fileIdMap = new Map(),
   resourceIdMap = new Map(),
   linkTargets = {},
-} = {}) =>
-  resources.map((resource) => {
+  repositoryState,
+} = {}) => {
+  const replacementIds = new Set(resourceIdMap.values());
+  const isKeptCharacterSprite = (characterId, spriteId) =>
+    !replacementIds.has(characterId) ||
+    isAssetPackageCharacterSprite(
+      repositoryState?.characters?.items?.[characterId],
+      spriteId,
+    );
+  return resources.map((resource) => {
     const linkIds = new Set(resource.linkIds ?? []);
-    const data = mapAssetPackageLinks(
-      rewriteMappedReferences(resource.data, {
-        fileIdBySourceId: fileIdMap,
-        resourceIdBySourceId: resourceIdMap,
-      }),
-      (value) => (linkIds.has(value) ? linkTargets[value] : value),
+    const data = keepAssetPackageCharacterSprites(
+      mapAssetPackageLinks(
+        rewriteMappedReferences(resource.data, {
+          fileIdBySourceId: fileIdMap,
+          resourceIdBySourceId: resourceIdMap,
+        }),
+        (value) => (linkIds.has(value) ? linkTargets[value] : value),
+      ),
+      isKeptCharacterSprite,
     );
     if (resourceNames[resource.sourceId] !== undefined) {
       data.name = resourceNames[resource.sourceId].trim();
@@ -1180,3 +1195,4 @@ export const rewriteAssetImportPlanReferences = ({
     });
     return { ...resource, data };
   });
+};

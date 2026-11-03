@@ -780,6 +780,7 @@ export const createResourcePackageImportService = ({
             plan,
             dependencyReplacements,
           }),
+          repositoryState: getRepositoryState(),
         });
         emitProgress(onProgress, {
           phase: "committing",
