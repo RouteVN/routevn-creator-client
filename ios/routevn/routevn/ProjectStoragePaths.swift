@@ -11,6 +11,9 @@ final class ProjectStoragePaths {
     private let lock = NSRecursiveLock()
     private var discoveriesByRoot: [String: (modified: Date, discovery: Discovery)] = [:]
     private let identityFilename = ".routevn-project.json"
+    // Where the app's Projects list last showed each project id (folder
+    // paths). It only decides which folder keeps an id that several carry.
+    private var listedFolders: [String: String] = [:]
 
     private struct Identity: Codable {
         let version: Int
@@ -49,6 +52,18 @@ final class ProjectStoragePaths {
             throw CocoaError(.fileReadCorruptFile)
         }
         return Location(database: directory.appendingPathComponent("project.db"), directory: directory)
+    }
+
+    /// Records where the Projects list last showed each project, as
+    /// project.db paths by project id. When a Files duplicate gives several
+    /// folders the same id, the folder recorded here keeps it.
+    func setListedProjectFiles(_ files: [String: String]) {
+        lock.lock()
+        defer { lock.unlock() }
+        listedFolders = files.mapValues {
+            URL(fileURLWithPath: $0).deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL.path
+        }
+        discoveriesByRoot.removeAll()
     }
 
     func projectIds() throws -> [String] {
@@ -109,6 +124,7 @@ final class ProjectStoragePaths {
     private func discover(in root: URL) throws -> Discovery {
         let modified = try root.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
         var discovered = Discovery()
+        var claimants: [String: [URL]] = [:]
         for child in try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey], options: .skipsHiddenFiles) {
             let values = try child.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard values.isDirectory == true, values.isSymbolicLink != true else { continue }
@@ -128,12 +144,20 @@ final class ProjectStoragePaths {
             } else if child.lastPathComponent.range(of: "^[A-Za-z0-9_-]{1,128}$", options: .regularExpression) != nil {
                 id = child.lastPathComponent
             } else { continue }
-            if discovered.ambiguousIds.contains(id) { continue }
-            if discovered.locations.removeValue(forKey: id) != nil {
+            claimants[id, default: []].append(directory)
+        }
+        for (id, directories) in claimants {
+            if directories.count == 1 {
+                discovered.locations[id] = directories[0]
+            } else if let listed = listedFolders[id],
+                      let keeper = directories.first(where: { $0.path == listed }) {
+                // A Files duplicate carries the same identity. The folder the
+                // Projects list already showed keeps the id; the copies are
+                // ignored until one is imported.
+                discovered.locations[id] = keeper
+            } else {
                 discovered.ambiguousIds.insert(id)
-                continue
             }
-            discovered.locations[id] = directory
         }
         if let modified {
             discoveriesByRoot[root.path] = (modified, discovered)
@@ -172,6 +196,65 @@ final class ProjectStoragePaths {
         return directory.lastPathComponent == projectId
             && FileOps.fileType(database) == mode_t(S_IFREG)
             && databaseProjectId(database) == projectId
+    }
+
+    /**
+     The library's own URL for `directory` when it is a folder directly inside
+     the library that holds a copy of `projectId` rather than the project
+     itself: another folder carries the same id (a Files duplicate copies the
+     hidden identity file too), or the library keeps the id in another folder.
+     The URL is spelled as the library lists it, like the locations the app
+     opens. Returns nil for a folder outside the library, for the one folder
+     that holds the id, and when the picked folder cannot be matched to a
+     library folder.
+     */
+    func libraryCopy(of projectId: String, at directory: URL) throws -> URL? {
+        lock.lock()
+        defer { lock.unlock() }
+        let root = try libraryFolder().resolvingSymlinksInPath().standardizedFileURL
+        let children = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey], options: .skipsHiddenFiles)
+        guard let child = children.first(where: { Self.isSameItem($0, directory) }),
+              (try? child.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == false,
+              let folder = try? checkedDirectory(child, root: root) else {
+            return nil
+        }
+        let discovered = try discover(in: root)
+        if discovered.ambiguousIds.contains(projectId) {
+            return folder
+        }
+        // Both URLs come from listing the library, so their paths compare.
+        guard let location = discovered.locations[projectId], location.path != folder.path else {
+            return nil
+        }
+        return folder
+    }
+
+    /// Gives `directory`, a folder directly inside the library, the identity
+    /// `projectId`, replacing the one it has. A copy's identity names the
+    /// project it was copied from.
+    func replaceIdentity(projectId: String, directory: URL) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        guard projectId.range(of: "^[A-Za-z0-9_-]{1,128}$", options: .regularExpression) != nil else { throw CocoaError(.fileWriteInvalidFileName) }
+        let root = try libraryFolder().resolvingSymlinksInPath().standardizedFileURL
+        let file = try checkedDirectory(directory, root: root).appendingPathComponent(identityFilename)
+        // An atomic write replaces a link instead of following it.
+        try JSONEncoder().encode(Identity(version: 1, id: projectId)).write(to: file, options: .atomic)
+        discoveriesByRoot.removeValue(forKey: root.path)
+    }
+
+    /// Whether two URLs name the same file or folder, even when their paths
+    /// are spelled differently (a picked URL and a listed one).
+    private static func isSameItem(_ first: URL, _ second: URL) -> Bool {
+        if first.standardizedFileURL.path == second.standardizedFileURL.path {
+            return true
+        }
+        let keys: Set<URLResourceKey> = [.fileResourceIdentifierKey]
+        guard let firstId = try? first.resourceValues(forKeys: keys).fileResourceIdentifier,
+              let secondId = try? second.resourceValues(forKeys: keys).fileResourceIdentifier else {
+            return false
+        }
+        return firstId.isEqual(secondId)
     }
 
     func recordIdentity(projectId: String, directory: URL) throws {

@@ -149,7 +149,11 @@ describe("iOS project file paths", () => {
     callIOSBridge.mockResolvedValue([project]);
 
     const projects = await service.loadAllProjects();
-    expect(callIOSBridge).toHaveBeenCalledWith("listProjectFolders");
+    // The saved path tells native which folder keeps an id that a Files
+    // duplicate also carries.
+    expect(callIOSBridge).toHaveBeenCalledWith("listProjectFolders", {
+      listedProjects: [{ id: "project-1", projectFilePath: "/old/project.db" }],
+    });
     expect(projects).toHaveLength(1);
     expect(projects[0]).toMatchObject(project);
     // The display path must not become the project identity used for opening

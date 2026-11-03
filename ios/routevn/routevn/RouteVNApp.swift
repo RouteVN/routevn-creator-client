@@ -577,7 +577,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         case "getProjectStorageStatus":
             return try storage.projectStorageStatus(projectId: requiredString(payload, "projectId"))
         case "listProjectFolders":
-            return try listProjectFolders()
+            return try listProjectFolders(payload)
         case "writeProjectFile":
             return try writeProjectFile(payload)
         case "deleteProjectFile":
@@ -2027,7 +2027,23 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         }
     }
 
-    private func listProjectFolders() throws -> [[String: Any]] {
+    /**
+     Lists the projects in the library. listedProjects ([{ id, projectFilePath }])
+     says where the Projects list showed each project last time, so a folder
+     duplicated in Files does not hide the original: the listed folder keeps the
+     id and the copy is ignored until it is imported.
+     */
+    private func listProjectFolders(_ payload: [String: Any]) throws -> [[String: Any]] {
+        var listedFiles: [String: String] = [:]
+        for item in payload["listedProjects"] as? [[String: Any]] ?? [] {
+            let projectId = stringValue(item["id"])
+            let projectFilePath = stringValue(item["projectFilePath"])
+            if !projectId.isEmpty && !projectFilePath.isEmpty {
+                listedFiles[projectId] = projectFilePath
+            }
+        }
+        storage.setListedProjectFiles(listedFiles)
+
         var projects: [[String: Any]] = []
 
         for projectId in try storage.projectIds() {
@@ -2165,7 +2181,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     /**
      Imports the project folder JavaScript points at: a picked folder ({ uri })
      or a folder inside a temporary folder ({ tempFolderId, path }). fileRenames are
-     applied to the copy's files/ only.
+     applied to the copy's files/ only. copyProjectId is the id a picked folder
+     gets when it is a copy of another library folder's project.
      */
     private func importProjectFolder(_ payload: [String: Any]) throws -> [String: Any] {
         var renames: [(from: String, to: String)] = []
@@ -2185,7 +2202,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 sourceUri: access.url.absoluteString,
                 sourceName: access.url.lastPathComponent,
                 fileRenames: renames,
-                isStaged: false
+                isStaged: false,
+                copyProjectId: optionalString(payload, key: "copyProjectId")
             )
         }
         let folder = try TempFolders.resolve(
@@ -2210,14 +2228,17 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
      created empty; a picked folder must have files/. A project whose id is
      already in the library (project.db and files/ present) is never modified:
      the import is reported with alreadyImported = true and the incoming source
-     is dropped.
+     is dropped. A picked folder inside the library that holds a copy of
+     another folder's project becomes a project of its own instead (see
+     adoptLibraryCopy).
      */
     private func importAccessibleProjectFolder(
         folderURL: URL,
         sourceUri: String,
         sourceName: String,
         fileRenames: [(from: String, to: String)],
-        isStaged: Bool
+        isStaged: Bool,
+        copyProjectId: String? = nil
     ) throws -> [String: Any] {
         do {
             let projectDbURL = folderURL.appendingPathComponent("project.db")
@@ -2237,6 +2258,16 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
 
             let projectInfo = try readProjectInfo(databaseURL: projectDbURL)
             let projectId = try storage.safePathSegment(stringValue(projectInfo["id"]))
+            if !isStaged, let copyFolder = try storage.libraryCopy(of: projectId, at: folderURL) {
+                return try adoptLibraryCopy(
+                    folderURL: copyFolder,
+                    projectInfo: projectInfo,
+                    newProjectId: copyProjectId,
+                    fileRenames: fileRenames,
+                    sourceUri: sourceUri,
+                    sourceName: sourceName
+                )
+            }
             let projectDbPath = storage.projectDatabasePath(projectId: projectId)
             // Where the library already keeps this project, whatever its folder
             // is called (an identity file maps the id to it), or the legacy
@@ -2350,6 +2381,62 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             projectInfo: projectInfo,
             databaseURL: directory.appendingPathComponent("project.db")
         )
+    }
+
+    /**
+     Makes a picked folder inside the library that holds a copy of another
+     folder's project a project of its own, where it is. A Files duplicate
+     copies the hidden identity file too, so two folders claim one id and
+     neither can be found. Nothing is copied: the requested renames are applied
+     to this folder's files/, which is now the library copy, and the folder
+     gets newProjectId in its identity file and its project.db. The other
+     folder keeps the original id.
+
+     The identity file is written first. If the database step then fails or
+     the app is stopped, this folder no longer claims the original id, so the
+     other folder is found again, and importing this folder again finishes the
+     job under another new id.
+     */
+    private func adoptLibraryCopy(
+        folderURL: URL,
+        projectInfo: [String: Any],
+        newProjectId: String?,
+        fileRenames: [(from: String, to: String)],
+        sourceUri: String,
+        sourceName: String
+    ) throws -> [String: Any] {
+        guard let newProjectId, !newProjectId.isEmpty else {
+            throw CodedError("importFailed", "copyProjectId is required to import a copy of a library project.")
+        }
+        let projectId = try storage.safePathSegment(newProjectId)
+        let sourceProjectId = try storage.safePathSegment(stringValue(projectInfo["id"]))
+        let databaseURL = folderURL.appendingPathComponent("project.db")
+        // A connection opened while this folder held the original id must not
+        // be reused for the new one.
+        if let database = sqliteDatabases.removeValue(forKey: databaseURL.path) {
+            sqlite3_close(database)
+        }
+        try FileOps.rename(fileRenames, in: folderURL.appendingPathComponent("files", isDirectory: true))
+        try storage.replaceProjectIdentity(projectId: projectId, directory: folderURL)
+
+        var copyInfo = projectInfo
+        copyInfo["id"] = projectId
+        try ProjectIdentityRewrite.rewrite(
+            databaseURL: databaseURL,
+            projectInfo: copyInfo,
+            from: sourceProjectId,
+            to: projectId
+        )
+
+        var result = projectEntry(
+            projectId: projectId,
+            projectInfo: copyInfo,
+            databaseURL: try storage.databaseURL(dbPath: storage.projectDatabasePath(projectId: projectId))
+        )
+        result["sourceUri"] = sourceUri
+        result["sourceName"] = sourceName
+        result["alreadyImported"] = false
+        return result
     }
 
     /**
@@ -2977,6 +3064,18 @@ final class RouteVNNativeStorage {
 
     func isUnfinishedImport(projectId: String, directory: URL, databaseProjectId: (URL) -> String?) -> Bool {
         projectStoragePaths.isUnfinishedImport(projectId: projectId, directory: directory, databaseProjectId: databaseProjectId)
+    }
+
+    func libraryCopy(of projectId: String, at directory: URL) throws -> URL? {
+        try projectStoragePaths.libraryCopy(of: safePathSegment(projectId), at: directory)
+    }
+
+    func setListedProjectFiles(_ files: [String: String]) {
+        projectStoragePaths.setListedProjectFiles(files)
+    }
+
+    func replaceProjectIdentity(projectId: String, directory: URL) throws {
+        try projectStoragePaths.replaceIdentity(projectId: safePathSegment(projectId), directory: directory)
     }
 
     func createProjectDirectory(projectId: String, projectName: String) throws -> URL {

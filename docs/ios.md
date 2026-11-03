@@ -345,10 +345,15 @@ creation rechecks under file coordination and never merges into an existing one.
 `ProjectStoragePaths.swift` resolves databases and assets only within the chosen
 library. `.routevn-project.json` (`version: 1`, `id`) preserves project identity
 across folder renames; the database still owns project information. Existing
-id-named folders remain supported. Malformed identities and duplicate IDs are
-excluded without blocking unrelated projects; ambiguous IDs cannot resolve to
-an arbitrary copy. Removing duplicate copies restores discovery. Failure to read
-the library itself remains an error.
+id-named folders remain supported. Malformed identities are excluded without
+blocking unrelated projects. A folder duplicated in Files carries the same ID.
+When the Projects list showed one of those folders before (the JS sync sends
+each listed `projectFilePath` with `listProjectFolders`), that folder keeps the
+ID and the copies are ignored, untouched, until one is imported: importing a
+copy gives it its own ID (see `docs/project-import.md`). Otherwise the ID is
+ambiguous and never resolves to an arbitrary copy; neither folder is listed
+until a copy is imported or removed. Failure to read the library itself remains
+an error.
 
 Old app-private projects are left untouched and are not discovered or migrated.
 On iOS, Remove hides a project from the list without deleting its folder;
@@ -620,8 +625,10 @@ the host file coordination service:
 ```bash
 swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift tests/ios/projectFolderSetupNative.swift -o /tmp/routevn-folder-native-tests
 /tmp/routevn-folder-native-tests
-swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift ios/routevn/routevn/ProjectStoragePaths.swift tests/ios/projectStoragePathsNative.swift -o /tmp/routevn-storage-native-tests
+swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift ios/routevn/routevn/ProjectStoragePaths.swift ios/routevn/routevn/TempFolders.swift ios/routevn/routevn/CodedError.swift tests/ios/projectStoragePathsNative.swift -o /tmp/routevn-storage-native-tests
 /tmp/routevn-storage-native-tests
+swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectIdentityRewrite.swift tests/ios/projectIdentityRewriteNative.swift -lsqlite3 -o /tmp/routevn-identity-rewrite-tests
+/tmp/routevn-identity-rewrite-tests
 swiftc -module-cache-path /tmp/routevn-export-swift-cache ios/routevn/routevn/SaveFileDestinations.swift tests/ios/saveFileDestinationsNative.swift -o /tmp/routevn-save-destinations-tests
 /tmp/routevn-save-destinations-tests
 swiftc -module-cache-path /tmp/routevn-device-id-swift-cache ios/routevn/routevn/NativeDeviceIdReader.swift tests/ios/nativeDeviceIdReaderNative.swift -lsqlite3 -o /tmp/routevn-device-id-tests
@@ -634,7 +641,9 @@ Use a physical device for these final checks:
 
 - Select/reconnect a library, cancel a replacement selection, create a project,
   restart, and rename its folder in Files. Removing the list entry must persist
-  without deleting files; explicit re-import restores it.
+  without deleting files; explicit re-import restores it. Duplicate a project
+  folder in Files: the original must stay listed. Import the copy: both
+  projects must be listed and open.
 - Export into a chosen folder, cancel, and repeat an export with the same name.
   Existing files must survive and the reported ZIP must open.
 - Play, seek, stop, switch tracks, close previews, and background/resume with the

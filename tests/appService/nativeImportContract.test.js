@@ -48,6 +48,14 @@ describe("native import contract", () => {
     expect(android).toContain(`window.${androidCallback}`);
     expect(ios).toContain(`"${iosCallback}"`);
 
+    // A picked iOS folder that copies another library folder's project is
+    // imported under the id JavaScript sends.
+    const iosService = await readRepoFile(
+      "src/deps/services/ios/appService.js",
+    );
+    expect(iosService).toContain("copyProjectId: generateId()");
+    expect(ios).toContain('key: "copyProjectId"');
+
     expect(host).toContain("tempFolderId");
     expect(android).toContain('payload.optString("tempFolderId")');
     expect(android).toContain('event.put("tempFolderId"');

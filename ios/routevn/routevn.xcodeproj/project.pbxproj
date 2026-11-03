@@ -15,6 +15,7 @@
 		2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000017 /* ProjectStoragePaths.swift */; };
 		2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000018 /* SaveFileDestinations.swift */; };
 		2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000019 /* ProjectDatabaseReader.swift */; };
+		2A00000100000000000000C0 /* ProjectIdentityRewrite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A00000100000000000000C1 /* ProjectIdentityRewrite.swift */; };
 		2A0000010000000000000009 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001A /* PrivacyInfo.xcprivacy */; };
 		2A000001000000000000000B /* AppDeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001C /* AppDeviceInfo.swift */; };
 		2A000001000000000000000C /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2A00000100000000000000A1 /* Sentry */; };
@@ -40,6 +41,7 @@
 		2A0000010000000000000017 /* ProjectStoragePaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStoragePaths.swift; sourceTree = "<group>"; };
 		2A0000010000000000000018 /* SaveFileDestinations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveFileDestinations.swift; sourceTree = "<group>"; };
 		2A0000010000000000000019 /* ProjectDatabaseReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDatabaseReader.swift; sourceTree = "<group>"; };
+		2A00000100000000000000C1 /* ProjectIdentityRewrite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectIdentityRewrite.swift; sourceTree = "<group>"; };
 		2A000001000000000000001A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2A000001000000000000001C /* AppDeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDeviceInfo.swift; sourceTree = "<group>"; };
 		2A000001000000000000001D /* NativeCrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCrashReporting.swift; sourceTree = "<group>"; };
@@ -84,6 +86,7 @@
 				2A0000010000000000000017 /* ProjectStoragePaths.swift */,
 				2A0000010000000000000018 /* SaveFileDestinations.swift */,
 				2A0000010000000000000019 /* ProjectDatabaseReader.swift */,
+				2A00000100000000000000C1 /* ProjectIdentityRewrite.swift */,
 				2A0000010000000000000021 /* TempFolders.swift */,
 				2A0000010000000000000022 /* ImportArchive.swift */,
 				2A0000010000000000000023 /* FileDownloader.swift */,
@@ -218,6 +221,7 @@
 				2A0000010000000000000006 /* ProjectStoragePaths.swift in Sources */,
 				2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */,
 				2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */,
+				2A00000100000000000000C0 /* ProjectIdentityRewrite.swift in Sources */,
 				2A0000010000000000000024 /* TempFolders.swift in Sources */,
 				2A0000010000000000000025 /* ImportArchive.swift in Sources */,
 				2A0000010000000000000026 /* FileDownloader.swift in Sources */,
