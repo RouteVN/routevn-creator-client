@@ -1,0 +1,409 @@
+{
+  "schema": "routevn.import-pack.v2",
+  "package": {
+    "kind": "routevn.creator.asset-package"
+  },
+  "repository": {
+    "files": {
+      "items": {
+        "file-image-one": {
+          "id": "file-image-one",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-image-one"
+          },
+          "size": 69,
+          "sha256": "d0d19ebdbcc1fbacfb1eff0f2cfbc48868b9b831d0672ce63ce93dee9706fb2d"
+        }
+      }
+    },
+    "layouts": {
+      "items": {
+        "layout-title": {
+          "id": "layout-title",
+          "type": "layout",
+          "name": "Title Menu",
+          "layoutType": "general",
+          "elements": {
+            "items": {
+              "element-start": {
+                "id": "element-start",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "rect",
+                "name": "Start",
+                "width": 100,
+                "height": 40,
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "sectionTransition": {
+                        "sectionId": "link.section-start"
+                      }
+                    }
+                  }
+                }
+              },
+              "element-ending": {
+                "id": "element-ending",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "rect",
+                "name": "Ending",
+                "width": 100,
+                "height": 40,
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "sectionTransition": {
+                        "sceneId": "link.scene-ending"
+                      }
+                    }
+                  }
+                }
+              },
+              "element-options": {
+                "id": "element-options",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "rect",
+                "name": "Options",
+                "width": 100,
+                "height": 40,
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "pushOverlay": {
+                        "resourceId": "link.layout-options"
+                      }
+                    }
+                  }
+                }
+              },
+              "element-quit": {
+                "id": "element-quit",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "rect",
+                "name": "Quit",
+                "width": 100,
+                "height": 40,
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "showConfirmDialog": {
+                        "resourceId": "link.layout-confirm",
+                        "confirmActions": {
+                          "resetStoryAtSection": {
+                            "sectionId": "link.section-end"
+                          }
+                        },
+                        "cancelActions": {}
+                      }
+                    }
+                  }
+                }
+              },
+              "element-history": {
+                "id": "element-history",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "rect",
+                "name": "History",
+                "width": 100,
+                "height": 40,
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "pushOverlay": {
+                        "resourceId": "layout-history"
+                      }
+                    }
+                  }
+                }
+              },
+              "element-hud": {
+                "id": "element-hud",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "fragment-ref",
+                "name": "Hud",
+                "fragmentLayoutId": "layout-hud"
+              },
+              "element-hud-open": {
+                "id": "element-hud-open",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "rect",
+                "name": "Hud Open",
+                "width": 100,
+                "height": 40,
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "pushOverlay": {
+                        "resourceId": "layout-hud"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "tree": [
+              {
+                "id": "element-start",
+                "children": []
+              },
+              {
+                "id": "element-ending",
+                "children": []
+              },
+              {
+                "id": "element-options",
+                "children": []
+              },
+              {
+                "id": "element-quit",
+                "children": []
+              },
+              {
+                "id": "element-history",
+                "children": []
+              },
+              {
+                "id": "element-hud",
+                "children": []
+              },
+              {
+                "id": "element-hud-open",
+                "children": []
+              }
+            ]
+          }
+        },
+        "layout-history": {
+          "id": "layout-history",
+          "type": "layout",
+          "name": "History Menu",
+          "layoutType": "general",
+          "elements": {
+            "items": {
+              "element-back": {
+                "id": "element-back",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "rect",
+                "name": "Back",
+                "width": 100,
+                "height": 40,
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "popOverlay": {},
+                      "resetStoryAtSection": {
+                        "sectionId": "link.section-start"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "tree": [
+              {
+                "id": "element-back",
+                "children": []
+              }
+            ]
+          }
+        },
+        "folder-menus": {
+          "id": "folder-menus",
+          "type": "folder",
+          "name": "Menus"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-menus",
+          "children": [
+            {
+              "id": "layout-title"
+            },
+            {
+              "id": "layout-history"
+            }
+          ]
+        }
+      ]
+    },
+    "controls": {
+      "items": {
+        "control-one": {
+          "id": "control-one",
+          "type": "control",
+          "name": "Control One",
+          "keyboard": {
+            "esc": {
+              "payload": {
+                "actions": {
+                  "pushOverlay": {
+                    "resourceId": "link.layout-options"
+                  }
+                }
+              }
+            }
+          },
+          "elements": {
+            "items": {},
+            "tree": []
+          }
+        },
+        "folder-controls": {
+          "id": "folder-controls",
+          "type": "folder",
+          "name": "Controls"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-controls",
+          "children": [
+            {
+              "id": "control-one"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "images": {
+      "items": {
+        "image-one": {
+          "id": "image-one",
+          "type": "image",
+          "name": "Image One",
+          "fileId": "file-image-one",
+          "width": 1,
+          "height": 1
+        }
+      }
+    },
+    "layouts": {
+      "items": {
+        "layout-hud": {
+          "id": "layout-hud",
+          "type": "layout",
+          "name": "Hud Fragment",
+          "layoutType": "general",
+          "isFragment": true,
+          "elements": {
+            "items": {
+              "element-restart": {
+                "id": "element-restart",
+                "x": 0,
+                "y": 0,
+                "anchorX": 0,
+                "anchorY": 0,
+                "scaleX": 1,
+                "scaleY": 1,
+                "rotation": 0,
+                "type": "sprite",
+                "name": "Restart",
+                "imageId": "image-one",
+                "click": {
+                  "payload": {
+                    "actions": {
+                      "resetStoryAtSection": {
+                        "sectionId": "link.section-other"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "tree": [
+              {
+                "id": "element-restart",
+                "children": []
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "links": {
+    "items": {
+      "link.section-start": {
+        "kind": "section",
+        "name": "Section One",
+        "sceneName": "Scene One"
+      },
+      "link.scene-ending": {
+        "kind": "scene",
+        "name": "Scene Two"
+      },
+      "link.layout-options": {
+        "kind": "layout",
+        "name": "Options Menu",
+        "layoutType": "general"
+      },
+      "link.layout-confirm": {
+        "kind": "layout",
+        "name": "Confirm Quit",
+        "layoutType": "confirmDialog"
+      },
+      "link.section-end": {
+        "kind": "section",
+        "name": "Section Three",
+        "sceneName": "Scene Two"
+      },
+      "link.section-other": {
+        "kind": "section",
+        "name": "Section Two",
+        "sceneName": "Scene One"
+      }
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import { DIALOGUE_CHARACTER_ID_CONDITION_TARGET } from "./layoutConditions.js";
+
 const configs = [
   {
     resourceType: "images",
@@ -263,14 +265,27 @@ const ASSET_PACKAGE_FILE_MIME_TYPES_BY_KIND = Object.freeze({
   json: new Set(["application/json", "text/json"]),
   video: new Set(["video/mp4"]),
 });
-const OPAQUE_REFERENCE_VALUE_FIELDS = new Set([
-  "enumValues",
-  "examples",
-  "value",
-]);
+const OPAQUE_REFERENCE_VALUE_FIELDS = new Set(["enumValues", "value"]);
 
-const isOpaqueReferenceValue = (fieldName, value) => {
+// A character's sprites, picked as `{ id, resourceId }` per sprite group: a
+// transform preview's `sprites`, and the avatar `sprite.items` of a layout
+// preview's dialogue. The ids are the character's own, which it keeps when
+// imported, so they are not references of the project.
+const isCharacterSpritePicks = (fieldName, value, holderFieldName) =>
+  Array.isArray(value) &&
+  (fieldName === "sprites" ||
+    (fieldName === "items" && holderFieldName === "sprite"));
+
+// `holderFieldName` is the field that holds the object `fieldName` is in.
+const isOpaqueReferenceValue = (fieldName, value, holderFieldName) => {
   if (OPAQUE_REFERENCE_VALUE_FIELDS.has(fieldName)) {
+    return true;
+  }
+  // A computed variable's example values for runtime fields.
+  if (fieldName === "runtime" && holderFieldName === "input") {
+    return true;
+  }
+  if (isCharacterSpritePicks(fieldName, value, holderFieldName)) {
     return true;
   }
   if (fieldName !== "default") {
@@ -279,8 +294,37 @@ const isOpaqueReferenceValue = (fieldName, value) => {
   return !value || typeof value !== "object" || !Object.hasOwn(value, "expr");
 };
 
+// Values by variable id, which are only data: a computed variable's example
+// inputs (`examples[].input.variables`) and a layout preview's variable
+// values (`preview.variables`). Each key names a variable.
+const isVariableValueMap = (fieldName, holderFieldName) =>
+  fieldName === "variables" &&
+  (holderFieldName === "input" || holderFieldName === "preview");
+
+// Fields that name a resource only in some objects: the character a
+// condition on the speaking character compares with, and each image a
+// particle texture picks between (`texture: { items: [{ src }] }`). Like a
+// `texture`, what they name need not exist.
+const isOptionalResourceField = ({
+  holder,
+  fieldName,
+  holderFieldName,
+  holderParentFieldName,
+}) =>
+  (fieldName === "value" &&
+    holder.target === DIALOGUE_CHARACTER_ID_CONDITION_TARGET) ||
+  (fieldName === "src" &&
+    holderFieldName === "items" &&
+    holderParentFieldName === "texture");
+
+const VARIABLE_PATH_ID = "[A-Za-z0-9_$]+";
+
 const parseVariableReferencePath = (value) => {
-  const dotMatch = value.match(/^variables\.([A-Za-z_$][A-Za-z0-9_$]*)(.*)$/);
+  // An id that is not a name, such as one that starts with a digit, may
+  // follow the dot too.
+  const dotMatch = value.match(
+    new RegExp(`^variables\\.(${VARIABLE_PATH_ID})(.*)$`),
+  );
   if (dotMatch) {
     return {
       resourceId: dotMatch[1],
@@ -305,28 +349,103 @@ const parseVariableReferencePath = (value) => {
   }
 };
 
-const getAssetPackageReference = (fieldName, value) => {
-  if (value === "") {
+const QUOTED_TEXT = String.raw`"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'`;
+// In an element's `$when` expression: quoted text, which names nothing; a
+// variable path; or the speaking character compared with a quoted id.
+const WHEN_REFERENCE_PATTERN = new RegExp(
+  String.raw`${QUOTED_TEXT}|variables(?:\.(${VARIABLE_PATH_ID})|\[\s*(${QUOTED_TEXT})\s*\])|dialogue\.characterId\s*[!=]==?\s*(${QUOTED_TEXT})`,
+  "g",
+);
+
+const parseQuotedText = (text) => {
+  if (text.startsWith("'")) {
+    return text.slice(1, -1);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
     return undefined;
   }
+};
+
+// The variables and characters an element's `$when` expression names. Each
+// is the part of the expression from `start` to `end`, which `format`
+// writes for another id. They need not exist, as the expression is not
+// checked.
+const findWhenReferences = (expression) => {
+  const references = [];
+  for (const match of expression.matchAll(WHEN_REFERENCE_PATTERN)) {
+    const [text, dotId, quotedId, quotedCharacterId] = match;
+    const end = match.index + text.length;
+    if (
+      text.startsWith('"') ||
+      text.startsWith("'") ||
+      /[\w$.]/.test(expression[match.index - 1] ?? "")
+    ) {
+      continue;
+    }
+    const reference =
+      quotedCharacterId === undefined
+        ? {
+            resourceId: dotId ?? parseQuotedText(quotedId),
+            start: match.index,
+            format: (resourceId) => `variables[${JSON.stringify(resourceId)}]`,
+          }
+        : {
+            resourceId: parseQuotedText(quotedCharacterId),
+            start: end - quotedCharacterId.length,
+            format: (resourceId) => JSON.stringify(resourceId),
+          };
+    if (reference.resourceId) {
+      reference.end = end;
+      reference.kind = "resource";
+      reference.required = false;
+      references.push(reference);
+    }
+  }
+  return references;
+};
+
+// The references a string field holds, each the part of the string from
+// `start` to `end`, which `format` writes for another id.
+const getAssetPackageReferences = (fieldName, value) => {
+  if (value === "") {
+    return [];
+  }
+  if (fieldName === "$when") {
+    return findWhenReferences(value);
+  }
+  const whole = (reference) => [{ ...reference, start: 0, end: value.length }];
   if (fieldName === "var" || fieldName === "target") {
     const variableReference = parseVariableReferencePath(value);
     if (variableReference) {
-      return { kind: "resource", required: true, ...variableReference };
+      return whole({ kind: "resource", required: true, ...variableReference });
     }
     if (fieldName === "var") {
-      return undefined;
+      return [];
     }
   }
   const kind = getAssetPackageReferenceKind(fieldName);
   return kind
-    ? {
+    ? whole({
         kind,
         required: !["target", "texture", "textures"].includes(fieldName),
         resourceId: value,
         format: (resourceId) => resourceId,
-      }
-    : undefined;
+      })
+    : [];
+};
+
+const replaceReferences = (value, references, mapReference) => {
+  let mapped = "";
+  let end = 0;
+  for (const reference of references) {
+    mapped +=
+      value.slice(end, reference.start) +
+      reference.format(mapReference(reference));
+    end = reference.end;
+  }
+  return mapped + value.slice(end);
 };
 
 export const getAssetPackageReferenceKind = (fieldName) => {
@@ -400,8 +519,7 @@ export const visitAssetPackageReferences = (
     if (typeof value !== "string") {
       return;
     }
-    const reference = getAssetPackageReference(fieldName, value);
-    if (reference) {
+    for (const reference of getAssetPackageReferences(fieldName, value)) {
       visitor({
         fieldName,
         parentFieldName,
@@ -412,45 +530,158 @@ export const visitAssetPackageReferences = (
     }
     return;
   }
+  if (isVariableValueMap(fieldName, parentFieldName)) {
+    for (const variableId of Object.keys(value)) {
+      visitor({
+        fieldName,
+        parentFieldName,
+        kind: "resource",
+        required: false,
+        value: variableId,
+      });
+    }
+    return;
+  }
   for (const [childFieldName, item] of Object.entries(value)) {
-    if (isOpaqueReferenceValue(childFieldName, item)) {
+    if (
+      typeof item === "string" &&
+      item !== "" &&
+      isOptionalResourceField({
+        holder: value,
+        fieldName: childFieldName,
+        holderFieldName: fieldName,
+        holderParentFieldName: parentFieldName,
+      })
+    ) {
+      visitor({
+        fieldName: childFieldName,
+        parentFieldName: fieldName,
+        kind: "resource",
+        required: false,
+        value: item,
+      });
+      continue;
+    }
+    if (isOpaqueReferenceValue(childFieldName, item, fieldName)) {
       continue;
     }
     visitAssetPackageReferences(item, visitor, childFieldName, fieldName);
   }
 };
 
-export const mapAssetPackageReferences = (value, mapper, fieldName) => {
+export const mapAssetPackageReferences = (
+  value,
+  mapper,
+  fieldName,
+  parentFieldName,
+) => {
   if (Array.isArray(value)) {
     return value.map((item) =>
-      mapAssetPackageReferences(item, mapper, fieldName),
+      mapAssetPackageReferences(item, mapper, fieldName, parentFieldName),
     );
   }
   if (!value || typeof value !== "object") {
     if (typeof value !== "string") {
       return value;
     }
-    const reference = getAssetPackageReference(fieldName, value);
-    if (!reference) {
-      return value;
-    }
-    return reference.format(
-      mapper({
-        fieldName,
-        kind: reference.kind,
-        required: reference.required,
-        value: reference.resourceId,
-      }),
+    return replaceReferences(
+      value,
+      getAssetPackageReferences(fieldName, value),
+      (reference) =>
+        mapper({
+          fieldName,
+          kind: reference.kind,
+          required: reference.required,
+          value: reference.resourceId,
+        }),
+    );
+  }
+  if (isVariableValueMap(fieldName, parentFieldName)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([variableId, item]) => [
+        mapper({
+          fieldName,
+          kind: "resource",
+          required: false,
+          value: variableId,
+        }),
+        item,
+      ]),
     );
   }
   return Object.fromEntries(
-    Object.entries(value).map(([childFieldName, item]) => [
-      childFieldName,
-      isOpaqueReferenceValue(childFieldName, item)
-        ? item
-        : mapAssetPackageReferences(item, mapper, childFieldName),
-    ]),
+    Object.entries(value).map(([childFieldName, item]) => {
+      if (
+        typeof item === "string" &&
+        item !== "" &&
+        isOptionalResourceField({
+          holder: value,
+          fieldName: childFieldName,
+          holderFieldName: fieldName,
+          holderParentFieldName: parentFieldName,
+        })
+      ) {
+        return [
+          childFieldName,
+          mapper({
+            fieldName: childFieldName,
+            kind: "resource",
+            required: false,
+            value: item,
+          }),
+        ];
+      }
+      return [
+        childFieldName,
+        isOpaqueReferenceValue(childFieldName, item, fieldName)
+          ? item
+          : mapAssetPackageReferences(item, mapper, childFieldName, fieldName),
+      ];
+    }),
   );
+};
+
+// Whether `character` has the sprite `spriteId`, other than a folder.
+export const isAssetPackageCharacterSprite = (character, spriteId) => {
+  const sprite = character?.sprites?.items?.[spriteId];
+  return (
+    character?.type === "character" &&
+    sprite !== undefined &&
+    sprite.type !== "folder"
+  );
+};
+
+// Keeps the sprites a resource picks of a character that
+// `hasSprite(characterId, spriteId)` accepts: those of a transform
+// preview's character, and the avatar of the speaker a layout preview's
+// dialogue shows. A transform preview left with none shows no character, as
+// a character needs one.
+export const keepAssetPackageCharacterSprites = (item, hasSprite) => {
+  const target = item.preview?.target;
+  const dialogue = item.preview?.dialogue;
+  const keepSprites = (characterId, sprites) =>
+    sprites.filter(({ resourceId }) => hasSprite(characterId, resourceId));
+  const hasTargetSprites = Array.isArray(target?.sprites);
+  const hasAvatarSprites = Array.isArray(dialogue?.character?.sprite?.items);
+  if (!hasTargetSprites && !hasAvatarSprites) {
+    return item;
+  }
+  const data = structuredClone(item);
+  if (hasTargetSprites) {
+    const sprites = keepSprites(target.characterId, target.sprites);
+    if (sprites.length > 0) {
+      data.preview.target.sprites = sprites;
+    } else {
+      delete data.preview.target;
+    }
+  }
+  if (hasAvatarSprites) {
+    data.preview.dialogue.character.sprite.items = keepSprites(
+      dialogue.characterId,
+      dialogue.character.sprite.items,
+    );
+  }
+  return data;
 };
 
 // Links: a pack's jumps into the story (to a section or a scene), and its
@@ -501,7 +732,10 @@ const mapLinksInner = (value, resolve, fieldName, parentFieldName, isRoot) => {
   }
   const mapped = {};
   for (const [childFieldName, item] of Object.entries(value)) {
-    if (isOpaqueReferenceValue(childFieldName, item)) {
+    if (
+      isOpaqueReferenceValue(childFieldName, item, fieldName) ||
+      isVariableValueMap(childFieldName, fieldName)
+    ) {
       mapped[childFieldName] = item;
       continue;
     }

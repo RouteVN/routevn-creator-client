@@ -5,7 +5,9 @@ import {
   ASSET_PACKAGE_RESOURCE_CONFIG_BY_TYPE,
   ASSET_PACKAGE_RESOURCE_TYPES,
   getAssetPackageStoryLinkKind,
+  isAssetPackageCharacterSprite,
   isAssetPackageLayoutOpenReference,
+  keepAssetPackageCharacterSprites,
   mapAssetPackageLinks,
   visitAssetPackageReferences,
 } from "./assetPackageResources.js";
@@ -452,11 +454,22 @@ export const createAssetPackageContents = ({
     getAssetPackageStoryLinkKind(fieldName) || links.has(value)
       ? toLinkId(value)
       : value;
+  // A layout preview's avatar may be any character's sprite. Only the
+  // speaker's goes with the package, as the speaker is the character it
+  // names and carries.
+  const isNamedCharacterSprite = (characterId, spriteId) =>
+    isAssetPackageCharacterSprite(
+      resourceDataByType.characters?.items?.[characterId],
+      spriteId,
+    );
   for (const collection of collections) {
     for (const [itemId, item] of Object.entries(collection.items)) {
       if (item.type === "folder") continue;
       collection.items[itemId] = mapAssetPackageLinks(
-        dropSectionJumpScenes(item),
+        keepAssetPackageCharacterSprites(
+          dropSectionJumpScenes(item),
+          isNamedCharacterSprite,
+        ),
         resolveLink,
       );
     }
