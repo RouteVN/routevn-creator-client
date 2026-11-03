@@ -509,6 +509,15 @@ export const handleSelectionBack = (deps) => {
   render();
 };
 
+// The form reports its values only on Import, so each dependency and link
+// choice is kept as it is made: after Back, even on to the creator's page and
+// back, the pack's Import reopens the selection with it.
+export const handleFormChange = (deps, payload) => {
+  const { store } = deps;
+  const { name, value } = payload._event.detail;
+  store.saveReviewValues({ values: { [name]: value } });
+};
+
 export const handleFormAction = async (deps, payload) => {
   const { store, render } = deps;
   const { actionId, values, valid } = payload._event.detail;
