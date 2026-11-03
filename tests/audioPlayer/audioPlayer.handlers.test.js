@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { handleBeforeMount } from "../../src/components/audioPlayer/audioPlayer.handlers.js";
+import {
+  handleAfterMount,
+  handleBeforeMount,
+} from "../../src/components/audioPlayer/audioPlayer.handlers.js";
 
 const originalWindow = globalThis.window;
 const originalCustomEvent = globalThis.CustomEvent;
@@ -178,5 +181,19 @@ describe("audio player handlers", () => {
         ...args,
       );
     }
+  });
+
+  it("plays a src as it is, without reading a project file", async () => {
+    const deps = createDeps();
+    deps.props = { src: "blob:sound", autoPlay: true };
+    deps.projectService = { getFileContent: vi.fn() };
+    deps.audioService.loadAudio = vi.fn(async () => ({ duration: 2 }));
+    deps.audioService.play = vi.fn();
+
+    await handleAfterMount(deps);
+
+    expect(deps.projectService.getFileContent).not.toHaveBeenCalled();
+    expect(deps.audioService.loadAudio).toHaveBeenCalledWith("blob:sound");
+    expect(deps.audioService.play).toHaveBeenCalledOnce();
   });
 });

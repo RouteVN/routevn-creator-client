@@ -32,14 +32,18 @@ export const closeImportDialog = ({ state }) => {
 export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   const copy = i18n.resourceImport ?? {};
   const importLabel = copy.importButton ?? "Import";
+  const showImport = props.showImport ?? true;
   const menuItems = [...(props.additionalMenuItems ?? [])];
-  menuItems.push({ label: importLabel, type: "item", value: "import" });
+  if (showImport) {
+    menuItems.push({ label: importLabel, type: "item", value: "import" });
+  }
 
   return {
     importLabel,
-    menuLabel: props.additionalMenuItems?.length
-      ? (i18n.resourcePages?.actionsLabel ?? "Actions")
-      : importLabel,
+    menuLabel:
+      showImport && !props.additionalMenuItems?.length
+        ? importLabel
+        : (i18n.resourcePages?.actionsLabel ?? "Actions"),
     isImportDialogOpen: state.isImportDialogOpen,
     menu: {
       isOpen: state.isMenuOpen,

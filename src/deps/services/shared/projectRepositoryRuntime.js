@@ -179,6 +179,10 @@ const RESOURCE_CREATE_REPLAY_DEFINITIONS = Object.freeze({
     idField: "controlId",
     collectionKey: "controls",
   },
+  "assetPack.create": {
+    idField: "assetPackId",
+    collectionKey: "assetPacks",
+  },
 });
 
 const isReplayValueSubset = (existingValue, expectedValue) => {

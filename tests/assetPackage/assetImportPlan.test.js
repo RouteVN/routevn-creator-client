@@ -4,7 +4,10 @@ import {
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_RESOURCE_TYPES,
 } from "../../src/internal/assetPackageResources.js";
-import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
+import {
+  createAssetImportPlan,
+  rewriteAssetImportPlanReferences,
+} from "../../src/internal/assetImportPlan.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 
 const createCollection = (resourceType) => {
@@ -494,6 +497,39 @@ describe("asset import plan", () => {
     expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
       "file-waveform-preview",
     );
+    // The full-screen preview plays the sound itself.
+    expect(sound.largePreviewSourceId).toBe("file-sound");
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file-sound",
+    );
+  });
+
+  it("previews colors as swatches of their value", () => {
+    const manifest = createManifest();
+    manifest.repository.colors.items["color-2"] = {
+      id: "color-2",
+      type: "color",
+      name: "Highlight",
+      hex: "#ffd84d",
+    };
+    manifest.repository.colors.tree[0].children.push({ id: "color-2" });
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      manifestUrl: "https://example.com/asset-package.json",
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+      resolveFileUrl: ({ descriptor, manifestUrl }) =>
+        new URL(descriptor.source.url, manifestUrl).href,
+    });
+
+    const resource = (sourceId) =>
+      plan.resources.find((item) => item.sourceId === sourceId);
+    expect(resource("colors:color-1").colorHex).toBe("#112233");
+    expect(resource("colors:color-2").colorHex).toBe("#FFD84D");
+    expect(resource("colors:color-2").previewSourceId).toBeUndefined();
+    expect(resource("fonts:font-1")).not.toHaveProperty("colorHex");
   });
 
   it("accepts package-only WebM previews", () => {
@@ -547,6 +583,565 @@ describe("asset import plan", () => {
     );
     expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
       "file-particle-thumbnail",
+    );
+    expect(particle.largePreviewSourceId).toBe("file-particle-preview");
+    expect(plan.previewFiles.map((file) => file.sourceId)).toContain(
+      "file-particle-preview",
+    );
+  });
+});
+
+// A v2 pack: a layout the author picked, using a text style that comes as a
+// dependency; the text style uses a font, also a dependency, and a color the
+// author picked.
+const createV2Manifest = () => ({
+  schema: "routevn.import-pack.v2",
+  package: { kind: ASSET_PACKAGE_KIND, name: "Package Name" },
+  repository: {
+    files: {
+      items: {
+        "file-font": {
+          id: "file-font",
+          mimeType: "font/woff2",
+          source: { url: "./files/file-font" },
+        },
+      },
+    },
+    colors: {
+      items: {
+        "color-1": {
+          id: "color-1",
+          type: "color",
+          name: "Ink",
+          hex: "#112233",
+        },
+      },
+      tree: [{ id: "color-1" }],
+    },
+    layouts: {
+      items: {
+        "folder-menus": { id: "folder-menus", type: "folder", name: "Menus" },
+        "layout-1": {
+          id: "layout-1",
+          type: "layout",
+          name: "Title Menu",
+          layoutType: "general",
+          elements: {
+            items: {
+              title: {
+                id: "title",
+                type: "text",
+                name: "Title",
+                text: "Title",
+                textStyleId: "text-style-1",
+              },
+            },
+            tree: [{ id: "title" }],
+          },
+        },
+      },
+      tree: [{ id: "folder-menus", children: [{ id: "layout-1" }] }],
+    },
+  },
+  dependencies: {
+    fonts: {
+      items: {
+        "font-1": {
+          id: "font-1",
+          type: "font",
+          name: "Serif",
+          fileId: "file-font",
+          fontFamily: "Serif",
+        },
+      },
+    },
+    textStyles: {
+      items: {
+        "text-style-1": {
+          id: "text-style-1",
+          type: "textStyle",
+          name: "Title",
+          fontId: ["font-1"],
+          colorId: "color-1",
+          fontSize: 48,
+          lineHeight: 1.2,
+          fontWeight: "700",
+        },
+      },
+    },
+  },
+});
+
+const planV2 = (manifest, options = {}) => {
+  let id = 0;
+  return createAssetImportPlan({
+    manifest,
+    manifestUrl: "https://example.com/pack/asset-package.json",
+    projectId: "project-1",
+    repositoryRevision: 1,
+    createId: () => `generated-${++id}`,
+    dependencyFolderName: "Fantasy UI",
+    ...options,
+  });
+};
+
+describe("asset import plan for v2 packages", () => {
+  it("lists only the author's picks and brings their dependencies into folders named after the pack", () => {
+    const plan = planV2(createV2Manifest());
+
+    expect(plan.resources.map((resource) => resource.name)).toEqual([
+      "Ink",
+      "Title Menu",
+    ]);
+    expect(plan.reviewSections.map((section) => section.resourceType)).toEqual([
+      "colors",
+      "layouts",
+    ]);
+    expect(plan.dependencies.map((resource) => resource.name).sort()).toEqual([
+      "Serif",
+      "Title",
+    ]);
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    // The color is a pick the layout reaches through its text style, so the
+    // review keeps it selected with the layout.
+    expect(layout.dependencySourceIds).toEqual(["colors:color-1"]);
+    expect([...layout.packageDependencySourceIds].sort()).toEqual([
+      "fonts:font-1",
+      "textStyles:text-style-1",
+    ]);
+
+    const folders = plan.entries.filter(
+      (entry) => entry.folder && entry.dependency,
+    );
+    expect(
+      folders.map((entry) => [entry.resourceType, entry.data.name]),
+    ).toEqual(
+      expect.arrayContaining([
+        ["fonts", "Fantasy UI"],
+        ["textStyles", "Fantasy UI"],
+      ]),
+    );
+    const destinationOf = (sourceId) =>
+      plan.entries.find((entry) => entry.sourceId === sourceId).destinationId;
+    const textStyle = plan.dependencies.find(
+      (resource) => resource.name === "Title",
+    );
+    expect(textStyle.parentDestinationId).toBe(
+      destinationOf("dependencies:textStyles"),
+    );
+    expect(layout.data.elements.items.title.textStyleId).toBe(
+      textStyle.destinationId,
+    );
+    expect(textStyle.data.fontId).toEqual([destinationOf("fonts:font-1")]);
+    expect(textStyle.data.colorId).toBe(destinationOf("colors:color-1"));
+    expect(plan.files.map((file) => file.sourceId)).toEqual(["file-font"]);
+  });
+
+  it("numbers a dependency folder whose name the project or the pack already uses", () => {
+    // The pack's own colors sit in a top-level "Fantasy UI" folder, and the
+    // text style uses a second color that comes as a dependency.
+    const manifest = createV2Manifest();
+    manifest.repository.colors = {
+      items: {
+        "folder-colors": {
+          id: "folder-colors",
+          type: "folder",
+          name: "Fantasy UI",
+        },
+        "color-1": manifest.repository.colors.items["color-1"],
+      },
+      tree: [{ id: "folder-colors", children: [{ id: "color-1" }] }],
+    };
+    manifest.dependencies.colors = {
+      items: {
+        "color-2": {
+          id: "color-2",
+          type: "color",
+          name: "Gold",
+          hex: "#FFD84D",
+        },
+      },
+    };
+    manifest.dependencies.textStyles.items["text-style-1"].colorId = "color-2";
+    const plan = planV2(manifest, {
+      repositoryState: {
+        fonts: {
+          items: { mine: { id: "mine", type: "folder", name: "fantasy ui" } },
+          tree: [{ id: "mine" }],
+        },
+      },
+    });
+
+    const folderName = (resourceType) =>
+      plan.entries.find(
+        (entry) => entry.sourceId === `dependencies:${resourceType}`,
+      ).data.name;
+    expect(folderName("fonts")).toBe("Fantasy UI 2");
+    expect(folderName("colors")).toBe("Fantasy UI 2");
+    expect(folderName("textStyles")).toBe("Fantasy UI");
+
+    const unnamed = planV2(createV2Manifest(), {
+      dependencyFolderName: undefined,
+    });
+    expect(
+      unnamed.entries.find((entry) => entry.sourceId === "dependencies:fonts")
+        .data.name,
+    ).toBe("Package Name");
+  });
+
+  it.each([
+    [
+      "a v1 package with dependencies",
+      (manifest) => {
+        manifest.schema = "routevn.import-pack.v1";
+      },
+      "unsupported_field",
+    ],
+    [
+      "a dependency folder",
+      (manifest) => {
+        manifest.dependencies.fonts.items["font-1"].type = "folder";
+      },
+      "unsupported_resource",
+    ],
+    [
+      "a dependency tree",
+      (manifest) => {
+        manifest.dependencies.fonts.tree = [{ id: "font-1" }];
+      },
+      "unsupported_field",
+    ],
+    [
+      "a resource that is both picked and a dependency",
+      (manifest) => {
+        manifest.dependencies.colors = {
+          items: {
+            "color-1": {
+              id: "color-1",
+              type: "color",
+              name: "Ink",
+              hex: "#112233",
+            },
+          },
+        };
+      },
+      "duplicate_resource_id",
+    ],
+    [
+      "a dependency nothing uses",
+      (manifest) => {
+        manifest.dependencies.colors = {
+          items: {
+            "color-2": {
+              id: "color-2",
+              type: "color",
+              name: "Spare",
+              hex: "#445566",
+            },
+          },
+        };
+      },
+      "unused_dependency",
+    ],
+    [
+      "more than 500 picks and dependencies of one type",
+      (manifest) => {
+        for (let index = 0; index < 500; index += 1) {
+          manifest.dependencies.colors ??= { items: {} };
+          manifest.dependencies.colors.items[`spare-${index}`] = {
+            id: `spare-${index}`,
+            type: "color",
+            name: `Spare ${index}`,
+            hex: "#445566",
+          };
+        }
+      },
+      "too_many_resources",
+    ],
+  ])("rejects %s", (_name, edit, code) => {
+    const manifest = createV2Manifest();
+    edit(manifest);
+    expect(() => planV2(manifest)).toThrow(expect.objectContaining({ code }));
+  });
+});
+
+// A v2 package whose Title Menu carries the layout thumbnail the project
+// keeps, and, when `withPreview`, the full-size PNG the creator draws at export.
+const createLayoutPreviewManifest = ({ withPreview }) => {
+  const manifest = createV2Manifest();
+  manifest.repository.files.items["file-layout-thumbnail"] = {
+    id: "file-layout-thumbnail",
+    mimeType: "image/jpeg",
+    source: { url: "./files/file-layout-thumbnail" },
+  };
+  manifest.repository.files.items["file-layout-preview"] = {
+    id: "file-layout-preview",
+    mimeType: "image/png",
+    source: { url: "./files/file-layout-preview" },
+  };
+  const layout = manifest.repository.layouts.items["layout-1"];
+  layout.thumbnailFileId = "file-layout-thumbnail";
+  if (withPreview) {
+    layout.previewMediaFileId = "file-layout-preview";
+  }
+  return manifest;
+};
+
+describe("layout previews in packages", () => {
+  it("shows a layout's full-size preview full screen, and keeps its thumbnail in the grid", () => {
+    const plan = planV2(createLayoutPreviewManifest({ withPreview: true }));
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout).toMatchObject({
+      previewSourceId: "file-layout-thumbnail",
+      previewKind: "image",
+      previewMimeType: "image/jpeg",
+      largePreviewSourceId: "file-layout-preview",
+    });
+    expect(plan.previewFiles.map((file) => file.sourceId)).toEqual(
+      expect.arrayContaining(["file-layout-thumbnail", "file-layout-preview"]),
+    );
+  });
+
+  it("imports the layout's thumbnail, not its package-only preview", () => {
+    const plan = planV2(createLayoutPreviewManifest({ withPreview: true }));
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout.data).not.toHaveProperty("previewMediaFileId");
+    expect(layout.data).not.toHaveProperty("thumbnailMediaFileId");
+    const thumbnail = plan.files.find(
+      (file) => file.sourceId === "file-layout-thumbnail",
+    );
+    expect(layout.data.thumbnailFileId).toBe(thumbnail.destinationId);
+    expect(plan.files.map((file) => file.sourceId)).not.toContain(
+      "file-layout-preview",
+    );
+  });
+
+  it("shows the thumbnail full screen for a layout without a full-size preview", () => {
+    const plan = planV2(createLayoutPreviewManifest({ withPreview: false }));
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout.previewSourceId).toBe("file-layout-thumbnail");
+    expect(layout.largePreviewSourceId).toBe("file-layout-thumbnail");
+    expect(plan.previewFiles.map((file) => file.sourceId)).not.toContain(
+      "file-layout-preview",
+    );
+  });
+
+  it("shows the thumbnail full screen when the full-size preview is not an image", () => {
+    const manifest = createLayoutPreviewManifest({ withPreview: true });
+    manifest.repository.files.items["file-layout-preview"].mimeType =
+      "application/octet-stream";
+
+    const plan = planV2(manifest);
+
+    const layout = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(layout.largePreviewSourceId).toBe("file-layout-thumbnail");
+  });
+});
+
+// A v2 package whose Title Menu has a Start button jumping into the story
+// through a story link.
+const createLinkManifest = () => {
+  const manifest = createV2Manifest();
+  manifest.repository.layouts.items["layout-1"].elements.items.start = {
+    id: "start",
+    type: "container",
+    name: "Start",
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    click: {
+      payload: {
+        actions: {
+          resetStoryAtSection: { sectionId: "link.start" },
+          nextLine: {},
+        },
+      },
+    },
+  };
+  manifest.repository.layouts.items["layout-1"].elements.tree.push({
+    id: "start",
+  });
+  manifest.links = {
+    items: {
+      "link.start": {
+        kind: "section",
+        name: "Start",
+        sceneName: "Title",
+      },
+    },
+  };
+  return manifest;
+};
+
+describe("links in v2 packages", () => {
+  it("lists the story links the resources jump through", () => {
+    const plan = planV2(createLinkManifest());
+
+    expect(plan.links).toEqual([
+      {
+        id: "link.start",
+        kind: "section",
+        name: "Start",
+        sceneName: "Title",
+      },
+    ]);
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(titleMenu.linkIds).toEqual(["link.start"]);
+  });
+
+  it("sends a story link where the importer chose, or drops its jump when unset", () => {
+    const plan = planV2(createLinkManifest());
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    const actionsOf = (linkTargets) =>
+      rewriteAssetImportPlanReferences({
+        resources: [titleMenu],
+        linkTargets,
+      })[0].data.elements.items.start.click.payload.actions;
+
+    expect(actionsOf({ "link.start": "section-9" })).toEqual({
+      resetStoryAtSection: { sectionId: "section-9" },
+      nextLine: {},
+    });
+    // The jump goes; the button's other actions stay.
+    expect(actionsOf({ "link.start": "" })).toEqual({ nextLine: {} });
+  });
+
+  it("rejects a jump without a story link, or through one of the wrong kind", () => {
+    const withoutLink = createLinkManifest();
+    delete withoutLink.links;
+    expect(() => planV2(withoutLink)).toThrow(
+      "Project reference 'sectionId' is not supported",
+    );
+
+    const wrongKind = createLinkManifest();
+    wrongKind.links.items["link.start"].kind = "scene";
+    expect(() => planV2(wrongKind)).toThrow(
+      "Project reference 'sectionId' is not supported",
+    );
+  });
+
+  it("rejects story links that are not a section or a scene", () => {
+    const manifest = createLinkManifest();
+    manifest.links.items["link.start"].kind = "line";
+    expect(() => planV2(manifest)).toThrow("must be section, scene or layout");
+
+    const extraField = createLinkManifest();
+    extraField.links.items["link.start"].sectionId = "section-1";
+    expect(() => planV2(extraField)).toThrow("is not supported");
+  });
+
+  it("opens a layout through a link, or drops the open action when unset", () => {
+    const manifest = createLinkManifest();
+    manifest.repository.layouts.items["layout-1"].elements.items.start.click = {
+      payload: { actions: { pushOverlay: { resourceId: "link.menu" } } },
+    };
+    manifest.links.items = {
+      "link.menu": { kind: "layout", name: "Menu Page", layoutType: "general" },
+    };
+    const plan = planV2(manifest);
+    expect(plan.links).toEqual([
+      {
+        id: "link.menu",
+        kind: "layout",
+        name: "Menu Page",
+        layoutType: "general",
+      },
+    ]);
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    expect(titleMenu.linkIds).toEqual(["link.menu"]);
+    // The opened layout is not a dependency.
+    expect(titleMenu.dependencySourceIds).not.toContain("layouts:link.menu");
+    const actionsOf = (linkTargets) =>
+      rewriteAssetImportPlanReferences({
+        resources: [titleMenu],
+        linkTargets,
+      })[0].data.elements.items.start.click.payload.actions;
+    expect(actionsOf({ "link.menu": "layout-9" })).toEqual({
+      pushOverlay: { resourceId: "layout-9" },
+    });
+    expect(actionsOf({ "link.menu": "" })).toEqual({});
+
+    // A layout neither carried nor linked is still missing.
+    delete manifest.links;
+    expect(() => planV2(manifest)).toThrow(
+      "Referenced resource 'link.menu' is missing.",
+    );
+  });
+
+  it("accepts a layout link only where an action opens a layout", () => {
+    const manifest = createLinkManifest();
+    manifest.repository.layouts.items["layout-1"].elements.items.start.click = {
+      payload: { actions: { playSound: { resourceId: "link.menu" } } },
+    };
+    manifest.links.items = {
+      "link.menu": { kind: "layout", name: "Menu Page" },
+    };
+    expect(() => planV2(manifest)).toThrow(
+      "Referenced resource 'link.menu' is missing.",
+    );
+  });
+
+  it("rejects a section jump that names a scene, and overlong link text", () => {
+    const withScene = createLinkManifest();
+    withScene.repository.layouts.items[
+      "layout-1"
+    ].elements.items.start.click.payload.actions = {
+      sectionTransition: { sectionId: "link.start", sceneId: "link.title" },
+    };
+    withScene.links.items["link.title"] = { kind: "scene", name: "Title" };
+    expect(() => planV2(withScene)).toThrow(
+      "A section jump in an asset package cannot name a scene.",
+    );
+
+    const longName = createLinkManifest();
+    longName.links.items["link.start"].name = "x".repeat(201);
+    expect(() => planV2(longName)).toThrow("is too long");
+  });
+
+  it("checks each resource again once its links are set", () => {
+    const plan = planV2(createLinkManifest());
+    const titleMenu = plan.resources.find(
+      (resource) => resource.name === "Title Menu",
+    );
+    let error;
+    try {
+      rewriteAssetImportPlanReferences({
+        resources: [titleMenu],
+        linkTargets: { "link.start": "section-9" },
+        resourceNames: { [titleMenu.sourceId]: "   " },
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error?.code).toBe("resource_validation_failed");
+  });
+
+  it("rejects a link id that is also a resource id", () => {
+    const manifest = createLinkManifest();
+    manifest.links.items["color-1"] = { kind: "scene", name: "Title" };
+    expect(() => planV2(manifest)).toThrow(
+      "Link id 'color-1' is also a resource id.",
     );
   });
 });

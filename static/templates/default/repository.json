@@ -5730,5 +5730,19 @@
         "id": "JgakbaXwhuEH"
       }
     ]
+  },
+  "assetPacks": {
+    "items": {
+      "p3HbGCyqKtTh": {
+        "id": "p3HbGCyqKtTh",
+        "type": "folder",
+        "name": "Default"
+      }
+    },
+    "tree": [
+      {
+        "id": "p3HbGCyqKtTh"
+      }
+    ]
   }
 }

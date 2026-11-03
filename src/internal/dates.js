@@ -55,6 +55,23 @@ export const formatDate = (
 };
 
 /**
+ * Format epoch milliseconds as a calendar date without the time. Store dates
+ * such as a release day are stored as UTC midnight, so they are read in UTC to
+ * show the same day in every time zone.
+ * @param {number} epochMs - Milliseconds since the Unix epoch
+ * @param {Object} [options] - The `dateTime` catalog of the active locale
+ * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
+ * @returns {string} Formatted date, such as "Aug 12, 2026"
+ */
+export const formatCalendarDate = (epochMs, { intlLocale = "en-US" } = {}) =>
+  new Date(epochMs).toLocaleDateString(intlLocale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+
+/**
  * Format a timestamp as a date and time with seconds, in 24-hour time.
  * @param {string} value - ISO date string
  * @param {Object} [options] - The `dateTime` catalog of the active locale

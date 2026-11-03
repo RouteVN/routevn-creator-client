@@ -5,6 +5,9 @@ propsSchema:
     additionalMenuItems:
       type: array
       description: Optional actions rendered before Import in the three-dot menu
+    showImport:
+      type: boolean
+      description: Whether the menu offers Import. Defaults to true
 events:
   menu-action:
     type: object

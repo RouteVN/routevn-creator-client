@@ -154,6 +154,79 @@ describe("import package command batch", () => {
     });
   });
 
+  it("adds imported top-level items after the project's own, in package order", async () => {
+    const repository = await createProjectRepository({
+      projectId: "project-assets",
+      store: {
+        appendEvents: vi.fn(async () => {}),
+        loadMaterializedViewCheckpoint: vi.fn(async () => undefined),
+        saveMaterializedViewCheckpoint: vi.fn(async () => {}),
+        deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
+      },
+      events: [],
+      historyLoaded: true,
+    });
+    const actor = { userId: "user-1", clientId: "client-1" };
+    const session = {
+      getActor: () => actor,
+      submitCommands: vi.fn(async (commands) =>
+        commands.map((command) => command.id),
+      ),
+    };
+    let commandIndex = 0;
+    const shared = createCommandApiShared({
+      idGenerator: () => `generated-command-${++commandIndex}`,
+      now: () => 1,
+      getCurrentProjectId: () => "project-assets",
+      getCurrentRepository: async () => repository,
+      getCachedRepository: () => repository,
+      ensureCommandSessionForProject: async () => session,
+      getOrCreateLocalActor: () => actor,
+      storyBasePartitionFor: () => "m",
+      storyScenePartitionFor: () => "m",
+      scenePartitionFor: () => "m",
+      resourceTypePartitionFor: () => "m",
+    });
+    const api = createImportPackageCommandApi(shared);
+    const folder = (destinationId, name, index) => ({
+      resourceType: "images",
+      destinationId,
+      commandId: `command-${destinationId}`,
+      folder: true,
+      index,
+      data: { type: "folder", name },
+    });
+    const commit = (entries) =>
+      api.commitAssetImportPackage({
+        planId: "asset-plan",
+        projectId: "project-assets",
+        repositoryRevision: repository.getRevision(),
+        entries,
+      });
+
+    await commit([folder("folder.existing", "Existing", 0)]);
+    const result = await commit([
+      folder("folder.masks", "Masks", 0),
+      folder("folder.preview", "Preview", 1),
+      {
+        resourceType: "images",
+        destinationId: "folder.inner",
+        commandId: "command-folder-inner",
+        parentDestinationId: "folder.masks",
+        folder: true,
+        index: 0,
+        data: { type: "folder", name: "Inner" },
+      },
+    ]);
+
+    expect(result).toMatchObject({ valid: true });
+    expect(repository.getState().images.tree).toEqual([
+      { id: "folder.existing", children: [] },
+      { id: "folder.masks", children: [{ id: "folder.inner", children: [] }] },
+      { id: "folder.preview", children: [] },
+    ]);
+  });
+
   it("commits every asset-package resource collection with cross-resource references", async () => {
     const repository = await createProjectRepository({
       projectId: "project-all-assets",

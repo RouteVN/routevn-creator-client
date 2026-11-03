@@ -7,8 +7,7 @@ The old animation-only and transform-only package formats are not supported.
 
 An Asset Package may contain images, sounds, videos, characters, transforms,
 animations, audio effects, particles, spritesheets, colors, fonts, text styles,
-layouts, variables, and controls. The creator currently excludes layouts from
-its export picker.
+layouts, variables, and controls.
 
 ## Manifest
 
@@ -16,7 +15,7 @@ The manifest is a partial RouteVN repository:
 
 ```json
 {
-  "schema": "routevn.import-pack.v1",
+  "schema": "routevn.import-pack.v2",
   "package": {
     "kind": "routevn.creator.asset-package"
   },
@@ -52,14 +51,78 @@ The manifest is a partial RouteVN repository:
           "children": [{ "id": "image.spark" }]
         }
       ]
+    },
+    "textStyles": {
+      "items": {
+        "textStyle.title": {
+          "id": "textStyle.title",
+          "type": "textStyle",
+          "name": "Title",
+          "fontId": ["font.serif"]
+        }
+      },
+      "tree": [{ "id": "textStyle.title" }]
+    }
+  },
+  "dependencies": {
+    "fonts": {
+      "items": {
+        "font.serif": {
+          "id": "font.serif",
+          "type": "font",
+          "name": "Serif",
+          "fileId": "file.serif"
+        }
+      }
     }
   }
 }
 ```
 
-Only included repository collections are imported. Each collection uses the
-normal `{ items, tree }` shape, and folders are regular items with
-`type: "folder"`.
+`repository` holds the resources the pack's author picked. Each collection
+uses the normal `{ items, tree }` shape, and folders are regular items with
+`type: "folder"`. `dependencies` holds the resources the picks use that the
+author did not pick: the same collection keys, each `{ items }` with no tree
+and no folders. It is left out when the picks use nothing else.
+
+A resource is in one section only. Every dependency is used by a pick,
+directly or through other dependencies, and picks and dependencies may
+reference each other. `repository.files` holds the files of both sections.
+
+`links` holds what the resources point to outside the pack, for the importer
+to point at their own: the places in the author's story they jump to, such as
+a title menu's Start button going to a section, and the layouts their actions
+open (`pushOverlay`, `showConfirmDialog`) that the pack does not carry. Each
+item is `{ kind, name, sceneName, layoutType }`: `kind` is `section`, `scene`
+or `layout`; `name` is its name; a section also gives its scene's name, and a
+layout its layout type; each text is at most 200 characters. Fields that jump into the story (`sectionId`,
+`sceneId` and their lists), and the `resourceId` of an action that opens such
+a layout, hold link keys, such as `"sectionId": "link.oivTjWAhhYG1"`, instead
+of the author's ids. A jump to a section leaves out its `sceneId`, as the
+section gives the scene; import rejects a section jump that names a scene. A layout the pack carries, because it is picked or
+something draws it, is opened as itself. `links` is left out when there are
+none.
+
+```json
+"links": {
+  "items": {
+    "link.oivTjWAhhYG1": {
+      "kind": "section",
+      "name": "Section 1",
+      "sceneName": "Title"
+    },
+    "link.fKr5fa67MQWh": {
+      "kind": "layout",
+      "name": "Menu Page",
+      "layoutType": "general"
+    }
+  }
+}
+```
+
+`routevn.import-pack.v1` packages have no `dependencies` or `links`:
+everything is in `repository`, and the importer treats every resource as a
+pick. The creator exports v2.
 
 The creator exports only `package.kind`. Catalog metadata such as package id,
 name, version, description, publisher, or source may be supplied by a publishing
@@ -75,9 +138,11 @@ Required resource dependencies must be present. During review, selected
 dependencies remain selected and cannot be deselected while a selected resource
 requires them. Missing required dependencies reject the package.
 
-Scene, section, and line ids are project-owned. Resources containing
-`sceneId`, `sectionId`, `lineId`, or their plural forms are rejected until
-story content can be packaged and remapped.
+Scene, section, and line ids are project-owned. In a v2 package, a scene or
+section reference must name one of the package's links, of the same kind, and so may the `resourceId` of a `pushOverlay` or `showConfirmDialog` action naming a layout link; import sets each to the
+section, scene or layout the user chose, or removes the action holding it when
+the user left the link unset. Other references to scenes or sections, and any
+`lineId` or `lineIds`, reject the package.
 
 ## Files
 
@@ -100,14 +165,93 @@ against the owning resource type before staging.
 
 ## Folder trees and dependencies
 
-The creator lets users choose top-level folders. Selecting a folder includes its
-complete subtree and preserves folder and item order. Export also includes
-transitive resource and file dependencies, even when their source folders were
-not explicitly selected.
+A project can have several asset packs. They are project resources, in the
+`assetPacks` collection: Releases → Asset Packs lists them with folders, like
+the other resource pages, and opening one shows its editor. A pack is
+`{ type: "assetPack", name, description, resources }`, where `resources` lists,
+for each resource type, the folders picked, at any depth, in the order picked.
+The model checks every folder id: it must name an existing folder of that
+type's collection. A picked folder may be moved, into another folder too, and
+stays picked; deleting a picked folder, or a folder holding one, is refused,
+and the message names the pack that keeps it. A project that kept one asset
+package before packs could be several gets it as its first pack, in a
+"Default" folder, the first time Asset Packs opens. Folders that selection
+names that the project no longer has are left out, and a selection left with
+none only is cleared. When the pack cannot be made, the page says why and
+keeps the selection, to try again the next time it opens.
+
+An asset pack's editor has two sections. Picked resources lists only
+the folders in the pack, by type, each with every resource in it and in the
+folders inside it, with its name; a folder inside another is named with its
+path ("Backgrounds > Night"), and a pick inside another pick is listed only
+with that one. Folders are added and removed in the picker. Previews are drawn
+as on the type's own page: images and thumbnails on the transparency grid,
+sound waveforms, font glyphs, text style samples and color swatches, or the
+type's icon. Dependencies lists what the picks use (see below). Pick resources
+opens a picker that shows one resource type at a time: a list of the types
+with resources, each with how many of its folders are picked, and the chosen
+type's folders at any depth, in the project's tree order and indented under
+the folder they sit in, each with a checkbox and the resources directly in
+it, so a resource shows once. The picker offers a folder that holds
+resources, in it or in a folder inside it, or that is picked, so it can be
+unticked. Clicking anywhere on a folder ticks or unticks it, with everything
+inside it. A folder inside a ticked one shows as included: ticked, and not
+ticked or unticked on its own. A pick of its own stays, so unticking the
+folder it sits in leaves it picked. A type with no
+folders says so. The picker opens on the type it showed last, or the first
+type with folders. Ticks apply to the page, and are saved, when Done is pressed;
+closing the picker otherwise leaves the selection as it was. Done does nothing
+more while it saves. A save changes only the types picked differently since
+the editor opened the pack or last saved it, so a type someone else changed
+meanwhile, and the editor did not, stays as they left it. A failed save says
+why in an alert, and the editor goes back to the saved picks.
+Types follow the store's order. Within a type, the page and the pack keep
+folders in the order they were picked: a newly ticked folder goes last, and
+the picker shows each ticked folder's place, counting a folder included in
+another only with it. Resources outside a folder
+cannot be picked. Export stays disabled until a resource is picked, or while
+the selection uses a resource that no longer exists or jumps to a line of the
+story; the page names the resource at fault.
+
+Selecting a folder includes its complete subtree and preserves folder and item
+order; everything in the chosen folders is a pick. Each picked folder is a
+top-level folder of the package, in pick order, even one that sits inside
+another folder in the project: the folders it sits in are not carried. A
+folder picked inside another pick comes with that pick and is not repeated.
+Export adds what the picks use, directly or through each
+other, to `dependencies`, without the folders it sits in. A resource in a
+chosen folder stays a pick even when another pick uses it, so an author shows
+a color or font on the pack page by choosing its folder too. The export page
+lists these under Dependencies, laid out as the picks: each type's in one box
+of tiles, with the picks that use each in its tooltip. Where the picks, or
+what they use, jump into the story, and the layouts they open that the pack
+does not carry, become links, listed under Links with the resources that jump
+there or open them.
 
 Import recreates the selected resources' complete package folder ancestry in
-the matching project collections. It does not ask for replacement destination
+the matching project collections, after the project's own folders and
+resources, in package order. The dependencies the selected picks use come
+along: each type's go into one new top-level folder after the pack's own,
+named after the pack, and numbered ("Fantasy UI 2") when the project or the
+pack already has a top-level folder by that name. A dependency no selected
+pick uses is not imported. Import does not ask for replacement destination
 folders or media substitutions.
+
+Choose Resources lists, under Dependencies, each dependency the selected
+resources bring, with a choice of the project's resources of its type, and for
+a layout, of its layout type. Each must be chosen, the pack's own or one of the project's: it starts at
+the project's resource of the same name, or else unchosen, and Import is
+refused until every one is chosen. A dependency replaced with the project's
+resource is not imported: every reference to it points at that resource
+instead, and what only it used is left out too. Import checks that each
+replacement still exists and is of the dependency's type.
+
+When the selected resources, or the dependencies they bring, use links,
+Choose Resources lists each under Links, with the resources that use it and a
+choice of the project's sections, scenes or layouts; a layout link offers the
+layouts of its layout's type. A link starts at the project's section with the
+same section and scene names, or its scene or layout with the same name, and
+otherwise unchosen; Import is refused until every one is chosen. Import checks that each choice still exists and, for a layout, has the link's layout type, writes it into every jump or open action through the link, and checks each resource again.
 
 Files, folders, and resources are committed in one atomic command batch. A
 pre-commit failure discards staged files. If commit confirmation is interrupted,
@@ -121,7 +265,12 @@ are JPEG, PNG, WebP, MP4, and WebM.
 
 Preview files are fetched lazily through the same bounded client as imported
 files. Preview-only fields and files are not persisted in the destination
-project unless another retained resource field references the file.
+project unless another retained resource field references the file. The
+previews read for an open pack are capped together at the total download
+limit, counted apart from the import: an import counts only the files it
+brings in, and uses a file already read for its preview without reading it
+again. Leaving a pack without importing it, with Back, by opening another pack
+or by closing the store, frees its previews.
 
 Creator-generated previews include:
 
@@ -130,30 +279,147 @@ Creator-generated previews include:
 - particles: full-resolution and lower-resolution videos
 - spritesheets: one full cycle of the first animation at its configured FPS,
   in full-resolution and lower-resolution videos
-- sounds: a 640 by 360 waveform PNG
+- sounds: a 640 by 360 waveform PNG, shown in the asset grid and the resource
+  choice list
 - fonts: a 1920 by 1080 glyph preview and a 640 by 360 thumbnail
 - text styles: a 960 by 270 preview and a 427 by 120 thumbnail
+- layouts: a PNG of the layout at the project's resolution, drawn with its
+  saved preview data and shown full screen; the asset grid and the resource
+  choice list keep the layout's small `thumbnailFileId` image, which is also
+  what the full-screen preview shows for a package without this PNG. A layout
+  that cannot be drawn, such as one using a file the project no longer has, is
+  exported without it, and so are the layouts not yet drawn when the renderer
+  cannot start
 
 Generated video MIME type is MP4 or WebM depending on the desktop WebView's
 canvas recording support. Generated previews exist only in the exported ZIP.
 
+Still image previews, in the pack page's asset grid, the resource choice list
+and full screen, sit on the Images page's transparency grid, so transparent
+areas show as checkers rather than black.
+
+Video previews play muted and loop, holding the last frame for half a second
+before playing again. In the pack page's asset grid and the
+resource choice list, each video shows the frame a third of the way through
+and plays from the start only while a mouse is over its card or the card has
+keyboard focus; touch devices show the still frame. The full-screen preview
+plays at once. A video stops while it is off screen or covered by the
+full-screen preview. WebKit, which the macOS and iOS apps use, can stop a
+WebM video at its end while still reporting it as playing, without an ended
+event, so the player treats a video held on its last frame as ended.
+
+A sound's full-screen preview plays the sound itself instead of its waveform:
+its audio file loads like a preview file, and the Sounds page's player, under
+a music icon, starts it at once. Clicking the player plays, pauses or seeks
+instead of closing the preview; its close button and Escape close it, and the
+sound stops when the preview closes. A sound without an MP3, WAV or Ogg audio
+file shows its waveform instead.
+
+A color has no preview file; it previews as a swatch of its `#RRGGBB` value,
+which the plan already requires of a color, with the value, such as
+`#FFD84D`, under its name, on its card and full screen.
+
+## Asset store
+
+Import opens the RouteVN asset store in a large dialog, 32 px from each window
+edge and at most 1600 px wide, or full screen in windows up to 768 px wide, under a header that stays in
+place with its title and a close button at its right: a sidebar with a Search
+field, and free packs, newest first, 20 at a time, each card with its
+cover, title, summary (at most two lines, ending in an ellipsis when cut, and
+left out when the pack has none) and creator. Search matches pack titles and creator names once
+typing pauses for 300 ms; closing the store drops a search still waiting. The store has no asset type filter for now: it
+lists every pack, whichever page Import was opened from. Choosing a pack opens its
+page: its description, the current
+version's release notes under "What's new", with their line breaks, when it has
+any, and every asset in the pack, read from its manifest. Only the author's picks show; dependencies do not. Assets are grouped as on the resource pages: a group for each
+type's own assets and one for each folder, labelled with its path such as
+Images > Masks, collapsible, with each asset on a card that shows its name.
+Beside them, a pack info panel holds the cover, the summary under it, the
+creator, version, release and update dates, and Import, and stays in view
+while the page scrolls; narrower windows show the panel above the description.
+The page opens at once with what the pack's card carries: title, summary,
+cover, creator and release date. The pack's details then replace what the card
+showed, adding the description, version, release notes and last update. The
+assets come last, once its manifest is
+read; Import waits for them. Back while
+the page loads cancels its requests. Clicking an asset previews it full screen,
+with its whole description, using its full-size preview file when the pack has
+one. The pack's creator opens the creator page: avatar, name, bio, profile
+links, which open in the system browser, and the creator's packs, newest first,
+which load with the profile in one request. Import on a pack page continues with
+the import flow below, whose resource choice sits in a centered column up to
+1200 px wide, as the pack page does. Back, the square button beside each page's title, steps
+from the resource choice to the pack page, keeping the choices made there, from
+a pack page to the list or creator page it was opened from, and from the creator
+page to the pack page it was opened from, or to the list. A page that no longer
+shows what it showed, such as a pack page left with Back or replaced by another
+pack opened from the creator page, is skipped, so Back always reaches the list.
+Back from a pack page drops the choices made for it, and the pack loads again
+when reopened; going to its creator's page and back, or reopening it from
+there, keeps them. The app has no
+purchases, so it requests and shows free packs only; the creator page leaves out
+the creator's other packs, and a creator with none free shows that they have no
+packs yet.
+
+The client calls three JSON-RPC methods at `https://api1.routevn.com/asset-store/rpc`,
+with the `X-RouteVN-RPC: 1` header and no credentials:
+
+| Method                        | Params                                                            | Used for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `assetStore.listAssetPacks`   | `{query, pricingType: "FREE", assetTypes, page: {cursor, limit}}` | Pack cards. Each item carries `data`, with the title, `summary` (one line of 0 to 300 characters, trimmed; `""` when missing or not text), cover, pricing, `assetCounts` and listing date, and its `creator`; `files` maps cover and avatar IDs to URLs. `assetTypes` is `null` or a list of asset types, such as `IMAGES`. `assetCounts` maps each asset type the pack has to its count, such as `{"IMAGES": 30, "SOUNDS": 20}`; types the app does not know and counts that are not positive are left out. |
+| `assetStore.getAssetPackById` | `{assetPackId}`                                                   | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update, and `data.package`: `{fileId, size, directoryOffset, directorySize}`, the published package's ZIP (its `files` URL), its byte size, and where its central directory starts and how long it is. The description shows as plain paragraphs and its images, each by its `files` URL; a malformed block is left out.                                       |
+| `assetStore.getCreatorById`   | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                           |
+
+Development builds call `http://127.0.0.1:3100/asset-store/rpc` instead. Set
+`VITE_ROUTEVN_ASSET_STORE_RPC_URL` when starting the watch server to use another
+local API. A list that fails to load shows Try Again, and a pack or creator that
+is no longer listed shows its own message. Images whose IDs `files` does not
+map to a usable URL are left out.
+
+## Reading a published package
+
+The asset store publishes each pack's package as the ZIP its publisher
+uploaded, and the app reads it in place: never downloading it whole and never
+unpacking it on a server. Every entry is stored (uncompressed); the API refuses
+anything else at upload. The app reads:
+
+1. the central directory, the ZIP's table of contents, with one byte range at
+   the `directoryOffset` and `directorySize` the API sends;
+2. `asset-package.json`, the manifest, as one more range: its local header and
+   data;
+3. each file it needs, a preview as its card scrolls into view or a file Import
+   downloads, as one range per file: the entry named by the file's
+   `source.url` without its leading `./`, such as `files/<id>`. A second range
+   follows only when an entry's local header is longer than its directory
+   record says.
+
+Every request names both ends of its range (`Range: bytes=<start>-<end>`), so a
+cross-origin read needs no CORS preflight, and nothing depends on reading the
+response's `Content-Range`. A server that answers with the whole file instead
+of a 206 range is refused. Size limits and `sha256` checks apply as they do to
+files fetched by URL.
+
 ## Import flow
 
-1. Load and strictly validate the manifest.
-2. Show a selection page when the package contains multiple resources.
-3. Keep required dependencies selected and locked.
-4. Let the user review and edit each selected resource's name and description.
+1. Choose a pack in the asset store, then read and strictly validate the
+   manifest inside its package.
+2. Show a selection page when the package contains multiple picks.
+3. Keep the picks that selected picks use, directly or through dependencies,
+   selected and locked; add the dependencies they use without listing them.
+4. Let the user review and edit each selected resource's name and description,
+   choose the pack's or the project's resource for each dependency the
+   selection brings, and choose where each link the selection uses goes.
 5. Lazily load the current resource preview.
 6. Download and validate only the selected resources' required files.
 7. Remap package-local ids.
 8. Commit the selected folder trees and resources atomically.
 
-A one-resource package skips the selection page.
+A package with one pick skips the selection page.
 
 ## Publisher requirements
 
-Production import links and every redirected manifest or file URL must use
-HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
+Production package URLs from the asset store, and any manifest or file URL,
+must use HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
 testing.
 
 Publishers should:
@@ -178,10 +444,12 @@ references, mismatched media types, and packages with no resources.
 Current limits are:
 
 - 2 MiB per manifest
+- 4 MiB per package central directory
 - 2,000 package files
 - 50 MiB per file
-- 200 MiB total per import
-- 500 resources per collection
+- 200 MiB total per import, counting the files it brings in
+- 200 MiB of previews per open pack
+- 500 resources per type, picks and dependencies together
 - 32 folder-tree levels
 - three parallel downloads
 - 15-second manifest timeout

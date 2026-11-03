@@ -92,13 +92,12 @@ describe("app.store repository loading progress", () => {
     expect(selectMobileTab({ state, tabId: "settings" }).color).toBe("white");
   });
 
-  it("resolves the asset package release route", () => {
+  it("resolves the asset pack release routes", () => {
     const state = createInitialState();
-    state.currentRoute = "/project/asset-package";
-
-    expect(selectViewData({ state }).currentRoutePattern).toBe(
-      "/project/asset-package",
-    );
+    for (const route of ["/project/asset-packs", "/project/asset-pack-editor"]) {
+      state.currentRoute = route;
+      expect(selectViewData({ state }).currentRoutePattern).toBe(route);
+    }
   });
 
   it("resolves the platform details route", () => {
@@ -235,12 +234,13 @@ describe("app.store mobile tab active state", () => {
     expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
   });
 
-  it("highlights the release tab on the asset package route", () => {
+  it("highlights the release tab on the asset pack routes", () => {
     const state = createInitialState();
-    state.currentRoute = "/project/asset-package";
-
-    expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
-    expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+    for (const route of ["/project/asset-packs", "/project/asset-pack-editor"]) {
+      state.currentRoute = route;
+      expect(selectMobileTab({ state, tabId: "release" }).color).toBe("white");
+      expect(selectMobileTab({ state, tabId: "assets" }).color).toBe("mu-fg");
+    }
   });
 
   it("highlights the open mobile sheet tab over the current route", () => {

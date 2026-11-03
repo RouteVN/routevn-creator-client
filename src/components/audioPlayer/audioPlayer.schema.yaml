@@ -9,6 +9,9 @@ propsSchema:
     fileId:
       type: string
       description: ID of the audio file to play
+    src:
+      type: string
+      description: URL of audio to play instead of a project file, such as a package's sound before it is imported
     autoPlay:
       type: boolean
       description: Whether to start playing automatically

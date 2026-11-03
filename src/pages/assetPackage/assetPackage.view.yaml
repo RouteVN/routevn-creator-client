@@ -1,44 +1,46 @@
 refs:
-  addResourceTypeButton:
+  backButton:
     eventListeners:
       click:
-        handler: handleAddResourceTypeButtonClick
-  resourceTypeMenu:
+        handler: handleBackClick
+  pickResourcesButton:
+    eventListeners:
+      click:
+        handler: handlePickResourcesClick
+  pickerDialog:
     eventListeners:
       close:
-        handler: handleResourceTypeMenuClose
-      item-click:
-        handler: handleResourceTypeMenuItemClick
-  resourceTypeHeading*:
-    eventListeners:
-      contextmenu:
-        handler: handleResourceTypeHeadingContextMenu
-  resourceTypeContextMenu:
-    eventListeners:
-      close:
-        handler: handleResourceTypeContextMenuClose
-      item-click:
-        handler: handleResourceTypeContextMenuItemClick
-  editResourceFoldersButton*:
+        handler: handlePickerClose
+  pickerDoneButton:
     eventListeners:
       click:
-        handler: handleEditResourceFoldersButtonClick
-  resourceFolderPicker:
-    eventListeners:
-      close:
-        handler: handleResourceFolderPickerClose
-  resourceFolderOption*:
+        handler: handlePickerDoneClick
+  pickerType*:
     eventListeners:
       click:
-        handler: handleResourceFolderOptionClick
-  confirmResourceFolders:
+        handler: handlePickerTypeClick
+  pickerFolder*:
     eventListeners:
       click:
-        handler: handleConfirmResourceFolders
+        handler: handlePickerFolderClick
   downloadAssetPackageButton:
     eventListeners:
       click:
         handler: handleDownloadAssetPackageButtonClick
+styles:
+  # A folder's resources as small tiles, as many to a row as fit.
+  ".assetPackageFolderGrid":
+    display: grid
+    grid-template-columns: repeat(auto-fill, 80px)
+    gap: var(--spacing-sm)
+    width: 100%
+  # The picker fills the window's height, whichever type it shows; its lists
+  # scroll.
+  '#pickerContent':
+    height: calc(100vh - 96px)
+  '@supports (height: 100dvh)':
+    '#pickerContent':
+      height: calc(100dvh - 96px)
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -50,34 +52,142 @@ template:
               - 'rtgl-view pos=abs h=1 bgc=bo style="left: 0; right: 0; top: 47px; z-index: 1001; pointer-events: none;"': null
               - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
                   - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-                      - rtgl-view w=f d=h av=c g=sm:
-                          - rtgl-text w=1fg: ${i18n.assetPackagePage.title}
-                          - rtgl-button#addResourceTypeButton v=pr pre=plus: ${i18n.assetPackagePage.addResourceTypeButton}
-                          - rtgl-button#downloadAssetPackageButton v=pr pre=download: ${i18n.assetPackagePage.downloadAssetPackageButton}
+                      - rtgl-view w=f d=h av=c g=md:
+                          - 'rtgl-button#backButton sq pre=chevronLeft v=ol aria-label="${backLabel}" title="${backLabel}"': null
+                          - rtgl-text w=1fg ellipsis: ${assetPackName}
+                          - rtgl-button#downloadAssetPackageButton v=pr pre=download ?disabled=${exportDisabled}: ${i18n.assetPackagePage.downloadAssetPackageButton}
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
                       - 'rtgl-view d=v g=md w=f ph=md pt=md style="min-width: 0; padding-bottom: 32vh; box-sizing: border-box;"':
-                          - rtgl-view w=560 sm-w=f d=v g=md:
-                              - $for section, sectionIndex in selectedResourceSections:
-                                  - rtgl-view w=f d=v g=sm:
-                                      - rtgl-view w=f d=h av=c:
-                                          - rtgl-view d=h av=c w=1fg h=32 ph=sm br=sm h-bgc=mu:
-                                              - 'rtgl-text#resourceTypeHeading${sectionIndex} data-resource-type="${section.resourceType}" s=md w=f': ${section.label}
-                                          - 'rtgl-button#editResourceFoldersButton${sectionIndex} data-resource-type="${section.resourceType}" sq v=ol pre=edit aria-label="${section.editButtonLabel}" title="${section.editButtonLabel}"': null
+                          - 'rtgl-view w=f d=v g=xl style="max-width: 880px;"':
+                              # Only what is picked, a folder inside another named with its
+                              # path; Pick resources opens the picker for the rest.
+                              - rtgl-view w=f d=v g=md:
+                                  - rtgl-view w=f d=h av=c g=sm:
+                                      - rtgl-text s=lg w=1fg: ${pickedTitle}
+                                      - rtgl-button#pickResourcesButton v=ol pre=edit: ${pickResourcesLabel}
+                                  - $if !hasPicks:
+                                      - rtgl-text s=sm c=mu-fg: ${nothingPickedMessage}
+                                  # No box around a folder: its name, then its tiles.
+                                  - $for section, sectionIndex in pickedSections:
+                                      - rtgl-view w=f d=v g=md:
+                                          - rtgl-text s=sm c=mu-fg: ${section.label}
+                                          - $for folder, folderIndex in section.folders:
+                                              - rtgl-view w=f d=v g=sm:
+                                                  - rtgl-view w=f d=h av=c g=sm:
+                                                      - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                                      - rtgl-text s=sm: ${folder.name}
+                                                  - $if folder.resourceCount:
+                                                      - div.assetPackageFolderGrid:
+                                                          - $for tile, tileIndex in folder.items:
+                                                              - rvn-asset-package-preview-tile :preview=${tile}: null
+                              # A line between the picks, what comes with them and the links.
+                              - $if comesWith.isInvalid || comesWith.isVisible:
+                                  - rtgl-view h=1 w=f bgc=bo: null
+                              # What the picks use comes along; the store does not show it.
+                              - $if comesWith.isInvalid:
+                                  - rtgl-text s=sm c=de: ${comesWith.invalidMessage}
+                              - $if comesWith.isVisible:
+                                  # Laid out as the picks: each type's tiles, with the picks
+                                  # that use each in its tooltip.
+                                  - rtgl-view w=f d=v g=md:
                                       - rtgl-view w=f d=v g=xs:
-                                          - $for folder, folderIndex in section.selectedFolders:
-                                              - rtgl-view w=f d=h av=c g=sm p=sm:
-                                                  - rtgl-svg svg=folder wh=16 c=mu-fg: null
-                                                  - rtgl-text s=sm: ${folder.label}
-  - rtgl-dropdown-menu#resourceTypeMenu :items=${resourceTypeMenuItems} ?open=${resourceTypeMenu.isOpen} x=${resourceTypeMenu.x} y=${resourceTypeMenu.y}: null
-  - rtgl-dropdown-menu#resourceTypeContextMenu :items=${resourceTypeContextMenu.items} ?open=${resourceTypeContextMenu.isOpen} x=${resourceTypeContextMenu.x} y=${resourceTypeContextMenu.y}: null
-  - rtgl-popover#resourceFolderPicker ?open=${resourceFolderPickerOpen} x=${folderPicker.x} y=${folderPicker.y} place=be content-w=320 content-g=sm content-ph=md content-pv=md:
-      - rtgl-view w=f d=v g=xs:
-          - $for folder, i in folderOptions:
-              - 'rtgl-button#resourceFolderOption${i} data-folder-id="${folder.id}" w=f v=${folder.buttonVariant} aria-label="${folder.label}" aria-pressed="${folder.selected}"':
-                  - rtgl-view w=f d=h av=c g=sm:
-                      - rtgl-svg svg=${folder.icon} wh=18: null
-                      - rtgl-text s=sm ta=s w=1fg: ${folder.label}
-                      - $if folder.selected:
-                          - rtgl-text s=sm c=mu-fg: ${folder.selectionOrder}
-      - rtgl-view w=f d=h ah=e pt=sm:
-          - rtgl-button#confirmResourceFolders s=sm v=pr: ${i18n.assetPackagePage.confirmButton}
+                                          - rtgl-text s=lg: ${comesWith.title}
+                                          - rtgl-text s=sm c=mu-fg: ${comesWith.hint}
+                                      - $for group, groupIndex in comesWith.groups:
+                                          - rtgl-view w=f d=v g=sm:
+                                              - rtgl-text s=sm c=mu-fg: ${group.label}
+                                              - div.assetPackageFolderGrid:
+                                                  - $for item, itemIndex in group.items:
+                                                      - 'rtgl-view w=f title="${item.usedBy}"':
+                                                          - rvn-asset-package-preview-tile :preview=${item.preview}: null
+                              # Where the picks jump into the story, and the layouts they
+                              # open; the importer chooses their own for each.
+                              - $if comesWith.links.isVisible:
+                                  - rtgl-view h=1 w=f bgc=bo: null
+                                  - rtgl-view w=f d=v g=md:
+                                      - rtgl-view w=f d=v g=xs:
+                                          - rtgl-text s=lg: ${comesWith.links.title}
+                                          - rtgl-text s=sm c=mu-fg: ${comesWith.links.hint}
+                                      - $for link, linkIndex in comesWith.links.items:
+                                          - rtgl-view w=f d=h av=c g=sm:
+                                              - rtgl-svg svg=${link.icon} wh=16 c=mu-fg: null
+                                              - 'rtgl-view w=1fg d=v style="min-width: 0;"':
+                                                  - rtgl-text s=sm: ${link.label}
+                                                  - rtgl-text s=xs c=mu-fg: ${link.usedBy}
+  # One type's folders at a time, to tick or untick; Done applies the ticks.
+  - rtgl-dialog#pickerDialog ?open=${isPickerOpen} s=lg md-layout=fixed-top:
+      - 'rtgl-view#pickerContent slot=content d=v w=f g=md style="min-height: 0;"':
+          - rtgl-view w=f d=v g=xs:
+              - rtgl-text s=lg: ${pickerTitle}
+              - rtgl-text s=sm c=mu-fg: ${pickerHint}
+          - $if !hasPickerTypes:
+              - rtgl-text s=sm c=mu-fg: ${emptyProjectMessage}
+          - $if hasPickerTypes:
+              - 'rtgl-view w=f h=1fg d=h sm-d=v g=md style="min-height: 0;"':
+                  # The types; the picked count shows beside each.
+                  - 'rtgl-view w=180 sm-w=f d=v sm-d=h g=xs sv sm-sh style="flex: 0 0 auto; align-self: stretch; min-height: 0;"':
+                      - $for type, typeIndex in pickerTypes:
+                          - $if type.isCurrent:
+                              - 'rtgl-view#pickerType${typeIndex} data-resource-type="${type.resourceType}" d=h av=c g=sm h=32 ph=sm br=sm cur=pointer bgc=mu aria-current="true" style="flex: 0 0 auto; align-self: stretch;"':
+                                  - rtgl-text s=sm w=1fg: ${type.label}
+                                  - $if type.selectedCount:
+                                      - rtgl-text s=sm c=mu-fg: ${type.selectedCount}
+                            $else:
+                              - 'rtgl-view#pickerType${typeIndex} data-resource-type="${type.resourceType}" d=h av=c g=sm h=32 ph=sm br=sm cur=pointer h-bgc=mu style="flex: 0 0 auto; align-self: stretch;"':
+                                  - rtgl-text s=sm c=mu-fg w=1fg: ${type.label}
+                                  - $if type.selectedCount:
+                                      - rtgl-text s=sm c=mu-fg: ${type.selectedCount}
+                  - 'rtgl-view w=1fg sm-w=f h=f d=v g=sm sv style="min-width: 0; min-height: 0;"':
+                      - $if pickerSection.hasNoFolders:
+                          - rtgl-text s=sm c=mu-fg ph=sm: ${pickerSection.noFoldersHint}
+                      - $for folder, folderIndex in pickerSection.folders:
+                          # A folder is indented under the folder it sits in.
+                          - 'rtgl-view w=f style="padding-left: ${folder.indent}px; box-sizing: border-box;"':
+                              # A folder inside a ticked one comes with it: ticked,
+                              # and not ticked or unticked on its own.
+                              - $if folder.isIncluded:
+                                  - 'rtgl-view w=f d=h g=md p=sm br=md bw=xs bc=bo cur=default aria-disabled="true"':
+                                      - 'rtgl-view w=18 d=v ah=c g=xs style="align-self: stretch; flex: 0 0 auto;"':
+                                          - rtgl-view h=20: null
+                                          - rtgl-view h=1fg: null
+                                          - 'rtgl-checkbox ?checked=${folder.selected} ?disabled=${folder.isIncluded} aria-label="${folder.name}" style="pointer-events: none;"': null
+                                          - rtgl-view h=1fg: null
+                                          - rtgl-view h=20: null
+                                      - 'rtgl-view w=1fg d=v g=sm style="min-width: 0;"':
+                                          - rtgl-view w=f d=h av=c g=sm h=20:
+                                              - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                              - rtgl-text s=sm: ${folder.name}
+                                              - rtgl-text s=xs c=mu-fg ellipsis: ${folder.includedHint}
+                                          - $if folder.resourceCount:
+                                              - div.assetPackageFolderGrid:
+                                                  - $for tile, tileIndex in folder.items:
+                                                      - rvn-asset-package-preview-tile :preview=${tile}: null
+                                $else:
+                                  # The whole box ticks the folder. At its left, the picked
+                                  # folder's place in the pack at the top and the checkbox
+                                  # centered on the folder; then its name, as on the page,
+                                  # and the resources directly in it under it. The checkbox
+                                  # takes no clicks of its own, so a click counts once;
+                                  # Space on it still reaches the box.
+                                  - 'rtgl-view#pickerFolder${folderIndex} data-resource-type="${pickerSection.resourceType}" data-folder-id="${folder.folderId}" w=f d=h g=md p=sm br=md bw=xs bc=bo cur=pointer h-bgc=mu':
+                                      # A fixed column, so the number never moves anything.
+                                      - 'rtgl-view w=18 d=v ah=c g=xs style="align-self: stretch; flex: 0 0 auto;"':
+                                          - rtgl-view h=20 av=c ah=c:
+                                              - $if folder.pickOrder:
+                                                  - rtgl-view wh=18 br=sm bgc=pr av=c ah=c:
+                                                      - rtgl-text s=xs c=pr-fg: ${folder.pickOrder}
+                                          - rtgl-view h=1fg: null
+                                          - 'rtgl-checkbox#folderCheckbox${folderIndex} ?checked=${folder.selected} aria-label="${folder.name}" style="pointer-events: none;"': null
+                                          - rtgl-view h=1fg: null
+                                          - rtgl-view h=20: null
+                                      - 'rtgl-view w=1fg d=v g=sm style="min-width: 0;"':
+                                          - rtgl-view w=f d=h av=c g=sm h=20:
+                                              - rtgl-svg svg=folder wh=16 c=mu-fg: null
+                                              - rtgl-text s=sm: ${folder.name}
+                                          - $if folder.resourceCount:
+                                              - div.assetPackageFolderGrid:
+                                                  - $for tile, tileIndex in folder.items:
+                                                      - rvn-asset-package-preview-tile :preview=${tile}: null
+          - rtgl-view w=f d=h ah=e:
+              # Done does nothing more while it saves.
+              - rtgl-button#pickerDoneButton v=pr ?disabled=${pickerDoneDisabled}: ${pickerDoneLabel}

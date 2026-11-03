@@ -17,6 +17,7 @@ export const RESOURCE_TYPES = Object.freeze([
   "variables",
   "layouts",
   "controls",
+  "assetPacks",
 ]);
 
 export const COLLAB_RESOURCE_TYPES = Object.freeze([
@@ -49,6 +50,7 @@ const RESOURCE_COMMAND_FAMILIES = Object.freeze([
   "variable",
   "layout",
   "control",
+  "assetPack",
 ]);
 
 const RESOURCE_COMMAND_OPERATIONS = Object.freeze([
@@ -104,6 +106,10 @@ const RESOURCE_COMMAND_TYPES = Object.freeze([
   "character.sprite.update",
   "character.sprite.move",
   "character.sprite.delete",
+  "assetPack.resource.create",
+  "assetPack.resource.update",
+  "assetPack.resource.move",
+  "assetPack.resource.delete",
 ]);
 
 const COMMAND_SCOPE_ENTRIES = Object.freeze([

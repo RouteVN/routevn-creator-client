@@ -1,24 +1,33 @@
 import { describe, expect, it } from "vitest";
 import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../src/internal/assetPackageResources.js";
 import { createAssetImportPlan } from "../../src/internal/assetImportPlan.js";
+import * as assetPackageStore from "../../src/pages/assetPackage/assetPackage.store.js";
 import {
-  closeResourceTypeContextMenu,
-  closeResourceFolderPicker,
-  confirmResourceFolderSelection,
+  applyPicker,
+  closePicker,
   createInitialState,
-  moveResourceType,
-  openResourceFolderPicker,
-  openResourceTypeContextMenu,
+  finishSavingPicks,
+  openPicker,
   selectAssetPackage,
   selectAssetPackageData,
+  selectBaseResources,
+  selectIsSavingPicks,
+  startSavingPicks,
+  setPickerResourceType,
   selectViewData,
   setFilesData,
+  setAssetPack,
   setAssetPackage,
   setResourceData,
+  setScenesData,
   setUiConfig,
-  toggleResourceFolderSelection,
+  toggleFolder,
 } from "../../src/pages/assetPackage/assetPackage.store.js";
-import { createAssetPackageManifest } from "../../src/pages/assetPackage/support/assetPackageManifest.js";
+import {
+  createAssetPackageManifest,
+  createSavedAssetPackContents,
+} from "../../src/internal/assetPackageManifest.js";
+import { visitAssetPackageReferences } from "../../src/internal/assetPackageResources.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const IMAGES_DATA = {
@@ -192,65 +201,96 @@ const createResourceDataByType = () => {
       { items: {}, tree: [] },
     ]),
   );
-  resourceDataByType.images = IMAGES_DATA;
-  resourceDataByType.sounds = SOUNDS_DATA;
-  resourceDataByType.videos = VIDEOS_DATA;
-  resourceDataByType.audioEffects = AUDIO_EFFECTS_DATA;
-  resourceDataByType.characters = CHARACTERS_DATA;
-  resourceDataByType.colors = COLORS_DATA;
-  resourceDataByType.fonts = FONTS_DATA;
-  resourceDataByType.textStyles = TEXT_STYLES_DATA;
-  resourceDataByType.layouts = LAYOUTS_DATA;
+  // Copies, so a test that edits its data leaves the next test's intact.
+  Object.assign(
+    resourceDataByType,
+    structuredClone({
+      images: IMAGES_DATA,
+      sounds: SOUNDS_DATA,
+      videos: VIDEOS_DATA,
+      audioEffects: AUDIO_EFFECTS_DATA,
+      characters: CHARACTERS_DATA,
+      colors: COLORS_DATA,
+      fonts: FONTS_DATA,
+      textStyles: TEXT_STYLES_DATA,
+      layouts: LAYOUTS_DATA,
+    }),
+  );
   return resourceDataByType;
 };
 
 describe("asset package store", () => {
-  it("offers only resource types with folders and uses the compact touch shell", () => {
+  it("lists each type with resources and its folders, and uses the compact touch shell", () => {
     const state = createInitialState();
-    const viewData = selectViewData({ state, i18n: EN_I18N });
-
-    expect(viewData).toMatchObject({
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
       resourceCategory: "releases",
-      selectedResourceId: "assetPackage",
+      selectedResourceId: "asset-pack-editor",
       showExplorerPanel: true,
       contentLeftPadding: "sm",
-    });
-    expect(viewData.resourceTypeMenuItems).toEqual([]);
-
-    openResourceFolderPicker(
-      { state },
-      { resourceType: "sounds", x: 20, y: 60 },
-    );
-    expect(state.folderPicker).toMatchObject({
-      resourceType: undefined,
-      isOpen: false,
+      hasPicks: false,
+      pickerTypes: [],
+      exportDisabled: true,
     });
 
     setResourceData(
       { state },
       { resourceDataByType: createResourceDataByType() },
     );
-    expect(
-      selectViewData({ state, i18n: EN_I18N }).resourceTypeMenuItems,
-    ).toEqual([
-      { label: "Images", type: "item", value: "images" },
-      { label: "Sounds", type: "item", value: "sounds" },
-      { label: "Videos", type: "item", value: "videos" },
-      { label: "Characters", type: "item", value: "characters" },
-      { label: "Audio Effects", type: "item", value: "audioEffects" },
-      { label: "Colors", type: "item", value: "colors" },
-      { label: "Fonts", type: "item", value: "fonts" },
-      { label: "Text Styles", type: "item", value: "textStyles" },
+    openPicker({ state });
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    // Types without resources are left out, and so are audio effects, which
+    // the asset store does not take for now.
+    expect(viewData.pickerTypes.map((type) => type.resourceType)).toEqual([
+      "images",
+      "sounds",
+      "videos",
+      "characters",
+      "colors",
+      "fonts",
+      "textStyles",
+      "layouts",
     ]);
-
-    openResourceFolderPicker(
-      { state },
-      { resourceType: "layouts", x: 20, y: 60 },
-    );
-    expect(state.folderPicker).toMatchObject({
-      resourceType: undefined,
-      isOpen: false,
+    // The picker opens on the first type with folders and shows only it.
+    expect(viewData.pickerTypes[0]).toMatchObject({
+      resourceType: "images",
+      label: "Images",
+      isCurrent: true,
+      selectedCount: "",
     });
+    expect(viewData.pickerSection.resourceType).toBe("images");
+    // Folders at any depth, in tree order, indented by depth, each with the
+    // resources directly in it, so a resource shows once.
+    expect(viewData.pickerSection.folders).toMatchObject([
+      {
+        folderId: "folder-1",
+        name: "Backgrounds",
+        indent: "0",
+        selected: false,
+        isIncluded: false,
+        pickOrder: "",
+        items: [],
+        resourceCount: 0,
+      },
+      {
+        folderId: "folder-2",
+        name: "Night",
+        indent: "24",
+        selected: false,
+        isIncluded: false,
+        pickOrder: "",
+        items: [
+          {
+            id: "image-1",
+            name: "City",
+            kind: "image",
+            fileId: "file-image-1",
+            showName: true,
+          },
+        ],
+        resourceCount: 1,
+      },
+      { folderId: "folder-3", name: "Characters", indent: "0" },
+    ]);
 
     setUiConfig({ state }, { uiConfig: { id: "touch" } });
     expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
@@ -260,143 +300,453 @@ describe("asset package store", () => {
     });
   });
 
-  it("orders folder selection and renders a generic resource section", () => {
+  it("ticks folders in the picker, in the order picked, and applies them on Done", () => {
     const state = createInitialState();
     setResourceData(
       { state },
       { resourceDataByType: createResourceDataByType() },
     );
-    openResourceFolderPicker(
+
+    openPicker({ state });
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-3" });
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-1" });
+    // A folder inside a ticked one comes with it, and is not ticked alone.
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-2" });
+    // Neither is a folder the type does not have.
+    toggleFolder({ state }, { resourceType: "images", folderId: "image-1" });
+    toggleFolder({ state }, { resourceType: "sounds", folderId: "folder-1" });
+    // Ticking a picked folder again leaves it where it is.
+    toggleFolder(
       { state },
-      { resourceType: "images", x: 20, y: 60 },
+      { resourceType: "images", folderId: "folder-3", selected: true },
     );
-
-    toggleResourceFolderSelection({ state }, { folderId: "folder-2" });
-    expect(state.folderPicker.draftSelectedFolderIds).toEqual([]);
-    toggleResourceFolderSelection({ state }, { folderId: "folder-3" });
-    toggleResourceFolderSelection({ state }, { folderId: "folder-1" });
-
-    expect(selectViewData({ state, i18n: EN_I18N }).folderOptions).toEqual([
-      expect.objectContaining({
-        id: "folder-1",
-        label: "Backgrounds",
-        selectionOrder: 2,
-        icon: "folder",
-      }),
-      expect.objectContaining({
-        id: "folder-3",
-        label: "Characters",
-        selectionOrder: 1,
-        icon: "folder",
-      }),
+    // The picker shows its ticks; the page waits for Done.
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.pickerTypes[0].selectedCount).toBe("2");
+    expect(
+      viewData.pickerSection.folders.map((folder) => [
+        folder.folderId,
+        folder.pickOrder,
+      ]),
+    ).toEqual([
+      ["folder-1", "2"],
+      ["folder-2", ""],
+      ["folder-3", "1"],
     ]);
-
-    confirmResourceFolderSelection({ state });
-    const viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.selectedResourceSections).toEqual([
-      {
-        resourceType: "images",
-        label: "Images",
-        selectedFolders: [
-          { id: "folder-3", label: "Characters" },
-          { id: "folder-1", label: "Backgrounds" },
-        ],
-        editButtonLabel: "Select Images folders",
-      },
+    expect(state.pickerFolderIdsByType.images).toEqual([
+      "folder-3",
+      "folder-1",
     ]);
-    expect(viewData.resourceTypeMenuItems).not.toContainEqual(
-      expect.objectContaining({ value: "images" }),
-    );
+    expect(state.pickerFolderIdsByType.sounds).toEqual([]);
+    expect(viewData.pickedSections).toEqual([]);
+    expect(viewData.exportDisabled).toBe(true);
 
-    openResourceFolderPicker(
-      { state },
-      { resourceType: "images", x: 20, y: 60 },
-    );
-    toggleResourceFolderSelection({ state }, { folderId: "folder-3" });
-    closeResourceFolderPicker({ state });
+    applyPicker({ state });
+    expect(state.isPickerOpen).toBe(false);
     expect(state.selectedFolderIdsByType.images).toEqual([
       "folder-3",
       "folder-1",
     ]);
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    // The page lists only what is picked, in the order picked.
+    expect(
+      viewData.pickedSections[0].folders.map((folder) => folder.folderId),
+    ).toEqual(["folder-3", "folder-1"]);
+    expect(viewData.pickedSections[0].folders[1]).toMatchObject({
+      name: "Backgrounds",
+      items: [{ id: "image-1", name: "City", showName: true }],
+    });
+    expect(viewData.exportDisabled).toBe(false);
+
+    // Closing the picker without Done drops its ticks.
+    openPicker({ state });
+    toggleFolder(
+      { state },
+      { resourceType: "images", folderId: "folder-3", selected: false },
+    );
+    closePicker({ state });
+    expect(state.selectedFolderIdsByType.images).toEqual([
+      "folder-3",
+      "folder-1",
+    ]);
+    openPicker({ state });
+    expect(state.pickerFolderIdsByType.images).toEqual([
+      "folder-3",
+      "folder-1",
+    ]);
+
+    // Unticked and ticked again, a folder goes after those picked before it.
+    toggleFolder(
+      { state },
+      { resourceType: "images", folderId: "folder-3", selected: false },
+    );
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-3" });
+    applyPicker({ state });
+    expect(state.selectedFolderIdsByType.images).toEqual([
+      "folder-1",
+      "folder-3",
+    ]);
+    openPicker({ state });
+
+    // Choosing another type shows only its folders; an unknown one is ignored.
+    setPickerResourceType({ state }, { resourceType: "sounds" });
+    setPickerResourceType({ state }, { resourceType: "scenes" });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.pickerSection.resourceType).toBe("sounds");
+    expect(
+      viewData.pickerTypes
+        .filter((type) => type.isCurrent)
+        .map((type) => type.resourceType),
+    ).toEqual(["sounds"]);
+    closePicker({ state });
+    expect(selectViewData({ state, i18n: EN_I18N }).pickerTypes).toEqual([]);
+    // Reopening shows the type shown last.
+    openPicker({ state });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).pickerSection.resourceType,
+    ).toBe("sounds");
   });
 
-  it("orders selected resource types and exposes valid move actions", () => {
+  it("leaves empty folders out of the picker, unless they are picked", () => {
+    const resourceDataByType = createResourceDataByType();
+    // An empty folder, and one holding only an empty folder.
+    Object.assign(resourceDataByType.images.items, {
+      "folder-empty": { type: "folder", name: "Empty" },
+      "folder-nested-empty": { type: "folder", name: "Nested Empty" },
+      "folder-inner-empty": { type: "folder", name: "Inner Empty" },
+    });
+    resourceDataByType.images.tree.push(
+      { id: "folder-empty", children: [] },
+      {
+        id: "folder-nested-empty",
+        children: [{ id: "folder-inner-empty", children: [] }],
+      },
+    );
+    // A type with only an empty folder.
+    resourceDataByType.colors = {
+      items: { "color-folder": { type: "folder", name: "Palette" } },
+      tree: [{ id: "color-folder", children: [] }],
+    };
+    const state = createInitialState();
+    setResourceData({ state }, { resourceDataByType });
+
+    openPicker({ state });
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.pickerSection.resourceType).toBe("images");
+    expect(
+      viewData.pickerSection.folders.map((folder) => folder.folderId),
+    ).toEqual(["folder-1", "folder-2", "folder-3"]);
+    expect(viewData.pickerTypes.map((type) => type.resourceType)).not.toContain(
+      "colors",
+    );
+    setPickerResourceType({ state }, { resourceType: "colors" });
+    expect(state.pickerResourceType).toBe("images");
+    closePicker({ state });
+
+    // A picked folder that is now empty stays, so it can be unticked.
+    setAssetPackage(
+      { state },
+      {
+        assetPackage: {
+          schemaVersion: 1,
+          resources: [{ resourceType: "images", folderIds: ["folder-empty"] }],
+        },
+      },
+    );
+    openPicker({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(
+      viewData.pickerSection.folders.map((folder) => [
+        folder.folderId,
+        folder.selected,
+      ]),
+    ).toEqual([
+      ["folder-1", false],
+      ["folder-2", false],
+      ["folder-3", false],
+      ["folder-empty", true],
+    ]);
+    toggleFolder(
+      { state },
+      { resourceType: "images", folderId: "folder-empty", selected: false },
+    );
+    applyPicker({ state });
+    expect(state.selectedFolderIdsByType.images).toEqual([]);
+    closePicker({ state });
+
+    // So does an emptied folder picked inside another, with the folders it
+    // sits in, which hold nothing else.
+    setAssetPackage(
+      { state },
+      {
+        assetPackage: {
+          schemaVersion: 1,
+          resources: [
+            { resourceType: "images", folderIds: ["folder-inner-empty"] },
+          ],
+        },
+      },
+    );
+    openPicker({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(
+      viewData.pickerSection.folders.map((folder) => [
+        folder.folderId,
+        folder.indent,
+        folder.selected,
+      ]),
+    ).toEqual([
+      ["folder-1", "0", false],
+      ["folder-2", "24", false],
+      ["folder-3", "0", false],
+      ["folder-nested-empty", "0", false],
+      ["folder-inner-empty", "24", true],
+    ]);
+  });
+
+  it("picks a folder at any depth, and shows one inside a ticked folder as included", () => {
+    const resourceDataByType = createResourceDataByType();
+    // Backgrounds > Night > Late, with a resource of its own.
+    Object.assign(resourceDataByType.images.items, {
+      "folder-late": { type: "folder", name: "Late" },
+      "image-late": { type: "image", name: "Moon", fileId: "file-image-1" },
+    });
+    resourceDataByType.images.tree[0].children[0].children.push({
+      id: "folder-late",
+      children: [{ id: "image-late" }],
+    });
+    const state = createInitialState();
+    setResourceData({ state }, { resourceDataByType });
+    const pickerFolders = () =>
+      selectViewData({ state, i18n: EN_I18N }).pickerSection.folders.map(
+        (folder) => ({
+          folderId: folder.folderId,
+          selected: folder.selected,
+          isIncluded: folder.isIncluded,
+          includedHint: folder.includedHint,
+          pickOrder: folder.pickOrder,
+        }),
+      );
+    const selectedCount = () =>
+      selectViewData({ state, i18n: EN_I18N }).pickerTypes[0].selectedCount;
+
+    openPicker({ state });
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-2" });
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-3" });
+    expect(pickerFolders()).toEqual([
+      {
+        folderId: "folder-1",
+        selected: false,
+        isIncluded: false,
+        includedHint: "",
+        pickOrder: "",
+      },
+      {
+        folderId: "folder-2",
+        selected: true,
+        isIncluded: false,
+        includedHint: "",
+        pickOrder: "1",
+      },
+      {
+        folderId: "folder-late",
+        selected: true,
+        isIncluded: true,
+        includedHint: "Included in “Night”",
+        pickOrder: "",
+      },
+      {
+        folderId: "folder-3",
+        selected: true,
+        isIncluded: false,
+        includedHint: "",
+        pickOrder: "2",
+      },
+    ]);
+    expect(selectedCount()).toBe("2");
+
+    // Ticking the folder Night sits in includes Night, which keeps its own
+    // pick; the numbers count the folders the pack carries.
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-1" });
+    expect(state.pickerFolderIdsByType.images).toEqual([
+      "folder-2",
+      "folder-3",
+      "folder-1",
+    ]);
+    expect(pickerFolders()).toMatchObject([
+      { folderId: "folder-1", selected: true, pickOrder: "2" },
+      {
+        folderId: "folder-2",
+        selected: true,
+        isIncluded: true,
+        includedHint: "Included in “Backgrounds”",
+        pickOrder: "",
+      },
+      {
+        folderId: "folder-late",
+        isIncluded: true,
+        includedHint: "Included in “Night”",
+      },
+      { folderId: "folder-3", pickOrder: "1" },
+    ]);
+    expect(selectedCount()).toBe("2");
+    // An included folder is not unticked on its own.
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-2" });
+    expect(state.pickerFolderIdsByType.images).toContain("folder-2");
+
+    // Unticking Backgrounds leaves Night picked.
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-1" });
+    expect(pickerFolders()).toMatchObject([
+      { folderId: "folder-1", selected: false, pickOrder: "" },
+      { folderId: "folder-2", selected: true, pickOrder: "1" },
+      { folderId: "folder-late", isIncluded: true },
+      { folderId: "folder-3", pickOrder: "2" },
+    ]);
+    applyPicker({ state });
+    expect(state.selectedFolderIdsByType.images).toEqual([
+      "folder-2",
+      "folder-3",
+    ]);
+  });
+
+  it("lists a nested pick on the page with its path, and a pick inside another once", () => {
     const state = createInitialState();
     setResourceData(
       { state },
       { resourceDataByType: createResourceDataByType() },
     );
-    state.selectedFolderIdsByType.images = ["folder-1"];
-    state.selectedFolderIdsByType.sounds = ["sound-folder"];
-    state.selectedFolderIdsByType.videos = ["video-folder"];
+    const pickedFolders = () =>
+      selectViewData({ state, i18n: EN_I18N }).pickedSections[0].folders.map(
+        (folder) => [
+          folder.folderId,
+          folder.name,
+          folder.items.map((item) => item.id),
+        ],
+      );
 
-    openResourceTypeContextMenu(
+    state.selectedFolderIdsByType.images = ["folder-3", "folder-2"];
+    expect(pickedFolders()).toEqual([
+      ["folder-3", "Characters", ["image-2"]],
+      ["folder-2", "Backgrounds > Night", ["image-1"]],
+    ]);
+    expect(selectViewData({ state, i18n: EN_I18N }).exportDisabled).toBe(false);
+
+    // Night comes with Backgrounds, which shows all it holds.
+    state.selectedFolderIdsByType.images = ["folder-2", "folder-1"];
+    expect(pickedFolders()).toEqual([["folder-1", "Backgrounds", ["image-1"]]]);
+  });
+
+  // The store runs exports named select* on read-only state, so an action
+  // named so would throw on its first write.
+  it("only reads the state in its select* exports", () => {
+    const state = createInitialState();
+    setResourceData(
       { state },
-      { resourceType: "images", x: 30, y: 40 },
+      { resourceDataByType: createResourceDataByType() },
     );
-    expect(
-      selectViewData({ state, i18n: EN_I18N }).resourceTypeContextMenu,
-    ).toMatchObject({
-      isOpen: true,
-      x: 30,
-      y: 40,
-      resourceType: "images",
-      items: [
+    openPicker({ state });
+    const freeze = (value) => {
+      if (value && typeof value === "object" && !Object.isFrozen(value)) {
+        Object.values(value).forEach(freeze);
+        Object.freeze(value);
+      }
+      return value;
+    };
+    freeze(state);
+
+    const selectors = Object.entries(assetPackageStore).filter(([name]) =>
+      name.startsWith("select"),
+    );
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const [, selector] of selectors) {
+      expect(() =>
+        selector({ state, i18n: EN_I18N }, { resourceType: "sounds" }),
+      ).not.toThrow();
+    }
+  });
+
+  it("shows every resource in a folder, with its name", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.colors = {
+      items: {
+        palette: { type: "folder", name: "Palette" },
+        ...Object.fromEntries(
+          Array.from({ length: 8 }, (_, index) => [
+            `color-${index}`,
+            { type: "color", name: `Color ${index}`, hex: "#112233" },
+          ]),
+        ),
+      },
+      tree: [
         {
-          label: "Move Down",
-          type: "item",
-          value: "move-down",
+          id: "palette",
+          children: Array.from({ length: 8 }, (_, index) => ({
+            id: `color-${index}`,
+          })),
         },
       ],
-    });
+    };
+    setResourceData({ state }, { resourceDataByType });
 
-    moveResourceType({ state }, { resourceType: "images", offset: 1 });
-    expect(
-      selectViewData({ state, i18n: EN_I18N }).selectedResourceSections.map(
-        ({ resourceType }) => resourceType,
-      ),
-    ).toEqual(["sounds", "images", "videos"]);
-    expect(
-      selectViewData({ state, i18n: EN_I18N }).resourceTypeContextMenu.items,
-    ).toEqual([
-      {
-        label: "Move Up",
-        type: "item",
-        value: "move-up",
-      },
-      {
-        label: "Move Down",
-        type: "item",
-        value: "move-down",
-      },
-    ]);
-    expect(selectAssetPackage({ state })).toEqual({
-      schemaVersion: 1,
-      resources: [
-        { resourceType: "sounds", folderIds: ["sound-folder"] },
-        { resourceType: "images", folderIds: ["folder-1"] },
-        { resourceType: "videos", folderIds: ["video-folder"] },
-      ],
-    });
-
-    closeResourceTypeContextMenu({ state });
-    expect(state.resourceTypeContextMenu.isOpen).toBe(false);
-
-    state.selectedFolderIdsByType.sounds = [];
-    state.selectedFolderIdsByType.videos = [];
-    openResourceTypeContextMenu(
-      { state },
-      { resourceType: "images", x: 30, y: 40 },
-    );
-    expect(
-      selectViewData({ state, i18n: EN_I18N }).resourceTypeContextMenu,
-    ).toMatchObject({
-      isOpen: false,
-      items: [],
+    openPicker({ state });
+    setPickerResourceType({ state }, { resourceType: "colors" });
+    const colors = selectViewData({ state, i18n: EN_I18N }).pickerSection;
+    expect(colors.folders[0].items).toHaveLength(8);
+    expect(colors.folders[0].items[7]).toMatchObject({
+      kind: "color",
+      name: "Color 7",
+      hex: "#112233",
+      showName: true,
     });
   });
 
-  it("hydrates the saved asset package and removes stale folder selections", () => {
+  it("previews fonts, text styles and resources without one as their pages do", () => {
+    const state = createInitialState();
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    openPicker({ state });
+    const previewOf = (resourceType) => {
+      setPickerResourceType({ state }, { resourceType });
+      return selectViewData({ state, i18n: EN_I18N }).pickerSection.folders[0]
+        .items[0];
+    };
+
+    expect(previewOf("fonts")).toMatchObject({
+      kind: "font",
+      fontFamily: "Body",
+      fontFileId: "file-font-1",
+    });
+    expect(previewOf("textStyles")).toMatchObject({
+      kind: "textStyle",
+      fontFamilies: ["Body"],
+      fontFileIds: ["file-font-1"],
+      color: "#112233",
+      previewText: "Body",
+    });
+    expect(previewOf("videos")).toMatchObject({
+      kind: "thumbnail",
+      fileId: "file-video-thumbnail-1",
+    });
+    // A type the store does not take is offered only while folders of it are
+    // picked, so they can be unticked.
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).pickerTypes.map(
+        (type) => type.resourceType,
+      ),
+    ).not.toContain("audioEffects");
+    setPickerResourceType({ state }, { resourceType: "audioEffects" });
+    expect(state.pickerResourceType).toBe("videos");
+    state.selectedFolderIdsByType.audioEffects = ["audio-effect-folder"];
+    expect(previewOf("audioEffects")).toMatchObject({
+      kind: "icon",
+      icon: "audioEffects",
+    });
+  });
+
+  it("hydrates the saved asset package in its saved order, keeping folders at any depth and removing stale ones", () => {
     const state = createInitialState();
     setResourceData(
       { state },
@@ -415,7 +765,7 @@ describe("asset package store", () => {
             },
             {
               resourceType: "images",
-              folderIds: ["folder-2", "folder-1"],
+              folderIds: ["folder-3", "folder-2", "image-1", "folder-1"],
             },
             {
               resourceType: "layouts",
@@ -426,18 +776,97 @@ describe("asset package store", () => {
       },
     );
 
+    const resources = [
+      {
+        resourceType: "images",
+        folderIds: ["folder-3", "folder-2", "folder-1"],
+      },
+      { resourceType: "videos", folderIds: ["video-folder"] },
+      { resourceType: "layouts", folderIds: ["layout-folder"] },
+    ];
     expect(selectAssetPackage({ state })).toEqual({
       schemaVersion: 1,
-      resources: [
-        { resourceType: "videos", folderIds: ["video-folder"] },
-        { resourceType: "images", folderIds: ["folder-1"] },
-      ],
+      resources,
     });
+    // A save starts from the picks as loaded.
+    expect(selectBaseResources({ state })).toEqual(resources);
+  });
+
+  it("disables Done while the picks save, and saves the next time from the saved picks", () => {
+    const state = createInitialState();
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    setAssetPack(
+      { state },
+      {
+        assetPackId: "pack-1",
+        name: "Pack",
+        resources: [{ resourceType: "images", folderIds: ["folder-1"] }],
+      },
+    );
+    expect(selectIsSavingPicks({ state })).toBe(false);
+    expect(selectViewData({ state, i18n: EN_I18N }).pickerDoneDisabled).toBe(
+      false,
+    );
+
+    openPicker({ state });
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-3" });
+    applyPicker({ state });
+    startSavingPicks({ state });
+    expect(selectIsSavingPicks({ state })).toBe(true);
+    expect(selectViewData({ state, i18n: EN_I18N }).pickerDoneDisabled).toBe(
+      true,
+    );
+    // Until the save ends, a save would still start from the loaded picks.
+    expect(selectBaseResources({ state })).toEqual([
+      { resourceType: "images", folderIds: ["folder-1"] },
+    ]);
+
+    const { resources } = selectAssetPackage({ state });
+    finishSavingPicks({ state }, { savedResources: resources });
+    expect(selectIsSavingPicks({ state })).toBe(false);
+    expect(selectBaseResources({ state })).toEqual([
+      { resourceType: "images", folderIds: ["folder-1", "folder-3"] },
+    ]);
+
+    // A failed save leaves the base as it was.
+    startSavingPicks({ state });
+    finishSavingPicks({ state });
+    expect(selectIsSavingPicks({ state })).toBe(false);
+    expect(selectBaseResources({ state })).toEqual(resources);
+  });
+
+  it("exports a saved pack from the project's state as its editor does", () => {
+    const resourceDataByType = createResourceDataByType();
+    const resources = [
+      { resourceType: "sounds", folderIds: ["sound-folder"] },
+      { resourceType: "images", folderIds: ["folder-3", "folder-1"] },
+    ];
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData({ state }, { resourceDataByType });
+    setAssetPack({ state }, { assetPackId: "pack-1", name: "Pack", resources });
+
+    const repositoryState = {
+      ...structuredClone(resourceDataByType),
+      files: FILES_DATA,
+      assetPacks: {
+        items: {
+          "pack-1": {
+            id: "pack-1",
+            type: "assetPack",
+            name: "Pack",
+            resources,
+          },
+        },
+        tree: [{ id: "pack-1" }],
+      },
+    };
     expect(
-      selectViewData({ state, i18n: EN_I18N }).selectedResourceSections.map(
-        ({ resourceType }) => resourceType,
-      ),
-    ).toEqual(["videos", "images"]);
+      createSavedAssetPackContents({ repositoryState, assetPackId: "pack-1" }),
+    ).toEqual(selectAssetPackageData({ state }));
   });
 
   it("exports selected folders from any resource type and nested file references", () => {
@@ -449,11 +878,10 @@ describe("asset package store", () => {
     );
     state.selectedFolderIdsByType.images = ["folder-1"];
     state.selectedFolderIdsByType.characters = ["character-folder"];
-    moveResourceType({ state }, { resourceType: "characters", offset: -1 });
 
-    const repository = selectAssetPackageData({ state });
+    const { repository } = selectAssetPackageData({ state });
 
-    expect(Object.keys(repository)).toEqual(["files", "characters", "images"]);
+    expect(Object.keys(repository)).toEqual(["files", "images", "characters"]);
 
     expect(repository.images.tree).toEqual([
       {
@@ -492,6 +920,122 @@ describe("asset package store", () => {
     );
   });
 
+  it("exports a nested pick as a top-level folder, and a pick inside another once", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    const exportedImages = () =>
+      selectAssetPackageData({ state }).repository.images;
+
+    // Night goes without Backgrounds, the folder it sits in.
+    state.selectedFolderIdsByType.images = ["folder-3", "folder-2"];
+    let images = exportedImages();
+    expect(images.tree).toEqual([
+      { id: "folder-3", children: [{ id: "image-2" }] },
+      { id: "folder-2", children: [{ id: "image-1" }] },
+    ]);
+    expect(Object.keys(images.items).sort()).toEqual([
+      "folder-2",
+      "folder-3",
+      "image-1",
+      "image-2",
+    ]);
+    expect(images.items["folder-2"]).toEqual({
+      id: "folder-2",
+      type: "folder",
+      name: "Night",
+    });
+
+    // Picked with Backgrounds, Night comes with it, once, where Backgrounds
+    // is picked.
+    state.selectedFolderIdsByType.images = ["folder-2", "folder-3", "folder-1"];
+    images = exportedImages();
+    expect(images.tree).toEqual([
+      { id: "folder-3", children: [{ id: "image-2" }] },
+      {
+        id: "folder-1",
+        children: [{ id: "folder-2", children: [{ id: "image-1" }] }],
+      },
+    ]);
+    expect(
+      createAssetPackageManifest(selectAssetPackageData({ state })).repository
+        .images.tree,
+    ).toEqual(images.tree);
+
+    // An empty nested pick exports nothing, so Export stays disabled.
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.images.items["folder-empty"] = {
+      type: "folder",
+      name: "Empty",
+    };
+    resourceDataByType.images.tree[1].children.push({
+      id: "folder-empty",
+      children: [],
+    });
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.images = ["folder-empty"];
+    expect(selectViewData({ state, i18n: EN_I18N }).exportDisabled).toBe(true);
+    expect(() =>
+      createAssetPackageManifest(selectAssetPackageData({ state })),
+    ).toThrow(expect.objectContaining({ code: "no_resources" }));
+  });
+
+  it("lists and exports what a nested pick uses", () => {
+    const resourceDataByType = createResourceDataByType();
+    // The text styles sit in a folder inside another.
+    resourceDataByType.textStyles.items["text-style-outer"] = {
+      type: "folder",
+      name: "UI",
+    };
+    resourceDataByType.textStyles.tree = [
+      { id: "text-style-outer", children: resourceDataByType.textStyles.tree },
+    ];
+    const resources = [
+      { resourceType: "textStyles", folderIds: ["text-style-folder"] },
+    ];
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData({ state }, { resourceDataByType });
+    setAssetPack({ state }, { assetPackId: "pack-1", name: "Pack", resources });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.pickedSections[0].folders[0].name).toBe("UI > Text Styles");
+    expect(
+      viewData.comesWith.groups.map((group) => group.resourceType),
+    ).toEqual(["colors", "fonts"]);
+    expect(viewData.exportDisabled).toBe(false);
+
+    const contents = selectAssetPackageData({ state });
+    expect(contents.repository.textStyles.tree).toEqual([
+      { id: "text-style-folder", children: [{ id: "text-style-1" }] },
+    ]);
+    expect(Object.keys(contents.dependencies)).toEqual(["colors", "fonts"]);
+    // The list page exports the saved pack as its editor does.
+    expect(
+      createSavedAssetPackContents({
+        repositoryState: {
+          ...structuredClone(resourceDataByType),
+          files: FILES_DATA,
+          assetPacks: {
+            items: {
+              "pack-1": {
+                id: "pack-1",
+                type: "assetPack",
+                name: "Pack",
+                resources,
+              },
+            },
+            tree: [{ id: "pack-1" }],
+          },
+        },
+        assetPackId: "pack-1",
+      }),
+    ).toEqual(contents);
+  });
+
   it("exports audio effect folders added by the current repository schema", () => {
     const state = createInitialState();
     setResourceData(
@@ -500,7 +1044,7 @@ describe("asset package store", () => {
     );
     state.selectedFolderIdsByType.audioEffects = ["audio-effect-folder"];
 
-    const repository = selectAssetPackageData({ state });
+    const { repository } = selectAssetPackageData({ state });
 
     expect(repository.audioEffects.tree).toEqual([
       {
@@ -517,7 +1061,7 @@ describe("asset package store", () => {
     });
   });
 
-  it("includes transitive resources required by selected folders", () => {
+  it("puts what the picks use in dependencies, without its folders", () => {
     const state = createInitialState();
     setFilesData({ state }, { filesData: FILES_DATA });
     setResourceData(
@@ -526,14 +1070,84 @@ describe("asset package store", () => {
     );
     state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
 
-    const repository = selectAssetPackageData({ state });
+    const { repository, dependencies } = selectAssetPackageData({ state });
 
+    expect(Object.keys(repository)).toEqual(["files", "textStyles"]);
     expect(repository.textStyles.items).toHaveProperty("text-style-1");
-    expect(repository.fonts.items).toHaveProperty("font-1");
-    expect(repository.fonts.items).toHaveProperty("font-folder");
-    expect(repository.colors.items).toHaveProperty("color-1");
-    expect(repository.colors.items).toHaveProperty("color-folder");
+    expect(Object.keys(dependencies)).toEqual(["colors", "fonts"]);
+    expect(Object.keys(dependencies.fonts.items)).toEqual(["font-1"]);
+    expect(dependencies.fonts).not.toHaveProperty("tree");
+    expect(Object.keys(dependencies.colors.items)).toEqual(["color-1"]);
     expect(repository.files.items).toHaveProperty("file-font-1");
+  });
+
+  it("lists what the picks use under Comes with, with the picks that use it", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N }).comesWith.isVisible).toBe(
+      false,
+    );
+
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+    const { comesWith } = selectViewData({ state, i18n: EN_I18N });
+
+    expect(comesWith).toMatchObject({
+      isVisible: true,
+      title: "Dependencies",
+      groups: [
+        {
+          resourceType: "colors",
+          items: [
+            {
+              name: "Body Color",
+              usedBy: "Used by Body",
+              preview: { kind: "color", name: "Body Color", showName: true },
+            },
+          ],
+        },
+        {
+          resourceType: "fonts",
+          items: [{ name: "Body Font", usedBy: "Used by Body" }],
+        },
+      ],
+    });
+  });
+
+  it("lists nothing under Comes with when the selection cannot be exported", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    delete resourceDataByType.fonts.items["font-1"];
+    resourceDataByType.fonts.tree[0].children = [];
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+
+    // It names the resource at fault.
+    expect(selectViewData({ state, i18n: EN_I18N }).comesWith).toMatchObject({
+      isVisible: false,
+      isInvalid: true,
+      invalidMessage:
+        "“Body” in Text Styles uses a resource that no longer exists, so this selection can't be exported.",
+    });
+  });
+
+  it("keeps a resource the author picked as a pick when another pick uses it", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+    state.selectedFolderIdsByType.colors = ["color-folder"];
+
+    const { repository, dependencies } = selectAssetPackageData({ state });
+
+    expect(repository.colors.items).toHaveProperty("color-1");
+    expect(Object.keys(dependencies)).toEqual(["fonts"]);
   });
 
   it("rejects a selected resource with a missing dependency", () => {
@@ -550,7 +1164,7 @@ describe("asset package store", () => {
     );
   });
 
-  it("rejects transitive layouts with project-only references", () => {
+  it("exports a story jump, even a dependency's, as a link", () => {
     const state = createInitialState();
     const resourceDataByType = createResourceDataByType();
     resourceDataByType.layouts = {
@@ -558,9 +1172,23 @@ describe("asset package store", () => {
         "layout-folder": { type: "folder", name: "Layouts" },
         "layout-1": {
           type: "layout",
-          name: "Dialogue",
-          interaction: {
-            resetStoryAtSection: { sectionId: "section-1" },
+          name: "Menu",
+          elements: {
+            items: {
+              "button-1": {
+                click: {
+                  payload: {
+                    actions: {
+                      resetStoryAtSection: { sectionId: "section-1" },
+                      sectionTransition: {
+                        sceneId: "scene-1",
+                        sectionId: "section-1",
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -578,10 +1206,150 @@ describe("asset package store", () => {
       tree: [{ id: "control-folder", children: [{ id: "control-1" }] }],
     };
     setResourceData({ state }, { resourceDataByType });
+    setScenesData(
+      { state },
+      {
+        scenesData: {
+          items: {
+            "scene-1": {
+              type: "scene",
+              name: "Title",
+              sections: {
+                items: { "section-1": { name: "Start" } },
+                tree: [{ id: "section-1" }],
+              },
+            },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      },
+    );
     state.selectedFolderIdsByType.controls = ["control-folder"];
 
+    const contents = selectAssetPackageData({ state });
+    // The jump points at the link; a section jump drops its scene.
+    expect(
+      contents.dependencies.layouts.items["layout-1"].elements.items["button-1"]
+        .click.payload.actions,
+    ).toEqual({
+      resetStoryAtSection: { sectionId: "link.section-1" },
+      sectionTransition: { sectionId: "link.section-1" },
+    });
+    expect(contents.links).toEqual({
+      items: {
+        "link.section-1": {
+          kind: "section",
+          name: "Start",
+          sceneName: "Title",
+        },
+      },
+    });
+    expect(createAssetPackageManifest(contents).links).toEqual(contents.links);
+
+    // The page lists the link with the layout that jumps there.
+    const { comesWith } = selectViewData({ state, i18n: EN_I18N });
+    expect(comesWith.isInvalid).toBe(false);
+    expect(comesWith.links).toMatchObject({
+      isVisible: true,
+      title: "Links",
+      items: [
+        {
+          id: "link.section-1",
+          icon: "section",
+          label: "Title / Start",
+          usedBy: "Used by Menu",
+        },
+      ],
+    });
+  });
+
+  it("exports a layout an action opens as a link, unless the pack carries it", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.layouts = {
+      items: {
+        "title-folder": { type: "folder", name: "Title" },
+        "menu-folder": { type: "folder", name: "Menus" },
+        title: {
+          type: "layout",
+          name: "Title",
+          layoutType: "general",
+          elements: {
+            items: {
+              options: {
+                click: {
+                  payload: { actions: { pushOverlay: { resourceId: "menu" } } },
+                },
+              },
+            },
+          },
+        },
+        menu: {
+          type: "layout",
+          name: "Menu Page",
+          layoutType: "general",
+          elements: { items: { background: { imageId: "image-1" } } },
+        },
+      },
+      tree: [
+        { id: "title-folder", children: [{ id: "title" }] },
+        { id: "menu-folder", children: [{ id: "menu" }] },
+      ],
+    };
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.layouts = ["title-folder"];
+
+    // Title opens Menu Page, which the pack does not carry, nor what it uses.
+    let contents = selectAssetPackageData({ state });
+    expect(
+      contents.repository.layouts.items.title.elements.items.options.click
+        .payload.actions.pushOverlay,
+    ).toEqual({ resourceId: "link.menu" });
+    expect(contents.dependencies).toEqual({});
+    expect(contents.links.items).toEqual({
+      "link.menu": { kind: "layout", name: "Menu Page", layoutType: "general" },
+    });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).comesWith.links.items,
+    ).toMatchObject([
+      { icon: "layout", label: "Menu Page", usedBy: "Used by Title" },
+    ]);
+
+    // Picked too, Menu Page is opened as itself.
+    state.selectedFolderIdsByType.layouts = ["title-folder", "menu-folder"];
+    contents = selectAssetPackageData({ state });
+    expect(
+      contents.repository.layouts.items.title.elements.items.options.click
+        .payload.actions.pushOverlay,
+    ).toEqual({ resourceId: "menu" });
+    expect(contents.links.items).toEqual({});
+  });
+
+  it("rejects a jump to a line of the story", () => {
+    const state = createInitialState();
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.layouts = {
+      items: {
+        "layout-folder": { type: "folder", name: "Layouts" },
+        "layout-1": {
+          type: "layout",
+          name: "Dialogue",
+          interaction: { jump: { lineId: "line-1" } },
+        },
+      },
+      tree: [{ id: "layout-folder", children: [{ id: "layout-1" }] }],
+    };
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.layouts = ["layout-folder"];
+
     expect(() => selectAssetPackageData({ state })).toThrow(
-      "Resource 'layout-1' contains unsupported project reference 'sectionId'.",
+      "Resource 'layout-1' contains unsupported project reference 'lineId'.",
+    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).comesWith.invalidMessage,
+    ).toBe(
+      "“Dialogue” in Layouts jumps to a line of the story, so this selection can't be exported.",
     );
   });
 
@@ -595,12 +1363,15 @@ describe("asset package store", () => {
     state.selectedFolderIdsByType.images = ["folder-3", "folder-1"];
     state.selectedFolderIdsByType.sounds = ["sound-folder"];
     state.selectedFolderIdsByType.videos = ["video-folder"];
-    const manifest = createAssetPackageManifest({
-      repository: selectAssetPackageData({ state }),
-    });
+    const manifest = createAssetPackageManifest(
+      selectAssetPackageData({ state }),
+    );
+    expect(manifest.schema).toBe("routevn.import-pack.v2");
     expect(manifest.package).toEqual({
       kind: "routevn.creator.asset-package",
     });
+    // Nothing the picks use is left out, so there is no dependencies section.
+    expect(manifest).not.toHaveProperty("dependencies");
     let id = 0;
 
     const plan = createAssetImportPlan({
@@ -621,5 +1392,61 @@ describe("asset package store", () => {
       { type: "video", name: "Intro", resourceType: "videos" },
     ]);
     expect(plan.files).toHaveLength(5);
+  });
+  it("round-trips: every reference an import commits points to something it commits", () => {
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    // Saved characters never keep an empty name variable; the project model
+    // removes it.
+    const resourceDataByType = createResourceDataByType();
+    delete resourceDataByType.characters.items["character-1"].nameVariableId;
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.images = ["folder-1"];
+    state.selectedFolderIdsByType.characters = ["character-folder"];
+    state.selectedFolderIdsByType.textStyles = ["text-style-folder"];
+    state.selectedFolderIdsByType.audioEffects = ["audio-effect-folder"];
+    const manifest = createAssetPackageManifest(
+      selectAssetPackageData({ state }),
+    );
+    expect(Object.keys(manifest.dependencies)).toEqual(["colors", "fonts"]);
+    let id = 0;
+
+    const plan = createAssetImportPlan({
+      manifest,
+      manifestUrl: "https://example.com/asset-package/asset-package.json",
+      projectId: "project-1",
+      repositoryState: createResourceDataByType(),
+      repositoryRevision: 1,
+      createId: () => `generated-${++id}`,
+      dependencyFolderName: "Pack",
+    });
+
+    const imported = [...plan.resources, ...plan.dependencies];
+    const resourceIds = new Set(
+      imported.map((resource) => resource.destinationId),
+    );
+    const fileIds = new Set(plan.files.map((file) => file.destinationId));
+    const dangling = [];
+    for (const resource of imported) {
+      visitAssetPackageReferences(resource.data, ({ kind, value }) => {
+        const known = kind === "file" ? fileIds : resourceIds;
+        if (!known.has(value)) dangling.push(`${resource.name}: ${value}`);
+      });
+    }
+    expect(dangling).toEqual([]);
+    // Picks keep their own folders; dependencies sit in the pack's folders.
+    expect(
+      plan.resources.map((resource) => resource.resourceType),
+    ).not.toContain("fonts");
+    const folderIds = new Set(
+      plan.entries
+        .filter((entry) => entry.folder && entry.dependency)
+        .map((entry) => entry.destinationId),
+    );
+    expect(
+      plan.dependencies.every((resource) =>
+        folderIds.has(resource.parentDestinationId),
+      ),
+    ).toBe(true);
   });
 });

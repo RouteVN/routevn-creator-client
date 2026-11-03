@@ -1,0 +1,36 @@
+styles:
+  ".assetPackageTileTransparencyGrid":
+    display: block
+    width: 100%
+    aspect-ratio: 16 / 9
+    overflow: hidden
+    background-color: "#eef2f7"
+    background-image: 'linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%)'
+    background-position: "0 0, 0 6px, 6px -6px, -6px 0"
+    background-repeat: repeat
+    background-size: 12px 12px
+template:
+  - 'rtgl-view w=f bw=xs bc=bo br=md overflow=hidden style="box-sizing: border-box;"':
+      - $if kind == 'image':
+          - div.assetPackageTileTransparencyGrid:
+              - rvn-file-image w=f h=f fileId=${fileId} originalFileId=${originalFileId} lazy: null
+        $elif kind == 'thumbnail':
+          - div.assetPackageTileTransparencyGrid:
+              - rvn-file-image w=f h=f fileId=${fileId} lazy: null
+        $elif kind == 'sound':
+          - 'rtgl-view w=f style="aspect-ratio: 16 / 9; overflow: hidden;"':
+              - rvn-waveform-visualizer waveformDataFileId=${waveformDataFileId} w=f h=f: null
+        $elif kind == 'font':
+          - 'rtgl-view w=f style="aspect-ratio: 16 / 9; overflow: hidden;"':
+              - rvn-font-preview mode=thumbnail :fontFamily=${fontFamily} previewText="Aa" fileId=${fontFileId} :fontWeightDescriptor=${fontWeightDescriptor} fontWeight=${fontWeight} fontSize=22 width=f height=f padding=4 av=c ah=c: null
+        $elif kind == 'textStyle':
+          - 'rtgl-view w=f style="aspect-ratio: 16 / 9; overflow: hidden;"':
+              - rvn-font-preview mode=thumbnail :fontFamilies=${fontFamilies} previewText="${previewText}" :fileIds=${fontFileIds} :fontWeightDescriptors=${fontWeightDescriptors} fontSize=${textStyleFontSize} lineHeight=${lineHeight} color=${color} strokeColor=${strokeColor} strokeWidth=${strokeWidth} fontWeight=${fontWeight} shadowColor=${shadowColor} shadowAlpha=${shadowAlpha} shadowBlur=${shadowBlur} shadowOffsetX=${shadowOffsetX} shadowOffsetY=${shadowOffsetY} width=f height=f padding=4 showBorder=false: null
+        $elif kind == 'color':
+          - 'rtgl-view w=f style="aspect-ratio: 16 / 9; background-color: ${hex};"': null
+        $else:
+          - 'rtgl-view w=f av=c ah=c bgc=mu style="aspect-ratio: 16 / 9;"':
+              - rtgl-svg svg=${icon} wh=20 c=mu-fg: null
+      - $if showName:
+          - rtgl-view w=f ph=sm pv=xs:
+              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${name}

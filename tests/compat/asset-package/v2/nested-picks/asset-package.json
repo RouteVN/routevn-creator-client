@@ -1,0 +1,191 @@
+{
+  "schema": "routevn.import-pack.v2",
+  "package": {
+    "kind": "routevn.creator.asset-package"
+  },
+  "repository": {
+    "files": {
+      "items": {
+        "file-image-night": {
+          "id": "file-image-night",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-image-night"
+          },
+          "size": 69,
+          "sha256": "4727f57b8e3eeb47a5c406c0c5628829b448a3257a5bc765fca2a2019f6179e1"
+        },
+        "file-image-hero": {
+          "id": "file-image-hero",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-image-hero"
+          },
+          "size": 69,
+          "sha256": "378831fd0fde632dd4f6b77598f3f32e71b5d5015a9f1eeff065401c2a9be470"
+        },
+        "file-image-hero-smile": {
+          "id": "file-image-hero-smile",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-image-hero-smile"
+          },
+          "size": 69,
+          "sha256": "49b6421aa202efc6348e09cadd78fe5a61492b1de4ca369552e7a7247d5a4020"
+        }
+      }
+    },
+    "images": {
+      "items": {
+        "image-night": {
+          "id": "image-night",
+          "type": "image",
+          "name": "Night",
+          "fileId": "file-image-night",
+          "width": 1,
+          "height": 1
+        },
+        "folder-night": {
+          "id": "folder-night",
+          "type": "folder",
+          "name": "Night"
+        },
+        "image-hero": {
+          "id": "image-hero",
+          "type": "image",
+          "name": "Hero",
+          "fileId": "file-image-hero",
+          "width": 1,
+          "height": 1
+        },
+        "image-hero-smile": {
+          "id": "image-hero-smile",
+          "type": "image",
+          "name": "Hero Smile",
+          "fileId": "file-image-hero-smile",
+          "width": 1,
+          "height": 1
+        },
+        "folder-expressions": {
+          "id": "folder-expressions",
+          "type": "folder",
+          "name": "Expressions"
+        },
+        "folder-cast": {
+          "id": "folder-cast",
+          "type": "folder",
+          "name": "Cast"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-night",
+          "children": [
+            {
+              "id": "image-night"
+            }
+          ]
+        },
+        {
+          "id": "folder-cast",
+          "children": [
+            {
+              "id": "image-hero"
+            },
+            {
+              "id": "folder-expressions",
+              "children": [
+                {
+                  "id": "image-hero-smile"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "colors": {
+      "items": {
+        "color-button": {
+          "id": "color-button",
+          "type": "color",
+          "name": "Button",
+          "hex": "#3355CC"
+        },
+        "folder-palette-buttons": {
+          "id": "folder-palette-buttons",
+          "type": "folder",
+          "name": "Buttons"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-palette-buttons",
+          "children": [
+            {
+              "id": "color-button"
+            }
+          ]
+        }
+      ]
+    },
+    "variables": {
+      "items": {
+        "variable-rank": {
+          "id": "variable-rank",
+          "type": "variable",
+          "variableType": "string",
+          "name": "Rank",
+          "computed": {
+            "branches": [
+              {
+                "when": {
+                  "gte": [
+                    {
+                      "var": "variables.variableScore"
+                    },
+                    3
+                  ]
+                },
+                "expr": "High"
+              }
+            ],
+            "default": {
+              "expr": "Low"
+            }
+          }
+        },
+        "folder-stats-derived": {
+          "id": "folder-stats-derived",
+          "type": "folder",
+          "name": "Derived"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-stats-derived",
+          "children": [
+            {
+              "id": "variable-rank"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "variables": {
+      "items": {
+        "variableScore": {
+          "id": "variableScore",
+          "type": "variable",
+          "variableType": "number",
+          "name": "Score",
+          "scope": "context",
+          "default": 0,
+          "value": 0
+        }
+      }
+    }
+  }
+}

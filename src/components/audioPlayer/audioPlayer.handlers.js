@@ -124,14 +124,18 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+// A `src` plays as it is; a `fileId` plays the project's file.
+const getAudioUrl = async ({ projectService, props }) =>
+  props.src || (await projectService.getFileContent(props.fileId)).url;
+
 export const handleAfterMount = async (deps) => {
-  const { store, props: attrs, projectService, render, audioService } = deps;
-  const { fileId, autoPlay } = attrs;
+  const { store, props: attrs, render, audioService } = deps;
+  const { autoPlay } = attrs;
   try {
     store.setLoading({ isLoading: true });
     render();
 
-    const { url } = await projectService.getFileContent(fileId);
+    const url = await getAudioUrl(deps);
     const audioInfo = await audioService.loadAudio(url);
     if (!audioInfo) {
       return;
@@ -149,10 +153,10 @@ export const handleAfterMount = async (deps) => {
 
 export const handleOnUpdate = async (deps, changes) => {
   const { oldProps } = changes;
-  const { store, props: attrs, projectService, render, audioService } = deps;
-  const { fileId, autoPlay } = attrs;
+  const { store, props: attrs, render, audioService } = deps;
+  const { fileId, src, autoPlay } = attrs;
 
-  if (oldProps.fileId === fileId) {
+  if (oldProps.fileId === fileId && oldProps.src === src) {
     return;
   }
 
@@ -162,7 +166,7 @@ export const handleOnUpdate = async (deps, changes) => {
 
     audioService.stop();
 
-    const { url } = await projectService.getFileContent(fileId);
+    const url = await getAudioUrl(deps);
     const audioInfo = await audioService.loadAudio(url);
     if (!audioInfo) {
       return;

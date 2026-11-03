@@ -3,6 +3,7 @@ import {
   AssetImportPlanError,
   createAssetImportPlan,
   rewriteAssetImportPlanReferences,
+  USE_PACK_DEPENDENCY,
 } from "../../../internal/assetImportPlan.js";
 import { isAssetPackageFileMimeTypeAllowed } from "../../../internal/assetPackageResources.js";
 import {
@@ -91,7 +92,15 @@ const emitProgress = (onProgress, progress) => {
   }
 };
 
-const selectPlanResources = ({ plan, selectedResourceIds }) => {
+// A dependency the importer chose one of the project's resources for.
+const isReplacement = (choice) =>
+  typeof choice === "string" && choice !== "" && choice !== USE_PACK_DEPENDENCY;
+
+const selectPlanResources = ({
+  plan,
+  selectedResourceIds,
+  dependencyReplacements = {},
+}) => {
   const selectedIds = new Set(
     selectedResourceIds ?? plan.resources.map((resource) => resource.sourceId),
   );
@@ -109,9 +118,41 @@ const selectPlanResources = ({ plan, selectedResourceIds }) => {
       }
     }
   }
-  return plan.resources.filter((resource) =>
+  const selectedPicks = plan.resources.filter((resource) =>
     selectedIds.has(resource.sourceId),
   );
+  // A v2 package's dependencies come along with the picks that use them,
+  // except those the importer replaced with their own, and what only those
+  // use.
+  const dependencyBySourceId = new Map(
+    (plan.dependencies ?? []).map((resource) => [resource.sourceId, resource]),
+  );
+  const dependencySourceIds = new Set();
+  const pendingDependencySourceIds = selectedPicks.flatMap(
+    (resource) =>
+      resource.directPackageDependencySourceIds ??
+      resource.packageDependencySourceIds ??
+      [],
+  );
+  while (pendingDependencySourceIds.length > 0) {
+    const sourceId = pendingDependencySourceIds.pop();
+    const dependency = dependencyBySourceId.get(sourceId);
+    if (
+      !dependency ||
+      dependencySourceIds.has(sourceId) ||
+      isReplacement(dependencyReplacements[sourceId])
+    ) {
+      continue;
+    }
+    dependencySourceIds.add(sourceId);
+    pendingDependencySourceIds.push(...(dependency.dependencySourceIds ?? []));
+  }
+  return [
+    ...selectedPicks,
+    ...(plan.dependencies ?? []).filter((resource) =>
+      dependencySourceIds.has(resource.sourceId),
+    ),
+  ];
 };
 
 const selectPackageEntries = ({
@@ -199,6 +240,112 @@ const validateReviewChoices = ({
   }
 };
 
+// Each dependency the selection imports was chosen: the package's own, or a
+// resource the project has of the same type, and a layout of the same layout
+// type.
+const validateDependencyReplacements = ({
+  plan,
+  selectedResources,
+  dependencyReplacements,
+  repositoryState,
+}) => {
+  const unchosen = selectedResources.find(
+    (resource) =>
+      resource.dependency &&
+      dependencyReplacements?.[resource.sourceId] !== USE_PACK_DEPENDENCY,
+  );
+  if (unchosen) {
+    fail(
+      "dependency_choice_required",
+      "Choose the package's or one of your own resources for each dependency.",
+      { resourceId: unchosen.sourceId },
+    );
+  }
+  const dependencyBySourceId = new Map(
+    (plan.dependencies ?? []).map((resource) => [resource.sourceId, resource]),
+  );
+  for (const [sourceId, targetId] of Object.entries(
+    dependencyReplacements ?? {},
+  )) {
+    if (!isReplacement(targetId)) continue;
+    const dependency = dependencyBySourceId.get(sourceId);
+    const target =
+      repositoryState?.[dependency?.resourceType]?.items?.[targetId];
+    if (
+      !dependency ||
+      target?.type !== dependency.type ||
+      (dependency.resourceType === "layouts" &&
+        target.layoutType !== dependency.data.layoutType)
+    ) {
+      fail(
+        "dependency_replacement_missing",
+        "A resource chosen to replace a dependency no longer exists, or is of another kind.",
+        { resourceId: sourceId },
+      );
+    }
+  }
+};
+
+// The project ids that replace the dependencies the importer replaced, by the
+// ids the package's resources point at them with.
+const createReplacementIdMap = ({ plan, dependencyReplacements }) =>
+  new Map(
+    (plan.dependencies ?? [])
+      .filter((resource) =>
+        isReplacement(dependencyReplacements?.[resource.sourceId]),
+      )
+      .map((resource) => [
+        resource.destinationId,
+        dependencyReplacements[resource.sourceId],
+      ]),
+  );
+
+// Each link the selection uses was set, to a section, scene or layout the
+// project still has, of the link's kind, and a layout of the link's layout
+// type.
+const validateLinkTargets = ({
+  plan,
+  selectedResources,
+  linkTargets,
+  repositoryState,
+}) => {
+  const unsetLinkId = selectedResources
+    .flatMap((resource) => resource.linkIds ?? [])
+    .find((linkId) => !linkTargets?.[linkId]);
+  if (unsetLinkId) {
+    fail("link_target_required", "Choose where each link goes.", {
+      resourceId: unsetLinkId,
+    });
+  }
+  const linkById = new Map((plan.links ?? []).map((link) => [link.id, link]));
+  const scenes = Object.entries(repositoryState?.scenes?.items ?? {}).filter(
+    ([, item]) => item?.type === "scene",
+  );
+  const targetExists = {
+    section: (targetId) =>
+      scenes.some(([, scene]) => scene.sections?.items?.[targetId]),
+    scene: (targetId) => scenes.some(([sceneId]) => sceneId === targetId),
+    layout: (targetId, link) => {
+      const layout = repositoryState?.layouts?.items?.[targetId];
+      return (
+        layout?.type === "layout" &&
+        (link.layoutType === undefined || layout.layoutType === link.layoutType)
+      );
+    },
+  };
+  for (const [linkId, targetId] of Object.entries(linkTargets ?? {})) {
+    if (!targetId) continue;
+    const link = linkById.get(linkId);
+    if (!link || !targetExists[link.kind]?.(targetId, link)) {
+      fail(
+        "link_target_missing",
+        "A section, scene or layout chosen for a link no longer exists.",
+        { resourceId: linkId },
+      );
+    }
+  }
+};
+
 const assertFileMimeTypes = ({ filePlan, mimeType }) => {
   for (const validationKind of filePlan.validationKinds ?? []) {
     if (!isAssetPackageFileMimeTypeAllowed({ validationKind, mimeType })) {
@@ -228,7 +375,12 @@ export const createResourcePackageImportService = ({
   logEvent = () => {},
 } = {}) => {
   const plans = new Map();
+  // Each plan's package source, which reads the files the plan lists.
+  const sources = new Map();
   const operations = new Map();
+  // Each plan's previews, `{ downloadedBytes, files }`: `files` maps a
+  // package file id to its `{ preview, download }`, and import reuses the
+  // download.
   const previewDownloadsByPlan = new Map();
 
   const beginOperation = (operationId) => {
@@ -246,6 +398,7 @@ export const createResourcePackageImportService = ({
   const endOperation = (id) => operations.delete(id);
   const deletePlan = (planId) => {
     plans.delete(planId);
+    sources.delete(planId);
     previewDownloadsByPlan.delete(planId);
   };
   const recordEvent = (event, details = {}) => {
@@ -257,22 +410,31 @@ export const createResourcePackageImportService = ({
   };
 
   return {
-    async createResourceImportPlan({ url, operationId } = {}) {
+    // `url` is a manifest whose files resolve against it; `zip` is a
+    // published package read in place (see importPackageClient.openPackage).
+    // A v2 package's dependencies go into folders named `dependencyFolderName`.
+    async createResourceImportPlan({
+      url,
+      zip,
+      operationId,
+      dependencyFolderName,
+    } = {}) {
       let operation;
       try {
         recordEvent("plan.started");
         operation = beginOperation(operationId);
-        const source = await importClient.fetchManifest({
-          url,
+        const source = importClient.openPackage({ url, zip });
+        const { manifest, manifestUrl } = await source.readManifest({
           signal: operation.controller.signal,
         });
         const plan = createAssetImportPlan({
-          manifest: source.manifest,
-          manifestUrl: source.manifestUrl,
+          manifest,
+          manifestUrl,
           projectId: getCurrentProjectId?.(),
           repositoryState: getRepositoryState(),
           repositoryRevision: getRepositoryRevision(),
           createId: idGenerator,
+          dependencyFolderName,
         });
         if (plan.knownDownloadBytes > importClient.limits.totalBytes) {
           throw new ImportPackageClientError(
@@ -281,6 +443,7 @@ export const createResourcePackageImportService = ({
           );
         }
         plans.set(plan.planId, plan);
+        sources.set(plan.planId, source);
         recordEvent("plan.completed", {
           planId: plan.planId,
           resourceCount: plan.resources.length,
@@ -321,9 +484,14 @@ export const createResourcePackageImportService = ({
           });
         }
         const mimeType = previewFile.descriptor.mimeType.toLowerCase();
+        const isAudio = isAssetPackageFileMimeTypeAllowed({
+          validationKind: "audio",
+          mimeType,
+        });
         if (
           !PREVIEW_IMAGE_MIME_TYPES.has(mimeType) &&
-          !PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+          !PREVIEW_VIDEO_MIME_TYPES.has(mimeType) &&
+          !isAudio
         ) {
           fail(
             "preview_type_unsupported",
@@ -334,20 +502,22 @@ export const createResourcePackageImportService = ({
 
         let previewState = previewDownloadsByPlan.get(planId);
         if (!previewState) {
-          previewState = { downloadedBytes: 0, results: new Map() };
+          previewState = { downloadedBytes: 0, files: new Map() };
           previewDownloadsByPlan.set(planId, previewState);
         }
-        const cached = previewState.results.get(sourceFileId);
+        const cached = previewState.files.get(sourceFileId);
         if (cached) {
-          return { valid: true, preview: cached };
+          return { valid: true, preview: cached.preview };
         }
 
         operation = beginOperation(operationId);
-        const download = await importClient.downloadFile({
+        const download = await sources.get(planId).readFile({
           descriptor: previewFile.descriptor,
-          manifestUrl: plan.manifestUrl,
           signal: operation.controller.signal,
         });
+        // A plan's previews together stay within the total download limit,
+        // so they cannot hold memory without bound. They are counted apart
+        // from what an import downloads.
         if (
           previewState.downloadedBytes + download.byteLength >
           importClient.limits.totalBytes
@@ -361,10 +531,14 @@ export const createResourcePackageImportService = ({
           sourceFileId,
           bytes: download.bytes,
           mimeType,
-          kind: PREVIEW_VIDEO_MIME_TYPES.has(mimeType) ? "video" : "image",
+          kind: isAudio
+            ? "audio"
+            : PREVIEW_VIDEO_MIME_TYPES.has(mimeType)
+              ? "video"
+              : "image",
         };
         previewState.downloadedBytes += download.byteLength;
-        previewState.results.set(sourceFileId, preview);
+        previewState.files.set(sourceFileId, { preview, download });
         return { valid: true, preview };
       } catch (error) {
         return toErrorResult(error);
@@ -378,6 +552,8 @@ export const createResourcePackageImportService = ({
       selectedResourceIds,
       resourceNames = {},
       resourceDescriptions = {},
+      linkTargets = {},
+      dependencyReplacements = {},
     } = {}) {
       try {
         const plan = plans.get(planId);
@@ -390,11 +566,24 @@ export const createResourcePackageImportService = ({
         const selectedResources = selectPlanResources({
           plan,
           selectedResourceIds,
+          dependencyReplacements,
         });
         validateReviewChoices({
           selectedResources,
           resourceNames,
           resourceDescriptions,
+        });
+        validateLinkTargets({
+          plan,
+          selectedResources,
+          linkTargets,
+          repositoryState: getRepositoryState(),
+        });
+        validateDependencyReplacements({
+          plan,
+          selectedResources,
+          dependencyReplacements,
+          repositoryState: getRepositoryState(),
         });
         return { valid: true };
       } catch (error) {
@@ -408,6 +597,8 @@ export const createResourcePackageImportService = ({
       selectedResourceIds,
       resourceNames = {},
       resourceDescriptions = {},
+      linkTargets = {},
+      dependencyReplacements = {},
       onProgress,
     } = {}) {
       let operation;
@@ -426,6 +617,9 @@ export const createResourcePackageImportService = ({
           );
         }
         planForCleanup = plan;
+        // Discarding the plan while it imports leaves this import as it is.
+        const source = sources.get(planId);
+        const previewFiles = previewDownloadsByPlan.get(planId)?.files;
         if (
           plan.projectId !== undefined &&
           getCurrentProjectId?.() !== plan.projectId
@@ -440,12 +634,25 @@ export const createResourcePackageImportService = ({
         const selectedResources = selectPlanResources({
           plan,
           selectedResourceIds,
+          dependencyReplacements,
         });
         selectedResourcesForCleanup = selectedResources;
         validateReviewChoices({
           selectedResources,
           resourceNames,
           resourceDescriptions,
+        });
+        validateLinkTargets({
+          plan,
+          selectedResources,
+          linkTargets,
+          repositoryState: getRepositoryState(),
+        });
+        validateDependencyReplacements({
+          plan,
+          selectedResources,
+          dependencyReplacements,
+          repositoryState: getRepositoryState(),
         });
 
         const previousCommit = getCommittedPlanResult({
@@ -470,17 +677,19 @@ export const createResourcePackageImportService = ({
           completed: 0,
           total: neededFiles.length,
         });
-        let downloadedBytes =
-          previewDownloadsByPlan.get(planId)?.downloadedBytes ?? 0;
+        // The limit counts the files this import brings in, once each, and
+        // not the previews of what it leaves out.
+        let downloadedBytes = 0;
         let completedDownloads = 0;
         const downloaded = await processWithConcurrency(
           neededFiles,
           async (filePlan) => {
-            const result = await importClient.downloadFile({
-              descriptor: filePlan.descriptor,
-              manifestUrl: plan.manifestUrl,
-              signal: operation.controller.signal,
-            });
+            const result =
+              previewFiles?.get(filePlan.sourceId)?.download ??
+              (await source.readFile({
+                descriptor: filePlan.descriptor,
+                signal: operation.controller.signal,
+              }));
             downloadedBytes += result.byteLength;
             if (downloadedBytes > importClient.limits.totalBytes) {
               throw new ImportPackageClientError(
@@ -578,6 +787,12 @@ export const createResourcePackageImportService = ({
           resourceNames,
           resourceDescriptions,
           fileIdMap: actualFileIds,
+          linkTargets,
+          resourceIdMap: createReplacementIdMap({
+            plan,
+            dependencyReplacements,
+          }),
+          repositoryState: getRepositoryState(),
         });
         emitProgress(onProgress, {
           phase: "committing",
@@ -697,6 +912,18 @@ export const createResourcePackageImportService = ({
         }
         if (operation) endOperation(operation.id);
       }
+    },
+
+    // Frees a plan the user left without importing it, with the previews read
+    // for it. A plan already imported, or unknown, is left as it is. Staged
+    // files are kept: a plan has them only when its commit's outcome is
+    // unknown, when they may belong to the committed resources.
+    discardResourceImportPlan({ planId } = {}) {
+      if (!plans.has(planId)) return { discarded: false };
+      deletePlan(planId);
+      assetService.finalizeResourceImportFiles?.({ planId });
+      recordEvent("plan.discarded", { planId });
+      return { discarded: true };
     },
 
     cancelResourceImport({ operationId } = {}) {

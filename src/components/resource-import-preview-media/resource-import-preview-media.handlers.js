@@ -1,30 +1,21 @@
 import { generateId } from "../../internal/id.js";
 
-const playMuted = (video) => {
-  if (!video) return;
-  video.defaultMuted = true;
-  video.muted = true;
-  try {
-    const playback = video.play();
-    playback?.catch(() => undefined);
-  } catch {
-    // A later canplay event retries playback when the media becomes ready.
-  }
-};
-
 const revokePreviewUrl = (store) => {
   const src = store.selectSrc();
   if (src) URL.revokeObjectURL(src);
 };
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, store } = deps;
+  const { projectService, audioService, store } = deps;
   return () => {
     const operationId = store.selectOperationId();
     if (operationId) {
       projectService.cancelResourceImport({ operationId });
     }
     store.cancelLoading();
+    // Another player, such as the Sounds page's, can keep the audio service
+    // open; a sound still stops with its preview.
+    if (store.selectKind() === "audio") audioService.stop();
     revokePreviewUrl(store);
   };
 };
@@ -65,8 +56,4 @@ export const handleAfterMount = async (deps) => {
 
 export const handleVisible = async (deps) => {
   await loadPreview(deps);
-};
-
-export const handleVideoCanPlay = (_deps, payload) => {
-  playMuted(payload._event.currentTarget);
 };

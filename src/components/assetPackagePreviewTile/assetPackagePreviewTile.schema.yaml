@@ -1,0 +1,11 @@
+componentName: rvn-asset-package-preview-tile
+propsSchema:
+  type: object
+  properties:
+    preview:
+      type: object
+      description: >-
+        How the resource previews, from the export page's
+        createResourcePreview: its kind (image, thumbnail, sound, font,
+        textStyle, color or icon), the fields that kind draws with, its name,
+        and showName to show the name below the preview.

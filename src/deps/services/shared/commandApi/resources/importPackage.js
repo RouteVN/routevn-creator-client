@@ -14,6 +14,8 @@ const invalid = (code, message, details) => ({
   error: { code, message, details },
 });
 
+// Top-level folders and resources go after the project's own, in package
+// order; inside an imported folder they keep their package positions.
 const createResourceCommand = ({ shared, context, entry, config }) => ({
   commandId: entry.commandId,
   scope: "resources",
@@ -25,10 +27,11 @@ const createResourceCommand = ({ shared, context, entry, config }) => ({
   payload: {
     [config.idField]: entry.destinationId,
     data: structuredClone(entry.data),
-    ...shared.buildPlacementPayload({
-      parentId: entry.parentDestinationId,
-      index: entry.index,
-    }),
+    ...shared.buildPlacementPayload(
+      entry.parentDestinationId
+        ? { parentId: entry.parentDestinationId, index: entry.index }
+        : { position: "last" },
+    ),
   },
 });
 

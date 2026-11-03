@@ -34,6 +34,7 @@ export const cancelLoading = ({ state }) => {
 };
 
 export const selectSrc = ({ state }) => state.src;
+export const selectKind = ({ state }) => state.kind;
 export const selectLoadRequested = ({ state }) => state.loadRequested;
 export const selectOperationId = ({ state }) => state.operationId;
 
@@ -42,4 +43,6 @@ export const selectViewData = ({ state, props }) => ({
   kind: state.kind,
   loading: state.loading,
   label: props.label ?? "",
+  paused: props.paused === true,
+  hover: props.hover === true,
 });
