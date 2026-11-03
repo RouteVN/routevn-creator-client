@@ -116,9 +116,15 @@ const parseRootMarginPx = (rootMargin) => {
   return { top, right, bottom, left };
 };
 
+// Walks the rendered tree: slotted content is laid out inside its slot, not
+// beside it in the host's parent.
 const getParentElement = (node) => {
   if (!node) {
     return;
+  }
+
+  if (node.assignedSlot) {
+    return node.assignedSlot;
   }
 
   if (node.parentElement instanceof HTMLElement) {
@@ -156,6 +162,12 @@ const resolveObserverRoot = (element) => {
   while (currentElement) {
     if (isScrollableElement(currentElement)) {
       return currentElement;
+    }
+
+    // A fixed element, such as a dialog panel, is placed against the viewport,
+    // so a scroll container around it in the DOM does not clip it.
+    if (getComputedStyle(currentElement).position === "fixed") {
+      return;
     }
 
     currentElement = getParentElement(currentElement);
