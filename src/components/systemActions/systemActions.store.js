@@ -342,6 +342,7 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     hiddenModes,
     allowedModes,
     allowAutoSlot: parseBooleanProp(attrs.allowAutoSlot, false),
+    allowCurrentValue: parseBooleanProp(attrs.allowCurrentValue, false),
     suppressDialogClose:
       state.suppressDialogClose === true ||
       parseBooleanProp(attrs.suppressDialogClose, false) ||

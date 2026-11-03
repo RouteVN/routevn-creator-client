@@ -2140,6 +2140,15 @@ export class LexicalLayoutTextEditorElement extends HTMLElement {
   }
 
   handleEditorBeforeInput(event) {
+    // Layout text is plain, so formatting input does nothing. In WebKit,
+    // Lexical sees no selection inside the dialog's shadow root and would
+    // leave the input to the browser, which restyles the text itself. Lexical
+    // then rebuilds the text from the changed node and drops the rest.
+    if (event.inputType.startsWith("format")) {
+      event.preventDefault();
+      return;
+    }
+
     if (
       event.inputType === "deleteContentBackward" ||
       event.inputType === "deleteContentForward"

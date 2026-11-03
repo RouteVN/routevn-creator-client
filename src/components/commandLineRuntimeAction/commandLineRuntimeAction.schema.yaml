@@ -7,3 +7,5 @@ propsSchema:
       type: string
     action:
       type: object
+    allowCurrentValue:
+      type: boolean

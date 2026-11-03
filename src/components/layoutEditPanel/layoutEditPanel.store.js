@@ -1981,6 +1981,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     actionsData: state.actionsEditorActions,
     hiddenSystemActionModes: [...HIDDEN_LAYOUT_ACTION_MODES],
     allowAutoSlot: props.allowAutoSlot === true,
+    // A slider's Change has a value for Current Value; a click or scroll has
+    // none.
+    allowCurrentValue: state.activeInteractionType === "change",
     config: {
       sections,
     },

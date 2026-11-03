@@ -8,6 +8,7 @@ import {
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { recordRecentSceneVisit } from "../../internal/ui/recentScenes.js";
+import { getLocalProjectPathFromPayload } from "../../internal/localProjectRoute.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
@@ -861,7 +862,23 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 };
 
 const refreshScenesData = async (deps) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
+
+  // An action that was running when the user left the project, such as
+  // creating a scene, ends with a refresh. By then the project is closed or is
+  // no longer the one the route opens, by id or by folder, and reading it fails.
+  const openProjectId = projectService.getEnsuredProjectId();
+  const routeProjectPath = getLocalProjectPathFromPayload(
+    appService.getPayload(),
+  );
+  if (
+    !openProjectId ||
+    openProjectId !== getCurrentProjectId(appService) ||
+    (routeProjectPath &&
+      routeProjectPath !== projectService.getEnsuredProjectPath())
+  ) {
+    return;
+  }
 
   cancelDeferredWhiteboardWork(store);
   setInitialWhiteboardHydrationState({ store });
@@ -1215,6 +1232,8 @@ export const handleSceneFormAction = async (deps, payload) => {
       };
     }
 
+    // The user can leave the project while the scene is created.
+    const projectId = getCurrentProjectId(appService);
     try {
       const createSceneResult =
         await projectService.createSceneWithInitialContent({
@@ -1255,7 +1274,7 @@ export const handleSceneFormAction = async (deps, payload) => {
       dismissMapAddHint({ store, appService });
       recordRecentSceneVisit({
         appService,
-        projectId: getCurrentProjectId(appService),
+        projectId,
         sceneId: newSceneId,
       });
 

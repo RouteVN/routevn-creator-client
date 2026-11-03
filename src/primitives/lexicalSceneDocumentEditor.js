@@ -14,6 +14,8 @@ import {
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   CUT_COMMAND,
+  DELETE_CHARACTER_COMMAND,
+  FORMAT_TEXT_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   PASTE_COMMAND,
@@ -1025,6 +1027,14 @@ const COMPOSITION_DELETE_INPUT_TYPES = new Set([
   "deleteHardLineForward",
 ]);
 
+// The formats a browser's formatting controls, such as the iPad keyboard's
+// B/I/U buttons, can apply to dialogue.
+const TEXT_FORMAT_BY_INPUT_TYPE = new Map([
+  ["formatBold", "bold"],
+  ["formatItalic", "italic"],
+  ["formatUnderline", "underline"],
+]);
+
 const getEventTimestamp = (event) => {
   const timestamp = Number(event?.timeStamp);
   // iPadOS 17 software-keyboard events can report 0. Use the page clock
@@ -1434,6 +1444,33 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.editor.registerCommand(
         KEY_ENTER_COMMAND,
         (event) => this.handleLexicalEnterCommand(event),
+        COMMAND_PRIORITY_HIGH,
+      ),
+      this.editor.registerCommand(
+        FORMAT_TEXT_COMMAND,
+        () => {
+          // In WebKit the page selection inside the shadow root reads as a
+          // point outside the editor, so Lexical's own selection is missing
+          // or stale. Format the range selected on the page instead.
+          if (this.refs.editor.contains(window.getSelection()?.anchorNode)) {
+            return false;
+          }
+          const nativeLineRangeSelection =
+            this.getNativeLineRangeSelectionContext();
+          if (nativeLineRangeSelection) {
+            this.applyNativeLineSelection({
+              nativeSelection: this.getNativeLineSelectionContext(),
+              nativeLineRangeSelection,
+            });
+          }
+          // Rich text formats the selection.
+          return false;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      this.editor.registerCommand(
+        DELETE_CHARACTER_COMMAND,
+        (isBackward) => isBackward && this.deleteBackwardFromFirstLineStart(),
         COMMAND_PRIORITY_HIGH,
       ),
       this.editor.registerCommand(
@@ -5140,6 +5177,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    // WebKit reports no selection inside the editor's shadow root, so Lexical
+    // leaves a format input to the browser. The browser restyles the line
+    // itself, and Lexical then rebuilds it from the changed text node, which
+    // drops the text before the selection. Format through the editor instead.
+    if (inputType.startsWith("format")) {
+      this.clearPendingTextInputFallback();
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+      const format = TEXT_FORMAT_BY_INPUT_TYPE.get(inputType);
+      if (format) {
+        this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
+      }
+      return;
+    }
+
     // Linux and macOS WebKit can apply an IME commit to the contenteditable
     // DOM without updating Lexical's editor state. The next controlled input
     // then reconciles from stale state and removes the committed characters.
@@ -6589,6 +6642,45 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return true;
   }
 
+  // Backspace from the start of the first line. Lexical removes that line,
+  // actions included, when the caret finds it empty or starting with spaces,
+  // or when deleting a selection leaves it empty. Keep the line: a caret there
+  // has nothing before it, and a selection loses only its text. Runs inside an
+  // editor update.
+  deleteBackwardFromFirstLineStart() {
+    const nativeSelection = this.getNativeLineSelectionContext();
+    const nativeLineRangeSelection = nativeSelection?.lineId
+      ? undefined
+      : this.getNativeLineRangeSelectionContext();
+    const start = nativeLineRangeSelection
+      ? {
+          lineId: nativeLineRangeSelection.startLineId,
+          offset: nativeLineRangeSelection.startOffset,
+        }
+      : { lineId: nativeSelection?.lineId, offset: nativeSelection?.start };
+    const lineNode = $getNodeByKey(this.lineKeyById.get(start.lineId));
+    if (start.offset !== 0 || !lineNode || lineNode.getPreviousSibling()) {
+      return false;
+    }
+
+    if (!nativeLineRangeSelection && nativeSelection.end === 0) {
+      return true;
+    }
+
+    if (nativeLineRangeSelection?.isMultiLine) {
+      this.pendingChangeReason = "structure";
+    }
+    this.applyNativeLineSelection({
+      nativeSelection,
+      nativeLineRangeSelection,
+    });
+    const selection = $getSelection();
+    if ($isRangeSelection(selection)) {
+      selection.removeText();
+    }
+    return true;
+  }
+
   mergeCurrentLineBackward({ context, nativeSelection } = {}) {
     context = context ?? this.getLineSelectionContext();
     if (
@@ -7199,13 +7291,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
-        if (referenceSelection?.node) {
+        // A caret at the line start has no chip before it, even when Lexical
+        // places it at the start of a chip.
+        const isCaretAtLineStart = start === end && start <= 0;
+        if (referenceSelection?.node && !(lineId && isCaretAtLineStart)) {
           this.selectReferenceNodeAsElement(referenceSelection.node);
           didHandle = true;
           return;
         }
 
-        if (!lineId || (start === end && start <= 0)) {
+        if (!lineId || isCaretAtLineStart) {
           return;
         }
 
@@ -7498,7 +7593,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             lineNode &&
             lineMeta &&
             lineSelection?.start === lineSelection?.end &&
-            lineSelection.start <= 1 &&
+            lineSelection.start === 1 &&
             /^\s/.test(lineText)
           ) {
             this.deleteLineContentRange(lineNode, lineMeta, 0, 1);

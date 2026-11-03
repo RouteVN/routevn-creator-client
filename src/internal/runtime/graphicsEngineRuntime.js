@@ -383,12 +383,17 @@ const getDataUrlMimeType = (value) => {
   return mimeType || undefined;
 };
 
+// A Slot Id of _event.slotId, which the help text used to suggest, means the
+// clicked item's slot, as Auto does. A confirm dialog's actions run on the
+// click on its button, which has no slot, so it is filled like Auto.
+const isAutoSlot = (value) => value === undefined || value === "_event.slotId";
+
 const fillSlotBinding = (payload, slotBinding, fieldName) => {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return;
   }
 
-  if (payload.slotId !== undefined || payload.slot !== undefined) {
+  if (!isAutoSlot(payload.slotId) || !isAutoSlot(payload.slot)) {
     return;
   }
 
@@ -489,6 +494,157 @@ const removeSlotActionsWithoutSlot = (actions) => {
   }
 };
 
+const EVENT_BINDING = "_event";
+
+// Payloads whose bindings Route Engine does not resolve with the rest of the
+// action: a confirm dialog's or a form's actions run on a later click, project
+// data is used as it is, and the actions below run from inside the action.
+const LATER_EVENT_BINDING_KEYS = new Map([
+  ["conditional", new Set(["branches"])],
+  ["updateProjectData", new Set(["projectData"])],
+  ["showConfirmDialog", new Set(["confirmActions", "cancelActions"])],
+  ["form", new Set(["submitActions", "cancelActions"])],
+  ["submitForm", new Set(["actions"])],
+  ["cancelForm", new Set(["actions"])],
+]);
+
+// Route Engine reads only the event's own properties, and a null value counts
+// as found.
+const canResolveEventBinding = (binding, eventData) => {
+  if (eventData === undefined || eventData === null) {
+    return false;
+  }
+
+  if (binding === EVENT_BINDING) {
+    return true;
+  }
+
+  let value = eventData;
+  for (const key of binding.slice(EVENT_BINDING.length + 1).split(".")) {
+    if (value === undefined || value === null || !Object.hasOwn(value, key)) {
+      return false;
+    }
+    value = value[key];
+  }
+
+  return value !== undefined;
+};
+
+const findUnresolvedEventBinding = (value, eventData, parentKey) => {
+  if (typeof value === "string") {
+    const isBinding =
+      value === EVENT_BINDING || value.startsWith(`${EVENT_BINDING}.`);
+    return isBinding && !canResolveEventBinding(value, eventData)
+      ? value
+      : undefined;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const binding = findUnresolvedEventBinding(entry, eventData, parentKey);
+      if (binding) {
+        return binding;
+      }
+    }
+    return undefined;
+  }
+
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const laterKeys = LATER_EVENT_BINDING_KEYS.get(parentKey);
+  for (const [key, entry] of Object.entries(value)) {
+    if (laterKeys?.has(key)) {
+      continue;
+    }
+    const binding = findUnresolvedEventBinding(entry, eventData, key);
+    if (binding) {
+      return binding;
+    }
+  }
+  return undefined;
+};
+
+// Route Engine runs these actions with their payloads as they are, apart from
+// a music action's audio effects.
+const LITERAL_PAYLOAD_ACTIONS = new Set([
+  "background",
+  "bgm",
+  "character",
+  "choice",
+  "cleanAll",
+  "control",
+  "dialogue",
+  "form",
+  "layout",
+  "screen",
+  "sfx",
+  "visual",
+  "voice",
+]);
+
+const getEventBindingPayload = (actionName, payload) => {
+  if (actionName === "bgm") {
+    return payload?.audioEffects;
+  }
+
+  // Route Engine resolves only the outcome it draws.
+  if (actionName === "random") {
+    return undefined;
+  }
+
+  return LITERAL_PAYLOAD_ACTIONS.has(actionName) ? undefined : payload;
+};
+
+// Actions that Route Engine runs from inside another action, with the same
+// event: a conditional's branches, a random outcome, and a submitted or
+// cancelled form's actions.
+const getNestedActions = (actionName, payload) => {
+  if (actionName === "conditional") {
+    return payload?.branches?.map((branch) => branch?.actions) ?? [];
+  }
+
+  if (actionName === "random") {
+    return (
+      payload?.distribution?.outcomes?.map((outcome) => outcome?.actions) ?? []
+    );
+  }
+
+  if (actionName === "submitForm" || actionName === "cancelForm") {
+    return [payload?.actions];
+  }
+
+  return [];
+};
+
+// An action can take a value from the event that runs it, such as Current
+// Value, which is a slider's new value, or _event.slotId, the slot of the save
+// or load slot item that was clicked. A click or key that has no such value
+// would make Route Engine throw, so the action is left out and does nothing.
+const removeActionsWithUnresolvedEventBindings = (actions, eventData) => {
+  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
+    return;
+  }
+
+  for (const [actionName, payload] of Object.entries(actions)) {
+    for (const nestedActions of getNestedActions(actionName, payload)) {
+      removeActionsWithUnresolvedEventBindings(nestedActions, eventData);
+    }
+    const binding = findUnresolvedEventBinding(
+      getEventBindingPayload(actionName, payload),
+      eventData,
+      actionName,
+    );
+    if (binding) {
+      console.warn(
+        `[runtime] Skipped ${actionName}: the event that ran it has no ${binding}.`,
+      );
+      delete actions[actionName];
+    }
+  }
+};
+
 export const prepareRuntimeInteractionActions = (actions, eventData) => {
   if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
     return actions;
@@ -501,6 +657,7 @@ export const prepareRuntimeInteractionActions = (actions, eventData) => {
     slotBinding,
   });
   removeSlotActionsWithoutSlot(preparedActions);
+  removeActionsWithUnresolvedEventBindings(preparedActions, eventData);
 
   return preparedActions;
 };
