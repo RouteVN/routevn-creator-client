@@ -21,6 +21,25 @@ class FakeIntersectionObserver {
   disconnect() {}
 }
 
+const resizeObservers = [];
+
+class FakeResizeObserver {
+  constructor(callback) {
+    this.callback = callback;
+    this.targets = [];
+    this.disconnected = false;
+    resizeObservers.push(this);
+  }
+
+  observe(target) {
+    this.targets.push(target);
+  }
+
+  disconnect() {
+    this.disconnected = true;
+  }
+}
+
 const makeScrollable = (element) => {
   element.style.overflow = "auto";
   Object.defineProperty(element, "scrollHeight", { value: 2000 });
@@ -66,24 +85,31 @@ const mountLazyImage = async (target) => {
 
 // A page column that scrolls, holding a dialog surface whose shadow tree puts
 // its slotted content in a fixed panel, as the scene editor's action panel
-// does in the side-by-side touch layout.
-const createFixedPanelPage = ({ panelContent }) => {
+// does in the side-by-side touch layout. The surface renders the panel and its
+// slot only once it is open.
+const createFixedPanelPage = ({ panelContent, isOpen = true }) => {
   const pageColumn = document.createElement("div");
   makeScrollable(pageColumn);
   const surface = document.createElement("div");
   const shadowRoot = surface.attachShadow({ mode: "open" });
-  const panel = document.createElement("div");
-  panel.style.position = "fixed";
-  panel.append(document.createElement("slot"));
-  shadowRoot.append(panel);
+  const open = () => {
+    const panel = document.createElement("div");
+    panel.style.position = "fixed";
+    panel.append(document.createElement("slot"));
+    shadowRoot.append(panel);
+  };
+  if (isOpen) {
+    open();
+  }
   surface.append(panelContent);
   pageColumn.append(surface);
   document.body.append(pageColumn);
-  return { pageColumn };
+  return { pageColumn, open };
 };
 
 beforeEach(() => {
   observers.length = 0;
+  resizeObservers.length = 0;
   vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
 });
 
@@ -133,5 +159,42 @@ describe("lazy file image observer root", () => {
 
     expect(observers).toHaveLength(1);
     expect(observers[0].options.root).toBe(list);
+  });
+
+  // The panel mounts its content before it opens: the image has no size yet,
+  // and the surface has no slot to place it in, so a scroll container chosen
+  // then would be the page column the panel opens over.
+  it("waits until an image in an opening panel is laid out before choosing what it scrolls with", async () => {
+    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+    const target = document.createElement("div");
+    const { open } = createFixedPanelPage({
+      panelContent: target,
+      isOpen: false,
+    });
+
+    const { context, projectService } = await mountLazyImage(target);
+
+    expect(observers).toHaveLength(0);
+    expect(resizeObservers).toHaveLength(1);
+    expect(resizeObservers[0].targets).toEqual([target]);
+    expect(context.state.isLazyObserved).toBe(true);
+
+    // A resize that leaves it without a size changes nothing.
+    resizeObservers[0].callback([]);
+    expect(observers).toHaveLength(0);
+
+    open();
+    placeOffscreen(target);
+    resizeObservers[0].callback([]);
+
+    expect(resizeObservers[0].disconnected).toBe(true);
+    expect(observers).toHaveLength(1);
+    expect(observers[0].options.root).toBeUndefined();
+
+    observers[0].callback([{ isIntersecting: true, intersectionRatio: 1 }]);
+    await vi.waitFor(() =>
+      expect(projectService.getFileContent).toHaveBeenCalledWith("file-sprite"),
+    );
+    expect(context.state.isLazyObserved).toBe(false);
   });
 });

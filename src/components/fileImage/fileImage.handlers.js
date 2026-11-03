@@ -286,8 +286,84 @@ const loadCurrentFile = async (deps, { attrs = deps.props } = {}) => {
   }
 };
 
+const hasLayoutBox = (element) => {
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 || rect.height > 0;
+};
+
+// Calls `onLaidOut` once the element has a size. An image in a panel that is
+// still opening has none yet, and until it has, the panel's slots and fixed
+// position, which decide what the image scrolls with, may not be in place.
+const whenLaidOut = (element, onLaidOut) => {
+  if (hasLayoutBox(element) || typeof ResizeObserver !== "function") {
+    onLaidOut();
+    return;
+  }
+
+  const observer = new ResizeObserver(() => {
+    if (!hasLayoutBox(element)) {
+      return;
+    }
+
+    observer.disconnect();
+    onLaidOut();
+  });
+  observer.observe(element);
+};
+
+const loadLazyFile = (deps, { phase }) => {
+  const { store, projectService, render } = deps;
+  store.setIsLazyObserved({ isLazyObserved: false });
+  if (store.selectShouldLoad()) {
+    return;
+  }
+
+  if (!getFileIdFromProps(deps.props, projectService)) {
+    return;
+  }
+
+  store.setShouldLoad({ shouldLoad: true });
+  render();
+  void loadCurrentFile(deps, { phase });
+};
+
+// Loads the image once it comes near the visible part of the scroll container
+// it is laid out in, or of the viewport.
+const observeNearViewport = (deps, target, { phase }) => {
+  const rootMargin = resolveLazyRootMargin(deps.props);
+  const root = resolveObserverRoot(target);
+
+  if (
+    isElementNearViewport(target, root, rootMargin) ||
+    typeof IntersectionObserver !== "function"
+  ) {
+    loadLazyFile(deps, { phase });
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const isIntersecting = entries.some(
+        (entry) => entry.isIntersecting || entry.intersectionRatio > 0,
+      );
+      if (!isIntersecting) {
+        return;
+      }
+
+      observer.disconnect();
+      loadLazyFile(deps, { phase });
+    },
+    {
+      root,
+      rootMargin,
+      threshold: 0.01,
+    },
+  );
+  observer.observe(target);
+};
+
 const startLazyLoadObservation = (deps, { phase = "mount" } = {}) => {
-  const { refs, store, props: attrs, projectService, render } = deps;
+  const { refs, store, props: attrs, projectService } = deps;
 
   if (!isLazyEnabled(attrs) || store.selectShouldLoad()) {
     return false;
@@ -307,56 +383,8 @@ const startLazyLoadObservation = (deps, { phase = "mount" } = {}) => {
     return false;
   }
 
-  const rootMargin = resolveLazyRootMargin(attrs);
-  const root = resolveObserverRoot(target);
-
-  if (isElementNearViewport(target, root, rootMargin)) {
-    store.setShouldLoad({ shouldLoad: true });
-    render();
-    void loadCurrentFile(deps, { phase });
-    return true;
-  }
-
-  if (typeof IntersectionObserver !== "function") {
-    store.setShouldLoad({ shouldLoad: true });
-    render();
-    void loadCurrentFile(deps, { phase });
-    return true;
-  }
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const isIntersecting = entries.some(
-        (entry) => entry.isIntersecting || entry.intersectionRatio > 0,
-      );
-      if (!isIntersecting) {
-        return;
-      }
-
-      observer.disconnect();
-      store.setIsLazyObserved({ isLazyObserved: false });
-      if (store.selectShouldLoad()) {
-        return;
-      }
-
-      const currentFileId = getFileIdFromProps(deps.props, projectService);
-      if (!currentFileId) {
-        return;
-      }
-
-      store.setShouldLoad({ shouldLoad: true });
-      render();
-      void loadCurrentFile(deps, { phase });
-    },
-    {
-      root,
-      rootMargin,
-      threshold: 0.01,
-    },
-  );
-
   store.setIsLazyObserved({ isLazyObserved: true });
-  observer.observe(target);
+  whenLaidOut(target, () => observeNearViewport(deps, target, { phase }));
   return true;
 };
 
