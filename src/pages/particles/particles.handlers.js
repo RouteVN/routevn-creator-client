@@ -6,7 +6,10 @@ import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
-import { createParticlePreviewState } from "../../internal/particlePreview.js";
+import {
+  createParticlePreviewState,
+  selectParticlePreviewBackgroundImage,
+} from "../../internal/particlePreview.js";
 import {
   getTagsCollection,
   resolveCollectionWithTags,
@@ -65,8 +68,9 @@ const loadParticlePreviewAssets = async ({ deps, renderState } = {}) => {
   }
 };
 
-// The detail panel plays the selected particle. It shows only on desktop;
-// touch layouts have no detail canvas.
+// The detail panel plays the selected particle on its preview background, as
+// its thumbnail shows it. It shows only on desktop; touch layouts have no
+// detail canvas.
 const renderDetailPreview = async (deps) => {
   const { graphicsService, refs, store } = deps;
   const particle = store.selectSelectedParticle();
@@ -74,16 +78,16 @@ const renderDetailPreview = async (deps) => {
     return;
   }
 
-  const renderableParticle = createRenderableParticleData(
-    particle,
-    store.selectImagesData().items,
-  );
+  const imageItems = store.selectImagesData().items ?? {};
+  const renderableParticle = createRenderableParticleData(particle, imageItems);
   await graphicsService.init({
     canvas: refs.detailCanvas,
     width: Math.max(1, Math.round(Number(renderableParticle.width) || 1)),
     height: Math.max(1, Math.round(Number(renderableParticle.height) || 1)),
   });
-  const previewState = createParticlePreviewState(renderableParticle);
+  const previewState = createParticlePreviewState(renderableParticle, {
+    backgroundImage: selectParticlePreviewBackgroundImage(particle, imageItems),
+  });
   await loadParticlePreviewAssets({
     deps,
     renderState: previewState,

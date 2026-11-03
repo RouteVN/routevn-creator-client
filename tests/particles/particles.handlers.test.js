@@ -363,7 +363,7 @@ describe("particles handlers", () => {
     expect(deps.refs.fileExplorer.clearSelection).toHaveBeenCalledOnce();
   });
 
-  it("plays the selected particle in the detail panel, but not once the page has gone", async () => {
+  it("plays the selected particle on its preview background in the detail panel, but not once the page has gone", async () => {
     const page = await createPage();
     const { deps, repositoryState } = page;
     repositoryState.images = {
@@ -375,14 +375,25 @@ describe("particles handlers", () => {
           fileId: "file-1",
           fileType: "image/png",
         },
+        "image-2": {
+          id: "image-2",
+          type: "image",
+          name: "Image Two",
+          fileId: "file-2",
+          fileType: "image/png",
+        },
       },
-      tree: [{ id: "image-1" }],
+      tree: [{ id: "image-1" }, { id: "image-2" }],
+    };
+    // The texture is image-1; the preview background is another image.
+    repositoryState.particles.items["particle-1"].preview = {
+      background: { imageId: "image-2" },
     };
     await handleDataChanged(deps);
     const canvas = { isConnected: true };
     deps.refs.detailCanvas = canvas;
-    deps.projectService.getFileContent = vi.fn(async () => ({
-      url: "blob:file-1",
+    deps.projectService.getFileContent = vi.fn(async (fileId) => ({
+      url: `blob:${fileId}`,
       type: "image/png",
     }));
     deps.graphicsService = {
@@ -399,12 +410,17 @@ describe("particles handlers", () => {
 
     expect(deps.graphicsService.loadAssets).toHaveBeenCalledWith({
       "file-1": { url: "blob:file-1", type: "image/png" },
+      "file-2": { url: "blob:file-2", type: "image/png" },
     });
     const [[renderState]] = deps.graphicsService.render.mock.calls;
     expect(renderState.elements.map(({ type }) => type)).toEqual([
-      "rect",
+      "sprite",
       "particles",
     ]);
+    expect(renderState.elements[0]).toMatchObject({
+      id: "particle-preview-bg",
+      src: "file-2",
+    });
 
     // A double click opens the editor while the texture loads. The editor
     // has the shared renderer by then, so the panel does not draw there.
