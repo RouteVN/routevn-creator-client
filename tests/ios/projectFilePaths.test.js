@@ -18,6 +18,7 @@ beforeEach(() => {
 afterEach(() => {
   dom.window.close();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const createService = (
@@ -158,6 +159,36 @@ describe("iOS project file paths", () => {
     expect(projects[0].id).toBe("project-1");
   });
 
+  it("lists projects in the order they were added, not by id", async () => {
+    // Native returns folders sorted by project id, which is random.
+    callIOSBridge.mockResolvedValue([
+      { id: "project-a", name: "Project Three", language: "en" },
+      { id: "project-b", name: "Project One", language: "en" },
+      { id: "project-c", name: "Project Four", language: "en" },
+      { id: "project-d", name: "Project Two", language: "en" },
+    ]);
+    const service = createService([
+      { id: "project-a", name: "Project Three", createdAt: 3000 },
+      { id: "project-b", name: "Project One", createdAt: 1000 },
+      { id: "project-d", name: "Project Two", createdAt: 2000 },
+    ]);
+
+    const projects = await service.loadAllProjects();
+    // A project found without an entry counts as added now, so it goes last.
+    expect(projects.map(({ name }) => name)).toEqual([
+      "Project One",
+      "Project Two",
+      "Project Three",
+      "Project Four",
+    ]);
+    expect((await service.getProjectEntries()).map(({ id }) => id)).toEqual([
+      "project-b",
+      "project-d",
+      "project-a",
+      "project-c",
+    ]);
+  });
+
   it("removes cached internal projects from the listing", async () => {
     const service = createService([
       {
@@ -191,6 +222,8 @@ describe("iOS project file paths", () => {
       if (method === "importProjectFolder") return projects[0];
       throw new Error(`Unexpected bridge call: ${method}`);
     });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(1000);
     const service = createService([], undefined, values);
     expect(await service.loadAllProjects()).toHaveLength(2);
     await service.removeProjectEntry("project-1");
@@ -211,11 +244,13 @@ describe("iOS project file paths", () => {
     expect((await restarted.loadAllProjects()).map(({ id }) => id)).toEqual([
       "project-2",
     ]);
+    vi.setSystemTime(2000);
     await restarted.openExistingProject({ uri: "routevn-folder://selected" });
     const reopened = createService([], undefined, values);
+    // The restored project counts as added now, so it is listed last.
     expect((await reopened.loadAllProjects()).map(({ id }) => id)).toEqual([
-      "project-1",
       "project-2",
+      "project-1",
     ]);
     expect(projects).toHaveLength(2);
   });
