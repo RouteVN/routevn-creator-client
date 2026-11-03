@@ -2,6 +2,7 @@ import { processWithConcurrency } from "../../../internal/processWithConcurrency
 import {
   AssetImportPlanError,
   createAssetImportPlan,
+  nameDependencyFolders,
   rewriteAssetImportPlanReferences,
   USE_PACK_DEPENDENCY,
 } from "../../../internal/assetImportPlan.js";
@@ -368,7 +369,6 @@ export const createResourcePackageImportService = ({
   idGenerator,
   getCurrentProjectId,
   getRepositoryState,
-  getRepositoryRevision,
   assetService,
   commandApi,
   importClient = createImportPackageClient(),
@@ -432,7 +432,6 @@ export const createResourcePackageImportService = ({
           manifestUrl,
           projectId: getCurrentProjectId?.(),
           repositoryState: getRepositoryState(),
-          repositoryRevision: getRepositoryRevision(),
           createId: idGenerator,
           dependencyFolderName,
         });
@@ -804,13 +803,16 @@ export const createResourcePackageImportService = ({
           commitResult = await commandApi.commitAssetImportPackage({
             planId: plan.planId,
             projectId: plan.projectId,
-            repositoryRevision: plan.repositoryRevision,
             fileRecords,
             fileCommandIds,
-            entries: selectPackageEntries({
-              plan,
-              selectedResources,
-              rewrittenResources,
+            entries: nameDependencyFolders({
+              entries: selectPackageEntries({
+                plan,
+                selectedResources,
+                rewrittenResources,
+              }),
+              baseName: plan.dependencyFolderBaseName,
+              repositoryState: getRepositoryState(),
             }),
           });
         } catch (error) {

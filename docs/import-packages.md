@@ -238,9 +238,16 @@ the matching project collections, after the project's own folders and
 resources, in package order. The dependencies the selected picks use come
 along: each type's go into one new top-level folder after the pack's own,
 named after the pack, and numbered ("Fantasy UI 2") when the project or the
-pack already has a top-level folder by that name. A dependency no selected
-pick uses is not imported. Import does not ask for replacement destination
-folders or media substitutions.
+pack already has a top-level folder by that name. The numbering follows the
+project as it is when Import runs. A dependency no selected pick uses is not
+imported. Import does not ask for replacement destination folders or media
+substitutions.
+
+Changes to the project after a pack's page opens, such as the thumbnails
+a page saves in the background, do not stop the import. Import checks the
+project as it is when it runs: the same project must still be open and no
+imported id may already be taken, and the imported resources then go through
+the project model's validation like any other change.
 
 Choose Resources lists, under Dependencies, each dependency the selected
 resources bring, with a choice of the project's resources of its type, and for
