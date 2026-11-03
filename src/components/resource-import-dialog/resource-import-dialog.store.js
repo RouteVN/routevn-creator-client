@@ -337,9 +337,8 @@ export const createInitialState = () => ({
   // The pack page loads in order: "details", then "assets", then "ready";
   // "failed" keeps what it has under the error.
   packStatus: "idle",
-  // Where Back leads from the pack page and from the creator page.
-  packReturnStep: STORE_STEP,
-  creatorReturnStep: STORE_STEP,
+  // The pages Back returns to, the last one visited on top (see goBack).
+  history: [],
   creator: createCreatorState(),
   // Folder groups collapsed on the pack page.
   collapsedPackGroupKeys: [],
@@ -366,8 +365,7 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
     state.planPackId = undefined;
     state.pack = undefined;
     state.packStatus = "idle";
-    state.packReturnStep = STORE_STEP;
-    state.creatorReturnStep = STORE_STEP;
+    state.history = [];
     state.creator = createCreatorState();
     state.collapsedPackGroupKeys = [];
     state.previewAssetSourceId = undefined;
@@ -417,12 +415,38 @@ export const setCatalogError = ({ state }, { cursor } = {}) => {
   state.catalog.failedCursor = cursor;
 };
 
+// Back returns to the page the user came from. Each page opened from another
+// records that one: the store list, or the pack or creator page with the pack
+// or creator it showed.
+const pushHistory = (state) => {
+  const page = { step: state.step };
+  if (state.step === PACK_STEP) page.id = state.pack.id;
+  if (state.step === CREATOR_STEP) page.id = state.creator.id;
+  state.history.push(page);
+};
+
+// A page Back would return to that no longer shows what it showed, such as a
+// pack page left with Back or now showing another pack, is skipped, so Back
+// always ends at the store list.
+const isStillShown = (state, page) => {
+  if (page.step === PACK_STEP) return state.pack?.id === page.id;
+  if (page.step === CREATOR_STEP) return state.creator.id === page.id;
+  return true;
+};
+
+const goBack = (state) => {
+  let page = state.history.pop();
+  while (page && !isStillShown(state, page)) page = state.history.pop();
+  state.step = page?.step ?? STORE_STEP;
+  state.error = undefined;
+};
+
 // A pack opens at once from the store list or a creator page, with what its
 // card shows; Back returns there. The pack's details then replace the card,
 // with its description, version and last update, and the assets load last.
 export const startOpeningPack = ({ state }, { operationId, pack } = {}) => {
   state.operationId = operationId;
-  state.packReturnStep = state.step;
+  pushHistory(state);
   state.step = PACK_STEP;
   state.pack = {
     id: pack.id,
@@ -499,22 +523,32 @@ export const closeAssetPreview = ({ state }) => {
 };
 
 export const reopenPackPage = ({ state }) => {
-  state.packReturnStep = state.step;
+  pushHistory(state);
   state.step = PACK_STEP;
   state.error = undefined;
 };
 
-// Leaving a pack that is still loading drops its requests.
-export const returnFromPackPage = ({ state }) => {
-  state.step = state.packReturnStep;
+// The dialog lets go of the open pack's plan, and of a pack still loading:
+// the user left it without importing it.
+export const clearPlan = ({ state }) => {
   state.operationId = undefined;
-  state.error = undefined;
+  state.plan = undefined;
+  state.planPackId = undefined;
+  state.reviewValues = {};
+  state.previewAssetSourceId = undefined;
+};
+
+// A pack page left with Back is closed: Back from elsewhere skips it.
+export const returnFromPackPage = ({ state }) => {
+  state.pack = undefined;
+  state.packStatus = "idle";
+  goBack(state);
 };
 
 // The creator page opens from a pack page or, for a creator already loaded,
 // again from wherever it was left.
 export const startCreatorLoad = ({ state }, { requestId, creatorId } = {}) => {
-  if (state.step !== CREATOR_STEP) state.creatorReturnStep = state.step;
+  if (state.step !== CREATOR_STEP) pushHistory(state);
   state.step = CREATOR_STEP;
   state.error = undefined;
   state.creator = createCreatorState();
@@ -524,7 +558,7 @@ export const startCreatorLoad = ({ state }, { requestId, creatorId } = {}) => {
 };
 
 export const reopenCreatorPage = ({ state }) => {
-  state.creatorReturnStep = state.step;
+  pushHistory(state);
   state.step = CREATOR_STEP;
   state.error = undefined;
 };
@@ -543,11 +577,7 @@ export const setCreatorError = ({ state }, { error } = {}) => {
 };
 
 export const returnFromCreatorPage = ({ state }) => {
-  state.step =
-    state.creatorReturnStep === PACK_STEP && state.plan
-      ? PACK_STEP
-      : STORE_STEP;
-  state.error = undefined;
+  goBack(state);
 };
 
 export const openStoreStep = ({ state }) => {

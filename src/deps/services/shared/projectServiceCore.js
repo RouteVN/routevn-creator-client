@@ -737,6 +737,8 @@ export const createProjectServiceCore = ({
       resourcePackageImportService.validateResourceImportPlan,
     executeResourceImportPlan:
       resourcePackageImportService.executeResourceImportPlan,
+    discardResourceImportPlan:
+      resourcePackageImportService.discardResourceImportPlan,
     cancelResourceImport: resourcePackageImportService.cancelResourceImport,
     loadRepositoryState,
     setActiveSceneId,

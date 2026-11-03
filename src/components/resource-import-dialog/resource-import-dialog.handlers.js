@@ -4,6 +4,7 @@ import { generateId } from "../../internal/id.js";
 
 const SELECTION_STEP = "selection";
 const STORE_SEARCH_ACTION = "resourceImport.storeSearch";
+const STORE_SEARCH_CANCEL_ACTION = "resourceImport.storeSearchCancel";
 const STORE_SEARCH_DEBOUNCE_MS = 300;
 
 const mapErrorMessage = (error, i18n = {}) => {
@@ -108,18 +109,43 @@ const searchCatalog = (deps, value) => {
   loadCatalog(deps);
 };
 
+// A cancel, sent when the dialog closes, takes the place of a search still
+// waiting for typing to settle, so that search never runs.
 const mountSearchSubscription = (deps) => {
   const { store, subject } = deps;
   return subject
     .pipe(
       filter(
         ({ action, payload }) =>
-          action === STORE_SEARCH_ACTION &&
+          (action === STORE_SEARCH_ACTION ||
+            action === STORE_SEARCH_CANCEL_ACTION) &&
           payload.instanceId === store.selectInstanceId(),
       ),
       debounceTime(STORE_SEARCH_DEBOUNCE_MS),
+      filter(({ action }) => action === STORE_SEARCH_ACTION),
     )
     .subscribe(({ payload }) => searchCatalog(deps, payload.value));
+};
+
+// Leaving a pack without importing it, by Back, by opening another pack or by
+// closing the dialog, stops what is still loading or importing and frees the
+// pack's plan with the previews read for it. The dialog forgets the plan
+// first, so it is freed once.
+const leavePack = (deps) => {
+  const { projectService, store } = deps;
+  const operationId = store.selectOperationId();
+  if (operationId) projectService.cancelResourceImport({ operationId });
+  const planId = store.selectPlan()?.planId;
+  store.clearPlan();
+  if (planId) projectService.discardResourceImportPlan({ planId });
+};
+
+const closeStore = (deps) => {
+  const { store, subject } = deps;
+  leavePack(deps);
+  subject.dispatch(STORE_SEARCH_CANCEL_ACTION, {
+    instanceId: store.selectInstanceId(),
+  });
 };
 
 export const handleBeforeMount = (deps) => {
@@ -128,10 +154,7 @@ export const handleBeforeMount = (deps) => {
   const searchSubscription = mountSearchSubscription(deps);
   return () => {
     searchSubscription.unsubscribe();
-    const operationId = deps.store.selectOperationId();
-    if (operationId) {
-      deps.projectService.cancelResourceImport({ operationId });
-    }
+    leavePack(deps);
   };
 };
 
@@ -139,6 +162,7 @@ export const handleOnUpdate = (deps, payload = {}) => {
   const oldProps = payload.oldProps ?? {};
   const newProps = payload.newProps ?? {};
   if (oldProps.open === newProps.open) return;
+  if (newProps.open !== true) closeStore(deps);
   syncFromProps(deps, newProps);
   if (newProps.open === true) {
     openStore(deps);
@@ -174,9 +198,9 @@ export const handleLoadMorePacks = (deps) => {
 // Opens the pack page at once from the pack's card, then loads the pack's
 // details, with its description, and, from the manifest inside its published
 // package, the import plan whose assets the page lists. Reopening the pack
-// whose plan is loaded keeps
-// the choices made for it. A response for a pack the user has left is
-// dropped.
+// whose plan is loaded, from its creator's page, keeps the choices made for
+// it; opening another pack leaves this one. A response for a pack the user
+// has left is dropped, and a plan made for it is freed.
 const openPack = async (deps, packId) => {
   const { appService, projectService, store, render } = deps;
   if (store.selectPlan() && store.selectPlanPackId() === packId) {
@@ -185,10 +209,7 @@ const openPack = async (deps, packId) => {
     return;
   }
 
-  const previousOperationId = store.selectOperationId();
-  if (previousOperationId) {
-    projectService.cancelResourceImport({ operationId: previousOperationId });
-  }
+  leavePack(deps);
   const operationId = generateId();
   store.startOpeningPack({
     operationId,
@@ -215,7 +236,12 @@ const openPack = async (deps, packId) => {
     operationId,
     dependencyFolderName: pack.title,
   });
-  if (store.selectOperationId() !== operationId) return;
+  if (store.selectOperationId() !== operationId) {
+    if (result.valid) {
+      projectService.discardResourceImportPlan({ planId: result.plan.planId });
+    }
+    return;
+  }
   if (result.valid === false) {
     store.setPackLoadError({ error: mapErrorMessage(result.error, deps.i18n) });
     render();
@@ -232,9 +258,8 @@ const openPack = async (deps, packId) => {
 };
 
 export const handlePackBack = (deps) => {
-  const { projectService, store, render } = deps;
-  const operationId = store.selectOperationId();
-  if (operationId) projectService.cancelResourceImport({ operationId });
+  const { store, render } = deps;
+  leavePack(deps);
   store.returnFromPackPage();
   render();
 };
@@ -386,9 +411,7 @@ export const handlePackGridKeyDown = (deps, payload) => {
 };
 
 export const handleDialogClose = (deps) => {
-  const { projectService, store } = deps;
-  const operationId = store.selectOperationId();
-  if (operationId) projectService.cancelResourceImport({ operationId });
+  closeStore(deps);
   emitCancelled(deps);
 };
 

@@ -398,6 +398,57 @@ describe("assetStoreClient", () => {
     });
   });
 
+  it("leaves out malformed description blocks instead of failing the pack page", async () => {
+    const { client } = createClient(() =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          assetPack: {
+            id: "AsPkPackOne00001",
+            data: {
+              ...packItem("AsPkPackOne00001").data,
+              package: packagePlace,
+              description: [
+                { type: "HEADING", text: 42 },
+                { type: "HEADING", text: { value: "About" } },
+                { type: "HEADING", text: "About" },
+                null,
+                { type: "PARAGRAPH", children: "Smooth transitions." },
+                { type: "PARAGRAPH", children: [{ text: ["Bad"] }] },
+                {
+                  type: "PARAGRAPH",
+                  children: [{ text: "Smooth " }, { marks: [] }, { text: "!" }],
+                },
+                {
+                  type: "LIST",
+                  items: [
+                    { children: [{ text: 7 }] },
+                    null,
+                    { children: [{ text: "Masks" }] },
+                  ],
+                },
+                { type: "IMAGE", fileId: "FiPackCover00001", width: "1" },
+              ],
+            },
+          },
+          creator,
+          files,
+        },
+      }),
+    );
+
+    const pack = await client.getAssetPackById({
+      assetPackId: "AsPkPackOne00001",
+    });
+
+    expect(pack.description).toEqual([
+      { text: "About" },
+      { text: "Smooth !" },
+      { text: "• Masks" },
+    ]);
+  });
+
   it("reads a creator's profile and free packs in one request", async () => {
     const { client, fetchImpl } = createClient(() =>
       rpcResponse({

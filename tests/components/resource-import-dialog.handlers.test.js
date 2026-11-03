@@ -70,15 +70,23 @@ const createDeps = () => {
 };
 
 describe("resource-import-dialog.handlers", () => {
-  it("closes from its close button, cancelling an import in progress", () => {
+  it("closes from its close button, cancelling an import in progress and freeing its plan", () => {
     const { deps } = createDeps();
     deps.store.selectOperationId = vi.fn(() => "operation-1");
+    deps.store.selectInstanceId = vi.fn(() => "instance-1");
+    deps.store.clearPlan = vi.fn();
+    deps.subject = { dispatch: vi.fn() };
     deps.projectService.cancelResourceImport = vi.fn();
+    deps.projectService.discardResourceImportPlan = vi.fn();
 
     handleDialogClose(deps);
 
     expect(deps.projectService.cancelResourceImport).toHaveBeenCalledWith({
       operationId: "operation-1",
+    });
+    expect(deps.store.clearPlan).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
     });
     expect(deps.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "import-cancelled" }),
@@ -327,6 +335,7 @@ const createStoreDeps = () => {
     projectService: {
       createResourceImportPlan: vi.fn(),
       cancelResourceImport: vi.fn(),
+      discardResourceImportPlan: vi.fn(),
     },
   };
   return { state, deps };
@@ -545,6 +554,88 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.projectService.createResourceImportPlan).not.toHaveBeenCalled();
   });
 
+  it("frees a plan made for a pack the user left while it loaded", async () => {
+    const { state, deps } = createStoreDeps();
+    const planned = deferred();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    deps.appService.getAssetStorePack.mockResolvedValue({
+      ...storePack("pack-1"),
+      package: packagePlace("https://files.example/pack.zip"),
+    });
+    deps.projectService.createResourceImportPlan.mockReturnValue(
+      planned.promise,
+    );
+    openDialog(deps);
+    await settle();
+
+    const opening = clickPack(deps, "pack-1");
+    await settle();
+    expect(deps.projectService.createResourceImportPlan).toHaveBeenCalled();
+    handlePackBack(deps);
+    expect(
+      deps.projectService.discardResourceImportPlan,
+    ).not.toHaveBeenCalled();
+
+    planned.resolve({
+      valid: true,
+      plan: { planId: "plan-late", package: {}, resources: [] },
+    });
+    await opening;
+    expect(state).toMatchObject({ step: "store", plan: undefined });
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-late",
+    });
+  });
+
+  it("frees the open pack's plan once when the dialog closes, from its close button or otherwise", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    deps.appService.getAssetStorePack.mockResolvedValue({
+      ...storePack("pack-1"),
+      package: packagePlace("https://files.example/pack.zip"),
+    });
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: { planId: "plan-1", package: {}, resources: [] },
+    });
+    openDialog(deps);
+    await settle();
+    await clickPack(deps, "pack-1");
+    handlePackImport(deps);
+
+    handleDialogClose(deps);
+    closeDialog(deps);
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
+    });
+    expect(state.plan).toBeUndefined();
+
+    openDialog(deps);
+    await settle();
+    await clickPack(deps, "pack-1");
+    closeDialog(deps);
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
+      2,
+    );
+
+    // Leaving the page under the dialog frees it too.
+    const cleanup = handleBeforeMount(deps);
+    openDialog(deps);
+    await settle();
+    await clickPack(deps, "pack-1");
+    cleanup();
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
+      3,
+    );
+  });
+
   it("keeps the creator page open when the pack's assets finish loading", async () => {
     const { state, deps } = createStoreDeps();
     const planned = deferred();
@@ -584,7 +675,7 @@ describe("resource-import-dialog asset store", () => {
     expect(state).toMatchObject({ step: "creator", packStatus: "ready" });
   });
 
-  it("steps back from selection to the pack page and the store, and reopens the pack without fetching it again", async () => {
+  it("steps back from selection to the pack page and the store, freeing the pack's plan, and loads the pack again when reopened", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({
       packs: [storePack("pack-1")],
@@ -603,13 +694,22 @@ describe("resource-import-dialog asset store", () => {
     handlePackImport(deps);
 
     handleSelectionBack(deps);
-    expect(state.step).toBe("pack");
+    expect(state).toMatchObject({ step: "pack", plan: { planId: "plan-1" } });
+    expect(
+      deps.projectService.discardResourceImportPlan,
+    ).not.toHaveBeenCalled();
     handlePackBack(deps);
-    expect(state.step).toBe("store");
+    expect(state).toMatchObject({ step: "store", plan: undefined });
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
+    });
     await clickPack(deps, "pack-1");
 
-    expect(state.step).toBe("pack");
-    expect(deps.appService.getAssetStorePack).toHaveBeenCalledTimes(1);
+    expect(state).toMatchObject({ step: "pack", plan: { planId: "plan-1" } });
+    expect(deps.appService.getAssetStorePack).toHaveBeenCalledTimes(2);
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
+      1,
+    );
   });
 
   it("shows a localized message when a pack is no longer available", async () => {
@@ -729,6 +829,61 @@ describe("resource-import-dialog asset store", () => {
       type(deps, "after close");
       await vi.advanceTimersByTimeAsync(300);
       expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops a search typed just before the dialog closed, and a late page for it", async () => {
+    vi.useFakeTimers();
+    try {
+      const { state, deps } = createStoreDeps();
+      const cleanup = handleBeforeMount(deps);
+      deps.appService.listAssetStorePacks.mockResolvedValue({
+        packs: [storePack("all")],
+      });
+      openDialog(deps);
+      await vi.runAllTimersAsync();
+      deps.appService.listAssetStorePacks.mockClear();
+      const type = (value) =>
+        handleStoreSearchInput(deps, { _event: { detail: { value } } });
+
+      // Closed before typing settled: the search never runs.
+      type("dragon");
+      await vi.advanceTimersByTimeAsync(100);
+      closeDialog(deps);
+      openDialog(deps);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
+        cursor: undefined,
+        query: "",
+      });
+      expect(state.catalog).toMatchObject({ query: "", status: "ready" });
+      expect(state.catalog.packs.map((pack) => pack.id)).toEqual(["all"]);
+
+      // Closed while the search loaded: its page does not replace the list.
+      const late = deferred();
+      deps.appService.listAssetStorePacks
+        .mockReturnValueOnce(late.promise)
+        .mockResolvedValueOnce({ packs: [storePack("fresh")] });
+      type("dragon");
+      await vi.advanceTimersByTimeAsync(300);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
+        cursor: undefined,
+        query: "dragon",
+      });
+      closeDialog(deps);
+      openDialog(deps);
+      await vi.advanceTimersByTimeAsync(0);
+      late.resolve({ packs: [storePack("dragon")] });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(state).toMatchObject({
+        searchText: "",
+        catalog: { query: "", status: "ready" },
+      });
+      expect(state.catalog.packs.map((pack) => pack.id)).toEqual(["fresh"]);
+      cleanup();
     } finally {
       vi.useRealTimers();
     }
@@ -908,7 +1063,36 @@ describe("resource-import-dialog asset store", () => {
     expect(state.creator.packs.map((pack) => pack.id)).toEqual(["fresh"]);
   });
 
-  it("returns to the creator page from a pack opened there", async () => {
+  it("returns to the creator page from a pack opened there, then to the store list once the first pack is replaced", async () => {
+    const { state, deps } = createStoreDeps();
+    const { discardResourceImportPlan } = deps.projectService;
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    openDialog(deps);
+    await settle();
+    await openPackPage(deps);
+    deps.appService.getAssetStoreCreator.mockResolvedValue(creatorPage());
+    await handlePackCreatorClick(deps);
+
+    // Another pack replaces the first one's plan.
+    await openPackPage(deps, "pack-2");
+    expect(discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-pack-1",
+    });
+    expect(state).toMatchObject({ step: "pack", planPackId: "pack-2" });
+    expect(state.pack.creator).toEqual(storePack("pack-2").creator);
+    handlePackBack(deps);
+    expect(state.step).toBe("creator");
+    expect(discardResourceImportPlan).toHaveBeenLastCalledWith({
+      planId: "plan-pack-2",
+    });
+    handleCreatorBack(deps);
+    expect(state.step).toBe("store");
+    expect(discardResourceImportPlan).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns from the creator page to the pack it was opened from, keeping its plan", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({
       packs: [storePack("pack-1")],
@@ -919,15 +1103,96 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStoreCreator.mockResolvedValue(creatorPage());
     await handlePackCreatorClick(deps);
 
-    await openPackPage(deps, "pack-2");
-    expect(state).toMatchObject({ step: "pack", planPackId: "pack-2" });
-    expect(state.pack.creator).toEqual(storePack("pack-2").creator);
+    handleCreatorBack(deps);
+    expect(state).toMatchObject({
+      step: "pack",
+      planPackId: "pack-1",
+      plan: { planId: "plan-pack-1" },
+    });
+    expect(
+      deps.projectService.discardResourceImportPlan,
+    ).not.toHaveBeenCalled();
+    handlePackBack(deps);
+    expect(state.step).toBe("store");
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-pack-1",
+    });
+  });
+
+  it("reopens a pack from its creator's page without looping Back between them", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    openDialog(deps);
+    await settle();
+    await openPackPage(deps);
+    deps.appService.getAssetStoreCreator.mockResolvedValue(creatorPage());
+    await handlePackCreatorClick(deps);
+
+    // The same pack, from the creator's list, keeps its plan.
+    await clickPack(deps, "pack-1");
+    expect(state).toMatchObject({ step: "pack", planPackId: "pack-1" });
+    expect(deps.appService.getAssetStorePack).toHaveBeenCalledTimes(1);
+    expect(
+      deps.projectService.discardResourceImportPlan,
+    ).not.toHaveBeenCalled();
+
     handlePackBack(deps);
     expect(state.step).toBe("creator");
     handleCreatorBack(deps);
-    expect(state.step).toBe("pack");
-    handlePackBack(deps);
-    expect(state.step).toBe("creator");
+    expect(state.step).toBe("store");
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
+      1,
+    );
+  });
+
+  it("reaches the store list with Back after any way through packs and creator pages", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1"), storePack("pack-2")],
+    });
+    deps.appService.getAssetStoreCreator.mockResolvedValue(creatorPage());
+    const back = () =>
+      state.step === "pack" ? handlePackBack(deps) : handleCreatorBack(deps);
+    // Each move, where the page allows it.
+    const moves = {
+      pack1: () => state.step !== "pack" && openPackPage(deps, "pack-1"),
+      pack2: () => state.step !== "pack" && openPackPage(deps, "pack-2"),
+      creator: () => state.step === "pack" && handlePackCreatorClick(deps),
+      back: () => state.step !== "store" && back(),
+    };
+    const paths = [[]];
+    for (const path of paths) {
+      if (path.length === 4) continue;
+      for (const move of Object.keys(moves)) paths.push([...path, move]);
+    }
+
+    const { createResourceImportPlan, discardResourceImportPlan } =
+      deps.projectService;
+    for (const path of paths) {
+      openDialog(deps);
+      await settle();
+      createResourceImportPlan.mockClear();
+      discardResourceImportPlan.mockClear();
+      for (const move of path) await moves[move]();
+      // Back returns through the pages opened, at most one press each.
+      let presses = 0;
+      while (state.step !== "store" && presses <= path.length) {
+        back();
+        presses += 1;
+      }
+      expect({ path, step: state.step }).toEqual({ path, step: "store" });
+      // Every plan made was freed once, and closing frees none again.
+      expect({
+        path,
+        freed: discardResourceImportPlan.mock.calls.length,
+      }).toEqual({ path, freed: createResourceImportPlan.mock.calls.length });
+      closeDialog(deps);
+      expect(discardResourceImportPlan).toHaveBeenCalledTimes(
+        createResourceImportPlan.mock.calls.length,
+      );
+    }
   });
 
   it("shows a missing creator's message and retries", async () => {

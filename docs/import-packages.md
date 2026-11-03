@@ -265,7 +265,12 @@ are JPEG, PNG, WebP, MP4, and WebM.
 
 Preview files are fetched lazily through the same bounded client as imported
 files. Preview-only fields and files are not persisted in the destination
-project unless another retained resource field references the file.
+project unless another retained resource field references the file. The
+previews read for an open pack are capped together at the total download
+limit, counted apart from the import: an import counts only the files it
+brings in, and uses a file already read for its preview without reading it
+again. Leaving a pack without importing it, with Back, by opening another pack
+or by closing the store, frees its previews.
 
 Creator-generated previews include:
 
@@ -322,7 +327,7 @@ place with its title and a close button at its right: a sidebar with a Search
 field, and free packs, newest first, 20 at a time, each card with its
 cover, title, summary (at most two lines, ending in an ellipsis when cut, and
 left out when the pack has none) and creator. Search matches pack titles and creator names once
-typing pauses for 300 ms. The store has no asset type filter for now: it
+typing pauses for 300 ms; closing the store drops a search still waiting. The store has no asset type filter for now: it
 lists every pack, whichever page Import was opened from. Choosing a pack opens its
 page: its description, the current
 version's release notes under "What's new", with their line breaks, when it has
@@ -346,7 +351,12 @@ the import flow below, whose resource choice sits in a centered column up to
 1200 px wide, as the pack page does. Back, the square button beside each page's title, steps
 from the resource choice to the pack page, keeping the choices made there, from
 a pack page to the list or creator page it was opened from, and from the creator
-page to the pack page it was opened from, or to the list. The app has no
+page to the pack page it was opened from, or to the list. A page that no longer
+shows what it showed, such as a pack page left with Back or replaced by another
+pack opened from the creator page, is skipped, so Back always reaches the list.
+Back from a pack page drops the choices made for it, and the pack loads again
+when reopened; going to its creator's page and back, or reopening it from
+there, keeps them. The app has no
 purchases, so it requests and shows free packs only; the creator page leaves out
 the creator's other packs, and a creator with none free shows that they have no
 packs yet.
@@ -357,7 +367,7 @@ with the `X-RouteVN-RPC: 1` header and no credentials:
 | Method                        | Params                                                            | Used for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `assetStore.listAssetPacks`   | `{query, pricingType: "FREE", assetTypes, page: {cursor, limit}}` | Pack cards. Each item carries `data`, with the title, `summary` (one line of 0 to 300 characters, trimmed; `""` when missing or not text), cover, pricing, `assetCounts` and listing date, and its `creator`; `files` maps cover and avatar IDs to URLs. `assetTypes` is `null` or a list of asset types, such as `IMAGES`. `assetCounts` maps each asset type the pack has to its count, such as `{"IMAGES": 30, "SOUNDS": 20}`; types the app does not know and counts that are not positive are left out. |
-| `assetStore.getAssetPackById` | `{assetPackId}`                                                   | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update, and `data.package`: `{fileId, size, directoryOffset, directorySize}`, the published package's ZIP (its `files` URL), its byte size, and where its central directory starts and how long it is. The description shows as plain paragraphs and its images, each by its `files` URL.                                                                      |
+| `assetStore.getAssetPackById` | `{assetPackId}`                                                   | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update, and `data.package`: `{fileId, size, directoryOffset, directorySize}`, the published package's ZIP (its `files` URL), its byte size, and where its central directory starts and how long it is. The description shows as plain paragraphs and its images, each by its `files` URL; a malformed block is left out.                                       |
 | `assetStore.getCreatorById`   | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                           |
 
 Development builds call `http://127.0.0.1:3100/asset-store/rpc` instead. Set
@@ -437,7 +447,8 @@ Current limits are:
 - 4 MiB per package central directory
 - 2,000 package files
 - 50 MiB per file
-- 200 MiB total per import
+- 200 MiB total per import, counting the files it brings in
+- 200 MiB of previews per open pack
 - 500 resources per type, picks and dependencies together
 - 32 folder-tree levels
 - three parallel downloads

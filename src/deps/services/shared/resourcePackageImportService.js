@@ -378,6 +378,9 @@ export const createResourcePackageImportService = ({
   // Each plan's package source, which reads the files the plan lists.
   const sources = new Map();
   const operations = new Map();
+  // Each plan's previews, `{ downloadedBytes, files }`: `files` maps a
+  // package file id to its `{ preview, download }`, and import reuses the
+  // download.
   const previewDownloadsByPlan = new Map();
 
   const beginOperation = (operationId) => {
@@ -499,12 +502,12 @@ export const createResourcePackageImportService = ({
 
         let previewState = previewDownloadsByPlan.get(planId);
         if (!previewState) {
-          previewState = { downloadedBytes: 0, results: new Map() };
+          previewState = { downloadedBytes: 0, files: new Map() };
           previewDownloadsByPlan.set(planId, previewState);
         }
-        const cached = previewState.results.get(sourceFileId);
+        const cached = previewState.files.get(sourceFileId);
         if (cached) {
-          return { valid: true, preview: cached };
+          return { valid: true, preview: cached.preview };
         }
 
         operation = beginOperation(operationId);
@@ -512,6 +515,9 @@ export const createResourcePackageImportService = ({
           descriptor: previewFile.descriptor,
           signal: operation.controller.signal,
         });
+        // A plan's previews together stay within the total download limit,
+        // so they cannot hold memory without bound. They are counted apart
+        // from what an import downloads.
         if (
           previewState.downloadedBytes + download.byteLength >
           importClient.limits.totalBytes
@@ -532,7 +538,7 @@ export const createResourcePackageImportService = ({
               : "image",
         };
         previewState.downloadedBytes += download.byteLength;
-        previewState.results.set(sourceFileId, preview);
+        previewState.files.set(sourceFileId, { preview, download });
         return { valid: true, preview };
       } catch (error) {
         return toErrorResult(error);
@@ -611,6 +617,9 @@ export const createResourcePackageImportService = ({
           );
         }
         planForCleanup = plan;
+        // Discarding the plan while it imports leaves this import as it is.
+        const source = sources.get(planId);
+        const previewFiles = previewDownloadsByPlan.get(planId)?.files;
         if (
           plan.projectId !== undefined &&
           getCurrentProjectId?.() !== plan.projectId
@@ -668,16 +677,19 @@ export const createResourcePackageImportService = ({
           completed: 0,
           total: neededFiles.length,
         });
-        let downloadedBytes =
-          previewDownloadsByPlan.get(planId)?.downloadedBytes ?? 0;
+        // The limit counts the files this import brings in, once each, and
+        // not the previews of what it leaves out.
+        let downloadedBytes = 0;
         let completedDownloads = 0;
         const downloaded = await processWithConcurrency(
           neededFiles,
           async (filePlan) => {
-            const result = await sources.get(planId).readFile({
-              descriptor: filePlan.descriptor,
-              signal: operation.controller.signal,
-            });
+            const result =
+              previewFiles?.get(filePlan.sourceId)?.download ??
+              (await source.readFile({
+                descriptor: filePlan.descriptor,
+                signal: operation.controller.signal,
+              }));
             downloadedBytes += result.byteLength;
             if (downloadedBytes > importClient.limits.totalBytes) {
               throw new ImportPackageClientError(
@@ -900,6 +912,18 @@ export const createResourcePackageImportService = ({
         }
         if (operation) endOperation(operation.id);
       }
+    },
+
+    // Frees a plan the user left without importing it, with the previews read
+    // for it. A plan already imported, or unknown, is left as it is. Staged
+    // files are kept: a plan has them only when its commit's outcome is
+    // unknown, when they may belong to the committed resources.
+    discardResourceImportPlan({ planId } = {}) {
+      if (!plans.has(planId)) return { discarded: false };
+      deletePlan(planId);
+      assetService.finalizeResourceImportFiles?.({ planId });
+      recordEvent("plan.discarded", { planId });
+      return { discarded: true };
     },
 
     cancelResourceImport({ operationId } = {}) {

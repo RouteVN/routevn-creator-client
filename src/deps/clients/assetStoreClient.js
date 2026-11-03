@@ -86,26 +86,33 @@ const isByteCount = (value) => Number.isSafeInteger(value) && value >= 0;
 
 const isTimestamp = (value) => Number.isInteger(value) && value > 0;
 
-const runText = (runs) =>
-  Array.isArray(runs) ? runs.map((run) => run?.text ?? "").join("") : "";
+// A block's text runs joined, or "" when a run's text is not text, so the
+// block is left out.
+const runText = (runs) => {
+  if (!Array.isArray(runs)) return "";
+  const texts = runs.map((run) => run?.text ?? "");
+  return texts.every((text) => typeof text === "string") ? texts.join("") : "";
+};
 
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 
 // Rich text as plain paragraphs (`{ text }`) and images (`{ imageUrl, alt,
-// width, height }`); list items keep a bullet. An image `files` does not map
-// is left out.
+// width, height }`); list items keep a bullet. An image `files` does not map,
+// and a malformed block or list item, are left out.
 const readDescription = (blocks, fileUrls) => {
   if (!Array.isArray(blocks)) return [];
   const description = [];
-  const paragraph = (text) => {
-    if (text.trim() !== "") description.push({ text });
+  const paragraph = (text, prefix = "") => {
+    if (text.trim() !== "") description.push({ text: `${prefix}${text}` });
   };
   for (const block of blocks) {
-    if (block?.type === "HEADING") paragraph(block.text ?? "");
+    if (block?.type === "HEADING" && typeof block.text === "string") {
+      paragraph(block.text);
+    }
     if (block?.type === "PARAGRAPH") paragraph(runText(block.children));
     if (block?.type === "LIST" && Array.isArray(block.items)) {
       for (const item of block.items) {
-        paragraph(`• ${runText(item?.children)}`);
+        paragraph(runText(item?.children), "• ");
       }
     }
     const imageUrl = block?.type === "IMAGE" && fileUrls.get(block.fileId);

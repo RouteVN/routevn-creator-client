@@ -921,6 +921,208 @@ describe("resourcePackageImportService", () => {
     });
   });
 
+  // The test package's files, 6 bytes each, without sizes in the manifest,
+  // under a 10-byte limit.
+  const createSizedService = () => {
+    const context = createService();
+    const manifest = assetManifest();
+    for (const file of Object.values(manifest.repository.files.items)) {
+      delete file.size;
+    }
+    context.importClient.fetchManifest.mockResolvedValue({
+      manifest,
+      manifestUrl: "http://localhost:4179/manifests/assets.json",
+    });
+    context.importClient.limits.totalBytes = 10;
+    context.importClient.downloadFile.mockImplementation(
+      async ({ descriptor }) => ({
+        bytes: new Uint8Array(6),
+        byteLength: 6,
+        contentType: descriptor.mimeType,
+      }),
+    );
+    return context;
+  };
+  const downloadsOf = (importClient, fileId) =>
+    importClient.downloadFile.mock.calls.filter(
+      ([{ descriptor }]) => descriptor.id === fileId,
+    ).length;
+
+  it("caps a plan's previews together at the total download limit", async () => {
+    const { service } = createSizedService();
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const [image, , video] = planned.plan.resources;
+
+    const first = await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: image.largePreviewSourceId,
+    });
+    const second = await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: video.largePreviewSourceId,
+    });
+
+    expect(first.valid).toBe(true);
+    expect(second).toMatchObject({
+      valid: false,
+      error: { code: "download_too_large" },
+    });
+  });
+
+  it("keeps previews of what an import leaves out out of its download limit", async () => {
+    const { service, importClient } = createSizedService();
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const [image, , video] = planned.plan.resources;
+    const preview = await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: video.largePreviewSourceId,
+    });
+    expect(preview.valid).toBe(true);
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+      selectedResourceIds: [image.sourceId],
+    });
+
+    expect(result).toMatchObject({ valid: true, importedCount: 1 });
+    expect(downloadsOf(importClient, "file.image")).toBe(1);
+  });
+
+  it("imports a file read for its preview without reading it again, counting it once", async () => {
+    const { service, importClient, commandApi } = createSizedService();
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const image = planned.plan.resources[0];
+    expect(image.largePreviewSourceId).toBe("file.image");
+    await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: image.largePreviewSourceId,
+    });
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+      selectedResourceIds: [image.sourceId],
+    });
+
+    expect(result).toMatchObject({ valid: true, importedCount: 1 });
+    expect(downloadsOf(importClient, "file.image")).toBe(1);
+    expect(commandApi.commitAssetImportPackage).toHaveBeenCalledOnce();
+  });
+
+  it("still refuses an import whose files exceed the download limit", async () => {
+    const { service, commandApi } = createSizedService();
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const video = planned.plan.resources[2];
+
+    // The video and its thumbnail are 12 bytes.
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+      selectedResourceIds: [video.sourceId],
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: { code: "download_too_large" },
+    });
+    expect(commandApi.commitAssetImportPackage).not.toHaveBeenCalled();
+  });
+
+  it("discards a plan left without importing it, with its previews, once", async () => {
+    const { service, importClient, assetService } = createService();
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const { planId } = planned.plan;
+    const image = planned.plan.resources[0];
+    await service.loadResourceImportPreview({
+      planId,
+      sourceFileId: image.previewSourceId,
+    });
+
+    expect(service.discardResourceImportPlan({ planId })).toEqual({
+      discarded: true,
+    });
+    expect(service.discardResourceImportPlan({ planId })).toEqual({
+      discarded: false,
+    });
+    expect(assetService.finalizeResourceImportFiles).toHaveBeenCalledWith({
+      planId,
+    });
+    expect(assetService.discardResourceImportFiles).not.toHaveBeenCalled();
+    // Its cached preview went with it.
+    await expect(
+      service.loadResourceImportPreview({
+        planId,
+        sourceFileId: image.previewSourceId,
+      }),
+    ).resolves.toMatchObject({
+      valid: false,
+      error: { code: "plan_expired" },
+    });
+    await expect(
+      service.executeResourceImportPlan({ planId }),
+    ).resolves.toMatchObject({
+      valid: false,
+      error: { code: "plan_expired" },
+    });
+    expect(importClient.downloadFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves an imported plan as it is when it is discarded", async () => {
+    const { service, assetService } = createService();
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const { planId } = planned.plan;
+    const result = await service.executeResourceImportPlan({ planId });
+    expect(result.valid).toBe(true);
+    assetService.finalizeResourceImportFiles.mockClear();
+
+    expect(service.discardResourceImportPlan({ planId })).toEqual({
+      discarded: false,
+    });
+    expect(assetService.finalizeResourceImportFiles).not.toHaveBeenCalled();
+    expect(assetService.discardResourceImportFiles).not.toHaveBeenCalled();
+  });
+
+  it("finishes an import whose plan is discarded while its files download", async () => {
+    const { service, importClient, commandApi } = createService();
+    let releaseDownloads;
+    const downloadsHeld = new Promise((resolve) => {
+      releaseDownloads = resolve;
+    });
+    importClient.downloadFile.mockImplementation(async ({ descriptor }) => {
+      await downloadsHeld;
+      return {
+        bytes: new Uint8Array([1, 2, 3]),
+        byteLength: 3,
+        contentType: descriptor.mimeType,
+      };
+    });
+    const planned = await service.createResourceImportPlan({
+      url: "http://localhost:4179/manifests/assets.json",
+    });
+    const { planId } = planned.plan;
+
+    const importing = service.executeResourceImportPlan({ planId });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    service.discardResourceImportPlan({ planId });
+    releaseDownloads();
+
+    await expect(importing).resolves.toMatchObject({
+      valid: true,
+      importedCount: 3,
+    });
+    expect(commandApi.commitAssetImportPackage).toHaveBeenCalledOnce();
+  });
+
   it("rejects corrupt generalized media before staging", async () => {
     const { service, importClient, assetService, commandApi } = createService();
     importClient.fetchManifest.mockResolvedValue({

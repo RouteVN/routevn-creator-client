@@ -79,6 +79,7 @@ const createPlan = () => ({
 const appService = {};
 const projectService = {
   cancelResourceImport() {},
+  discardResourceImportPlan() {},
 };
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
