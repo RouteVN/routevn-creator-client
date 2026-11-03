@@ -546,14 +546,32 @@ const findResourceSelectionCard = (_event) =>
     .composedPath()
     .find((target) => target?.dataset?.resourceSourceId !== undefined);
 
+// The form takes its starting values only when it opens, so a dependency or
+// link select that a change of selection adds starts at its value here: the
+// project's resource of the same name, if any. Selects already shown keep
+// what the user chose.
+const startNewChoiceFields = (deps, shownValues) => {
+  const { store, refs } = deps;
+  const { workflowForm } = refs;
+  const newValues = Object.fromEntries(
+    Object.entries(store.selectChoiceFieldValues()).filter(
+      ([name]) => !Object.hasOwn(shownValues, name),
+    ),
+  );
+  if (Object.keys(newValues).length === 0) return;
+  workflowForm.setValues({ values: newValues });
+};
+
 const toggleResourceSelection = (deps, _event) => {
   const { store, render } = deps;
   const card = findResourceSelectionCard(_event);
   if (!card) return;
   const sourceId = card.dataset.resourceSourceId;
   const selected = card.getAttribute("aria-pressed") !== "true";
+  const shownValues = store.selectChoiceFieldValues();
   store.setResourceSelected({ sourceId, selected });
   render();
+  startNewChoiceFields(deps, shownValues);
 };
 
 export const handleResourceSelectionToggle = (deps, payload) => {
@@ -572,8 +590,10 @@ export const handleSelectionToggleAll = (deps, payload) => {
   const { store, render } = deps;
   const { currentTarget } = payload._event;
   const selected = currentTarget.dataset.allSelected !== "true";
+  const shownValues = store.selectChoiceFieldValues();
   store.setAllResourcesSelected({ selected });
   render();
+  startNewChoiceFields(deps, shownValues);
 };
 
 export const handleCancelProgress = (deps) => {

@@ -10,6 +10,7 @@ import {
   openPackStep,
   openStoreStep,
   reopenLoadedPlan,
+  selectChoiceFieldValues,
   selectViewData,
   setAllResourcesSelected,
   setCatalogError,
@@ -531,6 +532,9 @@ describe("resource-import-dialog.store", () => {
     });
 
     setResourceSelected({ state }, { sourceId: "source.one", selected: true });
+    expect(selectChoiceFieldValues({ state })).toMatchObject({
+      link_0: "section-2",
+    });
     expect(linkFields()).toEqual([
       expect.objectContaining({
         name: "link_0",
@@ -628,9 +632,19 @@ describe("resource-import-dialog.store", () => {
       dependency_1: "",
     });
     expect(dependencyFields()).toEqual([]);
+    expect(selectChoiceFieldValues({ state })).toEqual({});
 
+    // Each select a selection adds comes with the value it starts at, which
+    // the dialog sets on the form.
     setResourceSelected({ state }, { sourceId: "source.one", selected: true });
+    expect(selectChoiceFieldValues({ state })).toEqual({
+      dependency_0: "font-2",
+    });
     setResourceSelected({ state }, { sourceId: "source.two", selected: true });
+    expect(selectChoiceFieldValues({ state })).toEqual({
+      dependency_0: "font-2",
+      dependency_1: "",
+    });
     expect(dependencyFields()).toEqual([
       expect.objectContaining({
         name: "dependency_0",
