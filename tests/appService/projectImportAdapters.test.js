@@ -1034,6 +1034,41 @@ describe("ios project import of a project that is already in the library", () =>
     expect(db.set).not.toHaveBeenCalled();
   });
 
+  it("lists a picked library copy under the fresh id it sends, beside the original", async () => {
+    const { db, appService } = await createExistingSetup();
+    const calls = mockMobileNative(IOS, {
+      answers: {
+        // Native imports a copy of another library folder's project in
+        // place under copyProjectId.
+        importProjectFolder: (payload) => ({
+          ...iosImportPayload(),
+          id: payload.copyProjectId,
+          projectFilePath: "/projects/Project One Copy/project.db",
+          alreadyImported: false,
+        }),
+      },
+    });
+
+    const project = await appService.openExistingProject(
+      "file:///projects/Project%20One%20Copy/",
+    );
+
+    const { copyProjectId } = calls.find(
+      (call) => call.method === "importProjectFolder",
+    ).payload;
+    expect(copyProjectId).toMatch(/^[1-9A-HJ-NP-Za-km-z]{12}$/);
+    expect(project.id).toBe(copyProjectId);
+    const entries = await db.get("projectEntries");
+    expect(entries).toHaveLength(2);
+    expect(entries.find((entry) => entry.id === "project-one")).toEqual(
+      existingEntry,
+    );
+    expect(entries.find((entry) => entry.id === copyProjectId)).toMatchObject({
+      name: "Project One",
+      projectFilePath: "/projects/Project One Copy/project.db",
+    });
+  });
+
   it("restores a hidden project, renaming its id-named folder after the project, and keeps its entry dates", async () => {
     const { db, appService } = await createExistingSetup({
       removed: ["project-one"],

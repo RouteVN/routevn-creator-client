@@ -176,13 +176,20 @@ export const createAppService = (params) => {
   });
 
   const syncIOSProjectEntriesFromStorage = async () => {
-    const discoveredProjects = await callIOSBridge("listProjectFolders");
+    const entries = (await appDb.get("projectEntries")) ?? [];
+    const existingEntries = Array.isArray(entries) ? entries : [];
+    // A folder duplicated in Files carries the same project id. Native keeps
+    // the id with the folder listed here and ignores the copy until it is
+    // imported, so the duplicate does not hide the original.
+    const discoveredProjects = await callIOSBridge("listProjectFolders", {
+      listedProjects: existingEntries
+        .filter((entry) => entry?.id && entry.projectFilePath)
+        .map(({ id, projectFilePath }) => ({ id, projectFilePath })),
+    });
     const removedProjectIds = new Set(
       (await appDb.get("iosRemovedProjectIds")) ?? [],
     );
 
-    const entries = (await appDb.get("projectEntries")) ?? [];
-    const existingEntries = Array.isArray(entries) ? entries : [];
     const existingEntriesById = new Map(
       existingEntries
         .filter((entry) => entry?.id)
@@ -276,9 +283,13 @@ export const createAppService = (params) => {
             path,
           ),
       });
+      // A folder in the library that is a copy of another folder's project
+      // (Files Duplicate copies the hidden identity file too) is imported in
+      // place under copyProjectId. Native ignores it for any other folder.
       const importedProject = await callIOSBridge("importProjectFolder", {
         uri: folderSelection.uri,
         fileRenames,
+        copyProjectId: generateId(),
       });
 
       return registerImportedIOSProject({

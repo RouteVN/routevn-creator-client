@@ -34,7 +34,9 @@ the folder are each picked with a **Browse** button inside the dialog. On
 Android and iOS no single system picker can select a folder or a file, so **From local** first shows an
 app-owned `showFormDialog` with **Project folder** and **Zip file** buttons.
 
-Android and iOS copy the project and keep no reference to the source.
+Android and iOS copy the project and keep no reference to the source. The one exception is an iOS folder that
+is already inside the library as a copy of another library folder's project (see **Importing a project that
+already exists**): it is imported where it is.
 
 **iOS folder names.** The folder is named after the project (sanitized: `< > : " / \ | ? *` and control
 characters become `-`, spaces and dots at the ends are trimmed, at most 180 bytes, Windows reserved names get
@@ -60,7 +62,8 @@ including, the first `.` (`abc.png` becomes `abc`, `a_b-1.tar.gz` becomes `a_b-1
 For a **picked folder**, JavaScript lists `files/` and plans the renames. Desktop renames inside the picked
 folder, but only after the folder is known to be a project (`project.db` and `files/` exist and the database
 is readable), and undoes the renames already made if one fails. Android and iOS pass the plan to
-`importProjectFolder` and rename their own copy, never the source. For a **zip**, the plan is applied while
+`importProjectFolder` and rename their own copy, never the source; an iOS copy inside the library is renamed
+where it is, because it becomes the library's copy. For a **zip**, the plan is applied while
 extracting: each file is written straight to its final name.
 
 ## Zip layout and safety (Rule B)
@@ -176,6 +179,20 @@ database.
   - **Hidden project:** one removed from the list but still on disk is restored by importing it again, with
     the library's own name, description and icon and no renames applied. An id-named folder from an older build
     is renamed after the project; any other folder name is left alone.
+  - **Copy inside the library:** a picked folder in the library whose id another library folder also holds (Files
+    **Duplicate** copies the hidden `.routevn-project.json` too, so neither folder can be found or listed), or
+    whose id the library keeps in another folder, becomes a project of its own where it is. Until then the copy is
+    ignored: the folder the Projects list already showed keeps the id and stays listed. When the list never showed
+    either folder, either one counts as the copy: the one picked gets the new id, and settings the app keeps per
+    project id stay with the folder that keeps the old one. JavaScript sends a fresh `copyProjectId` with every iOS
+    folder import. Native applies the Rule A renames in place, writes the new id into the folder's identity file,
+    then rewrites `project.db` in one transaction, as the Android import does: `projectInfo`, every committed
+    event's `project_id` and the `project-create:<id>` event in `committed_events` and `local_drafts` move to the
+    new id, and the `collab.lastCommittedId:<id>` cursor is dropped. Nothing is copied. The other folder keeps the
+    original id and is found again; a hidden one stays hidden, and with more than two copies every extra copy has
+    to be imported. If the database step fails, the folder no longer claims the original id, and importing it again
+    finishes under another new id. A folder outside the library, a zip or a URL whose id the library already holds
+    still ends with `projectExists`, or with `importFailed` while that id is ambiguous.
   - **Unfinished import:** a folder that is clearly an unfinished import of this same project (its identity file
     names this id, or it is the id-named folder an older build made, with `project.db` and no `files/`) is removed
     and replaced by the incoming copy. Any other folder or file that merely uses the id as its name is never
@@ -207,7 +224,8 @@ project is. JavaScript owns URL parsing and Drive links (`projectImportUrl.js`),
 checks, limits and Rule A (`projectImportPlan.js`), the sequence, progress stages and cleanup
 (`projectImportService.js`, driven through a small per-platform `projectImportHost.js`) and which error to
 show. The exception is each platform's storage step (`importProjectFolder`): on iOS it also
-names the library folder, decides "already in the library" and removes an unfinished import, and iOS exposes
+names the library folder, decides "already in the library", removes an unfinished import and gives a copy
+inside the library its new id, and iOS exposes
 `renameLegacyProjectFolder` for a hidden project; on Android a picked folder with the incomplete-export marker
 is rejected there. Picking a zip goes through the platform's `openArchivePicker`, outside this contract.
 
@@ -238,16 +256,16 @@ code provides three commands:
 addressed by an opaque `tempFolderId`; every `path` is relative to it, and native rejects absolute paths and
 empty, `.` or `..` segments, backslash, `:` and NUL.
 
-| Method                 | Payload                                                                                           | Result                                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `createTempFolder`     | none                                                                                              | `{ tempFolderId }`; also removes temporary folders older than 24 hours                     |
-| `removeTempFolder`     | `tempFolderId`                                                                                    | `{}`; idempotent                                                                           |
-| `downloadFile`         | `tempFolderId`, `url`, `path`, `maxBytes`                                                         | `{ finalUrl, contentDisposition?, bytes }`; progress events                                |
-| `copyImportFile`       | `tempFolderId`, `uri` (picked file), `path`, `maxBytes`                                           | `{ bytes }`                                                                                |
-| `listImportArchive`    | `tempFolderId`, `path`, `maxEntries`                                                              | `{ entries: [{ name, size, isDirectory }] }`                                               |
-| `extractImportArchive` | `tempFolderId`, `path`, `destination`, `files: [{ entry, path }]`, `maxBytes`                     | `{ files, bytes }`; progress events                                                        |
-| `listImportDirectory`  | `{ tempFolderId, path }` or `{ uri, path }` (picked folder); an empty `path` is the folder itself | `{ entries: [{ name, kind, size }] }`, `kind` is `file`, `directory`, `symlink` or `other` |
-| `importProjectFolder`  | `{ tempFolderId, path }` or `{ uri }`, `projectId` (Android only), `fileRenames?: [{ from, to }]` | The registered project                                                                     |
+| Method                 | Payload                                                                                                                                     | Result                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `createTempFolder`     | none                                                                                                                                        | `{ tempFolderId }`; also removes temporary folders older than 24 hours                     |
+| `removeTempFolder`     | `tempFolderId`                                                                                                                              | `{}`; idempotent                                                                           |
+| `downloadFile`         | `tempFolderId`, `url`, `path`, `maxBytes`                                                                                                   | `{ finalUrl, contentDisposition?, bytes }`; progress events                                |
+| `copyImportFile`       | `tempFolderId`, `uri` (picked file), `path`, `maxBytes`                                                                                     | `{ bytes }`                                                                                |
+| `listImportArchive`    | `tempFolderId`, `path`, `maxEntries`                                                                                                        | `{ entries: [{ name, size, isDirectory }] }`                                               |
+| `extractImportArchive` | `tempFolderId`, `path`, `destination`, `files: [{ entry, path }]`, `maxBytes`                                                               | `{ files, bytes }`; progress events                                                        |
+| `listImportDirectory`  | `{ tempFolderId, path }` or `{ uri, path }` (picked folder); an empty `path` is the folder itself                                           | `{ entries: [{ name, kind, size }] }`, `kind` is `file`, `directory`, `symlink` or `other` |
+| `importProjectFolder`  | `{ tempFolderId, path }` or `{ uri }`, `projectId` (Android only), `copyProjectId` (iOS picked folder only), `fileRenames?: [{ from, to }]` | The registered project                                                                     |
 
 `importProjectFolder` copies or moves the project into app storage, restores the identity and reports it. For a
 staging source with no `files/` or `file-metadata/` the copy gets an empty one. It applies `fileRenames` to the

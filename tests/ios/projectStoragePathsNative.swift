@@ -5,6 +5,8 @@ import SQLite3
 struct ProjectStoragePathsNativeTests {
     static func main() throws {
         try duplicateIdentities()
+        try libraryCopies()
+        try listedFolderKeepsDuplicatedId()
         try invalidIdentities()
         let fm = FileManager.default
         let fixture = fm.temporaryDirectory.appendingPathComponent("routevn-storage-test-\(UUID().uuidString)")
@@ -211,6 +213,124 @@ struct ProjectStoragePathsNativeTests {
         let ids = try paths.projectIds()
         precondition(ids == ["project-one", "project-three", "project-two"])
         print("PASS: duplicate identities isolated, cached/fresh lookups rejected, unrelated projects readable, creation and recovery preserved")
+    }
+
+    static func libraryCopies() throws {
+        let fm = FileManager.default
+        let library = fm.temporaryDirectory.appendingPathComponent("routevn-library-copy-test-\(UUID().uuidString)")
+        let outside = fm.temporaryDirectory.appendingPathComponent("routevn-library-copy-outside-\(UUID().uuidString)")
+        defer {
+            try? fm.removeItem(at: library)
+            try? fm.removeItem(at: outside)
+        }
+        try fm.createDirectory(at: library, withIntermediateDirectories: true)
+        let paths = ProjectStoragePaths(libraryFolder: { library })
+        try paths.ensureDirectories(projectId: "project-one", createProject: true, projectName: "Project One")
+        try paths.ensureDirectories(projectId: "project-two", createProject: true, projectName: "Project Two")
+        let original = try paths.location(projectId: "project-one")
+        try writeDatabase(original.database, value: "Project One")
+        let copy = library.appendingPathComponent("Project One Copy", isDirectory: true)
+        try fm.copyItem(at: original.directory, to: copy)
+        try fm.copyItem(at: original.directory, to: outside)
+
+        // Either folder of a duplicated id is a copy, even when the picked URL
+        // spells the path differently (/var is a link to /private/var).
+        let spelledCopy = URL(fileURLWithPath: copy.resolvingSymlinksInPath().path.hasPrefix("/var/")
+            ? "/private" + copy.resolvingSymlinksInPath().path
+            : copy.path, isDirectory: true)
+        let pickedCopy = try paths.libraryCopy(of: "project-one", at: spelledCopy)
+        precondition(pickedCopy?.lastPathComponent == "Project One Copy")
+        let pickedOriginal = try paths.libraryCopy(of: "project-one", at: original.directory)
+        precondition(pickedOriginal?.lastPathComponent == "Project One")
+        // The one folder that holds an id, and folders outside the library,
+        // are not copies.
+        let soleHolder = try paths.location(projectId: "project-two")
+        let soleHolderCopy = try paths.libraryCopy(of: "project-two", at: soleHolder.directory)
+        precondition(soleHolderCopy == nil)
+        let outsideCopy = try paths.libraryCopy(of: "project-one", at: outside)
+        precondition(outsideCopy == nil)
+        do {
+            try paths.replaceIdentity(projectId: "project-outside", directory: outside)
+            preconditionFailure("Gave a folder outside the library an identity")
+        } catch {}
+
+        // The copy takes a new id; the original is found again under its own.
+        try paths.replaceIdentity(projectId: "project-copy", directory: pickedCopy!)
+        let ids = try paths.projectIds()
+        precondition(ids == ["project-copy", "project-one", "project-two"])
+        let originalLocation = try paths.location(projectId: "project-one")
+        precondition(originalLocation.directory.lastPathComponent == "Project One")
+        let copyLocation = try paths.location(projectId: "project-copy")
+        precondition(copyLocation.directory.lastPathComponent == "Project One Copy")
+        let originalAfter = try paths.libraryCopy(of: "project-one", at: original.directory)
+        precondition(originalAfter == nil)
+        let copyAfter = try paths.libraryCopy(of: "project-copy", at: copy)
+        precondition(copyAfter == nil)
+
+        // A folder with no identity file whose database names a listed project
+        // is a copy too.
+        let bare = library.appendingPathComponent("Bare Copy", isDirectory: true)
+        try fm.createDirectory(at: bare, withIntermediateDirectories: false)
+        let bareCopy = try paths.libraryCopy(of: "project-one", at: bare)
+        precondition(bareCopy?.lastPathComponent == "Bare Copy")
+
+        // The copy is returned as the library lists it, however the picker
+        // spelled it (composed and decomposed accents), because the app's open
+        // database connections are keyed by the listed path.
+        let accented = library.appendingPathComponent("Caf\u{E9} Copy", isDirectory: true)
+        try fm.copyItem(at: original.directory, to: accented)
+        let listedAccented = try fm.contentsOfDirectory(at: library, includingPropertiesForKeys: nil)
+            .first { $0.lastPathComponent.precomposedStringWithCanonicalMapping == "Caf\u{E9} Copy" }!
+        let decomposedPick = library.appendingPathComponent("Cafe\u{301} Copy", isDirectory: true)
+        let accentedCopy = try paths.libraryCopy(of: "project-one", at: decomposedPick)
+        precondition(accentedCopy?.lastPathComponent == listedAccented.lastPathComponent)
+        print("PASS: library copies found by any path spelling, sole holders and outside folders left alone, copy identity replaced")
+    }
+
+    static func listedFolderKeepsDuplicatedId() throws {
+        let fm = FileManager.default
+        let library = fm.temporaryDirectory.appendingPathComponent("routevn-listed-folder-test-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: library) }
+        try fm.createDirectory(at: library, withIntermediateDirectories: true)
+        let paths = ProjectStoragePaths(libraryFolder: { library })
+        try paths.ensureDirectories(projectId: "project-one", createProject: true, projectName: "Project One")
+        try paths.ensureDirectories(projectId: "project-two", createProject: true, projectName: "Project Two")
+        let original = try paths.location(projectId: "project-one")
+        try writeDatabase(original.database, value: "Project One")
+        let identity = try Data(contentsOf: original.directory.appendingPathComponent(".routevn-project.json"))
+        // The Projects list showed the original before Files duplicated it.
+        paths.setListedProjectFiles(["project-one": original.database.path])
+        let copy = library.appendingPathComponent("Project One 2", isDirectory: true)
+        try fm.copyItem(at: original.directory, to: copy)
+
+        let kept = try paths.location(projectId: "project-one")
+        precondition(kept.directory.path == original.directory.path)
+        let value = try readDatabase(kept.database)
+        precondition(value == "Project One")
+        let ids = try paths.projectIds()
+        precondition(ids == ["project-one", "project-two"])
+        // The copy is the one an import adopts; the original is not a copy.
+        let pickedCopy = try paths.libraryCopy(of: "project-one", at: copy)
+        precondition(pickedCopy?.lastPathComponent == "Project One 2")
+        let pickedOriginal = try paths.libraryCopy(of: "project-one", at: original.directory)
+        precondition(pickedOriginal == nil)
+        // Nothing in either folder changes.
+        for directory in [original.directory, copy] {
+            let stored = try Data(contentsOf: directory.appendingPathComponent(".routevn-project.json"))
+            precondition(stored == identity)
+        }
+
+        // A listed path that is neither folder decides nothing.
+        paths.setListedProjectFiles(["project-one": library.appendingPathComponent("Elsewhere/project.db").path])
+        do {
+            _ = try paths.location(projectId: "project-one")
+            preconditionFailure("Resolved a duplicated id without its listed folder")
+        } catch let error as CocoaError {
+            precondition(error.code == .fileReadCorruptFile)
+        }
+        let unresolvedIds = try paths.projectIds()
+        precondition(unresolvedIds == ["project-two"])
+        print("PASS: the listed folder keeps a duplicated id, the copy is left untouched for import, an unknown listed path decides nothing")
     }
 
     static func invalidIdentities() throws {
