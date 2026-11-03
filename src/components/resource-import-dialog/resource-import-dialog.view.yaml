@@ -7,6 +7,8 @@ refs:
     eventListeners:
       form-action:
         handler: handleFormAction
+      form-change:
+        handler: handleFormChange
   storeSearchInput:
     eventListeners:
       value-input:
