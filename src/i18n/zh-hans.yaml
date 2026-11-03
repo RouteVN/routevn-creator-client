@@ -2849,6 +2849,10 @@ assetPackagePage:
   pickerTitle: "选择素材"
   doneButton: "完成"
   includedInFolderHint: "已包含在“{name}”中"
+  typeOptionsButton: "类型选项"
+  moveTypeUpMenuItem: "上移"
+  moveTypeDownMenuItem: "下移"
+  failedMoveResourceType: "无法移动此类型，请重试。"
 resourceImport:
   assetPackageImported_one: "已从素材包导入 {count} 个素材。"
   assetPackageImported_other: "已从素材包导入 {count} 个素材。"

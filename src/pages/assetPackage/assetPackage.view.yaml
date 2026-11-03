@@ -15,6 +15,16 @@ refs:
     eventListeners:
       click:
         handler: handlePickerDoneClick
+  typeOptionsButton*:
+    eventListeners:
+      click:
+        handler: handleTypeOptionsClick
+  typeMenu:
+    eventListeners:
+      close:
+        handler: handleTypeMenuClose
+      item-click:
+        handler: handleTypeMenuClickItem
   pickerType*:
     eventListeners:
       click:
@@ -70,7 +80,12 @@ template:
                                   # No box around a folder: its name, then its tiles.
                                   - $for section, sectionIndex in pickedSections:
                                       - rtgl-view w=f d=v g=md:
-                                          - rtgl-text s=sm c=mu-fg: ${section.label}
+                                          # The types are in the pack's order; a type's menu
+                                          # moves it up or down, unless it is the only one.
+                                          - rtgl-view w=f d=h av=c g=sm:
+                                              - rtgl-text c=mu-fg w=1fg: ${section.label}
+                                              - $if section.hasTypeMenu:
+                                                  - 'rtgl-button#typeOptionsButton${sectionIndex} data-resource-type="${section.resourceType}" sq v=gh pre=ellipsis ?disabled=${typeMenuDisabled} aria-label="${typeOptionsLabel}" title="${typeOptionsLabel}"': null
                                           - $for folder, folderIndex in section.folders:
                                               - rtgl-view w=f d=v g=sm:
                                                   - rtgl-view w=f d=h av=c g=sm:
@@ -191,3 +206,5 @@ template:
           - rtgl-view w=f d=h ah=e:
               # Done does nothing more while it saves.
               - rtgl-button#pickerDoneButton v=pr ?disabled=${pickerDoneDisabled}: ${pickerDoneLabel}
+  # Moves a type up or down among the pack's types.
+  - rtgl-dropdown-menu#typeMenu :items=${typeMenu.items} x=${typeMenu.x} y=${typeMenu.y} ?open=${typeMenu.isOpen}: null

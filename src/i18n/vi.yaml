@@ -2849,6 +2849,10 @@ assetPackagePage:
   pickerTitle: "Chọn tài nguyên"
   doneButton: "Xong"
   includedInFolderHint: "Đã có trong “{name}”"
+  typeOptionsButton: "Tùy chọn loại"
+  moveTypeUpMenuItem: "Di chuyển lên"
+  moveTypeDownMenuItem: "Di chuyển xuống"
+  failedMoveResourceType: "Không thể di chuyển loại này. Hãy thử lại."
 resourceImport:
   assetPackageImported_one: "Đã nhập {count} tài nguyên từ gói tài nguyên."
   assetPackageImported_other: "Đã nhập {count} tài nguyên từ gói tài nguyên."

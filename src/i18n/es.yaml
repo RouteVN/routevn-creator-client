@@ -2849,6 +2849,10 @@ assetPackagePage:
   pickerTitle: "Elegir recursos"
   doneButton: "Listo"
   includedInFolderHint: "Incluida en “{name}”"
+  typeOptionsButton: "Opciones del tipo"
+  moveTypeUpMenuItem: "Mover arriba"
+  moveTypeDownMenuItem: "Mover abajo"
+  failedMoveResourceType: "No se pudo mover este tipo. Inténtalo de nuevo."
 resourceImport:
   assetPackageImported_one: "{count} recurso importado del paquete."
   assetPackageImported_other: "{count} recursos importados del paquete."

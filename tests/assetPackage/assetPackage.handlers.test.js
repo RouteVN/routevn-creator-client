@@ -10,6 +10,9 @@ import {
   handlePickerClose,
   handlePickerDoneClick,
   handlePickerTypeClick,
+  handleTypeMenuClickItem,
+  handleTypeMenuClose,
+  handleTypeOptionsClick,
 } from "../../src/pages/assetPackage/assetPackage.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
@@ -71,6 +74,12 @@ const BASE_RESOURCES = [
   { resourceType: "images", folderIds: ["image-folder-0"] },
 ];
 
+const MOVE_BEFORE_IMAGES = {
+  resourceType: "videos",
+  position: "before",
+  positionTargetResourceType: "images",
+};
+
 const createDeps = () => ({
   appService: {
     getAppCopy: vi.fn(() => EN_I18N.appPage),
@@ -94,6 +103,7 @@ const createDeps = () => ({
       async () => new Blob(["asset-package"], { type: "application/zip" }),
     ),
     updateAssetPackResources: vi.fn(async () => ({ valid: true })),
+    moveAssetPackResource: vi.fn(async () => ({ valid: true })),
   },
   refs: {},
   render: vi.fn(),
@@ -120,6 +130,12 @@ const createDeps = () => ({
     toggleFolder: vi.fn(),
     applyPicker: vi.fn(),
     setPickerResourceType: vi.fn(),
+    openTypeMenu: vi.fn(),
+    closeTypeMenu: vi.fn(),
+    selectIsTypeMenuOpen: vi.fn(() => true),
+    selectTypeMenuResourceType: vi.fn(() => "videos"),
+    selectResourceTypeMove: vi.fn(() => MOVE_BEFORE_IMAGES),
+    moveResourceType: vi.fn(),
   },
   uiConfig: { id: "desktop" },
 });
@@ -332,6 +348,184 @@ describe("asset package handlers", () => {
     });
     expect(deps.projectService.updateAssetPackResources).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledOnce();
+  });
+
+  const typeOptionsEvent = () => ({
+    _event: {
+      clientX: 120,
+      clientY: 80,
+      currentTarget: {
+        dataset: { resourceType: "videos" },
+        getBoundingClientRect: () => ({ right: 200, bottom: 96 }),
+      },
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    },
+  });
+  const menuItemEvent = (value) => ({
+    _event: { detail: { item: { value } } },
+  });
+
+  it("opens a type's menu at the click", () => {
+    const deps = createDeps();
+    const payload = typeOptionsEvent();
+
+    handleTypeOptionsClick(deps, payload);
+
+    expect(payload._event.preventDefault).toHaveBeenCalledOnce();
+    expect(payload._event.stopPropagation).toHaveBeenCalledOnce();
+    expect(deps.store.openTypeMenu).toHaveBeenCalledWith({
+      x: 120,
+      y: 96,
+      resourceType: "videos",
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
+  it("does not open a type's menu while the picks save", () => {
+    const deps = createDeps();
+    deps.store.selectIsSavingPicks.mockReturnValue(true);
+
+    handleTypeOptionsClick(deps, typeOptionsEvent());
+
+    expect(deps.store.openTypeMenu).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+  });
+
+  it("closes a type's menu once", () => {
+    const deps = createDeps();
+
+    handleTypeMenuClose(deps);
+    expect(deps.store.closeTypeMenu).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledOnce();
+
+    deps.store.selectIsTypeMenuOpen.mockReturnValue(false);
+    handleTypeMenuClose(deps);
+    expect(deps.store.closeTypeMenu).toHaveBeenCalledOnce();
+    expect(deps.render).toHaveBeenCalledOnce();
+  });
+
+  it("saves a move up before the type above, then lists the types in the new order", async () => {
+    const deps = createDeps();
+
+    await handleTypeMenuClickItem(deps, menuItemEvent("move-up"));
+
+    expect(deps.store.selectResourceTypeMove).toHaveBeenCalledWith({
+      resourceType: "videos",
+      value: "move-up",
+    });
+    expect(deps.store.closeTypeMenu).toHaveBeenCalledOnce();
+    expect(deps.store.startSavingPicks).toHaveBeenCalledOnce();
+    expect(deps.projectService.moveAssetPackResource).toHaveBeenCalledWith({
+      assetPackId: "pack-1",
+      resourceType: "videos",
+      position: "before",
+      positionTargetResourceType: "images",
+    });
+    expect(deps.store.moveResourceType).toHaveBeenCalledWith(
+      MOVE_BEFORE_IMAGES,
+    );
+    expect(deps.store.finishSavingPicks).toHaveBeenCalledWith();
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    // Once as the save starts, once as it ends.
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("saves a move down after the type below", async () => {
+    const deps = createDeps();
+    const move = {
+      resourceType: "videos",
+      position: "after",
+      positionTargetResourceType: "colors",
+    };
+    deps.store.selectResourceTypeMove.mockReturnValue(move);
+
+    await handleTypeMenuClickItem(deps, menuItemEvent("move-down"));
+
+    expect(deps.store.selectResourceTypeMove).toHaveBeenCalledWith({
+      resourceType: "videos",
+      value: "move-down",
+    });
+    expect(deps.projectService.moveAssetPackResource).toHaveBeenCalledWith({
+      assetPackId: "pack-1",
+      ...move,
+    });
+    expect(deps.store.moveResourceType).toHaveBeenCalledWith(move);
+  });
+
+  // A failed move says what went wrong, like a failed save of the picks, and
+  // the page goes back to the pack as saved.
+  it("says why a move is refused and shows the pack as saved", async () => {
+    const deps = createDeps();
+    deps.projectService.moveAssetPackResource.mockResolvedValue({
+      valid: false,
+      error: { message: "Storage unavailable" },
+    });
+
+    await handleTypeMenuClickItem(deps, menuItemEvent("move-up"));
+
+    expect(deps.store.moveResourceType).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Could not move this type. Please try again.",
+        ),
+      }),
+    );
+    expect(deps.store.setAssetPack).toHaveBeenCalledWith({
+      assetPackId: "pack-1",
+      name: "Fantasy UI",
+      resources: SAVED_ASSET_PACKAGE.resources,
+    });
+    expect(deps.store.finishSavingPicks).toHaveBeenCalledWith();
+    expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a move that throws, says so and shows the pack as saved", async () => {
+    const deps = createDeps();
+    const error = new Error("Disk is gone");
+    deps.projectService.moveAssetPackResource.mockRejectedValue(error);
+
+    await handleTypeMenuClickItem(deps, menuItemEvent("move-up"));
+
+    expect(deps.appService.reportError).toHaveBeenCalledWith(
+      error,
+      expect.any(Object),
+    );
+    expect(deps.store.moveResourceType).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          "Could not move this type. Please try again.",
+        ),
+      }),
+    );
+    expect(deps.store.setAssetPack).toHaveBeenCalledWith({
+      assetPackId: "pack-1",
+      name: "Fantasy UI",
+      resources: SAVED_ASSET_PACKAGE.resources,
+    });
+    expect(deps.store.finishSavingPicks).toHaveBeenCalledWith();
+  });
+
+  it("saves nothing for a menu item that is no move, or while the picks save", async () => {
+    const deps = createDeps();
+    deps.store.selectResourceTypeMove.mockReturnValue(undefined);
+
+    await handleTypeMenuClickItem(deps, menuItemEvent("remove"));
+
+    expect(deps.projectService.moveAssetPackResource).not.toHaveBeenCalled();
+    expect(deps.store.closeTypeMenu).toHaveBeenCalledOnce();
+    expect(deps.store.startSavingPicks).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+
+    deps.store.selectResourceTypeMove.mockReturnValue(MOVE_BEFORE_IMAGES);
+    deps.store.selectIsSavingPicks.mockReturnValue(true);
+    await handleTypeMenuClickItem(deps, menuItemEvent("move-up"));
+
+    expect(deps.projectService.moveAssetPackResource).not.toHaveBeenCalled();
+    expect(deps.store.startSavingPicks).not.toHaveBeenCalled();
+    expect(deps.store.moveResourceType).not.toHaveBeenCalled();
   });
 
   it("chooses the path before exporting and reports completion", async () => {

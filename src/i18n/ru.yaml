@@ -2875,6 +2875,10 @@ assetPackagePage:
   pickerTitle: "Выбрать ресурсы"
   doneButton: "Готово"
   includedInFolderHint: "Входит в «{name}»"
+  typeOptionsButton: "Параметры типа"
+  moveTypeUpMenuItem: "Переместить вверх"
+  moveTypeDownMenuItem: "Переместить вниз"
+  failedMoveResourceType: "Не удалось переместить этот тип. Повторите попытку."
 resourceImport:
   assetPackageImported_one: "Из пакета импортирован {count} ресурс."
   assetPackageImported_few: "Из пакета импортировано {count} ресурса."

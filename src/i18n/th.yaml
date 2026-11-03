@@ -2849,6 +2849,10 @@ assetPackagePage:
   pickerTitle: "เลือกทรัพยากร"
   doneButton: "เสร็จสิ้น"
   includedInFolderHint: "รวมอยู่ใน “{name}” แล้ว"
+  typeOptionsButton: "ตัวเลือกประเภท"
+  moveTypeUpMenuItem: "ย้ายขึ้น"
+  moveTypeDownMenuItem: "ย้ายลง"
+  failedMoveResourceType: "ย้ายประเภทนี้ไม่ได้ ลองอีกครั้ง"
 resourceImport:
   assetPackageImported_one: "นำเข้าทรัพยากร {count} รายการจากแพ็กเกจทรัพยากรแล้ว"
   assetPackageImported_other: "นำเข้าทรัพยากร {count} รายการจากแพ็กเกจทรัพยากรแล้ว"
