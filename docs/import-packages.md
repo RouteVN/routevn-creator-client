@@ -262,7 +262,8 @@ Creator-generated previews include:
   choice list keep the layout's small `thumbnailFileId` image, which is also
   what the full-screen preview shows for a package without this PNG. A layout
   that cannot be drawn, such as one using a file the project no longer has, is
-  exported without it
+  exported without it, and so are the layouts not yet drawn when the renderer
+  cannot start
 
 Generated video MIME type is MP4 or WebM depending on the desktop WebView's
 canvas recording support. Generated previews exist only in the exported ZIP.

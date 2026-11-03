@@ -4,6 +4,7 @@ import { getFontFaceWeightDescriptor } from "../../../internal/fontCapabilities.
 import { toFontIds } from "../../../internal/fontIds.js";
 import { createLayoutThumbnailSource } from "../../../internal/layoutPreview.js";
 import { collectParticleTextureImageIds } from "../../../internal/particles.js";
+import { isRendererStartError } from "../../../internal/rendererStartError.js";
 
 const renderPreviewWith = async (exportName, options) => {
   const previewClient = await import(
@@ -351,38 +352,68 @@ const addTextStylePreviews = async ({
   }
 };
 
-// What a layout draws at the project's resolution, with the bytes of every
-// file it draws, for the layout preview renderer.
-const createLayoutRenderInput = async ({
+// Draws a layout at the project's resolution. Each file it draws is handed to
+// the renderer as a URL, as the thumbnail service does, and the URLs are
+// revoked once the layout is drawn.
+const renderLayoutPreview = async ({
+  renderer,
   layout,
   sourceRepository,
-  readSourceFile,
+  getFileContent,
 }) => {
   const source = createLayoutThumbnailSource({
     item: layout,
     repositoryState: sourceRepository,
   });
-  const assets = [];
-  for (const { fileId, fileType, fontWeightDescriptor } of source.assets) {
-    assets.push({
-      fileId,
-      bytes: await readSourceFile(fileId),
-      mimeType: fileType,
-      fontWeightDescriptor,
+  // Every file is waited for, so the URLs of the ones read can be revoked
+  // when another cannot be.
+  const reads = await Promise.allSettled(
+    source.assets.map(({ fileId }) =>
+      getFileContent(fileId, { verifyImageIntegrity: true }),
+    ),
+  );
+  try {
+    const failedRead = reads.find((read) => read.status === "rejected");
+    if (failedRead) {
+      throw failedRead.reason;
+    }
+    const assets = {};
+    source.assets.forEach((asset, index) => {
+      assets[asset.fileId] = {
+        url: reads[index].value.url,
+        type: asset.fileType,
+      };
+      if (asset.fontWeightDescriptor !== undefined) {
+        assets[asset.fileId].fontWeightDescriptor = asset.fontWeightDescriptor;
+      }
     });
+    return await renderer.render({
+      width: source.width,
+      height: source.height,
+      renderState: source.renderState,
+      assets,
+      settleMs: source.settleMs,
+    });
+  } finally {
+    for (const read of reads) {
+      if (read.status === "fulfilled") {
+        read.value.revoke?.();
+      }
+    }
   }
-  return { ...source, assets };
 };
 
 // A layout's full-size picture, which the asset store shows in place of the
-// layout's small thumbnail. A layout that cannot be drawn, such as one using a
-// file the project lost, is left without one, since the pack still carries its
-// thumbnail.
+// layout's small thumbnail. Previews are optional, so none of this fails the
+// export. A layout that cannot be drawn, such as one using a file the project
+// lost, is left without one, since the pack still carries its thumbnail. A
+// renderer that cannot start is not tried again: the layouts after it are left
+// without one, and the ones already drawn keep theirs.
 const addLayoutPreviews = async ({
   manifest,
   sourceRepository,
   fileBytesById,
-  readSourceFile,
+  getFileContent,
   createRenderer,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
@@ -395,36 +426,57 @@ const addLayoutPreviews = async ({
     return;
   }
 
-  const renderer = await createRenderer();
+  const warnRendererUnavailable = (error) => {
+    console.warn(
+      "[assetPackageExport] Could not start the layout preview renderer. The layouts not drawn yet are exported without previews.",
+      error,
+    );
+  };
+
+  let renderer;
+  try {
+    renderer = await createRenderer();
+  } catch (error) {
+    warnRendererUnavailable(error);
+    return;
+  }
   try {
     for (const [layoutId, layout] of layouts) {
-      let blob;
       try {
-        blob = await renderer.render(
-          await createLayoutRenderInput({
-            layout: sourceLayouts[layoutId],
-            sourceRepository,
-            readSourceFile,
-          }),
-        );
+        const blob = await renderLayoutPreview({
+          renderer,
+          layout: sourceLayouts[layoutId],
+          sourceRepository,
+          getFileContent,
+        });
+        await addGeneratedPreview({
+          blob,
+          files,
+          fileBytesById,
+          item: layout,
+          prefix: "layout-preview",
+          resourceId: layoutId,
+        });
       } catch (error) {
+        if (isRendererStartError(error)) {
+          warnRendererUnavailable(error);
+          break;
+        }
         console.warn(
           `[assetPackageExport] Could not render a preview for layout '${layoutId}'.`,
           error,
         );
-        continue;
       }
-      await addGeneratedPreview({
-        blob,
-        files,
-        fileBytesById,
-        item: layout,
-        prefix: "layout-preview",
-        resourceId: layoutId,
-      });
     }
   } finally {
-    await renderer.destroy();
+    try {
+      await renderer.destroy();
+    } catch (error) {
+      console.warn(
+        "[assetPackageExport] Could not free the layout preview renderer.",
+        error,
+      );
+    }
   }
 };
 
@@ -681,7 +733,7 @@ export const createAssetPackageExportService = ({
           manifest: exportManifest,
           sourceRepository,
           fileBytesById,
-          readSourceFile,
+          getFileContent,
           createRenderer: createLayoutPreviewRenderer,
         }),
     });
