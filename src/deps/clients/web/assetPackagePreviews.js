@@ -11,6 +11,7 @@ import {
 } from "../../../internal/spritesheets.js";
 import { createGraphicsService } from "../../services/graphicsService.js";
 import { startCanvasVideoRecording } from "../canvasVideoRecorder.js";
+import { createOffscreenRenderer } from "./editorThumbnails.js";
 
 const PREVIEW_WIDTH = 640;
 const PREVIEW_HEIGHT = 360;
@@ -1060,4 +1061,20 @@ export const renderParticlePreviewVideo = async ({
     objectUrls.forEach((url) => URL.revokeObjectURL(url));
     host.remove();
   }
+};
+
+// Draws layouts one after another at the project's resolution, and returns
+// each as a full-size PNG. Every `render` takes what
+// `createLayoutThumbnailSource` returns, with `assets` mapping each file the
+// layout draws to `{ url, type }`, and a font's to its `fontWeightDescriptor`
+// too. Layouts share a graphics context, which is made again after a few; see
+// `createOffscreenRenderer`, which also tells a context that cannot start from
+// a layout that cannot be drawn. `destroy` frees the context.
+export const createLayoutPreviewRenderer = () => {
+  const { render, release } = createOffscreenRenderer({
+    keyPrefix: "layout-preview",
+    capture: async (graphicsService) =>
+      canvasToPngBlob(await graphicsService.extractCanvas()),
+  });
+  return { render, destroy: release };
 };

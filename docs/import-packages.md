@@ -257,6 +257,13 @@ Creator-generated previews include:
   choice list
 - fonts: a 1920 by 1080 glyph preview and a 640 by 360 thumbnail
 - text styles: a 960 by 270 preview and a 427 by 120 thumbnail
+- layouts: a PNG of the layout at the project's resolution, drawn with its
+  saved preview data and shown full screen; the asset grid and the resource
+  choice list keep the layout's small `thumbnailFileId` image, which is also
+  what the full-screen preview shows for a package without this PNG. A layout
+  that cannot be drawn, such as one using a file the project no longer has, is
+  exported without it, and so are the layouts not yet drawn when the renderer
+  cannot start
 
 Generated video MIME type is MP4 or WebM depending on the desktop WebView's
 canvas recording support. Generated previews exist only in the exported ZIP.
