@@ -1699,7 +1699,6 @@ describe("asset package store", () => {
       manifestUrl: "https://example.com/asset-package/asset-package.json",
       projectId: "project-1",
       repositoryState: createResourceDataByType(),
-      repositoryRevision: 1,
       createId: () => `generated-${++id}`,
       resolveFileUrl: ({ descriptor, manifestUrl }) =>
         new URL(descriptor.source.url, manifestUrl).href,
@@ -1736,7 +1735,6 @@ describe("asset package store", () => {
       manifestUrl: "https://example.com/asset-package/asset-package.json",
       projectId: "project-1",
       repositoryState: createResourceDataByType(),
-      repositoryRevision: 1,
       createId: () => `generated-${++id}`,
       dependencyFolderName: "Pack",
     });
