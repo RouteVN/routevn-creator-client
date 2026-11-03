@@ -5,6 +5,7 @@ import {
   resolveAssetPackEditorPayload,
 } from "../../internal/assetPackEditorRoute.js";
 import { exportAssetPack } from "../../internal/ui/assetPackExport.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 // The editor edits the asset pack the address names (`ap`).
 export const handleBeforeMount = (deps) => {
@@ -57,21 +58,29 @@ export const handleBackClick = (deps) => {
   navigateBack(deps);
 };
 
-const persistAssetPackage = async (deps) => {
+// Saves the picks, changing only the types picked differently since they
+// were last loaded or saved. A failed save says what went wrong, and the page
+// goes back to the saved picks, as they are saved together or not at all.
+const savePicks = async (deps) => {
   const { appService, i18n, projectService, render, store } = deps;
   const assetPackId = store.selectAssetPackId();
-  let result;
-  try {
-    result = await projectService.updateAssetPackResources({
-      assetPackId,
-      resources: store.selectAssetPackage().resources,
-    });
-  } catch {
-    result = { valid: false };
-  }
-  if (result?.valid === false) {
-    // The picks are saved together or not at all, so the page goes back to
-    // the saved ones.
+  const baseResources = store.selectBaseResources();
+  const { resources } = store.selectAssetPackage();
+  store.startSavingPicks();
+  render();
+  const saveAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: i18n.assetPackagePage.failedSaveAssetPackage,
+    action: () =>
+      projectService.updateAssetPackResources({
+        assetPackId,
+        baseResources,
+        resources,
+      }),
+  });
+  if (saveAttempt.ok) {
+    store.finishSavingPicks({ savedResources: resources });
+  } else {
     const assetPack =
       projectService.getRepositoryState()?.assetPacks?.items?.[assetPackId];
     store.setAssetPack({
@@ -79,14 +88,9 @@ const persistAssetPackage = async (deps) => {
       name: assetPack?.name,
       resources: assetPack?.resources,
     });
-    render();
-    appService.showToast({
-      message: i18n.assetPackagePage.failedSaveAssetPackage,
-      status: "error",
-    });
-    return false;
+    store.finishSavingPicks();
   }
-  return true;
+  render();
 };
 
 export const handlePickerTypeClick = (deps, payload) => {
@@ -105,12 +109,15 @@ export const handlePickerFolderClick = (deps, payload) => {
   render();
 };
 
-// Done applies the picker's ticks to the page and saves them.
+// Done applies the picker's ticks to the page and saves them. While a save
+// is in flight, Done does nothing.
 export const handlePickerDoneClick = async (deps) => {
-  const { render, store } = deps;
+  const { store } = deps;
+  if (store.selectIsSavingPicks()) {
+    return;
+  }
   store.applyPicker();
-  render();
-  await persistAssetPackage(deps);
+  await savePicks(deps);
 };
 
 export const handlePickResourcesClick = (deps) => {

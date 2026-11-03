@@ -897,6 +897,7 @@ assetPacksPage:
   updateButton: "Update"
   failedCreateAssetPack: "Failed to create asset pack."
   failedCreateFolder: "Failed to create asset pack folder."
+  failedMoveSavedAssetPackage: "Could not move this project's earlier asset package into Asset Packs. It will be tried again the next time you open Asset Packs."
   failedDeleteAssetPack: "Failed to delete asset pack."
   failedDuplicateAssetPack: "Failed to duplicate asset pack."
   failedUpdateAssetPack: "Failed to update asset pack."
@@ -2847,6 +2848,7 @@ assetPackagePage:
   nothingPicked: "Nothing picked yet. Pick the folders to put in your pack."
   pickerTitle: "Pick resources"
   doneButton: "Done"
+  includedInFolderHint: "Included in “{name}”"
 resourceImport:
   assetPackageImported_one: "Imported {count} resource from the asset package."
   assetPackageImported_other: "Imported {count} resources from the asset package."

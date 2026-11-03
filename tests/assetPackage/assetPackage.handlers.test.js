@@ -67,10 +67,16 @@ const createRepositoryState = () => {
   return state;
 };
 
+const BASE_RESOURCES = [
+  { resourceType: "images", folderIds: ["image-folder-0"] },
+];
+
 const createDeps = () => ({
   appService: {
+    getAppCopy: vi.fn(() => EN_I18N.appPage),
     getPayload: vi.fn(() => ({ p: "project-1", ap: "pack-1" })),
     navigate: vi.fn(),
+    reportError: vi.fn(),
     saveFilePicker: vi.fn(async () => "/tmp/asset-package.zip"),
     showAlert: vi.fn(),
     showProgressDialog: vi.fn(() => ({
@@ -97,6 +103,10 @@ const createDeps = () => ({
       dependencies: {},
     })),
     selectAssetPackage: vi.fn(() => SAVED_ASSET_PACKAGE),
+    selectBaseResources: vi.fn(() => BASE_RESOURCES),
+    selectIsSavingPicks: vi.fn(() => false),
+    startSavingPicks: vi.fn(),
+    finishSavingPicks: vi.fn(),
     selectAssetPackId: vi.fn(() => "pack-1"),
     selectAssetPackName: vi.fn(() => "Fantasy UI"),
     setAssetPack: vi.fn(),
@@ -200,22 +210,62 @@ describe("asset package handlers", () => {
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
-  it("applies the picker's ticks and saves them on Done", async () => {
+  it("applies the picker's ticks and saves what changed since the picks it started from on Done", async () => {
     const deps = createDeps();
 
     await handlePickerDoneClick(deps);
 
     expect(deps.store.applyPicker).toHaveBeenCalledOnce();
     expect(deps.store.closePicker).not.toHaveBeenCalled();
-    expect(deps.render).toHaveBeenCalledOnce();
+    expect(deps.store.startSavingPicks).toHaveBeenCalledOnce();
     expect(deps.projectService.updateAssetPackResources).toHaveBeenCalledWith({
       assetPackId: "pack-1",
+      baseResources: BASE_RESOURCES,
       resources: SAVED_ASSET_PACKAGE.resources,
     });
+    // The next save starts from what this one saved.
+    expect(deps.store.finishSavingPicks).toHaveBeenCalledWith({
+      savedResources: SAVED_ASSET_PACKAGE.resources,
+    });
+    // Once as the save starts, once as it ends.
+    expect(deps.render).toHaveBeenCalledTimes(2);
     expect(deps.store.setAssetPack).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 
-  it("goes back to the saved picks and says so when they cannot be saved", async () => {
+  it("ignores Done while the picks save", async () => {
+    const deps = createDeps();
+    let resolveSave;
+    deps.projectService.updateAssetPackResources.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+    deps.store.startSavingPicks.mockImplementation(() => {
+      deps.store.selectIsSavingPicks.mockReturnValue(true);
+    });
+    deps.store.finishSavingPicks.mockImplementation(() => {
+      deps.store.selectIsSavingPicks.mockReturnValue(false);
+    });
+
+    const firstDone = handlePickerDoneClick(deps);
+    await handlePickerDoneClick(deps);
+    expect(deps.store.applyPicker).toHaveBeenCalledOnce();
+    expect(deps.projectService.updateAssetPackResources).toHaveBeenCalledOnce();
+
+    resolveSave({ valid: true });
+    await firstDone;
+    expect(deps.store.finishSavingPicks).toHaveBeenCalledOnce();
+    // Once the save ends, Done saves again.
+    deps.projectService.updateAssetPackResources.mockResolvedValue({
+      valid: true,
+    });
+    await handlePickerDoneClick(deps);
+    expect(deps.store.applyPicker).toHaveBeenCalledTimes(2);
+  });
+
+  it("goes back to the saved picks and says why in an alert when they cannot be saved", async () => {
     const deps = createDeps();
     deps.projectService.updateAssetPackResources.mockResolvedValue({
       valid: false,
@@ -229,11 +279,34 @@ describe("asset package handlers", () => {
       name: "Fantasy UI",
       resources: SAVED_ASSET_PACKAGE.resources,
     });
+    expect(deps.store.finishSavingPicks).toHaveBeenCalledWith();
     expect(deps.render).toHaveBeenCalledTimes(2);
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Could not save the asset package. Please try again.",
-      status: "error",
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Error",
+      message:
+        "Could not save the asset package. Please try again.\n\nDetails:\nStorage unavailable",
     });
+  });
+
+  it("reports a save that throws, and says why in an alert", async () => {
+    const deps = createDeps();
+    const error = new Error("Disk is gone");
+    deps.projectService.updateAssetPackResources.mockRejectedValue(error);
+
+    await handlePickerDoneClick(deps);
+
+    expect(deps.appService.reportError).toHaveBeenCalledWith(
+      error,
+      expect.any(Object),
+    );
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Error",
+      message:
+        "Could not save the asset package. Please try again.\n\nDetails:\nDisk is gone",
+    });
+    expect(deps.store.setAssetPack).toHaveBeenCalledOnce();
+    expect(deps.store.finishSavingPicks).toHaveBeenCalledWith();
   });
 
   it("opens the folder picker, and closes it without saving", () => {

@@ -897,6 +897,7 @@ assetPacksPage:
   updateButton: "Actualizar"
   failedCreateAssetPack: "No se pudo crear el paquete de recursos."
   failedCreateFolder: "No se pudo crear la carpeta de paquetes de recursos."
+  failedMoveSavedAssetPackage: "No se pudo pasar el paquete de recursos anterior de este proyecto a Paquetes de recursos. Se volverá a intentar la próxima vez que abras Paquetes de recursos."
   failedDeleteAssetPack: "No se pudo eliminar el paquete de recursos."
   failedDuplicateAssetPack: "No se pudo duplicar el paquete de recursos."
   failedUpdateAssetPack: "No se pudo actualizar el paquete de recursos."
@@ -2847,6 +2848,7 @@ assetPackagePage:
   nothingPicked: "Aún no has elegido nada. Elige las carpetas que quieres incluir en tu paquete."
   pickerTitle: "Elegir recursos"
   doneButton: "Listo"
+  includedInFolderHint: "Incluida en “{name}”"
 resourceImport:
   assetPackageImported_one: "{count} recurso importado del paquete."
   assetPackageImported_other: "{count} recursos importados del paquete."

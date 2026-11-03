@@ -20,21 +20,28 @@ const TYPE_ICONS = Object.freeze({
   controls: "controls",
 });
 
-// The resources in a folder and its subfolders, in project order.
-export const collectFolderResources = (resourceData, folderId) => {
+// The resources in a folder's tree node, in project order: with those in its
+// subfolders, or with `ownOnly`, only those directly in it.
+export const collectFolderResources = (
+  resourceData,
+  folderNode,
+  { ownOnly = false } = {},
+) => {
   const resources = [];
   const visit = (nodes) => {
     for (const node of nodes ?? []) {
       const item = resourceData.items[node.id];
       if (!item) continue;
       if (item.type === "folder") {
-        visit(node.children);
+        if (!ownOnly) {
+          visit(node.children);
+        }
         continue;
       }
       resources.push({ itemId: node.id, item });
     }
   };
-  visit(resourceData.tree.find((node) => node.id === folderId)?.children);
+  visit(folderNode?.children);
   return resources;
 };
 

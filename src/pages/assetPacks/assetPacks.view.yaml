@@ -45,6 +45,12 @@ refs:
         handler: handleMobileDetailOpenClick
         preventDefault: true
         stopPropagation: true
+  mobileDetailExportButton:
+    eventListeners:
+      click:
+        handler: handleDetailExportClick
+        preventDefault: true
+        stopPropagation: true
   mobileDetailDuplicateButton:
     eventListeners:
       click:
@@ -161,10 +167,14 @@ template:
               - rtgl-view#detailHeader h=36 w=f d=h bwb=xs ph=md av=c g=sm cur=pointer:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
-              - rtgl-view d=h w=f g=sm p=md bwb=xs:
-                  - rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}
-                  - rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}
-                  - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
+              # Open and Export as in the detail panel, then Duplicate and Delete.
+              - rtgl-view d=v w=f g=sm p=md bwb=xs:
+                  - rtgl-view d=h w=f g=sm:
+                      - rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}
+                      - rtgl-button#mobileDetailExportButton w=1fg v=se pre=download ?disabled=${selectedItemExportDisabled}: ${exportButton}
+                  - rtgl-view d=h w=f g=sm:
+                      - rtgl-button#mobileDetailDuplicateButton w=1fg v=se pre=duplicate: ${duplicateButton}
+                      - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rtgl-view d=v w=f p=md g=md:
                       - $if selectedItemDescription:

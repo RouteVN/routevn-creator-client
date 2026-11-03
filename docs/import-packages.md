@@ -169,35 +169,56 @@ A project can have several asset packs. They are project resources, in the
 `assetPacks` collection: Releases → Asset Packs lists them with folders, like
 the other resource pages, and opening one shows its editor. A pack is
 `{ type: "assetPack", name, description, resources }`, where `resources` lists,
-for each resource type, the top-level folders picked, in the order picked.
-Folder ids are not checked against their collections, so a pack may keep ids
-of folders since deleted; the editor skips them. A project that kept one asset
+for each resource type, the folders picked, at any depth, in the order picked.
+The model checks every folder id: it must name an existing folder of that
+type's collection. A picked folder may be moved, into another folder too, and
+stays picked; deleting a picked folder, or a folder holding one, is refused,
+and the message names the pack that keeps it. A project that kept one asset
 package before packs could be several gets it as its first pack, in a
-"Default" folder, the first time Asset Packs opens.
+"Default" folder, the first time Asset Packs opens. Folders that selection
+names that the project no longer has are left out, and a selection left with
+none only is cleared. When the pack cannot be made, the page says why and
+keeps the selection, to try again the next time it opens.
 
 An asset pack's editor has two sections. Picked resources lists only
-the top-level folders in the pack, by type, each with every resource in it
-with its name; folders are added and removed in the picker. Previews are drawn
+the folders in the pack, by type, each with every resource in it and in the
+folders inside it, with its name; a folder inside another is named with its
+path ("Backgrounds > Night"), and a pick inside another pick is listed only
+with that one. Folders are added and removed in the picker. Previews are drawn
 as on the type's own page: images and thumbnails on the transparency grid,
 sound waveforms, font glyphs, text style samples and color swatches, or the
 type's icon. Dependencies lists what the picks use (see below). Pick resources
 opens a picker that shows one resource type at a time: a list of the types
 with resources, each with how many of its folders are picked, and the chosen
-type's top-level folders, the same way, each with a checkbox;
-clicking anywhere on a folder ticks or unticks it. A type with no
+type's folders at any depth, in the project's tree order and indented under
+the folder they sit in, each with a checkbox and the resources directly in
+it, so a resource shows once. The picker offers a folder that holds
+resources, in it or in a folder inside it, or that is picked, so it can be
+unticked. Clicking anywhere on a folder ticks or unticks it, with everything
+inside it. A folder inside a ticked one shows as included: ticked, and not
+ticked or unticked on its own. A pick of its own stays, so unticking the
+folder it sits in leaves it picked. A type with no
 folders says so. The picker opens on the type it showed last, or the first
 type with folders. Ticks apply to the page, and are saved, when Done is pressed;
-closing the picker otherwise leaves the selection as it was.
-Types follow the store's order. Within a type, the picker lists folders in
-the project's order, and the page and the pack keep them in the order they
-were picked: a newly ticked folder goes last, and the picker shows each
-ticked folder's place. Resources outside a folder
+closing the picker otherwise leaves the selection as it was. Done does nothing
+more while it saves. A save changes only the types picked differently since
+the editor opened the pack or last saved it, so a type someone else changed
+meanwhile, and the editor did not, stays as they left it. A failed save says
+why in an alert, and the editor goes back to the saved picks.
+Types follow the store's order. Within a type, the page and the pack keep
+folders in the order they were picked: a newly ticked folder goes last, and
+the picker shows each ticked folder's place, counting a folder included in
+another only with it. Resources outside a folder
 cannot be picked. Export stays disabled until a resource is picked, or while
 the selection uses a resource that no longer exists or jumps to a line of the
 story; the page names the resource at fault.
 
 Selecting a folder includes its complete subtree and preserves folder and item
-order; everything in the chosen folders is a pick. Export adds what the picks use, directly or through each
+order; everything in the chosen folders is a pick. Each picked folder is a
+top-level folder of the package, in pick order, even one that sits inside
+another folder in the project: the folders it sits in are not carried. A
+folder picked inside another pick comes with that pick and is not repeated.
+Export adds what the picks use, directly or through each
 other, to `dependencies`, without the folders it sits in. A resource in a
 chosen folder stays a pick even when another pick uses it, so an author shows
 a color or font on the pack page by choosing its folder too. The export page

@@ -897,6 +897,7 @@ assetPacksPage:
   updateButton: "更新"
   failedCreateAssetPack: "素材パッケージを作成できませんでした。"
   failedCreateFolder: "素材パッケージのフォルダーを作成できませんでした。"
+  failedMoveSavedAssetPackage: "このプロジェクトに以前保存されていた素材パッケージを移行できませんでした。次に「素材パッケージ」を開いたときに、もう一度試します。"
   failedDeleteAssetPack: "素材パッケージを削除できませんでした。"
   failedDuplicateAssetPack: "素材パッケージを複製できませんでした。"
   failedUpdateAssetPack: "素材パッケージを更新できませんでした。"
@@ -2847,6 +2848,7 @@ assetPackagePage:
   nothingPicked: "まだ何も選んでいません。パッケージに入れるフォルダーを選んでください。"
   pickerTitle: "素材を選ぶ"
   doneButton: "完了"
+  includedInFolderHint: "「{name}」に含まれています"
 resourceImport:
   assetPackageImported_one: "素材パッケージから{count}件の素材を取り込みました。"
   assetPackageImported_other: "素材パッケージから{count}件の素材を取り込みました。"

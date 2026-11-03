@@ -7,7 +7,10 @@ import {
 import { exportAssetPack } from "../../internal/ui/assetPackExport.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
-import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { selectAssetPacksPageCopy } from "./support/assetPacksPageCopy.js";
 import { prepareAssetPacks } from "./support/prepareAssetPacks.js";
 
@@ -101,14 +104,42 @@ export const handleDataChanged = async (deps, options = {}) => {
   normalizeSelectedAssetPack(deps);
 };
 
+// Readies the project's asset packs, and says so when that fails.
 export const handleAfterMount = async (deps) => {
+  const { appService, projectService } = deps;
   await handleAfterMountBase(deps);
   const copy = selectCopy(deps);
-  const changed = await prepareAssetPacks({
-    projectService: deps.projectService,
-    folderName: copy.defaultFolderName ?? "Default",
-    packName: copy.savedPackName ?? "Asset Pack",
-  });
+  let prepared;
+  try {
+    prepared = await prepareAssetPacks({
+      projectService,
+      folderName: copy.defaultFolderName ?? "Default",
+      packName: copy.savedPackName ?? "Asset Pack",
+    });
+  } catch (error) {
+    // A pack may have been made before the failure, so the page refreshes.
+    prepared = { changed: true, packError: error };
+  }
+  const { changed, folderError, packError } = prepared;
+  if (folderError) {
+    console.error("[asset-packs] Failed to create a folder.", folderError);
+    showResourcePageError({
+      appService,
+      errorOrResult: folderError,
+      fallbackMessage: copy.failedCreateFolder,
+    });
+  }
+  if (packError) {
+    console.error(
+      "[asset-packs] Failed to move the saved selection.",
+      packError,
+    );
+    showResourcePageError({
+      appService,
+      errorOrResult: packError,
+      fallbackMessage: copy.failedMoveSavedAssetPackage,
+    });
+  }
   if (changed) {
     await handleDataChanged(deps);
   }

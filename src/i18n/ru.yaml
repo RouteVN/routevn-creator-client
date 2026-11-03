@@ -897,6 +897,7 @@ assetPacksPage:
   updateButton: "Сохранить"
   failedCreateAssetPack: "Не удалось создать пакет ресурсов."
   failedCreateFolder: "Не удалось создать папку пакетов ресурсов."
+  failedMoveSavedAssetPackage: "Не удалось перенести прежний пакет ресурсов этого проекта в «Пакеты ресурсов». Попытка повторится, когда вы снова откроете «Пакеты ресурсов»."
   failedDeleteAssetPack: "Не удалось удалить пакет ресурсов."
   failedDuplicateAssetPack: "Не удалось дублировать пакет ресурсов."
   failedUpdateAssetPack: "Не удалось обновить пакет ресурсов."
@@ -2873,6 +2874,7 @@ assetPackagePage:
   nothingPicked: "Пока ничего не выбрано. Выберите папки, которые войдут в пакет."
   pickerTitle: "Выбрать ресурсы"
   doneButton: "Готово"
+  includedInFolderHint: "Входит в «{name}»"
 resourceImport:
   assetPackageImported_one: "Из пакета импортирован {count} ресурс."
   assetPackageImported_few: "Из пакета импортировано {count} ресурса."

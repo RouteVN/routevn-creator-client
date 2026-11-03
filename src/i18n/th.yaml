@@ -897,6 +897,7 @@ assetPacksPage:
   updateButton: "อัปเดต"
   failedCreateAssetPack: "สร้างแพ็กเกจทรัพยากรไม่สำเร็จ"
   failedCreateFolder: "สร้างโฟลเดอร์แพ็กเกจทรัพยากรไม่สำเร็จ"
+  failedMoveSavedAssetPackage: "ย้ายแพ็กเกจทรัพยากรเดิมของโปรเจกต์นี้ไปยังแพ็กเกจทรัพยากรไม่สำเร็จ จะลองอีกครั้งเมื่อคุณเปิดแพ็กเกจทรัพยากรครั้งถัดไป"
   failedDeleteAssetPack: "ลบแพ็กเกจทรัพยากรไม่สำเร็จ"
   failedDuplicateAssetPack: "ทำสำเนาแพ็กเกจทรัพยากรไม่สำเร็จ"
   failedUpdateAssetPack: "อัปเดตแพ็กเกจทรัพยากรไม่สำเร็จ"
@@ -2847,6 +2848,7 @@ assetPackagePage:
   nothingPicked: "ยังไม่ได้เลือกอะไร เลือกโฟลเดอร์ที่จะใส่ในแพ็กเกจ"
   pickerTitle: "เลือกทรัพยากร"
   doneButton: "เสร็จสิ้น"
+  includedInFolderHint: "รวมอยู่ใน “{name}” แล้ว"
 resourceImport:
   assetPackageImported_one: "นำเข้าทรัพยากร {count} รายการจากแพ็กเกจทรัพยากรแล้ว"
   assetPackageImported_other: "นำเข้าทรัพยากร {count} รายการจากแพ็กเกจทรัพยากรแล้ว"

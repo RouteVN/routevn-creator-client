@@ -897,6 +897,7 @@ assetPacksPage:
   updateButton: "Cập nhật"
   failedCreateAssetPack: "Không tạo được gói tài nguyên."
   failedCreateFolder: "Không tạo được thư mục gói tài nguyên."
+  failedMoveSavedAssetPackage: "Không chuyển được gói tài nguyên cũ của dự án này sang Gói tài nguyên. Hệ thống sẽ thử lại vào lần tới bạn mở Gói tài nguyên."
   failedDeleteAssetPack: "Không xóa được gói tài nguyên."
   failedDuplicateAssetPack: "Không nhân bản được gói tài nguyên."
   failedUpdateAssetPack: "Không cập nhật được gói tài nguyên."
@@ -2847,6 +2848,7 @@ assetPackagePage:
   nothingPicked: "Chưa chọn gì. Hãy chọn các thư mục cần đưa vào gói."
   pickerTitle: "Chọn tài nguyên"
   doneButton: "Xong"
+  includedInFolderHint: "Đã có trong “{name}”"
 resourceImport:
   assetPackageImported_one: "Đã nhập {count} tài nguyên từ gói tài nguyên."
   assetPackageImported_other: "Đã nhập {count} tài nguyên từ gói tài nguyên."

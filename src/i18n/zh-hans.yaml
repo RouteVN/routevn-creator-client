@@ -897,6 +897,7 @@ assetPacksPage:
   updateButton: "更新"
   failedCreateAssetPack: "无法创建素材包。"
   failedCreateFolder: "无法创建素材包文件夹。"
+  failedMoveSavedAssetPackage: "无法将此项目之前的素材包移到素材包列表中。下次打开素材包时会再试一次。"
   failedDeleteAssetPack: "无法删除素材包。"
   failedDuplicateAssetPack: "无法复制素材包。"
   failedUpdateAssetPack: "无法更新素材包。"
@@ -2847,6 +2848,7 @@ assetPackagePage:
   nothingPicked: "还没有选择任何内容。请选择要放进素材包的文件夹。"
   pickerTitle: "选择素材"
   doneButton: "完成"
+  includedInFolderHint: "已包含在“{name}”中"
 resourceImport:
   assetPackageImported_one: "已从素材包导入 {count} 个素材。"
   assetPackageImported_other: "已从素材包导入 {count} 个素材。"

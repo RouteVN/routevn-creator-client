@@ -9,6 +9,7 @@ by package schema: `v2/` holds `routevn.import-pack.v2` packages.
 | `all-types`    | A picked folder for every resource type the export supports, a nested folder, files, generated previews, and references between the picks, including inside previews, element conditions (`$when` and overrides), computed variable examples and particle textures. |
 | `dependencies` | Picks that use resources outside the picked folders, so the package carries them as dependencies, including through other dependencies, a transform preview's character, conditions, example inputs and preview variable values.                                    |
 | `links`        | Picks and a dependency that jump to story sections and scenes or open layouts the package does not carry, which become links, and a layout the package carries.                                                                                                     |
+| `nested-picks` | Folders picked inside others: one in an unpicked folder, which becomes a top-level folder and brings what it uses as a dependency, one two folders deep, and one inside another pick, which comes with that pick once, in pick order.                               |
 
 ## Rules
 
