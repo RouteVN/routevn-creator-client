@@ -5,13 +5,19 @@ import * as assetPackageStore from "../../src/pages/assetPackage/assetPackage.st
 import {
   applyPicker,
   closePicker,
+  closeTypeMenu,
   createInitialState,
   finishSavingPicks,
+  moveResourceType,
   openPicker,
+  openTypeMenu,
   selectAssetPackage,
   selectAssetPackageData,
   selectBaseResources,
   selectIsSavingPicks,
+  selectIsTypeMenuOpen,
+  selectResourceTypeMove,
+  selectTypeMenuResourceType,
   startSavingPicks,
   setPickerResourceType,
   selectViewData,
@@ -746,7 +752,7 @@ describe("asset package store", () => {
     });
   });
 
-  it("hydrates the saved asset package in its saved order, keeping folders at any depth and removing stale ones", () => {
+  it("hydrates the saved asset package in its saved type order, keeping folders at any depth and removing stale ones", () => {
     const state = createInitialState();
     setResourceData(
       { state },
@@ -776,12 +782,13 @@ describe("asset package store", () => {
       },
     );
 
+    // The types stay in the order the pack lists them, not the default one.
     const resources = [
+      { resourceType: "videos", folderIds: ["video-folder"] },
       {
         resourceType: "images",
         folderIds: ["folder-3", "folder-2", "folder-1"],
       },
-      { resourceType: "videos", folderIds: ["video-folder"] },
       { resourceType: "layouts", folderIds: ["layout-folder"] },
     ];
     expect(selectAssetPackage({ state })).toEqual({
@@ -790,6 +797,306 @@ describe("asset package store", () => {
     });
     // A save starts from the picks as loaded.
     expect(selectBaseResources({ state })).toEqual(resources);
+  });
+
+  const loadPack = (resources) => {
+    const state = createInitialState();
+    setResourceData(
+      { state },
+      { resourceDataByType: createResourceDataByType() },
+    );
+    setAssetPack({ state }, { assetPackId: "pack-1", name: "Pack", resources });
+    return state;
+  };
+  const listedTypes = (state) =>
+    selectViewData({ state, i18n: EN_I18N }).pickedSections.map(
+      (section) => section.resourceType,
+    );
+
+  it("lists the picked types in the pack's order, and saves them in it", () => {
+    const state = loadPack([
+      { resourceType: "videos", folderIds: ["video-folder"] },
+      { resourceType: "images", folderIds: ["folder-1"] },
+      { resourceType: "colors", folderIds: ["color-folder"] },
+    ]);
+
+    expect(listedTypes(state)).toEqual(["videos", "images", "colors"]);
+    const savedTypes = (resources) =>
+      resources.map(({ resourceType }) => resourceType);
+    expect(savedTypes(selectAssetPackage({ state }).resources)).toEqual([
+      "videos",
+      "images",
+      "colors",
+    ]);
+    expect(savedTypes(selectBaseResources({ state }))).toEqual([
+      "videos",
+      "images",
+      "colors",
+    ]);
+  });
+
+  it("puts types picked since after the pack's, in the default order", () => {
+    const state = loadPack([
+      { resourceType: "videos", folderIds: ["video-folder"] },
+      { resourceType: "colors", folderIds: ["color-folder"] },
+    ]);
+
+    openPicker({ state });
+    toggleFolder(
+      { state },
+      { resourceType: "layouts", folderId: "layout-folder" },
+    );
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-1" });
+    toggleFolder(
+      { state },
+      { resourceType: "sounds", folderId: "sound-folder" },
+    );
+    applyPicker({ state });
+
+    expect(listedTypes(state)).toEqual([
+      "videos",
+      "colors",
+      "images",
+      "sounds",
+      "layouts",
+    ]);
+    expect(
+      selectAssetPackage({ state }).resources.map(
+        ({ resourceType }) => resourceType,
+      ),
+    ).toEqual(["videos", "colors", "images", "sounds", "layouts"]);
+    // The base is still the pack as loaded, until a save ends.
+    expect(
+      selectBaseResources({ state }).map(({ resourceType }) => resourceType),
+    ).toEqual(["videos", "colors"]);
+    finishSavingPicks(
+      { state },
+      { savedResources: selectAssetPackage({ state }).resources },
+    );
+    expect(
+      selectBaseResources({ state }).map(({ resourceType }) => resourceType),
+    ).toEqual(["videos", "colors", "images", "sounds", "layouts"]);
+  });
+
+  it("puts a type that was unpicked and picked again last", () => {
+    const state = loadPack([
+      { resourceType: "images", folderIds: ["folder-1"] },
+      { resourceType: "videos", folderIds: ["video-folder"] },
+      { resourceType: "colors", folderIds: ["color-folder"] },
+    ]);
+
+    openPicker({ state });
+    toggleFolder(
+      { state },
+      { resourceType: "images", folderId: "folder-1", selected: false },
+    );
+    applyPicker({ state });
+    expect(listedTypes(state)).toEqual(["videos", "colors"]);
+
+    openPicker({ state });
+    toggleFolder({ state }, { resourceType: "images", folderId: "folder-1" });
+    applyPicker({ state });
+    expect(listedTypes(state)).toEqual(["videos", "colors", "images"]);
+
+    // Unticked and ticked again in one picker, it never left.
+    openPicker({ state });
+    toggleFolder(
+      { state },
+      { resourceType: "videos", folderId: "video-folder", selected: false },
+    );
+    toggleFolder(
+      { state },
+      { resourceType: "videos", folderId: "video-folder" },
+    );
+    applyPicker({ state });
+    expect(listedTypes(state)).toEqual(["videos", "colors", "images"]);
+  });
+
+  it("goes back to the pack's order when the saved pack is loaded again", () => {
+    const state = loadPack([
+      { resourceType: "videos", folderIds: ["video-folder"] },
+      { resourceType: "images", folderIds: ["folder-1"] },
+    ]);
+    openPicker({ state });
+    toggleFolder(
+      { state },
+      { resourceType: "colors", folderId: "color-folder" },
+    );
+    applyPicker({ state });
+    expect(listedTypes(state)).toEqual(["videos", "images", "colors"]);
+
+    // A save that failed.
+    setAssetPack(
+      { state },
+      {
+        assetPackId: "pack-1",
+        name: "Pack",
+        resources: [
+          { resourceType: "videos", folderIds: ["video-folder"] },
+          { resourceType: "images", folderIds: ["folder-1"] },
+        ],
+      },
+    );
+    expect(listedTypes(state)).toEqual(["videos", "images"]);
+  });
+
+  it("offers each picked type a menu of the moves it can make, and none when it is alone", () => {
+    const state = loadPack([
+      { resourceType: "images", folderIds: ["folder-1"] },
+      { resourceType: "videos", folderIds: ["video-folder"] },
+      { resourceType: "colors", folderIds: ["color-folder"] },
+    ]);
+    const menuFor = (resourceType) => {
+      openTypeMenu({ state, i18n: EN_I18N }, { x: 10, y: 20, resourceType });
+      return state.typeMenu;
+    };
+
+    // The first type can only go down, the last only up.
+    expect(menuFor("images")).toEqual({
+      isOpen: true,
+      x: 10,
+      y: 20,
+      resourceType: "images",
+      items: [{ label: "Move Down", type: "item", value: "move-down" }],
+    });
+    expect(menuFor("videos").items).toEqual([
+      { label: "Move Up", type: "item", value: "move-up" },
+      { label: "Move Down", type: "item", value: "move-down" },
+    ]);
+    expect(menuFor("colors").items).toEqual([
+      { label: "Move Up", type: "item", value: "move-up" },
+    ]);
+    expect(selectIsTypeMenuOpen({ state })).toBe(true);
+    expect(selectTypeMenuResourceType({ state })).toBe("colors");
+    closeTypeMenu({ state });
+    expect(state.typeMenu).toEqual({
+      isOpen: false,
+      x: 0,
+      y: 0,
+      resourceType: undefined,
+      items: [],
+    });
+
+    // A type the pack does not list has no menu.
+    openTypeMenu({ state, i18n: EN_I18N }, { resourceType: "sounds" });
+    expect(selectIsTypeMenuOpen({ state })).toBe(false);
+
+    // Each heading has a button, unless there is only one type.
+    const sections = selectViewData({ state, i18n: EN_I18N }).pickedSections;
+    expect(sections.map((section) => section.hasTypeMenu)).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    const lone = loadPack([
+      { resourceType: "images", folderIds: ["folder-1"] },
+    ]);
+    expect(
+      selectViewData({ state: lone, i18n: EN_I18N }).pickedSections,
+    ).toMatchObject([{ resourceType: "images", hasTypeMenu: false }]);
+  });
+
+  it("moves a type before the one above it or after the one below it", () => {
+    const state = loadPack([
+      { resourceType: "images", folderIds: ["folder-1"] },
+      { resourceType: "videos", folderIds: ["video-folder"] },
+      { resourceType: "colors", folderIds: ["color-folder"] },
+    ]);
+
+    expect(
+      selectResourceTypeMove(
+        { state },
+        { resourceType: "videos", value: "move-up" },
+      ),
+    ).toEqual({
+      resourceType: "videos",
+      position: "before",
+      positionTargetResourceType: "images",
+    });
+    expect(
+      selectResourceTypeMove(
+        { state },
+        { resourceType: "videos", value: "move-down" },
+      ),
+    ).toEqual({
+      resourceType: "videos",
+      position: "after",
+      positionTargetResourceType: "colors",
+    });
+    // There is nothing above the first or below the last, or for an unknown
+    // item or type.
+    for (const [resourceType, value] of [
+      ["images", "move-up"],
+      ["colors", "move-down"],
+      ["videos", "remove"],
+      ["sounds", "move-up"],
+    ]) {
+      expect(
+        selectResourceTypeMove({ state }, { resourceType, value }),
+      ).toBeUndefined();
+    }
+
+    // A saved move changes the order the page lists and the next save uses.
+    moveResourceType(
+      { state },
+      {
+        resourceType: "colors",
+        position: "before",
+        positionTargetResourceType: "images",
+      },
+    );
+    expect(listedTypes(state)).toEqual(["colors", "images", "videos"]);
+    moveResourceType(
+      { state },
+      {
+        resourceType: "colors",
+        position: "after",
+        positionTargetResourceType: "videos",
+      },
+    );
+    expect(listedTypes(state)).toEqual(["images", "videos", "colors"]);
+    expect(
+      selectAssetPackage({ state }).resources.map(
+        ({ resourceType }) => resourceType,
+      ),
+    ).toEqual(["images", "videos", "colors"]);
+    expect(
+      selectBaseResources({ state }).map(({ resourceType }) => resourceType),
+    ).toEqual(["images", "videos", "colors"]);
+
+    // A move naming a type the page does not list changes nothing.
+    moveResourceType(
+      { state },
+      {
+        resourceType: "sounds",
+        position: "first",
+        positionTargetResourceType: "images",
+      },
+    );
+    moveResourceType(
+      { state },
+      {
+        resourceType: "videos",
+        position: "before",
+        positionTargetResourceType: "sounds",
+      },
+    );
+    expect(listedTypes(state)).toEqual(["images", "videos", "colors"]);
+  });
+
+  it("disables the type menus while the picks save", () => {
+    const state = loadPack([
+      { resourceType: "images", folderIds: ["folder-1"] },
+      { resourceType: "videos", folderIds: ["video-folder"] },
+    ]);
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      typeMenuDisabled: false,
+      typeOptionsLabel: "Type options",
+    });
+    startSavingPicks({ state });
+    expect(selectViewData({ state, i18n: EN_I18N }).typeMenuDisabled).toBe(
+      true,
+    );
   });
 
   it("disables Done while the picks save, and saves the next time from the saved picks", () => {
@@ -864,9 +1171,22 @@ describe("asset package store", () => {
         tree: [{ id: "pack-1" }],
       },
     };
-    expect(
-      createSavedAssetPackContents({ repositoryState, assetPackId: "pack-1" }),
-    ).toEqual(selectAssetPackageData({ state }));
+    const savedContents = createSavedAssetPackContents({
+      repositoryState,
+      assetPackId: "pack-1",
+    });
+    expect(savedContents).toEqual(selectAssetPackageData({ state }));
+    // Both list the picked types in the pack's order, which import follows.
+    expect(Object.keys(savedContents.repository)).toEqual([
+      "files",
+      "sounds",
+      "images",
+    ]);
+    expect(Object.keys(selectAssetPackageData({ state }).repository)).toEqual([
+      "files",
+      "sounds",
+      "images",
+    ]);
   });
 
   it("exports selected folders from any resource type and nested file references", () => {

@@ -2849,6 +2849,10 @@ assetPackagePage:
   pickerTitle: "Pick resources"
   doneButton: "Done"
   includedInFolderHint: "Included in “{name}”"
+  typeOptionsButton: "Type options"
+  moveTypeUpMenuItem: "Move Up"
+  moveTypeDownMenuItem: "Move Down"
+  failedMoveResourceType: "Could not move this type. Please try again."
 resourceImport:
   assetPackageImported_one: "Imported {count} resource from the asset package."
   assetPackageImported_other: "Imported {count} resources from the asset package."

@@ -2849,6 +2849,10 @@ assetPackagePage:
   pickerTitle: "素材を選ぶ"
   doneButton: "完了"
   includedInFolderHint: "「{name}」に含まれています"
+  typeOptionsButton: "種類のオプション"
+  moveTypeUpMenuItem: "上へ移動"
+  moveTypeDownMenuItem: "下へ移動"
+  failedMoveResourceType: "この種類を移動できませんでした。もう一度お試しください。"
 resourceImport:
   assetPackageImported_one: "素材パッケージから{count}件の素材を取り込みました。"
   assetPackageImported_other: "素材パッケージから{count}件の素材を取り込みました。"

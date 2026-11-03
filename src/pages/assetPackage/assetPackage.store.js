@@ -20,8 +20,10 @@ import {
   createResourcePreview,
 } from "./support/assetPackagePreviews.js";
 
-// A pack lists its types in this order, and each type's folders in the
-// order they were picked.
+// The order a type goes in when the pack has no place for it yet: types newly
+// picked go after the pack's own, in this order. A pack keeps its own order,
+// which the editor can change, and lists each type's folders in the order
+// they were picked.
 const RESOURCE_TYPE_ORDER = ASSET_PACKAGE_RESOURCE_CONFIGS.map(
   ({ resourceType }) => resourceType,
 );
@@ -66,14 +68,30 @@ const copyFolderIdsByType = (folderIdsByType) =>
     ]),
   );
 
+// The types with folders picked, in the page's order: those the pack lists,
+// in its order, then those picked since, in the default order. A type that
+// was unpicked is no longer in `resourceTypeOrder`, so picking it again puts
+// it last.
+const orderResourceTypes = (folderIdsByType, resourceTypeOrder) => {
+  const isPicked = (resourceType) => folderIdsByType[resourceType].length > 0;
+  const listed = resourceTypeOrder.filter(isPicked);
+  return [
+    ...listed,
+    ...RESOURCE_TYPE_ORDER.filter(
+      (resourceType) =>
+        isPicked(resourceType) && !listed.includes(resourceType),
+    ),
+  ];
+};
+
 // A pack's `resources`: the types with folders picked, in the page's order.
-const toResources = (folderIdsByType) =>
-  RESOURCE_TYPE_ORDER.filter(
-    (resourceType) => folderIdsByType[resourceType].length > 0,
-  ).map((resourceType) => ({
-    resourceType,
-    folderIds: [...folderIdsByType[resourceType]],
-  }));
+const toResources = (folderIdsByType, resourceTypeOrder) =>
+  orderResourceTypes(folderIdsByType, resourceTypeOrder).map(
+    (resourceType) => ({
+      resourceType,
+      folderIds: [...folderIdsByType[resourceType]],
+    }),
+  );
 
 export const createInitialState = () => ({
   resourceCategory: "releases",
@@ -92,6 +110,18 @@ export const createInitialState = () => ({
   // The picks as last loaded or saved. A save changes only the types picked
   // differently since, so it leaves the others as they are now.
   baseFolderIdsByType: createSelectedFolderIdsByType(),
+  // The picked types in the pack's order, as the page lists them, and as last
+  // loaded or saved. A move saves at once, so it changes both.
+  resourceTypeOrder: [],
+  baseResourceTypeOrder: [],
+  // The menu of a type's heading, which moves the type up or down.
+  typeMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    resourceType: undefined,
+    items: [],
+  },
   // While Done saves the picks, it does nothing more.
   isSavingPicks: false,
   isPickerOpen: false,
@@ -132,6 +162,11 @@ export const setAssetPackage = ({ state }, { assetPackage } = {}) => {
   }
   state.selectedFolderIdsByType = selectedFolderIdsByType;
   state.baseFolderIdsByType = copyFolderIdsByType(selectedFolderIdsByType);
+  state.resourceTypeOrder = orderResourceTypes(
+    selectedFolderIdsByType,
+    normalizedAssetPackage.resources.map(({ resourceType }) => resourceType),
+  );
+  state.baseResourceTypeOrder = [...state.resourceTypeOrder];
 };
 
 // The asset pack being edited, and its picks.
@@ -158,7 +193,7 @@ export const selectIsSavingPicks = ({ state }) => state.isSavingPicks;
 
 // The picks as last loaded or saved, which a save compares its picks with.
 export const selectBaseResources = ({ state }) =>
-  toResources(state.baseFolderIdsByType);
+  toResources(state.baseFolderIdsByType, state.baseResourceTypeOrder);
 
 export const startSavingPicks = ({ state }) => {
   state.isSavingPicks = true;
@@ -176,6 +211,9 @@ export const finishSavingPicks = ({ state }, { savedResources } = {}) => {
     baseFolderIdsByType[resourceType] = [...folderIds];
   }
   state.baseFolderIdsByType = baseFolderIdsByType;
+  state.baseResourceTypeOrder = savedResources.map(
+    ({ resourceType }) => resourceType,
+  );
 };
 
 // Ticks or unticks a folder, at any depth, in the picker; `selected` says
@@ -298,10 +336,15 @@ export const setPickerResourceType = ({ state }, { resourceType } = {}) => {
   }
 };
 
-// Done: the picker's ticks become the selection.
+// Done: the picker's ticks become the selection. The types stay in the order
+// they were in, and those newly picked go after them.
 export const applyPicker = ({ state }) => {
   state.selectedFolderIdsByType = copyFolderIdsByType(
     state.pickerFolderIdsByType,
+  );
+  state.resourceTypeOrder = orderResourceTypes(
+    state.selectedFolderIdsByType,
+    state.resourceTypeOrder,
   );
   state.isPickerOpen = false;
 };
@@ -319,14 +362,137 @@ export const selectAssetPackageData = ({ state }) =>
     filesData: state.filesData,
     resourceDataByType: state.resourceDataByType,
     selectedFolderIdsByType: state.selectedFolderIdsByType,
-    resourceTypeOrder: RESOURCE_TYPE_ORDER,
+    // The package lists the types in the pack's order, which import follows.
+    resourceTypeOrder: orderResourceTypes(
+      state.selectedFolderIdsByType,
+      state.resourceTypeOrder,
+    ),
     scenesData: state.scenesData,
   });
 
 export const selectAssetPackage = ({ state }) => ({
   schemaVersion: ASSET_PACKAGE_SCHEMA_VERSION,
-  resources: toResources(state.selectedFolderIdsByType),
+  resources: toResources(
+    state.selectedFolderIdsByType,
+    state.resourceTypeOrder,
+  ),
 });
+
+const MOVE_UP_VALUE = "move-up";
+const MOVE_DOWN_VALUE = "move-down";
+
+// Where a type's heading menu can move it: up unless it is the first, down
+// unless it is the last.
+const listTypeMenuItems = ({ copy, index, total }) => {
+  const items = [];
+  if (index > 0) {
+    items.push({
+      label: copy.moveTypeUpMenuItem,
+      type: "item",
+      value: MOVE_UP_VALUE,
+    });
+  }
+  if (index < total - 1) {
+    items.push({
+      label: copy.moveTypeDownMenuItem,
+      type: "item",
+      value: MOVE_DOWN_VALUE,
+    });
+  }
+  return items;
+};
+
+export const openTypeMenu = ({ state, i18n }, { x, y, resourceType } = {}) => {
+  const resourceTypes = orderResourceTypes(
+    state.selectedFolderIdsByType,
+    state.resourceTypeOrder,
+  );
+  const index = resourceTypes.indexOf(resourceType);
+  if (index === -1) {
+    return;
+  }
+  state.typeMenu.isOpen = true;
+  state.typeMenu.x = x ?? 0;
+  state.typeMenu.y = y ?? 0;
+  state.typeMenu.resourceType = resourceType;
+  state.typeMenu.items = listTypeMenuItems({
+    copy: i18n.assetPackagePage,
+    index,
+    total: resourceTypes.length,
+  });
+};
+
+export const closeTypeMenu = ({ state }) => {
+  state.typeMenu.isOpen = false;
+  state.typeMenu.x = 0;
+  state.typeMenu.y = 0;
+  state.typeMenu.resourceType = undefined;
+  state.typeMenu.items = [];
+};
+
+export const selectIsTypeMenuOpen = ({ state }) => state.typeMenu.isOpen;
+export const selectTypeMenuResourceType = ({ state }) =>
+  state.typeMenu.resourceType;
+
+// What a menu item asks of a type: to go `before` the type above it, or
+// `after` the type below it. Nothing at the ends, where there is no such type.
+export const selectResourceTypeMove = (
+  { state },
+  { resourceType, value } = {},
+) => {
+  const resourceTypes = orderResourceTypes(
+    state.selectedFolderIdsByType,
+    state.resourceTypeOrder,
+  );
+  const index = resourceTypes.indexOf(resourceType);
+  if (index === -1) {
+    return undefined;
+  }
+  if (value === MOVE_UP_VALUE && index > 0) {
+    return {
+      resourceType,
+      position: "before",
+      positionTargetResourceType: resourceTypes[index - 1],
+    };
+  }
+  if (value === MOVE_DOWN_VALUE && index < resourceTypes.length - 1) {
+    return {
+      resourceType,
+      position: "after",
+      positionTargetResourceType: resourceTypes[index + 1],
+    };
+  }
+  return undefined;
+};
+
+// A move that was saved: the type goes `before` or `after` another, in the
+// page's order and in the saved order the next save starts from.
+export const moveResourceType = (
+  { state },
+  { resourceType, position, positionTargetResourceType } = {},
+) => {
+  const pickedResourceTypes = orderResourceTypes(
+    state.selectedFolderIdsByType,
+    state.resourceTypeOrder,
+  );
+  if (!pickedResourceTypes.includes(resourceType)) {
+    return;
+  }
+  const resourceTypes = pickedResourceTypes.filter(
+    (type) => type !== resourceType,
+  );
+  const targetIndex = resourceTypes.indexOf(positionTargetResourceType);
+  if (targetIndex === -1) {
+    return;
+  }
+  resourceTypes.splice(
+    position === "before" ? targetIndex : targetIndex + 1,
+    0,
+    resourceType,
+  );
+  state.resourceTypeOrder = resourceTypes;
+  state.baseResourceTypeOrder = [...resourceTypes];
+};
 
 const previewOf = (state, resourceType, itemId, extra = {}) => ({
   ...createResourcePreview({
@@ -505,15 +671,19 @@ const formatSelectedLabel = ({ copy, i18n, count }) =>
       })
     : "";
 
-// The types with folders picked, each with its picked folders and every
-// resource in them, at any depth, with its preview.
+// The types with folders picked, in the pack's order, each with its picked
+// folders and every resource in them, at any depth, with its preview. A type
+// has a menu to move it, unless it is the only one.
 const buildPickedSectionsViewData = ({
   state,
   copy,
   resourceTypesCopy,
   i18n,
-}) =>
-  RESOURCE_TYPE_ORDER.flatMap((resourceType) => {
+}) => {
+  const sections = orderResourceTypes(
+    state.selectedFolderIdsByType,
+    state.resourceTypeOrder,
+  ).flatMap((resourceType) => {
     const resourceData = state.resourceDataByType[resourceType];
     const folders = listPickedFolders(state, resourceType);
     if (folders.length === 0) {
@@ -542,6 +712,11 @@ const buildPickedSectionsViewData = ({
       },
     ];
   });
+  return sections.map((section) => ({
+    ...section,
+    hasTypeMenu: sections.length > 1,
+  }));
+};
 
 // The folders the picker offers for the type it shows, in tree order and
 // indented by depth, each with the resources directly in it, so a resource
@@ -650,6 +825,8 @@ export const selectViewData = ({ state, i18n }) => {
     hasPicks: pickedSections.length > 0,
     nothingPickedMessage: copy.nothingPicked,
     pickedSections,
+    typeOptionsLabel: copy.typeOptionsButton,
+    typeMenuDisabled: state.isSavingPicks,
     pickerTitle: copy.pickerTitle,
     pickerHint: copy.introHint,
     pickerDoneLabel: copy.doneButton,

@@ -93,6 +93,83 @@ const savePicks = async (deps) => {
   render();
 };
 
+const getActionMenuPosition = (event) => {
+  const rect = event.currentTarget?.getBoundingClientRect?.();
+  return {
+    x: event.clientX || rect?.right || 0,
+    y: rect?.bottom || event.clientY || 0,
+  };
+};
+
+// A type's heading menu opens at the click, with the moves it can make.
+export const handleTypeOptionsClick = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+  if (store.selectIsSavingPicks()) {
+    return;
+  }
+  const { resourceType } = event.currentTarget.dataset;
+  store.openTypeMenu({ ...getActionMenuPosition(event), resourceType });
+  render();
+};
+
+export const handleTypeMenuClose = (deps) => {
+  const { render, store } = deps;
+  if (!store.selectIsTypeMenuOpen()) {
+    return;
+  }
+  store.closeTypeMenu();
+  render();
+};
+
+// Moving a type up or down saves at once, and the page lists the types in the
+// new order once it is saved. A move that cannot be saved says what went
+// wrong, and the page goes back to the pack as saved. While picks or another
+// move save, the menu does nothing.
+export const handleTypeMenuClickItem = async (deps, payload) => {
+  const { appService, i18n, projectService, render, store } = deps;
+  const { item } = payload._event.detail;
+  const resourceType = store.selectTypeMenuResourceType();
+  store.closeTypeMenu();
+  const move = store.selectResourceTypeMove({
+    resourceType,
+    value: item.value,
+  });
+  if (!move || store.selectIsSavingPicks()) {
+    render();
+    return;
+  }
+  const assetPackId = store.selectAssetPackId();
+  store.startSavingPicks();
+  render();
+  const moveAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: i18n.assetPackagePage.failedMoveResourceType,
+    action: () =>
+      projectService.moveAssetPackResource({
+        assetPackId,
+        resourceType: move.resourceType,
+        position: move.position,
+        positionTargetResourceType: move.positionTargetResourceType,
+      }),
+  });
+  if (moveAttempt.ok) {
+    store.moveResourceType(move);
+  } else {
+    const assetPack =
+      projectService.getRepositoryState()?.assetPacks?.items?.[assetPackId];
+    store.setAssetPack({
+      assetPackId,
+      name: assetPack?.name,
+      resources: assetPack?.resources,
+    });
+  }
+  store.finishSavingPicks();
+  render();
+};
+
 export const handlePickerTypeClick = (deps, payload) => {
   const { render, store } = deps;
   const { resourceType } = payload._event.currentTarget.dataset;

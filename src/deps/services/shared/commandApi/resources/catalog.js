@@ -545,6 +545,36 @@ export const createCatalogResourceCommandApi = (shared) => ({
 
     return shared.submitCommandsWithContext({ context, commands });
   },
+  // Moves one of an asset pack's types, with its folders, `before` or `after`
+  // another of the pack's types, which changes the order the pack lists them
+  // in.
+  async moveAssetPackResource({
+    assetPackId,
+    resourceType,
+    position,
+    positionTargetResourceType,
+  }) {
+    const context = await shared.ensureCommandContext();
+    return shared.submitCommandsWithContext({
+      context,
+      commands: [
+        {
+          scope: "resources",
+          basePartition: shared.resourceTypePartitionFor(
+            context.projectId,
+            "assetPacks",
+          ),
+          type: COMMAND_TYPES.ASSETPACK_RESOURCE_MOVE,
+          payload: {
+            assetPackId,
+            resourceType,
+            position,
+            positionTargetResourceType,
+          },
+        },
+      ],
+    });
+  },
   moveAssetPack: async ({
     assetPackId,
     parentId,

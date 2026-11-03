@@ -432,7 +432,7 @@ export const createAssetPackageContents = ({
   const collections = [];
   const repository = {};
   const packageDependencies = {};
-  for (const resourceType of getOrderedResourceTypes(resourceTypeOrder)) {
+  for (const resourceType of ASSET_PACKAGE_RESOURCE_TYPES) {
     const resourceData = resourceDataByType[resourceType];
     const picks = selectIncludedResourceData(
       resourceData,
@@ -480,11 +480,18 @@ export const createAssetPackageContents = ({
       );
     }
   }
+  // The picks are listed by type in the pack's order, which import lists them
+  // in. Files and dependencies keep the default order.
+  const orderedRepository = {
+    files: createPackageFiles({ filesData, collections }),
+  };
+  for (const resourceType of getOrderedResourceTypes(resourceTypeOrder)) {
+    if (repository[resourceType]) {
+      orderedRepository[resourceType] = repository[resourceType];
+    }
+  }
   return {
-    repository: {
-      files: createPackageFiles({ filesData, collections }),
-      ...repository,
-    },
+    repository: orderedRepository,
     dependencies: packageDependencies,
     links: {
       items: Object.fromEntries(
@@ -605,17 +612,15 @@ export const createAssetPackageManifest = ({
 };
 
 // What exporting a saved asset pack carries: its folders, read from the
-// project's state, in the order the editor exports them.
+// project's state, with its types in the pack's order, as the editor exports
+// them.
 export const createSavedAssetPackContents = ({
   repositoryState,
   assetPackId,
 }) => {
-  const resourceTypeOrder = ASSET_PACKAGE_RESOURCE_CONFIGS.map(
-    ({ resourceType }) => resourceType,
-  );
   const resourceDataByType = {};
   const selectedFolderIdsByType = {};
-  for (const resourceType of resourceTypeOrder) {
+  for (const { resourceType } of ASSET_PACKAGE_RESOURCE_CONFIGS) {
     resourceDataByType[resourceType] = repositoryState[resourceType] ?? {
       items: {},
       tree: [],
@@ -633,7 +638,7 @@ export const createSavedAssetPackContents = ({
     filesData: repositoryState.files ?? { items: {} },
     resourceDataByType,
     selectedFolderIdsByType,
-    resourceTypeOrder,
+    resourceTypeOrder: resources.map(({ resourceType }) => resourceType),
     scenesData: repositoryState.scenes ?? { items: {}, tree: [] },
   });
 };

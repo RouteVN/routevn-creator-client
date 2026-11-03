@@ -29,7 +29,8 @@ describe("asset package view", () => {
     // The page lists the picked folders; the picker holds the rest.
     expect(assetPackageView).not.toContain("addResourceTypeButton");
     expect(assetPackageView).not.toContain("rtgl-popover");
-    expect(assetPackageView).not.toContain("rtgl-dropdown-menu");
+    // The only menu is a type heading's, which moves the type.
+    expect(assetPackageView.match(/rtgl-dropdown-menu/g)).toHaveLength(1);
     expect(assetPackageView).toContain(
       "$for section, sectionIndex in pickedSections",
     );
@@ -89,6 +90,34 @@ describe("asset package view", () => {
     expect(assetPackageView).toContain(
       "'rtgl-view w=f title=\"${item.usedBy}\"':",
     );
+  });
+
+  it("gives each type's heading a menu to move it, unless it is the only type", () => {
+    const assetPackageView = readView(
+      "../../src/pages/assetPackage/assetPackage.view.yaml",
+    );
+    const view = load(assetPackageView);
+
+    // The heading shows the type's name, with a small ghost three-dot button
+    // on the right, only when there is more than one type.
+    expect(assetPackageView).toContain("$if section.hasTypeMenu:");
+    expect(assetPackageView).toContain(
+      "rtgl-text c=mu-fg w=1fg: ${section.label}",
+    );
+    expect(assetPackageView).toContain(
+      'rtgl-button#typeOptionsButton${sectionIndex} data-resource-type="${section.resourceType}" sq v=gh pre=ellipsis ?disabled=${typeMenuDisabled} aria-label="${typeOptionsLabel}" title="${typeOptionsLabel}"',
+    );
+    // The menu opens at the click, and its items are the store's.
+    expect(assetPackageView).toContain(
+      "rtgl-dropdown-menu#typeMenu :items=${typeMenu.items} x=${typeMenu.x} y=${typeMenu.y} ?open=${typeMenu.isOpen}",
+    );
+    expect(view.refs["typeOptionsButton*"].eventListeners.click.handler).toBe(
+      "handleTypeOptionsClick",
+    );
+    expect(view.refs.typeMenu.eventListeners).toEqual({
+      close: { handler: "handleTypeMenuClose" },
+      "item-click": { handler: "handleTypeMenuClickItem" },
+    });
   });
 
   it("draws each preview as the resource pages do", () => {

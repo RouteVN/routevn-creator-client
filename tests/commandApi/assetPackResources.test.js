@@ -299,4 +299,76 @@ describe("asset pack resources command API", () => {
       { resourceType: "textStyles", folderIds: ["styles-a-inner"] },
     ]);
   });
+
+  it("moves a type before or after another, and later types go last", async () => {
+    const { api, savedResources, submittedBatches } = await createApi();
+    await createPack(api);
+    const types = () =>
+      savedResources().map(({ resourceType }) => resourceType);
+    const colors = { resourceType: "colors", folderIds: ["colors-a"] };
+    const textStyles = { resourceType: "textStyles", folderIds: ["styles-a"] };
+    const transforms = {
+      resourceType: "transforms",
+      folderIds: ["transforms-a"],
+    };
+    await api.updateAssetPackResources({
+      assetPackId: "pack-1",
+      baseResources: [],
+      resources: [colors, textStyles],
+    });
+    expect(types()).toEqual(["colors", "textStyles"]);
+
+    // Move Down is after the next type.
+    submittedBatches.length = 0;
+    let result = await api.moveAssetPackResource({
+      assetPackId: "pack-1",
+      resourceType: "colors",
+      position: "after",
+      positionTargetResourceType: "textStyles",
+    });
+    expect(result.valid).toBe(true);
+    expect(submittedBatches).toEqual([["assetPack.resource.move"]]);
+    expect(types()).toEqual(["textStyles", "colors"]);
+    // Folders go with their type.
+    expect(savedResources()).toEqual([textStyles, colors]);
+
+    // Move Up is before the previous type.
+    result = await api.moveAssetPackResource({
+      assetPackId: "pack-1",
+      resourceType: "colors",
+      position: "before",
+      positionTargetResourceType: "textStyles",
+    });
+    expect(result.valid).toBe(true);
+    expect(types()).toEqual(["colors", "textStyles"]);
+
+    // An editor that lists the pack's order, with a type picked since last,
+    // saves it last, and a move between types does not disturb that.
+    await api.moveAssetPackResource({
+      assetPackId: "pack-1",
+      resourceType: "textStyles",
+      position: "before",
+      positionTargetResourceType: "colors",
+    });
+    const editorResources = [textStyles, colors, transforms];
+    result = await api.updateAssetPackResources({
+      assetPackId: "pack-1",
+      baseResources: [textStyles, colors],
+      resources: editorResources,
+    });
+    expect(result.valid).toBe(true);
+    expect(savedResources()).toEqual(editorResources);
+
+    // A move naming a type the pack does not have saves nothing.
+    submittedBatches.length = 0;
+    result = await api.moveAssetPackResource({
+      assetPackId: "pack-1",
+      resourceType: "colors",
+      position: "before",
+      positionTargetResourceType: "layouts",
+    });
+    expect(result.valid).toBe(false);
+    expect(submittedBatches).toEqual([]);
+    expect(savedResources()).toEqual(editorResources);
+  });
 });

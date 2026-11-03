@@ -205,11 +205,16 @@ more while it saves. A save changes only the types picked differently since
 the editor opened the pack or last saved it, so a type someone else changed
 meanwhile, and the editor did not, stays as they left it. A failed save says
 why in an alert, and the editor goes back to the saved picks.
-Types follow the store's order. Within a type, the page and the pack keep
-folders in the order they were picked: a newly ticked folder goes last, and
-the picker shows each ticked folder's place, counting a folder included in
-another only with it. Resources outside a folder
-cannot be picked. Export stays disabled until a resource is picked, or while
+Picked resources lists the types in the pack's own order, the order of its
+`resources`. Each type's heading has a three-dot menu with Move Up and Move
+Down, which saves at once and is not offered when the pack has one type. A type
+newly picked goes last, and so does one picked again after it was unpicked; a
+pack saved before types could be moved keeps its order until one is. The
+exported package lists its picked types in this order, so import lists and
+adds them in it too. Within a type, the page and the pack keep folders in the
+order they were picked: a newly ticked folder goes last, and the picker shows
+each ticked folder's place, counting a folder included in another only with
+it. Resources outside a folder cannot be picked. Export stays disabled until a resource is picked, or while
 the selection uses a resource that no longer exists or jumps to a line of the
 story; the page names the resource at fault.
 
