@@ -246,7 +246,6 @@ describe("resource-import-dialog.store", () => {
       "CHARACTERS",
       "TRANSFORMS",
       "ANIMATIONS",
-      "AUDIO_EFFECTS",
       "PARTICLES",
       "SPRITESHEETS",
       "COLORS",
@@ -254,14 +253,17 @@ describe("resource-import-dialog.store", () => {
       "TEXT_STYLES",
       "LAYOUTS",
       "VARIABLES",
-      "CONTROLS",
     ]);
     expect(catalog.assetTypeOptions[0]).toEqual({
       value: "IMAGES",
       label: "画像",
     });
     expect(catalog.assetTypeOptions[5].label).toBe("アニメーション");
-    expect(catalog.assetTypeOptions[6].label).toBe("Audio Effects");
+    // A type without a name in the catalog falls back to its formatted name.
+    expect(catalog.assetTypeOptions[6]).toEqual({
+      value: "PARTICLES",
+      label: "Particles",
+    });
   });
 
   it("groups the pack's assets by folder, labelled with their path, and collapses a group", () => {

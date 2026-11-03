@@ -741,14 +741,14 @@ describe("resource-import-dialog asset store", () => {
   it("opens filtered by the asset type of the resource page it opened from", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({ packs: [] });
-    deps.appService.getPath.mockReturnValue("/project/audio-effects");
+    deps.appService.getPath.mockReturnValue("/project/animations");
 
     openDialog(deps);
     await settle();
     expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
       cursor: undefined,
       query: "",
-      assetTypes: ["AUDIO_EFFECTS"],
+      assetTypes: ["ANIMATIONS"],
     });
 
     await handleStoreAssetTypesChange(deps, {
@@ -771,12 +771,19 @@ describe("resource-import-dialog asset store", () => {
     await settle();
     expect(state.catalog.assetTypes).toEqual(["LAYOUTS"]);
 
-    // A page with no asset type opens the store unfiltered.
-    closeDialog(deps);
-    deps.appService.getPath.mockReturnValue("/project/scenes");
-    openDialog(deps);
-    await settle();
-    expect(state.catalog.assetTypes).toEqual([]);
+    // A page with no asset type opens the store unfiltered, as does a page
+    // whose type the store does not take for now.
+    for (const path of [
+      "/project/scenes",
+      "/project/audio-effects",
+      "/project/controls",
+    ]) {
+      closeDialog(deps);
+      deps.appService.getPath.mockReturnValue(path);
+      openDialog(deps);
+      await settle();
+      expect(state.catalog.assetTypes).toEqual([]);
+    }
   });
 
   it("reloads the first page when saved asset types change, keeping the search", async () => {

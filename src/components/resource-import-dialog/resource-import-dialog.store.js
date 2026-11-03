@@ -1,5 +1,6 @@
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { USE_PACK_DEPENDENCY } from "../../internal/assetImportPlan.js";
+import { ASSET_STORE_HIDDEN_RESOURCE_TYPES } from "../../internal/assetPackageResources.js";
 import { formatCalendarDate, formatPercent } from "../../internal/dates.js";
 import { generateId } from "../../internal/id.js";
 
@@ -65,6 +66,12 @@ const STORE_ASSET_TYPES = Object.freeze([
     path: "/project/controls",
   },
 ]);
+
+// The types the filter offers: those the store takes for now.
+const OFFERED_STORE_ASSET_TYPES = STORE_ASSET_TYPES.filter(
+  ({ resourceType }) =>
+    !ASSET_STORE_HIDDEN_RESOURCE_TYPES.includes(resourceType),
+);
 
 const createCatalogState = () => ({
   status: "idle",
@@ -455,7 +462,7 @@ export const setCatalogAssetTypes = ({ state }, { assetTypes } = {}) => {
 
 // Chooses the asset type of the resource page at `path`, or none.
 export const setCatalogAssetTypesForPath = ({ state }, { path } = {}) => {
-  const pageType = STORE_ASSET_TYPES.find(
+  const pageType = OFFERED_STORE_ASSET_TYPES.find(
     (storeType) => storeType.path === path,
   );
   state.catalog.assetTypes = pageType ? [pageType.assetType] : [];
@@ -790,10 +797,13 @@ const getCatalogViewData = ({ state, copy, resourceTypeCopy }) => {
     searchText: state.searchText,
     assetTypesTitle: copy.assetTypesTitle ?? "Asset types",
     assetTypesPlaceholder: copy.assetTypesPlaceholder ?? "Choose asset types",
-    assetTypeOptions: STORE_ASSET_TYPES.map(({ assetType, resourceType }) => ({
-      value: assetType,
-      label: resourceTypeCopy[resourceType] ?? formatResourceType(resourceType),
-    })),
+    assetTypeOptions: OFFERED_STORE_ASSET_TYPES.map(
+      ({ assetType, resourceType }) => ({
+        value: assetType,
+        label:
+          resourceTypeCopy[resourceType] ?? formatResourceType(resourceType),
+      }),
+    ),
     selectedAssetTypes: catalog.assetTypes,
     isCatalogEmpty:
       catalog.status === "ready" && catalog.packs.length === 0 && !isFiltered,

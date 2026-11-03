@@ -1,6 +1,7 @@
 import {
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_SCHEMA_VERSION,
+  ASSET_STORE_HIDDEN_RESOURCE_TYPES,
   normalizeAssetPackage,
 } from "../../internal/assetPackageResources.js";
 import {
@@ -179,12 +180,18 @@ const listPickerFolders = (state, resourceType) => {
 };
 
 // The types the picker offers: those with resources or folders to offer.
+// A type the asset store does not take is offered only while the pack has
+// folders of it picked, so they can be unticked.
 const listPickerResourceTypes = (state) =>
-  RESOURCE_TYPE_ORDER.filter(
-    (resourceType) =>
+  RESOURCE_TYPE_ORDER.filter((resourceType) => {
+    if (ASSET_STORE_HIDDEN_RESOURCE_TYPES.includes(resourceType)) {
+      return state.selectedFolderIdsByType[resourceType].length > 0;
+    }
+    return (
       hasResources(state.resourceDataByType[resourceType]) ||
-      listPickerFolders(state, resourceType).length > 0,
-  );
+      listPickerFolders(state, resourceType).length > 0
+    );
+  });
 
 // The picker shows one type at a time: the one shown last, or else the first
 // with folders to offer. It starts from the current selection.

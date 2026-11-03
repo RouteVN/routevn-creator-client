@@ -234,13 +234,13 @@ describe("asset package store", () => {
     );
     openPicker({ state });
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    // Types without resources are left out.
+    // Types without resources are left out, and so are audio effects, which
+    // the asset store does not take for now.
     expect(viewData.pickerTypes.map((type) => type.resourceType)).toEqual([
       "images",
       "sounds",
       "videos",
       "characters",
-      "audioEffects",
       "colors",
       "fonts",
       "textStyles",
@@ -539,6 +539,16 @@ describe("asset package store", () => {
       kind: "thumbnail",
       fileId: "file-video-thumbnail-1",
     });
+    // A type the store does not take is offered only while folders of it are
+    // picked, so they can be unticked.
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).pickerTypes.map(
+        (type) => type.resourceType,
+      ),
+    ).not.toContain("audioEffects");
+    setPickerResourceType({ state }, { resourceType: "audioEffects" });
+    expect(state.pickerResourceType).toBe("videos");
+    state.selectedFolderIdsByType.audioEffects = ["audio-effect-folder"];
     expect(previewOf("audioEffects")).toMatchObject({
       kind: "icon",
       icon: "audioEffects",
