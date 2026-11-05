@@ -3089,6 +3089,7 @@ editHistory:
 dateTime:
   intlLocale: "ru"
   pluralRulesLocale: "ru"
+  relativeTimeStyle: "short"
   justNow: "Только что"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

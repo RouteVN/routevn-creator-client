@@ -37,6 +37,7 @@ import {
   EN_I18N,
   ES_I18N,
   FR_I18N,
+  ID_I18N,
   JA_I18N,
   PT_I18N,
   RU_I18N,
@@ -3616,6 +3617,7 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     ["Portuguese", PT_I18N],
     ["French", FR_I18N],
     ["Vietnamese", VI_I18N],
+    ["Indonesian", ID_I18N],
     ["Simplified Chinese", ZH_HANS_I18N],
   ])(
     "tells the user in %s that a referenced section can't be deleted",

@@ -301,6 +301,10 @@ describe("projects.store addProject", () => {
               value: "vi",
               label: "Tiếng Việt (Beta)",
             },
+            {
+              value: "id",
+              label: "Bahasa Indonesia (Beta)",
+            },
           ],
         },
       ],

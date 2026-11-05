@@ -16,6 +16,7 @@ import {
   EN_I18N,
   ES_I18N,
   FR_I18N,
+  ID_I18N,
   JA_I18N,
   PT_I18N,
   RU_I18N,
@@ -119,6 +120,7 @@ describe("layoutEditPanel Input field name", () => {
     for (const i18n of [
       ES_I18N,
       FR_I18N,
+      ID_I18N,
       JA_I18N,
       PT_I18N,
       RU_I18N,

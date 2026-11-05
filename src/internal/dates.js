@@ -6,12 +6,18 @@ const capitalizeFirst = (text, intlLocale) =>
  * @param {string} isoDateString - ISO date string like "2025-10-20T04:23:52.636Z"
  * @param {Object} [options] - The `dateTime` catalog of the active locale
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
+ * @param {"long"|"short"|"narrow"} [options.relativeTimeStyle] - Style of
+ *   relative times, such as "5 min. ago" for short or "5 minutes ago" for long
  * @param {string} [options.justNow] - Label for dates less than a minute old
  * @returns {string} Formatted date string
  */
 export const formatDate = (
   isoDateString,
-  { intlLocale = "en-US", justNow = "Just now" } = {},
+  {
+    intlLocale = "en-US",
+    relativeTimeStyle = "short",
+    justNow = "Just now",
+  } = {},
 ) => {
   if (!isoDateString) return "";
 
@@ -30,7 +36,7 @@ export const formatDate = (
 
     const relativeTime = new Intl.RelativeTimeFormat(intlLocale, {
       numeric: "auto",
-      style: "short",
+      style: relativeTimeStyle,
     });
     let text;
     if (diffDays !== 0) {

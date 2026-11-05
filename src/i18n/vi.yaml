@@ -3061,6 +3061,7 @@ editHistory:
 dateTime:
   intlLocale: "vi"
   pluralRulesLocale: "vi"
+  relativeTimeStyle: "short"
   justNow: "Vừa xong"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"
