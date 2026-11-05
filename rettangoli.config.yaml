@@ -26,6 +26,7 @@ fe:
       - "fr"
       - "vi"
       - "id"
+      - "uk"
   #  watchPort: 3001
 
 # all visual testing configuration

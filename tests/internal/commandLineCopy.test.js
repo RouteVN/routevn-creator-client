@@ -15,6 +15,7 @@ import {
   PT_I18N,
   RU_I18N,
   TH_I18N,
+  UK_I18N,
   VI_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
@@ -30,6 +31,7 @@ const LOCALE_I18N = {
   fr: FR_I18N,
   vi: VI_I18N,
   id: ID_I18N,
+  uk: UK_I18N,
 };
 
 describe("command-line action counts", () => {
@@ -53,6 +55,19 @@ describe("command-line action counts", () => {
     expect(format(24)).toBe("24 действия");
   });
 
+  it("picks each Ukrainian plural category", () => {
+    const copy = selectCommandLineCopy(UK_I18N);
+    const format = (count) =>
+      formatCommandLineActionCount(count, copy, UK_I18N.dateTime);
+
+    expect(format(1)).toBe("1 дія");
+    expect(format(2)).toBe("2 дії");
+    expect(format(5)).toBe("5 дій");
+    expect(format(11)).toBe("11 дій");
+    expect(format(21)).toBe("21 дія");
+    expect(format(24)).toBe("24 дії");
+  });
+
   it("follows the catalog's plural rules for 0", () => {
     const formatZero = (i18n) =>
       formatCommandLineActionCount(
@@ -69,6 +84,7 @@ describe("command-line action counts", () => {
       PT_I18N.commandLinePage.actionCount_other.replace("{count}", "0"),
     );
     expect(formatZero(RU_I18N)).toBe("0 действий");
+    expect(formatZero(UK_I18N)).toBe("0 дій");
   });
 });
 
