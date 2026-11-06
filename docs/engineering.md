@@ -119,6 +119,11 @@ apostrophe as `’` (U+2019), as in `ім’я`. Every count family has `_one`,
 (`{count} рядка`), and coordinates use `{x}; {y}` because `uk` writes decimals
 with a comma.
 
+For Italian localization, follow the RouteVN Italian translation style guide.
+Translations in the `it` catalog use curly double quotes (“ ”) and the
+apostrophe ’ (U+2019), never straight `"` or `'`. Italian writes decimals with
+a comma, so coordinates use `{x}; {y}`.
+
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace, and the text Rettangoli UI
 components show when the app passes none, such as a select's placeholder or a
@@ -156,7 +161,8 @@ the unit from `dateTime` catalog templates such as `fileSizeMegabytes` and
 writes a date less than a week old as a relative time, such as `5 min. ago`, in
 the `Intl.RelativeTimeFormat` style that `dateTime.relativeTimeStyle` sets:
 `short` in most catalogs, and `long` in `id`, whose short style writes
-`3 h lalu` for three days ago.
+`3 h lalu` for three days ago, and in `it`, where `3 giorni fa` reads more
+naturally than `3 gg fa`.
 
 Do not join a number and `%` in code either. `formatPercent` takes the sign
 from `dateTime.percent`, so French and Russian write `42 %` with a
