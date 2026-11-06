@@ -14,6 +14,7 @@ import {
   EN_I18N,
   FR_I18N,
   ID_I18N,
+  IT_I18N,
   PT_I18N,
   RU_I18N,
 } from "../support/i18n.js";
@@ -64,6 +65,9 @@ describe("formatDate", () => {
     // Without a style, the short one abbreviates "hari" to "h".
     expect(formatDate(minutesAgo(3 * 24 * 60 + 5), { intlLocale: "id" })).toBe(
       "3 h lalu",
+    );
+    expect(formatDate(minutesAgo(3 * 24 * 60 + 5), IT_I18N.dateTime)).toBe(
+      "3 giorni fa",
     );
   });
 
