@@ -3061,6 +3061,7 @@ editHistory:
 dateTime:
   intlLocale: "zh-Hans"
   pluralRulesLocale: "zh-Hans"
+  relativeTimeStyle: "short"
   justNow: "刚刚"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

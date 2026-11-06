@@ -3061,6 +3061,7 @@ editHistory:
 dateTime:
   intlLocale: "pt"
   pluralRulesLocale: "pt-PT"
+  relativeTimeStyle: "short"
   justNow: "Agora mesmo"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

@@ -10,7 +10,13 @@ import {
   formatNumberWithUnit,
   formatPercent,
 } from "../../src/internal/dates.js";
-import { EN_I18N, FR_I18N, PT_I18N, RU_I18N } from "../support/i18n.js";
+import {
+  EN_I18N,
+  FR_I18N,
+  ID_I18N,
+  PT_I18N,
+  RU_I18N,
+} from "../support/i18n.js";
 
 const minutesAgo = (minutes) =>
   new Date(Date.now() - minutes * 60 * 1000).toISOString();
@@ -40,6 +46,25 @@ describe("formatDate", () => {
       /^5 мин.* назад$/,
     );
     expect(formatDate(minutesAgo(24 * 60 + 5), RU_I18N.dateTime)).toBe("Вчера");
+  });
+
+  it("formats relative times in the catalog's relative time style", () => {
+    const { dateTime } = ID_I18N;
+
+    expect(formatDate(minutesAgo(5), dateTime)).toBe("5 menit yang lalu");
+    expect(formatDate(minutesAgo(2 * 60 + 5), dateTime)).toBe(
+      "2 jam yang lalu",
+    );
+    expect(formatDate(minutesAgo(2 * 24 * 60 + 5), dateTime)).toBe(
+      "Kemarin dulu",
+    );
+    expect(formatDate(minutesAgo(3 * 24 * 60 + 5), dateTime)).toBe(
+      "3 hari yang lalu",
+    );
+    // Without a style, the short one abbreviates "hari" to "h".
+    expect(formatDate(minutesAgo(3 * 24 * 60 + 5), { intlLocale: "id" })).toBe(
+      "3 h lalu",
+    );
   });
 
   it("formats older dates in the catalog locale", () => {

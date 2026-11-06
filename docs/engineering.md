@@ -106,6 +106,12 @@ with tone marks on the first vowel of open `oa`, `oe`, and `uy` syllables
 both spellings are accepted (`lý`, `kỹ`). Vietnamese nouns do not change form after a number, so both keys of a count
 family hold the same text.
 
+For Indonesian localization, follow the RouteVN Indonesian translation style
+guide. Indonesian nouns do not change form after a number, so both keys of a
+count family hold the same text. The `id` catalog separates two numbers in one
+value with a semicolon, as in `{x}; {y}`, because Indonesian writes decimals
+with a comma.
+
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace, and the text Rettangoli UI
 components show when the app passes none, such as a select's placeholder or a
@@ -139,7 +145,11 @@ makes 0 singular.
 Do not join a number and a unit in code. `formatFileSize`,
 `formatDurationLabel`, `formatMilliseconds`, and `formatElapsedSeconds` take
 the unit from `dateTime` catalog templates such as `fileSizeMegabytes` and
-`durationSeconds`, so a locale can write `2,45 Mo` or `250 ms`.
+`durationSeconds`, so a locale can write `2,45 Mo` or `250 ms`. `formatDate`
+writes a date less than a week old as a relative time, such as `5 min. ago`, in
+the `Intl.RelativeTimeFormat` style that `dateTime.relativeTimeStyle` sets:
+`short` in most catalogs, and `long` in `id`, whose short style writes
+`3 h lalu` for three days ago.
 
 Do not join a number and `%` in code either. `formatPercent` takes the sign
 from `dateTime.percent`, so French and Russian write `42 %` with a

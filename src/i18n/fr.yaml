@@ -3061,6 +3061,7 @@ editHistory:
 dateTime:
   intlLocale: "fr"
   pluralRulesLocale: "fr"
+  relativeTimeStyle: "short"
   justNow: "À l’instant"
   fileSizeBytes: "{value} o"
   fileSizeKilobytes: "{value} ko"

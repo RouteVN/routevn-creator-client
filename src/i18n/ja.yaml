@@ -3061,6 +3061,7 @@ editHistory:
 dateTime:
   intlLocale: "ja"
   pluralRulesLocale: "ja"
+  relativeTimeStyle: "short"
   justNow: "たった今"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

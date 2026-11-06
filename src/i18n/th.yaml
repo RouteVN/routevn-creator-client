@@ -3061,6 +3061,7 @@ editHistory:
 dateTime:
   intlLocale: "th"
   pluralRulesLocale: "th"
+  relativeTimeStyle: "short"
   justNow: "เมื่อสักครู่"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

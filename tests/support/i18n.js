@@ -18,3 +18,4 @@ export const RU_I18N = loadI18n("ru");
 export const PT_I18N = loadI18n("pt");
 export const FR_I18N = loadI18n("fr");
 export const VI_I18N = loadI18n("vi");
+export const ID_I18N = loadI18n("id");
