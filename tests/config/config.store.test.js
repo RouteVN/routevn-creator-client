@@ -140,6 +140,7 @@ describe("config language store", () => {
         { value: "id", label: "Bahasa Indonesia (Beta)" },
         { value: "uk", label: "Українська (Beta)" },
         { value: "it", label: "Italiano (Beta)" },
+        { value: "pl", label: "Polski (Beta)" },
       ],
     });
   });

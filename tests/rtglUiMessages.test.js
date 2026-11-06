@@ -9,6 +9,7 @@ import {
   ID_I18N,
   IT_I18N,
   JA_I18N,
+  PL_I18N,
   PT_I18N,
   RU_I18N,
   TH_I18N,
@@ -30,6 +31,7 @@ const CATALOGS = [
   ["Indonesian", ID_I18N],
   ["Ukrainian", UK_I18N],
   ["Italian", IT_I18N],
+  ["Polish", PL_I18N],
 ];
 
 const placeholders = (message) => (message.match(/\{\w+\}/g) ?? []).sort();

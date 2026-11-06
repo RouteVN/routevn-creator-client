@@ -14,6 +14,7 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "id", label: "Bahasa Indonesia (Beta)" }),
   Object.freeze({ value: "uk", label: "Українська (Beta)" }),
   Object.freeze({ value: "it", label: "Italiano (Beta)" }),
+  Object.freeze({ value: "pl", label: "Polski (Beta)" }),
 ]);
 
 const getAvailableAppLocales = (localeService) => {

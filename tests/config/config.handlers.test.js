@@ -53,6 +53,7 @@ const createDeps = () => {
       "id",
       "uk",
       "it",
+      "pl",
     ]),
     current: vi.fn(() => currentLocale),
     set: vi.fn(async (nextLocale) => {

@@ -124,6 +124,12 @@ Translations in the `it` catalog use curly double quotes (“ ”) and the
 apostrophe ’ (U+2019), never straight `"` or `'`. Italian writes decimals with
 a comma, so coordinates use `{x}; {y}`.
 
+For Polish localization, follow the RouteVN Polish translation style guide.
+Polish plural rules select `one`, `few`, and `many` for whole numbers and
+`other` for fractions, so every count family in the `pl` catalog has `_one`,
+`_few`, `_many`, and `_other` keys (`1 akcja`, `2 akcje`, `5 akcji`). `pl`
+writes decimals with a comma, so coordinates use `{x}; {y}`.
+
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace, and the text Rettangoli UI
 components show when the app passes none, such as a select's placeholder or a

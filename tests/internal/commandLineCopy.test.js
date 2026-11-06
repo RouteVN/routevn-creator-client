@@ -13,6 +13,7 @@ import {
   ID_I18N,
   IT_I18N,
   JA_I18N,
+  PL_I18N,
   PT_I18N,
   RU_I18N,
   TH_I18N,
@@ -34,6 +35,7 @@ const LOCALE_I18N = {
   id: ID_I18N,
   uk: UK_I18N,
   it: IT_I18N,
+  pl: PL_I18N,
 };
 
 describe("command-line action counts", () => {
@@ -70,6 +72,19 @@ describe("command-line action counts", () => {
     expect(format(24)).toBe("24 дії");
   });
 
+  it("picks each Polish plural category", () => {
+    const copy = selectCommandLineCopy(PL_I18N);
+    const format = (count) =>
+      formatCommandLineActionCount(count, copy, PL_I18N.dateTime);
+
+    expect(format(1)).toBe("1 akcja");
+    expect(format(2)).toBe("2 akcje");
+    expect(format(5)).toBe("5 akcji");
+    expect(format(12)).toBe("12 akcji");
+    expect(format(21)).toBe("21 akcji");
+    expect(format(22)).toBe("22 akcje");
+  });
+
   it("follows the catalog's plural rules for 0", () => {
     const formatZero = (i18n) =>
       formatCommandLineActionCount(
@@ -87,6 +102,7 @@ describe("command-line action counts", () => {
     );
     expect(formatZero(RU_I18N)).toBe("0 действий");
     expect(formatZero(UK_I18N)).toBe("0 дій");
+    expect(formatZero(PL_I18N)).toBe("0 akcji");
   });
 });
 
