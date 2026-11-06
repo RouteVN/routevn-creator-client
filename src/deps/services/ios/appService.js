@@ -10,6 +10,7 @@ import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { isDarkTheme } from "../../../internal/theme.js";
 import { createProgressDialog } from "../../clients/progressDialog.js";
 import { createIOSProjectFolderSetup } from "../../clients/ios/projectFolderSetup.js";
+import { selectOnMyDeviceLocation } from "../../../internal/iosFilesLocation.js";
 
 // `rootLabels` name the Files app locations in the app language, as Files
 // shows them: `onMyDevice` ("On My iPhone") and `iCloudDrive`.
@@ -163,11 +164,30 @@ export const createAppService = (params) => {
   const getFileDisplayPath = (filePath) => {
     const copy = appService.getAppCopy();
     const deviceName = projectFolderSetup.getStatus().deviceName ?? "iPhone";
-    const onMyDevice = copy.iosOnMyDeviceLocation ?? "On My {deviceName}";
     return formatFileDisplayPath(filePath, {
-      onMyDevice: onMyDevice.replaceAll("{deviceName}", () => deviceName),
+      onMyDevice:
+        selectOnMyDeviceLocation(copy, deviceName) ?? `On My ${deviceName}`,
       iCloudDrive: copy.iosICloudDriveLocation ?? "iCloud Drive",
     });
+  };
+
+  // Native names the projects folder with the English Files label, such as
+  // "On My iPhone/RouteVN Projects". Show that label in the app language.
+  const localizeFolderStatus = (status) => {
+    const deviceName = status.deviceName ?? "iPhone";
+    const nativeRoot = `On My ${deviceName}`;
+    const displayPath = status.folder?.displayPath;
+    if (!displayPath?.startsWith(nativeRoot)) return status;
+    const label =
+      selectOnMyDeviceLocation(appService.getAppCopy(), deviceName) ??
+      nativeRoot;
+    return {
+      ...status,
+      folder: {
+        ...status.folder,
+        displayPath: label + displayPath.slice(nativeRoot.length),
+      },
+    };
   };
 
   const registerImportedIOSProject = createRegisterImportedIOSProject({
@@ -432,7 +452,8 @@ export const createAppService = (params) => {
     ...appService,
 
     initializeProjectFolderSetup: () => projectFolderSetup.load(),
-    getProjectFolderSetup: () => projectFolderSetup.getStatus(),
+    getProjectFolderSetup: () =>
+      localizeFolderStatus(projectFolderSetup.getStatus()),
     // `name` must not be empty: before a name is typed, the create dialog
     // passes its localized "Untitled" label.
     async previewNewProjectLocation({ name }) {
@@ -445,7 +466,8 @@ export const createAppService = (params) => {
       };
     },
     pickProjectFolderSetup: (options) => projectFolderSetup.pick(options),
-    confirmProjectFolderSetup: (options) => projectFolderSetup.confirm(options),
+    confirmProjectFolderSetup: async (options) =>
+      localizeFolderStatus(await projectFolderSetup.confirm(options)),
 
     resolveProjectFolderSetupRoute(path) {
       return projectFolderSetup.getStatus().configured
