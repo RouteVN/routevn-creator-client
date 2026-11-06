@@ -34,8 +34,10 @@ export const summarizeProjectDataForRouteEngine = (projectData) => {
   };
 };
 
+// Fixes the given project data in place. Callers pass their own copy, so a
+// second copy of the whole story here only added memory to every render.
 export const sanitizeProjectDataForRouteEngine = (projectData) => {
-  const safeProjectData = structuredClone(projectData || {});
+  const safeProjectData = projectData ?? {};
   const changes = [];
   const story = isObjectRecord(safeProjectData.story)
     ? safeProjectData.story

@@ -1109,10 +1109,7 @@ describe("renderSceneEditorState", () => {
         },
         routeGraphics: {
           render: (renderState) => {
-            options.onSuppressedRenderState?.({
-              renderState,
-              systemState: engine.selectSystemState(),
-            });
+            options.onSuppressedRenderState?.({ renderState });
           },
         },
         ticker: {
