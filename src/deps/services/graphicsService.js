@@ -2737,10 +2737,11 @@ export const createGraphicsService = async ({
               return;
             }
             if (suppressedEngineRenderEffects > 0) {
-              onSuppressedRenderState?.({
-                renderState,
-                systemState: routeEngine?.selectSystemState?.(),
-              });
+              // The system state is a deep copy of the whole engine state,
+              // story included. The scene editor makes several suppressed
+              // renders per canvas update, so copying it here ran a large
+              // project out of memory.
+              onSuppressedRenderState?.({ renderState });
               return;
             }
             renderEngineState(renderState);

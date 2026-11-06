@@ -2768,6 +2768,7 @@ describe("graphicsService", () => {
         },
       ],
     };
+    const selectSystemState = vi.fn(() => systemState);
     const handleActions = vi.fn(() => {
       effectsHandlerOptions.routeGraphics.render({
         id: "interaction-render",
@@ -2794,7 +2795,7 @@ describe("graphicsService", () => {
       selectPresentationState: vi.fn(() => undefined),
       selectPresentationChanges: vi.fn(() => undefined),
       selectSectionLineChanges: vi.fn(() => []),
-      selectSystemState: vi.fn(() => systemState),
+      selectSystemState,
       handleActions,
     });
 
@@ -2841,8 +2842,9 @@ describe("graphicsService", () => {
         audio: [],
         animations: [],
       },
-      systemState,
     });
+    // Suppressed renders must not copy the engine state.
+    expect(selectSystemState).not.toHaveBeenCalled();
 
     service.engineHandleActions({ nextLine: true });
 
