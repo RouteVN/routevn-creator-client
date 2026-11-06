@@ -112,6 +112,13 @@ count family hold the same text. The `id` catalog separates two numbers in one
 value with a semicolon, as in `{x}; {y}`, because Indonesian writes decimals
 with a comma.
 
+For Ukrainian localization, follow the RouteVN Ukrainian translation style
+guide. The `uk` catalog uses the 2019 spelling (`проєкт`) and writes the
+apostrophe as `’` (U+2019), as in `ім’я`. Every count family has `_one`,
+`_few`, `_many`, and `_other` keys, with the genitive singular in `_other`
+(`{count} рядка`), and coordinates use `{x}; {y}` because `uk` writes decimals
+with a comma.
+
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace, and the text Rettangoli UI
 components show when the app passes none, such as a select's placeholder or a

@@ -8,6 +8,7 @@ import {
   PT_I18N,
   RU_I18N,
   TH_I18N,
+  UK_I18N,
   VI_I18N,
   ZH_HANS_I18N,
 } from "./support/i18n.js";
@@ -41,6 +42,7 @@ describe("update button labels", () => {
     ["French", FR_I18N, "Mettre à jour"],
     ["Vietnamese", VI_I18N, "Cập nhật"],
     ["Indonesian", ID_I18N, "Perbarui"],
+    ["Ukrainian", UK_I18N, "Оновити"],
   ])("uses a generic label in %s edit forms", (_locale, catalog, expected) => {
     const labels = collectUpdateButtonLabels(catalog);
 
