@@ -313,6 +313,10 @@ describe("projects.store addProject", () => {
               value: "it",
               label: "Italiano (Beta)",
             },
+            {
+              value: "pl",
+              label: "Polski (Beta)",
+            },
           ],
         },
       ],

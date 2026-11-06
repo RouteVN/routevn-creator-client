@@ -10,6 +10,7 @@ import {
   ID_I18N,
   IT_I18N,
   JA_I18N,
+  PL_I18N,
   PT_I18N,
   RU_I18N,
   TH_I18N,
@@ -32,6 +33,7 @@ const LOCALES = {
   id: ID_I18N,
   uk: UK_I18N,
   it: IT_I18N,
+  pl: PL_I18N,
 };
 
 const findEditorNode = (node) => {
