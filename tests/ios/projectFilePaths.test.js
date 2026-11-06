@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Subject from "../../src/deps/subject.js";
 import { createAppService } from "../../src/deps/services/ios/appService.js";
 import { createAppServiceCore } from "../../src/deps/services/shared/appServiceCore.js";
-import { PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
+import { PL_I18N, PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 const { callIOSBridge } = vi.hoisted(() => ({ callIOSBridge: vi.fn() }));
 vi.mock("../../src/deps/clients/ios/bridge.js", () => ({ callIOSBridge }));
@@ -102,12 +102,40 @@ describe("iOS project file paths", () => {
         "/private/example/File Provider Storage/RouteVN Projects/Project One",
       ),
     ).toBe("No meu iPad / RouteVN Projects / Project One");
+    // Polish declines the device name, as the Files app does.
+    service.setAppCopyProvider(() => PL_I18N.appPage);
+    expect(
+      service.getFileDisplayPath(
+        "/private/example/File Provider Storage/RouteVN Projects/Project One",
+      ),
+    ).toBe("Na moim iPadzie / RouteVN Projects / Project One");
     service.setAppCopyProvider(() => ZH_HANS_I18N.appPage);
     expect(
       service.getFileDisplayPath(
         "/private/var/mobile/Library/Mobile Documents/com~apple~CloudDocs/Exports/Project One_v1.zip",
       ),
     ).toBe("iCloud 云盘 / Exports / Project One_v1.zip");
+  });
+
+  it("names the projects folder's Files location in the app language", async () => {
+    const service = createService();
+    callIOSBridge.mockResolvedValue({
+      configured: true,
+      deviceName: "iPhone",
+      folder: {
+        name: "RouteVN Projects",
+        displayPath: "On My iPhone/RouteVN Projects",
+      },
+    });
+    await service.initializeProjectFolderSetup();
+
+    expect(service.getProjectFolderSetup().folder.displayPath).toBe(
+      "On My iPhone/RouteVN Projects",
+    );
+    service.setAppCopyProvider(() => PL_I18N.appPage);
+    expect(service.getProjectFolderSetup().folder.displayPath).toBe(
+      "Na moim iPhonie/RouteVN Projects",
+    );
   });
 
   it("keeps desktop file paths unchanged without an iOS adapter", () => {

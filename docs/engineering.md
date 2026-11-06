@@ -130,6 +130,14 @@ Polish plural rules select `one`, `few`, and `many` for whole numbers and
 `_few`, `_many`, and `_other` keys (`1 akcja`, `2 akcje`, `5 akcji`). `pl`
 writes decimals with a comma, so coordinates use `{x}; {y}`.
 
+The iOS Files location that local projects live in comes from
+`appPage.iosOnMyIphoneLocation` and `appPage.iosOnMyIpadLocation`, one label
+per device. The projects-folder setup messages insert it as `{location}`, and
+the projects folder path, which native code writes as `On My iPhone/…`, shows
+it in place of the English prefix. The app does not insert a device name into
+a sentence, so a language can decline it, as Polish does in `Na moim iPhonie`
+and `Na moim iPadzie`.
+
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace, and the text Rettangoli UI
 components show when the app passes none, such as a select's placeholder or a
@@ -168,7 +176,11 @@ writes a date less than a week old as a relative time, such as `5 min. ago`, in
 the `Intl.RelativeTimeFormat` style that `dateTime.relativeTimeStyle` sets:
 `short` in most catalogs, and `long` in `id`, whose short style writes
 `3 h lalu` for three days ago, and in `it`, where `3 giorni fa` reads more
-naturally than `3 gg fa`.
+naturally than `3 gg fa`. Older dates, store dates, and backup times show the
+month in the `Intl.DateTimeFormat` style that `dateTime.monthStyle` sets:
+`short` in most catalogs (`Oct 18, 2026`), and `2-digit` in `pl`, which writes
+`18.10.2026` because CLDR's short Polish month names lack the period that
+Polish abbreviations take.
 
 Do not join a number and `%` in code either. `formatPercent` takes the sign
 from `dateTime.percent`, so French and Russian write `42 %` with a

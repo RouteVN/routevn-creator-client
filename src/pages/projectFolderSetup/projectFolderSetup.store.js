@@ -1,3 +1,4 @@
+import { selectOnMyDeviceLocation } from "../../internal/iosFilesLocation.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 
 export const createInitialState = () => ({
@@ -32,8 +33,9 @@ export const selectCopy = ({ state, i18n }) => {
   if (state.isReconnecting) {
     copy.description = copy.openDescription;
   }
+  const location = selectOnMyDeviceLocation(i18n.appPage, state.deviceName);
   for (const key of ["description", "appFolderError", "localFolderError"]) {
-    copy[key] = formatI18nCopy(copy[key], { deviceName: state.deviceName });
+    copy[key] = formatI18nCopy(copy[key], { location });
   }
   return copy;
 };

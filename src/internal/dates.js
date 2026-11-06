@@ -8,6 +8,8 @@ const capitalizeFirst = (text, intlLocale) =>
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
  * @param {"long"|"short"|"narrow"} [options.relativeTimeStyle] - Style of
  *   relative times, such as "5 min. ago" for short or "5 minutes ago" for long
+ * @param {"short"|"2-digit"} [options.monthStyle] - How older dates show the
+ *   month, such as "Oct 18, 2026" for short or "18.10.2026" in Polish for 2-digit
  * @param {string} [options.justNow] - Label for dates less than a minute old
  * @returns {string} Formatted date string
  */
@@ -16,6 +18,7 @@ export const formatDate = (
   {
     intlLocale = "en-US",
     relativeTimeStyle = "short",
+    monthStyle = "short",
     justNow = "Just now",
   } = {},
 ) => {
@@ -52,7 +55,7 @@ export const formatDate = (
   // For older dates, show readable date format
   const options = {
     year: "numeric",
-    month: "short",
+    month: monthStyle,
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
@@ -67,12 +70,16 @@ export const formatDate = (
  * @param {number} epochMs - Milliseconds since the Unix epoch
  * @param {Object} [options] - The `dateTime` catalog of the active locale
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
+ * @param {"short"|"2-digit"} [options.monthStyle] - How the month is shown
  * @returns {string} Formatted date, such as "Aug 12, 2026"
  */
-export const formatCalendarDate = (epochMs, { intlLocale = "en-US" } = {}) =>
+export const formatCalendarDate = (
+  epochMs,
+  { intlLocale = "en-US", monthStyle = "short" } = {},
+) =>
   new Date(epochMs).toLocaleDateString(intlLocale, {
     year: "numeric",
-    month: "short",
+    month: monthStyle,
     day: "numeric",
     timeZone: "UTC",
   });
@@ -82,15 +89,16 @@ export const formatCalendarDate = (epochMs, { intlLocale = "en-US" } = {}) =>
  * @param {string} value - ISO date string
  * @param {Object} [options] - The `dateTime` catalog of the active locale
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
+ * @param {"short"|"2-digit"} [options.monthStyle] - How the month is shown
  * @returns {string} Formatted date and time
  */
 export const formatDateTimeWithSeconds = (
   value,
-  { intlLocale = "en-US" } = {},
+  { intlLocale = "en-US", monthStyle = "short" } = {},
 ) =>
   new Intl.DateTimeFormat(intlLocale, {
     day: "2-digit",
-    month: "short",
+    month: monthStyle,
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",

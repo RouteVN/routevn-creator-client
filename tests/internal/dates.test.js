@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCalendarDate,
   formatDate,
+  formatDateTimeWithSeconds,
   formatDimensions,
   formatDurationLabel,
   formatElapsedSeconds,
@@ -15,6 +16,7 @@ import {
   FR_I18N,
   ID_I18N,
   IT_I18N,
+  PL_I18N,
   PT_I18N,
   RU_I18N,
 } from "../support/i18n.js";
@@ -30,6 +32,12 @@ describe("formatCalendarDate", () => {
     );
     expect(formatCalendarDate(1786492800000, FR_I18N.dateTime)).toBe(
       "12 août 2026",
+    );
+  });
+
+  it("writes the month as a number when the catalog asks for it", () => {
+    expect(formatCalendarDate(1786492800000, PL_I18N.dateTime)).toBe(
+      "12.08.2026",
     );
   });
 });
@@ -82,6 +90,22 @@ describe("formatDate", () => {
         hour: "2-digit",
         minute: "2-digit",
       }),
+    );
+    // Polish writes numeric dates, because CLDR's short month names lack the
+    // period that Polish abbreviations take.
+    expect(formatDate(value, PL_I18N.dateTime)).toMatch(
+      /^15\.01\.2026, \d{2}:\d{2}$/,
+    );
+  });
+});
+
+describe("formatDateTimeWithSeconds", () => {
+  it("writes the month the way the catalog asks", () => {
+    const value = "2026-10-18T09:05:07.000Z";
+
+    expect(formatDateTimeWithSeconds(value, EN_I18N.dateTime)).toMatch(/Oct/);
+    expect(formatDateTimeWithSeconds(value, PL_I18N.dateTime)).toMatch(
+      /^\d{2}\.10\.2026, \d{2}:05:07$/,
     );
   });
 });

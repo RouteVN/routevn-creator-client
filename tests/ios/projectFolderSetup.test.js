@@ -257,7 +257,32 @@ describe("project folder onboarding", () => {
     expect(deps.appService.showToast).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["en", "ja", "zh-hans"])(
+  it.each([
+    ["iPhone", "Na moim iPhonie"],
+    ["iPad", "Na moim iPadzie"],
+  ])(
+    "names the %s Files location in the catalog's own words",
+    (deviceName, location) => {
+      const messages = yaml.load(
+        readFileSync(
+          new URL("../../src/i18n/pl.yaml", import.meta.url),
+          "utf8",
+        ),
+      );
+      const deps = createDeps();
+      deps.appService.getProjectFolderSetup.mockReturnValue({
+        configured: false,
+        deviceName,
+      });
+      handlers.handleBeforeMount(deps);
+      const copy = actions.selectCopy({ state: deps.state, i18n: messages });
+      expect(copy.description).toBe(
+        `Wybierz „${location}” lub istniejący folder projektów.`,
+      );
+    },
+  );
+
+  it.each(["en", "ja", "zh-hans", "pl"])(
     "uses the native iPad name in %s setup instructions and errors",
     async (locale) => {
       const messages = yaml.load(
@@ -276,7 +301,7 @@ describe("project folder onboarding", () => {
       for (const key of ["description", "appFolderError", "localFolderError"]) {
         expect(copy[key]).toContain("iPad");
         expect(copy[key]).not.toContain("iPhone");
-        expect(copy[key]).not.toContain("{deviceName}");
+        expect(copy[key]).not.toContain("{location}");
       }
       deps.appService.pickProjectFolderSetup.mockRejectedValue(
         Object.assign(new Error("native details"), { code: "localFolder" }),
