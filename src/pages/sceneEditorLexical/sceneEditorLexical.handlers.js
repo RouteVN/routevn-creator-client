@@ -1138,6 +1138,14 @@ export const handleEditHistoryShortcutKeyDown = (deps, payload) => {
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   const { store, render, subject } = deps;
+  // While a scene switch loads the next scene, the project state holds that
+  // scene's lines and none of the scene still in the store. Applied, it would
+  // show that scene's sections empty, and refresh its drafts to empty ones.
+  // The switch applies the project state once the store has the next scene.
+  if (store.selectIsNextSceneLoading()) {
+    return;
+  }
+
   const pendingDraftSections = store.selectPendingDraftSections?.() || [];
   const hadPendingSessionChanges =
     pendingDraftSections.length > 0 ||
@@ -1272,13 +1280,20 @@ export const syncSceneEditorRoutePayload = async (
       return;
     }
 
-    await projectService.setActiveSceneId(nextSceneId);
-    if (!canContinue()) {
-      return;
-    }
+    // Loading the next scene notifies the project state before the store has
+    // the next scene, see syncSceneEditorProjectPayload.
+    store.startNextSceneLoad();
+    try {
+      await projectService.setActiveSceneId(nextSceneId);
+      if (!canContinue()) {
+        return;
+      }
 
-    syncStoreProjectState(store, projectService);
-    store.setSceneId({ sceneId: nextSceneId });
+      syncStoreProjectState(store, projectService);
+      store.setSceneId({ sceneId: nextSceneId });
+    } finally {
+      store.finishNextSceneLoad();
+    }
 
     const scene = store.selectScene();
     if (!scene) {

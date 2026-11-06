@@ -212,8 +212,11 @@ template:
                     $else:
                       - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0; ${mobileLinesPanelStyle}"':
                           - 'rtgl-view#sceneEditorSectionsScroll w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-padding-top: 40px; scroll-padding-bottom: 48px; overscroll-behavior: contain;"':
+                              # Element ids are the render keys. Each block's id is made from its
+                              # section's id, so a section's editor is never reused for another section,
+                              # such as the section at the same place in the next scene.
                               - $for section, sectionIndex in sectionEditorItems:
-                                  - 'rtgl-view#sectionBlock${sectionIndex} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
+                                  - 'rtgl-view#${section.blockId} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
                                       - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-left: calc(var(--spacing-sm) * -1); padding-left: var(--spacing-md); padding-right: var(--spacing-sm);"':
                                           - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
                                           - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null
@@ -241,8 +244,11 @@ template:
                     $else:
                       - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0;"':
                           - 'rtgl-view#sceneEditorSectionsScroll w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-padding-top: 40px;"':
+                              # Element ids are the render keys. Each block's id is made from its
+                              # section's id, so a section's editor is never reused for another section,
+                              # such as the section at the same place in the next scene.
                               - $for section, sectionIndex in sectionEditorItems:
-                                  - 'rtgl-view#sectionBlock${sectionIndex} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
+                                  - 'rtgl-view#${section.blockId} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
                                       - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-left: calc(var(--spacing-sm) * -1); padding-left: var(--spacing-md); padding-right: var(--spacing-sm);"':
                                           - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
                                           - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null

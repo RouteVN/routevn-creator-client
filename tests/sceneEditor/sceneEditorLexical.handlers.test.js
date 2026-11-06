@@ -653,6 +653,8 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       setRepositoryRevision: vi.fn(),
       setSectionLineChangesBySectionId: vi.fn(),
       setScenePageLoading: vi.fn(),
+      startNextSceneLoad: vi.fn(),
+      finishNextSceneLoad: vi.fn(),
       selectIsScenePageLoading: () => false,
       selectIsSceneAssetLoading: () => false,
       hidePreviewScene: vi.fn(),

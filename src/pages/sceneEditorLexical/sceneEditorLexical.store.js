@@ -470,6 +470,18 @@ const getDraftSectionKey = (sceneId, sectionId) => {
   return String(sceneId) + ":" + String(sectionId);
 };
 
+// The id of a section's block in the view, which is also its render key, so
+// a section's editor is never reused for another section. View ids may hold
+// only letters and digits, and section ids can hold any character, so every
+// other character, and "x", is written as "x" and its six hex digits.
+const toSectionBlockId = (sectionId) =>
+  "sectionBlock" +
+  Array.from(String(sectionId), (character) =>
+    /^[a-wyzA-Z0-9]$/.test(character)
+      ? character
+      : "x" + character.codePointAt(0).toString(16).padStart(6, "0"),
+  ).join("");
+
 const getDraftSections = (state) => {
   const draftSections = Object.values(state.draftSections || {}).filter(
     (draftSection) => draftSection?.sceneId && draftSection?.sectionId,
@@ -740,6 +752,7 @@ export const createInitialState = () => ({
   projectLanguage: DEFAULT_PROJECT_LANGUAGE,
   draftSection: undefined,
   draftSections: {},
+  nextSceneLoads: 0,
   draftSaveTimerId: undefined,
   sceneTextStats: createEmptySceneTextStats(),
   sceneTextStatsRefreshHandle: undefined,
@@ -803,8 +816,35 @@ export const setSceneId = ({ state }, { sceneId } = {}) => {
   if (sceneId !== state.sceneId) {
     state.editHistory = createEditHistory();
     state.editHistoryBaselines = {};
+    // A saved draft is refreshed from the stored lines only while its scene is
+    // open. Kept across a scene change, it could later show, and then save,
+    // lines that are out of date. Unsaved drafts stay until they are saved.
+    for (const [draftSectionKey, draftSection] of Object.entries(
+      state.draftSections,
+    )) {
+      if (!draftSection.dirty) {
+        delete state.draftSections[draftSectionKey];
+      }
+    }
+    if (!state.draftSection?.dirty) {
+      state.draftSection = undefined;
+    }
   }
   state.sceneId = sceneId;
+};
+
+// Counts the scene switches still loading their scene. A switch that is
+// replaced by a later one ends while the later one still loads.
+export const startNextSceneLoad = ({ state }) => {
+  state.nextSceneLoads += 1;
+};
+
+export const finishNextSceneLoad = ({ state }) => {
+  state.nextSceneLoads -= 1;
+};
+
+export const selectIsNextSceneLoading = ({ state }) => {
+  return state.nextSceneLoads > 0;
 };
 
 // Each section's lines as of its last recorded edit: its baseline, or its
@@ -2434,6 +2474,7 @@ export const selectViewData = ({ state, i18n }) => {
       hasNextSectionLine: sections
         .slice(index + 1)
         .some((item) => item.lines?.[0]?.id),
+      blockId: toSectionBlockId(section.id),
       editorKey: `document-${section.id}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
       documentEditorLines: sectionLines,
       documentLineDecorations: buildSceneDocumentLineDecorations({
