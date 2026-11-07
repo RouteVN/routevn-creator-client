@@ -4249,6 +4249,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "routevn-android-export"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "miniz_oxide",
+ "routevn-exporter",
+ "routevn-packager",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+]
+
+[[package]]
 name = "routevn-creator"
 version = "1.20.0"
 dependencies = [
@@ -4260,6 +4274,7 @@ dependencies = [
  "log",
  "plist",
  "reqwest",
+ "routevn-android-export",
  "routevn-exporter",
  "routevn-packager",
  "rustls",

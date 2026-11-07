@@ -8,11 +8,11 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
-const PLATFORM_IDS = ["web", "windows", "macos"];
+const PLATFORM_IDS = ["web", "windows", "macos", "android"];
 
 const getAvailablePlatformIds = (state) =>
   state.platform === "android" || state.platform === "ios"
-    ? ["web"]
+    ? ["web", "android"]
     : PLATFORM_IDS;
 
 const createPlatformApplicationInfo = (platform) => {
@@ -54,6 +54,7 @@ const getPlatformTitle = (platform, copy) => {
   if (platform === "macos") {
     return copy.macosPlatformDetailsTitle;
   }
+  if (platform === "android") return copy.androidPlatformDetailsTitle;
   return copy.webPlatformDetailsTitle;
 };
 
@@ -64,6 +65,7 @@ const getPlatformTabLabel = (platform, copy) => {
   if (platform === "macos") {
     return copy.macosTabLabel;
   }
+  if (platform === "android") return copy.androidTabLabel;
   return copy.webTabLabel;
 };
 
@@ -114,6 +116,25 @@ const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
   //   );
   // }
 
+  if (platform === "android") {
+    fields.push(
+      {
+        type: "text",
+        label: copy.androidIconBackgroundColorLabel,
+        value: _applicationInfo.iconBackgroundColor,
+      },
+      {
+        type: "text",
+        label: copy.androidSplashBackgroundColorLabel,
+        value: _applicationInfo.splashBackgroundColor,
+      },
+      {
+        type: "slot",
+        slot: "android-previews",
+        label: copy.androidPreviewLabel,
+      },
+    );
+  }
   return fields;
 };
 
@@ -207,6 +228,11 @@ export const selectViewData = ({ state, i18n }) => {
           copy,
         )
       : [],
+    showAndroidPreviews: state.selectedPlatform === "android",
+    androidLauncherPreviewLabel: copy.androidLauncherPreviewLabel,
+    androidSplashPreviewLabel: copy.androidSplashPreviewLabel,
+    androidIconBackgroundStyle: `background-color: ${selectedPlatformInfo?.iconBackgroundColor ?? "#FFFFFF"};`,
+    androidSplashBackgroundStyle: `background-color: ${selectedPlatformInfo?.splashBackgroundColor ?? "#000000"};`,
     platformApplicationIconFileId: selectedPlatformInfo?.iconFileId,
     platformApplicationIdentifier:
       selectedPlatformInfo?.applicationIdentifier ?? "",
@@ -219,7 +245,8 @@ export const selectViewData = ({ state, i18n }) => {
     platformDialogKey: `${formMode}-${formPlatform ?? "none"}`,
     platformEditIconFileId: state.platformEditIconFileId,
     platformEditIconCropFile: state.platformEditIconCropFile,
-    platformEditIconOutputSize: PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+    platformEditIconOutputSize:
+      formPlatform === "android" ? 512 : PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
     showPlatformApplicationIcon: state.selectedPlatform !== "web",
@@ -249,6 +276,13 @@ export const setPlatformApplicationInfo = (
   target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
   if (platform !== "web") {
     target.iconFileId = applicationInfo?.iconFileId ?? undefined;
+  }
+
+  if (platform === "android") {
+    target.iconBackgroundColor =
+      applicationInfo.iconBackgroundColor ?? "#FFFFFF";
+    target.splashBackgroundColor =
+      applicationInfo.splashBackgroundColor ?? "#000000";
   }
 
   // TODO: Restore optional Windows release metadata in the UI projection.
@@ -311,6 +345,12 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
+  if (platform === "android") {
+    state.platformEditDefaultValues.iconBackgroundColor =
+      applicationInfo.iconBackgroundColor ?? "#FFFFFF";
+    state.platformEditDefaultValues.splashBackgroundColor =
+      applicationInfo.splashBackgroundColor ?? "#000000";
+  }
   // TODO: Restore optional Windows release metadata in dialog defaults.
   // state.platformEditDefaultValues.description = "";
   // state.platformEditDefaultValues.publisher = "";

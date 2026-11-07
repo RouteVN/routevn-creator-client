@@ -688,3 +688,72 @@ describe("projectExportService", () => {
     );
   });
 });
+
+it("reports Android export unavailable for adapters without the capability", async () => {
+  const service = createProjectExportService({ fileAdapter: {} });
+  expect(await service.getAndroidExportAvailability()).toEqual({
+    available: false,
+  });
+});
+
+it.each([
+  [1080, 1920, "portrait"],
+  [1920, 1080, "landscape"],
+])(
+  "derives Android orientation in the shared facade (%s × %s)",
+  async (width, height, orientation) => {
+    const fileAdapter = {
+      getAndroidExportAvailability: vi.fn(async () => ({ available: true })),
+      promptAndroidApkPath: vi.fn(),
+      createAndroidApkToPath: vi.fn(async () => ({
+        outputPath: "/exports/project.apk",
+      })),
+    };
+    const filePicker = {};
+    const getCurrentReference = () => ({
+      projectPath: "/projects/project-one",
+    });
+    const service = createProjectExportService({
+      fileAdapter,
+      filePicker,
+      getCurrentReference,
+    });
+    const projectData = { projectData: { screen: { width, height } } };
+    const metadata = {
+      applicationName: "Project One",
+      applicationId: "com.example.project_one",
+      versionName: "1.2.3",
+      versionCode: 42,
+      iconFileId: "icon-1",
+      iconBackgroundColor: "#FFFFFF",
+      splashBackgroundColor: "#000000",
+    };
+    expect(await service.getAndroidExportAvailability()).toEqual({
+      available: true,
+    });
+    await service.promptAndroidApkPath(
+      { defaultFileName: "project.apk" },
+      { title: "Save One" },
+    );
+    expect(fileAdapter.promptAndroidApkPath).toHaveBeenCalledWith({
+      defaultFileName: "project.apk",
+      options: { title: "Save One" },
+      filePicker,
+    });
+    await service.createAndroidApkToPath(
+      projectData,
+      [{ fileId: "image-1", mimeType: "image/png" }],
+      "/exports/project.apk",
+      metadata,
+    );
+    expect(fileAdapter.createAndroidApkToPath).toHaveBeenCalledWith({
+      projectData,
+      fileEntries: [{ id: "image-1", mimeType: "image/png" }],
+      outputPath: "/exports/project.apk",
+      ...metadata,
+      orientation,
+      options: {},
+      getCurrentReference,
+    });
+  },
+);

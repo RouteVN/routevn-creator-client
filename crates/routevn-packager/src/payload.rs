@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
@@ -286,6 +286,301 @@ fn write_chunked_encrypted_payload(
         output_path: output_path.to_path_buf(),
         footer,
     })
+}
+
+#[derive(Debug)]
+pub struct WriteStandaloneChunkedPayloadFromFileRequest<'a> {
+    pub input_path: &'a Path,
+    pub output_path: &'a Path,
+    pub key: PayloadKey,
+    pub nonce: PayloadNonce,
+    pub chunk_size: usize,
+}
+
+/// Streams `input_path` into a standalone chunked payload at `output_path`.
+///
+/// The output is byte-for-byte what `write_standalone_chunked_encrypted_payload`
+/// writes for the same plaintext, but only one segment is held in memory at a
+/// time, so packages larger than the available memory can be encrypted.
+/// `on_progress` receives the plaintext bytes processed and the total.
+pub fn write_standalone_chunked_encrypted_payload_from_file(
+    request: WriteStandaloneChunkedPayloadFromFileRequest<'_>,
+    mut on_progress: impl FnMut(u64, u64),
+) -> Result<AppendChunkedPayloadOutcome> {
+    let WriteStandaloneChunkedPayloadFromFileRequest {
+        input_path,
+        output_path,
+        key,
+        nonce,
+        chunk_size,
+    } = request;
+
+    if chunk_size == 0 {
+        return Err(invalid_payload(
+            output_path,
+            "chunk size must be greater than zero",
+        ));
+    }
+
+    let read_error = |source| PackagerError::ReadFile {
+        path: input_path.to_path_buf(),
+        source,
+    };
+    let write_error = |source| PackagerError::WriteFile {
+        path: output_path.to_path_buf(),
+        source,
+    };
+
+    let input = fs::File::open(input_path).map_err(read_error)?;
+    let input_len = input.metadata().map_err(read_error)?.len();
+    let mut reader = BufReader::with_capacity(chunk_size, input);
+
+    if let Some(parent) = output_path.parent() {
+        fs::create_dir_all(parent).map_err(|source| PackagerError::CreateDir {
+            path: parent.to_path_buf(),
+            source,
+        })?;
+    }
+    let output = fs::File::create(output_path).map_err(write_error)?;
+    let mut writer = BufWriter::with_capacity(chunk_size, output);
+
+    let mut buffer = vec![0u8; chunk_size];
+    let mut table_entries = Vec::new();
+    let mut plaintext_len = 0u64;
+    let mut encrypted_len = 0u64;
+
+    loop {
+        let filled = read_until_full(&mut reader, &mut buffer).map_err(read_error)?;
+        if filled == 0 {
+            break;
+        }
+
+        let segment_nonce = derive_segment_nonce(nonce, table_entries.len() as u64);
+        let encrypted_segment = encrypt_payload(&buffer[..filled], key, segment_nonce)?;
+        writer.write_all(&encrypted_segment).map_err(write_error)?;
+        table_entries.push(ChunkedPayloadTableEntry {
+            plaintext_len: filled as u64,
+            encrypted_len: encrypted_segment.len() as u64,
+        });
+        plaintext_len += filled as u64;
+        encrypted_len += encrypted_segment.len() as u64;
+        on_progress(plaintext_len, input_len);
+
+        if filled < chunk_size {
+            break;
+        }
+    }
+
+    if plaintext_len != input_len {
+        return Err(invalid_payload(
+            input_path,
+            "package changed while it was being encrypted",
+        ));
+    }
+
+    let table_bytes = serialize_chunk_table(&table_entries);
+    writer.write_all(&table_bytes).map_err(write_error)?;
+
+    let footer = EmbeddedChunkedPayloadFooter {
+        version: CHUNKED_FOOTER_VERSION,
+        encrypted_offset: 0,
+        encrypted_len,
+        table_offset: encrypted_len,
+        table_len: table_bytes.len() as u64,
+        plaintext_len,
+        chunk_size: chunk_size as u64,
+        segment_count: table_entries.len() as u64,
+        nonce,
+        key_envelope: wrap_payload_key(&[], key, nonce),
+    };
+    writer
+        .write_all(&serialize_chunked_footer(&footer))
+        .map_err(write_error)?;
+    writer
+        .into_inner()
+        .map_err(|error| write_error(error.into_error()))?
+        .sync_all()
+        .map_err(write_error)?;
+
+    Ok(AppendChunkedPayloadOutcome {
+        output_path: output_path.to_path_buf(),
+        footer,
+    })
+}
+
+fn read_until_full(reader: &mut impl Read, buffer: &mut [u8]) -> std::io::Result<usize> {
+    let mut filled = 0;
+    while filled < buffer.len() {
+        match reader.read(&mut buffer[filled..]) {
+            Ok(0) => break,
+            Ok(read) => filled += read,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(filled)
+}
+
+/// Random-access reader for a standalone chunked payload that occupies
+/// `[base_offset, base_offset + length)` of a file, such as an uncompressed
+/// asset inside an Android APK or a macOS `routevn-package.bin`.
+///
+/// The footer, chunk table, and unwrapped key are parsed once. The most
+/// recently decrypted segment is cached, because players read sequential
+/// ranges that usually fall in the same segment.
+#[derive(Debug)]
+pub struct StandaloneChunkedPayloadReader {
+    path: PathBuf,
+    file: fs::File,
+    base_offset: u64,
+    footer: EmbeddedChunkedPayloadFooter,
+    segments: Vec<ChunkedPayloadSegment>,
+    key: PayloadKey,
+    cached_segment: Option<(usize, Vec<u8>)>,
+}
+
+impl StandaloneChunkedPayloadReader {
+    pub fn open(path: &Path) -> Result<Self> {
+        let length = fs::metadata(path)
+            .map_err(|source| PackagerError::ReadFile {
+                path: path.to_path_buf(),
+                source,
+            })?
+            .len();
+        Self::open_range(path, 0, length)
+    }
+
+    pub fn open_range(path: &Path, base_offset: u64, length: u64) -> Result<Self> {
+        let read_error = |source| PackagerError::ReadFile {
+            path: path.to_path_buf(),
+            source,
+        };
+        let mut file = fs::File::open(path).map_err(read_error)?;
+        let file_len = file.metadata().map_err(read_error)?.len();
+        let range_end = base_offset
+            .checked_add(length)
+            .filter(|end| *end <= file_len)
+            .ok_or_else(|| invalid_payload(path, "payload range is outside the file"))?;
+
+        if length < CHUNKED_FOOTER_SIZE as u64 {
+            return Err(chunked_footer_too_small(path));
+        }
+
+        let footer = read_chunked_footer_ending_at(&mut file, path, range_end)?;
+        if footer.encrypted_offset != 0 {
+            return Err(invalid_payload(
+                path,
+                "standalone payload must start with its first segment",
+            ));
+        }
+        validate_chunked_footer_ranges(path, &footer, length)?;
+
+        let table_bytes = read_open_file_range(
+            &mut file,
+            path,
+            base_offset + footer.table_offset,
+            footer.table_len,
+        )?;
+        let segments = chunked_segments_from_table(path, &footer, &table_bytes)?;
+        let key = PayloadKey(xor_key_with_mask(
+            footer.key_envelope,
+            derive_key_mask(&[], footer.nonce),
+        ));
+
+        Ok(Self {
+            path: path.to_path_buf(),
+            file,
+            base_offset,
+            footer,
+            segments,
+            key,
+            cached_segment: None,
+        })
+    }
+
+    pub fn metadata(&self) -> EmbeddedPayloadMetadata {
+        EmbeddedPayloadMetadata {
+            plaintext_len: self.footer.plaintext_len,
+            chunk_size: self.footer.chunk_size,
+            segment_count: self.footer.segment_count,
+        }
+    }
+
+    pub fn plaintext_len(&self) -> u64 {
+        self.footer.plaintext_len
+    }
+
+    /// Copies plaintext starting at `position` into `buffer` and returns the
+    /// number of bytes copied. Returns 0 at or past the end of the payload.
+    pub fn read_at(&mut self, position: u64, buffer: &mut [u8]) -> Result<usize> {
+        let mut copied = 0usize;
+        let mut cursor = position;
+
+        while copied < buffer.len() && cursor < self.footer.plaintext_len {
+            let segment_index = self.segments.partition_point(|segment| {
+                segment.plaintext_offset + segment.plaintext_len <= cursor
+            });
+            let segment = self.segments[segment_index];
+            let plaintext = self.decrypted_segment(segment_index)?;
+            let segment_start = (cursor - segment.plaintext_offset) as usize;
+            let count = (plaintext.len() - segment_start).min(buffer.len() - copied);
+            buffer[copied..copied + count]
+                .copy_from_slice(&plaintext[segment_start..segment_start + count]);
+            copied += count;
+            cursor += count as u64;
+        }
+
+        Ok(copied)
+    }
+
+    fn decrypted_segment(&mut self, segment_index: usize) -> Result<&[u8]> {
+        let cached = matches!(&self.cached_segment, Some((index, _)) if *index == segment_index);
+        if !cached {
+            let segment = self.segments[segment_index];
+            let encrypted_segment = read_open_file_range(
+                &mut self.file,
+                &self.path,
+                self.base_offset + segment.encrypted_offset,
+                segment.encrypted_len,
+            )?;
+            let plaintext = decrypt_payload(
+                &encrypted_segment,
+                self.key,
+                derive_segment_nonce(self.footer.nonce, segment_index as u64),
+            )?;
+            if plaintext.len() as u64 != segment.plaintext_len {
+                return Err(invalid_payload(
+                    &self.path,
+                    "decrypted segment length does not match payload table",
+                ));
+            }
+            self.cached_segment = Some((segment_index, plaintext));
+        }
+
+        Ok(self
+            .cached_segment
+            .as_ref()
+            .map(|(_, plaintext)| plaintext.as_slice())
+            .unwrap_or_default())
+    }
+}
+
+fn read_open_file_range(
+    file: &mut fs::File,
+    path: &Path,
+    offset: u64,
+    length: u64,
+) -> Result<Vec<u8>> {
+    let read_error = |source| PackagerError::ReadFile {
+        path: path.to_path_buf(),
+        source,
+    };
+    let length = usize::try_from(length)
+        .map_err(|_| invalid_payload(path, "requested range does not fit this platform"))?;
+    file.seek(SeekFrom::Start(offset)).map_err(read_error)?;
+    let mut bytes = vec![0u8; length];
+    file.read_exact(&mut bytes).map_err(read_error)?;
+    Ok(bytes)
 }
 
 pub fn read_embedded_payload(exe_path: &Path, key: PayloadKey) -> Result<Vec<u8>> {
@@ -719,7 +1014,15 @@ fn read_chunked_segments(
     footer: &EmbeddedChunkedPayloadFooter,
 ) -> Result<Vec<ChunkedPayloadSegment>> {
     let table_bytes = read_file_range(path, footer.table_offset, footer.table_len)?;
-    let table_entries = parse_chunk_table(path, &table_bytes)?;
+    chunked_segments_from_table(path, footer, &table_bytes)
+}
+
+fn chunked_segments_from_table(
+    path: &Path,
+    footer: &EmbeddedChunkedPayloadFooter,
+    table_bytes: &[u8],
+) -> Result<Vec<ChunkedPayloadSegment>> {
+    let table_entries = parse_chunk_table(path, table_bytes)?;
     if table_entries.len() as u64 != footer.segment_count {
         return Err(invalid_payload(
             path,
@@ -966,12 +1269,147 @@ mod tests {
 
     use super::{
         AppendChunkedPayloadRequest, AppendPayloadRequest, PayloadKey, PayloadNonce,
+        StandaloneChunkedPayloadReader, WriteStandaloneChunkedPayloadFromFileRequest,
         WriteStandaloneChunkedPayloadRequest, append_chunked_encrypted_payload,
         append_encrypted_payload, generate_payload_key_material, parse_payload_key_hex,
         parse_payload_nonce_hex, read_embedded_payload, read_self_contained_embedded_payload,
         read_self_contained_embedded_payload_metadata, read_self_contained_embedded_payload_range,
         write_standalone_chunked_encrypted_payload,
+        write_standalone_chunked_encrypted_payload_from_file,
     };
+
+    fn patterned_bytes(length: usize) -> Vec<u8> {
+        (0..length)
+            .map(|index| (index.wrapping_mul(31) ^ (index >> 7)) as u8)
+            .collect()
+    }
+
+    #[test]
+    fn streamed_standalone_payload_matches_in_memory_writer() {
+        let temp = tempdir().unwrap();
+        let chunk_size = 64;
+        for length in [0, 1, 63, 64, 65, 224] {
+            let plaintext = patterned_bytes(length);
+            let input_path = temp.path().join(format!("package-{length}.bin"));
+            let memory_path = temp.path().join(format!("memory-{length}.bin"));
+            let streamed_path = temp.path().join(format!("streamed-{length}.bin"));
+            std::fs::write(&input_path, &plaintext).unwrap();
+
+            write_standalone_chunked_encrypted_payload(WriteStandaloneChunkedPayloadRequest {
+                output_path: &memory_path,
+                payload: &plaintext,
+                key: fixture_key(),
+                nonce: fixture_nonce(),
+                chunk_size,
+            })
+            .unwrap();
+            let mut progress = Vec::new();
+            write_standalone_chunked_encrypted_payload_from_file(
+                WriteStandaloneChunkedPayloadFromFileRequest {
+                    input_path: &input_path,
+                    output_path: &streamed_path,
+                    key: fixture_key(),
+                    nonce: fixture_nonce(),
+                    chunk_size,
+                },
+                |done, total| progress.push((done, total)),
+            )
+            .unwrap();
+
+            assert_eq!(
+                std::fs::read(&streamed_path).unwrap(),
+                std::fs::read(&memory_path).unwrap(),
+                "length {length}"
+            );
+            if length > 0 {
+                assert_eq!(progress.last(), Some(&(length as u64, length as u64)));
+            }
+            let mut reader = StandaloneChunkedPayloadReader::open(&streamed_path).unwrap();
+            let mut decrypted = vec![0u8; length];
+            assert_eq!(reader.read_at(0, &mut decrypted).unwrap(), length);
+            assert_eq!(decrypted, plaintext);
+        }
+    }
+
+    #[test]
+    fn standalone_reader_reads_payload_inside_a_larger_file() {
+        let temp = tempdir().unwrap();
+        let plaintext = patterned_bytes(1000);
+        let payload_path = temp.path().join("payload.bin");
+        write_standalone_chunked_encrypted_payload(WriteStandaloneChunkedPayloadRequest {
+            output_path: &payload_path,
+            payload: &plaintext,
+            key: fixture_key(),
+            nonce: fixture_nonce(),
+            chunk_size: 128,
+        })
+        .unwrap();
+        let payload_bytes = std::fs::read(&payload_path).unwrap();
+
+        let container_path = temp.path().join("container.apk");
+        let prefix = vec![0xAB; 333];
+        let suffix = vec![0xCD; 77];
+        let mut container = prefix.clone();
+        container.extend_from_slice(&payload_bytes);
+        container.extend_from_slice(&suffix);
+        std::fs::write(&container_path, &container).unwrap();
+
+        let mut reader = StandaloneChunkedPayloadReader::open_range(
+            &container_path,
+            prefix.len() as u64,
+            payload_bytes.len() as u64,
+        )
+        .unwrap();
+        assert_eq!(reader.plaintext_len(), plaintext.len() as u64);
+        assert_eq!(reader.metadata().segment_count, 8);
+
+        let mut whole = vec![0u8; plaintext.len() + 10];
+        assert_eq!(reader.read_at(0, &mut whole).unwrap(), plaintext.len());
+        assert_eq!(&whole[..plaintext.len()], plaintext.as_slice());
+
+        for (start, length) in [(0, 1), (127, 2), (128, 128), (500, 333), (999, 5)] {
+            let mut buffer = vec![0u8; length];
+            let copied = reader.read_at(start as u64, &mut buffer).unwrap();
+            let expected_end = (start + length).min(plaintext.len());
+            assert_eq!(copied, expected_end - start);
+            assert_eq!(&buffer[..copied], &plaintext[start..expected_end]);
+        }
+
+        let mut past_end = [0u8; 4];
+        assert_eq!(reader.read_at(1000, &mut past_end).unwrap(), 0);
+
+        let mut direct = StandaloneChunkedPayloadReader::open(&payload_path).unwrap();
+        let mut direct_bytes = vec![0u8; plaintext.len()];
+        assert_eq!(
+            direct.read_at(0, &mut direct_bytes).unwrap(),
+            plaintext.len()
+        );
+        assert_eq!(direct_bytes, plaintext);
+    }
+
+    #[test]
+    fn standalone_reader_rejects_tampered_segments() {
+        let temp = tempdir().unwrap();
+        let plaintext = patterned_bytes(300);
+        let payload_path = temp.path().join("payload.bin");
+        write_standalone_chunked_encrypted_payload(WriteStandaloneChunkedPayloadRequest {
+            output_path: &payload_path,
+            payload: &plaintext,
+            key: fixture_key(),
+            nonce: fixture_nonce(),
+            chunk_size: 100,
+        })
+        .unwrap();
+        let mut bytes = std::fs::read(&payload_path).unwrap();
+        bytes[150] ^= 0x01;
+        std::fs::write(&payload_path, &bytes).unwrap();
+
+        let mut reader = StandaloneChunkedPayloadReader::open(&payload_path).unwrap();
+        let mut first = vec![0u8; 50];
+        assert_eq!(reader.read_at(0, &mut first).unwrap(), 50);
+        let mut second = vec![0u8; 50];
+        assert!(reader.read_at(150, &mut second).is_err());
+    }
 
     fn fixture_key() -> PayloadKey {
         PayloadKey([0x42; 32])

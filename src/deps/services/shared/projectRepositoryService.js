@@ -1,3 +1,4 @@
+import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
 import {
   assertSupportedProjectState,
   createProjectRepository,
@@ -65,6 +66,7 @@ export const createProjectRepositoryService = ({
     web: "platformDetails.web",
     windows: "platformDetails.windows",
     macos: "platformDetails.macos",
+    android: "platformDetails.android",
   };
   const LEGACY_PLATFORM_DETAILS_KEYS = {
     web: "releaseInfo.web",
@@ -194,6 +196,16 @@ export const createProjectRepositoryService = ({
     // project-owned icon.
     if (platform !== "web") {
       platformDetails.iconFileId = sourceInfo?.iconFileId ?? null;
+    }
+
+    if (platform === "android") {
+      platformDetails.iconFileId = sourceInfo?.iconFileId ?? undefined;
+      platformDetails.iconBackgroundColor = normalizeAndroidBackgroundColor(
+        sourceInfo?.iconBackgroundColor ?? "#FFFFFF",
+      );
+      platformDetails.splashBackgroundColor = normalizeAndroidBackgroundColor(
+        sourceInfo?.splashBackgroundColor ?? "#000000",
+      );
     }
 
     if (platform === "windows") {
@@ -825,7 +837,10 @@ export const createProjectRepositoryService = ({
     let storedPlatformDetails = await store.app.get(key);
     let shouldPersist = false;
 
-    if (!hasStoredPlatformDetails(storedPlatformDetails)) {
+    if (
+      !hasStoredPlatformDetails(storedPlatformDetails) &&
+      LEGACY_PLATFORM_DETAILS_KEYS[platform]
+    ) {
       storedPlatformDetails = await store.app.get(
         LEGACY_PLATFORM_DETAILS_KEYS[platform],
       );

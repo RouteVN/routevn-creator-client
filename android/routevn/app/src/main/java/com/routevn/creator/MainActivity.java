@@ -212,6 +212,11 @@ public class MainActivity extends Activity {
     // bridge thread so the rest of the app's bridge calls are not held up.
     private final ExecutorService importExecutor =
         Executors.newSingleThreadExecutor();
+    // APK export packages and encrypts the whole game; it gets its own thread
+    // for the same reason.
+    private final ExecutorService apkExportExecutor =
+        Executors.newSingleThreadExecutor();
+    private final Object androidPlayerTemplateLock = new Object();
     private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
     private final Map<String, ProjectFileWriteSession> projectFileWriteSessions =
@@ -917,6 +922,7 @@ public class MainActivity extends Activity {
         projectBackup.close();
         backupExecutor.shutdownNow();
         importExecutor.shutdownNow();
+        apkExportExecutor.shutdownNow();
         // Cancellation is immediate; cleanup must wait behind storage work on
         // its own thread, not hold Activity destruction on media copies/hashes.
         bridgeExecutor.execute(() -> {
@@ -1280,6 +1286,18 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            if ("exportAndroidApkToUri".equals(method)) {
+                String exportRequestId = requestId;
+                JSONObject exportPayload = payload;
+                apkExportExecutor.execute(() -> {
+                    String result;
+                    try { result = bridgeSuccess(exportAndroidApkToUri(exportPayload)); }
+                    catch (Throwable error) { result = bridgeFailure(error); }
+                    reply.accept(attachBridgeResponseMetadata(exportRequestId, result));
+                });
+                return;
+            }
+
             switch (method) {
                 case "createTempFolder":
                 case "removeTempFolder":
@@ -1402,6 +1420,8 @@ public class MainActivity extends Activity {
                 return bridge.discardPendingSaveDocument(payloadJson);
             case "createDistributionZipStreamedToUri":
                 return bridge.createDistributionZipStreamedToUri(payloadJson);
+            case "getAndroidExportAvailability":
+                return bridgeSuccess(getAndroidExportAvailability());
             case "openFilePicker":
                 return bridge.openFilePicker(payloadJson);
             case "openSaveFilePicker":
@@ -3141,6 +3161,288 @@ public class MainActivity extends Activity {
             deleteTemporaryFile(outputFile);
             deleteTemporaryFile(partFile);
         }
+    }
+
+    private static final String ANDROID_PLAYER_TEMPLATE_ASSET_DIR =
+        "player-templates/android";
+    private static final String ANDROID_PLAYER_TEMPLATE_APK =
+        "RouteVNPlayerTemplate.apk";
+    private static final String ANDROID_PLAYER_TEMPLATE_DESCRIPTOR =
+        "RouteVNPlayerTemplate.json";
+
+    /**
+     * The exporter reads the player template by path, so the template bundled
+     * in this app's assets is copied out once per template version. Returns
+     * null when this build has no template.
+     */
+    private File[] ensureAndroidPlayerTemplate() throws Exception {
+        synchronized (androidPlayerTemplateLock) {
+            byte[] descriptor;
+            try (
+                InputStream input = getAssets().open(
+                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" +
+                    ANDROID_PLAYER_TEMPLATE_DESCRIPTOR
+                );
+                ByteArrayOutputStream output = new ByteArrayOutputStream()
+            ) {
+                writeOutputStream(output, input);
+                descriptor = output.toByteArray();
+            } catch (java.io.FileNotFoundException error) {
+                return null;
+            }
+
+            File directory = new File(
+                getNoBackupFilesDir(),
+                ANDROID_PLAYER_TEMPLATE_ASSET_DIR
+            );
+            File templateFile = new File(directory, ANDROID_PLAYER_TEMPLATE_APK);
+            File descriptorFile = new File(
+                directory,
+                ANDROID_PLAYER_TEMPLATE_DESCRIPTOR
+            );
+            if (
+                templateFile.isFile() &&
+                descriptorFile.isFile() &&
+                java.util.Arrays.equals(readBytes(descriptorFile), descriptor)
+            ) {
+                return new File[] { templateFile, descriptorFile };
+            }
+
+            if (!directory.isDirectory() && !directory.mkdirs()) {
+                throw new IllegalStateException(
+                    "Failed to create the Android player template folder."
+                );
+            }
+            // The descriptor is written last, so an interrupted copy is
+            // repeated on the next call.
+            deleteTemporaryFile(descriptorFile);
+            File partFile = new File(
+                directory,
+                ANDROID_PLAYER_TEMPLATE_APK + ".part"
+            );
+            try (
+                InputStream input = getAssets().open(
+                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" +
+                    ANDROID_PLAYER_TEMPLATE_APK
+                );
+                FileOutputStream output = new FileOutputStream(partFile)
+            ) {
+                writeOutputStream(output, input);
+                output.getFD().sync();
+            }
+            deleteTemporaryFile(templateFile);
+            if (!partFile.renameTo(templateFile)) {
+                deleteTemporaryFile(partFile);
+                throw new IllegalStateException(
+                    "Failed to install the Android player template."
+                );
+            }
+            try (FileOutputStream output = new FileOutputStream(descriptorFile)) {
+                output.write(descriptor);
+                output.getFD().sync();
+            }
+            return new File[] { templateFile, descriptorFile };
+        }
+    }
+
+    private JSONObject getAndroidExportAvailability() throws Exception {
+        File[] template;
+        try {
+            template = ensureAndroidPlayerTemplate();
+        } catch (Exception error) {
+            Log.w(TAG, "Android player template is unavailable", error);
+            JSONObject result = new JSONObject();
+            result.put("available", false);
+            result.put(
+                "reason",
+                "The Android player template could not be prepared."
+            );
+            return result;
+        }
+        if (template == null) {
+            JSONObject result = new JSONObject();
+            result.put("available", false);
+            return result;
+        }
+        return NativeExporter.androidExportCapabilities(
+            template[0].getAbsolutePath(),
+            template[1].getAbsolutePath()
+        );
+    }
+
+    private JSONObject exportAndroidApkToUri(JSONObject payload) throws Exception {
+        String safeProjectId = safePathSegment(payload.getString("projectId"));
+        String safeExportId = safePathSegment(payload.getString("exportId"));
+        String destinationUriString = payload.getString("uri").trim();
+        if (destinationUriString.isEmpty()) {
+            throw new IllegalArgumentException("Save location is required.");
+        }
+        Uri destinationUri = Uri.parse(destinationUriString);
+        boolean cleanupOnFailure = claimPendingSaveDocument(destinationUri);
+        File workDir = null;
+
+        try {
+            File[] template = ensureAndroidPlayerTemplate();
+            if (template == null) {
+                throw new IllegalStateException(
+                    "This build does not include the Android player template."
+                );
+            }
+
+            File exportsRoot = new File(getCacheDir(), "distribution-exports");
+            workDir = new File(exportsRoot, "apk-" + safeExportId);
+            deleteRecursively(workDir);
+            if (!workDir.mkdirs()) {
+                throw new IllegalStateException(
+                    "Failed to create export cache directory."
+                );
+            }
+            File outputFile = new File(workDir, "export.apk");
+
+            String safeIconFileId = safePathSegment(payload.getString("iconFileId"));
+            File iconFile = resolveSafeRelativeFile(
+                new File(getProjectRoot(safeProjectId), "files"),
+                safeIconFileId
+            );
+            if (!iconFile.isFile()) {
+                throw new IllegalStateException(
+                    "Required project file is missing: " + safeIconFileId
+                );
+            }
+
+            JSONObject request = new JSONObject();
+            request.put("templatePath", template[0].getAbsolutePath());
+            request.put("descriptorPath", template[1].getAbsolutePath());
+            request.put("outputPath", outputFile.getAbsolutePath());
+            request.put(
+                "assets",
+                buildDistributionZipAssets(
+                    safeProjectId,
+                    payload.optJSONArray("fileEntries")
+                )
+            );
+            request.put("instructionsJson", payload.getString("instructionsJson"));
+            request.put("applicationId", payload.getString("applicationId"));
+            request.put("applicationName", payload.getString("applicationName"));
+            request.put("versionName", payload.getString("versionName"));
+            request.put("versionCode", payload.getLong("versionCode"));
+            request.put("orientation", payload.getString("orientation"));
+            request.put("iconPath", iconFile.getAbsolutePath());
+            request.put(
+                "iconBackgroundColor",
+                payload.getString("iconBackgroundColor")
+            );
+            request.put(
+                "splashBackgroundColor",
+                payload.getString("splashBackgroundColor")
+            );
+            request.put("workDir", workDir.getAbsolutePath());
+
+            long startedNanos = System.nanoTime();
+            JSONObject result = NativeExporter.exportAndroidApk(
+                request,
+                apkExportProgressListener(safeExportId, startedNanos)
+            );
+            sendApkExportProgress(
+                safeExportId,
+                "saveApk",
+                0,
+                0,
+                (System.nanoTime() - startedNanos) / 1_000_000L
+            );
+            copyFileToUriAndVerify(outputFile, destinationUri);
+
+            JSONObject response = new JSONObject();
+            response.put("uri", destinationUri.toString());
+            response.put("apkBytes", result.optLong("apkBytes"));
+            response.put("packageBinBytes", result.optLong("packageBinBytes"));
+            response.put(
+                "encryptedPayloadBytes",
+                result.optLong("encryptedPayloadBytes")
+            );
+            response.put("stats", result.optJSONObject("stats"));
+            return response;
+        } catch (Throwable error) {
+            throw createPublicationFailure(
+                "Failed to save Android APK.",
+                destinationUri,
+                cleanupOnFailure,
+                error
+            );
+        } finally {
+            if (workDir != null) {
+                try {
+                    deleteRecursively(workDir);
+                } catch (Exception error) {
+                    Log.w(TAG, "Failed to remove APK export files", error);
+                }
+            }
+        }
+    }
+
+    /**
+     * Forwards exporter progress to window.__routeVNApkExportProgress. Phase
+     * changes are always delivered, other updates at most every 100 ms.
+     */
+    private NativeExporter.ProgressListener apkExportProgressListener(
+        String exportId,
+        long startedNanos
+    ) {
+        Object lock = new Object();
+        String[] lastPhase = { "" };
+        long[] lastEmitNanos = { 0 };
+        return (phase, current, total) -> {
+            long now = System.nanoTime();
+            synchronized (lock) {
+                boolean phaseChanged = !phase.equals(lastPhase[0]);
+                boolean complete = total > 0 && current == total;
+                boolean intervalElapsed =
+                    now - lastEmitNanos[0] >=
+                    TransferProgress.MIN_INTERVAL_MS * 1_000_000L;
+                if (!phaseChanged && !complete && !intervalElapsed) {
+                    return;
+                }
+                lastPhase[0] = phase;
+                lastEmitNanos[0] = now;
+            }
+            sendApkExportProgress(
+                exportId,
+                phase,
+                current,
+                total,
+                (now - startedNanos) / 1_000_000L
+            );
+        };
+    }
+
+    private void sendApkExportProgress(
+        String exportId,
+        String phase,
+        long current,
+        long total,
+        long elapsedMs
+    ) {
+        JSONObject event = new JSONObject();
+        try {
+            event.put("exportId", exportId);
+            event.put("phase", phase);
+            event.put("current", current);
+            event.put("total", total);
+            event.put("elapsedMs", elapsedMs);
+        } catch (JSONException error) {
+            return;
+        }
+        mainHandler.post(() -> {
+            if (webView == null) {
+                return;
+            }
+            webView.evaluateJavascript(
+                "(function(event){if(window.__routeVNApkExportProgress){window.__routeVNApkExportProgress(event);}})(" +
+                event.toString() +
+                ");",
+                null
+            );
+        });
     }
 
     private JSONArray buildDistributionZipAssets(

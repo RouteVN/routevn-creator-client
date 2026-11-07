@@ -66,6 +66,7 @@ Bundle implementation points:
 10. `12-windows-player-runtime-key-value-contract.md`
 11. `13-macos-player-export.md`
 12. `14-project-content-patches.md`
+13. `15-android-player-export.md`
 
 ## Implementation Mapping
 

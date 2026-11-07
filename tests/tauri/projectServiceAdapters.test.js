@@ -1161,4 +1161,151 @@ describe("tauri project service adapters preflight reads", () => {
       }),
     );
   });
+
+  it.each(["template", "descriptor"])(
+    "hides Android export when the %s resource is missing",
+    async (missing) => {
+      mocked.resolveResource.mockImplementation(
+        async (path) => `/resources/${path}`,
+      );
+      mocked.exists.mockImplementation(async (path) =>
+        missing === "template"
+          ? !path.endsWith(".apk")
+          : !path.endsWith(".json"),
+      );
+      const { fileAdapter } = createTauriProjectServiceAdapters({
+        collabLog: () => {},
+        creatorVersion: 2,
+      });
+      expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+        available: false,
+      });
+      expect(mocked.invoke).not.toHaveBeenCalled();
+    },
+  );
+
+  it("checks Android capabilities with both resource paths and preserves native failure reasons", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    mocked.invoke.mockResolvedValue({
+      available: false,
+      reason: "invalid descriptor",
+    });
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: false,
+      reason: "invalid descriptor",
+    });
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "get_android_export_host_capabilities",
+      {
+        templatePath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.apk",
+        descriptorPath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.json",
+      },
+    );
+    mocked.invoke.mockRejectedValue(new Error("command unavailable"));
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: false,
+      reason: "command unavailable",
+    });
+  });
+
+  it("prompts for an APK with localized dialog copy", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const filePicker = {
+      saveFilePicker: vi.fn(
+        async () => "/exports/Project One-1.2.3-unsigned.apk",
+      ),
+    };
+    await fileAdapter.promptAndroidApkPath({
+      defaultFileName: "Project One-1.2.3-unsigned.apk",
+      filePicker,
+      options: { title: "Save One", fileTypeName: "Type One" },
+    });
+    expect(filePicker.saveFilePicker).toHaveBeenCalledWith({
+      title: "Save One",
+      defaultPath: "Project One-1.2.3-unsigned.apk",
+      filters: [{ name: "Type One", extensions: ["apk"] }],
+    });
+  });
+
+  it("passes the exact Android request using disk paths and a progress channel", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const result = {
+      outputPath: "/exports/project.apk",
+      apkBytes: 10,
+      packageBinBytes: 5,
+      encryptedPayloadBytes: 7,
+      stats: {},
+    };
+    mocked.invoke.mockResolvedValue(result);
+    const onProgress = vi.fn();
+    const projectData = {
+      projectData: { screen: { width: 1080, height: 1920 } },
+    };
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    expect(
+      await fileAdapter.createAndroidApkToPath({
+        projectData,
+        fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
+        outputPath: "/exports/project.apk",
+        applicationName: "Project One",
+        applicationId: "com.example.project_one",
+        versionName: "1.2.3",
+        versionCode: 42,
+        orientation: "portrait",
+        iconFileId: "icon-1",
+        iconBackgroundColor: "#aabbcc",
+        splashBackgroundColor: "#123456",
+        options: { onProgress },
+        getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+      }),
+    ).toBe(result);
+    expect(mocked.invoke).toHaveBeenCalledWith("export_android_apk", {
+      request: {
+        templatePath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.apk",
+        descriptorPath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.json",
+        outputPath: "/exports/project.apk",
+        assets: [
+          {
+            id: "image-1",
+            path: "/projects/project-one/files/image-1",
+            mime: "image/png",
+          },
+        ],
+        instructionsJson: JSON.stringify(projectData),
+        applicationId: "com.example.project_one",
+        applicationName: "Project One",
+        versionName: "1.2.3",
+        versionCode: 42,
+        orientation: "portrait",
+        iconPath: "/projects/project-one/files/icon-1",
+        iconBackgroundColor: "#AABBCC",
+        splashBackgroundColor: "#123456",
+      },
+      onProgress: mocked.channels[0],
+    });
+    const progress = { phase: "writeApk", current: 1, total: 2, elapsedMs: 10 };
+    mocked.channels[0].messageHandler(progress);
+    expect(onProgress).toHaveBeenCalledWith(progress);
+    expect(mocked.readFile).not.toHaveBeenCalled();
+  });
 });

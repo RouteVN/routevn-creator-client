@@ -1,3 +1,5 @@
+import { getAndroidExportOrientation } from "../../../internal/androidExport.js";
+
 /**
  * Bundle format v4:
  * [version(1)] [manifestLength(4)] [reserved(11)] [manifest(JSON)] [unique chunks...]
@@ -1440,6 +1442,39 @@ export const createProjectExportService = ({
       getCurrentReference,
     });
   };
+
+  service.getAndroidExportAvailability = async (options = {}) => {
+    if (typeof fileAdapter.getAndroidExportAvailability !== "function") {
+      return { available: false };
+    }
+    return fileAdapter.getAndroidExportAvailability({ options });
+  };
+
+  service.promptAndroidApkPath = async ({ defaultFileName }, options = {}) =>
+    fileAdapter.promptAndroidApkPath({ defaultFileName, options, filePicker });
+
+  service.createAndroidApkToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.createAndroidApkToPath({
+      projectData,
+      fileEntries: normalizeExportFileEntries(fileEntries),
+      outputPath,
+      applicationName: metadata.applicationName,
+      applicationId: metadata.applicationId,
+      versionName: metadata.versionName,
+      versionCode: metadata.versionCode,
+      orientation: getAndroidExportOrientation(projectData.projectData.screen),
+      iconFileId: metadata.iconFileId,
+      iconBackgroundColor: metadata.iconBackgroundColor,
+      splashBackgroundColor: metadata.splashBackgroundColor,
+      options,
+      getCurrentReference,
+    });
 
   return service;
 };

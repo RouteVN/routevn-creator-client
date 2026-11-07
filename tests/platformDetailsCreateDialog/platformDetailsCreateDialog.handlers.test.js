@@ -85,3 +85,27 @@ describe("platformDetailsCreateDialog handlers", () => {
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
 });
+
+it("creates Android details using normalized colors", async () => {
+  const deps = createDeps({ platform: "android", iconFileId: "icon-1" });
+  await handleFormAction(
+    deps,
+    createSubmitPayload({
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+      iconBackgroundColor: "#aabbcc",
+      splashBackgroundColor: "#112233",
+    }),
+  );
+  expect(deps.projectService.createCurrentPlatformDetails).toHaveBeenCalledWith(
+    "android",
+    {
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+      iconFileId: "icon-1",
+      iconBackgroundColor: "#AABBCC",
+      splashBackgroundColor: "#112233",
+    },
+  );
+  expect(deps.dispatchEvent.mock.calls[0][0].detail.platform).toBe("android");
+});

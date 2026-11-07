@@ -8,6 +8,7 @@ import {
   setAppWindowMetrics,
   setSelectedItemId,
   setPlatform,
+  setAndroidExportAvailability,
   setMacosExportAvailability,
   setUiConfig,
   setVisualTestMode,
@@ -380,4 +381,62 @@ describe("versions store export actions", () => {
 
     expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
   });
+});
+
+it.each(["web", "tauri", "android", "ios"])(
+  "gates Android export on host capability for %s",
+  (platform) => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform });
+    setVisualTestMode({ state }, { enabled: true });
+    expect(selectViewData({ state }).canExportAndroidApk).toBe(false);
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: true } },
+    );
+    expect(selectViewData({ state }).canExportAndroidApk).toBe(
+      platform !== "web",
+    );
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: false } },
+    );
+    expect(selectViewData({ state }).canExportAndroidApk).toBe(false);
+  },
+);
+
+it("shows Android release details, native version fields, and the unsigned signing notice", () => {
+  const state = createInitialState();
+  openExportConfirmation(
+    { state },
+    {
+      exportType: "android-apk",
+      platform: "android",
+      versionId: "version-1",
+      versionName: "Release One",
+      applicationInfo: {
+        applicationName: "Project One",
+        applicationIdentifier: "com.example.project_one",
+        iconFileId: "icon-1",
+      },
+    },
+  );
+  const view = selectViewData({ state, i18n: EN_I18N });
+  expect(view.showAndroidExportForm).toBe(true);
+  expect(view.showMacosExportForm).toBe(false);
+  expect(view.exportConfirmationFields.map((field) => field.value)).toEqual([
+    "Release One",
+    "Project One",
+    undefined,
+    "com.example.project_one",
+  ]);
+  expect(
+    view.androidExportForm.fields[0].fields.map((field) => field.name),
+  ).toEqual(["version", "buildNumber"]);
+  expect(view.androidExportForm.actions.buttons[0].label).toBe(
+    EN_I18N.versionsPage.exportAndroidApkButton,
+  );
+  expect(view.androidUnsignedApkNotice).toBe(
+    EN_I18N.versionsPage.androidUnsignedApkNotice,
+  );
 });

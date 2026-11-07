@@ -76,12 +76,24 @@ template:
                                       - rvn-file-image#platformApplicationIcon slot=platform-application-icon fileId=${platformApplicationIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
                                     $else:
                                       - rtgl-image#platformApplicationIcon slot=platform-application-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+                              - $if showAndroidPreviews:
+                                  - rtgl-view slot=android-previews d=v g=md w=f:
+                                      - rtgl-text s=sm: ${androidLauncherPreviewLabel}
+                                      - rtgl-view d=h g=md wrap:
+                                          - 'div style="width: 96px; height: 96px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; ${androidIconBackgroundStyle}"':
+                                              - rvn-file-image fileId=${platformApplicationIconFileId} w=96 h=96: null
+                                          - 'div style="width: 96px; height: 96px; border-radius: 24px; overflow: hidden; display: flex; align-items: center; justify-content: center; ${androidIconBackgroundStyle}"':
+                                              - rvn-file-image fileId=${platformApplicationIconFileId} w=96 h=96: null
+                                      - rtgl-text s=sm: ${androidSplashPreviewLabel}
+                                      - 'div style="width: 200px; height: 160px; display: flex; align-items: center; justify-content: center; border-radius: 8px; ${androidSplashBackgroundStyle}"':
+                                          - 'div style="width: 96px; height: 96px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;"':
+                                              - rvn-file-image fileId=${platformApplicationIconFileId} w=67 h=67: null
                               - rtgl-view#platformApplicationIdentifier slot=platform-application-identifier cur=pointer:
                                   - rtgl-text: ${platformApplicationIdentifier}
                     $else:
                       - rtgl-view w=f h=f av=c ah=c ph=md:
                           - rtgl-text c=mu-fg ta=c: ${emptyPlatformsMessage}
-                  - rtgl-view w=f h=md: null
+                  - 'rtgl-view w=f h=240 aria-hidden=true style="flex: 0 0 240px;"': null
   - rtgl-dropdown-menu#addPlatformMenu ?open=${addPlatformMenu.isOpen} x=${addPlatformMenu.x} y=${addPlatformMenu.y} :items=${addPlatformMenu.items}: null
   - rtgl-dialog#platformEditDialog ?open=${isPlatformEditDialogOpen} s=md:
       - $if isPlatformEditDialogOpen:

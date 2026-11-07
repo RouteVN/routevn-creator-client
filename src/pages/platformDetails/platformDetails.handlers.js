@@ -19,16 +19,22 @@ export const handleAfterMount = async (deps) => {
   const copy = selectPlatformDetailsPageCopy(i18n);
 
   try {
-    const [webPlatformDetails, windowsPlatformDetails, macosPlatformDetails] =
-      await Promise.all([
-        projectService.getCurrentPlatformDetails("web"),
-        projectService.getCurrentPlatformDetails("windows"),
-        projectService.getCurrentPlatformDetails("macos"),
-      ]);
+    const [
+      webPlatformDetails,
+      windowsPlatformDetails,
+      macosPlatformDetails,
+      androidPlatformDetails,
+    ] = await Promise.all([
+      projectService.getCurrentPlatformDetails("web"),
+      projectService.getCurrentPlatformDetails("windows"),
+      projectService.getCurrentPlatformDetails("macos"),
+      projectService.getCurrentPlatformDetails("android"),
+    ]);
     const platformDetails = [
       ["web", webPlatformDetails],
       ["windows", windowsPlatformDetails],
       ["macos", macosPlatformDetails],
+      ["android", androidPlatformDetails],
     ];
     for (const [platform, applicationInfo] of platformDetails) {
       if (applicationInfo) {

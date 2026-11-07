@@ -1,0 +1,23 @@
+[package]
+name = "routevn-player-jni"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+description = "JNI reader for the encrypted game package inside exported Android players"
+
+[lib]
+name = "routevn_player"
+crate-type = ["cdylib"]
+
+[dependencies]
+jni = "0.21"
+routevn-packager = { path = "../routevn-packager" }
+
+[dev-dependencies]
+tempfile = "3.23.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = "symbols"

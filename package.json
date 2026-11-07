@@ -57,7 +57,7 @@
   "scripts": {
     "test:updates": "vitest run tests/updates",
     "test:error-reporting": "vitest run tests/errorReporting",
-    "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js",
+    "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js && vite build --config scripts/vite.player-runtime-host-android.config.js",
     "build:web": "./scripts/build.sh web",
     "build:icons": "node --input-type=module -e \"import { buildSvg } from '@rettangoli/ui/cli'; buildSvg({ dir: 'svg', outfile: 'static/public/rtgl-icons.js' });\"",
     "build:tauri": "./scripts/build.sh tauri",
@@ -71,6 +71,7 @@
     "watch:ios": "./scripts/watch-ios.sh",
     "android:install": "bun run build:android && cd android/routevn && ./gradlew installDebug",
     "android:bundle": "bun run build:android && cd android/routevn && ./gradlew bundleRelease -ProutevnDistribution=google-play",
+    "ios:rust": "./scripts/build-ios-rust.sh",
     "ios:build": "./scripts/ios.sh build",
     "ios:run": "./scripts/ios.sh run",
     "ios:install": "./scripts/ios.sh install",
@@ -120,7 +121,9 @@
     "player-template:build:win": "bun run build:bundle && node scripts/build-windows-player-template.js",
     "player-template:build:win:docker": "./scripts/build-windows-player-template-docker.sh",
     "player-template:prepare:mac": "bun run build:bundle && node scripts/build-macos-player-template.js --prepare-only",
-    "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js"
+    "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js",
+    "player-template:prepare:android": "bun run build:bundle && node scripts/build-android-player-template.js --prepare-only",
+    "player-template:build:android": "bun run build:bundle && node scripts/build-android-player-template.js"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.1",

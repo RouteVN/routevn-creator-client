@@ -6,8 +6,11 @@ import {
 import {
   base64ToUint8Array,
   callAndroidBridge,
+  NO_BRIDGE_TIMEOUT,
   uint8ArrayToBase64,
 } from "../../clients/android/bridge.js";
+import { createApkExportProgressClient } from "../../clients/apkExportProgress.js";
+import { createMobileAndroidApkExport } from "../shared/mobileAndroidApkExport.js";
 import { assertSafeAndroidStorageSegment } from "../../clients/android/storagePaths.js";
 import { getAndroidProjectFileUrl } from "./projectFileUrls.js";
 import {
@@ -543,6 +546,18 @@ const createDistributionZipBytes = async ({
   return zipBytes;
 };
 
+const androidApkExport = createMobileAndroidApkExport({
+  callBridge: (method, payload) =>
+    callAndroidBridge(method, payload, { timeoutMs: NO_BRIDGE_TIMEOUT }),
+  progressClient: createApkExportProgressClient(),
+  resolveProjectId: (reference) =>
+    assertSafeAndroidStorageSegment(
+      reference?.repositoryProjectId || reference?.projectId,
+      { label: "Android project id" },
+    ),
+  assertSafeFileId: assertSafeProjectFileId,
+});
+
 const createNativeDistributionZipStreamedToPath = async ({
   projectData,
   fileEntries,
@@ -857,6 +872,8 @@ export const createAndroidProjectServiceAdapters = ({
         mimeType: "application/zip",
       });
     },
+
+    ...androidApkExport,
 
     promptDistributionZipPath: async ({
       zipName,
