@@ -435,4 +435,50 @@ describe("particles handlers", () => {
     expect(deps.graphicsService.loadAssets).toHaveBeenCalledTimes(2);
     expect(deps.graphicsService.render).not.toHaveBeenCalled();
   });
+
+  it("keeps the page usable and says so when the detail preview cannot draw the saved particle", async () => {
+    const { deps } = await createPage();
+    deps.refs.detailCanvas = { isConnected: true };
+    deps.projectService.getFileContent = vi.fn(async (fileId) => ({
+      url: `blob:${fileId}`,
+      type: "image/png",
+    }));
+    const invalidData = new Error("Input Error: invalid particle data");
+    deps.graphicsService = {
+      init: vi.fn(async () => {}),
+      loadAssets: vi.fn(async () => {}),
+      render: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const select = () =>
+      handleParticleItemClick(deps, {
+        _event: { detail: { itemId: "particle-1" } },
+      });
+
+    try {
+      // The renderer can refuse the data at once or after it starts.
+      deps.graphicsService.render.mockImplementationOnce(() => {
+        throw invalidData;
+      });
+      await expect(select()).resolves.toBeUndefined();
+      deps.store.setSelectedItemId({ itemId: undefined });
+      deps.graphicsService.render.mockImplementationOnce(async () => {
+        throw invalidData;
+      });
+      await expect(select()).resolves.toBeUndefined();
+      expect(consoleError.mock.calls).toEqual([
+        ["[particles] Failed to draw the detail preview", invalidData],
+        ["[particles] Failed to draw the detail preview", invalidData],
+      ]);
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect(deps.appService.showToast.mock.calls).toEqual([
+      [{ message: "Failed to draw the particle preview." }],
+      [{ message: "Failed to draw the particle preview." }],
+    ]);
+  });
 });
