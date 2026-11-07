@@ -569,6 +569,7 @@ webServerPage:
   actionsLabel: "Дії"
   addButton: "Додати"
   copyUrlButton: "Копіювати URL-адресу"
+  openUrlButton: "Відкрити URL-адресу"
   desktopOnlyAlert: "Сторінка «Вебсервер» доступна лише в застосунку для комп’ютера."
   desktopOnlyDescription: "Цей інструмент випуску працює лише в застосунку для комп’ютера (Tauri), бо запускає локальний сервер."
   desktopOnlyTitle: "Лише в застосунку для комп’ютера"

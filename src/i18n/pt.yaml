@@ -569,6 +569,7 @@ webServerPage:
   actionsLabel: "Ações"
   addButton: "Adicionar"
   copyUrlButton: "Copiar URL"
+  openUrlButton: "Abrir URL"
   desktopOnlyAlert: "A página do servidor web só está disponível no RouteVN Creator para computador."
   desktopOnlyDescription: "Esta ferramenta de publicação precisa do RouteVN Creator para computador (Tauri), porque inicia um servidor local."
   desktopOnlyTitle: "Só para computador"

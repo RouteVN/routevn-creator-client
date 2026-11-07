@@ -569,6 +569,7 @@ webServerPage:
   actionsLabel: "Acciones"
   addButton: "Añadir"
   copyUrlButton: "Copiar URL"
+  openUrlButton: "Abrir URL"
   desktopOnlyAlert: "La pantalla del servidor web solo está disponible en la aplicación de escritorio."
   desktopOnlyDescription: "Esta herramienta de publicación necesita la aplicación de escritorio Tauri porque inicia un servidor local."
   desktopOnlyTitle: "Solo para escritorio"

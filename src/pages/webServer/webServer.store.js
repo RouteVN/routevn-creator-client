@@ -130,6 +130,7 @@ export const selectViewData = ({ state, i18n }) => {
     title: copy.title ?? "Web Server",
     addButton: copy.addButton ?? "Add",
     copyUrlButton: copy.copyUrlButton ?? "Copy URL",
+    openUrlButton: copy.openUrlButton ?? "Open URL",
     startButton: copy.startButton ?? "Start",
     stopButton: copy.stopButton ?? "Stop",
     startWebServerButton: copy.startWebServerButton ?? "Start Web Server",
