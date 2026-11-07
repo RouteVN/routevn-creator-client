@@ -569,6 +569,7 @@ webServerPage:
   actionsLabel: "操作"
   addButton: "添加"
   copyUrlButton: "复制 URL"
+  openUrlButton: "打开 URL"
   desktopOnlyAlert: "Web 服务器页面只能在桌面应用中使用。"
   desktopOnlyDescription: "此发布工具会启动本地服务器，因此只能在桌面应用中使用。"
   desktopOnlyTitle: "仅限桌面端"

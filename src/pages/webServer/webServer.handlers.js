@@ -248,6 +248,27 @@ export const handleCopyUrlClick = async (deps, payload) => {
   }
 };
 
+export const handleOpenUrlClick = async (deps, payload) => {
+  const { appService, store, i18n } = deps;
+  const { _event } = payload;
+  const copy = selectWebServerPageCopy(i18n);
+  _event.stopPropagation();
+
+  const server = store.selectServer(_event.currentTarget.dataset.serverId);
+  if (!server?.url || server.status === "stopped") {
+    appService.showToast({
+      message:
+        server?.status === "stopped"
+          ? copy.serverStopped
+          : copy.serverUrlMissing,
+      status: "error",
+    });
+    return;
+  }
+
+  await appService.openUrl(server.url);
+};
+
 export const handleStartServerClick = async (deps, payload) => {
   const { appService, store, i18n } = deps;
   const copy = selectWebServerPageCopy(i18n);

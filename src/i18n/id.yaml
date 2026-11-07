@@ -569,6 +569,7 @@ webServerPage:
   actionsLabel: "Tindakan"
   addButton: "Tambahkan"
   copyUrlButton: "Salin URL"
+  openUrlButton: "Buka URL"
   desktopOnlyAlert: "Halaman “Server web” hanya tersedia di aplikasi desktop."
   desktopOnlyDescription: "Alat rilis ini hanya dapat digunakan di aplikasi desktop karena perlu menjalankan server lokal."
   desktopOnlyTitle: "Khusus aplikasi desktop"

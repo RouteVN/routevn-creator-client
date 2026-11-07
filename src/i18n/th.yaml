@@ -569,6 +569,7 @@ webServerPage:
   actionsLabel: "การดำเนินการ"
   addButton: "เพิ่ม"
   copyUrlButton: "คัดลอก URL"
+  openUrlButton: "เปิด URL"
   desktopOnlyAlert: "หน้าจอเว็บเซิร์ฟเวอร์ใช้ได้เฉพาะในแอปเดสก์ท็อป"
   desktopOnlyDescription: "เครื่องมือเผยแพร่นี้ต้องใช้แอปเดสก์ท็อป Tauri เพราะต้องเริ่มเซิร์ฟเวอร์ในเครื่อง"
   desktopOnlyTitle: "เฉพาะเดสก์ท็อป"
