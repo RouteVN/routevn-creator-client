@@ -1014,6 +1014,75 @@ export const createBundleRangeReader = async ({
 
   let totalLength;
   let fullBundleBytes;
+  let fullBundleRequest;
+  let headerBytes;
+  let manifestBytes;
+
+  const cacheFullBundle = (bytes) => {
+    if (totalLength !== undefined && bytes.byteLength !== totalLength) {
+      throw new Error(
+        `Full bundle response returned ${bytes.byteLength} bytes, expected ${totalLength}`,
+      );
+    }
+
+    // A cached range can be mislabeled as 200. Validate the entire package
+    // before treating its body as bytes starting at offset zero.
+    if (
+      bytes.byteLength < BUNDLE_HEADER_SIZE ||
+      bytes[0] !== BUNDLE_FORMAT_VERSION_V4
+    ) {
+      throw new Error("Full bundle response is missing a valid bundle header.");
+    }
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const payloadOffset = BUNDLE_HEADER_SIZE + view.getUint32(1, false);
+    if (payloadOffset > bytes.byteLength) {
+      throw new Error("Full bundle response is missing the bundle manifest.");
+    }
+    const manifest = JSON.parse(
+      textDecoder.decode(bytes.subarray(BUNDLE_HEADER_SIZE, payloadOffset)),
+    );
+    let expectedLength = payloadOffset;
+    for (const chunk of Object.values(manifest.chunks)) {
+      expectedLength = Math.max(
+        expectedLength,
+        payloadOffset + chunk.start + chunk.length,
+      );
+    }
+    if (bytes.byteLength !== expectedLength) {
+      throw new Error(
+        `Full bundle response returned ${bytes.byteLength} bytes, expected ${expectedLength}`,
+      );
+    }
+    if (
+      headerBytes?.some((value, index) => bytes[index] !== value) ||
+      manifestBytes?.some(
+        (value, index) => bytes[BUNDLE_HEADER_SIZE + index] !== value,
+      )
+    ) {
+      throw new Error(
+        "Bundle changed while loading. Reload the player to read the updated package.",
+      );
+    }
+    fullBundleBytes = bytes;
+    totalLength = bytes.byteLength;
+  };
+
+  const fetchFullBundle = async () => {
+    if (!fullBundleRequest) {
+      // Bypass the browser's partial-response cache and omit Range. Share
+      // this recovery download between concurrent asset reads.
+      fullBundleRequest = (async () => {
+        const response = await fetchFn(url, { cache: "no-store" });
+        if (response.status !== 200) {
+          throw new Error(
+            `Full bundle request failed: expected 200, received ${response.status}`,
+          );
+        }
+        cacheFullBundle(new Uint8Array(await response.arrayBuffer()));
+      })();
+    }
+    await fullBundleRequest;
+  };
 
   const readCachedRange = (start, length) => {
     if (!fullBundleBytes) {
@@ -1040,6 +1109,10 @@ export const createBundleRangeReader = async ({
     if (cachedBytes) {
       return cachedBytes;
     }
+    if (fullBundleRequest) {
+      await fullBundleRequest;
+      return readCachedRange(start, length);
+    }
 
     const response = await fetchFn(url, {
       headers: {
@@ -1048,8 +1121,14 @@ export const createBundleRangeReader = async ({
     });
 
     if (response.status === 200) {
-      fullBundleBytes = new Uint8Array(await response.arrayBuffer());
-      totalLength = fullBundleBytes.byteLength;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (!fullBundleBytes) {
+        try {
+          cacheFullBundle(bytes);
+        } catch {
+          await fetchFullBundle();
+        }
+      }
       return readCachedRange(start, length);
     }
 
@@ -1076,7 +1155,7 @@ export const createBundleRangeReader = async ({
     return bytes;
   };
 
-  const headerBytes = await readRange(0, BUNDLE_HEADER_SIZE);
+  headerBytes = await readRange(0, BUNDLE_HEADER_SIZE);
   const headerView = new DataView(
     headerBytes.buffer,
     headerBytes.byteOffset,
@@ -1088,7 +1167,7 @@ export const createBundleRangeReader = async ({
   }
 
   const manifestLength = headerView.getUint32(1, false);
-  const manifestBytes = await readRange(BUNDLE_HEADER_SIZE, manifestLength);
+  manifestBytes = await readRange(BUNDLE_HEADER_SIZE, manifestLength);
   const manifest = JSON.parse(textDecoder.decode(manifestBytes));
   const chunkPayloadOffset = BUNDLE_HEADER_SIZE + manifestLength;
 
