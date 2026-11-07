@@ -1,3 +1,5 @@
+import { validatePlatformDetails } from "../../../internal/platformDetailsValidation.js";
+import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
 import {
   mkdir,
   writeFile,
@@ -61,7 +63,8 @@ import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import {
-  isValidMacosApplicationVersion,
+  isValidAndroidVersionCode,
+  isValidNativeApplicationVersion,
   isValidMacosBuildNumber,
 } from "../../../internal/nativeApplicationVersion.js";
 import {
@@ -196,7 +199,7 @@ const normalizeMacosApplicationMetadata = ({
   if (!normalizedTitle) {
     throw new Error("Project title is required for macOS application export.");
   }
-  if (!isValidMacosApplicationVersion(shortVersion)) {
+  if (!isValidNativeApplicationVersion(shortVersion)) {
     throw new Error(
       "The macOS short version must contain three numeric components.",
     );
@@ -1037,6 +1040,118 @@ export const createTauriProjectServiceAdapters = ({
     return result;
   };
 
+  const resolveAndroidPlayerTemplatePaths = async (options = {}) => ({
+    templatePath:
+      options.templatePath ??
+      (await resolveResource(
+        "player-templates/android/RouteVNPlayerTemplate.apk",
+      )),
+    descriptorPath:
+      options.descriptorPath ??
+      (await resolveResource(
+        "player-templates/android/RouteVNPlayerTemplate.json",
+      )),
+  });
+
+  const getAndroidExportAvailability = async ({ options = {} } = {}) => {
+    try {
+      const paths = await resolveAndroidPlayerTemplatePaths(options);
+      const [templateExists, descriptorExists] = await Promise.all([
+        exists(paths.templatePath),
+        exists(paths.descriptorPath),
+      ]);
+      if (!templateExists || !descriptorExists) return { available: false };
+      return await invoke("get_android_export_host_capabilities", paths);
+    } catch (error) {
+      return { available: false, reason: String(error?.message ?? error) };
+    }
+  };
+
+  const promptAndroidApkPath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    filePicker.saveFilePicker({
+      title: options.title ?? "Save Android APK",
+      defaultPath: defaultFileName,
+      filters: [
+        { name: options.fileTypeName ?? "Android APK", extensions: ["apk"] },
+      ],
+    });
+
+  const createAndroidApkToPath = async ({
+    projectData,
+    fileEntries,
+    outputPath,
+    applicationId,
+    applicationName,
+    versionName,
+    versionCode,
+    orientation,
+    iconFileId,
+    iconBackgroundColor,
+    splashBackgroundColor,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const validation = validatePlatformDetails({
+      platform: "android",
+      applicationInfo: {
+        applicationName,
+        applicationIdentifier: applicationId,
+        iconFileId,
+        iconBackgroundColor,
+        splashBackgroundColor,
+      },
+    });
+    if (!validation.valid)
+      throw new Error(`Invalid Android platform details: ${validation.code}`);
+    if (
+      !isValidNativeApplicationVersion(versionName) ||
+      !Number.isInteger(versionCode) ||
+      !isValidAndroidVersionCode(String(versionCode))
+    ) {
+      throw new Error("Invalid Android version name or version code.");
+    }
+    if (orientation !== "portrait" && orientation !== "landscape") {
+      throw new Error("Invalid Android export orientation.");
+    }
+    const paths = await resolveAndroidPlayerTemplatePaths(options);
+    const { filePath: iconPath } = await resolveReferenceFilePath(
+      getCurrentReference(),
+      iconFileId,
+      { label: "Project icon file id" },
+    );
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const onProgress = new Channel();
+    if (options.onProgress) onProgress.onmessage = options.onProgress;
+    return invoke("export_android_apk", {
+      request: {
+        templatePath: paths.templatePath,
+        descriptorPath: paths.descriptorPath,
+        outputPath,
+        assets,
+        instructionsJson: JSON.stringify(projectData),
+        applicationId,
+        applicationName: applicationName.trim(),
+        versionName,
+        versionCode,
+        orientation,
+        iconPath,
+        iconBackgroundColor:
+          normalizeAndroidBackgroundColor(iconBackgroundColor),
+        splashBackgroundColor: normalizeAndroidBackgroundColor(
+          splashBackgroundColor,
+        ),
+      },
+      onProgress,
+    });
+  };
+
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
@@ -1363,6 +1478,9 @@ export const createTauriProjectServiceAdapters = ({
     createDistributionZipStreamedToPath,
     promptWindowsExecutablePath,
     promptWindowsInstallerPath,
+    getAndroidExportAvailability,
+    promptAndroidApkPath,
+    createAndroidApkToPath,
     promptMacosApplicationPath,
     getWindowsExportAvailability,
     getMacosExportAvailability,

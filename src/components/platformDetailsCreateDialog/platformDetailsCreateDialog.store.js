@@ -22,6 +22,12 @@ export const syncFromProps = ({ state }, { props } = {}) => {
   state.defaultValues.applicationName = applicationInfo.applicationName ?? "";
   state.defaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
+  if (state.platform === "android") {
+    state.defaultValues.iconBackgroundColor =
+      applicationInfo.iconBackgroundColor ?? "#FFFFFF";
+    state.defaultValues.splashBackgroundColor =
+      applicationInfo.splashBackgroundColor ?? "#000000";
+  }
   state.iconFileId =
     state.platform === "web" ? undefined : applicationInfo.iconFileId;
   state.isIconCropDialogOpen = false;
@@ -59,7 +65,10 @@ export const selectViewData = ({ state, i18n }) => {
     formKey: state.formKey,
     iconCropFile: state.iconCropFile,
     iconFileId: state.iconFileId,
-    iconOutputSize: PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+    iconOutputSize:
+      state.platform === "android"
+        ? 512
+        : PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
     isIconCropDialogOpen: state.isIconCropDialogOpen,
     showIcon: state.platform !== "web",
   };

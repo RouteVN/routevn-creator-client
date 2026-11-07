@@ -37,6 +37,7 @@ tauri-plugin-persisted-scope = { version = "=2.3.4", features = ["protocol-asset
 time = { version = "0.3", features = ["formatting"] }
 url = "2"
 urlencoding = "2.1"
+routevn-android-export = { path = "../crates/routevn-android-export" }
 routevn-exporter = { path = "../crates/routevn-exporter" }
 routevn-packager = { path = "../crates/routevn-packager" }
 tempfile = "3"
@@ -85,4 +86,7 @@ debug = false
 debug = "line-tables-only"
 
 [profile.release.package.routevn-packager]
+debug = "line-tables-only"
+
+[profile.release.package.routevn-android-export]
 debug = "line-tables-only"

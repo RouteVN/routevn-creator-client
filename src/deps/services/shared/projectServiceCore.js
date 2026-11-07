@@ -42,7 +42,7 @@ const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";
 const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
 const LOAD_MENU_ELEMENT_ID = "icn4dknq2kyp";
 const LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID = "5rwEfyx2GBEi";
-const RELEASE_PLATFORM_IDS = ["web", "windows", "macos"];
+const RELEASE_PLATFORM_IDS = ["web", "windows", "macos", "android"];
 
 export const createProjectServiceCore = ({
   router,
@@ -822,6 +822,9 @@ export const createProjectServiceCore = ({
     createWindowsPortableExecutableToPath:
       exportService.createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath: exportService.createWindowsInstallerToPath,
+    getAndroidExportAvailability: exportService.getAndroidExportAvailability,
+    promptAndroidApkPath: exportService.promptAndroidApkPath,
+    createAndroidApkToPath: exportService.createAndroidApkToPath,
     promptMacosApplicationPath: exportService.promptMacosApplicationPath,
     getMacosExportAvailability: exportService.getMacosExportAvailability,
     createMacosApplicationToPath: exportService.createMacosApplicationToPath,

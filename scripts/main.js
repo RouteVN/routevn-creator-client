@@ -174,7 +174,13 @@ const setBundleDocumentTitle = async (bundleMetadata) => {
   return setNativeWindowTitle(title);
 };
 
+let playerHostReadyNotified = false;
+
 const showNativeWindow = async ({ reason } = {}) => {
+  if (!playerHostReadyNotified) {
+    playerHostReadyNotified = true;
+    globalThis.__ROUTEVN_PLAYER_HOST__?.onReady?.();
+  }
   if (!hasTauriCurrentWindow()) {
     return false;
   }

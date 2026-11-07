@@ -19,6 +19,24 @@ const copyIfPresent = async (from, to) => {
 
 await rm(assetsDir, { recursive: true, force: true });
 await mkdir(assetsDir, { recursive: true });
+const androidTemplateDir = join(assetsDir, "player-templates", "android");
+await mkdir(androidTemplateDir, { recursive: true });
+for (const filename of [
+  "RouteVNPlayerTemplate.apk",
+  "RouteVNPlayerTemplate.json",
+]) {
+  await cp(
+    join(
+      rootDir,
+      "src-tauri",
+      "assets",
+      "player-templates",
+      "android",
+      filename,
+    ),
+    join(androidTemplateDir, filename),
+  );
+}
 await copyIfPresent(join(siteDir, "public"), join(assetsDir, "public"));
 await copyIfPresent(join(siteDir, "templates"), join(assetsDir, "templates"));
 await copyIfPresent(join(siteDir, "bundle"), join(assetsDir, "bundle"));

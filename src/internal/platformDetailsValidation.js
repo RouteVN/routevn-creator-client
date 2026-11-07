@@ -1,3 +1,5 @@
+import { isValidAndroidApplicationId } from "./androidApplicationId.js";
+import { isValidAndroidBackgroundColor } from "./androidExport.js";
 import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifier.js";
 
 const WEB_APPLICATION_IDENTIFIER_PATTERN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9.-]+$/;
@@ -48,6 +50,24 @@ export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
       !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
     ) {
       return { valid: false, code: "macos-identifier-invalid" };
+    }
+  }
+
+  if (platform === "android") {
+    if (!applicationInfo.iconFileId) {
+      return { valid: false, code: "android-icon-required" };
+    }
+    if (!applicationInfo.applicationIdentifier) {
+      return { valid: false, code: "android-identifier-required" };
+    }
+    if (!isValidAndroidApplicationId(applicationInfo.applicationIdentifier)) {
+      return { valid: false, code: "android-identifier-invalid" };
+    }
+    if (
+      !isValidAndroidBackgroundColor(applicationInfo.iconBackgroundColor) ||
+      !isValidAndroidBackgroundColor(applicationInfo.splashBackgroundColor)
+    ) {
+      return { valid: false, code: "android-color-invalid" };
     }
   }
 

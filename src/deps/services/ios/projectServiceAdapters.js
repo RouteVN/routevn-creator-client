@@ -10,6 +10,8 @@ import {
 } from "../../clients/ios/bridge.js";
 import { assertSafeIOSStorageSegment } from "../../clients/ios/storagePaths.js";
 import { prepareIOSVideoForThumbnail } from "../../clients/ios/videoFrames.js";
+import { createApkExportProgressClient } from "../../clients/apkExportProgress.js";
+import { createMobileAndroidApkExport } from "../shared/mobileAndroidApkExport.js";
 import { getIOSProjectFileUrl } from "./projectFileUrls.js";
 import {
   createPersistedIOSProjectStore,
@@ -46,6 +48,7 @@ import {
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
+const apkExportProgressClient = createApkExportProgressClient();
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
@@ -673,6 +676,16 @@ export const createIOSProjectServiceAdapters = ({
   };
 
   const fileAdapter = {
+    ...createMobileAndroidApkExport({
+      callBridge: callIOSBridge,
+      progressClient: apkExportProgressClient,
+      resolveProjectId: (reference) =>
+        assertSafeIOSStorageSegment(
+          reference?.repositoryProjectId ?? reference?.projectId,
+          { label: "iOS project id" },
+        ),
+      assertSafeFileId: assertSafeProjectFileId,
+    }),
     continueOnUploadError: false,
     prepareVideoThumbnail: prepareIOSVideoForThumbnail,
     requiresFileMetadata: true,

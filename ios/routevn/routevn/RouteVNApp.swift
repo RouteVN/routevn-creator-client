@@ -592,6 +592,10 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             return try writeFileToUri(payload)
         case "createDistributionZipStreamedToUri":
             return try createDistributionZipStreamedToUri(payload)
+        case "getAndroidExportAvailability":
+            return try AndroidApkExport.availability()
+        case "exportAndroidApkToUri":
+            return try exportAndroidApkToUri(payload)
         case "openFilePicker":
             try launchFilePicker(payload)
             return true
@@ -637,6 +641,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func shouldHandleBridgeMethodInBackground(_ method: String) -> Bool {
         switch method {
         case "createDistributionZipStreamedToUri", "importProjectFolder", "exportProjectFolder",
+             "getAndroidExportAvailability", "exportAndroidApkToUri",
              "renameLegacyProjectFolder", "getProjectFolderSetup", "previewProjectFolderSetup",
              "confirmProjectFolderSetup", "createTempFolder", "removeTempFolder",
              "downloadFile", "copyImportFile", "listImportArchive", "extractImportArchive",
@@ -700,6 +705,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func bridgeFailureCode(_ error: Error) -> String {
         if isStorageFull(error) {
             return "storageFull"
+        }
+        if let exportError = error as? AndroidApkExportError {
+            return exportError.code
         }
         return (error as? ProjectFolderSetupError)?.rawValue ?? String(describing: type(of: error))
     }
@@ -1234,6 +1242,67 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             }
             throw error
         }
+    }
+
+    private func exportAndroidApkToUri(_ payload: [String: Any]) throws -> [String: Any] {
+        let uri = try requiredString(payload, "uri")
+        if SaveFileDestinations.isSaveURI(uri) {
+            let result = try saveFileDestinations.write(to: uri) { stagedURL in
+                var stagedPayload = payload
+                stagedPayload["uri"] = stagedURL.absoluteString
+                return try self.exportAndroidApkToUri(stagedPayload)
+            }
+            var exported = result.value
+            exported["uri"] = result.url.absoluteString
+            return exported
+        }
+        guard let targetURL = URL(string: uri), targetURL.isFileURL else {
+            throw RouteVNError.message("Only file URLs are supported by the iOS APK export path.")
+        }
+        let projectId = try storage.safePathSegment(requiredString(payload, "projectId"))
+        var assets: [[String: Any]] = []
+        for entry in payload["fileEntries"] as? [[String: Any]] ?? [] {
+            let fileId = try storage.safePathSegment(requiredString(entry, "id"))
+            let fileURL = try storage.projectFilePath(projectId: projectId, fileId: fileId)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                NSLog("Skipping missing file during native iOS APK export: \(fileId)")
+                continue
+            }
+            let mime = try resolveDistributionAssetMimeType(
+                projectId: projectId,
+                fileId: fileId,
+                fileURL: fileURL,
+                preferredMimeType: stringValue(entry["mimeType"])
+            )
+            assets.append(["id": fileId, "path": fileURL.path, "mime": mime])
+        }
+        let iconFileId = try storage.safePathSegment(requiredString(payload, "iconFileId"))
+        let iconURL = try storage.projectFilePath(projectId: projectId, fileId: iconFileId)
+        guard FileManager.default.fileExists(atPath: iconURL.path) else {
+            throw RouteVNError.message("The Android application icon could not be exported.")
+        }
+        guard let versionCode = payload["versionCode"] as? NSNumber else {
+            throw RouteVNError.message("versionCode is required.")
+        }
+        let request: [String: Any] = [
+            "assets": assets,
+            "instructionsJson": try requiredString(payload, "instructionsJson"),
+            "applicationId": try requiredString(payload, "applicationId"),
+            "applicationName": try requiredString(payload, "applicationName"),
+            "versionName": try requiredString(payload, "versionName"),
+            "versionCode": versionCode,
+            "orientation": try requiredString(payload, "orientation"),
+            "iconPath": iconURL.path,
+            "iconBackgroundColor": try requiredString(payload, "iconBackgroundColor"),
+            "splashBackgroundColor": try requiredString(payload, "splashBackgroundColor")
+        ]
+        let progress = AndroidApkExportProgress(exportId: try requiredString(payload, "exportId")) { [weak self] json in
+            self?.webView.evaluateJavaScript(
+                "window.__routeVNApkExportProgress && window.__routeVNApkExportProgress(\(json));",
+                completionHandler: nil
+            )
+        }
+        return try AndroidApkExport.export(request: request, to: targetURL, progress: progress)
     }
 
     private func createDistributionPackagePlan(

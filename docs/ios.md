@@ -217,6 +217,7 @@ source snapshot so the shared `_site` output is not replaced underneath watch:
 
 ```bash
 bun run build:ios
+bun run ios:rust
 release_dir=".artifacts/ios-release/1.20.0-18"
 mkdir -p "$release_dir"
 xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
@@ -401,6 +402,54 @@ suffix. Readable success messages do not rename files.
 Shared `Documents/RouteVN Creator` and `Exports` folders are created only when a
 download/export needs them. Startup creates only private app storage.
 See Apple's [directory-access guidance](https://developer.apple.com/documentation/uikit/providing-access-to-directories).
+
+### Android APK Export
+
+Android APK export links the Rust static library from
+`crates/routevn-exporter-ffi` through the generated
+`ios/routevn/Frameworks/RouteVNExporterFFI.xcframework`. It is linked into the
+app, without embedding a dynamic framework. Install Rust with rustup on the Mac,
+then run:
+
+```bash
+bun run ios:rust
+```
+
+This requires a full Xcode installation with the iOS and Simulator SDKs. The
+script installs missing `aarch64-apple-ios`, `aarch64-apple-ios-sim`, and
+`x86_64-apple-ios` Rust targets, builds with the committed lockfile, combines
+the simulator libraries with `lipo`, and creates the XCFramework. Set
+`IOS_RUST_AUTO_INSTALL_TARGETS=0` to require targets to be installed beforehand.
+Intermediate output lives in `.artifacts/ios-rust`; the XCFramework is ignored
+by Git. Its deployment target follows the Xcode project's iOS deployment target.
+`ios:build` and `ios:run` build it before invoking `xcodebuild`. For direct
+`xcodebuild` or archive commands, run `ios:rust` first.
+
+`build-ios-assets.js` copies `RouteVNPlayerTemplate.apk` and its JSON descriptor
+from `src-tauri/assets/player-templates/android/` into the bundled
+`web/player-templates/android/` folder. The template is inert data on iOS;
+Rust reads it in place without loading or executing it.
+
+The `getAndroidExportAvailability` and `exportAndroidApkToUri` bridge methods
+run on the background bridge queue. Swift resolves project file IDs and MIME
+types, passes local paths to Rust, verifies the APK's byte count, and publishes
+it through the same `SaveFileDestinations` flow as ZIP export. Temporary APKs,
+intermediate files, and partial copies are removed on success or failure.
+Exporter failures preserve their error code and message. The iOS project
+adapter exposes availability, the APK save picker, and export through the shared
+mobile APK export adapter.
+
+Progress reaches `window.__routeVNApkExportProgress` on the main thread as
+JSON containing `exportId`, `phase`, `current`, `total`, and `elapsedMs`.
+Concurrent native callbacks are synchronized, updates within a phase are limited
+to one per 100 ms, and phase changes always pass through. JavaScript subscribes
+for the active export and unsubscribes on success or failure.
+
+Device verification is pending. On macOS, verify the device and both Simulator
+architectures build and link. On a physical iPhone, verify availability, export
+progress, cancellation, filename collisions, failure cleanup, and a large
+project export. Check that the saved APK has the reported size and can be
+opened by Android APK tooling.
 
 ### Audio Playback
 

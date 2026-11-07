@@ -1,0 +1,24 @@
+[package]
+name = "routevn-android-export"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+description = "Builds unsigned Android APKs from the prebuilt RouteVN player template"
+
+[lib]
+name = "routevn_android_export"
+path = "src/lib.rs"
+
+[[bin]]
+name = "routevn-android-template"
+path = "src/bin/routevn-android-template.rs"
+
+[dependencies]
+image = { version = "=0.25.6", default-features = false, features = ["jpeg", "png", "webp"] }
+miniz_oxide = "0.8"
+routevn-exporter = { path = "../routevn-exporter" }
+routevn-packager = { path = "../routevn-packager" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tempfile = "3.23.0"

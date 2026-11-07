@@ -1,0 +1,112 @@
+{
+  "formatVersion": 1,
+  "templateVersionName": "1.0.0",
+  "templateVersionCode": 1,
+  "templateApplicationId": "vn.routevn.androidplayer.template",
+  "minSdk": 24,
+  "targetSdk": 37,
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "applicationIdStrings": [
+    "vn.routevn.androidplayer.template"
+  ],
+  "components": [],
+  "images": [
+    {
+      "entry": "res/4n.png",
+      "kind": "splash",
+      "size": 288
+    },
+    {
+      "entry": "res/9w.png",
+      "kind": "legacy",
+      "size": 48
+    },
+    {
+      "entry": "res/Bl.png",
+      "kind": "splash",
+      "size": 432
+    },
+    {
+      "entry": "res/Em.png",
+      "kind": "adaptiveForeground",
+      "size": 216
+    },
+    {
+      "entry": "res/FS.png",
+      "kind": "legacy",
+      "size": 96
+    },
+    {
+      "entry": "res/Lf.png",
+      "kind": "adaptiveForeground",
+      "size": 324
+    },
+    {
+      "entry": "res/QZ.png",
+      "kind": "adaptiveForeground",
+      "size": 108
+    },
+    {
+      "entry": "res/RJ.png",
+      "kind": "legacy",
+      "size": 144
+    },
+    {
+      "entry": "res/Xt.png",
+      "kind": "splash",
+      "size": 576
+    },
+    {
+      "entry": "res/as.png",
+      "kind": "adaptiveForeground",
+      "size": 432
+    },
+    {
+      "entry": "res/ce.png",
+      "kind": "splash",
+      "size": 864
+    },
+    {
+      "entry": "res/o-.png",
+      "kind": "legacy",
+      "size": 192
+    },
+    {
+      "entry": "res/pK.png",
+      "kind": "splash",
+      "size": 1152
+    },
+    {
+      "entry": "res/yn.png",
+      "kind": "legacy",
+      "size": 72
+    },
+    {
+      "entry": "res/zr.png",
+      "kind": "adaptiveForeground",
+      "size": 162
+    }
+  ],
+  "colors": [
+    {
+      "slot": "iconBackground",
+      "templateValue": "#FF13579B",
+      "offsets": [
+        4656
+      ]
+    },
+    {
+      "slot": "splashBackground",
+      "templateValue": "#FF2468AC",
+      "offsets": [
+        4672
+      ]
+    }
+  ],
+  "sha256": "955674aaaed278f852c999acf1c1730655939e7ae26122bc408981b81d90b9a0"
+}

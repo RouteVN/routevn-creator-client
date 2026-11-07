@@ -14,6 +14,7 @@ static/public/adoptedStyleSheets.js
 static/public/@rettangoli
 static/bundle/main.js
 static/bundle/player-runtime-persistence-host.js
+static/bundle/player-runtime-persistence-host-android.js
 /task
 /keys
 /temp
@@ -62,6 +63,7 @@ src/setup.js
 /*.keystore
 
 /ios/routevn/build
+/ios/routevn/Frameworks/RouteVNExporterFFI.xcframework/
 /ios/routevn/routevn/web
 /ios/routevn/**/*.xcuserdata
 /ios/routevn/**/xcuserdata/

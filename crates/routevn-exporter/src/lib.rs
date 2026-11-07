@@ -1224,6 +1224,29 @@ pub fn create_package_bin_with_progress(
     })
 }
 
+/// Writes `package.bin` straight to `output_path` so large projects never
+/// have to fit in memory. Assets are streamed from their source files.
+pub fn create_package_bin_file_with_progress(
+    output_path: &Path,
+    assets: &[ZipAssetInput],
+    instructions_json: &str,
+    on_progress: Option<&ZipExportProgressCallback<'_>>,
+) -> Result<PackageBinExportStats, String> {
+    let file = File::create(output_path).map_err(|e| {
+        format!(
+            "Failed to create package file {}: {e}",
+            output_path.display()
+        )
+    })?;
+    let mut writer = BufWriter::with_capacity(STREAM_COPY_BUFFER_SIZE, file);
+    let stats = write_package_bin_contents(&mut writer, assets, instructions_json, on_progress)?;
+    writer
+        .flush()
+        .map_err(|e| format!("Failed to flush package file: {e}"))?;
+
+    Ok(stats.to_export_stats(assets.len()))
+}
+
 fn write_distribution_zip(
     work_path: &Path,
     assets: &[ZipAssetInput],
@@ -1711,10 +1734,34 @@ mod tests {
                     mime: Some("application/octet-stream".to_string()),
                 },
             ],
-            instructions_json,
+            instructions_json.clone(),
         )
         .expect("direct package bin export should succeed");
         assert_eq!(direct_package.package_bin, package_bin);
+        let package_file_path = test_dir.join("package.bin");
+        let file_stats = create_package_bin_file_with_progress(
+            &package_file_path,
+            &[
+                ZipAssetInput {
+                    id: "file-a".to_string(),
+                    path: asset_a_path.display().to_string(),
+                    mime: Some("application/octet-stream".to_string()),
+                },
+                ZipAssetInput {
+                    id: "file-b".to_string(),
+                    path: asset_b_path.display().to_string(),
+                    mime: Some("application/octet-stream".to_string()),
+                },
+            ],
+            &instructions_json,
+            None,
+        )
+        .expect("file package bin export should succeed");
+        assert_eq!(
+            fs::read(&package_file_path).expect("read package file"),
+            package_bin
+        );
+        assert_eq!(file_stats.package_bin_bytes, package_bin.len() as u64);
         assert_eq!(direct_package.stats.asset_count, 2);
         assert_eq!(
             direct_package.stats.package_bin_bytes,
