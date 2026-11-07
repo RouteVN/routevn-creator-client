@@ -119,4 +119,66 @@ describe("bundle range reader", () => {
     expect(reader.totalLength).toBe(bundle.length);
     expect(fetchFn).toHaveBeenCalledTimes(4);
   });
+
+  it.each(["reordered assets", "changed instructions"])(
+    "rejects a same-length recovery package with %s",
+    async (change) => {
+      const bundle = await createBundle(instructions, assets);
+      const replacement =
+        change === "reordered assets"
+          ? await createBundle(
+              instructions,
+              Object.fromEntries(Object.entries(assets).reverse()),
+            )
+          : await createBundle({ title: "Project Two" }, assets);
+      expect(replacement.length).toBe(bundle.length);
+      let brokenRanges = false;
+      const fetchFn = vi.fn(async (_url, init) => {
+        if (!init.headers?.range) return new Response(replacement);
+        const response = rangeResponse(bundle, init);
+        return brokenRanges
+          ? new Response(await response.arrayBuffer())
+          : response;
+      });
+      const reader = await createBundleRangeReader({ fetchFn });
+      expect(await reader.readInstructions()).toEqual(instructions);
+      brokenRanges = true;
+      const reads = await Promise.allSettled(
+        Object.keys(assets).map((id) => reader.readAsset(id)),
+      );
+      for (const read of reads) {
+        expect(read.status).toBe("rejected");
+        expect(read.reason.message).toContain("Bundle changed while loading");
+      }
+      await expect(reader.readInstructions()).rejects.toThrow(
+        "Bundle changed while loading",
+      );
+      expect(
+        fetchFn.mock.calls.filter(([, init]) => !init.headers?.range),
+      ).toHaveLength(1);
+    },
+  );
+
+  it("rejects a changed header when recovery occurs during the manifest read", async () => {
+    const bundle = await createBundle(instructions, assets);
+    const replacement = await createBundle(instructions, {
+      "image-one2": {
+        mime: "image/png",
+        buffer: new Uint8Array([1, 2, 3]),
+      },
+      "image-two": assets["image-two"],
+    });
+    expect(replacement.length).toBe(bundle.length);
+    const fetchFn = vi.fn(async (_url, init) => {
+      if (!init.headers?.range) return new Response(replacement);
+      const response = rangeResponse(bundle, init);
+      return init.headers.range === "bytes=0-15"
+        ? response
+        : new Response(await response.arrayBuffer());
+    });
+    await expect(createBundleRangeReader({ fetchFn })).rejects.toThrow(
+      "Bundle changed while loading",
+    );
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+  });
 });

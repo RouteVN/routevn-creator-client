@@ -867,7 +867,9 @@ The shared bundle range reader validates an HTTP `200` body's header,
 manifest, and complete byte length before caching it as the full package.
 An incomplete or mislabeled range response triggers one shared full download
 without a Range header and with browser caching bypassed. Concurrent asset
-reads share that recovery; an invalid recovery response still fails visibly.
+reads share that recovery. The recovered header and manifest must match any
+metadata already read, so a same-size replacement cannot mix new payloads with
+old asset offsets. An invalid or changed recovery response fails visibly.
 Normal `206` responses retain range loading. Regression coverage lives in
 `tests/services/bundleRangeReader.test.js` and
 `node tests/services/bundleRangeReader.browser.mjs` (Chromium and WebKit).

@@ -1015,6 +1015,8 @@ export const createBundleRangeReader = async ({
   let totalLength;
   let fullBundleBytes;
   let fullBundleRequest;
+  let headerBytes;
+  let manifestBytes;
 
   const cacheFullBundle = (bytes) => {
     if (totalLength !== undefined && bytes.byteLength !== totalLength) {
@@ -1049,6 +1051,16 @@ export const createBundleRangeReader = async ({
     if (bytes.byteLength !== expectedLength) {
       throw new Error(
         `Full bundle response returned ${bytes.byteLength} bytes, expected ${expectedLength}`,
+      );
+    }
+    if (
+      headerBytes?.some((value, index) => bytes[index] !== value) ||
+      manifestBytes?.some(
+        (value, index) => bytes[BUNDLE_HEADER_SIZE + index] !== value,
+      )
+    ) {
+      throw new Error(
+        "Bundle changed while loading. Reload the player to read the updated package.",
       );
     }
     fullBundleBytes = bytes;
@@ -1143,7 +1155,7 @@ export const createBundleRangeReader = async ({
     return bytes;
   };
 
-  const headerBytes = await readRange(0, BUNDLE_HEADER_SIZE);
+  headerBytes = await readRange(0, BUNDLE_HEADER_SIZE);
   const headerView = new DataView(
     headerBytes.buffer,
     headerBytes.byteOffset,
@@ -1155,7 +1167,7 @@ export const createBundleRangeReader = async ({
   }
 
   const manifestLength = headerView.getUint32(1, false);
-  const manifestBytes = await readRange(BUNDLE_HEADER_SIZE, manifestLength);
+  manifestBytes = await readRange(BUNDLE_HEADER_SIZE, manifestLength);
   const manifest = JSON.parse(textDecoder.decode(manifestBytes));
   const chunkPayloadOffset = BUNDLE_HEADER_SIZE + manifestLength;
 

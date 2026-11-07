@@ -19,8 +19,14 @@ const assets = {
   "image-two": { mime: "image/png", buffer: new Uint8Array([5, 6, 7]) },
 };
 const bundle = await createBundle({ title: "Project One" }, assets);
+const replacement = await createBundle(
+  { title: "Project One" },
+  Object.fromEntries(Object.entries(assets).reverse()),
+);
+assert.equal(replacement.length, bundle.length);
 const payloadOffset = 16 + new DataView(bundle.buffer).getUint32(1, false);
 let breakRanges = false;
+let replaceRecovery = false;
 let recoveryDownloads = 0;
 const server = createServer((request, response) => {
   if (request.url === "/reader.js") {
@@ -34,7 +40,7 @@ const server = createServer((request, response) => {
     if (!match) {
       recoveryDownloads++;
       response.writeHead(200);
-      response.end(bundle);
+      response.end(replaceRecovery ? replacement : bundle);
       return;
     }
     const start = Number(match[1]);
@@ -61,6 +67,7 @@ try {
       const page = await browser.newPage();
       for (let load = 0; load < 3; load++) {
         breakRanges = load > 0;
+        replaceRecovery = false;
         recoveryDownloads = 0;
         if (load === 0) await page.goto(origin);
         else await page.reload();
@@ -85,8 +92,28 @@ try {
         assert.equal(result.totalLength, bundle.length);
         assert.equal(recoveryDownloads, load === 0 ? 0 : 1);
       }
+      replaceRecovery = true;
+      recoveryDownloads = 0;
+      await page.reload();
+      const mismatchedReads = await page.evaluate(async () => {
+        const { createBundleRangeReader } = await import("/reader.js");
+        const reader = await createBundleRangeReader();
+        const results = await Promise.allSettled([
+          reader.readAsset("image-one"),
+          reader.readAsset("image-two"),
+        ]);
+        return results.map((result) => ({
+          status: result.status,
+          message: result.reason?.message,
+        }));
+      });
+      for (const result of mismatchedReads) {
+        assert.equal(result.status, "rejected");
+        assert.match(result.message, /Bundle changed while loading/);
+      }
+      assert.equal(recoveryDownloads, 1);
       console.log(
-        `${name}: initial load and two malformed-range reloads passed`,
+        `${name}: initial load, malformed-range reloads, and changed-package rejection passed`,
       );
     } finally {
       await browser.close();
