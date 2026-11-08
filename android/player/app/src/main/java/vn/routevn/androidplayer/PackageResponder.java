@@ -53,8 +53,11 @@ final class PackageResponder implements Closeable {
         }
         headers.put("Content-Range", "bytes " + range[0] + "-" + range[1] + "/" + total);
         headers.put("Content-Length", Long.toString(range[1] - range[0] + 1));
+        // WebView skips an explicit range start on the returned stream itself, but not the
+        // start of a suffix range, so begin the stream where that skip lands on range[0].
+        long streamStart = rangeHeader.trim().startsWith("bytes=-") ? range[0] : 0;
         return new WebResourceResponse("application/octet-stream", null, 206,
-                "Partial Content", headers, new PackageStream(range[0], range[1]));
+                "Partial Content", headers, new PackageStream(streamStart, range[1]));
     }
 
     // Matches the desktop package fetch shim: one range, inclusive end, clamped to EOF.
@@ -130,6 +133,26 @@ final class PackageResponder implements Closeable {
             System.arraycopy(buffer, cursor, destination, offset, count);
             cursor += count;
             return count;
+        }
+
+        // WebView skips to the range start with this, so skipped bytes are never decrypted.
+        // available() stays 0: WebView would check the range against a positive value.
+        @Override
+        public long skip(long count) throws IOException {
+            if (closed) throw new IOException("Stream is closed");
+            if (count <= 0) return 0;
+            // WebView stores the result as an int and calls again until the skip is complete.
+            long limit = Math.min(count, Integer.MAX_VALUE);
+            int buffered = available - cursor;
+            if (limit <= buffered) {
+                cursor += (int) limit;
+                return limit;
+            }
+            long skipped = Math.min(limit - buffered, end - position + 1);
+            position += skipped;
+            cursor = 0;
+            available = 0;
+            return buffered + skipped;
         }
 
         private boolean fill() throws IOException {

@@ -33,7 +33,10 @@ final class RuntimeKvStore implements Closeable {
         try {
             connection.enableWriteAheadLogging();
             connection.execSQL("PRAGMA synchronous=FULL");
-            connection.execSQL("PRAGMA busy_timeout=5000");
+            // execSQL rejects statements that return rows; this PRAGMA returns the new timeout.
+            try (Cursor timeout = connection.rawQuery("PRAGMA busy_timeout=5000", null)) {
+                timeout.moveToFirst();
+            }
             int version = connection.getVersion();
             if (version != 0 && version != 1) {
                 throw new IllegalStateException("Unsupported Db schema version: " + version);

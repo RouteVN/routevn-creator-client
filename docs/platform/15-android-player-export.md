@@ -118,7 +118,10 @@ for `/web/package.bin` are answered from `assets/routevn-package.bin`: Java
 opens the APK at the asset's offset and length, and the `routevn_player` JNI
 library decrypts the requested range. Responses follow the desktop package
 shim: a single `bytes=` range returns 206 with `Content-Range`, a missing or
-unsatisfiable range returns 416.
+unsatisfiable range returns 416. WebView applies an explicit range start to the
+returned stream itself, so that stream begins at offset 0 and skips to the
+start without decrypting the skipped bytes. A suffix range is not skipped by
+WebView, so its stream begins at the computed start.
 
 `addWebMessageListener` exposes `RouteVNPlayerAndroid` to the asset origin
 only. The persistence host speaks the same `init`, `list`, `set`,
