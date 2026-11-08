@@ -181,7 +181,10 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
       },
     },
     refs: {
-      canvas: { getBoundingClientRect: () => ({ width: 960 }) },
+      canvas: {
+        isConnected: true,
+        getBoundingClientRect: () => ({ width: 960 }),
+      },
       canvasBackground: { centerContent: vi.fn() },
       transformInspector: { setTransientValues: vi.fn() },
     },
@@ -215,6 +218,7 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
       },
     },
     projectService: {
+      getEnsuredProjectId: () => "project-one",
       ensureRepository: async () => {},
       getRepositoryState: () => repositoryState,
       getFileContent: vi.fn(async (fileId) => ({

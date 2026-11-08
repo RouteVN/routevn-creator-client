@@ -225,6 +225,7 @@ const createDeps = ({ selectedItemId } = {}) => {
     store,
     refs: {
       canvas: {
+        isConnected: true,
         getBoundingClientRect: () => canvasBounds,
       },
     },
@@ -239,6 +240,7 @@ const createDeps = ({ selectedItemId } = {}) => {
     },
     projectService: {
       ensureRepository: vi.fn(),
+      getEnsuredProjectId: vi.fn(() => "project-1"),
       getRepositoryState: vi.fn(() => ({
         layouts: { items: {} },
         images: { items: {} },

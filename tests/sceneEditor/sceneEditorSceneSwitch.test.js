@@ -137,6 +137,7 @@ const createProject = () => {
         revision: 1,
       });
     }),
+    getEnsuredProjectId: () => "project-1",
     getRepositoryState,
     getDomainState,
     getRepositoryRevision: () => 1,
