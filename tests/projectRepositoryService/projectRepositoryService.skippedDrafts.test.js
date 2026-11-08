@@ -90,6 +90,9 @@ const createMainCheckpoint = ({
 const createService = ({
   drafts = [...projectDrafts, leftOutDraft],
   storeHistoryStats = historyStats,
+  invalidMain = false,
+  operations = [],
+  failUnfinishedRecord = false,
 } = {}) => {
   const checkpoints = new Map([
     [
@@ -97,6 +100,13 @@ const createService = ({
       createMainCheckpoint({ checkpointHistoryStats: storeHistoryStats }),
     ],
   ]);
+  if (invalidMain) {
+    checkpoints.get(MAIN_VIEW_NAME).value.files.items.orphan = {
+      id: "orphan",
+      type: "folder",
+      name: "Folder",
+    };
+  }
   const toKey = ({ viewName, partition }) =>
     viewName === MAIN_VIEW_NAME && partition === MAIN_PARTITION
       ? MAIN_VIEW_NAME
@@ -111,9 +121,21 @@ const createService = ({
       structuredClone(checkpoints.get(toKey(key))),
     loadMaterializedViewCheckpoints: async () => [],
     saveMaterializedViewCheckpoint: async (checkpoint) => {
+      operations.push({
+        action: "save",
+        checkpoint: structuredClone(checkpoint),
+      });
+      if (
+        failUnfinishedRecord &&
+        checkpoint.viewName === "project_repository_skipped_drafts" &&
+        !checkpoint.value.rebuilt
+      ) {
+        throw new Error("Could not save rebuild marker");
+      }
       checkpoints.set(toKey(checkpoint), structuredClone(checkpoint));
     },
     deleteMaterializedViewCheckpoint: vi.fn(async (key) => {
+      operations.push({ action: "delete", key: structuredClone(key) });
       checkpoints.delete(toKey(key));
     }),
     app: {
@@ -164,6 +186,67 @@ const createService = ({
 };
 
 describe("projectRepositoryService left-out drafts", () => {
+  it("preserves the old main checkpoint when the unfinished marker cannot be saved", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const operations = [];
+    const { service, store } = createService({
+      invalidMain: true,
+      operations,
+      failUnfinishedRecord: true,
+    });
+    const original = JSON.stringify(
+      await store.loadMaterializedViewCheckpoint({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+      }),
+    );
+    await expect(service.ensureRepository()).rejects.toThrow(
+      "missing item 'orphan'",
+    );
+    expect(
+      JSON.stringify(
+        await store.loadMaterializedViewCheckpoint({
+          viewName: MAIN_VIEW_NAME,
+          partition: MAIN_PARTITION,
+        }),
+      ),
+    ).toBe(original);
+    expect(
+      operations.some(
+        ({ checkpoint }) => checkpoint?.viewName === MAIN_VIEW_NAME,
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the rebuild marker unfinished until recovered main state and scene caches are saved", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const operations = [];
+    const { service } = createService({ invalidMain: true, operations });
+    const repository = await service.ensureRepository();
+    expect(repository.getState().scenes.items[sceneId].name).toBe("Scene One");
+    const unfinished = operations.findIndex(
+      ({ checkpoint }) =>
+        checkpoint?.viewName === "project_repository_skipped_drafts" &&
+        checkpoint.value.rebuilt === false,
+    );
+    const main = operations.findIndex(
+      ({ checkpoint }) => checkpoint?.viewName === MAIN_VIEW_NAME,
+    );
+    const finished = operations.findIndex(
+      ({ checkpoint }) =>
+        checkpoint?.viewName === "project_repository_skipped_drafts" &&
+        checkpoint.value.rebuilt === true,
+    );
+    const sceneClear = operations.findIndex(
+      ({ action, key }) =>
+        action === "delete" && key?.viewName !== MAIN_VIEW_NAME,
+    );
+    expect(unfinished).toBeGreaterThanOrEqual(0);
+    expect(sceneClear).toBeGreaterThan(unfinished);
+    expect(main).toBeGreaterThan(sceneClear);
+    expect(finished).toBeGreaterThan(main);
+  });
+
   it("passes the drafts a lazy history load leaves out to subscribers", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const { service, store } = createService();
