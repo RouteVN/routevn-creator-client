@@ -36,6 +36,30 @@ describe("Android platform setup form", () => {
     expect(view.guideCircle).toBe(1);
     expect(view.iconOutputSize).toBe(768);
   });
+  it("shows the background color behind an optional image only once it is set", () => {
+    const state = createInitialState();
+    syncFromProps(
+      { state },
+      {
+        props: {
+          platform: "android",
+          applicationInfo: {
+            iconBackgroundColor: "#FFFFFF",
+            splashBackgroundColor: "#000000",
+          },
+        },
+      },
+    );
+    let view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.iconBackgroundStyle).toBe("background-color: transparent;");
+    expect(view.splashBackgroundStyle).toBe("background-color: transparent;");
+
+    setOptionalIconFileId({ state }, { target: "adaptive", fileId: "a-1" });
+    setOptionalIconFileId({ state }, { target: "splash", fileId: "s-1" });
+    view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.iconBackgroundStyle).toBe("background-color: #FFFFFF;");
+    expect(view.splashBackgroundStyle).toBe("background-color: #000000;");
+  });
   it("prefills default colors and preserves them when the icon is cropped", () => {
     const state = createInitialState();
     syncFromProps(

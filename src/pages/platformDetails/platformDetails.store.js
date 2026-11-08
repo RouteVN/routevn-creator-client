@@ -276,8 +276,8 @@ export const selectViewData = ({ state, i18n }) => {
     showAndroidIcons: formPlatform === "android",
     removeIconLabel: copy.removeIconButton,
     usesAppIconLabel: copy.androidUsesAppIcon,
-    editIconBackgroundStyle: `background-color: ${state.iconPreviewColor};`,
-    editSplashBackgroundStyle: `background-color: ${state.splashPreviewColor};`,
+    editIconBackgroundStyle: `background-color: ${state.platformEditAdaptiveIconFileId ? state.iconPreviewColor : "transparent"};`,
+    editSplashBackgroundStyle: `background-color: ${state.platformEditSplashIconFileId ? state.splashPreviewColor : "transparent"};`,
     cropTitle: copy[`${state.platformEditIconCropTarget}CropTitle`],
     cropDescription: copy[`${state.platformEditIconCropTarget}CropDescription`],
     guideCircle:
