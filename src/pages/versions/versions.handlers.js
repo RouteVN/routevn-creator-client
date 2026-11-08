@@ -1769,6 +1769,8 @@ const runAndroidApkExport = async (deps, confirmation) => {
         versionName: nativeVersion.versionName,
         versionCode: nativeVersion.versionCode,
         iconFileId: applicationInfo.iconFileId,
+        adaptiveIconFileId: applicationInfo.adaptiveIconFileId,
+        splashIconFileId: applicationInfo.splashIconFileId,
         iconBackgroundColor: applicationInfo.iconBackgroundColor,
         splashBackgroundColor: applicationInfo.splashBackgroundColor,
       },

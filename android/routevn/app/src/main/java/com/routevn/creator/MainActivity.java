@@ -3328,6 +3328,21 @@ public class MainActivity extends Activity {
             request.put("versionCode", payload.getLong("versionCode"));
             request.put("orientation", payload.getString("orientation"));
             request.put("iconPath", iconFile.getAbsolutePath());
+            for (String[] optionalIcon : new String[][] {
+                {"adaptiveIconFileId", "adaptiveIconPath"},
+                {"splashIconFileId", "splashIconPath"}
+            }) {
+                if (payload.has(optionalIcon[0]) && !payload.isNull(optionalIcon[0])) {
+                    String fileId = safePathSegment(payload.getString(optionalIcon[0]));
+                    File file = resolveSafeRelativeFile(
+                        new File(getProjectRoot(safeProjectId), "files"), fileId
+                    );
+                    if (!file.isFile()) {
+                        throw new IllegalStateException("Required project file is missing: " + fileId);
+                    }
+                    request.put(optionalIcon[1], file.getAbsolutePath());
+                }
+            }
             request.put(
                 "iconBackgroundColor",
                 payload.getString("iconBackgroundColor")

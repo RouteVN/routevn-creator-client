@@ -208,7 +208,8 @@ Current keys:
 - `platformDetails.android`
   - independently customizable Android release metadata in the project `app` store
   - fields: `applicationName`, `iconFileId`, `applicationIdentifier`,
-    `iconBackgroundColor`, `splashBackgroundColor`
+    `iconBackgroundColor`, `splashBackgroundColor`, optional `adaptiveIconFileId`,
+    `splashIconFileId`
   - defaults copy the project name and icon, with a blank application identifier,
     an opaque white icon background (`#FFFFFF`), and an opaque black splash
     background (`#000000`); colors are normalized to uppercase `#RRGGBB`

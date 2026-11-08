@@ -91,9 +91,12 @@ changing code.
    label, and `screenOrientation` (`sensorPortrait` when the release's screen
    height exceeds its width, `sensorLandscape` otherwise)
 5. patch the two reserved colors in `resources.arsc` in place
-6. render the icon for each image slot: legacy icons fill their square,
-   adaptive foregrounds fit the centered 72 dp of 108 dp, and splash icons fit
-   inside the centered 192 dp circle of 288 dp
+6. render images on centered transparent canvases, preserving aspect ratio:
+   the app icon fills the legacy square. An optional adaptive foreground fits
+   the centered 72 dp square of its 108 dp canvas; otherwise the app icon fits
+   the largest square inside the centered 66 dp safe circle. An optional splash
+   icon fits the centered 192 dp square of its 288 dp canvas; otherwise the app
+   icon fits the largest square inside the centered 192 dp circle.
 7. write a new ZIP next to the destination: template entries in their original
    order with signature files dropped, unchanged entries copied without
    recompression, changed entries stored, and the encrypted package stored last

@@ -1284,7 +1284,7 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         guard let versionCode = payload["versionCode"] as? NSNumber else {
             throw RouteVNError.message("versionCode is required.")
         }
-        let request: [String: Any] = [
+        var request: [String: Any] = [
             "assets": assets,
             "instructionsJson": try requiredString(payload, "instructionsJson"),
             "applicationId": try requiredString(payload, "applicationId"),
@@ -1296,6 +1296,20 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             "iconBackgroundColor": try requiredString(payload, "iconBackgroundColor"),
             "splashBackgroundColor": try requiredString(payload, "splashBackgroundColor")
         ]
+        for (fileIdKey, pathKey) in [
+            ("adaptiveIconFileId", "adaptiveIconPath"),
+            ("splashIconFileId", "splashIconPath")
+        ] {
+            if let value = payload[fileIdKey], !(value is NSNull) {
+                let fileId = try storage.safePathSegment(requiredString(payload, fileIdKey))
+                let fileURL = try storage.projectFilePath(projectId: projectId, fileId: fileId)
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
+                    throw RouteVNError.message("Required project file is missing: \(fileId)")
+                }
+                request[pathKey] = fileURL.path
+            }
+        }
         let progress = AndroidApkExportProgress(exportId: try requiredString(payload, "exportId")) { [weak self] json in
             self?.webView.evaluateJavaScript(
                 "window.__routeVNApkExportProgress && window.__routeVNApkExportProgress(\(json));",

@@ -293,7 +293,7 @@ export const selectCropSelection = ({ state }) => {
   };
 };
 
-export const selectViewData = ({ state, i18n = {} }) => {
+export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   const isReady = hasImage(state) && Boolean(state.imageUrl);
   const maxZoom = getEffectiveMaxZoom(state);
   const zoomLevel = clamp(state.zoomLevel, MIN_ZOOM, maxZoom);
@@ -305,6 +305,8 @@ export const selectViewData = ({ state, i18n = {} }) => {
   });
 
   return {
+    guideCircle: props.guideCircle,
+    guideStyle: `width:${props.guideCircle * 100}%; height:${props.guideCircle * 100}%;`,
     imageUrl: state.imageUrl,
     isReady,
     loadingLabel: i18n.resourcePages?.imageLoadingLabel ?? "Loading image...",

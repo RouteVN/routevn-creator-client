@@ -47,6 +47,8 @@ fn request(work: &Path, template: &Path, descriptor: &Path) -> AndroidExportRequ
         version_code: 42,
         orientation: Orientation::Portrait,
         icon_path,
+        adaptive_icon_path: None,
+        splash_icon_path: None,
         icon_background_color: "#12AB34".to_string(),
         splash_background_color: "#000000".to_string(),
         work_dir: Some(work.to_path_buf()),
@@ -173,4 +175,49 @@ fn rejects_invalid_requests_before_writing() {
         export_android_apk(&request, None).unwrap_err().code,
         ErrorCode::InvalidRequest
     );
+}
+
+#[test]
+fn exports_distinct_optional_icons() {
+    use routevn_android_export::icons::ImageKind;
+    let dir = template_dir();
+    let template_path = dir.join("RouteVNPlayerTemplate.apk");
+    let descriptor_path = dir.join("RouteVNPlayerTemplate.json");
+    if !template_path.is_file() {
+        return;
+    }
+    let work = tempfile::tempdir().unwrap();
+    let mut request = request(work.path(), &template_path, &descriptor_path);
+    for (name, color) in [
+        ("app", [220, 60, 30, 255]),
+        ("adaptive", [10, 200, 30, 255]),
+        ("splash", [10, 30, 220, 255]),
+    ] {
+        RgbaImage::from_pixel(32, 32, Rgba(color))
+            .save(work.path().join(format!("{name}.png")))
+            .unwrap();
+    }
+    request.icon_path = work.path().join("app.png");
+    request.adaptive_icon_path = Some(work.path().join("adaptive.png"));
+    request.splash_icon_path = Some(work.path().join("splash.png"));
+    export_android_apk(&request, None).unwrap();
+    let descriptor = template::load_descriptor(&template_path, &descriptor_path).unwrap();
+    let mut file = File::open(&request.output_path).unwrap();
+    let index = zip::read_index(&mut file).unwrap();
+    for slot in descriptor.images {
+        let bytes = zip::read_entry(&mut file, index.entry(&slot.entry).unwrap()).unwrap();
+        let image = image::load_from_memory(&bytes).unwrap().to_rgba8();
+        assert_eq!(image.dimensions(), (slot.size, slot.size));
+        let color = match slot.kind {
+            ImageKind::Legacy => [220, 60, 30, 255],
+            ImageKind::AdaptiveForeground => [10, 200, 30, 255],
+            ImageKind::Splash => [10, 30, 220, 255],
+        };
+        assert_eq!(
+            image.get_pixel(slot.size / 2, slot.size / 2).0,
+            color,
+            "{}",
+            slot.entry
+        );
+    }
 }

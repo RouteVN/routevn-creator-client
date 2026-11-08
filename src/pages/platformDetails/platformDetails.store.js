@@ -86,6 +86,21 @@ const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
     });
   }
 
+  if (platform === "android") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "android-adaptive-icon",
+        label: copy.androidAdaptiveIconLabel,
+      },
+      {
+        type: "slot",
+        slot: "android-splash-icon",
+        label: copy.androidSplashIconLabel,
+      },
+    );
+  }
+
   fields.push({
     type: "slot",
     slot: "platform-application-identifier",
@@ -140,6 +155,8 @@ const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
 
 export const createInitialState = () => ({
   platform: "web",
+  iconPreviewColor: "#FFFFFF",
+  splashPreviewColor: "#000000",
   platformApplicationInfo: {},
   selectedPlatform: undefined,
   isTouchMode: false,
@@ -156,6 +173,9 @@ export const createInitialState = () => ({
   isPlatformEditIconCropDialogOpen: false,
   platformEditDefaultValues: createPlatformEditDefaultValues(),
   platformEditIconFileId: undefined,
+  platformEditAdaptiveIconFileId: undefined,
+  platformEditSplashIconFileId: undefined,
+  platformEditIconCropTarget: "icon",
   platformEditIconCropFile: undefined,
 });
 
@@ -175,6 +195,22 @@ export const selectPlatformEditIconFileId = ({ state }) => {
   return state.platformEditIconFileId;
 };
 
+export const selectPlatformEditAdaptiveIconFileId = ({ state }) =>
+  state.platformEditAdaptiveIconFileId;
+
+export const selectPlatformEditSplashIconFileId = ({ state }) =>
+  state.platformEditSplashIconFileId;
+
+export const selectPlatformEditIconCropTarget = ({ state }) =>
+  state.platformEditIconCropTarget;
+export const setPlatformEditOptionalIconFileId = (
+  { state },
+  { target, fileId },
+) => {
+  if (target === "adaptive") state.platformEditAdaptiveIconFileId = fileId;
+  else state.platformEditSplashIconFileId = fileId;
+};
+
 export const selectPlatformDialogState = ({ state }) => {
   return {
     mode: state.platformDialogMode,
@@ -184,6 +220,11 @@ export const selectPlatformDialogState = ({ state }) => {
 
 export const selectIsPlatformEditIconCropDialogOpen = ({ state }) => {
   return state.isPlatformEditIconCropDialogOpen;
+};
+
+export const setPlatformEditBackgroundColor = ({ state }, { name, value }) => {
+  if (name === "iconBackgroundColor") state.iconPreviewColor = value;
+  if (name === "splashBackgroundColor") state.splashPreviewColor = value;
 };
 
 export const selectViewData = ({ state, i18n }) => {
@@ -228,7 +269,34 @@ export const selectViewData = ({ state, i18n }) => {
           copy,
         )
       : [],
+    adaptiveIconFileId: selectedPlatformInfo?.adaptiveIconFileId,
+    splashIconFileId: selectedPlatformInfo?.splashIconFileId,
+    platformEditAdaptiveIconFileId: state.platformEditAdaptiveIconFileId,
+    platformEditSplashIconFileId: state.platformEditSplashIconFileId,
+    showAndroidIcons: formPlatform === "android",
+    removeIconLabel: copy.removeIconButton,
+    usesAppIconLabel: copy.androidUsesAppIcon,
+    editIconBackgroundStyle: `background-color: ${state.iconPreviewColor};`,
+    editSplashBackgroundStyle: `background-color: ${state.splashPreviewColor};`,
+    cropTitle: copy[`${state.platformEditIconCropTarget}CropTitle`],
+    cropDescription: copy[`${state.platformEditIconCropTarget}CropDescription`],
+    guideCircle:
+      state.platformEditIconCropTarget === "adaptive"
+        ? 66 / 72
+        : state.platformEditIconCropTarget === "splash"
+          ? 1
+          : undefined,
     showAndroidPreviews: state.selectedPlatform === "android",
+    androidLauncherPreviewFileId:
+      selectedPlatformInfo?.adaptiveIconFileId ??
+      selectedPlatformInfo?.iconFileId,
+    androidLauncherPreviewSize: selectedPlatformInfo?.adaptiveIconFileId
+      ? 96
+      : 62,
+    androidSplashPreviewFileId:
+      selectedPlatformInfo?.splashIconFileId ??
+      selectedPlatformInfo?.iconFileId,
+    androidSplashPreviewSize: selectedPlatformInfo?.splashIconFileId ? 96 : 67,
     androidLauncherPreviewLabel: copy.androidLauncherPreviewLabel,
     androidSplashPreviewLabel: copy.androidSplashPreviewLabel,
     androidIconBackgroundStyle: `background-color: ${selectedPlatformInfo?.iconBackgroundColor ?? "#FFFFFF"};`,
@@ -246,7 +314,11 @@ export const selectViewData = ({ state, i18n }) => {
     platformEditIconFileId: state.platformEditIconFileId,
     platformEditIconCropFile: state.platformEditIconCropFile,
     platformEditIconOutputSize:
-      formPlatform === "android" ? 512 : PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+      state.platformEditIconCropTarget === "splash"
+        ? 768
+        : formPlatform === "android"
+          ? 512
+          : PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
     showPlatformApplicationIcon: state.selectedPlatform !== "web",
@@ -279,6 +351,8 @@ export const setPlatformApplicationInfo = (
   }
 
   if (platform === "android") {
+    target.adaptiveIconFileId = applicationInfo.adaptiveIconFileId;
+    target.splashIconFileId = applicationInfo.splashIconFileId;
     target.iconBackgroundColor =
       applicationInfo.iconBackgroundColor ?? "#FFFFFF";
     target.splashBackgroundColor =
@@ -350,6 +424,10 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
       applicationInfo.iconBackgroundColor ?? "#FFFFFF";
     state.platformEditDefaultValues.splashBackgroundColor =
       applicationInfo.splashBackgroundColor ?? "#000000";
+    state.iconPreviewColor =
+      state.platformEditDefaultValues.iconBackgroundColor;
+    state.splashPreviewColor =
+      state.platformEditDefaultValues.splashBackgroundColor;
   }
   // TODO: Restore optional Windows release metadata in dialog defaults.
   // state.platformEditDefaultValues.description = "";
@@ -365,6 +443,8 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
   // }
   state.platformEditIconFileId =
     platform === "web" ? undefined : applicationInfo.iconFileId;
+  state.platformEditAdaptiveIconFileId = applicationInfo.adaptiveIconFileId;
+  state.platformEditSplashIconFileId = applicationInfo.splashIconFileId;
 };
 
 export const openPlatformCreateDialog = (
@@ -402,7 +482,11 @@ export const setPlatformEditIconFileId = ({ state }, { iconFileId } = {}) => {
   state.platformEditIconFileId = iconFileId;
 };
 
-export const openPlatformEditIconCropDialog = ({ state }, { file } = {}) => {
+export const openPlatformEditIconCropDialog = (
+  { state },
+  { file, target = "icon" } = {},
+) => {
+  state.platformEditIconCropTarget = target;
   state.isPlatformEditIconCropDialogOpen = true;
   state.platformEditIconCropFile = file;
 };

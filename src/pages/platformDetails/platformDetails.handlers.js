@@ -141,6 +141,8 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
     platform,
     values,
     iconFileId: store.selectPlatformEditIconFileId(),
+    adaptiveIconFileId: store.selectPlatformEditAdaptiveIconFileId(),
+    splashIconFileId: store.selectPlatformEditSplashIconFileId(),
   });
   const validation = validatePlatformDetails({
     platform,
@@ -198,7 +200,10 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   }
 };
 
-export const handlePlatformEditDialogIconClick = async (deps) => {
+export const handlePlatformEditDialogIconClick = async (
+  deps,
+  { target = "icon" } = {},
+) => {
   const { appService, i18n, render, store } = deps;
   const copy = selectPlatformDetailsPageCopy(i18n);
   let file;
@@ -221,7 +226,14 @@ export const handlePlatformEditDialogIconClick = async (deps) => {
     return;
   }
 
-  store.openPlatformEditIconCropDialog({ file });
+  store.openPlatformEditIconCropDialog({ file, target });
+  render();
+};
+
+export const handleRemovePlatformEditOptionalIcon = (deps, payload) => {
+  const { store, render } = deps;
+  const { target } = payload;
+  store.setPlatformEditOptionalIconFileId({ target, fileId: undefined });
   render();
 };
 
@@ -271,7 +283,23 @@ export const handlePlatformEditIconCropDialogConfirm = async (deps) => {
     return;
   }
 
-  store.setPlatformEditIconFileId({ iconFileId: uploadResult.fileId });
+  const target = store.selectPlatformEditIconCropTarget();
+  if (target === "icon")
+    store.setPlatformEditIconFileId({ iconFileId: uploadResult.fileId });
+  else
+    store.setPlatformEditOptionalIconFileId({
+      target,
+      fileId: uploadResult.fileId,
+    });
   store.closePlatformEditIconCropDialog();
+  render();
+};
+
+export const handlePlatformEditFormChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { name, value } = payload._event.detail;
+  if (name !== "iconBackgroundColor" && name !== "splashBackgroundColor")
+    return;
+  store.setPlatformEditBackgroundColor({ name, value });
   render();
 };

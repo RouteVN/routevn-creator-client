@@ -177,7 +177,8 @@ Use these rules when reasoning about identity:
 ## Android Release Identity
 
 `platformDetails.android` in the project-specific DB `app` store owns the Android
-application name, icon file ID, application identifier (package name), icon
+application name, icon file ID, optional adaptive icon and splash icon file IDs,
+application identifier (package name), icon
 background color, and splash background color. Records are created explicitly
 from Platform Details or export setup. Defaults use the project name and icon,
 a blank identifier, `#FFFFFF` for the icon background, and `#000000` for the

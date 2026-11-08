@@ -35,6 +35,8 @@ refs:
         handler: handlePlatformEditDialogClose
   platformEditForm:
     eventListeners:
+      form-change:
+        handler: handlePlatformEditFormChange
       form-action:
         handler: handlePlatformEditFormAction
   platformEditDialogIcon:
@@ -47,6 +49,30 @@ refs:
         handler: handlePlatformEditIconCropDialogClose
       confirm:
         handler: handlePlatformEditIconCropDialogConfirm
+  adaptiveIconButton:
+    eventListeners:
+      click:
+        handler: handlePlatformEditDialogIconClick
+        payload:
+          target: adaptive
+  adaptiveIconRemove:
+    eventListeners:
+      click:
+        handler: handleRemovePlatformEditOptionalIcon
+        payload:
+          target: adaptive
+  splashIconButton:
+    eventListeners:
+      click:
+        handler: handlePlatformEditDialogIconClick
+        payload:
+          target: splash
+  splashIconRemove:
+    eventListeners:
+      click:
+        handler: handleRemovePlatformEditOptionalIcon
+        payload:
+          target: splash
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -77,17 +103,31 @@ template:
                                     $else:
                                       - rtgl-image#platformApplicationIcon slot=platform-application-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
                               - $if showAndroidPreviews:
+                                  - rtgl-view slot=android-adaptive-icon:
+                                      - $if adaptiveIconFileId:
+                                          - 'div style="width:128px; height:128px; ${androidIconBackgroundStyle}"':
+                                              - rvn-file-image fileId=${adaptiveIconFileId} w=128 h=128: null
+                                        $else:
+                                          - rtgl-text c=mu-fg: ${usesAppIconLabel}
+                              - $if showAndroidPreviews:
+                                  - rtgl-view slot=android-splash-icon:
+                                      - $if splashIconFileId:
+                                          - 'div style="width:128px; height:128px; ${androidSplashBackgroundStyle}"':
+                                              - rvn-file-image fileId=${splashIconFileId} w=128 h=128: null
+                                        $else:
+                                          - rtgl-text c=mu-fg: ${usesAppIconLabel}
+                              - $if showAndroidPreviews:
                                   - rtgl-view slot=android-previews d=v g=md w=f:
                                       - rtgl-text s=sm: ${androidLauncherPreviewLabel}
                                       - rtgl-view d=h g=md wrap:
                                           - 'div style="width: 96px; height: 96px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; ${androidIconBackgroundStyle}"':
-                                              - rvn-file-image fileId=${platformApplicationIconFileId} w=96 h=96: null
+                                              - rvn-file-image fileId=${androidLauncherPreviewFileId} w=${androidLauncherPreviewSize} h=${androidLauncherPreviewSize}: null
                                           - 'div style="width: 96px; height: 96px; border-radius: 24px; overflow: hidden; display: flex; align-items: center; justify-content: center; ${androidIconBackgroundStyle}"':
-                                              - rvn-file-image fileId=${platformApplicationIconFileId} w=96 h=96: null
+                                              - rvn-file-image fileId=${androidLauncherPreviewFileId} w=${androidLauncherPreviewSize} h=${androidLauncherPreviewSize}: null
                                       - rtgl-text s=sm: ${androidSplashPreviewLabel}
                                       - 'div style="width: 200px; height: 160px; display: flex; align-items: center; justify-content: center; border-radius: 8px; ${androidSplashBackgroundStyle}"':
                                           - 'div style="width: 96px; height: 96px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;"':
-                                              - rvn-file-image fileId=${platformApplicationIconFileId} w=67 h=67: null
+                                              - rvn-file-image fileId=${androidSplashPreviewFileId} w=${androidSplashPreviewSize} h=${androidSplashPreviewSize}: null
                               - rtgl-view#platformApplicationIdentifier slot=platform-application-identifier cur=pointer:
                                   - rtgl-text: ${platformApplicationIdentifier}
                     $else:
@@ -106,4 +146,24 @@ template:
                             $else:
                               - rtgl-view w=120 h=120 ah=c av=c ph=sm bw=xs bc=bo br=md:
                                   - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
-  - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile} :outputSize=${platformEditIconOutputSize}: null
+                  - $if showAndroidIcons:
+                      - rtgl-view slot=platform-android-adaptive-icon-edit d=v g=sm:
+                          - 'button#adaptiveIconButton type=button aria-label="${clickToUploadLabel}" style="width:120px; height:120px; padding:0; border:0; cursor:pointer; ${editIconBackgroundStyle}"':
+                              - $if platformEditAdaptiveIconFileId:
+                                  - rvn-file-image fileId=${platformEditAdaptiveIconFileId} w=120 h=120 bw=xs bc=bo br=md: null
+                                $else:
+                                  - rtgl-view w=120 h=120 ah=c av=c ph=sm bw=xs bc=bo br=md:
+                                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+                          - $if platformEditAdaptiveIconFileId:
+                              - rtgl-button#adaptiveIconRemove v=ol: ${removeIconLabel}
+                  - $if showAndroidIcons:
+                      - rtgl-view slot=platform-android-splash-icon-edit d=v g=sm:
+                          - 'button#splashIconButton type=button aria-label="${clickToUploadLabel}" style="width:120px; height:120px; padding:0; border:0; cursor:pointer; ${editSplashBackgroundStyle}"':
+                              - $if platformEditSplashIconFileId:
+                                  - rvn-file-image fileId=${platformEditSplashIconFileId} w=120 h=120 bw=xs bc=bo br=md: null
+                                $else:
+                                  - rtgl-view w=120 h=120 ah=c av=c ph=sm bw=xs bc=bo br=md:
+                                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+                          - $if platformEditSplashIconFileId:
+                              - rtgl-button#splashIconRemove v=ol: ${removeIconLabel}
+  - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile} :outputSize=${platformEditIconOutputSize} :guideCircle=${guideCircle} :title=${cropTitle} :description=${cropDescription}: null

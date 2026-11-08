@@ -12,6 +12,8 @@ const createDeps = ({ platform = "web", iconFileId } = {}) => ({
   store: {
     selectPlatform: vi.fn(() => platform),
     selectIconFileId: vi.fn(() => iconFileId),
+    selectAdaptiveIconFileId: vi.fn(() => "adaptive-1"),
+    selectSplashIconFileId: vi.fn(() => "splash-1"),
   },
 });
 
@@ -103,6 +105,8 @@ it("creates Android details using normalized colors", async () => {
       applicationName: "Project One",
       applicationIdentifier: "com.example.project_one",
       iconFileId: "icon-1",
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
       iconBackgroundColor: "#AABBCC",
       splashBackgroundColor: "#112233",
     },

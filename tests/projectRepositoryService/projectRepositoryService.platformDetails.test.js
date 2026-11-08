@@ -74,7 +74,7 @@ const createHarness = ({
           platformDetails.windows = clone(value);
         }
         if (key === "platformDetails.android")
-          platformDetails.android = clone(value);
+          platformDetails.android = JSON.parse(JSON.stringify(value));
         if (key === "platformDetails.macos") {
           platformDetails.macos = clone(value);
         }
@@ -115,6 +115,27 @@ const createHarness = ({
 };
 
 describe("projectRepositoryService platform details", () => {
+  it("persists optional Android icons and clears them on a later save", async () => {
+    const { service, getPlatformDetails } = createHarness();
+    await service.createCurrentPlatformDetails("android", {
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+    });
+    expect(await service.getCurrentPlatformDetails("android")).toMatchObject({
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+    });
+    await service.updateCurrentPlatformDetails("android", {
+      adaptiveIconFileId: undefined,
+      splashIconFileId: undefined,
+    });
+    expect(getPlatformDetails("android").adaptiveIconFileId).toBeUndefined();
+    expect(getPlatformDetails("android").splashIconFileId).toBeUndefined();
+    expect(await service.getCurrentPlatformDetails("android")).toMatchObject({
+      adaptiveIconFileId: undefined,
+      splashIconFileId: undefined,
+    });
+  });
   it("starts empty and explicitly creates each platform once", async () => {
     const harness = createHarness();
 

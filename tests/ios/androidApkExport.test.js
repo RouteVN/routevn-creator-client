@@ -136,6 +136,19 @@ describe("iOS Android APK export adapter", () => {
     expect(onProgress).toHaveBeenCalledTimes(1);
   });
 
+  it("passes optional icon ids to the bridge", async () => {
+    callIOSBridge.mockResolvedValue({ uri: "saved" });
+    await createFileAdapter().createAndroidApkToPath({
+      ...exportRequest(),
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+    });
+    expect(callIOSBridge.mock.calls[0][1]).toMatchObject({
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+    });
+  });
+
   it("unsubscribes after native failures and preserves the bridge error", async () => {
     const onProgress = vi.fn();
     const error = Object.assign(new Error("The export failed."), {
@@ -168,6 +181,8 @@ describe("iOS Android APK export adapter", () => {
     { getCurrentReference: () => ({ projectId: "../project" }) },
     { fileEntries: [{ id: "../asset" }] },
     { iconFileId: "../icon" },
+    { adaptiveIconFileId: "../icon" },
+    { splashIconFileId: "../icon" },
   ])(
     "rejects unsafe storage identifiers before exporting: %o",
     async (override) => {

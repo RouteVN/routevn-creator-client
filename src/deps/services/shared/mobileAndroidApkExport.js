@@ -49,6 +49,8 @@ export const createMobileAndroidApkExport = ({
     versionCode,
     orientation,
     iconFileId,
+    adaptiveIconFileId,
+    splashIconFileId,
     iconBackgroundColor,
     splashBackgroundColor,
     options = {},
@@ -78,6 +80,13 @@ export const createMobileAndroidApkExport = ({
         splashBackgroundColor,
       ),
     };
+
+    if (adaptiveIconFileId != null) {
+      payload.adaptiveIconFileId = assertSafeFileId(adaptiveIconFileId);
+    }
+    if (splashIconFileId != null) {
+      payload.splashIconFileId = assertSafeFileId(splashIconFileId);
+    }
 
     const unsubscribe = progressClient.subscribe({
       exportId,

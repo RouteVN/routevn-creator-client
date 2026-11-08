@@ -1470,6 +1470,8 @@ export const createProjectExportService = ({
       versionCode: metadata.versionCode,
       orientation: getAndroidExportOrientation(projectData.projectData.screen),
       iconFileId: metadata.iconFileId,
+      adaptiveIconFileId: metadata.adaptiveIconFileId,
+      splashIconFileId: metadata.splashIconFileId,
       iconBackgroundColor: metadata.iconBackgroundColor,
       splashBackgroundColor: metadata.splashBackgroundColor,
       options,

@@ -97,6 +97,30 @@ describe("mobile Android APK export", () => {
     expect(result.apkBytes).toBe(1234);
   });
 
+  it("validates and sends optional icon ids", async () => {
+    const callBridge = vi.fn(async () => ({}));
+    const { androidApkExport } = createExport({ callBridge });
+    await androidApkExport.createAndroidApkToPath(
+      exportRequest({
+        adaptiveIconFileId: "adaptive-1",
+        splashIconFileId: "splash-1",
+      }),
+    );
+    expect(callBridge.mock.calls[0][1]).toMatchObject({
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+    });
+    for (const override of [
+      { adaptiveIconFileId: "../bad" },
+      { splashIconFileId: "../bad" },
+    ]) {
+      await expect(
+        androidApkExport.createAndroidApkToPath(exportRequest(override)),
+      ).rejects.toThrow("Unsafe file id");
+    }
+    expect(callBridge).toHaveBeenCalledTimes(1);
+  });
+
   it("stops forwarding progress after the export fails", async () => {
     let exportId;
     const callBridge = vi.fn(async (_method, payload) => {

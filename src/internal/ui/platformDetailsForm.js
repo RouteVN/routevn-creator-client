@@ -55,6 +55,23 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     });
   }
 
+  if (platform === "android") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "platform-android-adaptive-icon-edit",
+        label: copy.androidAdaptiveIconLabel,
+        description: copy.androidAdaptiveIconDescription,
+      },
+      {
+        type: "slot",
+        slot: "platform-android-splash-icon-edit",
+        label: copy.androidSplashIconLabel,
+        description: copy.androidSplashIconDescription,
+      },
+    );
+  }
+
   fields.push({
     name: "applicationIdentifier",
     type: "input-text",
@@ -137,6 +154,8 @@ export const createPlatformDetailsPatch = ({
   platform,
   values,
   iconFileId,
+  adaptiveIconFileId,
+  splashIconFileId,
 }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
@@ -148,6 +167,8 @@ export const createPlatformDetailsPatch = ({
 
   patch.applicationIdentifier = values.applicationIdentifier.trim();
   if (platform === "android") {
+    patch.adaptiveIconFileId = adaptiveIconFileId;
+    patch.splashIconFileId = splashIconFileId;
     for (const name of ["iconBackgroundColor", "splashBackgroundColor"]) {
       patch[name] = isValidAndroidBackgroundColor(values[name])
         ? normalizeAndroidBackgroundColor(values[name])

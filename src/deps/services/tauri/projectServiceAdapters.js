@@ -1090,6 +1090,8 @@ export const createTauriProjectServiceAdapters = ({
     versionCode,
     orientation,
     iconFileId,
+    adaptiveIconFileId,
+    splashIconFileId,
     iconBackgroundColor,
     splashBackgroundColor,
     options = {},
@@ -1129,27 +1131,40 @@ export const createTauriProjectServiceAdapters = ({
     });
     const onProgress = new Channel();
     if (options.onProgress) onProgress.onmessage = options.onProgress;
-    return invoke("export_android_apk", {
-      request: {
-        templatePath: paths.templatePath,
-        descriptorPath: paths.descriptorPath,
-        outputPath,
-        assets,
-        instructionsJson: JSON.stringify(projectData),
-        applicationId,
-        applicationName: applicationName.trim(),
-        versionName,
-        versionCode,
-        orientation,
-        iconPath,
-        iconBackgroundColor:
-          normalizeAndroidBackgroundColor(iconBackgroundColor),
-        splashBackgroundColor: normalizeAndroidBackgroundColor(
-          splashBackgroundColor,
-        ),
-      },
-      onProgress,
-    });
+    const request = {
+      templatePath: paths.templatePath,
+      descriptorPath: paths.descriptorPath,
+      outputPath,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      applicationId,
+      applicationName: applicationName.trim(),
+      versionName,
+      versionCode,
+      orientation,
+      iconPath,
+      iconBackgroundColor: normalizeAndroidBackgroundColor(iconBackgroundColor),
+      splashBackgroundColor: normalizeAndroidBackgroundColor(
+        splashBackgroundColor,
+      ),
+    };
+    if (adaptiveIconFileId != null) {
+      const { filePath } = await resolveReferenceFilePath(
+        getCurrentReference(),
+        adaptiveIconFileId,
+        { label: "Android adaptive icon file id" },
+      );
+      request.adaptiveIconPath = filePath;
+    }
+    if (splashIconFileId != null) {
+      const { filePath } = await resolveReferenceFilePath(
+        getCurrentReference(),
+        splashIconFileId,
+        { label: "Android splash icon file id" },
+      );
+      request.splashIconPath = filePath;
+    }
+    return invoke("export_android_apk", { request, onProgress });
   };
 
   const storageAdapter = {

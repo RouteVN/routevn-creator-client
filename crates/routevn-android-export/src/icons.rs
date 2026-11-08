@@ -32,39 +32,65 @@ impl ImageKind {
         }
     }
 
-    /// Fraction of the canvas the game icon occupies.
-    pub fn content_fraction(self) -> f64 {
-        match self {
-            Self::Legacy => 1.0,
-            Self::AdaptiveForeground => 72.0 / 108.0,
-            // The largest square inside the 192 dp circle, on a 288 dp canvas.
-            Self::Splash => 192.0 / std::f64::consts::SQRT_2 / 288.0,
-        }
-    }
-
     /// Pixel size at an Android density (160 = mdpi).
     pub fn pixel_size(self, density: u16) -> u32 {
         self.canvas_dp() * u32::from(density) / 160
     }
 }
 
-pub fn load_icon(path: &Path) -> Result<RgbaImage> {
+/// Source images for the template slots.
+pub struct IconImages {
+    pub app: RgbaImage,
+    pub adaptive: Option<RgbaImage>,
+    pub splash: Option<RgbaImage>,
+}
+
+impl IconImages {
+    pub fn render(&self, kind: ImageKind, size: u32) -> Result<Vec<u8>> {
+        let (source, fraction) = match kind {
+            ImageKind::Legacy => (&self.app, 1.0),
+            ImageKind::AdaptiveForeground => match &self.adaptive {
+                Some(image) => (image, 72.0 / 108.0),
+                None => (&self.app, 66.0 / std::f64::consts::SQRT_2 / 108.0),
+            },
+            ImageKind::Splash => match &self.splash {
+                Some(image) => (image, 192.0 / 288.0),
+                None => (&self.app, 192.0 / std::f64::consts::SQRT_2 / 288.0),
+            },
+        };
+        let round_down = kind == ImageKind::AdaptiveForeground && self.adaptive.is_none();
+        render(source, fraction, size, round_down)
+    }
+}
+
+pub fn load_icon(path: &Path, label: &str) -> Result<RgbaImage> {
     let reader = ImageReader::open(path)
         .and_then(|reader| reader.with_guessed_format())
-        .map_err(|error| icon_error(format!("Failed to open the icon: {error}")))?;
+        .map_err(|error| icon_error(format!("Failed to open the {label}: {error}")))?;
     let image = reader
         .decode()
-        .map_err(|error| icon_error(format!("Failed to read the icon image: {error}")))?;
+        .map_err(|error| icon_error(format!("Failed to read the {label} image: {error}")))?;
     if image.width() == 0 || image.height() == 0 {
-        return Err(icon_error("The icon image is empty."));
+        return Err(icon_error(format!("The {label} image is empty.")));
     }
     Ok(image.to_rgba8())
 }
 
-/// Renders `icon` for one slot: scaled to fit the kind's content area,
+/// Renders `icon` scaled to fit the specified fraction of the canvas,
 /// centered on a transparent square canvas of `size` pixels.
-pub fn render(icon: &RgbaImage, kind: ImageKind, size: u32) -> Result<Vec<u8>> {
-    let content = ((f64::from(size) * kind.content_fraction()).round() as u32).clamp(1, size);
+pub fn render(
+    icon: &RgbaImage,
+    content_fraction: f64,
+    size: u32,
+    round_down: bool,
+) -> Result<Vec<u8>> {
+    let exact_content = f64::from(size) * content_fraction;
+    let content = if round_down {
+        exact_content.floor()
+    } else {
+        exact_content.round()
+    };
+    let content = (content as u32).clamp(1, size);
     let scale = f64::from(content) / f64::from(icon.width().max(icon.height()));
     let width = ((f64::from(icon.width()) * scale).round() as u32).clamp(1, content);
     let height = ((f64::from(icon.height()) * scale).round() as u32).clamp(1, content);
@@ -142,16 +168,26 @@ mod tests {
     fn renders_icons_inside_their_safe_areas() {
         let icon = RgbaImage::from_pixel(64, 64, Rgba([200, 40, 40, 255]));
 
-        let legacy = decode(&render(&icon, ImageKind::Legacy, 48).unwrap());
+        let legacy = decode(&render(&icon, 1.0, 48, false).unwrap());
         assert_eq!(legacy.dimensions(), (48, 48));
         assert_eq!(legacy.get_pixel(0, 0)[3], 255);
 
-        let foreground = decode(&render(&icon, ImageKind::AdaptiveForeground, 108).unwrap());
-        assert_eq!(foreground.get_pixel(17, 54)[3], 0);
-        assert_eq!(foreground.get_pixel(19, 54)[3], 255);
+        let foreground =
+            decode(&render(&icon, 66.0 / std::f64::consts::SQRT_2 / 108.0, 108, true).unwrap());
+        assert_eq!(foreground.get_pixel(29, 54)[3], 0);
+        assert_eq!(foreground.get_pixel(31, 54)[3], 255);
         assert_eq!(foreground.get_pixel(54, 54)[3], 255);
 
-        let splash = decode(&render(&icon, ImageKind::Splash, 288).unwrap());
+        for (x, y, pixel) in foreground.enumerate_pixels() {
+            if pixel[3] > 0 {
+                let dx = f64::from(x) + 0.5 - 54.0;
+                let dy = f64::from(y) + 0.5 - 54.0;
+                assert!(dx * dx + dy * dy <= 33.0 * 33.0);
+            }
+        }
+
+        let splash =
+            decode(&render(&icon, 192.0 / std::f64::consts::SQRT_2 / 288.0, 288, false).unwrap());
         let inside_circle = |x: u32, y: u32| {
             let dx = f64::from(x) + 0.5 - 144.0;
             let dy = f64::from(y) + 0.5 - 144.0;
@@ -169,9 +205,43 @@ mod tests {
     }
 
     #[test]
+    fn renders_provided_images_in_visible_squares() {
+        let icon = RgbaImage::from_pixel(64, 64, Rgba([200, 40, 40, 255]));
+        let images = IconImages {
+            app: icon.clone(),
+            adaptive: Some(icon.clone()),
+            splash: Some(icon),
+        };
+        for (kind, size, start, end) in [
+            (ImageKind::AdaptiveForeground, 108, 18, 89),
+            (ImageKind::Splash, 288, 48, 239),
+        ] {
+            let image = decode(&images.render(kind, size).unwrap());
+            assert_eq!(image.get_pixel(start, start)[3], 255);
+            assert_eq!(image.get_pixel(end, end)[3], 255);
+            assert_eq!(image.get_pixel(start - 1, start)[3], 0);
+            assert_eq!(image.get_pixel(end + 1, end)[3], 0);
+        }
+    }
+
+    #[test]
+    fn image_load_errors_identify_the_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let invalid = dir.path().join("invalid.png");
+        std::fs::write(&invalid, b"not an image").unwrap();
+        for path in [dir.path().join("missing.png"), invalid] {
+            for label in ["app icon", "adaptive icon", "splash icon"] {
+                let error = load_icon(&path, label).unwrap_err();
+                assert_eq!(error.code, ErrorCode::IconInvalid);
+                assert!(error.message.contains(label));
+            }
+        }
+    }
+
+    #[test]
     fn fits_non_square_icons() {
         let wide = RgbaImage::from_pixel(100, 50, Rgba([0, 0, 255, 255]));
-        let rendered = decode(&render(&wide, ImageKind::Legacy, 48).unwrap());
+        let rendered = decode(&render(&wide, 1.0, 48, false).unwrap());
         assert_eq!(rendered.get_pixel(24, 2)[3], 0);
         assert_eq!(rendered.get_pixel(24, 24)[3], 255);
     }

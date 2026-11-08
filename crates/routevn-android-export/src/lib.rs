@@ -59,6 +59,10 @@ pub struct AndroidExportRequest {
     pub version_code: u32,
     pub orientation: Orientation,
     pub icon_path: PathBuf,
+    #[serde(default)]
+    pub adaptive_icon_path: Option<PathBuf>,
+    #[serde(default)]
+    pub splash_icon_path: Option<PathBuf>,
     pub icon_background_color: String,
     pub splash_background_color: String,
     /// Directory for intermediate files. Defaults to the system temp
@@ -260,7 +264,19 @@ pub fn export_android_apk(
 
     progress.emit("prepareApk", 0, 0);
     let descriptor = template::load_descriptor(&request.template_path, &request.descriptor_path)?;
-    let icon = icons::load_icon(&request.icon_path)?;
+    let icons = icons::IconImages {
+        app: icons::load_icon(&request.icon_path, "app icon")?,
+        adaptive: request
+            .adaptive_icon_path
+            .as_deref()
+            .map(|path| icons::load_icon(path, "adaptive icon"))
+            .transpose()?,
+        splash: request
+            .splash_icon_path
+            .as_deref()
+            .map(|path| icons::load_icon(path, "splash icon"))
+            .transpose()?,
+    };
 
     let work = match &request.work_dir {
         Some(dir) => tempfile::Builder::new()
@@ -338,10 +354,7 @@ pub fn export_android_apk(
     progress.emit("renderIcons", 0, descriptor.images.len() as u64);
     let mut images = std::collections::HashMap::new();
     for (position, slot) in descriptor.images.iter().enumerate() {
-        images.insert(
-            slot.entry.clone(),
-            icons::render(&icon, slot.kind, slot.size)?,
-        );
+        images.insert(slot.entry.clone(), icons.render(slot.kind, slot.size)?);
         progress.emit(
             "renderIcons",
             position as u64 + 1,

@@ -1,6 +1,8 @@
 refs:
   platformForm:
     eventListeners:
+      form-change:
+        handler: handleFormChange
       form-action:
         handler: handleFormAction
   iconButton:
@@ -13,6 +15,30 @@ refs:
         handler: handleIconCropDialogClose
       confirm:
         handler: handleIconCropDialogConfirm
+  adaptiveIconButton:
+    eventListeners:
+      click:
+        handler: handleIconClick
+        payload:
+          target: adaptive
+  adaptiveIconRemove:
+    eventListeners:
+      click:
+        handler: handleRemoveOptionalIcon
+        payload:
+          target: adaptive
+  splashIconButton:
+    eventListeners:
+      click:
+        handler: handleIconClick
+        payload:
+          target: splash
+  splashIconRemove:
+    eventListeners:
+      click:
+        handler: handleRemoveOptionalIcon
+        payload:
+          target: splash
 template:
   - rtgl-form#platformForm key=${formKey} :defaultValues=${defaultValues} :form=${form} sticky sbv=touch w=f h=f:
       - $if showIcon:
@@ -22,4 +48,24 @@ template:
                 $else:
                   - rtgl-view w=120 h=120 ah=c av=c ph=sm bw=xs bc=bo br=md:
                       - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
-  - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile} :outputSize=${iconOutputSize}: null
+      - $if showAndroidIcons:
+          - rtgl-view slot=platform-android-adaptive-icon-edit d=v g=sm:
+              - 'button#adaptiveIconButton type=button aria-label="${clickToUploadLabel}" style="width:120px; height:120px; padding:0; border:0; cursor:pointer; ${iconBackgroundStyle}"':
+                  - $if adaptiveIconFileId:
+                      - rvn-file-image fileId=${adaptiveIconFileId} w=120 h=120 bw=xs bc=bo br=md: null
+                    $else:
+                      - rtgl-view w=120 h=120 ah=c av=c ph=sm bw=xs bc=bo br=md:
+                          - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+              - $if adaptiveIconFileId:
+                  - rtgl-button#adaptiveIconRemove v=ol: ${removeIconLabel}
+      - $if showAndroidIcons:
+          - rtgl-view slot=platform-android-splash-icon-edit d=v g=sm:
+              - 'button#splashIconButton type=button aria-label="${clickToUploadLabel}" style="width:120px; height:120px; padding:0; border:0; cursor:pointer; ${splashBackgroundStyle}"':
+                  - $if splashIconFileId:
+                      - rvn-file-image fileId=${splashIconFileId} w=120 h=120 bw=xs bc=bo br=md: null
+                    $else:
+                      - rtgl-view w=120 h=120 ah=c av=c ph=sm bw=xs bc=bo br=md:
+                          - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+              - $if splashIconFileId:
+                  - rtgl-button#splashIconRemove v=ol: ${removeIconLabel}
+  - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile} :outputSize=${iconOutputSize} :guideCircle=${guideCircle} :title=${cropTitle} :description=${cropDescription}: null

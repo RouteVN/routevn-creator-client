@@ -200,6 +200,8 @@ export const createProjectRepositoryService = ({
 
     if (platform === "android") {
       platformDetails.iconFileId = sourceInfo?.iconFileId ?? undefined;
+      platformDetails.adaptiveIconFileId = sourceInfo?.adaptiveIconFileId;
+      platformDetails.splashIconFileId = sourceInfo?.splashIconFileId;
       platformDetails.iconBackgroundColor = normalizeAndroidBackgroundColor(
         sourceInfo?.iconBackgroundColor ?? "#FFFFFF",
       );
@@ -325,8 +327,12 @@ export const createProjectRepositoryService = ({
       if (!Object.hasOwn(patch, key)) {
         continue;
       }
-      nextPlatformDetails[key] =
-        key === "iconFileId" ? (patch[key] ?? null) : (patch[key] ?? "");
+      if (key === "adaptiveIconFileId" || key === "splashIconFileId") {
+        nextPlatformDetails[key] = patch[key];
+      } else {
+        nextPlatformDetails[key] =
+          key === "iconFileId" ? (patch[key] ?? null) : (patch[key] ?? "");
+      }
     }
 
     return normalizePlatformDetails(platform, nextPlatformDetails);

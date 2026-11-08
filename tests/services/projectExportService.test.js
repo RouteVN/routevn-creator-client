@@ -725,6 +725,8 @@ it.each([
       versionName: "1.2.3",
       versionCode: 42,
       iconFileId: "icon-1",
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
       iconBackgroundColor: "#FFFFFF",
       splashBackgroundColor: "#000000",
     };
@@ -755,5 +757,20 @@ it.each([
       options: {},
       getCurrentReference,
     });
+    const withoutOptionalIcons = { ...metadata };
+    delete withoutOptionalIcons.adaptiveIconFileId;
+    delete withoutOptionalIcons.splashIconFileId;
+    await service.createAndroidApkToPath(
+      projectData,
+      [],
+      "/exports/project.apk",
+      withoutOptionalIcons,
+    );
+    expect(fileAdapter.createAndroidApkToPath).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        adaptiveIconFileId: undefined,
+        splashIconFileId: undefined,
+      }),
+    );
   },
 );

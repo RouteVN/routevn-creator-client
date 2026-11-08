@@ -1664,6 +1664,8 @@ const createAndroidDeps = () => {
     applicationName: "Project One",
     applicationIdentifier: "com.example.project_one",
     iconFileId: "icon-1",
+    adaptiveIconFileId: "adaptive-1",
+    splashIconFileId: "splash-1",
     iconBackgroundColor: "#FFFFFF",
     splashBackgroundColor: "#000000",
   });
@@ -1686,6 +1688,29 @@ const submitAndroidExport = (
   handleAndroidExportFormAction(deps, {
     _event: { detail: { actionId: "submit", values } },
   });
+
+it("exports Android without optional icon ids", async () => {
+  const deps = createAndroidDeps();
+  deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+    applicationName: "Project One",
+    applicationIdentifier: "com.example.project_one",
+    iconFileId: "icon-1",
+    iconBackgroundColor: "#FFFFFF",
+    splashBackgroundColor: "#000000",
+  });
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  await submitAndroidExport(deps);
+  expect(deps.projectService.createAndroidApkToPath).toHaveBeenCalledWith(
+    expect.any(Object),
+    expect.any(Array),
+    expect.any(String),
+    expect.objectContaining({
+      adaptiveIconFileId: undefined,
+      splashIconFileId: undefined,
+    }),
+    expect.any(Object),
+  );
+});
 
 it("prefills Android native version inputs and exports with the entered version and build", async () => {
   const deps = createAndroidDeps();
@@ -1721,6 +1746,8 @@ it("prefills Android native version inputs and exports with the entered version 
       applicationName: "Project One",
       applicationId: "com.example.project_one",
       iconFileId: "icon-1",
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
       versionName: "2.3.4",
       versionCode: 42,
       iconBackgroundColor: "#FFFFFF",
