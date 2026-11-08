@@ -131,12 +131,17 @@ only. The persistence host speaks the same `init`, `list`, `set`,
 `applyBatch`, and `clear` contract as the Windows and macOS players (see
 `11-windows-player-runtime-persistence.md` and
 `12-windows-player-runtime-key-value-contract.md`), stored in the app's
-`runtime.db` with WAL, `synchronous=FULL`, and schema version 1.
+`runtime.db` with WAL, `synchronous=FULL`, and schema version 1. Values are
+read in chunks so saves are not limited by the Android cursor window size.
 
 One difference: Android's bundled SQLite has no `json_valid()` before API 34,
 so the `kv.value` column has no CHECK constraint on Android. The native store
 validates every value with a strict JSON syntax check before writing, in
 addition to the JavaScript validation every player performs.
+
+Audio is suspended while the game is in the background and resumes when it
+returns to the foreground. Android System WebView 111 or later is required; an
+older version shows a message asking the player to update it.
 
 Auto Backup and device transfer include only `runtime.db` and its WAL file.
 

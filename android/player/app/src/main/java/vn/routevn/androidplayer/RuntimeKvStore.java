@@ -15,6 +15,7 @@ import java.util.Map;
 
 // All calls, including close, run on PlayerBridge's single database executor.
 final class RuntimeKvStore implements Closeable {
+    private static final int CHUNK_SIZE = 256 * 1024;
     private final File path;
     private SQLiteDatabase db;
 
@@ -66,22 +67,45 @@ final class RuntimeKvStore implements Closeable {
 
     JSONArray list(JSONObject payload) throws JSONException {
         ensureInitialized();
-        String sql = "SELECT key, value FROM kv ORDER BY key";
+        String columns = "key, length(value), substr(value, 1, " + CHUNK_SIZE + ")";
+        String sql = "SELECT " + columns + " FROM kv ORDER BY key";
         String[] args = null;
         if (payload.has("prefix")) {
             String prefix = requireString(payload, "prefix");
-            sql = "SELECT key, value FROM kv WHERE substr(key, 1, ?) = ? ORDER BY key";
+            sql = "SELECT " + columns + " FROM kv WHERE substr(key, 1, ?) = ? ORDER BY key";
             args = new String[] {Integer.toString(prefix.length()), prefix};
         }
         JSONArray rows = new JSONArray();
-        try (Cursor cursor = db.rawQuery(sql, args)) {
-            while (cursor.moveToNext()) {
-                JSONObject row = new JSONObject();
-                row.put("key", cursor.getString(0));
-                // Keep JSON text intact across the bridge; JS parses it just as the desktop client does.
-                row.put("value", cursor.isNull(1) ? JSONObject.NULL : cursor.getString(1));
-                rows.put(row);
+        // All bridge calls share one executor, while the transaction also protects
+        // the snapshot from writers using another database connection.
+        db.beginTransactionNonExclusive();
+        try {
+            try (Cursor cursor = db.rawQuery(sql, args)) {
+                while (cursor.moveToNext()) {
+                    String key = cursor.getString(0);
+                    JSONObject row = new JSONObject();
+                    row.put("key", key);
+                    if (cursor.isNull(1)) {
+                        row.put("value", JSONObject.NULL);
+                    } else {
+                        long length = cursor.getLong(1);
+                        StringBuilder value = new StringBuilder(cursor.getString(2));
+                        for (long offset = CHUNK_SIZE + 1L; offset <= length; offset += CHUNK_SIZE) {
+                            try (Cursor chunk = db.rawQuery(
+                                    "SELECT substr(value, ?, ?) FROM kv WHERE key = ?",
+                                    new String[] {Long.toString(offset), Integer.toString(CHUNK_SIZE), key})) {
+                                if (!chunk.moveToFirst()) throw new IllegalStateException("Missing runtime value");
+                                value.append(chunk.getString(0));
+                            }
+                        }
+                        row.put("value", value.toString());
+                    }
+                    rows.put(row);
+                }
             }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
         }
         return rows;
     }
