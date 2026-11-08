@@ -625,6 +625,7 @@ webServerPage:
   actionsLabel: "Действия"
   addButton: "Добавить"
   copyUrlButton: "Копировать URL-адрес"
+  openUrlButton: "Открыть URL-адрес"
   desktopOnlyAlert: "Экран веб-сервера доступен только в настольном приложении."
   desktopOnlyDescription: "Этому инструменту публикации нужно настольное приложение (Tauri), потому что он запускает локальный сервер."
   desktopOnlyTitle: "Только в настольном приложении"

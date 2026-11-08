@@ -11,6 +11,10 @@ refs:
     eventListeners:
       click:
         handler: handleCopyUrlClick
+  openUrlBtn*:
+    eventListeners:
+      click:
+        handler: handleOpenUrlClick
   startServerBtn*:
     eventListeners:
       click:
@@ -23,6 +27,10 @@ refs:
     eventListeners:
       click:
         handler: handleCopyUrlClick
+  openDetailUrlBtn:
+    eventListeners:
+      click:
+        handler: handleOpenUrlClick
   stopDetailServerBtn:
     eventListeners:
       click:
@@ -62,6 +70,7 @@ template:
                                           - rtgl-text s=sm c=mu-fg ellipsis=true: ${item.displayRootPath}
                                           - rtgl-text s=xs c=mu-fg ellipsis=true: ${item.url}
                                       - $if item.canCopyUrl:
+                                          - rtgl-button#openUrlBtn${i} data-server-id="${item.id}" v=se s=sm: ${openUrlButton}
                                           - rtgl-button#copyUrlBtn${i} data-server-id="${item.id}" v=se s=sm: ${copyUrlButton}
                                       - $if item.canStartServer:
                                           - rtgl-button#startServerBtn${i} data-server-id="${item.id}" v=se s=sm: ${startButton}
@@ -76,6 +85,7 @@ template:
                               - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - $if canCopySelectedServerUrl:
+                                  - rtgl-button#openDetailUrlBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${openUrlButton}
                                   - rtgl-button#copyDetailUrlBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${copyUrlButton}
                               - $if canStartSelectedServer:
                                   - rtgl-button#startDetailServerBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${startWebServerButton}

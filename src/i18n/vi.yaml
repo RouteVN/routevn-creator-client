@@ -625,6 +625,7 @@ webServerPage:
   actionsLabel: "Thao tác"
   addButton: "Thêm"
   copyUrlButton: "Sao chép URL"
+  openUrlButton: "Mở URL"
   desktopOnlyAlert: "Trang “Máy chủ web” chỉ có trong ứng dụng RouteVN Creator trên máy tính."
   desktopOnlyDescription: "Công cụ phát hành này chỉ dùng được trong ứng dụng RouteVN Creator trên máy tính vì cần khởi động một máy chủ cục bộ."
   desktopOnlyTitle: "Chỉ có trên máy tính"

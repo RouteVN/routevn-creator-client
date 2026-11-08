@@ -22,9 +22,9 @@
     "@lexical/selection": "0.22.0",
     "@lexical/utils": "0.22.0",
     "@noble/hashes": "2.4.0",
-    "@rettangoli/fe": "1.6.1",
-    "@rettangoli/ui": "1.32.0",
-    "@rettangoli/vt": "1.1.0",
+    "@rettangoli/fe": "2.0.0",
+    "@rettangoli/ui": "2.0.0",
+    "@rettangoli/vt": "2.0.0",
     "@routevn/creator-model": "1.18.0",
     "@sentry/browser": "10.44.0",
     "@tauri-apps/api": "2.11.0",
@@ -133,7 +133,7 @@
     "oxlint": "1.65.0",
     "prettier": "3.6.2",
     "puty": "0.1.2",
-    "rtgl": "2.3.1",
+    "rtgl": "3.0.0",
     "vitest": "3.2.4"
   },
   "overrides": {

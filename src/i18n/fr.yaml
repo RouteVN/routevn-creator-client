@@ -625,6 +625,7 @@ webServerPage:
   actionsLabel: "Actions"
   addButton: "Ajouter"
   copyUrlButton: "Copier l’URL"
+  openUrlButton: "Ouvrir l’URL"
   desktopOnlyAlert: "L’écran « Serveur Web » n’est disponible que dans l’application de bureau."
   desktopOnlyDescription: "Cet outil de publication nécessite l’application de bureau Tauri, car il démarre un serveur local."
   desktopOnlyTitle: "Application de bureau uniquement"

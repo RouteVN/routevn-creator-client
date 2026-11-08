@@ -625,6 +625,7 @@ webServerPage:
   actionsLabel: "Działania"
   addButton: "Dodaj"
   copyUrlButton: "Kopiuj adres URL"
+  openUrlButton: "Otwórz adres URL"
   desktopOnlyAlert: "Strona „Serwer WWW” jest dostępna tylko w aplikacji na komputery."
   desktopOnlyDescription: "To narzędzie do wydawania gier wymaga aplikacji na komputery (Tauri), ponieważ uruchamia lokalny serwer."
   desktopOnlyTitle: "Tylko w aplikacji na komputery"

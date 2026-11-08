@@ -625,6 +625,7 @@ webServerPage:
   actionsLabel: "操作"
   addButton: "追加"
   copyUrlButton: "URLをコピー"
+  openUrlButton: "URLを開く"
   desktopOnlyAlert: "Webサーバーページはデスクトップアプリでのみ利用できます。"
   desktopOnlyDescription: "この公開ツールはローカルサーバーを起動するため、デスクトップアプリが必要です。"
   desktopOnlyTitle: "デスクトップ専用"

@@ -625,6 +625,7 @@ webServerPage:
   actionsLabel: "Actions"
   addButton: "Add"
   copyUrlButton: "Copy URL"
+  openUrlButton: "Open URL"
   desktopOnlyAlert: "The web server page is only available in the desktop app."
   desktopOnlyDescription: "This release tool needs the Tauri desktop app because it starts a local server."
   desktopOnlyTitle: "Desktop only"

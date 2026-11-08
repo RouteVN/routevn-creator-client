@@ -625,6 +625,7 @@ webServerPage:
   actionsLabel: "Azioni"
   addButton: "Aggiungi"
   copyUrlButton: "Copia URL"
+  openUrlButton: "Apri URL"
   desktopOnlyAlert: "La schermata “Server web” è disponibile solo nella versione per computer."
   desktopOnlyDescription: "Questo strumento di pubblicazione richiede la versione per computer (Tauri) perché avvia un server locale."
   desktopOnlyTitle: "Solo su computer"

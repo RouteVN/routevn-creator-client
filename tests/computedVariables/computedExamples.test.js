@@ -116,6 +116,46 @@ describe("computed examples", () => {
     ]);
   });
 
+  it("starts number inputs with an empty stored default at 0", () => {
+    expect(
+      createComputedExampleInputItems({
+        computed: {
+          expr: {
+            add: [{ var: "variables.legacy" }, { var: "variables.name" }],
+          },
+        },
+        flatGroups: [
+          {
+            id: "group",
+            children: [
+              {
+                id: "legacy",
+                type: "variable",
+                name: "Legacy",
+                variableType: "number",
+                default: "",
+              },
+              {
+                id: "name",
+                type: "variable",
+                name: "Name",
+                variableType: "string",
+                default: "",
+              },
+            ],
+          },
+        ],
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        id: "legacy",
+        type: "number",
+        defaultValue: 0,
+      }),
+      expect.objectContaining({ id: "name", type: "string", defaultValue: "" }),
+    ]);
+  });
+
   it("maps form values to the persisted input namespaces", () => {
     const inputItems = [
       {
