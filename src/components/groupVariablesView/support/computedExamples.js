@@ -15,8 +15,15 @@ const cloneValue = (value) =>
 
 const getVariableType = (item = {}) => item.variableType ?? "string";
 
-const getInitialInputValue = (item = {}) =>
-  cloneValue(item.value ?? item.default ?? getDefaultValueForType(item.type));
+// Older number variables can store an empty default. Start those at 0, as the
+// variable list shows them, so the required number field is not empty.
+const getInitialInputValue = (item = {}) => {
+  const value = item.value ?? item.default;
+  if (value === undefined || (item.type === "number" && value === "")) {
+    return getDefaultValueForType(item.type);
+  }
+  return cloneValue(value);
+};
 
 const getDefaultValueForType = (type) => {
   if (type === "number") {
