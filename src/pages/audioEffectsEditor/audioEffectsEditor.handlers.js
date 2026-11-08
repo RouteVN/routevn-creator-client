@@ -1,3 +1,4 @@
+import { warnIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import {
   createAudioEffectsEditorPayload,
   getAudioEffectsEditorBackPath,
@@ -289,6 +290,8 @@ export const handlePlayClick = async (deps) => {
     render();
     return;
   }
+
+  if (warnIfAudioUnavailable(deps)) return;
 
   try {
     await playAudioEffectPreview(deps);

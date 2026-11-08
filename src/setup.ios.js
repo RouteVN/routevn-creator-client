@@ -1,3 +1,7 @@
+import {
+  isAudioAvailable,
+  createSilentGraphicsAudioRuntime,
+} from "./deps/clients/audioAvailability.js";
 import { errorReporter } from "./deps/clients/ios/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 import { configureAudioRuntime } from "route-graphics";
@@ -48,7 +52,11 @@ const iosGraphicsAudioOutput = createIOSGraphicsAudioOutput({
   runtime: iosAudioRuntime,
   onError: (error) => alertPreviewAudioFailure(error),
 });
-configureAudioRuntime(iosGraphicsAudioOutput.graphicsRuntime);
+configureAudioRuntime(
+  isAudioAvailable()
+    ? iosGraphicsAudioOutput.graphicsRuntime
+    : createSilentGraphicsAudioRuntime(),
+);
 
 const uiConfig = {
   id: "touch",
@@ -299,8 +307,9 @@ const alertPreviewAudioFailure = (error) => {
 
 const graphicsService = await createGraphicsService({
   subject,
+  audioAvailable: isAudioAvailable(),
   onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
-  audioOutput: iosGraphicsAudioOutput,
+  audioOutput: isAudioAvailable() ? iosGraphicsAudioOutput : undefined,
   onAudioOutputError: alertPreviewAudioFailure,
   onRenderError: (error) => {
     console.error(error);

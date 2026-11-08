@@ -271,6 +271,8 @@ appPage:
   filePickerFiles: "Файли"
   pressEscapeAgainFullscreen: "Щоб вийти з повноекранного режиму, двічі швидко натисніть клавішу Esc"
   failedExitFullscreen: "Не вдалося вийти з повноекранного режиму. Скористайтеся кнопками керування вікном."
+  audioUnavailable: "Звук зараз недоступний на цьому пристрої."
+  audioUnavailableLockdownHint: "Якщо ввімкнено режим ізоляції, його можна вимкнути для RouteVN у Параметрах."
   failedStartPreviewAudio: "Не вдалося запустити звук у попередньому перегляді. Закрийте попередній перегляд і відкрийте його знову."
   assetsTab: "Ресурси"
   buildingProjectState: "Підготовка проєкту…"

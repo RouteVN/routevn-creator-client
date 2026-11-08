@@ -1,3 +1,5 @@
+import { createAudioUnavailableError } from "./audioAvailability.js";
+
 export const createMobileAudioRuntime = ({
   windowTarget = globalThis.window,
   documentTarget = globalThis.document,
@@ -97,6 +99,7 @@ export const createMobileAudioRuntime = ({
   const createAudioContext = () => {
     const AudioContextConstructor =
       windowTarget.AudioContext ?? windowTarget.webkitAudioContext;
+    if (!AudioContextConstructor) throw createAudioUnavailableError();
     const context = new AudioContextConstructor();
     const entry = {
       context,

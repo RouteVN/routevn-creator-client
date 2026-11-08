@@ -271,6 +271,8 @@ appPage:
   filePickerFiles: "Sélecteur de fichiers"
   pressEscapeAgainFullscreen: "Appuyez deux fois rapidement sur Échap pour quitter le plein écran"
   failedExitFullscreen: "Impossible de quitter le plein écran. Utilisez les boutons de la fenêtre."
+  audioUnavailable: "L’audio n’est pas disponible sur cet appareil pour le moment."
+  audioUnavailableLockdownHint: "Si le mode Isolement est activé, vous pouvez le désactiver pour RouteVN dans Réglages."
   failedStartPreviewAudio: "Impossible de démarrer l’audio de l’aperçu. Fermez l’aperçu, puis rouvrez-le."
   assetsTab: "Ressources"
   buildingProjectState: "Reconstitution de l’état du projet…"

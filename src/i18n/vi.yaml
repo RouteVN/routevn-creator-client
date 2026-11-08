@@ -271,6 +271,8 @@ appPage:
   filePickerFiles: "Trình chọn tệp"
   pressEscapeAgainFullscreen: "Nhấn nhanh Esc hai lần để thoát chế độ toàn màn hình"
   failedExitFullscreen: "Không thoát được chế độ toàn màn hình. Hãy dùng các nút điều khiển của cửa sổ."
+  audioUnavailable: "Hiện không thể dùng âm thanh trên thiết bị này."
+  audioUnavailableLockdownHint: "Nếu Chế độ phong tỏa đang bật, bạn có thể tắt chế độ này cho RouteVN trong Cài đặt."
   failedStartPreviewAudio: "Không phát được âm thanh trong bản xem trước. Hãy đóng rồi mở lại bản xem trước."
   assetsTab: "Tài nguyên"
   buildingProjectState: "Đang chuẩn bị dữ liệu dự án…"

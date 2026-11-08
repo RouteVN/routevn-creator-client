@@ -1,3 +1,4 @@
+import { warnIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import { generateId } from "../../internal/id.js";
 import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
@@ -208,6 +209,8 @@ const openSoundPreviewById = ({
   if (!soundItem?.fileId) {
     return;
   }
+
+  if (warnIfAudioUnavailable(deps)) return;
 
   void appService
     .getAudioService?.()

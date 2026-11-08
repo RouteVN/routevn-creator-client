@@ -1,3 +1,8 @@
+import { configureAudioRuntime } from "route-graphics";
+import {
+  isAudioAvailable,
+  createSilentGraphicsAudioRuntime,
+} from "./deps/clients/audioAvailability.js";
 import { errorReporter } from "./deps/clients/tauri/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 
@@ -31,6 +36,8 @@ import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectComp
 import { registerPrimitives } from "./primitives/registerPrimitives";
 
 registerPrimitives();
+if (!isAudioAvailable())
+  configureAudioRuntime(createSilentGraphicsAudioRuntime());
 setupFileDropNavigationGuard();
 
 const rawDistribution = import.meta.env?.VITE_ROUTEVN_DISTRIBUTION;
@@ -107,6 +114,7 @@ const apiService = createApiService();
 
 const graphicsService = await createGraphicsService({
   subject,
+  audioAvailable: isAudioAvailable(),
   onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   projectMediaOrigin,
   onRenderError: (error) => {
