@@ -705,6 +705,11 @@ const dispatchLineNavigationRender = (
 // The command layer words its refusals in English, for logs. A refusal the
 // user can resolve is explained here in their language instead.
 const getSceneEditorCommandRefusalMessage = (copy, code) => {
+  if (code === "last_section") {
+    return (
+      copy.cannotDeleteLastSection ?? "A scene must keep at least one section."
+    );
+  }
   if (code === "section_referenced") {
     return (
       copy.cannotDeleteReferencedSection ??
@@ -3950,7 +3955,10 @@ export const handleDownloadCanvasClick = async (deps) => {
 export const handlePreviewClick = (deps) => {
   const { store, render, appService, projectService } = deps;
   // The preview needs graphics too, which this device could not start.
-  if (store.selectIsCanvasUnavailable()) {
+  if (
+    store.selectIsCanvasUnavailable() ||
+    !store.selectScene()?.sections?.length
+  ) {
     return;
   }
 

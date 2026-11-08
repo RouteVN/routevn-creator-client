@@ -1,3 +1,4 @@
+import { wouldDeleteAllSections } from "../../internal/sectionDeletion.js";
 import { formatLoadingProgress } from "../../internal/ui/assetLoadingProgress.js";
 import {
   createEditHistory,
@@ -1810,7 +1811,14 @@ export const showSectionDropdownMenu = (
   }
 
   // Only show delete option if there's more than 1 section
-  if (scene && scene.sections && scene.sections.length > 1) {
+  const sectionCollection =
+    state.repositoryState?.scenes?.items?.[state.sceneId]?.sections;
+  if (
+    scene &&
+    scene.sections &&
+    scene.sections.length > 1 &&
+    !wouldDeleteAllSections(sectionCollection, [sectionId])
+  ) {
     items.push({ label: "Delete", type: "item", value: "delete-section" });
   }
 
@@ -2235,6 +2243,8 @@ export const selectViewData = ({ state, i18n }) => {
       documentEditorLines: [],
       documentLineDecorations: [],
       sectionEditorItems: [],
+      hasNoSections: false,
+      isPreviewHidden: state.isCanvasUnavailable,
       textStyles: [],
       mentionTargets: [],
       currentLine: null,
@@ -2650,6 +2660,11 @@ export const selectViewData = ({ state, i18n }) => {
     sectionsOverviewItems,
     documentEditorLines,
     sectionEditorItems,
+    hasNoSections: sections.length === 0,
+    // A scene without sections has nothing to preview.
+    isPreviewHidden: state.isCanvasUnavailable || sections.length === 0,
+    emptySectionsMessage: copy.emptySectionsMessage,
+    addSectionLabel: copy.addSectionMenuItem,
     textStyles,
     mentionTargets,
     documentLineDecorations,

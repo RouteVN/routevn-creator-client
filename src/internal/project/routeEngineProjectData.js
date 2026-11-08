@@ -3,6 +3,15 @@ const isObjectRecord = (value) =>
 
 const EMPTY_SECTION_LINE_ID = "__empty__";
 
+// Route Engine starts a scene at its first section, so a scene needs at least
+// one of these to be shown.
+export const getRouteEngineSectionIds = (scene) => {
+  const sections = isObjectRecord(scene?.sections) ? scene.sections : {};
+  return Object.entries(sections)
+    .filter(([, section]) => isObjectRecord(section))
+    .map(([sectionId]) => sectionId);
+};
+
 export const summarizeProjectDataForRouteEngine = (projectData) => {
   const story = isObjectRecord(projectData?.story) ? projectData.story : {};
   const scenes = isObjectRecord(story.scenes) ? story.scenes : {};
@@ -62,9 +71,7 @@ export const sanitizeProjectDataForRouteEngine = (projectData) => {
   for (const sceneId of validSceneIds) {
     const scene = scenes[sceneId];
     const sections = isObjectRecord(scene?.sections) ? scene.sections : {};
-    const validSectionIds = Object.entries(sections)
-      .filter(([, section]) => isObjectRecord(section))
-      .map(([sectionId]) => sectionId);
+    const validSectionIds = getRouteEngineSectionIds(scene);
 
     if (!validSectionIds.includes(scene.initialSectionId)) {
       if (scene.initialSectionId !== validSectionIds[0]) {

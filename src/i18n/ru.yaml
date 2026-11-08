@@ -2230,6 +2230,8 @@ sceneEditorPage:
   computedVariableFailed: "Не удалось получить значение вычисляемой переменной «{name}». Возможно, её формула возвращает значение неверного типа. Проверьте формулу и используемые в ней переменные на экране «Переменные»."
   actionsLabel: "Действия"
   addSectionMenuItem: "Добавить раздел"
+  emptySectionsMessage: "В этой сцене нет разделов."
+  cannotDeleteLastSection: "В сцене должен остаться хотя бы один раздел."
   addSectionAboveMenuItem: "Добавить раздел выше"
   addSectionBelowMenuItem: "Добавить раздел ниже"
   autoLabel: "Авто"

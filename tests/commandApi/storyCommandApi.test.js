@@ -50,6 +50,20 @@ const createEmptyStoryState = () => ({
 });
 
 describe("story command api", () => {
+  it("refuses a deletion that removes the last section", async () => {
+    const context = { state: createStoryState() };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandWithContext: vi.fn(),
+    };
+    const result = await createStoryCommandApi(shared).deleteSectionItem({
+      sceneId: "scene-1",
+      sectionIds: ["section-1"],
+    });
+    expect(result.error.code).toBe("last_section");
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+  });
+
   it("rejects deleting a section referenced by another scene projection", async () => {
     const contextState = {
       scenes: {

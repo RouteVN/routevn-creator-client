@@ -1,3 +1,4 @@
+import { wouldDeleteAllSections } from "../../../../internal/sectionDeletion.js";
 import {
   findLineLocation,
   findSectionLocation,
@@ -1168,6 +1169,19 @@ export const createStoryCommandApi = (shared) => {
         };
       }
 
+      for (const scene of Object.values(
+        deleteContext.state?.scenes?.items ?? {},
+      )) {
+        if (wouldDeleteAllSections(scene.sections, sectionIds ?? [])) {
+          return {
+            valid: false,
+            error: {
+              code: "last_section",
+              message: "A scene must keep a section.",
+            },
+          };
+        }
+      }
       if (typeof sceneId === "string" && sceneId.length > 0) {
         sceneIdsForPartitions.add(sceneId);
       }

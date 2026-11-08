@@ -2220,6 +2220,8 @@ sceneEditorPage:
   computedVariableFailed: "Could not calculate computed variable “{name}”. Its formula may have produced the wrong type of value. Check the formula and the variables it uses in Variables."
   actionsLabel: "Actions"
   addSectionMenuItem: "Add section"
+  emptySectionsMessage: "This scene has no sections."
+  cannotDeleteLastSection: "A scene must keep at least one section."
   addSectionAboveMenuItem: "Add section above"
   addSectionBelowMenuItem: "Add section below"
   autoLabel: "Auto"

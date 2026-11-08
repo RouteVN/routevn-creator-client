@@ -2220,6 +2220,8 @@ sceneEditorPage:
   computedVariableFailed: "Impossible d’évaluer la variable calculée « {name} ». Sa formule a peut-être produit une valeur du mauvais type. Vérifiez la formule et les variables qu’elle utilise sur l’écran « Variables »."
   actionsLabel: "Actions"
   addSectionMenuItem: "Ajouter une section"
+  emptySectionsMessage: "Cette scène n’a aucune section."
+  cannotDeleteLastSection: "Une scène doit garder au moins une section."
   addSectionAboveMenuItem: "Ajouter une section au-dessus"
   addSectionBelowMenuItem: "Ajouter une section en dessous"
   autoLabel: "Auto"

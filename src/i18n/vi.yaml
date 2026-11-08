@@ -2220,6 +2220,8 @@ sceneEditorPage:
   computedVariableFailed: "Không tính được biến tính toán “{name}”. Có thể công thức của biến đã cho ra giá trị sai kiểu. Hãy mở trang “Biến” rồi kiểm tra công thức và các biến mà công thức dùng."
   actionsLabel: "Hành động"
   addSectionMenuItem: "Thêm phần"
+  emptySectionsMessage: "Cảnh này không có phần nào."
+  cannotDeleteLastSection: "Một cảnh phải có ít nhất một phần."
   addSectionAboveMenuItem: "Thêm phần ở trên"
   addSectionBelowMenuItem: "Thêm phần ở dưới"
   autoLabel: "Tự động"

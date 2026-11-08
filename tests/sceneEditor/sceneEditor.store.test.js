@@ -1135,6 +1135,80 @@ describe("sceneEditorLexical.store", () => {
     ).toEqual({ changeType: "set", items: [] });
   });
 
+  it("hides deletion when a section contains every other section", () => {
+    const state = createInitialState();
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {
+                    parent: {
+                      id: "parent",
+                      name: "Parent",
+                      lines: { items: {}, tree: [] },
+                    },
+                    child: {
+                      id: "child",
+                      name: "Child",
+                      lines: { items: {}, tree: [] },
+                    },
+                  },
+                  tree: [{ id: "parent", children: [{ id: "child" }] }],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+    showSectionDropdownMenu(
+      { state },
+      { sectionId: "parent", position: { x: 0, y: 0 } },
+    );
+    expect(state.dropdownMenu.items.map((item) => item.value)).not.toContain(
+      "delete-section",
+    );
+  });
+
+  it("offers to add a section, and hides Preview, for a scene without sections", () => {
+    const state = createInitialState();
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: { items: {}, tree: [] },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+
+    const view = selectViewData({ state, i18n: EN_I18N });
+
+    expect(view.hasNoSections).toBe(true);
+    expect(view.isPreviewHidden).toBe(true);
+    expect(view.emptySectionsMessage).toBe("This scene has no sections.");
+    expect(view.addSectionLabel).toBe("Add section");
+  });
+
   it("builds section menu actions for add, reorder, and moving to another scene", () => {
     const state = createInitialState();
 

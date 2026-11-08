@@ -2220,6 +2220,8 @@ sceneEditorPage:
   computedVariableFailed: "計算変数「{name}」の値を計算できませんでした。計算式の結果が、想定と異なる型の値になった可能性があります。「変数」で計算式と、計算式が使う変数を確認してください。"
   actionsLabel: "アクション"
   addSectionMenuItem: "セクションを追加"
+  emptySectionsMessage: "このシーンにはセクションがありません。"
+  cannotDeleteLastSection: "シーンには少なくとも1つのセクションが必要です。"
   addSectionAboveMenuItem: "上にセクションを追加"
   addSectionBelowMenuItem: "下にセクションを追加"
   autoLabel: "自動"
