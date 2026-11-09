@@ -725,7 +725,7 @@ export const handleAppVersionClick = (deps, payload) => {
     label: copy.languageMenuItem,
     type: "item",
     value: "language",
-    icon: "website",
+    icon: "translate",
   });
   items.push({
     label: copy.appearanceMenuItem,

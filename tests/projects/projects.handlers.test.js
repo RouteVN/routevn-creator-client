@@ -680,7 +680,7 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
-          icon: "website",
+          icon: "translate",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
@@ -722,7 +722,7 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
-          icon: "website",
+          icon: "translate",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
@@ -765,7 +765,7 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
-          icon: "website",
+          icon: "translate",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
