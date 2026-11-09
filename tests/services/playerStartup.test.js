@@ -2,6 +2,11 @@ import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUNDLE_PLAYER_INDEX_HTML } from "../../src/deps/services/shared/projectExportService.js";
 
+// Each test imports the player script again after vi.resetModules(). That
+// import takes about 0.2 s in a full test run and close to 1 s, the default
+// vi.waitFor timeout, when the machine is busy.
+const PLAYER_IMPORT_TIMEOUT_MS = 10_000;
+
 const runtime = vi.hoisted(() => ({
   init: vi.fn(),
   render: vi.fn(),
@@ -132,7 +137,10 @@ describe("exported player startup", () => {
     const loading = document.querySelector("#loading");
     const progress = document.querySelector("#loading-progress");
     const boot = import("../../scripts/main.js");
-    await vi.waitFor(() => expect(runtime.loadAssets).toHaveBeenCalledTimes(2));
+    await vi.waitFor(
+      () => expect(runtime.loadAssets).toHaveBeenCalledTimes(2),
+      { timeout: PLAYER_IMPORT_TIMEOUT_MS },
+    );
 
     expect(progress.value).toBe(20);
     expect(loading.classList.contains("ready")).toBe(false);
