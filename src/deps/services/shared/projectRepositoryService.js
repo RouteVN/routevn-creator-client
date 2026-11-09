@@ -1359,7 +1359,7 @@ export const createProjectRepositoryService = ({
               return repository;
             };
             let repository;
-            let skipFinalizeMainCheckpoint = false;
+            let recovered = false;
             try {
               repository = await openRepository(store);
             } catch (error) {
@@ -1401,6 +1401,10 @@ export const createProjectRepositoryService = ({
                   );
                 }
                 await recovery.commit();
+                // The store stamps the checkpoint with the history it reads
+                // while saving. If that changed, the stamp may include events
+                // the rebuilt state does not, so drop the checkpoint and fail
+                // this open; the next one rebuilds from the full history.
                 const afterCommitStats =
                   await store.getRepositoryHistoryStats();
                 if (
@@ -1409,12 +1413,15 @@ export const createProjectRepositoryService = ({
                     afterCommitStats,
                   )
                 ) {
-                  await discardReusableMainCheckpoint(store);
-                  skipFinalizeMainCheckpoint = true;
                   console.warn(
                     "Discarding recovered project repository checkpoint after history changed",
                   );
+                  await discardReusableMainCheckpoint(store);
+                  throw new Error(
+                    "Project history changed during checkpoint recovery",
+                  );
                 }
+                recovered = true;
               } catch {
                 throw error;
               }
@@ -1438,7 +1445,8 @@ export const createProjectRepositoryService = ({
             });
 
             try {
-              if (!skipFinalizeMainCheckpoint) {
+              // A recovery has just saved the main checkpoint.
+              if (!recovered) {
                 await flushRepositoryMainCheckpoint(repository);
               }
             } catch (error) {

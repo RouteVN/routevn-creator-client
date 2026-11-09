@@ -259,9 +259,8 @@ describe("projectRepositoryService left-out drafts", () => {
           ),
         ).toBe(false);
       } else {
-        const repository = await service.ensureRepository();
-        expect(repository.getState().scenes.items[sceneId].name).toBe(
-          "Scene One",
+        await expect(service.ensureRepository()).rejects.toThrow(
+          "missing item 'orphan'",
         );
         expect(await store.loadMaterializedViewCheckpoint(key)).toBeUndefined();
         const mainOperations = operations.filter(
@@ -307,6 +306,13 @@ describe("projectRepositoryService left-out drafts", () => {
     expect(sceneClear).toBeGreaterThan(unfinished);
     expect(main).toBeGreaterThan(sceneClear);
     expect(finished).toBeGreaterThan(main);
+    // The open does not save the recovered main state a second time.
+    expect(
+      operations.filter(
+        ({ action, checkpoint }) =>
+          action === "save" && checkpoint?.viewName === MAIN_VIEW_NAME,
+      ),
+    ).toHaveLength(1);
   });
 
   it("passes the drafts a lazy history load leaves out to subscribers", async () => {
