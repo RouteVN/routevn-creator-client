@@ -196,6 +196,16 @@ export const createAppShellService = ({
 
     getAppLocaleUsage,
 
+    // The device's preferred languages as BCP 47 tags, most preferred first.
+    // The web view reports the system languages on every platform.
+    getDeviceLanguages() {
+      const navigator = globalThis.navigator;
+      if (navigator?.languages?.length > 0) {
+        return [...navigator.languages];
+      }
+      return navigator?.language ? [navigator.language] : [];
+    },
+
     registerBeforeNavigation(handler) {
       beforeNavigationHandlers.add(handler);
       return () => {

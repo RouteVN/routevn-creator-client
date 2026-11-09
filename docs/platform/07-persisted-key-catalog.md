@@ -110,6 +110,15 @@ Current keys:
       - purpose: whether the tablet landscape explorer pane (Files or
         Elements) is hidden to its show button
       - scope: global
+    - `app.locale`
+      - purpose: the UI language the user chose; while it is unset the app
+        uses English
+      - scope: global
+    - `app.localeSuggestionDismissed`
+      - purpose: the locale whose "also available in" box on the Projects
+        page was closed; the box shows again only for a different device
+        language
+      - scope: global
 
 Naming rules:
 

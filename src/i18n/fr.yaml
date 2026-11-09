@@ -3127,3 +3127,8 @@ rtglUi:
   tagSelectEmpty: "Aucune étiquette disponible"
   tagSelectPlaceholder: "Ajouter une étiquette"
   tagSelectSave: "Enregistrer"
+languageSuggestion:
+  message: "RouteVN Creator est aussi disponible en français (bêta)."
+  switchButton: "Passer au français"
+  closeButton: "Fermer"
+  failedSwitchMessage: "Impossible de changer de langue."

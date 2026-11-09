@@ -3155,3 +3155,8 @@ rtglUi:
   tagSelectEmpty: "Brak dostępnych tagów"
   tagSelectPlaceholder: "Dodaj tag"
   tagSelectSave: "Zapisz"
+languageSuggestion:
+  message: "RouteVN Creator jest też dostępny po polsku (beta)."
+  switchButton: "Przełącz na polski"
+  closeButton: "Zamknij"
+  failedSwitchMessage: "Nie udało się zmienić języka."
