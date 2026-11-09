@@ -1,4 +1,8 @@
 export const APP_LOCALE_CONFIG_KEY = "app.locale";
+// Whether the "also available in" suggestion was closed. Once closed, it
+// does not show again.
+export const APP_LOCALE_SUGGESTION_DISMISSED_CONFIG_KEY =
+  "app.localeSuggestionDismissed";
 export const DEFAULT_APP_LOCALE = "en";
 
 export const APP_LOCALE_OPTIONS = Object.freeze([
@@ -70,4 +74,57 @@ export const activateAppLocale = async ({
   }
 
   return activeLocale;
+};
+
+// Regions whose Chinese is written in Simplified characters.
+const SIMPLIFIED_CHINESE_REGIONS = new Set(["cn", "sg", "my"]);
+
+// The app locale for a BCP 47 language tag, such as "ja" for "ja-JP" or
+// "zh-hans" for "zh-CN". Traditional Chinese has no app locale.
+const toAppLocale = (languageTag) => {
+  const [language, ...subtags] = `${languageTag ?? ""}`
+    .toLowerCase()
+    .replaceAll("_", "-")
+    .split("-")
+    .filter(Boolean);
+
+  if (language === "zh") {
+    if (subtags.includes("hant")) {
+      return undefined;
+    }
+    const isSimplified =
+      subtags.length === 0 ||
+      subtags.includes("hans") ||
+      subtags.some((subtag) => SIMPLIFIED_CHINESE_REGIONS.has(subtag));
+    return isSimplified ? "zh-hans" : undefined;
+  }
+
+  // Older Android versions report Indonesian as "in".
+  return language === "in" ? "id" : language;
+};
+
+// The app locale to suggest: the device's most preferred language, when the
+// app has it and it is not the default. Choosing a language or closing the
+// suggestion ends it for good. Only the first preference counts, so a device
+// that lists English first gets none.
+export const resolveAppLocaleSuggestion = ({
+  storedLocale,
+  dismissed,
+  deviceLanguages = [],
+  availableLocales = [],
+} = {}) => {
+  if (dismissed || availableLocales.includes(storedLocale)) {
+    return undefined;
+  }
+
+  const locale = toAppLocale(deviceLanguages[0]);
+  if (
+    !locale ||
+    locale === DEFAULT_APP_LOCALE ||
+    !availableLocales.includes(locale)
+  ) {
+    return undefined;
+  }
+
+  return locale;
 };

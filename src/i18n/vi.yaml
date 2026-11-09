@@ -3141,3 +3141,7 @@ rtglUi:
   tagSelectEmpty: "Chưa có thẻ nào"
   tagSelectPlaceholder: "Thêm thẻ"
   tagSelectSave: "Lưu"
+languageSuggestion:
+  message: "RouteVN Creator cũng có bản tiếng Việt (Beta)."
+  switchButton: "Chuyển sang tiếng Việt"
+  closeButton: "Đóng"

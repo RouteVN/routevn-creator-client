@@ -9,6 +9,7 @@ import {
   isDarkTheme,
   normalizeTheme,
 } from "../../../internal/theme.js";
+import { getDeviceLanguages } from "../../clients/deviceLanguages.js";
 
 const createNoopUpdater = () => ({
   checkForUpdates: async () => null,
@@ -195,6 +196,8 @@ export const createAppShellService = ({
     },
 
     getAppLocaleUsage,
+
+    getDeviceLanguages,
 
     registerBeforeNavigation(handler) {
       beforeNavigationHandlers.add(handler);

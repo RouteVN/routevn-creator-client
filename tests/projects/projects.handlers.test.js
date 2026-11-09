@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAppVersionClick,
+  handleLocaleSuggestionChange,
   handleAppVersionMenuClickItem,
   handleAppVersionMenuClose,
   handleAppearanceDialogClose,
@@ -647,6 +648,19 @@ describe("projects create dialog", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: PT_I18N.projectsPage.importDestinationNotEmptyMessage,
     });
+  });
+});
+
+describe("projects language suggestion", () => {
+  it("keeps the page's language when the box switches it", () => {
+    const deps = createDeps();
+
+    handleLocaleSuggestionChange(deps, {
+      _event: { detail: { locale: "ja" } },
+    });
+
+    expect(deps.store.setCurrentLocale).toHaveBeenCalledWith({ locale: "ja" });
+    expect(deps.render).toHaveBeenCalledTimes(1);
   });
 });
 

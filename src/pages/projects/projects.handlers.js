@@ -800,6 +800,13 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
   }
 };
 
+// The box under the project list switched the app to the device language.
+export const handleLocaleSuggestionChange = (deps, payload) => {
+  const { store, render } = deps;
+  store.setCurrentLocale({ locale: payload._event.detail.locale });
+  render();
+};
+
 export const handleLanguageDialogClose = (deps) => {
   const { store, render } = deps;
   if (!store.selectIsLanguageDialogOpen()) {

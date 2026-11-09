@@ -1,0 +1,4 @@
+componentName: rvn-language-suggestion
+propsSchema:
+  type: object
+  properties: {}

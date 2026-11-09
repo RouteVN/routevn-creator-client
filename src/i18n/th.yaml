@@ -3141,3 +3141,7 @@ rtglUi:
   tagSelectEmpty: "ไม่มีแท็ก"
   tagSelectPlaceholder: "เพิ่มแท็ก"
   tagSelectSave: "บันทึก"
+languageSuggestion:
+  message: "RouteVN Creator มีภาษาไทย (Beta) ให้ใช้งานด้วย"
+  switchButton: "เปลี่ยนเป็นภาษาไทย"
+  closeButton: "ปิด"

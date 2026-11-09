@@ -57,6 +57,10 @@ refs:
     eventListeners:
       click:
         handler: handleAppVersionClick
+  languageSuggestion:
+    eventListeners:
+      locale-change:
+        handler: handleLocaleSuggestionChange
   appVersionDropdownMenu:
     eventListeners:
       close:
@@ -272,6 +276,8 @@ template:
                                                   - rtgl-text s=xs c=mu-fg: ${project.memberCount}
                                   - rtgl-view h="33vh": null
           - 'rtgl-view w=f ah=c bgc=bg style="flex-shrink: 0;"':
+              - 'rtgl-view sm-w=f w=640 ph=md style="box-sizing: border-box;"':
+                  - 'rvn-language-suggestion#languageSuggestion style="display: block; width: 100%;"': null
               - $if platform == 'android':
                   - 'rtgl-view sm-w=f w=640 ph=md pt=md pb=lg style="box-sizing: border-box;"':
                       - 'rvn-android-backup-status style="display: block; width: 100%;"': null
