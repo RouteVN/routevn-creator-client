@@ -104,7 +104,9 @@ pub fn run() {
         .manage(project_media_server::ProjectMediaServerState::new())
         .manage(static_web_server::StaticWebServerState::new())
         .register_asynchronous_uri_scheme_protocol("project-file", |_ctx, request, responder| {
-            std::thread::spawn(move || responder.respond(project_file_protocol::respond(&request)));
+            tauri::async_runtime::spawn_blocking(move || {
+                responder.respond(project_file_protocol::respond(&request))
+            });
         });
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]

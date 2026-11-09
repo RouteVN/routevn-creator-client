@@ -5,9 +5,9 @@ use tauri::{
     http::{
         Request, Response, StatusCode,
         header::{
-            ACCEPT_RANGES, ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN,
-            ACCESS_CONTROL_EXPOSE_HEADERS, CACHE_CONTROL, CONTENT_LENGTH, CONTENT_RANGE,
-            CONTENT_TYPE, RANGE,
+            ACCEPT_RANGES, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
+            ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, CACHE_CONTROL,
+            CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE,
         },
     },
 };
@@ -92,7 +92,7 @@ fn parse_range(value: &str, size: u64) -> Option<Result<(u64, u64), ()>> {
         if suffix == 0 || size == 0 {
             return Some(Err(()));
         }
-        (size.saturating_sub(suffix), size - 1)
+        (size.saturating_sub(suffix.min(MAX_RANGE_LEN)), size - 1)
     } else {
         let start = number(start)?;
         let requested_end = if end.is_empty() {
@@ -106,12 +106,15 @@ fn parse_range(value: &str, size: u64) -> Option<Result<(u64, u64), ()>> {
         if start >= size {
             return Some(Err(()));
         }
-        (start, requested_end.unwrap_or(size - 1).min(size - 1))
+        (
+            start,
+            requested_end
+                .unwrap_or(size - 1)
+                .min(size - 1)
+                .min(start.saturating_add(MAX_RANGE_LEN - 1)),
+        )
     };
-    Some(Ok((
-        start,
-        end.min(start.saturating_add(MAX_RANGE_LEN - 1)),
-    )))
+    Some(Ok((start, end)))
 }
 
 pub fn respond(request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
@@ -120,6 +123,7 @@ pub fn respond(request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
             .status(StatusCode::NO_CONTENT)
             .header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
             .header(ACCESS_CONTROL_ALLOW_METHODS, "GET, OPTIONS")
+            .header(ACCESS_CONTROL_ALLOW_HEADERS, "Range, Content-Type")
             .header(CACHE_CONTROL, "no-store")
             .body(Vec::new())
             .unwrap();
@@ -180,6 +184,10 @@ pub fn respond(request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
                 .status(StatusCode::RANGE_NOT_SATISFIABLE)
                 .header(CONTENT_TYPE, "text/plain; charset=utf-8")
                 .header(CONTENT_RANGE, format!("bytes */{size}"))
+                .header(
+                    ACCESS_CONTROL_EXPOSE_HEADERS,
+                    "Content-Range, Accept-Ranges, Content-Length",
+                )
                 .body(bytes)
                 .unwrap();
         }
@@ -244,6 +252,18 @@ mod tests {
         std::fs::write(&path, &bytes).unwrap();
         let size = bytes.len();
 
+        let options = respond(
+            &Request::builder()
+                .method("OPTIONS")
+                .body(Vec::new())
+                .unwrap(),
+        );
+        assert_eq!(options.status(), StatusCode::NO_CONTENT);
+        assert_eq!(
+            options.headers()[ACCESS_CONTROL_ALLOW_HEADERS],
+            "Range, Content-Type"
+        );
+
         let full = request(&path, "mp4", None);
         assert_eq!(full.status(), StatusCode::OK);
         assert_eq!(full.headers()[ACCEPT_RANGES], "bytes");
@@ -264,8 +284,13 @@ mod tests {
             ),
             (
                 format!("bytes=-{}", size * 2),
-                0,
-                MAX_RANGE_LEN as usize - 1,
+                size - MAX_RANGE_LEN as usize,
+                size - 1,
+            ),
+            (
+                "bytes=-2097152".to_owned(),
+                size - MAX_RANGE_LEN as usize,
+                size - 1,
             ),
         ] {
             let response = request(&path, "mp4", Some(&header));
@@ -294,6 +319,10 @@ mod tests {
             let response = request(&path, "mp4", Some(&header));
             assert_eq!(response.status(), StatusCode::RANGE_NOT_SATISFIABLE);
             assert_eq!(response.headers()[CONTENT_RANGE], format!("bytes */{size}"));
+            assert_eq!(
+                response.headers()[ACCESS_CONTROL_EXPOSE_HEADERS],
+                "Content-Range, Accept-Ranges, Content-Length"
+            );
         }
         for header in [
             "bytes=abc",
@@ -319,5 +348,9 @@ mod tests {
         let empty = request(&path, "mp4", Some("bytes=0-1"));
         assert_eq!(empty.status(), StatusCode::RANGE_NOT_SATISFIABLE);
         assert_eq!(empty.headers()[CONTENT_RANGE], "bytes */0");
+        assert_eq!(
+            empty.headers()[ACCESS_CONTROL_EXPOSE_HEADERS],
+            "Content-Range, Accept-Ranges, Content-Length"
+        );
     }
 }
