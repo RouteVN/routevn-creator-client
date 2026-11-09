@@ -193,12 +193,70 @@ const resolveParticleTextureForRender = (texture, imageItems = {}) => {
   };
 };
 
+const PARTICLE_TEXTURE_MODES = new Set(["single", "random", "cycle"]);
+const PARTICLE_TEXTURE_PICKS = new Set(["perParticle", "perWave"]);
+const PARTICLE_TEXTURE_SHAPES = new Set(["circle", "ellipse", "rect"]);
+
+const isOptionalNumber = (value) =>
+  value === undefined || (typeof value === "number" && !Number.isNaN(value));
+
+const isRenderableTextureShape = (texture) =>
+  PARTICLE_TEXTURE_SHAPES.has(texture.shape) &&
+  isOptionalNumber(texture.radius) &&
+  isOptionalNumber(texture.width) &&
+  isOptionalNumber(texture.height) &&
+  (texture.color === undefined ||
+    typeof texture.color === "string" ||
+    typeof texture.color === "number");
+
+const isRenderableTextureItem = (item) => {
+  if (!isPlainObject(item)) {
+    return false;
+  }
+  if (item.src !== undefined) {
+    return typeof item.src === "string" && item.src.length > 0;
+  }
+  return Boolean(item.shape) && isRenderableTextureShape(item);
+};
+
+// Whether route-graphics draws a particle with this texture, as
+// createRenderableParticleData resolves it. It throws for any other value,
+// such as no texture, one whose image is gone, or an imported texture without
+// a mode, and that fails every render of the scene. Layouts, visuals and
+// previews draw nothing for such a particle instead.
+export const isRenderableParticleTexture = (texture) => {
+  if (typeof texture === "string") {
+    return texture.length > 0;
+  }
+  if (!isPlainObject(texture)) {
+    return false;
+  }
+  if (texture.shape) {
+    return isRenderableTextureShape(texture);
+  }
+  if (
+    !PARTICLE_TEXTURE_MODES.has(texture.mode) ||
+    (texture.pick !== undefined && !PARTICLE_TEXTURE_PICKS.has(texture.pick)) ||
+    !Array.isArray(texture.items) ||
+    texture.items.length === 0 ||
+    (texture.mode === "single" && texture.items.length !== 1)
+  ) {
+    return false;
+  }
+  return texture.items.every(isRenderableTextureItem);
+};
+
 export const createRenderableParticleData = (
   particle = {},
   imageItems = {},
 ) => {
   const nextParticle = structuredClone(particle ?? {});
   normalizeParticleModules(nextParticle.modules);
+  // route-graphics rejects a seed that is not a number, such as a blank Seed
+  // field saved as null, and draws an unseeded effect without one.
+  if (!Number.isFinite(nextParticle.seed)) {
+    delete nextParticle.seed;
+  }
   const appearance = nextParticle?.modules?.appearance;
 
   if (!appearance || typeof appearance !== "object") {

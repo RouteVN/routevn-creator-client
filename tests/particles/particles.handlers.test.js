@@ -395,6 +395,37 @@ describe("particles handlers", () => {
     ).toMatchObject({ id: "particle-1" });
   });
 
+  // The check reads every scene, and the particle stays listed meanwhile.
+  it("ignores another delete of a particle while its delete runs", async () => {
+    const { deps } = await createPage();
+    let finishCheck;
+    deps.projectService.deleteParticleIfUnused = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishCheck = () =>
+            resolve({
+              deleted: false,
+              usage: { inProps: { lines: [{}] }, isUsed: true, count: 1 },
+            });
+        }),
+    );
+    const payload = { _event: { detail: { itemId: "particle-1" } } };
+
+    const firstDelete = handleItemDelete(deps, payload);
+    await handleItemDelete(deps, payload);
+    finishCheck();
+    await firstDelete;
+
+    expect(deps.projectService.deleteParticleIfUnused).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+
+    // Once it has finished, the particle can be sent to delete again.
+    const nextDelete = handleItemDelete(deps, payload);
+    finishCheck();
+    await nextDelete;
+    expect(deps.projectService.deleteParticleIfUnused).toHaveBeenCalledTimes(2);
+  });
+
   it("reports a delete the project refuses", async () => {
     const { deps } = await createPage();
     deps.projectService.deleteParticleIfUnused = vi.fn(async () => ({

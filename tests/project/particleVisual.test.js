@@ -167,6 +167,12 @@ describe("a particle used as a visual", () => {
       "has a texture image that was deleted",
       createParticle({ texture: "gone" }),
     ],
+    // An imported texture without a mode threw "modules.appearance.texture.
+    // mode must be 'single', 'random', or 'cycle'".
+    [
+      "has a texture without a mode",
+      createParticle({ texture: { items: [{ src: "flake-image" }] } }),
+    ],
   ])("draws nothing when the particle %s", (_case, particle) => {
     const elements = renderLine(createRepositoryState(particle));
 

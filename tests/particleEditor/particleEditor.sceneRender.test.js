@@ -110,6 +110,42 @@ describe("particle seed in scene render elements", () => {
   });
 });
 
+// route-graphics threw "modules.appearance.texture.mode must be 'single',
+// 'random', or 'cycle'" on every render for such a texture, which the
+// project model lets through, such as from an imported asset pack.
+describe("particle textures route-graphics rejects", () => {
+  const withTexture = (texture) => {
+    const particle = savedParticle("1");
+    return {
+      ...particle,
+      modules: {
+        ...particle.modules,
+        appearance: { ...particle.modules.appearance, texture },
+      },
+    };
+  };
+
+  it.each([
+    ["has no mode", { items: [{ src: "image-1" }] }],
+    ["names an item without a source", { mode: "random", items: [{}] }],
+    ["has an unknown shape", { shape: "star" }],
+  ])("draws nothing in a layout when the texture %s", (_case, texture) => {
+    expect(buildSceneParticleElement(withTexture(texture)).type).toBe(
+      "container",
+    );
+  });
+
+  it("leaves the particles out of the preview for such a texture", () => {
+    const elements = createParticlePreviewState(
+      withTexture({ items: [{ src: "file-1" }] }),
+    ).elements;
+
+    expect(elements.some((element) => element.type === "particles")).toBe(
+      false,
+    );
+  });
+});
+
 describe("particle emission counts", () => {
   const withCounts = (counts) => {
     const particle = savedParticle("1");
