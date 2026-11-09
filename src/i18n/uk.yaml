@@ -2546,6 +2546,8 @@ commandLinePage:
   "Operator": "Оператор"
   "One Of": "Серед"
   "Optional": "Необов’язково"
+  "Particle": "Ефект частинок"
+  "Particles": "Частинки"
   "Persist Speaker": "Зберігати мовця"
   "Persist Sprite": "Зберігати спрайт"
   persistSpriteDescription: "Показувати цей спрайт у наступних рядках діалогу."

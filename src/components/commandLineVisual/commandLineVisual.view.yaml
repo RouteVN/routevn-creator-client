@@ -191,7 +191,7 @@ template:
                                                   - rtgl-icon icon=play s=xl c=fg: null
                                         $elif visual.resourceType == 'spritesheet':
                                           - rvn-spritesheet-preview key=${visual.spritesheetPreviewKey} previewKey=${visual.spritesheetPreviewKey} fileId=${visual.spritesheetFileId} :atlas=${visual.spritesheetAtlas} :animation=${visual.spritesheetAnimation} w=f h=f emptyLabel=${noThumbnailLabel}: null
-                                        $elif visual.resourceType == 'layout':
+                                        $elif visual.resourceType == 'layout' || visual.resourceType == 'particle':
                                           - $if visual.fileId:
                                               - rvn-file-image fileId=${visual.fileId} w=f h=f: null
                                             $else:
@@ -287,7 +287,7 @@ template:
                                                           - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                                   - rtgl-view pos=abs edge=f w=f h=f av=c ah=c bgc=bg-60:
                                                       - rtgl-icon icon=play s=xl c=fg: null
-                                                $elif item.resourceType == 'layout':
+                                                $elif item.resourceType == 'layout' || item.resourceType == 'particle':
                                                   - $if item.previewFileId:
                                                       - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
                                                     $else:

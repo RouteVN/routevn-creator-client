@@ -1276,6 +1276,47 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("previews particle visuals with their thumbnails", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          particles: {
+            items: {
+              "snow-particle": {
+                id: "snow-particle",
+                type: "particle",
+                name: "Snowfall",
+                thumbnailFileId: "file-snowfall-thumbnail",
+                modules: {},
+              },
+            },
+            tree: [{ id: "snow-particle" }],
+          },
+        },
+      },
+    );
+
+    const { preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          visual: {
+            items: [{ id: "snow-visual", resourceId: "snow-particle" }],
+          },
+        },
+      },
+    });
+
+    expect(preview.visual.items[0]).toMatchObject({
+      id: "snow-visual",
+      resourceId: "snow-particle",
+      resourceType: "particle",
+      previewFileId: "file-snowfall-thumbnail",
+    });
+  });
+
   it("uses effective presentation resources for partial background and visual actions", () => {
     const state = createInitialState();
     const atlas = {

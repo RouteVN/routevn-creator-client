@@ -652,6 +652,7 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
   const layoutsHierarchy = repositoryStateData.layouts || {};
   const layoutsItems = layoutsHierarchy.items || {};
   const spritesheets = repositoryStateData.spritesheets ?? {};
+  const particles = repositoryStateData.particles?.items || {};
   const controlsItems = repositoryStateData.controls?.items || {};
   const sceneItems = scenes.items || {};
 
@@ -1308,11 +1309,13 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
         const spritesheetData = spritesheets.items?.[item.resourceId];
         const videoData = videos[item.resourceId];
         const layoutData = layoutsItems[item.resourceId];
+        const particleData = particles[item.resourceId];
         const resourcesByType = {
           image: imageData,
           spritesheet: spritesheetData,
           video: videoData,
           layout: layoutData,
+          particle: particleData,
         };
         const resourceType = resourcesByType[item.resourceType]
           ? item.resourceType
@@ -1322,7 +1325,9 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
               ? "spritesheet"
               : videoData
                 ? "video"
-                : "layout";
+                : particleData
+                  ? "particle"
+                  : "layout";
         const resource = resourcesByType[resourceType];
         const spritesheetPreview =
           resourceType === "spritesheet"

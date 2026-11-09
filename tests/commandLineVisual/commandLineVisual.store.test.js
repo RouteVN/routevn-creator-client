@@ -23,6 +23,7 @@ import {
   setExistingVisuals,
   setImages,
   setLayouts,
+  setParticles,
   setPendingVisualLayer,
   setPendingVisualTransformId,
   setTab,
@@ -144,6 +145,25 @@ const setRepositoryCollections = (state) => {
           },
         },
         tree: [{ id: "visual-layout" }, { id: "dialogue-layout" }],
+      },
+    },
+  );
+  setParticles(
+    { state },
+    {
+      particles: {
+        items: {
+          "visual-particle": {
+            id: "visual-particle",
+            type: "particle",
+            name: "Snowfall",
+            width: 1920,
+            height: 1080,
+            thumbnailFileId: "file-snowfall-thumbnail",
+            modules: {},
+          },
+        },
+        tree: [{ id: "visual-particle" }],
       },
     },
   );
@@ -1090,6 +1110,7 @@ describe("commandLineVisual.store animation controls", () => {
       { id: "spritesheet", label: "Spritesheets" },
       { id: "video", label: "Videos" },
       { id: "layout", label: "Layouts" },
+      { id: "particle", label: "Particles" },
     ]);
     expect(
       viewData.resourceGroups.flatMap((group) =>
@@ -1129,6 +1150,43 @@ describe("commandLineVisual.store animation controls", () => {
         group.children.map((child) => child.id),
       ),
     ).toEqual(["visual-layout"]);
+
+    setTab({ state }, { tab: "particle" });
+    viewData = selectViewData({ state });
+    expect(viewData.tab).toBe("particle");
+    expect(viewData.resourceGroups.flatMap((group) => group.children)).toEqual([
+      expect.objectContaining({
+        id: "visual-particle",
+        resourceType: "particle",
+        resourceTypeLabel: "Particle",
+        previewFileId: "file-snowfall-thumbnail",
+      }),
+    ]);
+  });
+
+  it("resolves selected particle visuals with or without a saved resource type", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-snow",
+            resourceId: "visual-particle",
+          },
+        ],
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0].resourceType).toBe("particle");
+    expect(selectViewData({ state }).defaultValues.visuals[0]).toMatchObject({
+      id: "visual-snow",
+      resourceId: "visual-particle",
+      resourceType: "particle",
+      displayName: "Snowfall",
+      fileId: "file-snowfall-thumbnail",
+    });
   });
 
   it("hydrates spritesheet animation previews and preserves animation names", () => {

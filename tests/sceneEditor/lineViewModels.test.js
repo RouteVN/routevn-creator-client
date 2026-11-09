@@ -443,6 +443,53 @@ describe("sceneEditor.lineDecorations", () => {
     });
   });
 
+  it("uses particle thumbnails for line visual previews", () => {
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines: [{ id: "line-1" }],
+      repositoryState: {
+        ...createRepositoryState(),
+        particles: {
+          items: {
+            "snow-particle": {
+              id: "snow-particle",
+              type: "particle",
+              name: "Snowfall",
+              thumbnailFileId: "file-snowfall-thumbnail",
+            },
+          },
+          tree: [{ id: "snow-particle" }],
+        },
+      },
+      sectionLineChanges: {
+        lines: [
+          {
+            id: "line-1",
+            changes: {
+              visual: {
+                changeType: "add",
+                data: {
+                  items: [{ id: "snow-visual", resourceId: "snow-particle" }],
+                },
+              },
+            },
+            presentationState: {},
+          },
+        ],
+      },
+    });
+
+    expect(viewModels[0].visual).toEqual({
+      changeType: "add",
+      items: [
+        {
+          visualId: "snow-visual",
+          resourceId: "snow-particle",
+          fileId: "file-snowfall-thumbnail",
+        },
+      ],
+    });
+  });
+
   it("marks conditional actions for inline action previews", () => {
     const lines = [
       {

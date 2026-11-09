@@ -270,8 +270,15 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { animations, images, spritesheets, videos, layouts, transforms } =
-    projectService.getState();
+  const {
+    animations,
+    images,
+    spritesheets,
+    videos,
+    layouts,
+    particles,
+    transforms,
+  } = projectService.getState();
 
   store.setImages({
     images: images ?? { tree: [], items: {} },
@@ -284,6 +291,9 @@ export const handleAfterMount = async (deps) => {
   });
   store.setLayouts({
     layouts: layouts ?? { tree: [], items: {} },
+  });
+  store.setParticles({
+    particles: particles ?? { tree: [], items: {} },
   });
   store.setTransforms({
     transforms: transforms ?? { tree: [], items: {} },
