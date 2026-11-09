@@ -271,6 +271,8 @@ appPage:
   filePickerFiles: "Seletor de arquivos"
   pressEscapeAgainFullscreen: "Pressione Esc duas vezes rapidamente para sair da tela cheia"
   failedExitFullscreen: "Não foi possível sair da tela cheia. Use os botões da janela."
+  audioUnavailable: "O áudio não está disponível neste dispositivo de momento."
+  audioUnavailableLockdownHint: "Se o modo de isolamento estiver ativado, pode desativá-lo para o RouteVN nas Definições."
   failedStartPreviewAudio: "Não foi possível iniciar o áudio da pré-visualização. Feche e volte a abrir a pré-visualização."
   assetsTab: "Recursos"
   buildingProjectState: "Aguarde a preparação do estado do projeto…"

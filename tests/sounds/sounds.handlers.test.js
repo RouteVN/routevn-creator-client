@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../../src/internal/ui/audioUnavailableNotice.js", () => ({
+  warnIfAudioUnavailable: vi.fn(() => false),
+}));
 import { EN_I18N } from "../support/i18n.js";
 import {
   handleDataChanged,

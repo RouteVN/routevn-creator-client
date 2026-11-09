@@ -1,3 +1,8 @@
+import { configureAudioRuntime } from "route-graphics";
+import {
+  isAudioAvailable,
+  createSilentGraphicsAudioRuntime,
+} from "./deps/clients/audioAvailability.js";
 import { createGlobalUI } from "@rettangoli/ui";
 
 // Infra - Web
@@ -27,6 +32,8 @@ import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
 registerPrimitives();
+if (!isAudioAvailable())
+  configureAudioRuntime(createSilentGraphicsAudioRuntime());
 
 await resetWebAppStateForVisualTests();
 
@@ -124,6 +131,7 @@ const apiService = createApiService();
 // Initialize async resources first
 const graphicsService = await createGraphicsService({
   subject,
+  audioAvailable: isAudioAvailable(),
   onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   onRenderError: (error) => {
     console.error(error);

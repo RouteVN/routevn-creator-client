@@ -19,6 +19,7 @@ const routeGraphicsInstance = {
   destroy: vi.fn(),
   loadAssets: vi.fn(async () => {}),
   render: vi.fn(),
+  parse: vi.fn((state) => state),
   setAnimationPlaybackMode: vi.fn(),
   canvas: {
     style: {},
@@ -125,6 +126,73 @@ describe("graphicsService", () => {
       selectSectionLineChanges: vi.fn(() => []),
       handleActions: vi.fn(),
     });
+  });
+
+  it("renders animated scenes without waiting for unavailable audio", async () => {
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+      audioAvailable: false,
+    });
+    try {
+      await service.init({
+        canvas: { children: [], appendChild: vi.fn(), removeChild: vi.fn() },
+        width: 1920,
+        height: 1080,
+      });
+      service.initRouteEngine({
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      });
+      routeGraphicsInstance.render.mockClear();
+      service.engineRenderCurrentState({
+        renderState: {
+          id: "scene-one",
+          elements: [
+            {
+              id: "button",
+              click: { soundSrc: "cached-sound" },
+              children: [{ id: "child", hover: { sound: "cached-sound" } }],
+            },
+          ],
+          audio: [{ id: "sound-one", src: "missing-sound" }],
+          audioEffects: [],
+          animations: [{ id: "animation-one" }],
+        },
+      });
+      expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+        expect.objectContaining({
+          audio: [],
+          audioEffects: [],
+          animations: [{ id: "animation-one" }],
+          elements: [
+            { id: "button", click: {}, children: [{ id: "child", hover: {} }] },
+          ],
+        }),
+      );
+      const state = {
+        elements: [{ id: "button", click: { soundSrc: "cached-sound" } }],
+        audio: [{ id: "sound-one", src: "cached-sound" }],
+        audioEffects: [{ id: "effect-one" }],
+      };
+      expect(service.parse(state)).toEqual(state);
+      service.render(state);
+      expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith({
+        elements: [{ id: "button", click: {} }],
+        audio: [],
+        audioEffects: [],
+      });
+      const loadAudio = vi.spyOn(audioAssetApi, "load");
+      await service.ensureAudioAssetsLoaded(["cached-sound"]);
+      expect(loadAudio).not.toHaveBeenCalled();
+      loadAudio.mockRestore();
+    } finally {
+      await service.destroy();
+    }
   });
 
   it("starts the platform output before graphics and closes it before destroying sources", async () => {
@@ -2488,7 +2556,7 @@ describe("graphicsService", () => {
 
     const originalActions = {
       updateVariable: {
-        id: "update-1",
+        id: "update1",
         operations: [
           {
             variableId: "var-1",
@@ -2512,7 +2580,7 @@ describe("graphicsService", () => {
     expect(handleActions).toHaveBeenCalledWith(
       {
         updateVariable: {
-          id: "update-1",
+          id: "update1",
           operations: [
             {
               variableId: "var-1",
@@ -2532,7 +2600,7 @@ describe("graphicsService", () => {
     );
     expect(originalActions).toEqual({
       updateVariable: {
-        id: "update-1",
+        id: "update1",
         operations: [
           {
             variableId: "var-1",

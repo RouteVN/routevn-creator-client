@@ -271,6 +271,8 @@ appPage:
   filePickerFiles: "Pliki"
   pressEscapeAgainFullscreen: "Naciśnij szybko dwa razy klawisz Esc, aby wyjść z trybu pełnoekranowego"
   failedExitFullscreen: "Nie udało się wyjść z trybu pełnoekranowego. Użyj przycisków okna."
+  audioUnavailable: "Dźwięk jest obecnie niedostępny na tym urządzeniu."
+  audioUnavailableLockdownHint: "Jeśli tryb blokady jest włączony, możesz go wyłączyć dla RouteVN w Ustawieniach."
   failedStartPreviewAudio: "Nie udało się uruchomić dźwięku w podglądzie. Zamknij podgląd i otwórz go ponownie."
   assetsTab: "Zasoby"
   buildingProjectState: "Przygotowywanie danych projektu…"

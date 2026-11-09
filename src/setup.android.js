@@ -1,3 +1,7 @@
+import {
+  isAudioAvailable,
+  createSilentGraphicsAudioRuntime,
+} from "./deps/clients/audioAvailability.js";
 import { errorReporter } from "./deps/clients/android/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 import { configureAudioRuntime } from "route-graphics";
@@ -39,7 +43,11 @@ registerPrimitives();
 const nativeBackOverlays = installNativeBackOverlays();
 
 const androidAudioRuntime = createAndroidAudioRuntime();
-configureAudioRuntime(androidAudioRuntime.graphicsRuntime);
+configureAudioRuntime(
+  isAudioAvailable()
+    ? androidAudioRuntime.graphicsRuntime
+    : createSilentGraphicsAudioRuntime(),
+);
 
 let isAndroidDebugBuild = false;
 try {
@@ -180,6 +188,7 @@ const apiService = createApiService({
 
 const graphicsService = await createGraphicsService({
   subject,
+  audioAvailable: isAudioAvailable(),
   onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   onRenderError: (error) => {
     console.error(error);

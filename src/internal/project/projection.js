@@ -25,6 +25,7 @@ import {
   resolveSpritesheetSize,
 } from "../spritesheets.js";
 import { toExecutableComputed } from "../computedExamples.js";
+import { normalizeUpdateVariableIds } from "../routeEngineActions.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const LAYOUT_ACTION_INTERACTION_KEYS = [
@@ -1425,6 +1426,11 @@ export function constructProjectData(state, options = {}) {
 
   alignDialogueModesWithLayouts(story, resources.layouts);
   removeUpdatesToMissingVariables(story.scenes, resources.variables);
+
+  // Route Engine accepts only alphanumeric updateVariable action ids.
+  story.scenes = normalizeUpdateVariableIds(story.scenes);
+  resources.layouts = normalizeUpdateVariableIds(resources.layouts);
+  resources.controls = normalizeUpdateVariableIds(resources.controls);
 
   return {
     screen: {

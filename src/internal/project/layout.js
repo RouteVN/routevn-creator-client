@@ -1393,6 +1393,20 @@ const applyTextNode = ({ element, node, context }) => {
   return nextElement;
 };
 
+const clampSpriteBlur = (blur) => {
+  const result = structuredClone(blur);
+  for (const [key, min] of [
+    ["x", 0],
+    ["y", 0],
+    ["quality", 1],
+  ]) {
+    if (Number.isFinite(result[key])) {
+      result[key] = Math.max(min, result[key]);
+    }
+  }
+  return result;
+};
+
 const applySpriteNode = ({ element, node }) => {
   if (node.type !== "sprite" && !SPRITE_IMAGE_BY_TYPE[node.type]) {
     return element;
@@ -1410,7 +1424,7 @@ const applySpriteNode = ({ element, node }) => {
     ...(node.hoverImageId ? { hoverImageId: node.hoverImageId } : {}),
     ...(node.clickImageId ? { clickImageId: node.clickImageId } : {}),
     ...(node.blur && typeof node.blur === "object" && !Array.isArray(node.blur)
-      ? { blur: structuredClone(node.blur) }
+      ? { blur: clampSpriteBlur(node.blur) }
       : {}),
   };
 };
