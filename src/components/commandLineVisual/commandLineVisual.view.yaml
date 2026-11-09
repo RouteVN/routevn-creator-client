@@ -287,17 +287,12 @@ template:
                                                           - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
                                                   - rtgl-view pos=abs edge=f w=f h=f av=c ah=c bgc=bg-60:
                                                       - rtgl-icon icon=play s=xl c=fg: null
-                                                $elif item.resourceType == 'layout' || item.resourceType == 'particle':
+                                                $else:
                                                   - $if item.previewFileId:
                                                       - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
                                                     $else:
                                                       - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
                                                           - rtgl-text s=sm c=mu-fg: ${noThumbnailLabel}
-                                                $elif item.previewFileId:
-                                                  - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
-                                                $else:
-                                                  - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
-                                                      - rtgl-text s=sm c=mu-fg: ${item.resourceTypeLabel}
                                           - rtgl-view w=f p=md:
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
