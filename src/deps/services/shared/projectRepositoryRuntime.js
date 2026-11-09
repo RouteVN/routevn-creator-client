@@ -545,6 +545,8 @@ export const createProjectRepositoryRuntime = async ({
   normalizeState = (state) => state,
   assertState = () => {},
   onHydrationProgress = () => {},
+  forceHistoryLoad = false,
+  onInitialStateValidationError = () => {},
 }) => {
   let events = Array.isArray(sourceEvents)
     ? sourceEvents.map((event) => structuredClone(event))
@@ -901,6 +903,10 @@ export const createProjectRepositoryRuntime = async ({
       }),
   });
 
+  if (forceHistoryLoad) {
+    await ensureEventHistoryLoaded();
+  }
+
   const initialMainHydrationProgress =
     await beginInitialMainHydrationProgress();
   let currentMainState;
@@ -914,7 +920,12 @@ export const createProjectRepositoryRuntime = async ({
     });
   }
 
-  assertState(currentMainState);
+  try {
+    assertState(currentMainState);
+  } catch (error) {
+    onInitialStateValidationError(error);
+    throw error;
+  }
 
   const refreshMainState = async () => {
     currentMainState = await loadCurrentMainState();

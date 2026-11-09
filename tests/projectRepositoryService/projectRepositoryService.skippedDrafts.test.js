@@ -90,6 +90,10 @@ const createMainCheckpoint = ({
 const createService = ({
   drafts = [...projectDrafts, leftOutDraft],
   storeHistoryStats = historyStats,
+  invalidMain = false,
+  operations = [],
+  failUnfinishedRecord = false,
+  getHistoryStats = () => storeHistoryStats,
 } = {}) => {
   const checkpoints = new Map([
     [
@@ -97,6 +101,13 @@ const createService = ({
       createMainCheckpoint({ checkpointHistoryStats: storeHistoryStats }),
     ],
   ]);
+  if (invalidMain) {
+    checkpoints.get(MAIN_VIEW_NAME).value.files.items.orphan = {
+      id: "orphan",
+      type: "folder",
+      name: "Folder",
+    };
+  }
   const toKey = ({ viewName, partition }) =>
     viewName === MAIN_VIEW_NAME && partition === MAIN_PARTITION
       ? MAIN_VIEW_NAME
@@ -104,16 +115,30 @@ const createService = ({
   const store = {
     listCommittedAfter: vi.fn(async () => []),
     listDraftsOrdered: vi.fn(async () => structuredClone(drafts)),
-    getRepositoryHistoryStats: async () => structuredClone(storeHistoryStats),
+    getRepositoryHistoryStats: vi.fn(async () =>
+      structuredClone(getHistoryStats()),
+    ),
     isRepositoryHistoryStatsEqual: (left, right) =>
       JSON.stringify(left) === JSON.stringify(right),
     loadMaterializedViewCheckpoint: async (key) =>
       structuredClone(checkpoints.get(toKey(key))),
     loadMaterializedViewCheckpoints: async () => [],
     saveMaterializedViewCheckpoint: async (checkpoint) => {
+      operations.push({
+        action: "save",
+        checkpoint: structuredClone(checkpoint),
+      });
+      if (
+        failUnfinishedRecord &&
+        checkpoint.viewName === "project_repository_skipped_drafts" &&
+        !checkpoint.value.rebuilt
+      ) {
+        throw new Error("Could not save rebuild marker");
+      }
       checkpoints.set(toKey(checkpoint), structuredClone(checkpoint));
     },
     deleteMaterializedViewCheckpoint: vi.fn(async (key) => {
+      operations.push({ action: "delete", key: structuredClone(key) });
       checkpoints.delete(toKey(key));
     }),
     app: {
@@ -164,6 +189,132 @@ const createService = ({
 };
 
 describe("projectRepositoryService left-out drafts", () => {
+  it("preserves the old main checkpoint when the unfinished marker cannot be saved", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const operations = [];
+    const { service, store } = createService({
+      invalidMain: true,
+      operations,
+      failUnfinishedRecord: true,
+    });
+    const original = JSON.stringify(
+      await store.loadMaterializedViewCheckpoint({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+      }),
+    );
+    await expect(service.ensureRepository()).rejects.toThrow(
+      "missing item 'orphan'",
+    );
+    expect(
+      JSON.stringify(
+        await store.loadMaterializedViewCheckpoint({
+          viewName: MAIN_VIEW_NAME,
+          partition: MAIN_PARTITION,
+        }),
+      ),
+    ).toBe(original);
+    expect(
+      operations.some(
+        ({ checkpoint }) => checkpoint?.viewName === MAIN_VIEW_NAME,
+      ),
+    ).toBe(false);
+  });
+
+  it.each(["before commit", "after commit"])(
+    "handles history changing %s during recovery",
+    async (changeTime) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const operations = [];
+      let statsReads = 0;
+      const changedStats = { ...historyStats, latestDraftClock: 4 };
+      const { service, store } = createService({
+        invalidMain: true,
+        operations,
+        getHistoryStats: () => {
+          statsReads += 1;
+          const changeAt = changeTime === "before commit" ? 3 : 4;
+          return statsReads >= changeAt ? changedStats : historyStats;
+        },
+      });
+      const key = { viewName: MAIN_VIEW_NAME, partition: MAIN_PARTITION };
+      const original = await store.loadMaterializedViewCheckpoint(key);
+      if (changeTime === "before commit") {
+        await expect(service.ensureRepository()).rejects.toThrow(
+          "missing item 'orphan'",
+        );
+        expect(await store.loadMaterializedViewCheckpoint(key)).toEqual(
+          original,
+        );
+        expect(
+          operations.some(
+            ({ checkpoint }) => checkpoint?.viewName === MAIN_VIEW_NAME,
+          ),
+        ).toBe(false);
+        expect(
+          operations.some(
+            ({ checkpoint }) =>
+              checkpoint?.viewName === "project_repository_skipped_drafts" &&
+              checkpoint.value.rebuilt,
+          ),
+        ).toBe(false);
+      } else {
+        await expect(service.ensureRepository()).rejects.toThrow(
+          "missing item 'orphan'",
+        );
+        expect(await store.loadMaterializedViewCheckpoint(key)).toBeUndefined();
+        const mainOperations = operations.filter(
+          ({ checkpoint, key: operationKey }) =>
+            checkpoint?.viewName === MAIN_VIEW_NAME ||
+            operationKey?.viewName === MAIN_VIEW_NAME,
+        );
+        expect(mainOperations.map(({ action }) => action)).toEqual([
+          "save",
+          "delete",
+        ]);
+        expect(warn).toHaveBeenCalledWith(
+          "Discarding recovered project repository checkpoint after history changed",
+        );
+      }
+    },
+  );
+
+  it("keeps the rebuild marker unfinished until recovered main state and scene caches are saved", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const operations = [];
+    const { service } = createService({ invalidMain: true, operations });
+    const repository = await service.ensureRepository();
+    expect(repository.getState().scenes.items[sceneId].name).toBe("Scene One");
+    const unfinished = operations.findIndex(
+      ({ checkpoint }) =>
+        checkpoint?.viewName === "project_repository_skipped_drafts" &&
+        checkpoint.value.rebuilt === false,
+    );
+    const main = operations.findIndex(
+      ({ checkpoint }) => checkpoint?.viewName === MAIN_VIEW_NAME,
+    );
+    const finished = operations.findIndex(
+      ({ checkpoint }) =>
+        checkpoint?.viewName === "project_repository_skipped_drafts" &&
+        checkpoint.value.rebuilt === true,
+    );
+    const sceneClear = operations.findIndex(
+      ({ action, key }) =>
+        action === "delete" && key?.viewName !== MAIN_VIEW_NAME,
+    );
+    expect(unfinished).toBeGreaterThanOrEqual(0);
+    expect(sceneClear).toBeGreaterThan(unfinished);
+    expect(main).toBeGreaterThan(sceneClear);
+    expect(finished).toBeGreaterThan(main);
+    // The open does not save the recovered main state a second time.
+    expect(
+      operations.filter(
+        ({ action, checkpoint }) =>
+          action === "save" && checkpoint?.viewName === MAIN_VIEW_NAME,
+      ),
+    ).toHaveLength(1);
+  });
+
   it("passes the drafts a lazy history load leaves out to subscribers", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const { service, store } = createService();
