@@ -171,7 +171,7 @@ describe("exported player startup", () => {
     expect(runtime.tickerStart).toHaveBeenCalledOnce();
     expect(loading.classList.contains("ready")).toBe(true);
     expect(loading.classList.contains("hidden")).toBe(true);
-  }, 20_000);
+  });
 
   it("shows a loading failure instead of leaving the progress screen stuck", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
