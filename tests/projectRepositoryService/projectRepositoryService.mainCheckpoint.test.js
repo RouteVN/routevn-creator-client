@@ -206,6 +206,7 @@ describe("projectRepositoryService main checkpoint reuse", () => {
     [false, true, false, false, false],
     [true, false, true, false, false],
     [false, false, false, true, false],
+    [true, false, false, true, false],
     [false, false, false, false, true],
   ])(
     "replays an invalid checkpoint without writing on failure (valid history: %s, legacy: %s, later event: %s, past history: %s, no bootstrap: %s)",
@@ -300,6 +301,7 @@ describe("projectRepositoryService main checkpoint reuse", () => {
         const repository = await service.ensureRepository();
         expect(repository.getState()).toEqual(expectedState);
         expect(checkpoint.value).toEqual(expectedState);
+        expect(checkpoint.lastCommittedId).toBe(historyStats.committedCount);
         expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalled();
       } else {
         await expect(service.ensureRepository()).rejects.toThrow(
@@ -313,7 +315,7 @@ describe("projectRepositoryService main checkpoint reuse", () => {
         expect(store.app.set).not.toHaveBeenCalled();
       }
       expect(store.listCommittedAfter).toHaveBeenCalledTimes(
-        pastHistory ? 0 : noBootstrap ? 1 : 2,
+        noBootstrap ? 1 : 2,
       );
     },
   );
@@ -739,123 +741,146 @@ describe("projectRepositoryService main checkpoint reuse", () => {
     }
   });
 
-  it("flushes a fresh main checkpoint after replaying events for a stale checkpoint", async () => {
-    const repositoryEvents = [
-      {
-        id: "project-create:project-1",
-        partition: "m",
-        projectId: "project-1",
-        type: "project.create",
-        schemaVersion: 1,
-        payload: {
-          state: structuredClone(initialProjectData),
-        },
-        clientTs: 1,
-        meta: {
+  // The stale checkpoint is discarded before its state is cloned or validated.
+  it.each([
+    ["stale history stats", 1, true],
+    ["no history stats and another revision", 2, false],
+    ["stale history stats and a revision past the history", 2, true],
+  ])(
+    "flushes a fresh main checkpoint after replaying events for a checkpoint with %s",
+    async (_label, staleRevision, withHistoryStats) => {
+      const repositoryEvents = [
+        {
+          id: "project-create:project-1",
+          partition: "m",
+          projectId: "project-1",
+          type: "project.create",
+          schemaVersion: 1,
+          payload: {
+            state: structuredClone(initialProjectData),
+          },
           clientTs: 1,
+          meta: {
+            clientTs: 1,
+          },
         },
-      },
-    ];
-    const listDraftsOrdered = vi.fn(async () =>
-      createDraftRowsFromRepositoryEvents(repositoryEvents),
-    );
-    const saveMaterializedViewCheckpoint = vi.fn(async () => {});
-    let checkpointDeleted = false;
-    const deleteMaterializedViewCheckpoint = vi.fn(async () => {
-      checkpointDeleted = true;
-    });
-    const store = {
-      listCommittedAfter: vi.fn(async () => []),
-      listDraftsOrdered,
-      getCursor: vi.fn(async () => 0),
-      getRepositoryHistoryStats: async () => ({
-        committedCount: 0,
-        latestCommittedId: 0,
-        draftCount: 1,
-        latestDraftClock: 2,
-      }),
-      isRepositoryHistoryStatsEqual: (left, right) =>
-        JSON.stringify(left) === JSON.stringify(right),
-      loadMaterializedViewCheckpoint: async () =>
-        checkpointDeleted
-          ? undefined
-          : {
-              viewName: "project_repository_main_state",
-              viewVersion: "1",
-              partition: "m",
-              lastCommittedId: 1,
-              value: structuredClone(initialProjectData),
-              meta: {
-                historyStats: {
-                  committedCount: 0,
-                  latestCommittedId: 0,
-                  draftCount: 0,
-                  latestDraftClock: 0,
-                },
-              },
-              updatedAt: 1,
-            },
-      saveMaterializedViewCheckpoint,
-      deleteMaterializedViewCheckpoint,
-      app: {
-        get: async (key) => {
-          if (key === "creatorVersion") {
-            return 1;
-          }
-
-          if (key === "projectInfo") {
-            return {
-              id: "project-1",
-              namespace: "namespace-1",
-              name: "Project 1",
-              description: "",
-              iconFileId: null,
-            };
-          }
-
-          return undefined;
+      ];
+      const listDraftsOrdered = vi.fn(async () =>
+        createDraftRowsFromRepositoryEvents(repositoryEvents),
+      );
+      const saveMaterializedViewCheckpoint = vi.fn(async () => {});
+      // Copying the state for validation reads this nested value; the
+      // discard warning's summary does not.
+      let stateReads = 0;
+      const staleValue = structuredClone(initialProjectData);
+      staleValue.readProbe = {};
+      Object.defineProperty(staleValue.readProbe, "value", {
+        enumerable: true,
+        get: () => {
+          stateReads += 1;
+          return 1;
         },
-        set: vi.fn(async () => {}),
-      },
-    };
-    const storageAdapter = {
-      readCreatorVersionByReference: vi.fn(async () => 1),
-      resolveProjectReferenceByProjectId: vi.fn(async ({ projectId }) => ({
-        projectPath: `/tmp/${projectId}`,
-        cacheKey: `/tmp/${projectId}`,
-        repositoryProjectId: projectId,
-      })),
-      createStore: vi.fn(async () => store),
-    };
-    const service = createProjectRepositoryService({
-      router: {
-        getPayload: () => ({
-          p: "project-1",
+      });
+      let checkpointDeleted = false;
+      const deleteMaterializedViewCheckpoint = vi.fn(async () => {
+        checkpointDeleted = true;
+      });
+      const store = {
+        listCommittedAfter: vi.fn(async () => []),
+        listDraftsOrdered,
+        getCursor: vi.fn(async () => 0),
+        getRepositoryHistoryStats: async () => ({
+          committedCount: 0,
+          latestCommittedId: 0,
+          draftCount: 1,
+          latestDraftClock: 2,
         }),
-      },
-      db: {},
-      creatorVersion: 1,
-      storageAdapter,
-      collabAdapter: noopCollabAdapter,
-    });
+        isRepositoryHistoryStatsEqual: (left, right) =>
+          JSON.stringify(left) === JSON.stringify(right),
+        loadMaterializedViewCheckpoint: async () =>
+          checkpointDeleted
+            ? undefined
+            : {
+                viewName: "project_repository_main_state",
+                viewVersion: "1",
+                partition: "m",
+                lastCommittedId: staleRevision,
+                value: staleValue,
+                meta: withHistoryStats
+                  ? {
+                      historyStats: {
+                        committedCount: 0,
+                        latestCommittedId: 0,
+                        draftCount: 0,
+                        latestDraftClock: 0,
+                      },
+                    }
+                  : undefined,
+                updatedAt: 1,
+              },
+        saveMaterializedViewCheckpoint,
+        deleteMaterializedViewCheckpoint,
+        app: {
+          get: async (key) => {
+            if (key === "creatorVersion") {
+              return 1;
+            }
 
-    const repository = await service.ensureRepository();
+            if (key === "projectInfo") {
+              return {
+                id: "project-1",
+                namespace: "namespace-1",
+                name: "Project 1",
+                description: "",
+                iconFileId: null,
+              };
+            }
 
-    expect(listDraftsOrdered).toHaveBeenCalledTimes(1);
-    expect(deleteMaterializedViewCheckpoint).toHaveBeenCalledWith({
-      viewName: "project_repository_main_state",
-      partition: "m",
-    });
-    expect(saveMaterializedViewCheckpoint).toHaveBeenCalledWith(
-      expect.objectContaining({
+            return undefined;
+          },
+          set: vi.fn(async () => {}),
+        },
+      };
+      const storageAdapter = {
+        readCreatorVersionByReference: vi.fn(async () => 1),
+        resolveProjectReferenceByProjectId: vi.fn(async ({ projectId }) => ({
+          projectPath: `/tmp/${projectId}`,
+          cacheKey: `/tmp/${projectId}`,
+          repositoryProjectId: projectId,
+        })),
+        createStore: vi.fn(async () => store),
+      };
+      const service = createProjectRepositoryService({
+        router: {
+          getPayload: () => ({
+            p: "project-1",
+          }),
+        },
+        db: {},
+        creatorVersion: 1,
+        storageAdapter,
+        collabAdapter: noopCollabAdapter,
+      });
+
+      const repository = await service.ensureRepository();
+
+      expect(stateReads).toBe(0);
+      expect(listDraftsOrdered).toHaveBeenCalledTimes(1);
+      expect(deleteMaterializedViewCheckpoint).toHaveBeenCalledWith({
         viewName: "project_repository_main_state",
         partition: "m",
-        viewVersion: "1",
-        lastCommittedId: 1,
-      }),
-    );
-    expect(repository.getState()).toEqual(initialProjectData);
-  });
+      });
+      expect(saveMaterializedViewCheckpoint).toHaveBeenCalledWith(
+        expect.objectContaining({
+          viewName: "project_repository_main_state",
+          partition: "m",
+          viewVersion: "1",
+          lastCommittedId: 1,
+        }),
+      );
+      expect(repository.getState()).toEqual(initialProjectData);
+    },
+  );
 
   it("recovers from a stale closed-pool store by evicting and recreating it", async () => {
     const staleStore = {

@@ -571,22 +571,6 @@ export const createProjectRepositoryService = ({
       checkpointHistoryStats &&
       typeof checkpointHistoryStats === "object" &&
       !Array.isArray(checkpointHistoryStats);
-    let checkpointStateValid = true;
-    if (
-      !hasCheckpointHistoryStats ||
-      checkpointRevision > currentHistoryLength
-    ) {
-      try {
-        assertSupportedProjectState(
-          normalizeRepositoryStateWithCreatorModel(
-            structuredClone(checkpoint.value),
-          ),
-        );
-      } catch {
-        checkpointStateValid = false;
-      }
-    }
-
     if (hasCheckpointHistoryStats) {
       if (
         !store.isRepositoryHistoryStatsEqual(
@@ -622,7 +606,25 @@ export const createProjectRepositoryService = ({
         await discardReusableMainCheckpoint(store);
         return undefined;
       }
+    }
 
+    let checkpointStateValid = true;
+    if (
+      !hasCheckpointHistoryStats ||
+      checkpointRevision > currentHistoryLength
+    ) {
+      try {
+        assertSupportedProjectState(
+          normalizeRepositoryStateWithCreatorModel(
+            structuredClone(checkpoint.value),
+          ),
+        );
+      } catch {
+        checkpointStateValid = false;
+      }
+    }
+
+    if (!hasCheckpointHistoryStats) {
       emitRepositoryLoadStage(onLoadStage, {
         stage: "backfill_main_checkpoint_metadata",
         label: "Updating project state checkpoint...",
@@ -1357,18 +1359,11 @@ export const createProjectRepositoryService = ({
               return repository;
             };
             let repository;
+            let skipFinalizeMainCheckpoint = false;
             try {
               repository = await openRepository(store);
             } catch (error) {
-              const historyLength =
-                Number(currentHistoryStats?.committedCount ?? 0) +
-                Number(currentHistoryStats?.draftCount ?? 0);
-              if (
-                error !== validationError ||
-                !reusableMainCheckpoint ||
-                Number(reusableMainCheckpoint.checkpoint.lastCommittedId) >
-                  historyLength
-              ) {
+              if (error !== validationError || !reusableMainCheckpoint) {
                 throw error;
               }
               let firstEvent;
@@ -1390,9 +1385,36 @@ export const createProjectRepositoryService = ({
               );
               const recovery = createRecoveryStore(store);
               try {
+                currentHistoryStats = await store.getRepositoryHistoryStats();
                 repository = await openRepository(recovery.store, true);
                 await flushRepositoryMainCheckpoint(repository);
+                const beforeCommitStats =
+                  await store.getRepositoryHistoryStats();
+                if (
+                  !store.isRepositoryHistoryStatsEqual(
+                    currentHistoryStats,
+                    beforeCommitStats,
+                  )
+                ) {
+                  throw new Error(
+                    "Project history changed during checkpoint recovery",
+                  );
+                }
                 await recovery.commit();
+                const afterCommitStats =
+                  await store.getRepositoryHistoryStats();
+                if (
+                  !store.isRepositoryHistoryStatsEqual(
+                    currentHistoryStats,
+                    afterCommitStats,
+                  )
+                ) {
+                  await discardReusableMainCheckpoint(store);
+                  skipFinalizeMainCheckpoint = true;
+                  console.warn(
+                    "Discarding recovered project repository checkpoint after history changed",
+                  );
+                }
               } catch {
                 throw error;
               }
@@ -1416,7 +1438,9 @@ export const createProjectRepositoryService = ({
             });
 
             try {
-              await flushRepositoryMainCheckpoint(repository);
+              if (!skipFinalizeMainCheckpoint) {
+                await flushRepositoryMainCheckpoint(repository);
+              }
             } catch (error) {
               console.warn("Failed to flush project repository checkpoint", {
                 cacheKey: reference.cacheKey,
