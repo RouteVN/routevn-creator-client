@@ -3131,4 +3131,3 @@ languageSuggestion:
   message: "RouteVN Creator est aussi disponible en français (Beta)."
   switchButton: "Passer au français"
   closeButton: "Fermer"
-  failedSwitchMessage: "Impossible de changer de langue."

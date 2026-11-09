@@ -3131,4 +3131,3 @@ languageSuggestion:
   message: "RouteVN Creator juga tersedia dalam bahasa Indonesia (Beta)."
   switchButton: "Ganti ke bahasa Indonesia"
   closeButton: "Tutup"
-  failedSwitchMessage: "Tidak dapat mengganti bahasa."

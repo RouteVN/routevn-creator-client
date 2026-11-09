@@ -18,7 +18,7 @@ export const setBusy = ({ state }, { busy } = {}) => {
   state.busy = busy;
 };
 
-export const selectSuggestedLocale = ({ state }) => state.suggestion?.locale;
+export const selectSuggestion = ({ state }) => state.suggestion;
 
 export const selectViewData = ({ state }) => {
   const { suggestion } = state;

@@ -3159,4 +3159,3 @@ languageSuggestion:
   message: "RouteVN Creator також доступний українською (Beta)."
   switchButton: "Перейти на українську"
   closeButton: "Закрити"
-  failedSwitchMessage: "Не вдалося змінити мову."
