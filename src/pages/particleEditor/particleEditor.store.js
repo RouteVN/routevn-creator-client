@@ -9,12 +9,10 @@ import {
 import {
   collectParticleTextureImageIds,
   createRenderableParticleData,
+  isRenderableParticleTexture,
   resolveParticleTextureImageItem,
 } from "../../internal/particles.js";
-import {
-  formatParticleAspectRatio,
-  hasRenderableParticleTexture,
-} from "../../internal/particlePreview.js";
+import { formatParticleAspectRatio } from "../../internal/particlePreview.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
@@ -542,7 +540,7 @@ export const selectViewData = ({ state, i18n }) => {
     canvasZoomFitLabel: copy.canvasZoomFitLabel,
     canvasAspectRatio: formatParticleAspectRatio(canvasResolution),
     // Without a texture the particles do not draw, so the canvas says so.
-    showTextureHint: !hasRenderableParticleTexture(
+    showTextureHint: !isRenderableParticleTexture(
       canvasParticle.modules?.appearance?.texture,
     ),
     textureHint: copy.textureHint,

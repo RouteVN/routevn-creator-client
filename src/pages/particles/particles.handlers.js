@@ -486,47 +486,52 @@ export const handleEditFormAction = async (deps, payload) => {
 const PARTICLE_USAGE_TARGETS = ["scenes", "layouts", "controls"];
 
 export const handleItemDelete = async (deps, payload) => {
-  const { appService, projectService, render } = deps;
+  const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
-  if (!itemId) {
+  if (!itemId || store.selectIsDeletingItem({ itemId })) {
     return;
   }
 
-  const deleteAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage: copy.failedDeleteParticle,
-    title: copy.errorTitle,
-    action: () =>
-      projectService.deleteParticleIfUnused({
-        particleId: itemId,
-        checkTargets: PARTICLE_USAGE_TARGETS,
-      }),
-  });
-
-  if (!deleteAttempt.ok) {
-    return;
-  }
-
-  const { deleted, usage, deleteResult } = deleteAttempt.result;
-  if (usage.isUsed) {
-    appService.showAlert({ message: copy.cannotDeleteResourceInUse });
-    render();
-    return;
-  }
-
-  if (!deleted) {
-    showResourcePageError({
+  store.startDeletingItem({ itemId });
+  try {
+    const deleteAttempt = await runResourcePageMutation({
       appService,
-      errorOrResult: deleteResult,
       fallbackMessage: copy.failedDeleteParticle,
       title: copy.errorTitle,
+      action: () =>
+        projectService.deleteParticleIfUnused({
+          particleId: itemId,
+          checkTargets: PARTICLE_USAGE_TARGETS,
+        }),
     });
-    render();
-    return;
-  }
 
-  await refreshParticleData(deps);
+    if (!deleteAttempt.ok) {
+      return;
+    }
+
+    const { deleted, usage, deleteResult } = deleteAttempt.result;
+    if (usage.isUsed) {
+      appService.showAlert({ message: copy.cannotDeleteResourceInUse });
+      render();
+      return;
+    }
+
+    if (!deleted) {
+      showResourcePageError({
+        appService,
+        errorOrResult: deleteResult,
+        fallbackMessage: copy.failedDeleteParticle,
+        title: copy.errorTitle,
+      });
+      render();
+      return;
+    }
+
+    await refreshParticleData(deps);
+  } finally {
+    store.finishDeletingItem({ itemId });
+  }
 };
 
 // The copy has the particle's effect, name, description, tags and thumbnail,

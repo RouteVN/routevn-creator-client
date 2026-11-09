@@ -16,6 +16,7 @@ import { canAutoTweenProperty } from "../animationPlayback.js";
 import {
   collectParticleTextureImageIds,
   createRenderableParticleData,
+  isRenderableParticleTexture,
 } from "../particles.js";
 import { toVariableConditionTarget } from "../layoutConditions.js";
 import { requireProjectResolution } from "../projectResolution.js";
@@ -1005,27 +1006,26 @@ const constructParticleResources = (
 
       const renderableParticle = createRenderableParticleData(item, imageItems);
 
-      // A visual draws its particle through Route Engine, where Route
-      // Graphics rejects a particle with no texture ("modules.appearance.
-      // texture is required") and a seed that is not a number, such as a
-      // blank Seed field saved as null. Either fails every render of the
-      // scene. A particle without a texture draws nothing, so it is left out
-      // and its visual draws nothing, as a layout's particle element does.
-      if (!renderableParticle.modules?.appearance?.texture) {
+      // A visual draws its particle through Route Engine, which has no
+      // fallback for a texture route-graphics rejects. Such a particle is
+      // left out, so its visual draws nothing, as a layout's particle
+      // element does.
+      if (
+        !isRenderableParticleTexture(
+          renderableParticle.modules?.appearance?.texture,
+        )
+      ) {
         return result;
       }
 
-      const particleResource = pickResourceFields(renderableParticle, [
+      result[particleId] = pickResourceFields(renderableParticle, [
         "name",
         "description",
         "width",
         "height",
+        "seed",
         "modules",
       ]);
-      if (Number.isFinite(renderableParticle.seed)) {
-        particleResource.seed = renderableParticle.seed;
-      }
-      result[particleId] = particleResource;
       return result;
     },
     {},
@@ -2779,23 +2779,16 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
         inProps[usageTargetName] = usages;
       }
 
+      // Animations and particles can use images themselves, so the ones
+      // referenced here are checked below. A key such as `resourceId` can
+      // name several kinds of resource, so ids that are not animations or
+      // particles are skipped there.
       scanNodeForResourceReferences(data, ({ key, value }) => {
-        // Lines, layouts and controls pick animations as
-        // `animations: { resourceId }`; ids that are not animations are
-        // skipped below.
-        if (
-          (key === "animation" || key === "resourceId") &&
-          typeof value === "string"
-        ) {
+        const types = RESOURCE_KEY_TO_TYPES[key] ?? [];
+        if (types.includes("animations")) {
           referencedAnimationIds.add(value);
         }
-
-        // Layouts pick a particle as `particleId` and visuals as
-        // `resourceId`; ids that are not particles are skipped below.
-        if (
-          (key === "particleId" || key === "resourceId") &&
-          typeof value === "string"
-        ) {
+        if (types.includes("particles")) {
           referencedParticleIds.add(value);
         }
       });

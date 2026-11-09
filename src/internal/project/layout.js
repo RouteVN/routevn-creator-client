@@ -4,6 +4,7 @@ import { toAlphanumericId } from "../layoutEditorElementRegistry.js";
 import {
   createRenderableParticleData,
   isBuiltinParticleTextureName,
+  isRenderableParticleTexture,
 } from "../particles.js";
 import {
   resolveSpritesheetAnimationFps,
@@ -1447,7 +1448,11 @@ const applyParticleNode = ({ element, node, context }) => {
     context.imageItems,
   );
 
-  if (!renderableParticle?.modules?.appearance?.texture) {
+  if (
+    !isRenderableParticleTexture(
+      renderableParticle.modules?.appearance?.texture,
+    )
+  ) {
     return {
       ...element,
       type: "container",
@@ -1460,9 +1465,7 @@ const applyParticleNode = ({ element, node, context }) => {
     modules: structuredClone(renderableParticle.modules ?? {}),
   };
 
-  // A blank Seed field is saved as null, which route-graphics rejects with
-  // "seed must be a number" and which then fails every render of the scene.
-  if (Number.isFinite(renderableParticle.seed)) {
+  if (renderableParticle.seed !== undefined) {
     nextElement.seed = renderableParticle.seed;
   }
 

@@ -1,6 +1,7 @@
 import {
   collectParticleTextureImageIds,
   createRenderableParticleData,
+  isRenderableParticleTexture,
   normalizeParticleModules,
 } from "./particles.js";
 
@@ -25,20 +26,6 @@ export const formatParticleAspectRatio = (particle) => {
   }
 
   return `${width} / ${height}`;
-};
-
-// Whether a particle texture, as createRenderableParticleData resolves it,
-// draws anything. The canvas draws no particles without one.
-export const hasRenderableParticleTexture = (texture) => {
-  if (typeof texture === "string") {
-    return texture.length > 0;
-  }
-
-  if (texture?.shape) {
-    return true;
-  }
-
-  return Array.isArray(texture?.items) && texture.items.length > 0;
 };
 
 const createPreviewBackgroundElement = ({ width, height, image } = {}) => {
@@ -100,7 +87,7 @@ export const createParticlePreviewState = (
     }),
   ];
 
-  if (hasRenderableParticleTexture(particle?.modules?.appearance?.texture)) {
+  if (isRenderableParticleTexture(particle?.modules?.appearance?.texture)) {
     elements.push(element);
   }
 
