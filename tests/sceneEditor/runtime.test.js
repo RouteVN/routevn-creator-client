@@ -192,7 +192,11 @@ describe("empty scene startup", () => {
       store,
       appService,
       graphicsService,
-      projectService: { ensureRepository: vi.fn(), setActiveSceneId: vi.fn() },
+      projectService: {
+        ensureRepository: vi.fn(),
+        setActiveSceneId: vi.fn(),
+        getEnsuredProjectId: () => "project-one",
+      },
       refs: {
         previewCanvasHost: { getCanvasRoot: () => ({ isConnected: true }) },
       },
@@ -216,6 +220,7 @@ describe("renderSceneEditorState", () => {
       const graphicsService = { initRouteEngine: vi.fn() };
       await renderSceneEditorState({
         graphicsService,
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store: {
           selectSceneId: () => "scene-1",
           selectSelectedSectionId: () => undefined,
