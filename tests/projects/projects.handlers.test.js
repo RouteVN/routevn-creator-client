@@ -674,21 +674,25 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.checkUpdateMenuItem,
           type: "item",
           value: "check-update",
+          icon: "download",
         },
         {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
+          icon: "website",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
           type: "item",
           value: "appearance",
+          icon: "sun",
         },
         {
           label: EN_I18N.projectsPage.contactMenuItem,
           type: "item",
           value: "contact",
+          icon: "chat",
         },
       ],
     });
@@ -718,16 +722,19 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
+          icon: "website",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
           type: "item",
           value: "appearance",
+          icon: "sun",
         },
         {
           label: EN_I18N.projectsPage.contactMenuItem,
           type: "item",
           value: "contact",
+          icon: "chat",
         },
       ],
     });
@@ -758,16 +765,19 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
+          icon: "website",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
           type: "item",
           value: "appearance",
+          icon: "sun",
         },
         {
           label: EN_I18N.projectsPage.contactMenuItem,
           type: "item",
           value: "contact",
+          icon: "chat",
         },
       ],
     });
