@@ -1,3 +1,4 @@
+import { createAssetLoadSessionGuard } from "../../internal/ui/assetLoadSessionGuard.js";
 import { concatMap, debounceTime, filter, from, tap } from "rxjs";
 import {
   applyTransformPositionIntent,
@@ -63,6 +64,10 @@ const navigateBack = (appService) => {
 // of the canvas, and is not read again while the page is open.
 const loadPreviewImageAssets = async (deps) => {
   const { graphicsService, projectService, store } = deps;
+  const isCurrent = createAssetLoadSessionGuard({
+    projectService,
+    canvas: deps.refs?.canvas,
+  });
   const loadedFileIds = store.selectLoadedAssetFileIds();
   const failedFileIds = store.selectFailedAssetFileIds();
   const images = new Map();
@@ -88,14 +93,17 @@ const loadPreviewImageAssets = async (deps) => {
       const fileResult = await projectService.getFileContent(fileId, {
         verifyImageIntegrity: true,
       });
+      if (!isCurrent()) return [];
       await graphicsService.loadAssets({
         [fileId]: {
           url: fileResult.url,
           type: image.fileType ?? fileResult.type ?? "image/png",
         },
       });
+      if (!isCurrent()) return [];
       store.markAssetLoaded({ fileId });
     } catch (error) {
+      if (!isCurrent()) return [];
       console.warn("[transformEditor] Failed to load a preview image", {
         fileId,
         error,
@@ -157,7 +165,13 @@ const renderTransformCanvas = async (deps) => {
   }
 
   try {
-    warnPreviewImageFailures(deps, await loadPreviewImageAssets(deps));
+    const isCurrent = createAssetLoadSessionGuard({
+      projectService: deps.projectService,
+      canvas: deps.refs?.canvas,
+    });
+    const failures = await loadPreviewImageAssets(deps);
+    if (!isCurrent()) return;
+    warnPreviewImageFailures(deps, failures);
     if (store.selectRightPanelMode() === "preview") {
       graphicsService.render(createPreviewRenderState(store));
       return;

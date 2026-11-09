@@ -9,7 +9,10 @@ describe("fontPreview.handlers", () => {
         fileIds: ["font-400", "font-variable"],
         fontWeightDescriptors: ["400", "100 900"],
       },
-      projectService: { loadFontFile },
+      projectService: {
+        loadFontFile,
+        getEnsuredProjectId: () => "project-one",
+      },
       store: {
         startFontLoad: vi.fn(),
         finishFontLoad: vi.fn(),
@@ -43,7 +46,10 @@ describe("fontPreview.handlers", () => {
         fileIds: ["font-400", "font-missing"],
         fontWeightDescriptors: ["400", ""],
       },
-      projectService: { loadFontFile },
+      projectService: {
+        loadFontFile,
+        getEnsuredProjectId: () => "project-one",
+      },
       store: {
         startFontLoad: vi.fn(),
         finishFontLoad: vi.fn(),
