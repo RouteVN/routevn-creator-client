@@ -2939,45 +2939,60 @@ private final class RouteVNZipStreamWriter {
 
 final class RouteVNSchemeHandler: NSObject, WKURLSchemeHandler {
     private let storage: RouteVNNativeStorage
+    private let fileQueue = DispatchQueue(label: "vn.routevn.scheme-files", qos: .userInitiated, attributes: .concurrent)
+    private var liveTasks = Set<ObjectIdentifier>()
 
     init(storage: RouteVNNativeStorage) {
         self.storage = storage
     }
 
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
+        let taskID = ObjectIdentifier(urlSchemeTask)
+        liveTasks.insert(taskID)
         do {
             guard let url = urlSchemeTask.request.url else {
                 throw RouteVNError.message("Invalid routevn URL.")
             }
-
             let resolved = try storage.resolveRouteVNURL(url)
-            let data = try Data(contentsOf: resolved.url)
-            let response = HTTPURLResponse(
-                url: url,
-                statusCode: 200,
-                httpVersion: "HTTP/1.1",
-                headerFields: [
-                    "Content-Type": resolved.mimeType,
-                    "Content-Length": String(data.count),
-                    "Access-Control-Allow-Origin": "*",
-                    "Cross-Origin-Resource-Policy": "cross-origin"
-                ]
-            ) ?? URLResponse(
-                url: url,
-                mimeType: resolved.mimeType,
-                expectedContentLength: data.count,
-                textEncodingName: nil
-            )
-
-            urlSchemeTask.didReceive(response)
-            urlSchemeTask.didReceive(data)
-            urlSchemeTask.didFinish()
+            let rangeHeader = urlSchemeTask.request.value(forHTTPHeaderField: "Range")
+            fileQueue.async {
+                let result = Result {
+                    try ByteRangeResponse.make(fileURL: resolved.url, contentType: resolved.mimeType, rangeHeader: rangeHeader)
+                }
+                DispatchQueue.main.async {
+                    guard self.liveTasks.contains(taskID) else { return }
+                    switch result {
+                    case let .success(value):
+                        guard let response = HTTPURLResponse(
+                            url: url,
+                            statusCode: value.statusCode,
+                            httpVersion: "HTTP/1.1",
+                            headerFields: value.headers
+                        ) else {
+                            urlSchemeTask.didFailWithError(RouteVNError.message("Could not create routevn response."))
+                            self.liveTasks.remove(taskID)
+                            return
+                        }
+                        urlSchemeTask.didReceive(response)
+                        if !value.body.isEmpty {
+                            urlSchemeTask.didReceive(value.body)
+                        }
+                        urlSchemeTask.didFinish()
+                    case let .failure(error):
+                        urlSchemeTask.didFailWithError(error)
+                    }
+                    self.liveTasks.remove(taskID)
+                }
+            }
         } catch {
             urlSchemeTask.didFailWithError(error)
+            liveTasks.remove(taskID)
         }
     }
 
-    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
+        liveTasks.remove(ObjectIdentifier(urlSchemeTask))
+    }
 }
 
 final class RouteVNNativeStorage {

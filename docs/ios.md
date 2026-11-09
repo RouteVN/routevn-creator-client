@@ -623,6 +623,8 @@ Native filesystem checks use disposable fixtures on macOS and require access to
 the host file coordination service:
 
 ```bash
+swiftc -module-cache-path /tmp/routevn-range-swift-cache ios/routevn/routevn/ByteRangeResponse.swift tests/ios/byteRangeResponseNative.swift -o /tmp/routevn-byte-range-tests
+/tmp/routevn-byte-range-tests
 swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift tests/ios/projectFolderSetupNative.swift -o /tmp/routevn-folder-native-tests
 /tmp/routevn-folder-native-tests
 swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift ios/routevn/routevn/ProjectStoragePaths.swift ios/routevn/routevn/TempFolders.swift ios/routevn/routevn/CodedError.swift tests/ios/projectStoragePathsNative.swift -o /tmp/routevn-storage-native-tests
