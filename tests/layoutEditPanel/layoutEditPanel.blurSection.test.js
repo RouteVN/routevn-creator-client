@@ -16,6 +16,11 @@ import {
   handleSpriteBlurFormAction,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
 import { EN_I18N, FR_I18N } from "../support/i18n.js";
+import {
+  createSpriteBlurDialogDefaults,
+  createSpriteBlurFromDialogValues,
+  createSpriteBlurForm,
+} from "../../src/components/layoutEditPanel/support/layoutEditPanelBlur.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
@@ -59,6 +64,31 @@ const createDeps = (state) => ({
 });
 
 describe("layoutEditPanel sprite blur section", () => {
+  it("bounds dialog fields, defaults and submitted values", () => {
+    const fields = createSpriteBlurForm().fields;
+    expect(fields.slice(0, 3).map(({ name, min }) => ({ name, min }))).toEqual([
+      { name: "blurX", min: 0 },
+      { name: "blurY", min: 0 },
+      { name: "blurQuality", min: 1 },
+    ]);
+    expect(
+      createSpriteBlurDialogDefaults({ x: -2, y: -3, quality: 0 }),
+    ).toMatchObject({ blurX: 0, blurY: 0, blurQuality: 1 });
+    expect(
+      createSpriteBlurFromDialogValues({
+        blurX: -1,
+        blurY: -2,
+        blurQuality: -3,
+      }),
+    ).toMatchObject({ x: 0, y: 0, quality: 1 });
+    expect(
+      createSpriteBlurFromDialogValues({
+        blurX: 2,
+        blurY: 3,
+        blurQuality: 2.5,
+      }),
+    ).toMatchObject({ x: 2, y: 3, quality: 2.5 });
+  });
   it("shows a sprite-only blur section with an add action", () => {
     const state = createInitialState();
     setValues(

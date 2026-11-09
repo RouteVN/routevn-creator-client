@@ -20,6 +20,7 @@ it("warns once for all failed layout assets, retries, and recovers without chang
     store,
     appService: { showAlert: vi.fn() },
     projectService: {
+      getEnsuredProjectId: () => "project-one",
       getRepositoryState: () => repository,
       getFileContent: vi.fn(async (id) => {
         if (broken && id === "font") throw new Error("font checksum mismatch");
@@ -66,3 +67,38 @@ it("warns once for all failed layout assets, retries, and recovers without chang
   ).toEqual([]);
   expect(deps.appService.showAlert).toHaveBeenCalledOnce();
 });
+
+it.each([undefined, "project-two"])(
+  "drops a late layout load after project changes to %s",
+  async (nextProject) => {
+    let projectId = "project-one";
+    let finish;
+    const store = {
+      selectCachedFileContent: vi.fn(),
+      clearCachedFileContent: vi.fn(),
+      cacheFileContent: vi.fn(),
+      selectWarnedAssetFileIds: vi.fn(),
+      markAssetWarningsShown: vi.fn(),
+    };
+    const deps = {
+      store,
+      appService: { showAlert: vi.fn() },
+      projectService: {
+        getEnsuredProjectId: () => projectId,
+        getFileContent: () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      },
+      graphicsService: { hasLoadedAsset: () => false, loadAssets: vi.fn() },
+    };
+    const load = loadAvailableLayoutEditorAssets(deps, [{ url: "image" }], {});
+    projectId = nextProject;
+    finish({ url: "asset://image" });
+    expect(await load).toEqual([]);
+    expect(store.cacheFileContent).not.toHaveBeenCalled();
+    expect(store.markAssetWarningsShown).not.toHaveBeenCalled();
+    expect(deps.graphicsService.loadAssets).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  },
+);

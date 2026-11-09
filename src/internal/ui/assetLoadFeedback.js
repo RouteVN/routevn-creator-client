@@ -75,7 +75,13 @@ export const showAssetLoadFailures = (
   if (failures.length === 0) return;
   const { appService, projectService, i18n = {} } = deps;
   const copy = i18n.assetLoadFeedback ?? {};
-  const repository = projectService?.getRepositoryState?.() ?? {};
+  let repository;
+  try {
+    repository = projectService?.getRepositoryState?.() ?? {};
+  } catch (error) {
+    console.warn("[assetLoadFeedback] Failed to read project assets", error);
+    return;
+  }
   const types = { ...i18n.resourceTypes, voices: copy.voices ?? "Voices" };
   const names = getAssetNames(
     repository,

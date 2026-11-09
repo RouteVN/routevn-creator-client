@@ -242,6 +242,7 @@ describe("renderSceneEditorState", () => {
     const showAlert = vi.fn();
     try {
       await renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         graphicsService,
         appService: { showAlert },
         store: {
@@ -309,6 +310,7 @@ describe("renderSceneEditorState", () => {
       const graphicsService = createGraphicsService();
       graphicsService.loadAssets = vi.fn(async () => {});
       const projectService = {
+        getEnsuredProjectId: () => "project-one",
         getFileContent: vi.fn(async () => {
           throw Object.assign(new Error("checksum mismatch"), {
             fileId: "font-file-one",
@@ -731,6 +733,7 @@ describe("renderSceneEditorState", () => {
           }),
       );
       const projectService = {
+        getEnsuredProjectId: () => "project-one",
         getFileContent: vi.fn(async (fileId) => ({ url: fileId })),
         // The open project's repository is gone once the user has left it.
         getRepositoryState: vi.fn(() => {
@@ -898,6 +901,7 @@ describe("renderSceneEditorState", () => {
       },
     };
     const unmount = mountSceneEditorSubscriptions({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       subject,
       appService,
       store,
@@ -952,6 +956,7 @@ describe("renderSceneEditorState", () => {
     try {
       await expect(
         restoreSceneEditorFromPreview({
+          projectService: { getEnsuredProjectId: () => "project-one" },
           appService,
           i18n: {
             resourcePages: { errorTitle: "Error title" },
@@ -997,6 +1002,7 @@ describe("renderSceneEditorState", () => {
       subject,
       appService,
       projectService: {
+        getEnsuredProjectId: () => "project-one",
         getRepositoryState: () => ({
           variables: {
             items: {
@@ -1059,6 +1065,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorCanvas(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         render,
         refs: {},
@@ -1095,6 +1102,7 @@ describe("renderSceneEditorState", () => {
 
     await expect(
       renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       }),
@@ -1102,6 +1110,7 @@ describe("renderSceneEditorState", () => {
 
     await expect(
       renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       }),
@@ -1232,6 +1241,7 @@ describe("renderSceneEditorState", () => {
       },
     };
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: async () => ({
         type: "audio/ogg",
         url: "blob:http://localhost/track.ogg",
@@ -1381,6 +1391,7 @@ describe("renderSceneEditorState", () => {
         store,
         graphicsService,
         projectService: {
+          getEnsuredProjectId: () => "project-one",
           getFileContent: async (fileId) => ({ url: `asset://${fileId}` }),
         },
       }),
@@ -1441,6 +1452,7 @@ describe("renderSceneEditorState", () => {
         store,
         graphicsService,
         projectService: {
+          getEnsuredProjectId: () => "project-one",
           getFileContent: async (fileId) => ({ url: `asset://${fileId}` }),
         },
       }),
@@ -1474,6 +1486,7 @@ describe("renderSceneEditorState", () => {
     };
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
@@ -1532,6 +1545,7 @@ describe("renderSceneEditorState", () => {
       },
     };
     const deps = {
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       render: vi.fn(),
       graphicsService,
@@ -1598,6 +1612,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorState(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       },
@@ -1611,6 +1626,7 @@ describe("renderSceneEditorState", () => {
     );
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
@@ -1654,6 +1670,7 @@ describe("renderSceneEditorState", () => {
     };
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
@@ -1685,12 +1702,14 @@ describe("renderSceneEditorState", () => {
     };
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
 
     await renderSceneEditorState(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       },
@@ -1735,6 +1754,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorState(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       },
@@ -1788,6 +1808,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorCanvas(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         render,
         graphicsService,
@@ -1873,6 +1894,7 @@ describe("renderSceneEditorState", () => {
         render: vi.fn(),
         graphicsService,
         projectService: {
+          getEnsuredProjectId: () => "project-one",
           getFileContent: vi.fn(async (fileId) => ({
             url: fileId,
           })),
@@ -1992,6 +2014,7 @@ describe("renderSceneEditorState", () => {
           store,
           graphicsService,
           projectService: {
+            getEnsuredProjectId: () => "project-one",
             getFileContent: vi.fn(async (fileId) => ({ url: fileId })),
           },
           refs: {
@@ -2166,6 +2189,7 @@ describe("renderSceneEditorState", () => {
       }
     });
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `asset://${fileId}`,
       })),
@@ -2236,6 +2260,112 @@ describe("renderSceneEditorState", () => {
     );
   });
 
+  it.each(["closed", "replaced", "unmounted"])(
+    "drops a late scene load when %s",
+    async (scenario) => {
+      const projectData = createProjectData();
+      projectData.resources.videos["late-video"] = {
+        id: "late-video",
+        fileId: `late-video-${scenario}.mp4`,
+        fileType: "video/mp4",
+        width: 1920,
+        height: 1080,
+      };
+      projectData.story.scenes["scene-1"].sections[
+        "section-1"
+      ].lines[1].actions.background = {
+        resourceId: "late-video",
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080,
+      };
+      const graphicsService = createGraphicsService();
+      graphicsService.loadAssets = vi.fn(async (assets) => {
+        if (assets[`late-video-${scenario}.mp4`]) {
+          throw new Error(
+            "Timed out loading video asset `late-video-${scenario}.mp4`.",
+          );
+        }
+      });
+      const projectService = {
+        getEnsuredProjectId: () => "project-one",
+        getFileContent: vi.fn(async (fileId) => ({
+          url: `asset://${fileId}`,
+        })),
+      };
+      const store = {
+        ...createWarningStore(),
+        selectIsScenePageLoading: () => false,
+        selectPreviewScene: () => ({
+          previewVisible: false,
+        }),
+        selectSceneId: () => "scene-1",
+        selectSelectedSectionId: () => "section-1",
+        selectSelectedLineId: () => "line-2",
+        selectProjectData: () => projectData,
+        selectTemporaryPresentationState: () => ({}),
+        selectIsBackgroundTransformEditorOpen: () => false,
+        selectScene: () => ({
+          sections: [{ id: "section-1" }],
+        }),
+        selectIsMuted: () => true,
+        setPresentationState: ({ presentationState }) => {
+          store.presentationState = presentationState;
+        },
+        setSectionLineChanges: vi.fn(),
+      };
+      const deps = {
+        appService: { showAlert: vi.fn() },
+        store,
+        render: vi.fn(),
+        graphicsService,
+        projectService,
+        refs: {
+          previewCanvasHost: {
+            getCanvasRoot: () => ({
+              isConnected: true,
+            }),
+          },
+        },
+      };
+
+      let projectId = "project-one";
+      let rejectLoad;
+      let startedLoad;
+      const started = new Promise((resolve) => {
+        startedLoad = resolve;
+      });
+      projectService.getEnsuredProjectId = () => projectId;
+      projectService.getRepositoryState = vi.fn(() => {
+        if (!projectId) throw new Error("Repository not initialized");
+        return {};
+      });
+      graphicsService.loadAssets.mockImplementation(() => {
+        startedLoad();
+        return new Promise((resolve, reject) => {
+          rejectLoad = reject;
+        });
+      });
+      const canvas = { isConnected: true };
+      deps.refs.previewCanvasHost.getCanvasRoot = () => canvas;
+      const load = renderSceneEditorCanvas(deps, {
+        skipRender: true,
+        skipAnimations: true,
+      });
+      await started;
+      projectService.getRepositoryState.mockClear();
+      if (scenario === "closed") projectId = undefined;
+      if (scenario === "replaced") projectId = "project-two";
+      if (scenario === "unmounted") canvas.isConnected = false;
+      rejectLoad(new Error("late failure"));
+      await expect(load).resolves.toBeUndefined();
+      expect(deps.appService.showAlert).not.toHaveBeenCalled();
+      expect(projectService.getRepositoryState).not.toHaveBeenCalled();
+      expect(store.selectWarnedAssetFileIds()).toEqual([]);
+    },
+  );
+
   it("uses project file metadata for scene videos when resource fileType is missing", async () => {
     const projectData = createProjectData();
     projectData.resources.videos["intro-video"] = {
@@ -2256,6 +2386,7 @@ describe("renderSceneEditorState", () => {
     const graphicsService = createGraphicsService();
     graphicsService.loadAssets = vi.fn(async () => {});
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `http://127.0.0.1:45000/file.mp4?path=${fileId}`,
         type: "video/mp4",
@@ -2359,6 +2490,7 @@ describe("renderSceneEditorState", () => {
       });
     });
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `asset://${fileId}`,
       })),
@@ -2448,6 +2580,7 @@ describe("renderSceneEditorState", () => {
     graphicsService.hasLoadedAsset = vi.fn(() => false);
     graphicsService.loadAssets = vi.fn(async () => {});
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `asset://${fileId}`,
       })),
@@ -2522,6 +2655,7 @@ describe("renderSceneEditorState", () => {
     });
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
@@ -2580,6 +2714,7 @@ describe("scene editor canvas entry line", () => {
   const renderCanvasLine = async (projectData, { lineId }) => {
     const store = createCanvasStore(projectData, { lineId });
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService: createLineActionGraphicsService(),
     });
@@ -2730,6 +2865,7 @@ describe("scene editor canvas transition loop", () => {
 
     try {
       await restoreSceneEditorFromPreview({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         appService,
         i18n,
         store: {
@@ -2998,6 +3134,7 @@ describe("scene editor canvas transition loop", () => {
           render: vi.fn(),
           syncProjectState: vi.fn(),
           projectService: {
+            getEnsuredProjectId: () => "project-one",
             ensureRepository: vi.fn(),
             setActiveSceneId: vi.fn(),
             getRepositoryState: () => ({}),
@@ -3083,6 +3220,7 @@ describe("scene editor return from the full-screen preview", () => {
 
     try {
       await restoreSceneEditorFromPreview({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         subject: { dispatch: vi.fn() },
         graphicsService: {
           init: vi.fn(async () => {}),
