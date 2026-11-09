@@ -22,6 +22,7 @@
 		2A000001000000000000000D /* NativeCrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001D /* NativeCrashReporting.swift */; };
 		2A000001000000000000000F /* NativeDeviceIdReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000002B /* NativeDeviceIdReader.swift */; };
 		2A000001000000000000000E /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 2A00000100000000000000A2 /* ZIPFoundation */; };
+		2A000001000000000000002F /* ByteRangeResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000002E /* ByteRangeResponse.swift */; };
 		2A0000010000000000000024 /* TempFolders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000021 /* TempFolders.swift */; };
 		2A0000010000000000000025 /* ImportArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000022 /* ImportArchive.swift */; };
 		2A0000010000000000000026 /* FileDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000023 /* FileDownloader.swift */; };
@@ -46,6 +47,7 @@
 		2A000001000000000000001C /* AppDeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDeviceInfo.swift; sourceTree = "<group>"; };
 		2A000001000000000000001D /* NativeCrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCrashReporting.swift; sourceTree = "<group>"; };
 		2A000001000000000000002B /* NativeDeviceIdReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeDeviceIdReader.swift; sourceTree = "<group>"; };
+		2A000001000000000000002E /* ByteRangeResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ByteRangeResponse.swift; sourceTree = "<group>"; };
 		2A0000010000000000000021 /* TempFolders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempFolders.swift; sourceTree = "<group>"; };
 		2A0000010000000000000022 /* ImportArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportArchive.swift; sourceTree = "<group>"; };
 		2A0000010000000000000023 /* FileDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDownloader.swift; sourceTree = "<group>"; };
@@ -87,6 +89,7 @@
 				2A0000010000000000000018 /* SaveFileDestinations.swift */,
 				2A0000010000000000000019 /* ProjectDatabaseReader.swift */,
 				2A00000100000000000000C1 /* ProjectIdentityRewrite.swift */,
+				2A000001000000000000002E /* ByteRangeResponse.swift */,
 				2A0000010000000000000021 /* TempFolders.swift */,
 				2A0000010000000000000022 /* ImportArchive.swift */,
 				2A0000010000000000000023 /* FileDownloader.swift */,
@@ -222,6 +225,7 @@
 				2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */,
 				2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */,
 				2A00000100000000000000C0 /* ProjectIdentityRewrite.swift in Sources */,
+				2A000001000000000000002F /* ByteRangeResponse.swift in Sources */,
 				2A0000010000000000000024 /* TempFolders.swift in Sources */,
 				2A0000010000000000000025 /* ImportArchive.swift in Sources */,
 				2A0000010000000000000026 /* FileDownloader.swift in Sources */,
