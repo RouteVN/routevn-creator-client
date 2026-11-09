@@ -3128,7 +3128,7 @@ rtglUi:
   tagSelectPlaceholder: "タグを追加"
   tagSelectSave: "保存"
 languageSuggestion:
-  message: "RouteVN Creator は日本語でもご利用いただけます（ベータ版）。"
+  message: "RouteVN Creator は日本語 (Beta) でもご利用いただけます。"
   switchButton: "日本語に切り替える"
   closeButton: "閉じる"
   failedSwitchMessage: "言語を切り替えられませんでした。"

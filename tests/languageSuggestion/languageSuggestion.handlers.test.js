@@ -86,8 +86,8 @@ describe("language suggestion", () => {
     ["a language was chosen", { userConfig: { "app.locale": "en" } }],
     ["the device prefers English", { deviceLanguages: ["en-SG", "ja-JP"] }],
     [
-      "it was closed for this language",
-      { userConfig: { "app.localeSuggestionDismissed": "ja" } },
+      "it was closed before",
+      { userConfig: { "app.localeSuggestionDismissed": true } },
     ],
   ])("shows nothing when %s", (_case, options) => {
     const box = createBox(options);
@@ -137,13 +137,13 @@ describe("language suggestion", () => {
     expect(box.config["app.locale"]).toBeUndefined();
   });
 
-  it("remembers the closed language and goes away", async () => {
+  it("remembers that it was closed and goes away", async () => {
     const box = createBox();
     await box.mount();
 
     handleCloseClick(box.deps);
 
-    expect(box.config["app.localeSuggestionDismissed"]).toBe("ja");
+    expect(box.config["app.localeSuggestionDismissed"]).toBe(true);
     expect(box.config["app.locale"]).toBeUndefined();
     expect(box.view().visible).toBe(false);
   });

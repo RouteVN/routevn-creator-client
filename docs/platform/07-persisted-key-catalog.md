@@ -115,9 +115,8 @@ Current keys:
         uses English
       - scope: global
     - `app.localeSuggestionDismissed`
-      - purpose: the locale whose "also available in" box on the Projects
-        page was closed; the box shows again only for a different device
-        language
+      - purpose: `true` once the "also available in" box on the Projects
+        page was closed; it does not show again
       - scope: global
 
 Naming rules:

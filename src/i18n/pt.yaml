@@ -3128,7 +3128,7 @@ rtglUi:
   tagSelectPlaceholder: "Adicionar etiqueta"
   tagSelectSave: "Guardar"
 languageSuggestion:
-  message: "O RouteVN Creator também está disponível em português (beta)."
+  message: "O RouteVN Creator também está disponível em português (Beta)."
   switchButton: "Mudar para português"
   closeButton: "Fechar"
   failedSwitchMessage: "Não foi possível mudar o idioma."

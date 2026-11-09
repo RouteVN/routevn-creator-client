@@ -1,5 +1,6 @@
 export const APP_LOCALE_CONFIG_KEY = "app.locale";
-// The locale whose "also available in" suggestion was closed.
+// Whether the "also available in" suggestion was closed. Once closed, it
+// does not show again.
 export const APP_LOCALE_SUGGESTION_DISMISSED_CONFIG_KEY =
   "app.localeSuggestionDismissed";
 export const DEFAULT_APP_LOCALE = "en";
@@ -103,16 +104,16 @@ const toAppLocale = (languageTag) => {
 };
 
 // The app locale to suggest: the device's most preferred language, when the
-// app has it and it is not the default, while the user has not chosen a
-// language and has not closed the suggestion for that locale. Only the first
-// preference counts, so a device that lists English first gets none.
+// app has it and it is not the default. Choosing a language or closing the
+// suggestion ends it for good. Only the first preference counts, so a device
+// that lists English first gets none.
 export const resolveAppLocaleSuggestion = ({
   storedLocale,
-  dismissedLocale,
+  dismissed,
   deviceLanguages = [],
   availableLocales = [],
 } = {}) => {
-  if (availableLocales.includes(storedLocale)) {
+  if (dismissed || availableLocales.includes(storedLocale)) {
     return undefined;
   }
 
@@ -120,7 +121,6 @@ export const resolveAppLocaleSuggestion = ({
   if (
     !locale ||
     locale === DEFAULT_APP_LOCALE ||
-    locale === dismissedLocale ||
     !availableLocales.includes(locale)
   ) {
     return undefined;

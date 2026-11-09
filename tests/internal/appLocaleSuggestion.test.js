@@ -43,8 +43,8 @@ describe("resolveAppLocaleSuggestion", () => {
     expect(suggest(["ja-JP"], { storedLocale: "xx" })).toBe("ja");
   });
 
-  it("suggests a closed locale again only for another device language", () => {
-    expect(suggest(["ja-JP"], { dismissedLocale: "ja" })).toBeUndefined();
-    expect(suggest(["fr-FR"], { dismissedLocale: "ja" })).toBe("fr");
+  it("suggests nothing once closed, whatever the device language", () => {
+    expect(suggest(["ja-JP"], { dismissed: true })).toBeUndefined();
+    expect(suggest(["fr-FR"], { dismissed: true })).toBeUndefined();
   });
 });

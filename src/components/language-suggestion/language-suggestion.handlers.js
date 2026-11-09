@@ -11,7 +11,7 @@ const loadSuggestion = async (deps) => {
   const { appService, locale, store, render } = deps;
   const suggestedLocale = resolveAppLocaleSuggestion({
     storedLocale: appService.getUserConfig(APP_LOCALE_CONFIG_KEY),
-    dismissedLocale: appService.getUserConfig(
+    dismissed: appService.getUserConfig(
       APP_LOCALE_SUGGESTION_DISMISSED_CONFIG_KEY,
     ),
     deviceLanguages: appService.getDeviceLanguages(),
@@ -79,10 +79,7 @@ export const handleSwitchClick = async (deps) => {
 
 export const handleCloseClick = (deps) => {
   const { appService, store, render } = deps;
-  appService.setUserConfig(
-    APP_LOCALE_SUGGESTION_DISMISSED_CONFIG_KEY,
-    store.selectSuggestedLocale(),
-  );
+  appService.setUserConfig(APP_LOCALE_SUGGESTION_DISMISSED_CONFIG_KEY, true);
   store.clearSuggestion();
   render();
 };
