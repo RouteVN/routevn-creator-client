@@ -1005,14 +1005,27 @@ const constructParticleResources = (
 
       const renderableParticle = createRenderableParticleData(item, imageItems);
 
-      result[particleId] = pickResourceFields(renderableParticle, [
+      // A visual draws its particle through Route Engine, where Route
+      // Graphics rejects a particle with no texture ("modules.appearance.
+      // texture is required") and a seed that is not a number, such as a
+      // blank Seed field saved as null. Either fails every render of the
+      // scene. A particle without a texture draws nothing, so it is left out
+      // and its visual draws nothing, as a layout's particle element does.
+      if (!renderableParticle.modules?.appearance?.texture) {
+        return result;
+      }
+
+      const particleResource = pickResourceFields(renderableParticle, [
         "name",
         "description",
         "width",
         "height",
-        "seed",
         "modules",
       ]);
+      if (Number.isFinite(renderableParticle.seed)) {
+        particleResource.seed = renderableParticle.seed;
+      }
+      result[particleId] = particleResource;
       return result;
     },
     {},
@@ -2777,7 +2790,12 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
           referencedAnimationIds.add(value);
         }
 
-        if (key === "particleId" && typeof value === "string") {
+        // Layouts pick a particle as `particleId` and visuals as
+        // `resourceId`; ids that are not particles are skipped below.
+        if (
+          (key === "particleId" || key === "resourceId") &&
+          typeof value === "string"
+        ) {
           referencedParticleIds.add(value);
         }
       });

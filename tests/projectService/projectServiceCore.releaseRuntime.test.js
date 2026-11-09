@@ -60,6 +60,7 @@ const mocked = vi.hoisted(() => ({
     deleteImageIfUnused: vi.fn(),
     deleteSoundIfUnused: vi.fn(),
     deleteVideoIfUnused: vi.fn(),
+    deleteParticleIfUnused: vi.fn(),
     createCollabSession: vi.fn(),
     ensureCommandSessionForProject: vi.fn(),
     getCollabSession: vi.fn(),

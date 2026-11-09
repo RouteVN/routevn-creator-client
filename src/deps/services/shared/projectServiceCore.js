@@ -771,6 +771,7 @@ export const createProjectServiceCore = ({
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,
     repairSoundFileType,
     deleteVideoIfUnused: collabService.deleteVideoIfUnused,
+    deleteParticleIfUnused: collabService.deleteParticleIfUnused,
     async initializeProject(payload) {
       await repositoryService.releaseRepositoryByProjectId(payload?.projectId);
       return storageAdapter.initializeProject(payload);

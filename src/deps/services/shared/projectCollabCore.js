@@ -386,6 +386,17 @@ export const createProjectCollabCore = ({
         }),
     });
 
+  const deleteParticleIfUnused = async ({ particleId, checkTargets = [] }) =>
+    deleteItemIfUnused({
+      resourceId: particleId,
+      collection: "particles",
+      checkTargets,
+      deleteItem: (resourceId) =>
+        commandApi.deleteParticles({
+          particleIds: [resourceId],
+        }),
+    });
+
   return {
     getCurrentProjectId,
     storyBasePartitionFor,
@@ -408,5 +419,6 @@ export const createProjectCollabCore = ({
     deleteImageIfUnused,
     deleteSoundIfUnused,
     deleteVideoIfUnused,
+    deleteParticleIfUnused,
   };
 };

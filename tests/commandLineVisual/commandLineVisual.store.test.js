@@ -1158,7 +1158,6 @@ describe("commandLineVisual.store animation controls", () => {
       expect.objectContaining({
         id: "visual-particle",
         resourceType: "particle",
-        resourceTypeLabel: "Particle",
         previewFileId: "file-snowfall-thumbnail",
       }),
     ]);

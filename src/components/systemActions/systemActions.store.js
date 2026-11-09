@@ -652,7 +652,7 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
   const layoutsHierarchy = repositoryStateData.layouts || {};
   const layoutsItems = layoutsHierarchy.items || {};
   const spritesheets = repositoryStateData.spritesheets ?? {};
-  const particles = repositoryStateData.particles?.items || {};
+  const particles = repositoryStateData.particles?.items ?? {};
   const controlsItems = repositoryStateData.controls?.items || {};
   const sceneItems = scenes.items || {};
 
@@ -1310,24 +1310,19 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
         const videoData = videos[item.resourceId];
         const layoutData = layoutsItems[item.resourceId];
         const particleData = particles[item.resourceId];
+        // As in Route Engine, a particle is looked up before a layout.
         const resourcesByType = {
           image: imageData,
           spritesheet: spritesheetData,
           video: videoData,
-          layout: layoutData,
           particle: particleData,
+          layout: layoutData,
         };
         const resourceType = resourcesByType[item.resourceType]
           ? item.resourceType
-          : imageData
-            ? "image"
-            : spritesheetData
-              ? "spritesheet"
-              : videoData
-                ? "video"
-                : particleData
-                  ? "particle"
-                  : "layout";
+          : (Object.keys(resourcesByType).find(
+              (type) => resourcesByType[type],
+            ) ?? "layout");
         const resource = resourcesByType[resourceType];
         const spritesheetPreview =
           resourceType === "spritesheet"

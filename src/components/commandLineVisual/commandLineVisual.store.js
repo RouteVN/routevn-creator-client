@@ -1614,18 +1614,6 @@ export const selectViewData = ({ state, i18n }) => {
     return {
       ...child,
       resourceType,
-      resourceTypeLabel: localizeCommandLineText(
-        resourceType === "image"
-          ? "Image"
-          : resourceType === "video"
-            ? "Video"
-            : resourceType === "spritesheet"
-              ? "Spritesheet"
-              : resourceType === "particle"
-                ? "Particle"
-                : "Layout",
-        copy,
-      ),
       previewFileId: child.thumbnailFileId || child.fileId,
       itemBorderWidth: resourceType === "image" ? "xs" : "none",
       itemBorderColor: isSelected ? "pr" : "bo",

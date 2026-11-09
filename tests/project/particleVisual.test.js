@@ -2,7 +2,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import createRouteEngine from "route-engine-js";
 import { extractFileIdsForScenes } from "../../src/internal/project/layout.js";
-import { constructProjectData } from "../../src/internal/project/projection.js";
+import {
+  constructProjectData,
+  recursivelyCheckResource,
+} from "../../src/internal/project/projection.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 
 let parseElements;
@@ -43,16 +46,20 @@ const findElement = (elements, id) => {
   }
 };
 
-// A particle as the Particles page saves it, drawn with an image texture.
-const createParticle = () => {
-  const particle = createParticlePreset({
+// A particle as the Particles page creates it, before a texture is picked.
+const createNewParticle = () =>
+  createParticlePreset({
     projectResolution: { width: 1920, height: 1080 },
   });
-  particle.modules.appearance.texture = "flake-image";
-  return particle;
+
+// A particle drawn with an image texture.
+const createParticle = ({ texture = "flake-image", ...fields } = {}) => {
+  const particle = createNewParticle();
+  particle.modules.appearance.texture = texture;
+  return { ...particle, ...fields };
 };
 
-const createRepositoryState = () => ({
+const createRepositoryState = (particle = createParticle()) => ({
   project: { resolution: { width: 1920, height: 1080 } },
   story: { initialSceneId: "scene-1" },
   images: createTreeCollection({
@@ -67,7 +74,7 @@ const createRepositoryState = () => ({
     },
   }),
   particles: createTreeCollection({
-    snow: { id: "snow", ...createParticle() },
+    snow: { id: "snow", ...particle },
   }),
   transforms: createTreeCollection({
     center: {
@@ -115,12 +122,17 @@ const createRepositoryState = () => ({
   }),
 });
 
+// Builds the line's render state the way the scene editor does.
+const renderLine = (repositoryState) => {
+  const projectData = constructProjectData(repositoryState);
+  const engine = createRouteEngine({ handlePendingEffects() {} });
+  engine.init({ initialState: { global: {}, projectData } });
+  return parseElements(engine.selectRenderState().elements);
+};
+
 describe("a particle used as a visual", () => {
   it("renders as a particle effect through Route Engine and Route Graphics", () => {
-    const projectData = constructProjectData(createRepositoryState());
-    const engine = createRouteEngine({ handlePendingEffects() {} });
-    engine.init({ initialState: { global: {}, projectData } });
-    const elements = parseElements(engine.selectRenderState().elements);
+    const elements = renderLine(createRepositoryState());
 
     // The center transform anchors the 1920x1080 effect at the middle of
     // the screen, so its top-left corner lands at the origin.
@@ -145,5 +157,46 @@ describe("a particle used as a visual", () => {
     expect(
       extractFileIdsForScenes(projectData, ["scene-1"]).map(({ url }) => url),
     ).toContain("flake-file");
+  });
+
+  // Route Graphics threw "modules.appearance.texture is required" on every
+  // render of the line: a new particle has no texture until one is picked.
+  it.each([
+    ["has no texture yet", createNewParticle()],
+    [
+      "has a texture image that was deleted",
+      createParticle({ texture: "gone" }),
+    ],
+  ])("draws nothing when the particle %s", (_case, particle) => {
+    const elements = renderLine(createRepositoryState(particle));
+
+    expect(findElement(elements, "visual-snowfall")).toBeUndefined();
+    expect(findElement(elements, "visual-snowfall-particles")).toBeUndefined();
+  });
+
+  // Route Graphics threw "seed must be a number" for a blank Seed field.
+  it("renders without a seed when the saved seed is null", () => {
+    const elements = renderLine(
+      createRepositoryState(createParticle({ seed: null })),
+    );
+
+    const particles = findElement(elements, "visual-snowfall-particles");
+    expect(particles).toMatchObject({ type: "particles" });
+    expect(particles).not.toHaveProperty("seed");
+  });
+
+  it("keeps its texture image from being deleted", () => {
+    expect(
+      recursivelyCheckResource({
+        state: createRepositoryState(),
+        itemId: "flake-image",
+        checkTargets: ["scenes", "layouts", "controls", "animations"],
+      }),
+    ).toMatchObject({
+      isUsed: true,
+      inProps: {
+        particles: [{ property: "modules.appearance.texture" }],
+      },
+    });
   });
 });

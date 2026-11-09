@@ -3,7 +3,10 @@ import { createParticleEditorPayload } from "../../internal/particleEditorRoute.
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
-import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
 import {
@@ -478,8 +481,12 @@ export const handleEditFormAction = async (deps, payload) => {
   await refreshParticleData(deps, { selectedItemId: editItemId });
 };
 
+// Scenes use a particle as a visual's resource, and layouts and controls as
+// a particle element. The left file explorer checks the same targets.
+const PARTICLE_USAGE_TARGETS = ["scenes", "layouts", "controls"];
+
 export const handleItemDelete = async (deps, payload) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, render } = deps;
   const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   if (!itemId) {
@@ -491,12 +498,30 @@ export const handleItemDelete = async (deps, payload) => {
     fallbackMessage: copy.failedDeleteParticle,
     title: copy.errorTitle,
     action: () =>
-      projectService.deleteParticles({
-        particleIds: [itemId],
+      projectService.deleteParticleIfUnused({
+        particleId: itemId,
+        checkTargets: PARTICLE_USAGE_TARGETS,
       }),
   });
 
   if (!deleteAttempt.ok) {
+    return;
+  }
+
+  const { deleted, usage, deleteResult } = deleteAttempt.result;
+  if (usage.isUsed) {
+    appService.showAlert({ message: copy.cannotDeleteResourceInUse });
+    render();
+    return;
+  }
+
+  if (!deleted) {
+    showResourcePageError({
+      appService,
+      errorOrResult: deleteResult,
+      fallbackMessage: copy.failedDeleteParticle,
+      title: copy.errorTitle,
+    });
     return;
   }
 
