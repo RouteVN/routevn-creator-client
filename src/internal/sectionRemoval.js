@@ -1,5 +1,6 @@
-// A section deletion also removes its descendants.
-export const wouldDeleteAllSections = (sections, sectionIds) => {
+// Deleting a section, or moving it to another scene, also takes its
+// descendants. A scene must keep at least one section.
+export const wouldRemoveAllSections = (sections, sectionIds) => {
   const targets = new Set(sectionIds);
   const deleted = new Set();
   const visit = (nodes, deleting = false) => {

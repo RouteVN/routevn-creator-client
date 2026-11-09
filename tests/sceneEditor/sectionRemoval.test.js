@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { wouldDeleteAllSections } from "../../src/internal/sectionDeletion.js";
+import { wouldRemoveAllSections } from "../../src/internal/sectionRemoval.js";
 
-describe("wouldDeleteAllSections", () => {
+describe("wouldRemoveAllSections", () => {
   const sections = {
     items: { parent: {}, child: {}, other: {} },
     tree: [{ id: "parent", children: [{ id: "child" }] }, { id: "other" }],
   };
 
   it("counts descendants and multiple selected sections", () => {
-    expect(wouldDeleteAllSections(sections, ["parent"])).toBe(false);
-    expect(wouldDeleteAllSections(sections, ["parent", "other"])).toBe(true);
-    expect(wouldDeleteAllSections(sections, ["child", "other"])).toBe(false);
+    expect(wouldRemoveAllSections(sections, ["parent"])).toBe(false);
+    expect(wouldRemoveAllSections(sections, ["parent", "other"])).toBe(true);
+    expect(wouldRemoveAllSections(sections, ["child", "other"])).toBe(false);
     expect(
-      wouldDeleteAllSections(
+      wouldRemoveAllSections(
         { items: { parent: {}, child: {} }, tree: [sections.tree[0]] },
         ["parent"],
       ),

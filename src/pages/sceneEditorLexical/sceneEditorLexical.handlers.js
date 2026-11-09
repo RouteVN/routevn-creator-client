@@ -3719,8 +3719,7 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const sourceScene = store.selectCommittedScene();
-  if ((sourceScene?.sections?.length ?? 0) <= 1) {
+  if (store.selectWouldRemoveAllSections({ sectionIds: [sectionId] })) {
     appService?.showAlert({
       message:
         copy.sceneMustKeepOneSection ??

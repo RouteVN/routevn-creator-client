@@ -1135,7 +1135,7 @@ describe("sceneEditorLexical.store", () => {
     ).toEqual({ changeType: "set", items: [] });
   });
 
-  it("hides deletion when a section contains every other section", () => {
+  it("hides Delete and Move to scene when a section contains every other section", () => {
     const state = createInitialState();
     setSceneId({ state }, { sceneId: "scene-1" });
     setRepositoryState(
@@ -1164,8 +1164,14 @@ describe("sceneEditorLexical.store", () => {
                   tree: [{ id: "parent", children: [{ id: "child" }] }],
                 },
               },
+              "scene-2": {
+                id: "scene-2",
+                type: "scene",
+                name: "Scene 2",
+                sections: { items: {}, tree: [] },
+              },
             },
-            tree: [{ id: "scene-1" }],
+            tree: [{ id: "scene-1" }, { id: "scene-2" }],
           },
         },
       },
@@ -1174,8 +1180,16 @@ describe("sceneEditorLexical.store", () => {
       { state },
       { sectionId: "parent", position: { x: 0, y: 0 } },
     );
-    expect(state.dropdownMenu.items.map((item) => item.value)).not.toContain(
-      "delete-section",
+    const values = state.dropdownMenu.items.map((item) => item.value);
+    expect(values).not.toContain("delete-section");
+    expect(values).not.toContain("move-section-scene");
+
+    showSectionDropdownMenu(
+      { state },
+      { sectionId: "child", position: { x: 0, y: 0 } },
+    );
+    expect(state.dropdownMenu.items.map((item) => item.value)).toEqual(
+      expect.arrayContaining(["delete-section", "move-section-scene"]),
     );
   });
 
