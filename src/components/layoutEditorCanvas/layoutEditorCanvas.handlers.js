@@ -1,4 +1,8 @@
-import { loadAvailableLayoutEditorAssets } from "./support/layoutEditorAssetFeedback.js";
+import {
+  hasPendingLayoutEditorVideos,
+  loadAvailableLayoutEditorAssets,
+  waitForLayoutEditorVideos,
+} from "./support/layoutEditorAssetFeedback.js";
 import { debounceTime, filter, fromEvent, tap } from "rxjs";
 import {
   DEFAULT_PROJECT_RESOLUTION,
@@ -1032,9 +1036,11 @@ const renderLayoutEditorCanvas = async (
   { clearFirst = false, updatedItem } = {},
 ) => {
   const renderRequestId = generateId();
+  const wasVideoLoading = deps.store.selectIsVideoLoading();
   deps.store.setActiveRenderRequestId({
     requestId: renderRequestId,
   });
+  if (wasVideoLoading) deps.render();
   if (!deps.store.selectIsGraphicsReady()) {
     return;
   }
@@ -1090,6 +1096,37 @@ const renderLayoutEditorCanvas = async (
       metrics: selectedElementMetrics,
     });
 
+    // Show the loading state while a video's first frame is on its way.
+    const showVideoLoading = () => {
+      if (
+        isCanvasRenderRequestStale(deps, renderRequestId) ||
+        deps.store.selectIsVideoLoading()
+      ) {
+        return;
+      }
+      deps.store.setVideoLoading({ requestId: renderRequestId, value: true });
+      deps.render();
+    };
+    if (hasPendingLayoutEditorVideos(deps, fileReferences)) {
+      showVideoLoading();
+    }
+    const failedFileIds = await loadAvailableLayoutEditorAssets(
+      deps,
+      fileReferences,
+      repositoryState,
+    );
+    if (finishStaleCanvasRender(deps, renderRequestId)) return;
+    const videoFailures = await waitForLayoutEditorVideos(deps, {
+      fileReferences,
+      failedFileIds,
+      isRenderCurrent: () => !isCanvasRenderRequestStale(deps, renderRequestId),
+      onWaitStart: showVideoLoading,
+    });
+    if (finishStaleCanvasRender(deps, renderRequestId)) return;
+    const wasWaitingForVideo = deps.store.selectIsVideoLoading();
+    deps.store.setVideoLoading({ requestId: renderRequestId, value: false });
+    if (wasWaitingForVideo) deps.render();
+    failedFileIds.push(...videoFailures);
     if (clearFirst) {
       deps.graphicsService.render({
         id: generatePrefixedId("layout-editor-preview-clear-"),
@@ -1098,12 +1135,6 @@ const renderLayoutEditorCanvas = async (
       });
     }
 
-    const failedFileIds = await loadAvailableLayoutEditorAssets(
-      deps,
-      fileReferences,
-      repositoryState,
-    );
-    if (finishStaleCanvasRender(deps, renderRequestId)) return;
     const availableElements = omitUnavailableLayoutElements(
       elements,
       failedFileIds,
@@ -1113,6 +1144,12 @@ const renderLayoutEditorCanvas = async (
       elements: availableElements,
       animations: [],
     });
+    // The canvas mounts before the page passes in its layout; only a draw of
+    // that layout ends the first loading state.
+    if (layoutState.id !== undefined && !deps.store.selectHasDrawnLayout()) {
+      deps.store.markLayoutDrawn();
+      deps.render();
+    }
     deps.store.setCanvasRenderState({
       elements: availableElements,
       baseElements: omitUnavailableLayoutElements(baseElements, failedFileIds),
@@ -1128,6 +1165,13 @@ const renderLayoutEditorCanvas = async (
     });
     restoreCanvasHoverAfterRender(deps);
   } catch (error) {
+    if (
+      !isCanvasRenderRequestStale(deps, renderRequestId) &&
+      deps.store.selectIsVideoLoading()
+    ) {
+      deps.store.setVideoLoading({ requestId: renderRequestId, value: false });
+      deps.render();
+    }
     console.error("[layoutEditorCanvas] Failed to render canvas", error);
   }
 };
@@ -1715,13 +1759,20 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  await initCanvasGraphics(deps);
-  await prefetchLayoutEditorAssets(deps, deps.props, {
-    reason: "after-mount",
-  });
-  await renderLayoutEditorCanvas(deps, deps.props, {
-    reason: "after-mount",
-  });
+  try {
+    await initCanvasGraphics(deps);
+    await prefetchLayoutEditorAssets(deps, deps.props, {
+      reason: "after-mount",
+    });
+    await renderLayoutEditorCanvas(deps, deps.props, {
+      reason: "after-mount",
+    });
+  } catch (error) {
+    // Graphics that fail to start must not leave the canvas loading forever.
+    deps.store.markLayoutDrawn();
+    deps.render();
+    throw error;
+  }
 };
 
 export const prefetchAssets = async (

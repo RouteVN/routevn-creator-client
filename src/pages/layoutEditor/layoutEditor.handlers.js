@@ -1,3 +1,4 @@
+import { toFlatItems } from "../../internal/project/tree.js";
 import { generateId } from "../../internal/id.js";
 import { getResourcePageErrorMessage } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -297,6 +298,20 @@ const resolveParticleCreateAction = (detail = {}) => {
   return undefined;
 };
 
+const resolveVideoCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "video"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
 const resolveFragmentCreateAction = (detail = {}) => {
   const value = resolveMenuItem(detail)?.value;
   if (
@@ -446,6 +461,47 @@ const createParticleCreateForm = (selectionItems = [], copy = {}) => {
           id: "submit",
           variant: "pr",
           label: copy.createParticleButton ?? "Create Particle",
+          validate: true,
+        },
+      ],
+    },
+  };
+};
+
+const createVideoCreateForm = (selectionItems = [], copy = {}) => {
+  return {
+    title: copy.createVideoTitle ?? "Create Video",
+    description:
+      copy.createVideoDescription ??
+      "Choose which video to insert into the layout",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: copy.nameLabel ?? "Name",
+        required: true,
+      },
+      {
+        name: "videoId",
+        type: "select",
+        label: copy.videoLabel ?? "Video",
+        required: true,
+        clearable: false,
+        options: selectionItems,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: copy.cancelButton ?? "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: copy.createVideoButton ?? "Create Video",
           validate: true,
         },
       ],
@@ -1682,6 +1738,131 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
             "Failed to create spritesheet animation.",
         ),
         title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
+  const videoAction = resolveVideoCreateAction(payload?._event?.detail);
+  if (videoAction) {
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const videosData = store.selectVideosData();
+    const selectionItems = toFlatItems(videosData)
+      .filter((item) => item.type === "video")
+      .map((item) => ({ label: item.name, value: item.id }));
+
+    if (selectionItems.length === 0) {
+      appService.showAlert({
+        message: copy.createVideoFirst ?? "Create a video first.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    let dialogResult;
+    try {
+      dialogResult = await appService.showFormDialog({
+        form: createVideoCreateForm(selectionItems, copy),
+        defaultValues: {
+          name: videoAction.name ?? copy.videoDefaultName ?? "Video",
+          videoId: selectionItems[0]?.value,
+        },
+      });
+    } catch {
+      appService.showToast({
+        message: copy.failedCreateVideo ?? "Failed to create video.",
+      });
+      return;
+    }
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const name = dialogResult.values?.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: copy.videoNameRequired ?? "Video name is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const videoId = dialogResult.values?.videoId;
+    if (!videoId) {
+      appService.showAlert({
+        message: copy.videoRequired ?? "Video is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
+      appService.showAlert({
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const nextElementId = generateId();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("video", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      videoId,
+    };
+    const video = videosData.items[videoId];
+    const hasSize =
+      Number.isFinite(video.width) &&
+      video.width > 0 &&
+      Number.isFinite(video.height) &&
+      video.height > 0;
+    nextElementData.width = hasSize ? video.width : 640;
+    nextElementData.height = hasSize ? video.height : 360;
+    nextElementData.aspectRatioLock =
+      nextElementData.width / nextElementData.height;
+
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    let createResult;
+    try {
+      await projectService.ensureRepository();
+      createResult = await createElement({
+        [ownerPayloadKey]: layoutId,
+        elementId: nextElementId,
+        data: nextElementData,
+        parentId,
+        position: "first",
+      });
+    } catch {
+      appService.showToast({
+        message: copy.failedCreateVideo ?? "Failed to create video.",
+      });
+      return;
+    }
+
+    if (createResult?.valid === false) {
+      appService.showToast({
+        message: getResultErrorMessage(
+          appService,
+          createResult,
+          copy.failedCreateVideo ?? "Failed to create video.",
+        ),
       });
       return;
     }

@@ -1291,7 +1291,15 @@ export const createGraphicsService = async ({
     return new Error(`Video asset "${key}" failed to load (${details}).`);
   };
 
-  const waitForVideoReadyForPlayback = async (key, video) => {
+  const waitForVideoReadyForPlayback = async (
+    key,
+    video,
+    {
+      timeoutMs = VIDEO_ASSET_READY_TIMEOUT_MS,
+      signal,
+      startLoading = true,
+    } = {},
+  ) => {
     if (!video || isVideoReadyForPlayback(video)) {
       return;
     }
@@ -1305,6 +1313,7 @@ export const createGraphicsService = async ({
         video.removeEventListener("canplaythrough", handleReady);
         video.removeEventListener("playing", handleReady);
         video.removeEventListener("error", handleError);
+        signal?.removeEventListener("abort", handleAbort);
       };
       const finish = () => {
         cleanup();
@@ -1323,24 +1332,65 @@ export const createGraphicsService = async ({
         fail(getVideoLoadError(key, video));
       };
 
+      const handleAbort = () =>
+        fail(signal.reason ?? new DOMException("Aborted", "AbortError"));
+
       video.addEventListener("loadeddata", handleReady);
       video.addEventListener("canplay", handleReady);
       video.addEventListener("canplaythrough", handleReady);
       video.addEventListener("playing", handleReady);
       video.addEventListener("error", handleError);
+      signal?.addEventListener("abort", handleAbort, { once: true });
       timeoutId = setTimeout(() => {
-        fail(
-          new Error(`Timed out waiting for video asset "${key}" to preload.`),
+        const error = new Error(
+          `Timed out waiting for video asset "${key}" to preload.`,
         );
-      }, VIDEO_ASSET_READY_TIMEOUT_MS);
+        error.code = "video_ready_timeout";
+        fail(error);
+      }, timeoutMs);
 
-      try {
-        video.preload = "auto";
-        video.load();
-      } catch {}
+      if (startLoading) {
+        try {
+          video.preload = "auto";
+          video.load();
+        } catch {}
+      }
 
-      handleReady();
+      if (signal?.aborted) handleAbort();
+      else if (!startLoading && video.error) handleError();
+      else handleReady();
     });
+  };
+
+  const isVideoReady = (key) => {
+    const video = getVideoResourceForKey(key);
+    return Boolean(video) && isVideoReadyForPlayback(video);
+  };
+
+  const waitForVideosReady = async (keys, { timeoutMs, signal } = {}) => {
+    signal?.throwIfAborted();
+    const results = await Promise.all(
+      keys.map(async (fileId) => {
+        const video = getVideoResourceForKey(fileId);
+        if (!video)
+          return {
+            fileId,
+            error: new Error(`Video asset "${fileId}" is unavailable.`),
+          };
+        try {
+          await waitForVideoReadyForPlayback(fileId, video, {
+            timeoutMs,
+            signal,
+            startLoading: false,
+          });
+        } catch (error) {
+          if (signal?.aborted) throw error;
+          return { fileId, error };
+        }
+        return undefined;
+      }),
+    );
+    return { failures: results.filter(Boolean) };
   };
 
   const waitForVideoWarmFrame = async (key, video) => {
@@ -2841,6 +2891,8 @@ export const createGraphicsService = async ({
     ensureAudioAssetsLoaded,
     collectRenderStateAudioKeys: getRenderStateAudioKeys,
     warmRenderStateVideoAssets,
+    isVideoReady,
+    waitForVideosReady,
 
     engineRenderCurrentState: (options = {}) => {
       if (!engine || !routeGraphics) {

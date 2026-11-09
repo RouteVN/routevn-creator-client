@@ -753,6 +753,7 @@ export const createLayoutEditorRenderState = ({
   createLayoutPreviewRenderState({
     layoutState,
     repositoryState,
+    videoRenderMode: "editor",
     mapElement: createLayoutEditorSelectionElementMapper({
       layoutId: layoutState?.id,
     }),
@@ -772,6 +773,7 @@ const createLayoutEditorResolvedElements = ({
       previewData,
       resolution,
       sampleText,
+      videoRenderMode: "editor",
       mapElement: createLayoutEditorSelectionElementMapper({
         layoutId: layoutState?.id,
       }),

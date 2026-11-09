@@ -1,3 +1,4 @@
+import { resolveResourceFileType } from "../resourceFileMetadata.js";
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { toAlphanumericId } from "../layoutEditorElementRegistry.js";
@@ -1429,6 +1430,24 @@ const applySpriteNode = ({ element, node }) => {
   };
 };
 
+const applyVideoNode = ({ element, node, context }) => {
+  if (node.type !== "video") return element;
+  const video = context.videoItems[node.videoId];
+  if (video?.type !== "video" || !video.fileId) {
+    return { ...element, type: "container" };
+  }
+  return {
+    ...element,
+    type: "video",
+    src: video.fileId,
+    fileType:
+      resolveResourceFileType({ item: video, files: context.filesData }) ??
+      "video/mp4",
+    loop: node.loop === true,
+    volume: context.videoRenderMode === "editor" ? 0 : (node.volume ?? 100),
+  };
+};
+
 const applyParticleNode = ({ element, node, context }) => {
   if (node.type !== "particle") {
     return element;
@@ -1774,6 +1793,11 @@ const mapLayoutNode = ({ node, imageItems, context, ancestry = [] }) => {
     context: nodeContext,
   });
   element = applySpriteNode({ element, node: effectiveNode });
+  element = applyVideoNode({
+    element,
+    node: effectiveNode,
+    context: nodeContext,
+  });
   element = applyParticleNode({
     element,
     node: effectiveNode,
@@ -2012,6 +2036,9 @@ export const buildLayoutElements = (
     textStylesData,
     textStyles,
     particleItems: options.particlesData?.items || {},
+    videoItems: options.videosData?.items || {},
+    filesData: options.filesData,
+    videoRenderMode: options.videoRenderMode,
     spritesheetItems: options.spritesheetsData?.items || {},
     layoutsData: options.layoutsData,
     fragmentStack: options.fragmentStack ?? [],
@@ -2257,6 +2284,7 @@ const RESOURCE_REFERENCE_KEYS = new Set([
   "colorId",
   "strokeColorId",
   "particleId",
+  "videoId",
   "imageId",
   "hoverSoundId",
   "clickSoundId",
