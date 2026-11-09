@@ -1090,7 +1090,20 @@ public class MainActivity extends Activity {
             WebView view,
             WebResourceRequest request
         ) {
-            return assetLoader.shouldInterceptRequest(request.getUrl());
+            Uri uri = request.getUrl();
+            String path = uri.getPath();
+            if ("https".equals(uri.getScheme()) && APP_ASSET_HOST.equals(uri.getHost())
+                && path != null && path.startsWith("/android-files/")) {
+                String range = null;
+                for (Map.Entry<String, String> header : request.getRequestHeaders().entrySet()) {
+                    if ("Range".equalsIgnoreCase(header.getKey())) {
+                        range = header.getValue();
+                        break;
+                    }
+                }
+                return createInternalFileResponse(path.substring("/android-files/".length()), range);
+            }
+            return assetLoader.shouldInterceptRequest(uri);
         }
 
         @Override
@@ -1204,25 +1217,32 @@ public class MainActivity extends Activity {
         implements WebViewAssetLoader.PathHandler {
         @Override
         public WebResourceResponse handle(String path) {
-            try {
-                String normalizedPath = normalizeInternalStoragePath(path);
-                File file = resolveInternalStorageFileForPath(normalizedPath);
-                if (!file.isFile()) {
-                    return null;
-                }
+            return createInternalFileResponse(path, null);
+        }
+    }
 
-                String mimeType = readMimeTypeForInternalPath(normalizedPath, file);
-                return new WebResourceResponse(
-                    mimeType,
-                    null,
-                    200,
-                    "OK",
-                    createInternalFileResponseHeaders(),
-                    new FileInputStream(file)
-                );
-            } catch (Exception error) {
+    private WebResourceResponse createInternalFileResponse(String path, String range) {
+        try {
+            String normalizedPath = normalizeInternalStoragePath(path);
+            File file = resolveInternalStorageFileForPath(normalizedPath);
+            if (!file.isFile()) {
                 return null;
             }
+
+            String mimeType = readMimeTypeForInternalPath(normalizedPath, file);
+            Map<String, String> headers = createInternalFileResponseHeaders();
+            ByteRangeResponse response = ByteRangeResponse.open(file, range);
+            try {
+                headers.putAll(response.headers);
+                return new WebResourceResponse(
+                    mimeType, null, response.status, response.reason, headers, response.body
+                );
+            } catch (Exception error) {
+                response.body.close();
+                throw error;
+            }
+        } catch (Exception error) {
+            return null;
         }
     }
 
