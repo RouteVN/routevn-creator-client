@@ -185,6 +185,7 @@ export const createInitialState = () => {
     soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
+    videosData: { tree: [], items: {} },
     charactersData: { tree: [], items: {} },
     layoutsData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
@@ -557,6 +558,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     soundsData,
     spritesheetsData,
     particlesData,
+    videosData,
     charactersData,
     layoutsData,
     textStylesData,
@@ -624,6 +626,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   state.soundsData = soundsData ?? { items: {}, tree: [] };
   state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };
   state.particlesData = particlesData ?? { items: {}, tree: [] };
+  state.videosData = videosData ?? { items: {}, tree: [] };
   state.charactersData = charactersData ?? { items: {}, tree: [] };
   state.layoutsData = layoutsData ?? { items: {}, tree: [] };
   state.textStylesData = textStylesData ?? { items: {}, tree: [] };
@@ -665,6 +668,7 @@ export const selectImages = ({ state }) => state.images;
 export const selectSoundsData = ({ state }) => state.soundsData;
 export const selectSpritesheetsData = ({ state }) => state.spritesheetsData;
 export const selectParticlesData = ({ state }) => state.particlesData;
+export const selectVideosData = ({ state }) => state.videosData;
 export const selectLayoutsData = ({ state }) => state.layoutsData;
 
 export const selectSelectedItem = ({ state }) => {
@@ -932,6 +936,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
     soundsData: state.soundsData,
     spritesheetsData: state.spritesheetsData,
     particlesData: state.particlesData,
+    videosData: state.videosData,
     charactersData: state.charactersData,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,

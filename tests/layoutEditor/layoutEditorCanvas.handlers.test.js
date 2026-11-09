@@ -1,6 +1,7 @@
 import { Subject } from "rxjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  handleAfterMount,
   handleBeforeMount,
   handleCanvasClick,
   handleCanvasDoubleClick,
@@ -59,6 +60,16 @@ const createStore = (props) => {
       canvasStore.selectWarnedAssetFileIds,
     ),
     markAssetWarningsShown: bindAction(canvasStore.markAssetWarningsShown),
+    selectTimedOutVideoFileIds: bindSelector(
+      canvasStore.selectTimedOutVideoFileIds,
+    ),
+    selectIsVideoLoading: bindSelector(canvasStore.selectIsVideoLoading),
+    setVideoLoading: bindAction(canvasStore.setVideoLoading),
+    selectHasDrawnLayout: bindSelector(canvasStore.selectHasDrawnLayout),
+    markLayoutDrawn: bindAction(canvasStore.markLayoutDrawn),
+    rememberTimedOutVideoFileIds: bindAction(
+      canvasStore.rememberTimedOutVideoFileIds,
+    ),
     setGraphicsReady: bindAction(canvasStore.setGraphicsReady),
     selectIsGraphicsReady: bindSelector(canvasStore.selectIsGraphicsReady),
     setActiveRenderRequestId: bindAction(canvasStore.setActiveRenderRequestId),
@@ -1349,5 +1360,61 @@ describe("layoutEditorCanvas with selection off", () => {
     await handleOnUpdate(deps, { oldProps, newProps: deps.props });
 
     expect(deps.store.selectHoveredSelection()).toBeUndefined();
+  });
+  it("covers the canvas with the assets label until the layout is first drawn", async () => {
+    const deps = createDeps();
+    const viewData = () =>
+      canvasStore.selectViewData({
+        state: deps.store.state,
+        props: deps.props,
+        i18n: EN_I18N,
+      });
+    expect(viewData()).toMatchObject({
+      isCanvasLoading: true,
+      canvasLoadingLabel: "Loading assets...",
+    });
+
+    await handleOnUpdate(deps, {
+      oldProps: deps.props,
+      newProps: { ...deps.props, previewData: { changed: true } },
+    });
+
+    expect(deps.graphicsService.render).toHaveBeenCalled();
+    expect(deps.store.selectHasDrawnLayout()).toBe(true);
+    expect(deps.render).toHaveBeenCalled();
+    expect(viewData().isCanvasLoading).toBe(false);
+
+    // After the first draw only a loading video covers the canvas.
+    deps.store.setActiveRenderRequestId({ requestId: "render-2" });
+    deps.store.setVideoLoading({ requestId: "render-2", value: true });
+    expect(viewData()).toMatchObject({
+      isCanvasLoading: true,
+      canvasLoadingLabel: "Loading video...",
+    });
+  });
+
+  it("keeps the first loading state while the layout has not arrived", async () => {
+    const deps = createDeps();
+    const layoutState = deps.props.layoutState;
+    deps.props = { ...deps.props, layoutState: undefined };
+
+    await handleOnUpdate(deps, {
+      oldProps: { ...deps.props, layoutState },
+      newProps: deps.props,
+    });
+
+    expect(deps.graphicsService.render).toHaveBeenCalled();
+    expect(deps.store.selectHasDrawnLayout()).toBe(false);
+  });
+
+  it("stops covering the canvas when graphics fail to start", async () => {
+    const deps = createDeps();
+    const error = new Error("Graphics could not start.");
+    deps.graphicsService.init = vi.fn().mockRejectedValue(error);
+
+    await expect(handleAfterMount(deps)).rejects.toBe(error);
+
+    expect(deps.store.selectHasDrawnLayout()).toBe(true);
+    expect(deps.render).toHaveBeenCalled();
   });
 });

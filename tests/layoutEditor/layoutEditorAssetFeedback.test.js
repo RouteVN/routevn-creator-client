@@ -1,5 +1,8 @@
 import { expect, it, vi } from "vitest";
-import { loadAvailableLayoutEditorAssets } from "../../src/components/layoutEditorCanvas/support/layoutEditorAssetFeedback.js";
+import {
+  loadAvailableLayoutEditorAssets,
+  waitForLayoutEditorVideos,
+} from "../../src/components/layoutEditorCanvas/support/layoutEditorAssetFeedback.js";
 import { omitUnavailableLayoutElements } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
 import * as actions from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.store.js";
 
@@ -102,3 +105,125 @@ it.each([undefined, "project-two"])(
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
   },
 );
+
+it("waits only for unready videos, remembers timeouts, and warns once", async () => {
+  const context = { state: actions.createInitialState() };
+  const store = Object.fromEntries(
+    Object.entries(actions).map(([name, action]) => [
+      name,
+      (payload) => action(context, payload),
+    ]),
+  );
+  const ready = new Set(["ready"]);
+  const timeout = Object.assign(new Error("timeout"), {
+    code: "video_ready_timeout",
+  });
+  const graphicsService = {
+    isVideoReady: vi.fn((id) => ready.has(id)),
+    waitForVideosReady: vi.fn(async () => ({
+      failures: [{ fileId: "slow", error: timeout }],
+    })),
+  };
+  const deps = {
+    store,
+    graphicsService,
+    appService: { showAlert: vi.fn() },
+    projectService: {
+      getEnsuredProjectId: () => "project-one",
+      getRepositoryState: () => ({}),
+    },
+  };
+  const onWaitStart = vi.fn();
+  const fileReferences = [
+    { url: "ready", type: "video/mp4" },
+    { url: "slow", type: "video/mp4" },
+    { url: "image", type: "image/png" },
+  ];
+  const call = () =>
+    waitForLayoutEditorVideos(deps, {
+      fileReferences,
+      failedFileIds: [],
+      onWaitStart,
+    });
+  expect(await call()).toEqual(["slow"]);
+  expect(graphicsService.waitForVideosReady).toHaveBeenCalledWith(["slow"], {
+    timeoutMs: 30000,
+  });
+  expect(onWaitStart).toHaveBeenCalledOnce();
+  expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+  expect(await call()).toEqual(["slow"]);
+  expect(graphicsService.waitForVideosReady).toHaveBeenCalledOnce();
+  expect(onWaitStart).toHaveBeenCalledOnce();
+  ready.add("slow");
+  expect(await call()).toEqual([]);
+  expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+});
+
+it("does not wait or show loading for image-only and ready-video references", async () => {
+  const deps = {
+    store: { selectTimedOutVideoFileIds: () => [] },
+    graphicsService: { isVideoReady: () => true, waitForVideosReady: vi.fn() },
+    projectService: { getEnsuredProjectId: () => "project-one" },
+  };
+  const onWaitStart = vi.fn();
+  expect(
+    await waitForLayoutEditorVideos(deps, {
+      fileReferences: [
+        { url: "image", type: "image/png" },
+        { url: "ready", type: "video/mp4" },
+      ],
+      failedFileIds: [],
+      onWaitStart,
+    }),
+  ).toEqual([]);
+  expect(onWaitStart).not.toHaveBeenCalled();
+  expect(deps.graphicsService.waitForVideosReady).not.toHaveBeenCalled();
+});
+
+it("ignores video failures from stale renders", async () => {
+  const context = { state: actions.createInitialState() };
+  const store = Object.fromEntries(
+    Object.entries(actions).map(([name, action]) => [
+      name,
+      (payload) => action(context, payload),
+    ]),
+  );
+  let current = true;
+  let finish;
+  const deps = {
+    store,
+    projectService: { getEnsuredProjectId: () => "project-one" },
+    graphicsService: {
+      isVideoReady: () => false,
+      waitForVideosReady: () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    },
+  };
+  const pending = waitForLayoutEditorVideos(deps, {
+    fileReferences: [{ url: "video", type: "video/mp4" }],
+    failedFileIds: [],
+    onWaitStart: vi.fn(),
+    isRenderCurrent: () => current,
+  });
+  current = false;
+  finish({
+    failures: [{ fileId: "video", error: { code: "video_ready_timeout" } }],
+  });
+  expect(await pending).toEqual([]);
+  expect(context.state.timedOutVideoFileIds).toEqual([]);
+});
+
+it("ties the loading indicator to the current render request", () => {
+  const context = { state: actions.createInitialState() };
+  actions.setActiveRenderRequestId(context, { requestId: "one" });
+  actions.setVideoLoading(context, { requestId: "one", value: true });
+  actions.setActiveRenderRequestId(context, { requestId: "two" });
+  actions.setVideoLoading(context, { requestId: "two", value: true });
+  actions.setVideoLoading(context, { requestId: "one", value: false });
+  expect(context.state.videoLoadingRequestId).toBe("two");
+  actions.setActiveRenderRequestId(context, { requestId: "three" });
+  actions.setVideoLoading(context, { requestId: "one", value: true });
+  expect(actions.selectIsVideoLoading(context)).toBe(false);
+});

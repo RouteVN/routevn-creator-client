@@ -13,6 +13,9 @@ contextMenuItems:
   - label: Particle
     type: item
     createType: particle
+  - label: Video
+    type: item
+    createType: video
   - label: Text
     type: item
     createType: text
@@ -119,6 +122,9 @@ emptyContextMenuItems:
   - label: Particle
     type: item
     createType: particle
+  - label: Video
+    type: item
+    createType: video
   - label: Text
     type: item
     createType: text

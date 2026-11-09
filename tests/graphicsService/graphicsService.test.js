@@ -1051,6 +1051,79 @@ describe("graphicsService", () => {
     });
   });
 
+  it("checks video readiness and reports missing, timed-out, and failed videos", async () => {
+    class FakeVideo extends EventTarget {
+      HAVE_FUTURE_DATA = 3;
+      readyState = 0;
+      videoWidth = 0;
+      videoHeight = 0;
+    }
+    const original = globalThis.HTMLVideoElement;
+    globalThis.HTMLVideoElement = FakeVideo;
+    vi.useFakeTimers();
+    try {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: { dispatch: vi.fn() },
+      });
+      const slow = new FakeVideo();
+      const failed = new FakeVideo();
+      const ready = new FakeVideo();
+      ready.readyState = 3;
+      ready.videoWidth = 100;
+      ready.videoHeight = 100;
+      assetsCache.set("slow", { source: { resource: slow } });
+      assetsCache.set("failed", { source: { resource: failed } });
+      assetsCache.set("ready", { source: { resource: ready } });
+      expect(service.isVideoReady("missing")).toBe(false);
+      expect(service.isVideoReady("slow")).toBe(false);
+      expect(service.isVideoReady("ready")).toBe(true);
+      const pending = service.waitForVideosReady(
+        ["slow", "failed", "ready", "missing"],
+        { timeoutMs: 30000 },
+      );
+      failed.dispatchEvent(new Event("error"));
+      await vi.advanceTimersByTimeAsync(30000);
+      const { failures } = await pending;
+      expect(failures.map(({ fileId }) => fileId)).toEqual([
+        "slow",
+        "failed",
+        "missing",
+      ]);
+      expect(failures[0].error.code).toBe("video_ready_timeout");
+      slow.readyState = 3;
+      slow.videoWidth = 100;
+      slow.videoHeight = 100;
+      expect(service.isVideoReady("slow")).toBe(true);
+      expect(await service.waitForVideosReady(["slow"])).toEqual({
+        failures: [],
+      });
+      const later = new FakeVideo();
+      assetsCache.set("later", { source: { resource: later } });
+      const readyWait = service.waitForVideosReady(["later"], {
+        timeoutMs: 30000,
+      });
+      later.readyState = 3;
+      later.videoWidth = 100;
+      later.videoHeight = 100;
+      later.dispatchEvent(new Event("canplay"));
+      expect(await readyWait).toEqual({ failures: [] });
+      const controller = new AbortController();
+      later.readyState = 0;
+      const aborted = service.waitForVideosReady(["later"], {
+        signal: controller.signal,
+      });
+      controller.abort();
+      await expect(aborted).rejects.toMatchObject({ name: "AbortError" });
+    } finally {
+      vi.useRealTimers();
+      if (original === undefined) delete globalThis.HTMLVideoElement;
+      else globalThis.HTMLVideoElement = original;
+    }
+  });
+
   it("waits for video assets to have playable frame data before resolving", async () => {
     class FakeVideoElement {
       constructor() {

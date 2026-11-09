@@ -159,6 +159,9 @@ const STATIC_LABEL_COPY_KEYS = {
   Opacity: "opacityLabel",
   Pagination: "paginationTitle",
   Particle: "particleLabel",
+  Video: "videoLabel",
+  Loop: "loopLabel",
+  Volume: "volumeLabel",
   Position: "positionSection",
   "Position X": "positionXLabel",
   "Position Y": "positionYLabel",
@@ -820,6 +823,7 @@ export const createInitialState = () => {
     soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
+    videosData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
@@ -1412,6 +1416,10 @@ export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
   state.spritesheetsData = spritesheetsData;
 };
 
+export const setVideosData = ({ state }, { videosData } = {}) => {
+  state.videosData = videosData;
+};
+
 export const setParticlesData = ({ state }, { particlesData } = {}) => {
   state.particlesData = particlesData;
 };
@@ -1645,6 +1653,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     state.spritesheetsData,
   );
   const particleSelectionItems = toParticleSelectionItems(state.particlesData);
+  const videoSelectionItems = toFlatItems(state.videosData)
+    .filter((item) => item.type === "video")
+    .map((item) => ({ label: item.name, value: item.id }));
   const imageFlatItems = toFlatItems(state.imagesData);
   const imageFolderItems = imageFlatItems.filter(
     (item) => item.type === "folder",
@@ -1803,6 +1814,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       soundItemsWithNone,
       spritesheetSelectionItems,
       particleSelectionItems,
+      videoSelectionItems,
+      videoLoopOptions: [
+        { label: copy.yesOption ?? "Yes", value: true },
+        { label: copy.noOption ?? "No", value: false },
+      ],
       sliderValueOptions,
       revealEffectOptions,
       dateFormatOptions,

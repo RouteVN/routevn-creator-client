@@ -503,6 +503,9 @@ const normalizePanelValue = (name, value) => {
       ? Math.round(Number(value))
       : value;
 
+  if (name === "volume" && Number.isFinite(Number(normalizedValue))) {
+    return Math.min(100, Math.max(0, Number(normalizedValue)));
+  }
   if (name === "rotation" && Number.isFinite(Number(normalizedValue))) {
     return normalizeLayoutRotation(Number(normalizedValue));
   }
@@ -787,6 +790,7 @@ export const handleBeforeMount = (deps) => {
   store.setParticlesData({
     particlesData: props.particlesData || EMPTY_TREE,
   });
+  store.setVideosData({ videosData: props.videosData || EMPTY_TREE });
   store.setTextStylesData({
     textStylesData: props.textStylesData || EMPTY_TREE,
   });
@@ -845,6 +849,7 @@ export const handleOnUpdate = (deps, payload) => {
     oldProps?.soundsData === newProps?.soundsData &&
     oldProps?.spritesheetsData === newProps?.spritesheetsData &&
     oldProps?.particlesData === newProps?.particlesData &&
+    oldProps?.videosData === newProps?.videosData &&
     oldProps?.variablesData === newProps?.variablesData &&
     oldProps?.textStylesData === newProps?.textStylesData &&
     oldProps?.selectedElementMetrics === newProps?.selectedElementMetrics
@@ -871,6 +876,7 @@ export const handleOnUpdate = (deps, payload) => {
   store.setParticlesData({
     particlesData: newProps.particlesData || EMPTY_TREE,
   });
+  store.setVideosData({ videosData: newProps.videosData || EMPTY_TREE });
   store.setTextStylesData({
     textStylesData: newProps.textStylesData || EMPTY_TREE,
   });
