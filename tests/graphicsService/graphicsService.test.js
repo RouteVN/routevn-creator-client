@@ -2488,7 +2488,7 @@ describe("graphicsService", () => {
 
     const originalActions = {
       updateVariable: {
-        id: "update-1",
+        id: "update1",
         operations: [
           {
             variableId: "var-1",
@@ -2512,7 +2512,7 @@ describe("graphicsService", () => {
     expect(handleActions).toHaveBeenCalledWith(
       {
         updateVariable: {
-          id: "update-1",
+          id: "update1",
           operations: [
             {
               variableId: "var-1",
@@ -2532,7 +2532,7 @@ describe("graphicsService", () => {
     );
     expect(originalActions).toEqual({
       updateVariable: {
-        id: "update-1",
+        id: "update1",
         operations: [
           {
             variableId: "var-1",
