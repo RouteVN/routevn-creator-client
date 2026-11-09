@@ -271,6 +271,8 @@ appPage:
   filePickerFiles: เครื่องมือเลือกไฟล์
   pressEscapeAgainFullscreen: "กด Esc 2 ครั้งอย่างรวดเร็วเพื่อออกจากโหมดเต็มจอ"
   failedExitFullscreen: "ไม่สามารถออกจากโหมดเต็มจอได้ โปรดใช้ปุ่มควบคุมหน้าต่าง"
+  audioUnavailable: "ขณะนี้ไม่สามารถใช้เสียงบนอุปกรณ์นี้ได้"
+  audioUnavailableLockdownHint: "หากเปิดโหมดล็อกดาวน์อยู่ คุณสามารถปิดโหมดนี้สำหรับ RouteVN ได้ในแอปการตั้งค่า"
   failedStartPreviewAudio: "ไม่สามารถเล่นเสียงในตัวอย่างได้ ปิดแล้วเปิดตัวอย่างอีกครั้ง"
   assetsTab: "ทรัพยากร"
   buildingProjectState: "กำลังสร้างสถานะโปรเจกต์..."

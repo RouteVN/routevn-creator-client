@@ -1,3 +1,4 @@
+import { warnOnceIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import { setSceneEditorPageLoading } from "../../internal/ui/sceneEditor/loadingProgress.js";
 import { mountSceneEditorWindowLayout } from "./support/windowLayout.js";
 import { getSceneStartupErrorMessage } from "./support/startupError.js";
@@ -3987,6 +3988,7 @@ export const handlePreviewClick = (deps) => {
       });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();
+      warnOnceIfAudioUnavailable(deps);
     } catch (error) {
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       console.error("[sceneEditor] Failed to open preview", error);

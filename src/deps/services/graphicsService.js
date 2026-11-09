@@ -129,17 +129,21 @@ const normalizeGraphicsInteractionSoundVolume = (value) => {
   return Math.min(Math.max(parsed, 0), 100);
 };
 
-const sanitizeGraphicsInteractionSoundVolume = (interaction) => {
+const sanitizeGraphicsInteractionSoundVolume = (interaction, disableSound) => {
   if (
     !interaction ||
     typeof interaction !== "object" ||
     Array.isArray(interaction) ||
-    !Object.hasOwn(interaction, "soundVolume")
+    (!disableSound && !Object.hasOwn(interaction, "soundVolume"))
   ) {
     return interaction;
   }
 
   const nextInteraction = { ...interaction };
+  if (disableSound) {
+    delete nextInteraction.sound;
+    delete nextInteraction.soundSrc;
+  }
   const nextVolume = normalizeGraphicsInteractionSoundVolume(
     interaction.soundVolume,
   );
@@ -153,7 +157,7 @@ const sanitizeGraphicsInteractionSoundVolume = (interaction) => {
   return nextInteraction;
 };
 
-const sanitizeGraphicsElementSoundVolumes = (elements) => {
+const sanitizeGraphicsElementSoundVolumes = (elements, disableSound) => {
   if (!Array.isArray(elements) || elements.length === 0) {
     return elements;
   }
@@ -168,8 +172,10 @@ const sanitizeGraphicsElementSoundVolumes = (elements) => {
 
     for (const interactionKey of INTERACTION_SOUND_KEYS) {
       const interaction = element[interactionKey];
-      const nextInteraction =
-        sanitizeGraphicsInteractionSoundVolume(interaction);
+      const nextInteraction = sanitizeGraphicsInteractionSoundVolume(
+        interaction,
+        disableSound,
+      );
       if (nextInteraction !== interaction) {
         if (nextElement === element) {
           nextElement = { ...element };
@@ -180,7 +186,10 @@ const sanitizeGraphicsElementSoundVolumes = (elements) => {
     }
 
     const children = element.children;
-    const nextChildren = sanitizeGraphicsElementSoundVolumes(children);
+    const nextChildren = sanitizeGraphicsElementSoundVolumes(
+      children,
+      disableSound,
+    );
     if (nextChildren !== children) {
       if (nextElement === element) {
         nextElement = { ...element };
@@ -195,9 +204,15 @@ const sanitizeGraphicsElementSoundVolumes = (elements) => {
   return didChange ? nextElements : elements;
 };
 
-const sanitizeRenderStateInteractionSoundVolumes = (renderState) => {
+const sanitizeRenderStateInteractionSoundVolumes = (
+  renderState,
+  disableSound = false,
+) => {
   const elements = renderState?.elements;
-  const nextElements = sanitizeGraphicsElementSoundVolumes(elements);
+  const nextElements = sanitizeGraphicsElementSoundVolumes(
+    elements,
+    disableSound,
+  );
 
   if (nextElements === elements) {
     return renderState;
@@ -664,6 +679,7 @@ export const createGraphicsService = async ({
   subject,
   projectMediaOrigin,
   audioOutput,
+  audioAvailable = true,
   onAudioOutputError,
   onRenderError,
   // Called when graphics cannot start because the device has no usable WebGL.
@@ -792,6 +808,7 @@ export const createGraphicsService = async ({
   };
 
   const ensureAudioAssetsLoaded = async (assetKeys = []) => {
+    if (!audioAvailable) return;
     const uniqueAudioKeys = Array.from(
       new Set(assetKeys.filter((key) => typeof key === "string" && key)),
     );
@@ -1922,7 +1939,7 @@ export const createGraphicsService = async ({
       ([, value]) => classifyAsset(value?.type) === "audio",
     );
     let audioLoadError;
-    if (audioAssetEntries.length > 0) {
+    if (audioAvailable && audioAssetEntries.length > 0) {
       try {
         await runAsyncOperation(
           () => decodeAudioAssetEntries(audioAssetEntries),
@@ -2168,9 +2185,12 @@ export const createGraphicsService = async ({
       renderState: nextRenderState,
       enableGlobalKeyboardBindings,
     });
-    nextRenderState =
-      sanitizeRenderStateInteractionSoundVolumes(nextRenderState);
-    const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
+    nextRenderState = sanitizeRenderStateInteractionSoundVolumes(
+      nextRenderState,
+      !audioAvailable,
+    );
+    const effectiveSkipAudio =
+      skipAudio || isEngineAudioMuted || !audioAvailable;
 
     if (
       effectiveSkipAudio &&
@@ -2843,7 +2863,8 @@ export const createGraphicsService = async ({
           ? "manual"
           : "auto";
       routeGraphics.setAnimationPlaybackMode?.(nextAnimationPlaybackMode);
-      const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
+      const effectiveSkipAudio =
+        skipAudio || isEngineAudioMuted || !audioAvailable;
       if (skipAnimations) {
         renderState = {
           ...renderState,
@@ -2881,8 +2902,17 @@ export const createGraphicsService = async ({
     waitUntilReady,
     attachCanvas,
     render: (payload) => {
+      let renderState = payload;
+      if (!audioAvailable) {
+        renderState = { ...payload, audio: [], audioEffects: [] };
+      }
       return routeGraphics?.render(
-        omitUnloadedVideos(sanitizeRenderStateInteractionSoundVolumes(payload)),
+        omitUnloadedVideos(
+          sanitizeRenderStateInteractionSoundVolumes(
+            renderState,
+            !audioAvailable,
+          ),
+        ),
       );
     },
     parse: (payload) => routeGraphics?.parse(payload),

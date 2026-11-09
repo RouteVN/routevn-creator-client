@@ -271,6 +271,8 @@ appPage:
   filePickerFiles: "Pemilih file"
   pressEscapeAgainFullscreen: "Tekan tombol Esc dua kali dengan cepat untuk keluar dari layar penuh"
   failedExitFullscreen: "Gagal keluar dari layar penuh. Gunakan tombol kontrol jendela."
+  audioUnavailable: "Audio tidak tersedia di perangkat ini untuk saat ini."
+  audioUnavailableLockdownHint: "Jika Mode Penguncian aktif, Anda dapat menonaktifkannya untuk RouteVN di Pengaturan."
   failedStartPreviewAudio: "Gagal memutar audio pratinjau. Tutup pratinjau, lalu buka lagi."
   assetsTab: "Aset"
   buildingProjectState: "Menyiapkan data proyek…"

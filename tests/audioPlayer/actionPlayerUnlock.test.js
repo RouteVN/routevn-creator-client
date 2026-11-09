@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../../src/internal/ui/audioUnavailableNotice.js", () => ({
+  warnIfAudioUnavailable: vi.fn(() => false),
+}));
 import * as bgm from "../../src/components/commandLineBgm/commandLineBgm.handlers.js";
 import * as soundEffects from "../../src/components/commandLineSoundEffects/commandLineSoundEffects.handlers.js";
 import * as voice from "../../src/components/commandLineVoice/commandLineVoice.handlers.js";
