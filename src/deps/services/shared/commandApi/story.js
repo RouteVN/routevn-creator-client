@@ -1,3 +1,4 @@
+import { wouldRemoveAllSections } from "../../../../internal/sectionRemoval.js";
 import {
   findLineLocation,
   findSectionLocation,
@@ -1168,6 +1169,19 @@ export const createStoryCommandApi = (shared) => {
         };
       }
 
+      for (const scene of Object.values(
+        deleteContext.state?.scenes?.items ?? {},
+      )) {
+        if (wouldRemoveAllSections(scene.sections, sectionIds ?? [])) {
+          return {
+            valid: false,
+            error: {
+              code: "last_section",
+              message: "A scene must keep a section.",
+            },
+          };
+        }
+      }
       if (typeof sceneId === "string" && sceneId.length > 0) {
         sceneIdsForPartitions.add(sceneId);
       }
@@ -1316,6 +1330,18 @@ export const createStoryCommandApi = (shared) => {
         typeof sceneId === "string" &&
         typeof sourceSceneId === "string" &&
         sceneId !== sourceSceneId;
+      if (
+        isCrossSceneMove &&
+        wouldRemoveAllSections(sectionLocation.sectionCollection, [sectionId])
+      ) {
+        return {
+          valid: false,
+          error: {
+            code: "last_section",
+            message: "A scene must keep a section.",
+          },
+        };
+      }
       const movedSectionLineSets = isCrossSceneMove
         ? buildMovedSectionLineSets(sectionLocation)
         : [];

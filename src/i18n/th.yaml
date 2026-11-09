@@ -2222,6 +2222,8 @@ sceneEditorPage:
   computedVariableFailed: "ไม่สามารถคำนวณค่าของตัวแปรที่คำนวณ “{name}” ได้ สูตรอาจให้ค่าผิดประเภท ตรวจสอบสูตรและตัวแปรที่สูตรใช้ในหน้า “ตัวแปร”"
   actionsLabel: "แอ็กชัน"
   addSectionMenuItem: "เพิ่มส่วน"
+  emptySectionsMessage: "ฉากนี้ไม่มีส่วน"
+  cannotDeleteLastSection: "ฉากต้องมีอย่างน้อยหนึ่งส่วน"
   addSectionAboveMenuItem: "เพิ่มส่วนด้านบน"
   addSectionBelowMenuItem: "เพิ่มส่วนด้านล่าง"
   autoLabel: "อัตโนมัติ"

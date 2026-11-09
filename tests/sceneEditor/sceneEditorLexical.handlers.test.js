@@ -2723,10 +2723,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         sectionId: "section-1",
       })),
       selectSceneId: vi.fn(() => "scene-1"),
-      selectCommittedScene: vi.fn(() => ({
-        id: "scene-1",
-        sections: [{ id: "section-1" }],
-      })),
+      selectWouldRemoveAllSections: vi.fn(() => true),
       hideSectionMoveSceneDialog: vi.fn(),
     };
     const moveSectionItem = vi.fn();
@@ -2759,6 +2756,9 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "This scene must keep at least one section.",
       title: "Error",
+    });
+    expect(store.selectWouldRemoveAllSections).toHaveBeenCalledWith({
+      sectionIds: ["section-1"],
     });
     expect(moveSectionItem).not.toHaveBeenCalled();
     expect(store.hideSectionMoveSceneDialog).not.toHaveBeenCalled();
@@ -3769,10 +3769,7 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     const store = {
       selectSectionMoveSceneDialog: vi.fn(() => ({ sectionId: "section-1" })),
       selectSceneId: vi.fn(() => "scene-1"),
-      selectCommittedScene: vi.fn(() => ({
-        id: "scene-1",
-        sections: [{ id: "section-1" }, { id: "section-2" }],
-      })),
+      selectWouldRemoveAllSections: vi.fn(() => false),
       hideSectionMoveSceneDialog: vi.fn(),
       setSelectedSectionId: vi.fn(),
     };

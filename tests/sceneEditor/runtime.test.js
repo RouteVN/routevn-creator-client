@@ -158,7 +158,80 @@ const createGraphicsService = () => {
   };
 };
 
+describe("empty scene startup", () => {
+  it("opens without starting the route engine and clears a stale selection", async () => {
+    const projectData = createProjectData();
+    projectData.story.scenes["scene-1"].sections = {};
+    let sectionId = "old-section";
+    let lineId = "old-line";
+    const graphicsService = { init: vi.fn(), initRouteEngine: vi.fn() };
+    const store = {
+      selectScene: () => ({ sections: [] }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => sectionId,
+      selectSelectedLineId: () => lineId,
+      setSelectedSectionId: ({ selectedSectionId }) => {
+        sectionId = selectedSectionId;
+      },
+      setSelectedLineId: ({ selectedLineId }) => {
+        lineId = selectedLineId;
+      },
+      selectProjectData: () => projectData,
+      selectIsScenePageLoading: () => false,
+      selectIsSceneAssetLoading: () => false,
+      setSceneId: vi.fn(),
+      setScenePageLoading: vi.fn(),
+      setSceneAssetLoading: vi.fn(),
+      setSceneLoadingProgress: vi.fn(),
+    };
+    const appService = {
+      getPayload: () => ({ s: "scene-1", sectionId, lineId }),
+      setPayload: vi.fn(),
+    };
+    await initializeSceneEditorPage({
+      store,
+      appService,
+      graphicsService,
+      projectService: {
+        ensureRepository: vi.fn(),
+        setActiveSceneId: vi.fn(),
+        getEnsuredProjectId: () => "project-one",
+      },
+      refs: {
+        previewCanvasHost: { getCanvasRoot: () => ({ isConnected: true }) },
+      },
+      subject: { dispatch: vi.fn() },
+      syncProjectState: vi.fn(),
+      render: vi.fn(),
+    });
+    expect(graphicsService.initRouteEngine).not.toHaveBeenCalled();
+    expect(sectionId).toBeUndefined();
+    expect(lineId).toBeUndefined();
+    expect(appService.setPayload).toHaveBeenCalledWith({ s: "scene-1" });
+  });
+});
+
 describe("renderSceneEditorState", () => {
+  it.each([{}, { missing: undefined }])(
+    "does not initialize the engine when the selected scene has no valid sections",
+    async (sections) => {
+      const projectData = createProjectData();
+      projectData.story.scenes["scene-1"].sections = sections;
+      const graphicsService = { initRouteEngine: vi.fn() };
+      await renderSceneEditorState({
+        graphicsService,
+        projectService: { getEnsuredProjectId: () => "project-one" },
+        store: {
+          selectSceneId: () => "scene-1",
+          selectSelectedSectionId: () => undefined,
+          selectSelectedLineId: () => undefined,
+          selectProjectData: () => projectData,
+        },
+      });
+      expect(graphicsService.initRouteEngine).not.toHaveBeenCalled();
+    },
+  );
+
   it("still paints when the audio warm-up retries a damaged sound", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();

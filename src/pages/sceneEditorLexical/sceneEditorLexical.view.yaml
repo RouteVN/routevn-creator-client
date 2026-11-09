@@ -3,6 +3,10 @@ refs:
     eventListeners:
       contextmenu:
         handler: handleSectionsEmptySpaceContextMenu
+  addEmptySection*:
+    eventListeners:
+      click:
+        handler: handleSectionAddClick
   sectionEditor*:
     eventListeners:
       scene-lines-changed:
@@ -212,6 +216,10 @@ template:
                     $else:
                       - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0; ${mobileLinesPanelStyle}"':
                           - 'rtgl-view#sceneEditorSectionsScroll w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-padding-top: 40px; scroll-padding-bottom: 48px; overscroll-behavior: contain;"':
+                              - $if hasNoSections:
+                                  - rtgl-view w=f p=lg av=c ah=c g=sm:
+                                      - rtgl-text c=mu-fg: ${emptySectionsMessage}
+                                      - rtgl-button#addEmptySectionMobile v=ol: ${addSectionLabel}
                               # Element ids are the render keys. Each block's id is made from its
                               # section's id, so a section's editor is never reused for another section,
                               # such as the section at the same place in the next scene.
@@ -222,7 +230,7 @@ template:
                                           - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null
                                       - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets} :compactPreviews=${isTouchMode}: null
                               - 'rtgl-view h=${mobileEditorBottomSpacerHeight} aria-hidden=true style="flex-shrink: 0;"': null
-              - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth} :undoDisabled=${undoDisabled} :redoDisabled=${redoDisabled} :previewHidden=${isCanvasUnavailable}: null
+              - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth} :undoDisabled=${undoDisabled} :redoDisabled=${redoDisabled} :previewHidden=${isPreviewHidden}: null
         $else:
           - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-width: 0; min-height: 0;"':
@@ -244,6 +252,10 @@ template:
                     $else:
                       - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0;"':
                           - 'rtgl-view#sceneEditorSectionsScroll w=f ph=sm pb=md sv h=1fg style="min-width: 0; scroll-padding-top: 40px;"':
+                              - $if hasNoSections:
+                                  - rtgl-view w=f p=lg av=c ah=c g=sm:
+                                      - rtgl-text c=mu-fg: ${emptySectionsMessage}
+                                      - rtgl-button#addEmptySectionDesktop v=ol: ${addSectionLabel}
                               # Element ids are the render keys. Each block's id is made from its
                               # section's id, so a section's editor is never reused for another section,
                               # such as the section at the same place in the next scene.
@@ -257,7 +269,7 @@ template:
               - rtgl-view w=1 h=f bgc=mu: null
               - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':
                   - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h jc=e g=sm:
-                      - $if !isCanvasUnavailable:
+                      - $if !isPreviewHidden:
                           - 'rtgl-button#previewButton sq pre=play v=ol title="${previewButton}" aria-label="${previewButton}"': null
                           - 'rtgl-button#downloadCanvasButton sq pre=download v=ol title="${downloadCanvasButton}" aria-label="${downloadCanvasButton}"': null
                       - rtgl-view w=1fg: null

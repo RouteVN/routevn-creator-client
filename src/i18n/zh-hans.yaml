@@ -2222,6 +2222,8 @@ sceneEditorPage:
   computedVariableFailed: "无法算出计算变量“{name}”的值。其公式可能得出了类型不符的值。请在“变量”中检查该公式及其使用的变量。"
   actionsLabel: "动作"
   addSectionMenuItem: "添加段落"
+  emptySectionsMessage: "此场景没有段落。"
+  cannotDeleteLastSection: "场景必须至少保留一个段落。"
   addSectionAboveMenuItem: "在上方添加段落"
   addSectionBelowMenuItem: "在下方添加段落"
   autoLabel: "自动"

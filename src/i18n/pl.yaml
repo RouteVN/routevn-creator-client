@@ -2232,6 +2232,8 @@ sceneEditorPage:
   computedVariableFailed: "Nie udało się obliczyć wartości zmiennej „{name}”. Jej formuła mogła zwrócić wartość niewłaściwego typu. Sprawdź formułę i używane w niej zmienne na stronie „Zmienne”."
   actionsLabel: "Akcje"
   addSectionMenuItem: "Dodaj sekcję"
+  emptySectionsMessage: "Ta scena nie ma sekcji."
+  cannotDeleteLastSection: "Scena musi mieć co najmniej jedną sekcję."
   addSectionAboveMenuItem: "Dodaj sekcję powyżej"
   addSectionBelowMenuItem: "Dodaj sekcję poniżej"
   autoLabel: "Auto"

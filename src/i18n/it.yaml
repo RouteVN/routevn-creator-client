@@ -2222,6 +2222,8 @@ sceneEditorPage:
   computedVariableFailed: "Impossibile ottenere il valore della variabile calcolata “{name}”. La formula potrebbe aver prodotto un valore di tipo sbagliato. Nella schermata “Variabili”, controlla la formula e le variabili che usa."
   actionsLabel: "Azioni"
   addSectionMenuItem: "Aggiungi sezione"
+  emptySectionsMessage: "Questa scena non ha sezioni."
+  cannotDeleteLastSection: "Una scena deve avere almeno una sezione."
   addSectionAboveMenuItem: "Aggiungi sezione sopra"
   addSectionBelowMenuItem: "Aggiungi sezione sotto"
   autoLabel: "Auto"

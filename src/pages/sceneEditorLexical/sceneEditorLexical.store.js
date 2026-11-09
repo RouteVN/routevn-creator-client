@@ -1,3 +1,4 @@
+import { wouldRemoveAllSections } from "../../internal/sectionRemoval.js";
 import { formatLoadingProgress } from "../../internal/ui/assetLoadingProgress.js";
 import {
   createEditHistory,
@@ -1758,6 +1759,17 @@ export const selectSectionMoveSceneDialog = ({ state }) => {
   return state.sectionMoveSceneDialog;
 };
 
+// Deleting the sections, or moving them to another scene, would leave the
+// current scene without a section.
+export const selectWouldRemoveAllSections = ({ state }, { sectionIds }) => {
+  const sections =
+    state.repositoryState?.scenes?.items?.[state.sceneId]?.sections;
+  return (
+    Object.keys(sections?.items ?? {}).length <= 1 ||
+    wouldRemoveAllSections(sections, sectionIds)
+  );
+};
+
 export const showSectionDropdownMenu = (
   { state },
   { position, sectionId } = {},
@@ -1796,12 +1808,12 @@ export const showSectionDropdownMenu = (
     { label: "Duplicate", type: "item", value: "duplicate-section" },
   );
 
-  if (
-    sceneOptions.length > 0 &&
-    scene &&
-    scene.sections &&
-    scene.sections.length > 1
-  ) {
+  const canRemoveSection = !selectWouldRemoveAllSections(
+    { state },
+    { sectionIds: [sectionId] },
+  );
+
+  if (sceneOptions.length > 0 && canRemoveSection) {
     items.push({
       label: "Move to scene",
       type: "item",
@@ -1809,8 +1821,7 @@ export const showSectionDropdownMenu = (
     });
   }
 
-  // Only show delete option if there's more than 1 section
-  if (scene && scene.sections && scene.sections.length > 1) {
+  if (canRemoveSection) {
     items.push({ label: "Delete", type: "item", value: "delete-section" });
   }
 
@@ -2235,6 +2246,8 @@ export const selectViewData = ({ state, i18n }) => {
       documentEditorLines: [],
       documentLineDecorations: [],
       sectionEditorItems: [],
+      hasNoSections: false,
+      isPreviewHidden: state.isCanvasUnavailable,
       textStyles: [],
       mentionTargets: [],
       currentLine: null,
@@ -2650,6 +2663,11 @@ export const selectViewData = ({ state, i18n }) => {
     sectionsOverviewItems,
     documentEditorLines,
     sectionEditorItems,
+    hasNoSections: sections.length === 0,
+    // A scene without sections has nothing to preview.
+    isPreviewHidden: state.isCanvasUnavailable || sections.length === 0,
+    emptySectionsMessage: copy.emptySectionsMessage,
+    addSectionLabel: copy.addSectionMenuItem,
     textStyles,
     mentionTargets,
     documentLineDecorations,

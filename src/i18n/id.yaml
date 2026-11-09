@@ -2222,6 +2222,8 @@ sceneEditorPage:
   computedVariableFailed: "Gagal menghitung nilai variabel terhitung “{name}”. Rumusnya mungkin menghasilkan jenis nilai yang salah. Buka halaman “Variabel”, lalu periksa rumus tersebut dan variabel yang digunakannya."
   actionsLabel: "Aksi"
   addSectionMenuItem: "Tambahkan bagian"
+  emptySectionsMessage: "Adegan ini tidak memiliki bagian."
+  cannotDeleteLastSection: "Adegan harus memiliki setidaknya satu bagian."
   addSectionAboveMenuItem: "Tambahkan bagian di atas"
   addSectionBelowMenuItem: "Tambahkan bagian di bawah"
   autoLabel: "Otomatis"

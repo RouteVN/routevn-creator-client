@@ -34,6 +34,7 @@ import {
 import { normalizeLineActions } from "../../project/engineActions.js";
 import { constructAudioEffectResources } from "../../project/projection.js";
 import {
+  getRouteEngineSectionIds,
   sanitizeProjectDataForRouteEngine,
   summarizeProjectDataForRouteEngine,
 } from "../../project/routeEngineProjectData.js";
@@ -1429,6 +1430,13 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const lineId = store.selectSelectedLineId();
   const projectDataProjectionStartedAt = shouldMeasure ? getDebugNow() : 0;
   const projectedProjectData = selectProjectDataWithCurrentAudioEffects(deps);
+  // Route Engine cannot start a scene without a section.
+  if (
+    getRouteEngineSectionIds(projectedProjectData?.story?.scenes?.[sceneId])
+      .length === 0
+  ) {
+    return;
+  }
   const projectDataProjectionDurationMs = shouldMeasure
     ? getDebugDurationMs(projectDataProjectionStartedAt)
     : undefined;
@@ -1893,6 +1901,14 @@ export const initializeSceneEditorPage = async (deps) => {
     } else {
       delete nextPayload.lineId;
     }
+    appService.setPayload?.(nextPayload);
+  } else if (scene?.sections?.length === 0) {
+    store.setSelectedSectionId({ selectedSectionId: undefined });
+    store.setSelectedLineId({ selectedLineId: undefined });
+    const nextPayload = { ...appService.getPayload(), s: sceneId };
+    delete nextPayload.sceneId;
+    delete nextPayload.sectionId;
+    delete nextPayload.lineId;
     appService.setPayload?.(nextPayload);
   }
 

@@ -50,6 +50,61 @@ const createEmptyStoryState = () => ({
 });
 
 describe("story command api", () => {
+  it("refuses a deletion that removes the last section", async () => {
+    const context = { state: createStoryState() };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandWithContext: vi.fn(),
+    };
+    const result = await createStoryCommandApi(shared).deleteSectionItem({
+      sceneId: "scene-1",
+      sectionIds: ["section-1"],
+    });
+    expect(result.error.code).toBe("last_section");
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+  });
+
+  it("refuses moving the sections a scene needs to another scene", async () => {
+    const state = createStoryState();
+    const scene = state.scenes.items["scene-1"];
+    scene.sections.items["section-2"] = {
+      id: "section-2",
+      lines: { items: {}, tree: [] },
+    };
+    scene.sections.tree = [
+      { id: "section-1", children: [{ id: "section-2" }] },
+    ];
+    state.scenes.items["scene-2"] = {
+      id: "scene-2",
+      type: "scene",
+      sections: { items: {}, tree: [] },
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => ({
+        projectId: "project-1",
+        state,
+      })),
+      resolveSectionIndex: vi.fn(() => 0),
+      buildPlacementPayload: vi.fn(() => ({ parentId: null, index: 0 })),
+      submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+      scenePartitionFor: vi.fn((_projectId, sceneId) => `s:${sceneId}`),
+      storyBasePartitionFor: vi.fn(() => "m"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    for (const sectionId of ["section-1", "section-2"]) {
+      const result = await api.moveSectionItem({
+        sectionId,
+        sceneId: "scene-2",
+        position: "last",
+      });
+      expect(result?.error?.code).toBe(
+        sectionId === "section-1" ? "last_section" : undefined,
+      );
+    }
+    expect(shared.submitCommandWithContext).toHaveBeenCalledOnce();
+  });
+
   it("rejects deleting a section referenced by another scene projection", async () => {
     const contextState = {
       scenes: {
@@ -648,8 +703,12 @@ describe("story command api", () => {
                       tree: [{ id: "line-1" }],
                     },
                   },
+                  "section-2": {
+                    id: "section-2",
+                    lines: { items: {}, tree: [] },
+                  },
                 },
-                tree: [{ id: "section-1" }],
+                tree: [{ id: "section-1" }, { id: "section-2" }],
               },
             },
             "scene-2": {
@@ -1217,8 +1276,13 @@ describe("story command api: duplicating and moving a large section", () => {
                   tree: lines.map(({ id }) => ({ id })),
                 },
               },
+              "section-2": {
+                id: "section-2",
+                name: "Other section",
+                lines: { items: {}, tree: [] },
+              },
             },
-            tree: [{ id: "section-1" }],
+            tree: [{ id: "section-1" }, { id: "section-2" }],
           },
         },
         "scene-2": {
