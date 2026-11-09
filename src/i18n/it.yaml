@@ -857,6 +857,8 @@ layoutsPage:
   failedUpdateLayout: "Impossibile aggiornare il layout."
   failedUpdateTags: "Impossibile aggiornare i tag del layout."
   fragmentLabel: "Frammento"
+  inputLayoutPromptText: "Inserisci il tuo nome"
+  inputLayoutSubmitText: "Invia"
   layoutNameLabel: "Nome del layout"
   layoutTypeChoice: "Scelta"
   layoutTypeConfirmDialog: "Finestra di conferma"

@@ -857,6 +857,8 @@ layoutsPage:
   failedUpdateLayout: "Nie udało się zaktualizować układu."
   failedUpdateTags: "Nie udało się zaktualizować tagów układu."
   fragmentLabel: "Fragment"
+  inputLayoutPromptText: "Wpisz swoje imię"
+  inputLayoutSubmitText: "Zatwierdź"
   layoutNameLabel: "Nazwa układu"
   layoutTypeChoice: "Wybór"
   layoutTypeConfirmDialog: "Okno potwierdzenia"

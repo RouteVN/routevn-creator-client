@@ -857,6 +857,8 @@ layoutsPage:
   failedUpdateLayout: "Không cập nhật được bố cục."
   failedUpdateTags: "Không cập nhật được thẻ của bố cục."
   fragmentLabel: "Bố cục con"
+  inputLayoutPromptText: "Nhập tên của bạn"
+  inputLayoutSubmitText: "Xác nhận"
   layoutNameLabel: "Tên bố cục"
   layoutTypeChoice: "Lựa chọn"
   layoutTypeConfirmDialog: "Hộp thoại xác nhận"

@@ -857,6 +857,8 @@ layoutsPage:
   failedUpdateLayout: "Gagal memperbarui tata letak."
   failedUpdateTags: "Gagal memperbarui label tata letak."
   fragmentLabel: "Fragmen"
+  inputLayoutPromptText: "Masukkan nama Anda"
+  inputLayoutSubmitText: "Kirim"
   layoutNameLabel: "Nama tata letak"
   layoutTypeChoice: "Pilihan"
   layoutTypeConfirmDialog: "Kotak konfirmasi"

@@ -857,6 +857,8 @@ layoutsPage:
   failedUpdateLayout: "レイアウトを更新できませんでした。"
   failedUpdateTags: "レイアウトのタグを更新できませんでした。"
   fragmentLabel: "フラグメント"
+  inputLayoutPromptText: "名前を入力してください"
+  inputLayoutSubmitText: "決定"
   layoutNameLabel: "レイアウト名"
   layoutTypeChoice: "選択肢"
   layoutTypeConfirmDialog: "確認ダイアログ"

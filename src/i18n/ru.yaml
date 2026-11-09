@@ -857,6 +857,8 @@ layoutsPage:
   failedUpdateLayout: "Не удалось сохранить макет."
   failedUpdateTags: "Не удалось сохранить теги макета."
   fragmentLabel: "Фрагмент"
+  inputLayoutPromptText: "Введите имя"
+  inputLayoutSubmitText: "Подтвердить"
   layoutNameLabel: "Название макета"
   layoutTypeChoice: "Выбор"
   layoutTypeConfirmDialog: "Подтверждение"
