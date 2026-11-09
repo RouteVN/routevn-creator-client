@@ -15,4 +15,4 @@ template:
                   - 'rtgl-svg svg=translate wh=20 aria-hidden=true style="flex-shrink: 0;"': null
                   - 'rtgl-text s=sm w=1fg style="min-width: 0;"': ${message}
                   - 'rtgl-button#closeButton sq s=sm v=gh pre=x aria-label="${closeLabel}" title="${closeLabel}"': null
-              - rtgl-button#switchButton v=ol ?disabled=${busy}: ${switchLabel}
+              - rtgl-button#switchButton w=f v=ol ?disabled=${busy}: ${switchLabel}
