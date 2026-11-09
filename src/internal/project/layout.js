@@ -1443,7 +1443,7 @@ const applyVideoNode = ({ element, node, context }) => {
     fileType:
       resolveResourceFileType({ item: video, files: context.filesData }) ??
       "video/mp4",
-    loop: node.loop === true,
+    loop: node.loop ?? true,
     volume: context.videoRenderMode === "editor" ? 0 : (node.volume ?? 100),
   };
 };

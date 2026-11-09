@@ -389,7 +389,7 @@ export const toInspectorValues = ({
     sliderManualInitialValue,
     particleId: values?.particleId ?? "",
     videoId: values?.videoId ?? "",
-    loop: values?.loop ?? false,
+    loop: values?.loop ?? true,
     volume: values?.volume ?? 100,
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",

@@ -36,7 +36,7 @@ describe("layout video rendering", () => {
       type: "video",
       src: "file",
       fileType: "video/webm",
-      loop: false,
+      loop: true,
       volume: 100,
       width: 640,
       height: 360,
@@ -44,8 +44,8 @@ describe("layout video rendering", () => {
     expect(extractFileIdsFromRenderState([element])).toContainEqual(
       expect.objectContaining({ url: "file", type: "video/webm" }),
     );
-    expect(build(video, { loop: true, volume: 35 })).toMatchObject({
-      loop: true,
+    expect(build(video, { loop: false, volume: 35 })).toMatchObject({
+      loop: false,
       volume: 35,
     });
   });
