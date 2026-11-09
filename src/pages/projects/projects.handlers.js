@@ -717,6 +717,7 @@ export const handleAppVersionClick = (deps, payload) => {
       label: copy.checkUpdateMenuItem,
       type: "item",
       value: "check-update",
+      icon: "download",
     });
   }
 
@@ -724,16 +725,19 @@ export const handleAppVersionClick = (deps, payload) => {
     label: copy.languageMenuItem,
     type: "item",
     value: "language",
+    icon: "translate",
   });
   items.push({
     label: copy.appearanceMenuItem,
     type: "item",
     value: "appearance",
+    icon: "sun",
   });
   items.push({
     label: copy.contactMenuItem,
     type: "item",
     value: "contact",
+    icon: "chat",
   });
 
   const menuPayload = {
