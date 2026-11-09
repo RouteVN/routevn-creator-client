@@ -402,6 +402,7 @@ describe("particles handlers", () => {
       usage: { inProps: {}, isUsed: false, count: 0 },
       deleteResult: { valid: false, error: { message: "refused" } },
     }));
+    deps.render.mockClear();
 
     await handleItemDelete(deps, {
       _event: { detail: { itemId: "particle-1" } },
@@ -411,6 +412,7 @@ describe("particles handlers", () => {
       message: expect.stringContaining("Failed to delete particle."),
       title: "Error",
     });
+    expect(deps.render).toHaveBeenCalled();
   });
 
   it("puts a tag created from the add form into that form", async () => {

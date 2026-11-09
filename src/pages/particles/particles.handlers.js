@@ -522,6 +522,7 @@ export const handleItemDelete = async (deps, payload) => {
       fallbackMessage: copy.failedDeleteParticle,
       title: copy.errorTitle,
     });
+    render();
     return;
   }
 
