@@ -1,9 +1,13 @@
+use std::io::{Read, Seek, SeekFrom};
+
 use tauri::{
-    Runtime, UriSchemeContext, Url,
+    Url,
     http::{
         Request, Response, StatusCode,
         header::{
-            ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE,
+            ACCEPT_RANGES, ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN,
+            ACCESS_CONTROL_EXPOSE_HEADERS, CACHE_CONTROL, CONTENT_LENGTH, CONTENT_RANGE,
+            CONTENT_TYPE, RANGE,
         },
     },
 };
@@ -70,10 +74,47 @@ fn is_allowed_project_file_path(path: &str) -> bool {
     path.contains("\\files\\") || path.contains("/files/")
 }
 
-pub fn handle<R: Runtime>(
-    _ctx: UriSchemeContext<'_, R>,
-    request: Request<Vec<u8>>,
-) -> Response<Vec<u8>> {
+const MAX_RANGE_LEN: u64 = 1000 * 1024;
+
+// None means the header is malformed and should be ignored.
+fn parse_range(value: &str, size: u64) -> Option<Result<(u64, u64), ()>> {
+    let range = value.strip_prefix("bytes=")?;
+    let (start, end) = range.split_once('-')?;
+    let number = |value: &str| {
+        if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+            None
+        } else {
+            value.parse::<u64>().ok()
+        }
+    };
+    let (start, end) = if start.is_empty() {
+        let suffix = number(end)?;
+        if suffix == 0 || size == 0 {
+            return Some(Err(()));
+        }
+        (size.saturating_sub(suffix), size - 1)
+    } else {
+        let start = number(start)?;
+        let requested_end = if end.is_empty() {
+            None
+        } else {
+            Some(number(end)?)
+        };
+        if requested_end.is_some_and(|end| end < start) {
+            return None;
+        }
+        if start >= size {
+            return Some(Err(()));
+        }
+        (start, requested_end.unwrap_or(size - 1).min(size - 1))
+    };
+    Some(Ok((
+        start,
+        end.min(start.saturating_add(MAX_RANGE_LEN - 1)),
+    )))
+}
+
+pub fn respond(request: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     if request.method() == "OPTIONS" {
         return Response::builder()
             .status(StatusCode::NO_CONTENT)
@@ -111,19 +152,172 @@ pub fn handle<R: Runtime>(
         return build_error_response(StatusCode::BAD_REQUEST, "Unsupported media extension");
     };
 
-    let bytes = match std::fs::read(&file_path) {
-        Ok(bytes) => bytes,
-        Err(_) => {
-            return build_error_response(StatusCode::NOT_FOUND, "File not found");
-        }
+    let mut file = match std::fs::File::open(&file_path) {
+        Ok(file) => file,
+        Err(_) => return build_error_response(StatusCode::NOT_FOUND, "File not found"),
     };
-
-    Response::builder()
-        .status(StatusCode::OK)
+    let size = match file.metadata() {
+        Ok(metadata) => metadata.len(),
+        Err(_) => return build_error_response(StatusCode::NOT_FOUND, "File not found"),
+    };
+    let range = if request.headers().get_all(RANGE).iter().count() == 1 {
+        request
+            .headers()
+            .get(RANGE)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| parse_range(value, size))
+    } else {
+        None
+    };
+    let mut response = Response::builder()
         .header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
         .header(ACCESS_CONTROL_ALLOW_METHODS, "GET, OPTIONS")
-        .header(CACHE_CONTROL, "no-store")
+        .header(CACHE_CONTROL, "no-store");
+    let mut bytes = Vec::new();
+    match range {
+        Some(Err(())) => {
+            return response
+                .status(StatusCode::RANGE_NOT_SATISFIABLE)
+                .header(CONTENT_TYPE, "text/plain; charset=utf-8")
+                .header(CONTENT_RANGE, format!("bytes */{size}"))
+                .body(bytes)
+                .unwrap();
+        }
+        Some(Ok((start, end))) => {
+            bytes.resize((end - start + 1) as usize, 0);
+            if file
+                .seek(SeekFrom::Start(start))
+                .and_then(|_| file.read_exact(&mut bytes))
+                .is_err()
+            {
+                return build_error_response(StatusCode::NOT_FOUND, "File not found");
+            }
+            response = response
+                .status(StatusCode::PARTIAL_CONTENT)
+                .header(CONTENT_RANGE, format!("bytes {start}-{end}/{size}"));
+        }
+        None => {
+            if file.read_to_end(&mut bytes).is_err() {
+                return build_error_response(StatusCode::NOT_FOUND, "File not found");
+            }
+            response = response.status(StatusCode::OK);
+        }
+    }
+    response
         .header(CONTENT_TYPE, content_type)
+        .header(ACCEPT_RANGES, "bytes")
+        .header(
+            ACCESS_CONTROL_EXPOSE_HEADERS,
+            "Content-Range, Accept-Ranges, Content-Length",
+        )
+        .header(CONTENT_LENGTH, bytes.len())
         .body(bytes)
         .unwrap()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    fn request(path: &Path, extension: &str, range: Option<&str>) -> Response<Vec<u8>> {
+        let mut url = Url::parse(&format!("http://localhost/media.{extension}")).unwrap();
+        url.query_pairs_mut()
+            .append_pair("path", path.to_str().unwrap());
+        let uri = format!("{}?{}", url.path(), url.query().unwrap());
+        let mut builder = Request::builder().uri(uri);
+        if let Some(range) = range {
+            builder = builder.header(RANGE, range);
+        }
+        respond(&builder.body(Vec::new()).unwrap())
+    }
+
+    #[test]
+    fn serves_ranges_and_preserves_errors() {
+        let temp = tempfile::tempdir().unwrap();
+        let directory = temp.path().join("files");
+        std::fs::create_dir(&directory).unwrap();
+        let path = directory.join("video.mp4");
+        let bytes: Vec<u8> = (0..3 * 1024 * 1024)
+            .map(|i| ((i * 31 + i / 257) % 256) as u8)
+            .collect();
+        std::fs::write(&path, &bytes).unwrap();
+        let size = bytes.len();
+
+        let full = request(&path, "mp4", None);
+        assert_eq!(full.status(), StatusCode::OK);
+        assert_eq!(full.headers()[ACCEPT_RANGES], "bytes");
+        assert_eq!(full.body(), &bytes);
+        assert_eq!(
+            full.headers()[ACCESS_CONTROL_EXPOSE_HEADERS],
+            "Content-Range, Accept-Ranges, Content-Length"
+        );
+
+        for (header, start, end) in [
+            ("bytes=0-1".to_owned(), 0, 1),
+            ("bytes=10-".to_owned(), 10, 10 + MAX_RANGE_LEN as usize - 1),
+            ("bytes=-8".to_owned(), size - 8, size - 1),
+            (
+                format!("bytes={}-{}", size - 5, size + 100),
+                size - 5,
+                size - 1,
+            ),
+            (
+                format!("bytes=-{}", size * 2),
+                0,
+                MAX_RANGE_LEN as usize - 1,
+            ),
+        ] {
+            let response = request(&path, "mp4", Some(&header));
+            assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT, "{header}");
+            assert_eq!(
+                response.headers()[CONTENT_RANGE],
+                format!("bytes {start}-{end}/{size}")
+            );
+            assert_eq!(
+                response.headers()[CONTENT_LENGTH],
+                (end - start + 1).to_string()
+            );
+            assert_eq!(response.headers()[ACCEPT_RANGES], "bytes");
+            assert_eq!(response.headers()[CONTENT_TYPE], "video/mp4");
+            assert_eq!(
+                response.headers()[ACCESS_CONTROL_EXPOSE_HEADERS],
+                "Content-Range, Accept-Ranges, Content-Length"
+            );
+            assert_eq!(response.body(), &bytes[start..=end]);
+        }
+        for header in [
+            format!("bytes={size}-"),
+            format!("bytes={}-", size + 1),
+            "bytes=-0".to_owned(),
+        ] {
+            let response = request(&path, "mp4", Some(&header));
+            assert_eq!(response.status(), StatusCode::RANGE_NOT_SATISFIABLE);
+            assert_eq!(response.headers()[CONTENT_RANGE], format!("bytes */{size}"));
+        }
+        for header in [
+            "bytes=abc",
+            "items=0-1",
+            "bytes=0-1,4-5",
+            "bytes=5-4",
+            "bytes=-",
+        ] {
+            let response = request(&path, "mp4", Some(header));
+            assert_eq!(response.status(), StatusCode::OK, "{header}");
+            assert_eq!(response.body(), &bytes);
+        }
+        assert_eq!(
+            request(&temp.path().join("video.mp4"), "mp4", None).status(),
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            request(&path, "unknown", None).status(),
+            StatusCode::BAD_REQUEST
+        );
+
+        std::fs::write(&path, []).unwrap();
+        let empty = request(&path, "mp4", Some("bytes=0-1"));
+        assert_eq!(empty.status(), StatusCode::RANGE_NOT_SATISFIABLE);
+        assert_eq!(empty.headers()[CONTENT_RANGE], "bytes */0");
+    }
 }
