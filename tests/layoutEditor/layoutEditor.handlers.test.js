@@ -1346,6 +1346,57 @@ describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {
 });
 
 describe("layoutEditor.handleFileExplorerAction", () => {
+  it.each([
+    [{ width: 800, height: 450 }, 800, 450],
+    [{ width: 800 }, 640, 360],
+  ])(
+    "creates a video with resource dimensions or the fallback",
+    async (size, width, height) => {
+      vi.useFakeTimers();
+      try {
+        const deps = createLayoutEditorDeps();
+        deps.store.selectVideosData = vi.fn(() => ({
+          items: { "video-one": { type: "video", name: "Video One", ...size } },
+          tree: [{ id: "video-one" }],
+        }));
+        deps.store.selectProjectResolution = vi.fn(() => ({
+          width: 1920,
+          height: 1080,
+        }));
+        deps.store.setSelectedItemId = vi.fn();
+        deps.store.setDetailPanelSelectedItemId = vi.fn();
+        deps.store.setRightPanelMode = vi.fn();
+        deps.refs.fileExplorer = { selectItem: vi.fn() };
+        deps.appService.showFormDialog = vi.fn(async () => ({
+          actionId: "submit",
+          values: { name: "Video One", videoId: "video-one" },
+        }));
+        await handleFileExplorerAction(deps, {
+          _event: {
+            detail: {
+              item: { value: { action: "new-child-item", type: "video" } },
+            },
+          },
+        });
+        expect(deps.projectService.createLayoutElement).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              type: "video",
+              videoId: "video-one",
+              width,
+              height,
+              loop: true,
+              volume: 100,
+              aspectRatioLock: width / height,
+            }),
+          }),
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("creates image elements at the top of the selected parent", async () => {
     vi.useFakeTimers();
     const createLayoutElement = vi.fn(async () => ({ valid: true }));

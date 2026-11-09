@@ -17,6 +17,8 @@ propsSchema:
       type: object
     particlesData:
       type: object
+    videosData:
+      type: object
     charactersData:
       type: object
     textStylesData:

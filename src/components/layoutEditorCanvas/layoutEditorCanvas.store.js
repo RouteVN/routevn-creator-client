@@ -14,6 +14,9 @@ export const createInitialState = () => ({
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
   warnedAssetFileIds: [],
+  timedOutVideoFileIds: [],
+  videoLoadingRequestId: undefined,
+  hasDrawnLayout: false,
   activeRenderRequestId: undefined,
   selectionOccurrencesById: {},
   selectionOccurrenceIdsByOwner: {},
@@ -32,6 +35,24 @@ export const createInitialState = () => ({
   canvasUnitsPerCssPixel: 1,
 });
 
+export const selectTimedOutVideoFileIds = ({ state }) =>
+  state.timedOutVideoFileIds;
+export const selectIsVideoLoading = ({ state }) =>
+  state.videoLoadingRequestId !== undefined;
+export const rememberTimedOutVideoFileIds = ({ state }, { fileIds }) => {
+  state.timedOutVideoFileIds = [
+    ...new Set([...state.timedOutVideoFileIds, ...fileIds]),
+  ];
+};
+export const setVideoLoading = ({ state }, { requestId, value }) => {
+  if (state.activeRenderRequestId !== requestId) return;
+  state.videoLoadingRequestId = value ? requestId : undefined;
+};
+export const selectHasDrawnLayout = ({ state }) => state.hasDrawnLayout;
+export const markLayoutDrawn = ({ state }) => {
+  state.hasDrawnLayout = true;
+};
+
 export const selectWarnedAssetFileIds = ({ state }) => state.warnedAssetFileIds;
 export const markAssetWarningsShown = ({ state }, { fileIds }) => {
   state.warnedAssetFileIds = [
@@ -47,6 +68,7 @@ export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
   state.isDragging = true;
   state.dragMode = dragMode;
   state.activeRenderRequestId = undefined;
+  state.videoLoadingRequestId = undefined;
   // Pointer deltas stay relative to this snapshot for the entire gesture.
   state.dragRenderState = {
     baseElements: state.canvasBaseElements,
@@ -126,6 +148,7 @@ export const clearPendingUpdatedItem = ({ state }, _payload = {}) => {
 
 export const setActiveRenderRequestId = ({ state }, { requestId } = {}) => {
   state.activeRenderRequestId = requestId;
+  state.videoLoadingRequestId = undefined;
 };
 
 export const setSelectionOccurrences = (
@@ -336,13 +359,20 @@ export const selectDragRenderState = ({ state }) => {
   return state.dragRenderState;
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
   const resolution = requireProjectResolution(
     props.resolution ?? DEFAULT_PROJECT_RESOLUTION,
     "Layout editor canvas resolution",
   );
 
   return {
+    // Until the layout is first drawn the canvas waits for all its assets;
+    // after that only a video that is still loading covers it.
+    isCanvasLoading:
+      !state.hasDrawnLayout || state.videoLoadingRequestId !== undefined,
+    canvasLoadingLabel: state.hasDrawnLayout
+      ? i18n.layoutEditorPage.loadingVideoLabel
+      : i18n.layoutEditorPage.loadingAssetsLabel,
     canvasAspectRatio: formatProjectResolutionAspectRatio(resolution),
     canvasCursor:
       state.isDragging && state.dragMode === "rotate"

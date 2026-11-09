@@ -76,6 +76,16 @@ const CREATE_TEMPLATES = {
     width: 0,
     height: 0,
   }),
+  video: () => ({
+    type: "video",
+    name: "Video",
+    ...BASE_TRANSFORM,
+    aspectRatioLock: 1,
+    width: 0,
+    height: 0,
+    loop: true,
+    volume: 100,
+  }),
   particle: () => ({
     type: "particle",
     name: "Particle",
@@ -508,6 +518,7 @@ const TYPE_FAMILIES = {
   "fragment-ref": "fragment",
   sprite: "sprite",
   particle: "particle",
+  video: "video",
   "spritesheet-animation": "spritesheetAnimation",
   "sprite-ref-save-load-slot-image": "sprite",
   text: "text",
@@ -530,6 +541,7 @@ const ICONS_BY_FAMILY = {
   fragment: "fragment",
   sprite: "sprite",
   particle: "particles",
+  video: "video",
   spritesheetAnimation: "spritesheets",
   text: "text",
   input: "input",
@@ -557,6 +569,7 @@ const DEFAULT_CAPABILITIES = {
   supportsSpriteBlur: false,
   supportsSpritesheetAnimation: false,
   supportsParticleSelection: false,
+  supportsVideoSelection: false,
   supportsSliderImages: false,
   supportsSliderValues: false,
   supportsDateFormat: false,
@@ -581,6 +594,11 @@ const FAMILY_CAPABILITIES = {
     supportsAnchor: true,
     supportsSoundSelection: true,
     supportsSpriteImages: true,
+    supportsActions: true,
+  },
+  video: {
+    supportsAnchor: true,
+    supportsVideoSelection: true,
     supportsActions: true,
   },
   particle: {
@@ -678,6 +696,13 @@ const TYPE_RULES = {
         nextItem,
         imagesData,
       });
+    },
+  },
+  video: {
+    normalizeFieldValue: ({ name, value }) => {
+      if (name === "videoId" && (value === null || value === ""))
+        return undefined;
+      return value;
     },
   },
   particle: {
@@ -814,6 +839,7 @@ const PANEL_FEATURES_BY_TYPE = {
   "container-ref-confirm-dialog-cancel": [...DEFAULT_PANEL_FEATURES, "actions"],
   sprite: [...DEFAULT_PANEL_FEATURES, "images", "actions"],
   particle: [...DEFAULT_PANEL_FEATURES, "particle", "actions"],
+  video: [...DEFAULT_PANEL_FEATURES, "video", "actions"],
   "spritesheet-animation": [
     ...DEFAULT_PANEL_FEATURES,
     "spritesheet",

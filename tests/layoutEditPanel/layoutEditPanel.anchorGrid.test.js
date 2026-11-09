@@ -91,6 +91,7 @@ describe("layoutEditPanel anchor grid", () => {
     "fragment-ref",
     "sprite",
     "particle",
+    "video",
     "spritesheet-animation",
     "input",
   ])("uses the nine-cell grid for %s anchors", (itemType) => {

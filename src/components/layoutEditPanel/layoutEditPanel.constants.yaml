@@ -1,3 +1,15 @@
+volumePopoverForm: &volumePopoverForm
+  fields:
+    - name: value
+      type: input-number
+      min: 0
+      max: 100
+  actions:
+    buttons:
+      - id: submit
+        variant: pr
+        label: Submit
+
 numberPopoverForm: &numberPopoverForm
   fields:
     - name: value
@@ -366,6 +378,31 @@ layoutSections:
         name: spritesheetSelection
         value: "${spritesheetSelectionValue}"
         options: "${spritesheetSelectionItems}"
+  - "$when": "supportsVideoSelection"
+    id: video
+    label: Video
+    items:
+      - type: select
+        stacked: true
+        label: Video
+        name: videoId
+        value: "${values.videoId}"
+        options: "${videoSelectionItems}"
+      - type: segmented-control
+        stacked: true
+        label: Loop
+        name: loop
+        value: "${values.loop}"
+        options: "${videoLoopOptions}"
+      - type: group
+        stacked: true
+        halfWidth: true
+        fields:
+          - type: clickable-value
+            label: Volume
+            name: volume
+            value: "${values.volume}"
+            popoverForm: *volumePopoverForm
   - "$when": "supportsParticleSelection"
     id: particle
     label: Particle

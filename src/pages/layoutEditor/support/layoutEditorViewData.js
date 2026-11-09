@@ -45,6 +45,7 @@ export const CREATE_TYPE_LABEL_KEYS = Object.freeze({
   sprite: "imageMenuItem",
   "spritesheet-animation": "spritesheetAnimationMenuItem",
   particle: "particleMenuItem",
+  video: "videoMenuItem",
   text: "textMenuItem",
   slider: "sliderMenuItem",
   input: "inputMenuItem",
