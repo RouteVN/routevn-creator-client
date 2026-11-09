@@ -2528,6 +2528,8 @@ commandLinePage:
   "Operator": "Operatore"
   "One Of": "Uno tra"
   "Optional": "Facoltativo"
+  "Particle": "Effetto particellare"
+  "Particles": "Particelle"
   "Persist Speaker": "Mantieni chi parla"
   "Persist Sprite": "Mantieni sprite"
   persistSpriteDescription: "Mostra questo sprite anche nelle righe di dialogo successive."

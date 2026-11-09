@@ -2528,6 +2528,8 @@ commandLinePage:
   "Operator": "Opérateur"
   "One Of": "Parmi"
   "Optional": "Facultatif"
+  "Particle": "Particules"
+  "Particles": "Particules"
   "Persist Speaker": "Conserver le locuteur"
   "Persist Sprite": "Conserver le sprite"
   persistSpriteDescription: "Affiche ce sprite sur les lignes de dialogue suivantes."

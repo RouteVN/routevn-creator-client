@@ -203,6 +203,11 @@ const buildDialogueSpritePreview = ({
 };
 
 const resolveVisualPreviewFileId = ({ repositoryState, resourceId }) => {
+  const particle = repositoryState?.particles?.items?.[resourceId];
+  if (particle) {
+    return particle.thumbnailFileId;
+  }
+
   return resolvePreviewResourceFileId({ repositoryState, resourceId });
 };
 

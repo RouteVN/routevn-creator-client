@@ -59,6 +59,7 @@ const RESOURCE_TYPES = [
   { type: "spritesheet", label: "Spritesheets" },
   { type: "video", label: "Videos" },
   { type: "layout", label: "Layouts" },
+  { type: "particle", label: "Particles" },
 ];
 
 const tabs = RESOURCE_TYPES.map(({ type, label }) => ({
@@ -621,6 +622,7 @@ const selectResourceCollection = (state, resourceType) => {
     spritesheet: state.spritesheets,
     video: state.videos,
     layout: state.layouts,
+    particle: state.particles,
   };
 
   return collections[resourceType];
@@ -751,14 +753,15 @@ export const createInitialState = () => ({
   spritesheets: createEmptyCollection(),
   videos: createEmptyCollection(),
   layouts: createEmptyCollection(),
+  particles: createEmptyCollection(),
   transforms: createEmptyCollection(),
   animations: createEmptyCollection(),
   /**
    * Array of raw visual objects with the following structure:
    * {
    *   id: string,              // Unique visual ID
-   *   resourceId: string,      // Image/spritesheet/video/layout resource ID
-   *   resourceType: string,    // image/spritesheet/video/layout
+   *   resourceId: string,      // Image/spritesheet/video/layout/particle resource ID
+   *   resourceType: string,    // image/spritesheet/video/layout/particle
    *   animationName: string,   // Required for spritesheet resources
    *   transformId: string,     // Transform ID
    *   layer: number,           // Required visual render layer
@@ -829,6 +832,12 @@ export const setVideos = ({ state }, { videos } = {}) => {
 export const setLayouts = ({ state }, { layouts } = {}) => {
   state.layouts = normalizeResourceCollection(layouts, {
     defaultType: "layout",
+  });
+};
+
+export const setParticles = ({ state }, { particles } = {}) => {
+  state.particles = normalizeResourceCollection(particles, {
+    defaultType: "particle",
   });
 };
 
@@ -1612,7 +1621,9 @@ export const selectViewData = ({ state, i18n }) => {
             ? "Video"
             : resourceType === "spritesheet"
               ? "Spritesheet"
-              : "Layout",
+              : resourceType === "particle"
+                ? "Particle"
+                : "Layout",
         copy,
       ),
       previewFileId: child.thumbnailFileId || child.fileId,

@@ -2528,6 +2528,8 @@ commandLinePage:
   "Operator": "ตัวดำเนินการ"
   "One Of": "เป็นหนึ่งใน"
   "Optional": "ไม่บังคับ"
+  "Particle": "ฝุ่นละออง"
+  "Particles": "ฝุ่นละออง"
   "Persist Speaker": "คงผู้พูดไว้"
   "Persist Sprite": "คงสไปรต์ไว้"
   persistSpriteDescription: "แสดงสไปรต์นี้ต่อในบรรทัดบทสนทนาถัด ๆ ไป"
