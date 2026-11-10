@@ -218,7 +218,7 @@ source snapshot so the shared `_site` output is not replaced underneath watch:
 ```bash
 bun run build:ios
 bun run ios:rust
-release_dir=".artifacts/ios-release/1.20.0-18"
+release_dir=".artifacts/ios-release/1.21.0-19"
 mkdir -p "$release_dir"
 xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
   -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
