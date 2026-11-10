@@ -1,6 +1,10 @@
 import { sanitizeArtifactFileName } from "./artifactFileName.js";
 import { requireProjectResolution } from "./projectResolution.js";
 
+// Android APK export is not released yet. Until it is, the Versions page hides
+// its export button and Platform Details hides the Android platform.
+export const ANDROID_EXPORT_RELEASED = false;
+
 export const isValidAndroidBackgroundColor = (value) =>
   typeof value === "string" &&
   value.length === 7 &&

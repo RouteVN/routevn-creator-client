@@ -1,3 +1,4 @@
+import { ANDROID_EXPORT_RELEASED } from "../../internal/androidExport.js";
 import { formatDate } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
@@ -546,7 +547,9 @@ export const selectViewData = ({ state, i18n }) => {
     androidUnsignedApkNotice: copy.androidUnsignedApkNotice,
     exportAndroidApkButton: copy.exportAndroidApkButton,
     canExportAndroidApk:
-      state.platform !== "web" && state.androidExportAvailability.available,
+      ANDROID_EXPORT_RELEASED &&
+      state.platform !== "web" &&
+      state.androidExportAvailability.available,
     showMacosExportForm:
       state.exportConfirmation.exportType === "macos-application",
     macosExportForm: createMacosExportForm(copy),

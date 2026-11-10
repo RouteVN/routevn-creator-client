@@ -1,3 +1,4 @@
+import { ANDROID_EXPORT_RELEASED } from "../../internal/androidExport.js";
 import {
   createPlatformEditForm,
   PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
@@ -8,11 +9,17 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
-const PLATFORM_IDS = ["web", "windows", "macos", "android"];
+// Android stays out of the tabs and the Add menu until its export ships.
+const PLATFORM_IDS = ANDROID_EXPORT_RELEASED
+  ? ["web", "windows", "macos", "android"]
+  : ["web", "windows", "macos"];
+const MOBILE_PLATFORM_IDS = ANDROID_EXPORT_RELEASED
+  ? ["web", "android"]
+  : ["web"];
 
 const getAvailablePlatformIds = (state) =>
   state.platform === "android" || state.platform === "ios"
-    ? ["web", "android"]
+    ? MOBILE_PLATFORM_IDS
     : PLATFORM_IDS;
 
 const createPlatformApplicationInfo = (platform) => {

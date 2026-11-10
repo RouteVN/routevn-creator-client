@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   closePlatformEditDialog,
   createInitialState,
@@ -14,6 +14,13 @@ import {
   setUiConfig,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
 import { EN_I18N } from "../support/i18n.js";
+
+// These tests cover Android export itself, which ships later; the
+// unreleased state is covered in tests/platformDetails/androidExportUnreleased.test.js.
+vi.mock("../../src/internal/androidExport.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ANDROID_EXPORT_RELEASED: true,
+}));
 
 describe("platformDetails.store", () => {
   it("centers the content in the content column width in tablet landscape", () => {

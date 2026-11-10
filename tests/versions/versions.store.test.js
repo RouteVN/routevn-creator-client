@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
   closeExportConfirmation,
@@ -16,6 +16,13 @@ import {
   setWindowsExportAvailability,
 } from "../../src/pages/versions/versions.store.js";
 import { EN_I18N } from "../support/i18n.js";
+
+// These tests cover Android export itself, which ships later; the
+// unreleased state is covered in tests/platformDetails/androidExportUnreleased.test.js.
+vi.mock("../../src/internal/androidExport.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ANDROID_EXPORT_RELEASED: true,
+}));
 
 const version = {
   id: "version-1",

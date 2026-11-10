@@ -1,9 +1,16 @@
 import { JSDOM } from "jsdom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as platformStore from "../../src/pages/platformDetails/platformDetails.store.js";
 import * as versionsStore from "../../src/pages/versions/versions.store.js";
 import { renderViewYaml } from "../support/renderView.js";
 import { EN_I18N } from "../support/i18n.js";
+
+// These tests cover Android export itself, which ships later; the
+// unreleased state is covered in tests/platformDetails/androidExportUnreleased.test.js.
+vi.mock("../../src/internal/androidExport.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ANDROID_EXPORT_RELEASED: true,
+}));
 
 const applicationInfo = {
   applicationName: "Project One",
