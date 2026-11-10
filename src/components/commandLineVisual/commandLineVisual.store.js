@@ -1572,7 +1572,6 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
       ...visual,
       resource,
       resourceType,
-      previewBorderWidth: resourceType === "image" ? "xs" : "none",
       displayName:
         resource?.resourceType === "spritesheet" && visual.animationName
           ? `${resourceName} / ${visual.animationName}`
@@ -1615,7 +1614,6 @@ export const selectViewData = ({ state, i18n }) => {
       ...child,
       resourceType,
       previewFileId: child.thumbnailFileId || child.fileId,
-      itemBorderWidth: resourceType === "image" ? "xs" : "none",
       itemBorderColor: isSelected ? "pr" : "bo",
       itemHoverBorderColor: isSelected ? "pr" : "ac",
       itemBackgroundColor: isSelected ? "ac" : "bg",
