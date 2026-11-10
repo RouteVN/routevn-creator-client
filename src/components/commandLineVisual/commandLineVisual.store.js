@@ -1617,7 +1617,6 @@ export const selectViewData = ({ state, i18n }) => {
       itemBorderColor: isSelected ? "pr" : "bo",
       itemHoverBorderColor: isSelected ? "pr" : "ac",
       itemBackgroundColor: isSelected ? "ac" : "bg",
-      itemHoverBackgroundColor: isSelected ? "ac" : "mu",
     };
   };
   const buildResourceGroups = ({ collection, resourceType, childFilter }) => {

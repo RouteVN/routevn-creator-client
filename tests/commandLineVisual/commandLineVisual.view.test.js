@@ -22,6 +22,22 @@ describe("commandLineVisual view", () => {
     );
   });
 
+  it("changes only the border colour of visual cards and selector items on hover", () => {
+    const cardLines = readView()
+      .split("\n")
+      .filter(
+        (line) =>
+          line.includes("rtgl-view#visualImage") ||
+          line.includes("rtgl-view#resourceItem"),
+      );
+
+    expect(cardLines).toHaveLength(2);
+    for (const line of cardLines) {
+      expect(line).toContain("h-bc=");
+      expect(line).not.toContain("h-bgc=");
+    }
+  });
+
   it("uses the same accessible transform summary card as Background", () => {
     const view = readView();
 
