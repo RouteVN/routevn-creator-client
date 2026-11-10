@@ -1,3 +1,4 @@
+import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
 import {
   assertSupportedProjectState,
   createProjectRepository,
@@ -140,6 +141,7 @@ export const createProjectRepositoryService = ({
     web: "platformDetails.web",
     windows: "platformDetails.windows",
     macos: "platformDetails.macos",
+    android: "platformDetails.android",
   };
   const LEGACY_PLATFORM_DETAILS_KEYS = {
     web: "releaseInfo.web",
@@ -271,6 +273,18 @@ export const createProjectRepositoryService = ({
       platformDetails.iconFileId = sourceInfo?.iconFileId ?? null;
     }
 
+    if (platform === "android") {
+      platformDetails.iconFileId = sourceInfo?.iconFileId ?? undefined;
+      platformDetails.adaptiveIconFileId = sourceInfo?.adaptiveIconFileId;
+      platformDetails.splashIconFileId = sourceInfo?.splashIconFileId;
+      platformDetails.iconBackgroundColor = normalizeAndroidBackgroundColor(
+        sourceInfo?.iconBackgroundColor ?? "#FFFFFF",
+      );
+      platformDetails.splashBackgroundColor = normalizeAndroidBackgroundColor(
+        sourceInfo?.splashBackgroundColor ?? "#000000",
+      );
+    }
+
     if (platform === "windows") {
       platformDetails.publisher = "";
       platformDetails.description = "";
@@ -388,8 +402,12 @@ export const createProjectRepositoryService = ({
       if (!Object.hasOwn(patch, key)) {
         continue;
       }
-      nextPlatformDetails[key] =
-        key === "iconFileId" ? (patch[key] ?? null) : (patch[key] ?? "");
+      if (key === "adaptiveIconFileId" || key === "splashIconFileId") {
+        nextPlatformDetails[key] = patch[key];
+      } else {
+        nextPlatformDetails[key] =
+          key === "iconFileId" ? (patch[key] ?? null) : (patch[key] ?? "");
+      }
     }
 
     return normalizePlatformDetails(platform, nextPlatformDetails);
@@ -919,7 +937,10 @@ export const createProjectRepositoryService = ({
     let storedPlatformDetails = await store.app.get(key);
     let shouldPersist = false;
 
-    if (!hasStoredPlatformDetails(storedPlatformDetails)) {
+    if (
+      !hasStoredPlatformDetails(storedPlatformDetails) &&
+      LEGACY_PLATFORM_DETAILS_KEYS[platform]
+    ) {
       storedPlatformDetails = await store.app.get(
         LEGACY_PLATFORM_DETAILS_KEYS[platform],
       );

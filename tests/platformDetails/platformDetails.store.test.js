@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   closePlatformEditDialog,
   createInitialState,
@@ -14,6 +14,13 @@ import {
   setUiConfig,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
 import { EN_I18N } from "../support/i18n.js";
+
+// These tests cover Android export itself, which ships later; the
+// unreleased state is covered in tests/platformDetails/androidExportUnreleased.test.js.
+vi.mock("../../src/internal/androidExport.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ANDROID_EXPORT_RELEASED: true,
+}));
 
 describe("platformDetails.store", () => {
   it("centers the content in the content column width in tablet landscape", () => {
@@ -59,12 +66,13 @@ describe("platformDetails.store", () => {
         { label: "Web", type: "item", value: "web" },
         { label: "Windows", type: "item", value: "windows" },
         { label: "macOS", type: "item", value: "macos" },
+        { label: "Android", type: "item", value: "android" },
       ],
     });
   });
 
   it.each(["android", "ios"])(
-    "offers only Web platform details in the %s app",
+    "offers Web and Android platform details in the %s app",
     (platform) => {
       const state = createInitialState();
       setPlatform({ state }, { platform });
@@ -74,7 +82,10 @@ describe("platformDetails.store", () => {
       expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
         canAddPlatform: true,
         addPlatformMenu: {
-          items: [{ label: "Web", type: "item", value: "web" }],
+          items: [
+            { label: "Web", type: "item", value: "web" },
+            { label: "Android", type: "item", value: "android" },
+          ],
         },
       });
 
@@ -90,7 +101,7 @@ describe("platformDetails.store", () => {
       );
 
       expect(selectViewData({ state, i18n: EN_I18N }).canAddPlatform).toBe(
-        false,
+        true,
       );
     },
   );
@@ -303,6 +314,7 @@ describe("platformDetails.store", () => {
     expect(viewData.addPlatformMenu.items).toEqual([
       { label: "Windows", type: "item", value: "windows" },
       { label: "macOS", type: "item", value: "macos" },
+      { label: "Android", type: "item", value: "android" },
     ]);
     expect(viewData.canAddPlatform).toBe(true);
     expect(viewData.platformEditForm.fields).toContainEqual(
@@ -342,3 +354,54 @@ describe("platformDetails.store", () => {
     ]);
   });
 });
+
+it.each(["web", "tauri", "android", "ios"])(
+  "offers Android details on %s and projects colors and previews",
+  (platform) => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform });
+    expect(selectCanAddPlatform({ state }, { platform: "android" })).toBe(true);
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "android",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.example.project_one",
+          iconFileId: "icon-1",
+          iconBackgroundColor: "#AABBCC",
+          splashBackgroundColor: "#123456",
+        },
+      },
+    );
+    setSelectedPlatform({ state }, { platform: "android" });
+    openPlatformEditDialog({ state });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.platformTabs).toEqual([{ id: "android", label: "Android" }]);
+    expect(view.platformEditDefaultValues).toMatchObject({
+      iconBackgroundColor: "#AABBCC",
+      splashBackgroundColor: "#123456",
+    });
+    expect(view.platformDetailFields).toContainEqual({
+      type: "text",
+      label: EN_I18N.platformDetailsPage.androidIconBackgroundColorLabel,
+      value: "#AABBCC",
+    });
+    expect(view.platformDetailFields).toContainEqual({
+      type: "text",
+      label: EN_I18N.platformDetailsPage.androidSplashBackgroundColorLabel,
+      value: "#123456",
+    });
+    expect(view.showAndroidPreviews).toBe(true);
+    expect(view.androidIconBackgroundStyle).toBe("background-color: #AABBCC;");
+    expect(view.androidSplashBackgroundStyle).toBe(
+      "background-color: #123456;",
+    );
+    expect(
+      view.platformEditForm.fields
+        .filter((field) => field.type === "color-picker")
+        .map((field) => field.name),
+    ).toEqual(["iconBackgroundColor", "splashBackgroundColor"]);
+    expect(view.platformEditIconOutputSize).toBe(512);
+  },
+);

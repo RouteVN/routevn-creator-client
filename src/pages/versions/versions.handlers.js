@@ -1,3 +1,5 @@
+import { withErrorDetails } from "../../internal/errorDetails.js";
+import { createAndroidApkFileName } from "../../internal/androidExport.js";
 import { generateId } from "../../internal/id.js";
 import { formatElapsedSeconds } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
@@ -11,8 +13,10 @@ import { createBundleInstructions } from "../../deps/services/shared/projectExpo
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import {
+  createAndroidNativeVersion,
+  isValidAndroidVersionCode,
   createMacosNativeVersion,
-  isValidMacosApplicationVersion,
+  isValidNativeApplicationVersion,
   isValidMacosBuildNumber,
 } from "../../internal/nativeApplicationVersion.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
@@ -107,6 +111,17 @@ const refreshMacosExportAvailability = async (deps) => {
         hostSupported: false,
       },
     });
+  }
+};
+
+const refreshAndroidExportAvailability = async (deps) => {
+  const { store, projectService } = deps;
+  try {
+    store.setAndroidExportAvailability({
+      availability: await projectService.getAndroidExportAvailability(),
+    });
+  } catch {
+    store.setAndroidExportAvailability({ availability: { available: false } });
   }
 };
 
@@ -340,6 +355,14 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
       "The macOS bundle identifier is invalid. Update it in Platform Details before exporting."
     );
   }
+  if (code === "android-icon-required")
+    return copy.platformDetailsAndroidIconRequired;
+  if (code === "android-identifier-required")
+    return copy.platformDetailsAndroidIdentifierRequired;
+  if (code === "android-identifier-invalid")
+    return copy.platformDetailsAndroidIdentifierInvalid;
+  if (code === "android-color-invalid")
+    return copy.platformDetailsAndroidColorInvalid;
   return copy.platformDetailsLoadFailed ?? "Platform details are invalid.";
 };
 
@@ -577,6 +600,7 @@ export const handleAfterMount = async (deps) => {
   await Promise.all([
     refreshWindowsExportAvailability(deps),
     refreshMacosExportAvailability(deps),
+    refreshAndroidExportAvailability(deps),
   ]);
   await refreshVersionsData(deps);
 };
@@ -820,12 +844,25 @@ const startExportConfirmation = async (
   });
   render();
 
+  if (exportType === "android-apk") {
+    const { androidExportForm } = refs;
+    androidExportForm.reset();
+    androidExportForm.setValues({
+      values: {
+        version: isValidNativeApplicationVersion(version.name)
+          ? version.name
+          : "",
+        buildNumber: "",
+      },
+    });
+  }
+
   if (exportType === "macos-application") {
     const { macosExportForm } = refs;
     macosExportForm.reset();
     macosExportForm.setValues({
       values: {
-        version: isValidMacosApplicationVersion(version?.name)
+        version: isValidNativeApplicationVersion(version?.name)
           ? version.name
           : "",
         buildNumber: "",
@@ -875,6 +912,12 @@ export const handleDownloadWindowsInstallerClick = (deps, payload) =>
   prepareExportConfirmation(deps, payload, {
     exportType: "windows-installer",
     platform: "windows",
+  });
+
+export const handleDownloadAndroidApkClick = (deps, payload) =>
+  prepareExportConfirmation(deps, payload, {
+    exportType: "android-apk",
+    platform: "android",
   });
 
 export const handleDownloadMacosApplicationClick = (deps, payload) =>
@@ -1651,10 +1694,190 @@ const runMacosApplicationExport = async (deps, confirmation) => {
   }
 };
 
+const runAndroidApkExport = async (deps, confirmation) => {
+  const { store, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  const { versionId, applicationInfo, nativeVersion } = confirmation;
+  const version = store.selectVersion(versionId);
+  if (!version) {
+    appService.showAlert({
+      message: copy.versionNotFound,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  let outputPath;
+  try {
+    const availability = await projectService.getAndroidExportAvailability();
+    if (!availability.available) {
+      appService.showAlert({
+        message: copy.androidExportUnavailable,
+        title: copy.errorTitle,
+      });
+      return;
+    }
+    outputPath = await projectService.promptAndroidApkPath(
+      {
+        defaultFileName: createAndroidApkFileName(
+          applicationInfo.applicationName,
+          nativeVersion.versionName,
+        ),
+      },
+      {
+        title: copy.saveAndroidApkDialogTitle,
+        fileTypeName: copy.androidApkFileTypeName,
+      },
+    );
+  } catch (error) {
+    appService.showAlert({
+      message: withErrorDetails(
+        copy.androidExportFailed,
+        error,
+        copy.errorDetailsLabel,
+      ),
+      title: copy.errorTitle,
+    });
+    return;
+  }
+  if (!outputPath) return;
+
+  const progressDialog = appService.showProgressDialog({
+    message: copy.androidApkInProgressMessage,
+    title: copy.androidApkInProgressTitle,
+    status: copy.bundlePreparingProjectStatus,
+    progress: {},
+  });
+  let result;
+  let exportError;
+  try {
+    await progressDialog.waitForPaint();
+    const { transformedData, fileEntries } = await createVersionExportData({
+      appService,
+      applicationInfo,
+      platform: "android",
+      projectService,
+      version,
+    });
+    result = await projectService.createAndroidApkToPath(
+      transformedData,
+      fileEntries,
+      outputPath,
+      {
+        applicationName: applicationInfo.applicationName,
+        applicationId: applicationInfo.applicationIdentifier,
+        versionName: nativeVersion.versionName,
+        versionCode: nativeVersion.versionCode,
+        iconFileId: applicationInfo.iconFileId,
+        adaptiveIconFileId: applicationInfo.adaptiveIconFileId,
+        splashIconFileId: applicationInfo.splashIconFileId,
+        iconBackgroundColor: applicationInfo.iconBackgroundColor,
+        splashBackgroundColor: applicationInfo.splashBackgroundColor,
+      },
+      {
+        onProgress: (progress) =>
+          progressDialog.update(
+            createAndroidApkProgressView({
+              copy,
+              dateTime: i18n.dateTime,
+              progress,
+            }),
+          ),
+      },
+    );
+  } catch (error) {
+    exportError = error;
+  } finally {
+    progressDialog.close();
+  }
+  if (exportError !== undefined) {
+    if (appService.getPlatform() === "android") {
+      try {
+        await appService.discardPendingSaveDocument(outputPath);
+      } catch (cleanupError) {
+        exportError = new Error(
+          `${exportError?.message ?? exportError} ${cleanupError?.message ?? cleanupError}`,
+          { cause: exportError },
+        );
+      }
+    }
+    appService.showAlert({
+      message: withErrorDetails(
+        copy.androidExportFailed,
+        exportError,
+        copy.errorDetailsLabel,
+      ),
+      title: copy.errorTitle,
+    });
+    return;
+  }
+  appService.showAlert({
+    message: formatI18nCopy(copy.androidApkExportCompletedMessage, {
+      path: appService.getFileDisplayPath(result?.outputPath ?? outputPath),
+    }),
+    title: copy.exportCompletedTitle,
+  });
+};
+
+const createAndroidApkProgressView = ({ copy, dateTime, progress }) => {
+  const statuses = {
+    prepareApk: copy.androidPreparingApkStatus,
+    encryptPayload: copy.androidEncryptingPayloadStatus,
+    rewriteManifest: copy.androidPreparingApkStatus,
+    renderIcons: copy.androidPreparingApkStatus,
+    writeApk: copy.androidWritingApkStatus,
+    saveApk: copy.androidWritingApkStatus,
+    verifyApk: copy.androidVerifyingApkStatus,
+    finalizeApk: copy.androidFinalizingApkStatus,
+    finalize: copy.androidFinalizingApkStatus,
+  };
+  const status = statuses[progress.phase];
+  if (!status) return createBundleProgressView({ copy, dateTime, progress });
+  const elapsed = formatBundleElapsedTime(progress.elapsedMs, dateTime);
+  return {
+    status: elapsed
+      ? formatI18nCopy(copy.bundleElapsedStatus, { status, elapsed })
+      : status,
+    progress:
+      progress.total > 0
+        ? { current: progress.current, total: progress.total }
+        : {},
+  };
+};
+
+export const handleAndroidExportFormAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") return;
+  const copy = selectVersionsPageCopy(i18n);
+  const version = values.version.trim();
+  const buildNumber = values.buildNumber.trim();
+  let message;
+  if (!version) message = copy.androidExportVersionRequired;
+  else if (!isValidNativeApplicationVersion(version))
+    message = copy.androidExportVersionInvalid;
+  else if (!buildNumber) message = copy.androidExportBuildNumberRequired;
+  else if (!isValidAndroidVersionCode(buildNumber))
+    message = copy.androidExportBuildNumberInvalid;
+  if (message) {
+    appService.showAlert({ message, title: copy.warningTitle });
+    return;
+  }
+  const confirmation = store.selectExportConfirmation();
+  if (confirmation.exportType !== "android-apk") return;
+  const nativeVersion = createAndroidNativeVersion(version, buildNumber);
+  store.closeExportConfirmation();
+  render();
+  await runAndroidApkExport(deps, { ...confirmation, nativeVersion });
+};
+
 export const handleExportConfirmationConfirm = async (deps) => {
   const { store, render } = deps;
   const confirmation = store.selectExportConfirmation();
-  if (confirmation.exportType === "macos-application") {
+  if (
+    confirmation.exportType === "macos-application" ||
+    confirmation.exportType === "android-apk"
+  ) {
     return;
   }
   store.closeExportConfirmation();
@@ -1689,7 +1912,7 @@ export const handleMacosExportFormAction = async (deps, payload) => {
     message =
       copy.macosExportVersionRequired ??
       "Version is required for macOS export.";
-  } else if (!isValidMacosApplicationVersion(version)) {
+  } else if (!isValidNativeApplicationVersion(version)) {
     message =
       copy.macosExportVersionInvalid ??
       "Version must contain three numeric components, for example 1.2.0.";

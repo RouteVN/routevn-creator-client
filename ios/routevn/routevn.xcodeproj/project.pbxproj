@@ -29,6 +29,8 @@
 		2A0000010000000000000028 /* CodedError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000027 /* CodedError.swift */; };
 		2A000001000000000000002A /* TransferProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000029 /* TransferProgress.swift */; };
 		2A000001000000000000002D /* RendererLossGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000002C /* RendererLossGuard.swift */; };
+		2A00000100000000000000D0 /* AndroidApkExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A00000100000000000000D2 /* AndroidApkExport.swift */; };
+		2A00000100000000000000D1 /* RouteVNExporterFFI.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A00000100000000000000D3 /* RouteVNExporterFFI.xcframework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +56,8 @@
 		2A0000010000000000000027 /* CodedError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodedError.swift; sourceTree = "<group>"; };
 		2A0000010000000000000029 /* TransferProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferProgress.swift; sourceTree = "<group>"; };
 		2A000001000000000000002C /* RendererLossGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererLossGuard.swift; sourceTree = "<group>"; };
+		2A00000100000000000000D2 /* AndroidApkExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidApkExport.swift; sourceTree = "<group>"; };
+		2A00000100000000000000D3 /* RouteVNExporterFFI.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = RouteVNExporterFFI.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +67,7 @@
 			files = (
 				2A000001000000000000000C /* Sentry in Frameworks */,
 				2A000001000000000000000E /* ZIPFoundation in Frameworks */,
+				2A00000100000000000000D1 /* RouteVNExporterFFI.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,6 +79,7 @@
 			children = (
 				2A0000010000000000000031 /* routevn */,
 				2A0000010000000000000032 /* Products */,
+				2A00000100000000000000D4 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -81,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				2A0000010000000000000011 /* RouteVNApp.swift */,
+				2A00000100000000000000D2 /* AndroidApkExport.swift */,
 				2A000001000000000000001C /* AppDeviceInfo.swift */,
 				2A000001000000000000001D /* NativeCrashReporting.swift */,
 				2A000001000000000000002B /* NativeDeviceIdReader.swift */,
@@ -111,6 +118,14 @@
 				2A0000010000000000000010 /* routevn.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2A00000100000000000000D4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2A00000100000000000000D3 /* RouteVNExporterFFI.xcframework */,
+			);
+			path = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -217,6 +232,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A0000010000000000000001 /* RouteVNApp.swift in Sources */,
+				2A00000100000000000000D0 /* AndroidApkExport.swift in Sources */,
 				2A000001000000000000000B /* AppDeviceInfo.swift in Sources */,
 				2A000001000000000000000D /* NativeCrashReporting.swift in Sources */,
 				2A000001000000000000000F /* NativeDeviceIdReader.swift in Sources */,

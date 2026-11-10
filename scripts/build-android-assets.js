@@ -47,4 +47,25 @@ try {
   );
 }
 
+// The Android player template lets the Creator export Android APKs on device.
+const playerTemplateDir = join(
+  rootDir,
+  "src-tauri",
+  "assets",
+  "player-templates",
+  "android",
+);
+await mkdir(join(assetsDir, "player-templates", "android"), {
+  recursive: true,
+});
+for (const fileName of [
+  "RouteVNPlayerTemplate.apk",
+  "RouteVNPlayerTemplate.json",
+]) {
+  await copyIfPresent(
+    join(playerTemplateDir, fileName),
+    join(assetsDir, "player-templates", "android", fileName),
+  );
+}
+
 console.log(`Android WebView assets copied to ${assetsDir}`);

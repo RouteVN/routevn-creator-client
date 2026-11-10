@@ -1,3 +1,4 @@
+import { ANDROID_EXPORT_RELEASED } from "../../internal/androidExport.js";
 import {
   createPlatformEditForm,
   PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
@@ -8,11 +9,17 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
-const PLATFORM_IDS = ["web", "windows", "macos"];
+// Android stays out of the tabs and the Add menu until its export ships.
+const PLATFORM_IDS = ANDROID_EXPORT_RELEASED
+  ? ["web", "windows", "macos", "android"]
+  : ["web", "windows", "macos"];
+const MOBILE_PLATFORM_IDS = ANDROID_EXPORT_RELEASED
+  ? ["web", "android"]
+  : ["web"];
 
 const getAvailablePlatformIds = (state) =>
   state.platform === "android" || state.platform === "ios"
-    ? ["web"]
+    ? MOBILE_PLATFORM_IDS
     : PLATFORM_IDS;
 
 const createPlatformApplicationInfo = (platform) => {
@@ -54,6 +61,7 @@ const getPlatformTitle = (platform, copy) => {
   if (platform === "macos") {
     return copy.macosPlatformDetailsTitle;
   }
+  if (platform === "android") return copy.androidPlatformDetailsTitle;
   return copy.webPlatformDetailsTitle;
 };
 
@@ -64,6 +72,7 @@ const getPlatformTabLabel = (platform, copy) => {
   if (platform === "macos") {
     return copy.macosTabLabel;
   }
+  if (platform === "android") return copy.androidTabLabel;
   return copy.webTabLabel;
 };
 
@@ -82,6 +91,21 @@ const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
       slot: "platform-application-icon",
       label: copy.iconLabel,
     });
+  }
+
+  if (platform === "android") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "android-adaptive-icon",
+        label: copy.androidAdaptiveIconLabel,
+      },
+      {
+        type: "slot",
+        slot: "android-splash-icon",
+        label: copy.androidSplashIconLabel,
+      },
+    );
   }
 
   fields.push({
@@ -114,11 +138,32 @@ const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
   //   );
   // }
 
+  if (platform === "android") {
+    fields.push(
+      {
+        type: "text",
+        label: copy.androidIconBackgroundColorLabel,
+        value: _applicationInfo.iconBackgroundColor,
+      },
+      {
+        type: "text",
+        label: copy.androidSplashBackgroundColorLabel,
+        value: _applicationInfo.splashBackgroundColor,
+      },
+      {
+        type: "slot",
+        slot: "android-previews",
+        label: copy.androidPreviewLabel,
+      },
+    );
+  }
   return fields;
 };
 
 export const createInitialState = () => ({
   platform: "web",
+  iconPreviewColor: "#FFFFFF",
+  splashPreviewColor: "#000000",
   platformApplicationInfo: {},
   selectedPlatform: undefined,
   isTouchMode: false,
@@ -135,6 +180,9 @@ export const createInitialState = () => ({
   isPlatformEditIconCropDialogOpen: false,
   platformEditDefaultValues: createPlatformEditDefaultValues(),
   platformEditIconFileId: undefined,
+  platformEditAdaptiveIconFileId: undefined,
+  platformEditSplashIconFileId: undefined,
+  platformEditIconCropTarget: "icon",
   platformEditIconCropFile: undefined,
 });
 
@@ -154,6 +202,22 @@ export const selectPlatformEditIconFileId = ({ state }) => {
   return state.platformEditIconFileId;
 };
 
+export const selectPlatformEditAdaptiveIconFileId = ({ state }) =>
+  state.platformEditAdaptiveIconFileId;
+
+export const selectPlatformEditSplashIconFileId = ({ state }) =>
+  state.platformEditSplashIconFileId;
+
+export const selectPlatformEditIconCropTarget = ({ state }) =>
+  state.platformEditIconCropTarget;
+export const setPlatformEditOptionalIconFileId = (
+  { state },
+  { target, fileId },
+) => {
+  if (target === "adaptive") state.platformEditAdaptiveIconFileId = fileId;
+  else state.platformEditSplashIconFileId = fileId;
+};
+
 export const selectPlatformDialogState = ({ state }) => {
   return {
     mode: state.platformDialogMode,
@@ -163,6 +227,11 @@ export const selectPlatformDialogState = ({ state }) => {
 
 export const selectIsPlatformEditIconCropDialogOpen = ({ state }) => {
   return state.isPlatformEditIconCropDialogOpen;
+};
+
+export const setPlatformEditBackgroundColor = ({ state }, { name, value }) => {
+  if (name === "iconBackgroundColor") state.iconPreviewColor = value;
+  if (name === "splashBackgroundColor") state.splashPreviewColor = value;
 };
 
 export const selectViewData = ({ state, i18n }) => {
@@ -207,6 +276,38 @@ export const selectViewData = ({ state, i18n }) => {
           copy,
         )
       : [],
+    adaptiveIconFileId: selectedPlatformInfo?.adaptiveIconFileId,
+    splashIconFileId: selectedPlatformInfo?.splashIconFileId,
+    platformEditAdaptiveIconFileId: state.platformEditAdaptiveIconFileId,
+    platformEditSplashIconFileId: state.platformEditSplashIconFileId,
+    showAndroidIcons: formPlatform === "android",
+    removeIconLabel: copy.removeIconButton,
+    usesAppIconLabel: copy.androidUsesAppIcon,
+    editIconBackgroundStyle: `background-color: ${state.platformEditAdaptiveIconFileId ? state.iconPreviewColor : "transparent"};`,
+    editSplashBackgroundStyle: `background-color: ${state.platformEditSplashIconFileId ? state.splashPreviewColor : "transparent"};`,
+    cropTitle: copy[`${state.platformEditIconCropTarget}CropTitle`],
+    cropDescription: copy[`${state.platformEditIconCropTarget}CropDescription`],
+    guideCircle:
+      state.platformEditIconCropTarget === "adaptive"
+        ? 66 / 72
+        : state.platformEditIconCropTarget === "splash"
+          ? 1
+          : undefined,
+    showAndroidPreviews: state.selectedPlatform === "android",
+    androidLauncherPreviewFileId:
+      selectedPlatformInfo?.adaptiveIconFileId ??
+      selectedPlatformInfo?.iconFileId,
+    androidLauncherPreviewSize: selectedPlatformInfo?.adaptiveIconFileId
+      ? 96
+      : 62,
+    androidSplashPreviewFileId:
+      selectedPlatformInfo?.splashIconFileId ??
+      selectedPlatformInfo?.iconFileId,
+    androidSplashPreviewSize: selectedPlatformInfo?.splashIconFileId ? 96 : 67,
+    androidLauncherPreviewLabel: copy.androidLauncherPreviewLabel,
+    androidSplashPreviewLabel: copy.androidSplashPreviewLabel,
+    androidIconBackgroundStyle: `background-color: ${selectedPlatformInfo?.iconBackgroundColor ?? "#FFFFFF"};`,
+    androidSplashBackgroundStyle: `background-color: ${selectedPlatformInfo?.splashBackgroundColor ?? "#000000"};`,
     platformApplicationIconFileId: selectedPlatformInfo?.iconFileId,
     platformApplicationIdentifier:
       selectedPlatformInfo?.applicationIdentifier ?? "",
@@ -219,7 +320,12 @@ export const selectViewData = ({ state, i18n }) => {
     platformDialogKey: `${formMode}-${formPlatform ?? "none"}`,
     platformEditIconFileId: state.platformEditIconFileId,
     platformEditIconCropFile: state.platformEditIconCropFile,
-    platformEditIconOutputSize: PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+    platformEditIconOutputSize:
+      state.platformEditIconCropTarget === "splash"
+        ? 768
+        : formPlatform === "android"
+          ? 512
+          : PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
     showPlatformApplicationIcon: state.selectedPlatform !== "web",
@@ -249,6 +355,15 @@ export const setPlatformApplicationInfo = (
   target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
   if (platform !== "web") {
     target.iconFileId = applicationInfo?.iconFileId ?? undefined;
+  }
+
+  if (platform === "android") {
+    target.adaptiveIconFileId = applicationInfo.adaptiveIconFileId;
+    target.splashIconFileId = applicationInfo.splashIconFileId;
+    target.iconBackgroundColor =
+      applicationInfo.iconBackgroundColor ?? "#FFFFFF";
+    target.splashBackgroundColor =
+      applicationInfo.splashBackgroundColor ?? "#000000";
   }
 
   // TODO: Restore optional Windows release metadata in the UI projection.
@@ -311,6 +426,16 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
+  if (platform === "android") {
+    state.platformEditDefaultValues.iconBackgroundColor =
+      applicationInfo.iconBackgroundColor ?? "#FFFFFF";
+    state.platformEditDefaultValues.splashBackgroundColor =
+      applicationInfo.splashBackgroundColor ?? "#000000";
+    state.iconPreviewColor =
+      state.platformEditDefaultValues.iconBackgroundColor;
+    state.splashPreviewColor =
+      state.platformEditDefaultValues.splashBackgroundColor;
+  }
   // TODO: Restore optional Windows release metadata in dialog defaults.
   // state.platformEditDefaultValues.description = "";
   // state.platformEditDefaultValues.publisher = "";
@@ -325,6 +450,8 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
   // }
   state.platformEditIconFileId =
     platform === "web" ? undefined : applicationInfo.iconFileId;
+  state.platformEditAdaptiveIconFileId = applicationInfo.adaptiveIconFileId;
+  state.platformEditSplashIconFileId = applicationInfo.splashIconFileId;
 };
 
 export const openPlatformCreateDialog = (
@@ -362,7 +489,11 @@ export const setPlatformEditIconFileId = ({ state }, { iconFileId } = {}) => {
   state.platformEditIconFileId = iconFileId;
 };
 
-export const openPlatformEditIconCropDialog = ({ state }, { file } = {}) => {
+export const openPlatformEditIconCropDialog = (
+  { state },
+  { file, target = "icon" } = {},
+) => {
+  state.platformEditIconCropTarget = target;
   state.isPlatformEditIconCropDialogOpen = true;
   state.platformEditIconCropFile = file;
 };

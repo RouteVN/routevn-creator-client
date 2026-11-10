@@ -213,6 +213,21 @@ Current keys:
     `releaseInfo.macos` is copied to the matching `platformDetails.*` key when
     first read; obsolete Web icon metadata is removed because Web export uses
     the project-owned icon
+- `platformDetails.android`
+  - independently customizable Android release metadata in the project `app` store
+  - fields: `applicationName`, `iconFileId`, `applicationIdentifier`,
+    `iconBackgroundColor`, `splashBackgroundColor`, optional `adaptiveIconFileId`,
+    `splashIconFileId`
+  - defaults copy the project name and icon, with a blank application identifier,
+    an opaque white icon background (`#FFFFFF`), and an opaque black splash
+    background (`#000000`); colors are normalized to uppercase `#RRGGBB`
+  - created explicitly from Platform Details or export setup; opening or cancelling
+    setup does not persist a record
+  - identifiers must follow Android package-name rules; the template and Creator
+    application identifiers are reserved
+  - Version and Build Number are required per-export inputs and are not persisted
+  - project DB import/export preserves the record on every host; no legacy
+    `releaseInfo.android` key is read because Android has no preview storage key
 - `creatorVersion`
   - stored project format version gate for compatibility checks
 - `versions`

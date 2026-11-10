@@ -12,6 +12,8 @@ const createDeps = ({ platform = "web", iconFileId } = {}) => ({
   store: {
     selectPlatform: vi.fn(() => platform),
     selectIconFileId: vi.fn(() => iconFileId),
+    selectAdaptiveIconFileId: vi.fn(() => "adaptive-1"),
+    selectSplashIconFileId: vi.fn(() => "splash-1"),
   },
 });
 
@@ -84,4 +86,30 @@ describe("platformDetailsCreateDialog handlers", () => {
     });
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
   });
+});
+
+it("creates Android details using normalized colors", async () => {
+  const deps = createDeps({ platform: "android", iconFileId: "icon-1" });
+  await handleFormAction(
+    deps,
+    createSubmitPayload({
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+      iconBackgroundColor: "#aabbcc",
+      splashBackgroundColor: "#112233",
+    }),
+  );
+  expect(deps.projectService.createCurrentPlatformDetails).toHaveBeenCalledWith(
+    "android",
+    {
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+      iconFileId: "icon-1",
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+      iconBackgroundColor: "#AABBCC",
+      splashBackgroundColor: "#112233",
+    },
+  );
+  expect(deps.dispatchEvent.mock.calls[0][0].detail.platform).toBe("android");
 });

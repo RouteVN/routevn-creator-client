@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
   handleDataChanged,
+  handleAndroidExportFormAction,
+  handleAfterMount,
+  handleDownloadAndroidApkClick,
   handleDownloadMacosApplicationClick,
   handleDownloadWindowsExecutableClick,
   handleDownloadWindowsInstallerClick,
@@ -1647,5 +1650,232 @@ describe("versions macOS export handlers", () => {
     expect(
       deps.projectService.createMacosApplicationToPath,
     ).not.toHaveBeenCalled();
+  });
+});
+
+const createAndroidDeps = () => {
+  const deps = createDeps({
+    repository: {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+    },
+    version: { id: "version-1", name: "1.2.3", actionIndex: 3 },
+  });
+  deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+    applicationName: "Project One",
+    applicationIdentifier: "com.example.project_one",
+    iconFileId: "icon-1",
+    adaptiveIconFileId: "adaptive-1",
+    splashIconFileId: "splash-1",
+    iconBackgroundColor: "#FFFFFF",
+    splashBackgroundColor: "#000000",
+  });
+  deps.projectService.getAndroidExportAvailability = vi.fn(async () => ({
+    available: true,
+  }));
+  deps.projectService.promptAndroidApkPath = vi.fn(
+    async () => "/exports/project.apk",
+  );
+  deps.projectService.createAndroidApkToPath = vi.fn(async () => ({
+    outputPath: "/exports/project.apk",
+  }));
+  deps.refs.androidExportForm = { reset: vi.fn(), setValues: vi.fn() };
+  return deps;
+};
+const submitAndroidExport = (
+  deps,
+  values = { version: "1.2.3", buildNumber: "42" },
+) =>
+  handleAndroidExportFormAction(deps, {
+    _event: { detail: { actionId: "submit", values } },
+  });
+
+it("exports Android without optional icon ids", async () => {
+  const deps = createAndroidDeps();
+  deps.projectService.getCurrentPlatformDetails.mockResolvedValue({
+    applicationName: "Project One",
+    applicationIdentifier: "com.example.project_one",
+    iconFileId: "icon-1",
+    iconBackgroundColor: "#FFFFFF",
+    splashBackgroundColor: "#000000",
+  });
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  await submitAndroidExport(deps);
+  expect(deps.projectService.createAndroidApkToPath).toHaveBeenCalledWith(
+    expect.any(Object),
+    expect.any(Array),
+    expect.any(String),
+    expect.objectContaining({
+      adaptiveIconFileId: undefined,
+      splashIconFileId: undefined,
+    }),
+    expect.any(Object),
+  );
+});
+
+it("prefills Android native version inputs and exports with the entered version and build", async () => {
+  const deps = createAndroidDeps();
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  expect(deps.refs.androidExportForm.reset).toHaveBeenCalledTimes(1);
+  expect(deps.refs.androidExportForm.setValues).toHaveBeenCalledWith({
+    values: { version: "1.2.3", buildNumber: "" },
+  });
+  deps.projectService.createAndroidApkToPath.mockImplementation(
+    async (_data, _files, outputPath, _metadata, options) => {
+      options.onProgress({
+        phase: "writeApk",
+        current: 1,
+        total: 2,
+        elapsedMs: 1500,
+      });
+      return { outputPath };
+    },
+  );
+  await submitAndroidExport(deps, { version: "2.3.4", buildNumber: "42" });
+  expect(deps.projectService.promptAndroidApkPath).toHaveBeenCalledWith(
+    { defaultFileName: "Project One-2.3.4-unsigned.apk" },
+    {
+      title: EN_I18N.versionsPage.saveAndroidApkDialogTitle,
+      fileTypeName: EN_I18N.versionsPage.androidApkFileTypeName,
+    },
+  );
+  expect(deps.projectService.createAndroidApkToPath).toHaveBeenCalledWith(
+    expect.any(Object),
+    expect.any(Array),
+    "/exports/project.apk",
+    {
+      applicationName: "Project One",
+      applicationId: "com.example.project_one",
+      iconFileId: "icon-1",
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+      versionName: "2.3.4",
+      versionCode: 42,
+      iconBackgroundColor: "#FFFFFF",
+      splashBackgroundColor: "#000000",
+    },
+    { onProgress: expect.any(Function) },
+  );
+  expect(deps.progressDialog.update).toHaveBeenCalledWith(
+    expect.objectContaining({
+      status: expect.stringContaining(
+        EN_I18N.versionsPage.androidWritingApkStatus,
+      ),
+      progress: { current: 1, total: 2 },
+    }),
+  );
+  expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
+  expect(deps.appService.showAlert).toHaveBeenCalledWith({
+    message: EN_I18N.versionsPage.androidApkExportCompletedMessage.replace(
+      "{path}",
+      "/exports/project.apk",
+    ),
+    title: EN_I18N.versionsPage.exportCompletedTitle,
+  });
+});
+
+it.each([
+  ["", "42", "androidExportVersionRequired"],
+  ["1.2", "42", "androidExportVersionInvalid"],
+  ["1.2.3", "", "androidExportBuildNumberRequired"],
+  ["1.2.3", "01", "androidExportBuildNumberInvalid"],
+  ["1.2.3", "2100000001", "androidExportBuildNumberInvalid"],
+])(
+  "validates Android version %s and build %s",
+  async (version, buildNumber, key) => {
+    const deps = createAndroidDeps();
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, { version, buildNumber });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage[key],
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+    expect(deps.store.closeExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.projectService.promptAndroidApkPath).not.toHaveBeenCalled();
+  },
+);
+
+it("leaves the Android Version blank for a nonnumeric release name", async () => {
+  const deps = createAndroidDeps();
+  deps.store.selectVersion.mockReturnValue({
+    id: "version-1",
+    name: "Release One",
+  });
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  expect(deps.refs.androidExportForm.setValues).toHaveBeenCalledWith({
+    values: { version: "", buildNumber: "" },
+  });
+});
+
+it("opens Android setup when platform details are missing and resumes after creation", async () => {
+  const deps = createAndroidDeps();
+  const applicationInfo = await deps.projectService.getCurrentPlatformDetails();
+  deps.projectService.getCurrentPlatformDetails.mockResolvedValueOnce(
+    undefined,
+  );
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  expect(deps.store.openPlatformDetailsDialog).toHaveBeenCalledWith(
+    expect.objectContaining({
+      platform: "android",
+      exportType: "android-apk",
+      versionId: "version-1",
+    }),
+  );
+  expect(deps.projectService.promptAndroidApkPath).not.toHaveBeenCalled();
+  await handlePlatformDetailsCreated(deps);
+  expect(deps.store.openExportConfirmation).toHaveBeenCalledWith(
+    expect.objectContaining({ applicationInfo, exportType: "android-apk" }),
+  );
+});
+
+it("does not start export when unavailable or the save picker is cancelled", async () => {
+  const deps = createAndroidDeps();
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  deps.projectService.getAndroidExportAvailability.mockResolvedValue({
+    available: false,
+  });
+  await submitAndroidExport(deps);
+  expect(deps.projectService.promptAndroidApkPath).not.toHaveBeenCalled();
+  deps.projectService.getAndroidExportAvailability.mockResolvedValue({
+    available: true,
+  });
+  deps.projectService.promptAndroidApkPath.mockResolvedValue(undefined);
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  await submitAndroidExport(deps);
+  expect(deps.appService.showProgressDialog).not.toHaveBeenCalled();
+  expect(deps.projectService.createAndroidApkToPath).not.toHaveBeenCalled();
+});
+
+it.each(["capability", "picker", "export"])(
+  "shows localized Android failure details for %s failures",
+  async (stage) => {
+    const deps = createAndroidDeps();
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    const method = {
+      capability: "getAndroidExportAvailability",
+      picker: "promptAndroidApkPath",
+      export: "createAndroidApkToPath",
+    }[stage];
+    deps.projectService[method].mockRejectedValue(new Error("Failure One"));
+    await submitAndroidExport(deps);
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: `${EN_I18N.versionsPage.androidExportFailed}\n\n${EN_I18N.versionsPage.errorDetailsLabel}\nFailure One`,
+      title: EN_I18N.versionsPage.errorTitle,
+    });
+    if (stage === "export")
+      expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
+  },
+);
+
+it("refreshes Android availability during Versions setup", async () => {
+  const deps = createAndroidDeps();
+  deps.store.setAndroidExportAvailability = vi.fn();
+  deps.store.setMacosExportAvailability = vi.fn();
+  deps.store.setWindowsExportAvailability = vi.fn();
+  deps.store.setVersions = vi.fn();
+  deps.projectService.getWindowsExportAvailability = vi.fn(async () => ({}));
+  deps.projectService.loadVersionsFromProject = vi.fn(async () => []);
+  await handleAfterMount(deps);
+  expect(deps.store.setAndroidExportAvailability).toHaveBeenCalledWith({
+    availability: { available: true },
   });
 });

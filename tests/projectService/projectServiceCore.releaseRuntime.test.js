@@ -314,6 +314,69 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     expect(mocked.collabService.deleteImageIfUnused).not.toHaveBeenCalled();
   });
 
+  it("reports Android adaptive and splash icons that use an image file", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        images: {
+          items: {
+            "image-1": {
+              id: "image-1",
+              type: "image",
+              fileId: "file-splash-1",
+            },
+          },
+        },
+        layouts: { items: {} },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.checkProjectResourceUsage.mockResolvedValue({
+      inProps: {},
+      isUsed: false,
+      count: 0,
+    });
+    mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
+      async (platform) =>
+        platform === "android"
+          ? {
+              iconFileId: "file-icon-1",
+              adaptiveIconFileId: "file-adaptive-1",
+              splashIconFileId: "file-splash-1",
+            }
+          : undefined,
+    );
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(
+      projectService.checkResourceUsage({
+        itemId: "image-1",
+        checkTargets: ["scenes", "layouts"],
+      }),
+    ).resolves.toEqual({
+      inProps: {
+        platformDetails: [{ property: "android.splashIconFileId" }],
+      },
+      isUsed: true,
+      count: 1,
+    });
+  });
+
   it("delegates image deletion when platform details does not use its file", async () => {
     const repository = {
       getState: vi.fn(() => ({

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUNDLE_PLAYER_INDEX_HTML } from "../../src/deps/services/shared/projectExportService.js";
@@ -201,5 +202,51 @@ describe("exported player startup", () => {
     expect(
       document.querySelector("#loading").classList.contains("hidden"),
     ).toBe(true);
+  });
+  it("keeps Android progress visible until the first frame and notifies its host once without Tauri", async () => {
+    dom.window.close();
+    dom = new JSDOM(
+      readFileSync(
+        new URL(
+          "../../scripts/player-templates/android/index.html",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      { url: "https://appassets.androidplatform.net/web/index.html" },
+    );
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("window", dom.window);
+    const onReady = vi.fn(() => {
+      expect(runtime.render).toHaveBeenCalledOnce();
+      expect(
+        document.querySelector("#loading").classList.contains("hidden"),
+      ).toBe(true);
+    });
+    vi.stubGlobal("__ROUTEVN_PLAYER_HOST__", { onReady });
+    const assets = deferred();
+    runtime.loadAssets.mockReturnValue(assets.promise);
+    const boot = import("../../scripts/main.js");
+    await vi.waitFor(() => expect(runtime.loadAssets).toHaveBeenCalledTimes(2));
+    expect(document.querySelector("#loading-progress").value).toBe(20);
+    expect(
+      document.querySelector("#loading").classList.contains("hidden"),
+    ).toBe(false);
+    expect(onReady).not.toHaveBeenCalled();
+    assets.resolve([]);
+    await boot;
+    expect(onReady).toHaveBeenCalledOnce();
+  });
+
+  it("notifies the host when startup diagnostics should become visible", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const onReady = vi.fn();
+    vi.stubGlobal("__ROUTEVN_PLAYER_HOST__", { onReady });
+    runtime.loadAssets.mockRejectedValue(new Error("Asset unavailable"));
+    await import("../../scripts/main.js");
+    expect(onReady).toHaveBeenCalledOnce();
+    expect(document.querySelector("#loading").classList.contains("error")).toBe(
+      true,
+    );
   });
 });

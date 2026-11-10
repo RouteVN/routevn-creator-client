@@ -37,12 +37,17 @@ const NON_RETRYABLE_FONT_INSPECTION_ERROR_CODES = new Set([
   "invalid_font_weight",
   "unreadable_font_weight",
 ]);
+const PLATFORM_DETAILS_IMAGE_PROPERTIES = [
+  "iconFileId",
+  "adaptiveIconFileId",
+  "splashIconFileId",
+];
 const MENU_ITEM_TEXT_STYLE_ID = "e2WbW3vcPZR9";
 const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";
 const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
 const LOAD_MENU_ELEMENT_ID = "icn4dknq2kyp";
 const LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID = "5rwEfyx2GBEi";
-const RELEASE_PLATFORM_IDS = ["web", "windows", "macos"];
+const RELEASE_PLATFORM_IDS = ["web", "windows", "macos", "android"];
 
 export const createProjectServiceCore = ({
   router,
@@ -554,13 +559,14 @@ export const createProjectServiceCore = ({
           await repositoryService.getCurrentPlatformDetails(platform),
       })),
     );
-    const usages = platformDetailsByPlatform
-      .filter(
-        ({ applicationInfo }) => applicationInfo?.iconFileId === image.fileId,
-      )
-      .map(({ platform }) => ({
-        property: `${platform}.iconFileId`,
-      }));
+    const usages = [];
+    for (const { platform, applicationInfo } of platformDetailsByPlatform) {
+      for (const property of PLATFORM_DETAILS_IMAGE_PROPERTIES) {
+        if (applicationInfo?.[property] === image.fileId) {
+          usages.push({ property: `${platform}.${property}` });
+        }
+      }
+    }
 
     return {
       inProps: usages.length > 0 ? { platformDetails: usages } : {},
@@ -823,6 +829,9 @@ export const createProjectServiceCore = ({
     createWindowsPortableExecutableToPath:
       exportService.createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath: exportService.createWindowsInstallerToPath,
+    getAndroidExportAvailability: exportService.getAndroidExportAvailability,
+    promptAndroidApkPath: exportService.promptAndroidApkPath,
+    createAndroidApkToPath: exportService.createAndroidApkToPath,
     promptMacosApplicationPath: exportService.promptMacosApplicationPath,
     getMacosExportAvailability: exportService.getMacosExportAvailability,
     createMacosApplicationToPath: exportService.createMacosApplicationToPath,

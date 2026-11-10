@@ -6,7 +6,7 @@ import createRouteEngine, {
 } from "route-engine-js";
 import { Ticker } from "pixi.js";
 
-import createRouteGraphics from "route-graphics";
+import createRouteGraphics, { configureAudioRuntime } from "route-graphics";
 import { createRuntimeAssetFromDicedImage } from "../src/internal/bundleRuntimeDicedImages.js";
 import { prepareRenderStateAudioChannelsForGraphics } from "../src/internal/audioRenderState.js";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
@@ -23,6 +23,9 @@ import { installPlayerAudioUnlock } from "./playerAudioUnlock.js";
 import { waitForPlayerStart } from "./playerStartGate.js";
 import { updatePlayerLoadingProgress } from "./playerLoadingProgress.js";
 import { createPlayerStartupEffects } from "./playerStartupEffects.js";
+
+const hostAudioRuntime = globalThis.__ROUTEVN_PLAYER_HOST__?.audioRuntime;
+if (hostAudioRuntime) configureAudioRuntime(hostAudioRuntime);
 
 const MAX_DIAGNOSTIC_EVENTS = 24;
 const MAX_DIAGNOSTIC_TEXT_LENGTH = 12_000;
@@ -174,7 +177,13 @@ const setBundleDocumentTitle = async (bundleMetadata) => {
   return setNativeWindowTitle(title);
 };
 
+let playerHostReadyNotified = false;
+
 const showNativeWindow = async ({ reason } = {}) => {
+  if (!playerHostReadyNotified) {
+    playerHostReadyNotified = true;
+    globalThis.__ROUTEVN_PLAYER_HOST__?.onReady?.();
+  }
   if (!hasTauriCurrentWindow()) {
     return false;
   }

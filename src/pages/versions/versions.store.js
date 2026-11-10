@@ -1,3 +1,4 @@
+import { ANDROID_EXPORT_RELEASED } from "../../internal/androidExport.js";
 import { formatDate } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
@@ -79,6 +80,7 @@ const getExportConfirmationTitle = (exportType, copy) => {
   if (exportType === "macos-application") {
     return copy.confirmMacosExportTitle ?? "Confirm macOS App Export";
   }
+  if (exportType === "android-apk") return copy.confirmAndroidExportTitle;
   return copy.confirmWebExportTitle ?? "Confirm Web Export";
 };
 
@@ -94,6 +96,7 @@ const getExportConfirmationButtonLabel = (exportType, copy) => {
   if (exportType === "macos-application") {
     return copy.exportMacosApplicationButton ?? "Export macOS App (Beta)";
   }
+  if (exportType === "android-apk") return copy.exportAndroidApkButton;
   return copy.exportWebButton ?? "Export Web";
 };
 
@@ -131,6 +134,41 @@ const createMacosExportForm = (copy = {}) => ({
         variant: "pr",
         validate: true,
         label: copy.exportMacosApplicationButton ?? "Export macOS App (Beta)",
+      },
+    ],
+  },
+});
+
+const createAndroidExportForm = (copy) => ({
+  fields: [
+    {
+      type: "row",
+      fields: [
+        {
+          name: "version",
+          type: "input-text",
+          label: copy.androidExportVersionLabel,
+          description: copy.androidExportVersionDescription,
+          required: true,
+        },
+        {
+          name: "buildNumber",
+          type: "input-text",
+          label: copy.androidExportBuildNumberLabel,
+          description: copy.androidExportBuildNumberDescription,
+          required: true,
+        },
+      ],
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.exportAndroidApkButton,
       },
     ],
   },
@@ -209,6 +247,7 @@ export const createInitialState = () => ({
     installerHostSupported: false,
     installerToolAvailable: false,
   },
+  androidExportAvailability: { available: false },
   macosExportAvailability: {
     application: false,
     templateAvailable: false,
@@ -294,6 +333,13 @@ export const setWindowsExportAvailability = (
     !!availability?.installerHostSupported;
   state.windowsExportAvailability.installerToolAvailable =
     !!availability?.installerToolAvailable;
+};
+
+export const setAndroidExportAvailability = (
+  { state },
+  { availability } = {},
+) => {
+  state.androidExportAvailability.available = !!availability?.available;
 };
 
 export const setMacosExportAvailability = (
@@ -495,6 +541,15 @@ export const selectViewData = ({ state, i18n }) => {
       state.exportConfirmation.exportType,
       copy,
     ),
+    showAndroidExportForm:
+      state.exportConfirmation.exportType === "android-apk",
+    androidExportForm: createAndroidExportForm(copy),
+    androidUnsignedApkNotice: copy.androidUnsignedApkNotice,
+    exportAndroidApkButton: copy.exportAndroidApkButton,
+    canExportAndroidApk:
+      ANDROID_EXPORT_RELEASED &&
+      state.platform !== "web" &&
+      state.androidExportAvailability.available,
     showMacosExportForm:
       state.exportConfirmation.exportType === "macos-application",
     macosExportForm: createMacosExportForm(copy),

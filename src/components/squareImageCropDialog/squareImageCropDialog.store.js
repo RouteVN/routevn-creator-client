@@ -7,6 +7,7 @@ export const createInitialState = () => ({
   open: false,
   file: undefined,
   outputSize: undefined,
+  guideCircle: undefined,
   title: undefined,
   description: undefined,
   confirmLabel: undefined,
@@ -24,6 +25,7 @@ export const syncFromProps = ({ state }, { props } = {}) => {
   state.open = props?.open === true;
   state.file = nextFile;
   state.outputSize = props?.outputSize;
+  state.guideCircle = props?.guideCircle;
   state.title = props?.title;
   state.description = props?.description;
   state.confirmLabel = props?.confirmLabel;
@@ -44,6 +46,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     isOpen: state.open,
     file: state.file,
     outputSize: state.outputSize,
+    guideCircle: state.guideCircle,
     title: state.title ?? copy.cropImageTitle ?? DEFAULT_TITLE,
     description:
       state.description ?? copy.cropImageDescription ?? DEFAULT_DESCRIPTION,

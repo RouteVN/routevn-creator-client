@@ -1,3 +1,8 @@
+import {
+  normalizeAndroidBackgroundColor,
+  isValidAndroidBackgroundColor,
+} from "../androidExport.js";
+
 export const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
 
 export const PLATFORM_APPLICATION_ICON_VALIDATIONS = [
@@ -15,6 +20,7 @@ const getPlatformEditTitle = (platform, copy) => {
   if (platform === "macos") {
     return copy.editMacosPlatformDetailsTitle;
   }
+  if (platform === "android") return copy.editAndroidPlatformDetailsTitle;
   return copy.editWebPlatformDetailsTitle;
 };
 
@@ -25,6 +31,7 @@ const getPlatformCreateTitle = (platform, copy) => {
   if (platform === "macos") {
     return copy.createMacosPlatformDetailsTitle;
   }
+  if (platform === "android") return copy.createAndroidPlatformDetailsTitle;
   return copy.createWebPlatformDetailsTitle;
 };
 
@@ -48,6 +55,23 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     });
   }
 
+  if (platform === "android") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "platform-android-adaptive-icon-edit",
+        label: copy.androidAdaptiveIconLabel,
+        description: copy.androidAdaptiveIconDescription,
+      },
+      {
+        type: "slot",
+        slot: "platform-android-splash-icon-edit",
+        label: copy.androidSplashIconLabel,
+        description: copy.androidSplashIconDescription,
+      },
+    );
+  }
+
   fields.push({
     name: "applicationIdentifier",
     type: "input-text",
@@ -58,6 +82,23 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     description: copy[`${platform}ApplicationIdentifierDescription`],
     required: true,
   });
+
+  if (platform === "android") {
+    fields.push(
+      {
+        name: "iconBackgroundColor",
+        type: "color-picker",
+        label: copy.androidIconBackgroundColorLabel,
+        required: true,
+      },
+      {
+        name: "splashBackgroundColor",
+        type: "color-picker",
+        label: copy.androidSplashBackgroundColorLabel,
+        required: true,
+      },
+    );
+  }
 
   // TODO: Restore optional Windows release metadata in the edit form.
   // if (platform === "windows") {
@@ -113,6 +154,8 @@ export const createPlatformDetailsPatch = ({
   platform,
   values,
   iconFileId,
+  adaptiveIconFileId,
+  splashIconFileId,
 }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
@@ -123,6 +166,15 @@ export const createPlatformDetailsPatch = ({
   }
 
   patch.applicationIdentifier = values.applicationIdentifier.trim();
+  if (platform === "android") {
+    patch.adaptiveIconFileId = adaptiveIconFileId;
+    patch.splashIconFileId = splashIconFileId;
+    for (const name of ["iconBackgroundColor", "splashBackgroundColor"]) {
+      patch[name] = isValidAndroidBackgroundColor(values[name])
+        ? normalizeAndroidBackgroundColor(values[name])
+        : values[name];
+    }
+  }
 
   // TODO: Restore optional Windows release metadata when these fields return
   // to the Platform Details UI. Omitting them from the patch preserves any
@@ -164,5 +216,11 @@ export const getPlatformDetailsValidationMessage = (copy, code) => {
   if (code === "macos-identifier-invalid") {
     return copy.macosApplicationIdentifierInvalid;
   }
+  if (code === "android-icon-required") return copy.androidIconRequired;
+  if (code === "android-identifier-required")
+    return copy.androidApplicationIdentifierRequired;
+  if (code === "android-identifier-invalid")
+    return copy.androidApplicationIdentifierInvalid;
+  if (code === "android-color-invalid") return copy.androidColorInvalid;
   return copy.failedSavePlatformMessage;
 };

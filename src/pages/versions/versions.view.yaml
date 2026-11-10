@@ -23,6 +23,10 @@ refs:
     eventListeners:
       click:
         handler: handleDownloadWindowsInstallerClick
+  detailAndroidApkBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadAndroidApkClick
   detailMacosApplicationBtn:
     eventListeners:
       click:
@@ -59,6 +63,10 @@ refs:
     eventListeners:
       click:
         handler: handleExportConfirmationConfirm
+  androidExportForm:
+    eventListeners:
+      form-action:
+        handler: handleAndroidExportFormAction
   macosExportForm:
     eventListeners:
       form-action:
@@ -117,6 +125,8 @@ template:
                                           - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
                                       - $if canExportWindowsInstaller:
                                           - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
+                                      - $if canExportAndroidApk:
+                                          - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidApkButton}
                                       - $if canExportMacosApplication:
                                           - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
                         $else:
@@ -136,6 +146,8 @@ template:
                               - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
                           - $if canExportWindowsInstaller:
                               - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
+                          - $if canExportAndroidApk:
+                              - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidApkButton}
                           - $if canExportMacosApplication:
                               - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
   - $if isVersionDialogOpen:
@@ -158,7 +170,10 @@ template:
                           - rvn-file-image slot=export-confirmation-icon fileId=${exportConfirmationIconFileId} w=96 h=96 bw=xs bc=bo br=md: null
                         $else:
                           - rtgl-image slot=export-confirmation-icon src="/public/project_logo_placeholder.png" w=96 h=96 bw=xs bc=bo br=md: null
-              - $if showMacosExportForm:
+              - $if showAndroidExportForm:
+                  - rtgl-text: ${androidUnsignedApkNotice}
+                  - rtgl-form#androidExportForm :form=${androidExportForm} w=f: null
+                $elif showMacosExportForm:
                   - rtgl-form#macosExportForm :form=${macosExportForm} w=f: null
                 $else:
                   - rtgl-view w=f d=h ah=e av=c g=sm:
