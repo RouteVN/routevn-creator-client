@@ -913,6 +913,8 @@ layoutsPage:
   failedUpdateLayout: "Impossible de mettre à jour la mise en page."
   failedUpdateTags: "Impossible de mettre à jour les étiquettes de la mise en page."
   fragmentLabel: "Fragment"
+  inputLayoutPromptText: "Saisissez votre nom"
+  inputLayoutSubmitText: "Valider"
   layoutNameLabel: "Nom de la mise en page"
   layoutTypeChoice: "Choix"
   layoutTypeConfirmDialog: "Confirmation"

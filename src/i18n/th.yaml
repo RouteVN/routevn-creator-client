@@ -913,6 +913,8 @@ layoutsPage:
   failedUpdateLayout: "อัปเดตเลย์เอาต์ไม่สำเร็จ"
   failedUpdateTags: "อัปเดตแท็กของเลย์เอาต์ไม่สำเร็จ"
   fragmentLabel: "ส่วนย่อย"
+  inputLayoutPromptText: "ป้อนชื่อของคุณ"
+  inputLayoutSubmitText: "ยืนยัน"
   layoutNameLabel: "ชื่อเลย์เอาต์"
   layoutTypeChoice: "ตัวเลือก"
   layoutTypeConfirmDialog: "กล่องยืนยัน"

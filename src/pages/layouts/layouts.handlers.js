@@ -1,6 +1,9 @@
 import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
-import { scaleLayoutElementsForProjectResolution } from "../../internal/projectResolution.js";
+import {
+  requireProjectResolution,
+  scaleLayoutElementsForProjectResolution,
+} from "../../internal/projectResolution.js";
 import {
   CURRENT_LAYOUT_SCHEMA_VERSION,
   isFragmentLayout,
@@ -15,7 +18,11 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { LAYOUT_TAG_SCOPE_KEY } from "./layouts.store.js";
-import { selectLayoutsPageCopy } from "./support/layoutsPageCopy.js";
+import {
+  selectInputLayoutTemplateCopy,
+  selectLayoutsPageCopy,
+} from "./support/layoutsPageCopy.js";
+import { createInputLayoutElements } from "./support/inputLayoutTemplate.js";
 
 const selectCopy = (deps = {}) => selectLayoutsPageCopy(deps.i18n);
 
@@ -336,6 +343,25 @@ const createEmptyLayoutElements = () => ({
   items: {},
   tree: [],
 });
+
+// A new Input layout starts with a prompt, an input, and a submit button.
+// Other new layouts start empty.
+const createNewLayoutElements = ({ deps, layoutType } = {}) => {
+  if (layoutType !== "input") {
+    return createEmptyLayoutElements();
+  }
+
+  const { projectService, i18n } = deps;
+  const repositoryState = projectService.getRepositoryState();
+  return createInputLayoutElements({
+    projectResolution: requireProjectResolution(
+      repositoryState.project?.resolution,
+      "Project resolution",
+    ),
+    textStylesData: repositoryState.textStyles,
+    copy: selectInputLayoutTemplateCopy(i18n),
+  });
+};
 
 export const createLayoutTemplate = (layoutType, projectResolution) => {
   if (layoutType === "dialogue-adv") {
@@ -1138,7 +1164,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
           isFragment,
           layoutSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
         },
-        elements: createEmptyLayoutElements(),
+        elements: createNewLayoutElements({ deps, layoutType }),
         parentId: store.selectTargetGroupId(),
         position: "last",
       }),

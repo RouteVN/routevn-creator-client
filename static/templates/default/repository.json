@@ -5546,6 +5546,113 @@
         "preview": {
           "backgroundImageId": "Nywji71vMz3w"
         }
+      },
+      "N2LsZZYHBXt2": {
+        "id": "N2LsZZYHBXt2",
+        "type": "layout",
+        "name": "Default Input",
+        "description": "",
+        "layoutType": "input",
+        "layoutSchemaVersion": 2,
+        "isFragment": false,
+        "elements": {
+          "items": {
+            "hmqzdW4miCkA": {
+              "id": "hmqzdW4miCkA",
+              "type": "text",
+              "name": "Text",
+              "x": 960,
+              "y": 440,
+              "anchorX": 0.5,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Enter your name",
+              "content": [
+                {
+                  "text": "Enter your name"
+                }
+              ],
+              "textStyle": {
+                "align": "center"
+              },
+              "textStyleId": "D6GseHxLs9fE"
+            },
+            "RxjgWPMJuT2a": {
+              "id": "RxjgWPMJuT2a",
+              "type": "input",
+              "name": "Input",
+              "x": 960,
+              "y": 490,
+              "anchorX": 0.5,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "field": "field",
+              "width": 330,
+              "height": 52
+            },
+            "qmFVviNGxnCu": {
+              "id": "qmFVviNGxnCu",
+              "type": "container",
+              "name": "Input Submit Container",
+              "x": 960,
+              "y": 572,
+              "anchorX": 0.5,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "absolute",
+              "gapX": 0,
+              "gapY": 0,
+              "formRole": "submit"
+            },
+            "91rHa2us4WnP": {
+              "id": "91rHa2us4WnP",
+              "type": "text",
+              "name": "Text",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Submit",
+              "content": [
+                {
+                  "text": "Submit"
+                }
+              ],
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "D6GseHxLs9fE"
+            }
+          },
+          "tree": [
+            {
+              "id": "hmqzdW4miCkA",
+              "children": []
+            },
+            {
+              "id": "RxjgWPMJuT2a",
+              "children": []
+            },
+            {
+              "id": "qmFVviNGxnCu",
+              "children": [
+                {
+                  "id": "91rHa2us4WnP",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
       }
     },
     "tree": [
@@ -5581,6 +5688,9 @@
           },
           {
             "id": "nLFbrco2dLmU"
+          },
+          {
+            "id": "N2LsZZYHBXt2"
           }
         ]
       }

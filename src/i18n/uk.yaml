@@ -913,6 +913,8 @@ layoutsPage:
   failedUpdateLayout: "Не вдалося оновити макет."
   failedUpdateTags: "Не вдалося оновити теги макета."
   fragmentLabel: "Фрагмент"
+  inputLayoutPromptText: "Введіть ім’я"
+  inputLayoutSubmitText: "Підтвердити"
   layoutNameLabel: "Назва макета"
   layoutTypeChoice: "Вибір"
   layoutTypeConfirmDialog: "Вікно підтвердження"

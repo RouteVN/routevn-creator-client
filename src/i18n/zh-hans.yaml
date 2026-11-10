@@ -913,6 +913,8 @@ layoutsPage:
   failedUpdateLayout: "无法更新布局。"
   failedUpdateTags: "无法更新布局标签。"
   fragmentLabel: "片段"
+  inputLayoutPromptText: "请输入你的名字"
+  inputLayoutSubmitText: "确定"
   layoutNameLabel: "布局名称"
   layoutTypeChoice: "选项"
   layoutTypeConfirmDialog: "确认对话框"

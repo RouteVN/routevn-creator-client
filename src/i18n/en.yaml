@@ -913,6 +913,8 @@ layoutsPage:
   failedUpdateLayout: "Failed to update layout."
   failedUpdateTags: "Failed to update layout tags."
   fragmentLabel: "Fragment"
+  inputLayoutPromptText: "Enter your name"
+  inputLayoutSubmitText: "Submit"
   layoutNameLabel: "Layout Name"
   layoutTypeChoice: "Choice"
   layoutTypeConfirmDialog: "Confirm Dialog"
