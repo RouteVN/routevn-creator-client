@@ -166,18 +166,19 @@ const createLinkTargets = async (target, manifest) => {
 // Imports the package with the choices the import dialog sends when every
 // pick is kept as the package names it: each dependency is the package's own
 // or `replaceDependency` picks one of the project's, and each link goes to
-// its target.
+// its target. `afterReview` changes the project between the review and the
+// import, as the app may while the review is open.
 const importPackage = async ({
   target,
   published,
   linkTargets,
   replaceDependency = () => USE_PACK_DEPENDENCY,
+  afterReview = async () => {},
 }) => {
   const service = createResourcePackageImportService({
     idGenerator: target.nextId,
     getCurrentProjectId: () => target.projectId,
     getRepositoryState: () => target.repository.getState(),
-    getRepositoryRevision: () => target.repository.getRevision(),
     assetService: {
       validateResourceImportFile: async ({ file, validationKind }) => {
         const bytes = new Uint8Array(await file.arrayBuffer());
@@ -237,6 +238,7 @@ const importPackage = async ({
   expect(
     service.validateResourceImportPlan({ planId: plan.planId, ...choices }),
   ).toEqual({ valid: true });
+  await afterReview();
   const before = target.repository.getState();
   const result = await service.executeResourceImportPlan({
     planId: plan.planId,
@@ -709,3 +711,64 @@ describe.each(PACKAGE_DIRS)(
     });
   },
 );
+
+// The app keeps changing the project while a review is open, such as when a
+// page saves its thumbnails: the import still goes through, against the
+// project as it is when it runs.
+describe("asset package format: import after the project changed", () => {
+  it("imports, and numbers a dependency folder past a same-named folder made during the review", async () => {
+    const { dir } = PACKAGE_DIRS.find(({ label }) =>
+      label.endsWith("/dependencies"),
+    );
+    const { manifest, files } = readPackage(dir);
+    expect(manifest.dependencies.fonts).toBeDefined();
+    expect(manifest.repository.fonts).toBeUndefined();
+    const published = await publishPackage(files);
+    const target = await createTarget("changed-project");
+    const linkTargets = await createLinkTargets(target, manifest);
+    const revisionAtReview = { value: undefined };
+    const projectFolderId = target.nextId();
+
+    const imported = await importPackage({
+      target,
+      published,
+      linkTargets,
+      afterReview: async () => {
+        revisionAtReview.value = target.repository.getRevision();
+        await target.submit([
+          {
+            type: "image.create",
+            payload: {
+              imageId: target.nextId(),
+              data: { type: "folder", name: "Images Made Meanwhile" },
+              parentId: null,
+              position: "last",
+            },
+          },
+          {
+            type: "font.create",
+            payload: {
+              fontId: projectFolderId,
+              data: { type: "folder", name: DEPENDENCY_FOLDER_NAME },
+              parentId: null,
+              position: "last",
+            },
+          },
+        ]);
+      },
+    });
+
+    expect(target.repository.getRevision()).toBeGreaterThan(
+      revisionAtReview.value,
+    );
+    const { fonts } = imported.state;
+    const topLevelFolderNames = fonts.tree.map(
+      ({ id }) => fonts.items[id].name,
+    );
+    expect(topLevelFolderNames).toEqual([
+      DEPENDENCY_FOLDER_NAME,
+      `${DEPENDENCY_FOLDER_NAME} 2`,
+    ]);
+    expect(fonts.tree[0].id).toBe(projectFolderId);
+  });
+});

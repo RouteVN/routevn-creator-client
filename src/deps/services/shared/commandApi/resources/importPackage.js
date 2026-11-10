@@ -39,23 +39,15 @@ export const createImportPackageCommandApi = (shared) => ({
   async commitAssetImportPackage({
     planId,
     projectId,
-    repositoryRevision,
     fileRecords = [],
     fileCommandIds = {},
     entries = [],
   } = {}) {
     const context = await shared.ensureCommandContext();
+    // Other changes to the project since the review opened, such as the
+    // thumbnails a page saves, don't stop the import: the checks below and
+    // the model's own validation hold against the project as it is now.
     if (projectId !== undefined && context.projectId !== projectId) {
-      return invalid(
-        "project_changed",
-        "The project changed while the import was open. Review the import again.",
-        { planId },
-      );
-    }
-    if (
-      repositoryRevision !== undefined &&
-      context.repository.getRevision() !== repositoryRevision
-    ) {
       return invalid(
         "project_changed",
         "The project changed while the import was open. Review the import again.",

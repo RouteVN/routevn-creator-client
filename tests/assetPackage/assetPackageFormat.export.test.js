@@ -166,7 +166,6 @@ describe("asset package format: references inside data", () => {
       manifest,
       projectId: "project-two",
       repositoryState: { characters: { items: {}, tree: [] } },
-      repositoryRevision: 1,
       createId: () => `imported-${++idCount}`,
     });
   };

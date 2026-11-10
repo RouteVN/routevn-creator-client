@@ -158,7 +158,6 @@ export const createProjectServiceCore = ({
     idGenerator,
     getCurrentProjectId,
     getRepositoryState,
-    getRepositoryRevision,
     assetService,
     commandApi: collabService.commandApi,
     logEvent: (event, details) =>

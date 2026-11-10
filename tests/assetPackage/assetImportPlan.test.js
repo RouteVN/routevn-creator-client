@@ -6,6 +6,7 @@ import {
 } from "../../src/internal/assetPackageResources.js";
 import {
   createAssetImportPlan,
+  nameDependencyFolders,
   rewriteAssetImportPlanReferences,
 } from "../../src/internal/assetImportPlan.js";
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
@@ -678,7 +679,6 @@ const planV2 = (manifest, options = {}) => {
     manifest,
     manifestUrl: "https://example.com/pack/asset-package.json",
     projectId: "project-1",
-    repositoryRevision: 1,
     createId: () => `generated-${++id}`,
     dependencyFolderName: "Fantasy UI",
     ...options,
@@ -790,6 +790,77 @@ describe("asset import plan for v2 packages", () => {
       unnamed.entries.find((entry) => entry.sourceId === "dependencies:fonts")
         .data.name,
     ).toBe("Package Name");
+  });
+
+  it("names dependency folders again against the project when the import runs", () => {
+    const plan = planV2(createV2Manifest());
+    const folderNames = (entries) =>
+      Object.fromEntries(
+        entries
+          .filter((entry) => entry.dependency && entry.folder)
+          .map((entry) => [entry.resourceType, entry.data.name]),
+      );
+    expect(plan.dependencyFolderBaseName).toBe("Fantasy UI");
+    expect(folderNames(plan.entries)).toEqual({
+      fonts: "Fantasy UI",
+      textStyles: "Fantasy UI",
+    });
+
+    // While the review was open, the project gained a top-level fonts
+    // folder by the pack's name, and a nested text styles folder by it.
+    const entries = nameDependencyFolders({
+      entries: plan.entries,
+      baseName: plan.dependencyFolderBaseName,
+      repositoryState: {
+        fonts: {
+          items: { mine: { id: "mine", type: "folder", name: "FANTASY UI" } },
+          tree: [{ id: "mine" }],
+        },
+        textStyles: {
+          items: {
+            outer: { id: "outer", type: "folder", name: "Styles" },
+            inner: { id: "inner", type: "folder", name: "Fantasy UI" },
+          },
+          tree: [{ id: "outer", children: [{ id: "inner" }] }],
+        },
+      },
+    });
+
+    expect(folderNames(entries)).toEqual({
+      fonts: "Fantasy UI 2",
+      textStyles: "Fantasy UI",
+    });
+    expect(entries.filter((entry) => !entry.dependency)).toEqual(
+      plan.entries.filter((entry) => !entry.dependency),
+    );
+  });
+
+  it("numbers a dependency folder past a top-level folder the same import brings", () => {
+    const entries = nameDependencyFolders({
+      baseName: "Fantasy UI",
+      repositoryState: {},
+      entries: [
+        {
+          resourceType: "colors",
+          folder: true,
+          data: { type: "folder", name: "Fantasy UI" },
+        },
+        {
+          resourceType: "colors",
+          folder: true,
+          parentDestinationId: "folder-1",
+          data: { type: "folder", name: "Fantasy UI 2" },
+        },
+        {
+          resourceType: "colors",
+          folder: true,
+          dependency: true,
+          data: { type: "folder", name: "Fantasy UI" },
+        },
+      ],
+    });
+
+    expect(entries[2].data.name).toBe("Fantasy UI 2");
   });
 
   it.each([

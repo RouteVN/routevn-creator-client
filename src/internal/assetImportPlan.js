@@ -787,6 +787,25 @@ const createReviewSections = ({ manifest, resources }) => {
   return sections;
 };
 
+// The names of a collection's top-level folders, compared without case.
+const collectTopLevelFolderNames = (collection, takenNames = new Set()) => {
+  for (const node of collection?.tree ?? []) {
+    const item = collection.items?.[node.id];
+    if (item?.type === "folder" && typeof item.name === "string") {
+      takenNames.add(item.name.trim().toLocaleLowerCase());
+    }
+  }
+  return takenNames;
+};
+
+const numberFolderName = (baseName, takenNames) => {
+  let name = baseName;
+  for (let number = 2; takenNames.has(name.toLocaleLowerCase()); number += 1) {
+    name = `${baseName} ${number}`;
+  }
+  return name;
+};
+
 // The top-level folder a type's dependencies go into: the pack's name,
 // numbered when the project or the pack already has a top-level folder by
 // that name in that type.
@@ -796,24 +815,37 @@ const getDependencyFolderName = ({
   repositoryState,
   manifest,
 }) => {
-  const takenNames = new Set();
-  for (const collection of [
+  const takenNames = collectTopLevelFolderNames(
     repositoryState?.[resourceType],
-    manifest.repository[resourceType],
-  ]) {
-    for (const node of collection?.tree ?? []) {
-      const item = collection.items?.[node.id];
-      if (item?.type === "folder" && typeof item.name === "string") {
-        takenNames.add(item.name.trim().toLocaleLowerCase());
+  );
+  collectTopLevelFolderNames(manifest.repository[resourceType], takenNames);
+  return numberFolderName(baseName, takenNames);
+};
+
+// Names the dependency folders an import brings against the project as it is
+// when the import runs, so a folder the project gained after the review
+// opened still moves them to the next number. The top-level folders the same
+// import brings count as taken too.
+export const nameDependencyFolders = ({ entries, baseName, repositoryState }) =>
+  entries.map((entry) => {
+    if (!entry.dependency || !entry.folder) return entry;
+    const takenNames = collectTopLevelFolderNames(
+      repositoryState?.[entry.resourceType],
+    );
+    for (const other of entries) {
+      if (
+        other.resourceType === entry.resourceType &&
+        other.folder &&
+        !other.dependency &&
+        !other.parentDestinationId
+      ) {
+        takenNames.add(other.data.name.trim().toLocaleLowerCase());
       }
     }
-  }
-  let name = baseName;
-  for (let number = 2; takenNames.has(name.toLocaleLowerCase()); number += 1) {
-    name = `${baseName} ${number}`;
-  }
-  return name;
-};
+    const data = structuredClone(entry.data);
+    data.name = numberFolderName(baseName, takenNames);
+    return { ...entry, data };
+  });
 
 // For the review, a pick needs the picks it uses, directly or through
 // dependencies; the dependencies it reaches come along when it is imported.
@@ -852,7 +884,6 @@ export const createAssetImportPlan = ({
   manifestUrl,
   projectId,
   repositoryState,
-  repositoryRevision,
   createId,
   dependencyFolderName,
 } = {}) => {
@@ -1128,7 +1159,7 @@ export const createAssetImportPlan = ({
     planId,
     manifestUrl,
     projectId,
-    repositoryRevision,
+    dependencyFolderBaseName,
     package: structuredClone(manifest.package),
     entries: orderedEntries,
     resources: picks,
