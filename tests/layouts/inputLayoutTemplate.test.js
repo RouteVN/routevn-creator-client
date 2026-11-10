@@ -128,8 +128,9 @@ const editInPanel = (item, changes) => {
   );
 };
 
-// The Input layout a user builds by hand in the layout editor: a centered
-// prompt, an input below it, and a submit button below that.
+// The Input layout a user builds by hand in the layout editor: a prompt, an
+// input below it, and a submit button below that, centered horizontally and
+// above the middle of the screen.
 const buildInputLayoutInLayoutEditor = async ({ i18n, textStyles }) => {
   const { promptText, submitText } = selectInputLayoutTemplateCopy(i18n);
   const topCenter = { x: 0.5, y: 0 };
@@ -139,7 +140,7 @@ const buildInputLayoutInLayoutEditor = async ({ i18n, textStyles }) => {
     [
       ["anchor", topCenter],
       ["x", "960"],
-      ["y", "440"],
+      ["y", "340"],
       ["textStyle.align", "center"],
       ["content", [{ text: promptText }]],
     ],
@@ -149,7 +150,7 @@ const buildInputLayoutInLayoutEditor = async ({ i18n, textStyles }) => {
     [
       ["anchor", topCenter],
       ["x", "960"],
-      ["y", "490"],
+      ["y", "390"],
     ],
   );
   const submitContainerElement = editInPanel(
@@ -161,7 +162,7 @@ const buildInputLayoutInLayoutEditor = async ({ i18n, textStyles }) => {
     [
       ["anchor", topCenter],
       ["x", "960"],
-      ["y", "572"],
+      ["y", "472"],
     ],
   );
   const submitTextElement = editInPanel(
@@ -298,14 +299,14 @@ describe("createInputLayoutElements", () => {
     const { promptTextElement, inputElement, submitContainerElement } =
       toTemplateElements(elements);
 
-    expect(promptTextElement).toMatchObject({ x: 640, y: 293 });
+    expect(promptTextElement).toMatchObject({ x: 640, y: 227 });
     expect(inputElement).toMatchObject({
       x: 640,
-      y: 327,
+      y: 260,
       width: 220,
       height: 35,
     });
-    expect(submitContainerElement).toMatchObject({ x: 640, y: 381 });
+    expect(submitContainerElement).toMatchObject({ x: 640, y: 315 });
   });
 
   it("is the Default Input layout of the default project template", () => {

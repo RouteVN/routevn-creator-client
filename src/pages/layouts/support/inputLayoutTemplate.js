@@ -2,8 +2,9 @@ import { getFirstTextStyleId } from "../../../constants/textStyles.js";
 import { generateId } from "../../../internal/id.js";
 import { scaleLayoutElementsForProjectResolution } from "../../../internal/projectResolution.js";
 
-// A new Input layout starts with a centered prompt, an input below it, and a
-// submit button below that. Each element is what the layout editor's Add
+// A new Input layout starts with a prompt, an input below it, and a submit
+// button below that, centered horizontally and placed above the middle of the
+// screen. Each element is what the layout editor's Add
 // Element menu creates, changed only through the edit panel: the same
 // defaults, names, and first text style. tests/layouts/inputLayoutTemplate
 // adds the elements that way and compares, so when an editor default
@@ -28,7 +29,7 @@ export const createInputLayoutElements = ({
     type: "text",
     name: copy.textName ?? "Text",
     x: 960,
-    y: 440,
+    y: 340,
     anchorX: 0.5,
     anchorY: 0,
     scaleX: 1,
@@ -45,7 +46,7 @@ export const createInputLayoutElements = ({
     type: "input",
     name: copy.inputName ?? "Input",
     x: 960,
-    y: 490,
+    y: 390,
     anchorX: 0.5,
     anchorY: 0,
     scaleX: 1,
@@ -60,7 +61,7 @@ export const createInputLayoutElements = ({
     type: "container",
     name: copy.submitContainerName ?? "Input Submit Container",
     x: 960,
-    y: 572,
+    y: 472,
     anchorX: 0.5,
     anchorY: 0,
     scaleX: 1,
