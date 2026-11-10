@@ -1,15 +1,45 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+const readView = () =>
+  readFileSync(
+    new URL(
+      "../../src/components/commandLineVisual/commandLineVisual.view.yaml",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
 describe("commandLineVisual view", () => {
-  it("uses the same accessible transform summary card as Background", () => {
-    const view = readFileSync(
-      new URL(
-        "../../src/components/commandLineVisual/commandLineVisual.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
+  it("borders every visual card and selector item, whatever its resource type", () => {
+    const view = readView();
+
+    expect(view).toContain(
+      "rtgl-view#visualImage${visual.controlId} data-index=${visual.visualIndex} cur=pointer bw=xs bc=bo h-bc=ac",
     );
+    expect(view).toContain(
+      "rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} data-resource-type=${item.resourceType} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor}",
+    );
+  });
+
+  it("changes only the border colour of visual cards and selector items on hover", () => {
+    const cardLines = readView()
+      .split("\n")
+      .filter(
+        (line) =>
+          line.includes("rtgl-view#visualImage") ||
+          line.includes("rtgl-view#resourceItem"),
+      );
+
+    expect(cardLines).toHaveLength(2);
+    for (const line of cardLines) {
+      expect(line).toContain("h-bc=");
+      expect(line).not.toContain("h-bgc=");
+    }
+  });
+
+  it("uses the same accessible transform summary card as Background", () => {
+    const view = readView();
 
     expect(view).toContain("customTransformButton*:");
     expect(view).toContain("handler: handleCustomTransformButtonClick");

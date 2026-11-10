@@ -171,7 +171,7 @@ template:
                   - $for visualGroup, groupIndex in defaultValues.visualGroups:
                       - $for visual, i in visualGroup.visuals:
                           - 'rtgl-view#visualItem${visual.controlId} slot=${visual.previewFormSlot} data-index=${visual.visualIndex} data-visual-id=${visual.id} style="align-self: flex-start; flex: 0 0 auto; min-width: 0; max-width: 100%;"':
-                              - 'rtgl-view#visualImage${visual.controlId} data-index=${visual.visualIndex} cur=pointer bw=${visual.previewBorderWidth} bc=bo h-bc=ac h-bgc=mu br=md overflow=hidden style="width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;"':
+                              - 'rtgl-view#visualImage${visual.controlId} data-index=${visual.visualIndex} cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden style="width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;"':
                                   - 'div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
                                       - $if visual.resourceType == 'image':
                                           - 'div.visualResourceThumbnailTransparencyGrid style="width: 100%; height: 100%;"':
@@ -269,7 +269,7 @@ template:
                                   - rtgl-text: ${group.fullLabel}
                           - 'rtgl-view d=h w=f wrap g=md style="${resourceSelectorGridStyle}"':
                               - $for item, j in group.children:
-                                  - 'rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} data-resource-type=${item.resourceType} cur=pointer bw=${item.itemBorderWidth} bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=${item.itemBackgroundColor} h-bgc=${item.itemHoverBackgroundColor} br=md style="${resourceSelectorItemStyle}"':
+                                  - 'rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} data-resource-type=${item.resourceType} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=${item.itemBackgroundColor} br=md style="${resourceSelectorItemStyle}"':
                                       - 'rtgl-view br=md overflow=hidden style="${resourceSelectorCardStyle}"':
                                           - 'div style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
                                               - $if item.resourceType == 'image':
