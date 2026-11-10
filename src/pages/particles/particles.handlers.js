@@ -73,36 +73,50 @@ const loadParticlePreviewAssets = async ({ deps, renderState } = {}) => {
 
 // The detail panel plays the selected particle on its preview background, as
 // its thumbnail shows it. It shows only on desktop; touch layouts have no
-// detail canvas.
+// detail canvas. Saved data that cannot be drawn, such as invalid values from
+// an import, sync or an older client, leaves the preview empty with a message,
+// and the page stays usable so the particle can be corrected in the editor.
 const renderDetailPreview = async (deps) => {
-  const { graphicsService, refs, store } = deps;
+  const { appService, graphicsService, refs, store } = deps;
   const particle = store.selectSelectedParticle();
   if (!particle || !refs.detailCanvas) {
     return;
   }
 
-  const imageItems = store.selectImagesData().items ?? {};
-  const renderableParticle = createRenderableParticleData(particle, imageItems);
-  await graphicsService.init({
-    canvas: refs.detailCanvas,
-    width: Math.max(1, Math.round(Number(renderableParticle.width) || 1)),
-    height: Math.max(1, Math.round(Number(renderableParticle.height) || 1)),
-  });
-  const previewState = createParticlePreviewState(renderableParticle, {
-    backgroundImage: selectParticlePreviewBackgroundImage(particle, imageItems),
-  });
-  await loadParticlePreviewAssets({
-    deps,
-    renderState: previewState,
-  });
-  // The renderer is shared. Once this page has gone, as when a double click
-  // opens the particle in the editor, the renderer is the editor's, and this
-  // particle drawn there before the editor loads its texture never starts:
-  // the editor then draws the same particle, which is left as it is.
-  if (!refs.detailCanvas.isConnected) {
-    return;
+  try {
+    const imageItems = store.selectImagesData().items ?? {};
+    const renderableParticle = createRenderableParticleData(
+      particle,
+      imageItems,
+    );
+    await graphicsService.init({
+      canvas: refs.detailCanvas,
+      width: Math.max(1, Math.round(Number(renderableParticle.width) || 1)),
+      height: Math.max(1, Math.round(Number(renderableParticle.height) || 1)),
+    });
+    const previewState = createParticlePreviewState(renderableParticle, {
+      backgroundImage: selectParticlePreviewBackgroundImage(
+        particle,
+        imageItems,
+      ),
+    });
+    await loadParticlePreviewAssets({
+      deps,
+      renderState: previewState,
+    });
+    // The renderer is shared. Once this page has gone, as when a double click
+    // opens the particle in the editor, the renderer is the editor's, and this
+    // particle drawn there before the editor loads its texture never starts:
+    // the editor then draws the same particle, which is left as it is.
+    if (!refs.detailCanvas.isConnected) {
+      return;
+    }
+    // Awaited, so a failure inside the renderer is caught here too.
+    await graphicsService.render(previewState);
+  } catch (error) {
+    console.error("[particles] Failed to draw the detail preview", error);
+    appService.showToast({ message: selectCopy(deps).failedRenderPreview });
   }
-  graphicsService.render(previewState);
 };
 
 const normalizeSelectedParticle = (deps) => {
