@@ -86,7 +86,7 @@ describe("rvn-character-sprite-selector", () => {
       showFileExplorer: true,
       // A dialog has room for wider cards than the scene editor's panel.
       gridStyle: expect.stringContaining(
-        "repeat(auto-fill, minmax(240px, 1fr))",
+        "repeat(auto-fill, minmax(min(240px, calc((100% - var(--spacing-lg)) / 2)), 1fr))",
       ),
       previewStyle: "width: 100%; aspect-ratio: 16 / 9;",
     });
@@ -113,7 +113,7 @@ describe("rvn-character-sprite-selector", () => {
     expect(selector.view()).toMatchObject({
       showFileExplorer: false,
       gridStyle: expect.stringContaining(
-        "repeat(auto-fill, minmax(240px, 1fr))",
+        "repeat(auto-fill, minmax(min(240px, calc((100% - var(--spacing-lg)) / 2)), 1fr))",
       ),
     });
   });

@@ -17,13 +17,15 @@ export const createCommandLineResourceSelectorLayout = ({
 });
 
 // Character and sprite cards keep 16:9 images and fill each row, at least
-// `minCardWidth` wide, so wider areas show more of them.
+// `minCardWidth` wide, so wider areas show more of them. A row always holds at
+// least two cards: in a narrow area the minimum drops to half the row, less
+// the gap between the two cards.
 export const createCharacterSelectorLayout = ({
   isTouchMode,
   minCardWidth = 180,
 } = {}) => ({
   showFileExplorer: !isTouchMode,
-  gridStyle: `display: grid; grid-template-columns: repeat(auto-fill, minmax(${minCardWidth}px, 1fr));`,
+  gridStyle: `display: grid; grid-template-columns: repeat(auto-fill, minmax(min(${minCardWidth}px, calc((100% - var(--spacing-lg)) / 2)), 1fr));`,
   itemStyle: GRID_CELL_STYLE,
   cardStyle: GRID_CELL_STYLE,
   previewStyle: "width: 100%; aspect-ratio: 16 / 9;",
