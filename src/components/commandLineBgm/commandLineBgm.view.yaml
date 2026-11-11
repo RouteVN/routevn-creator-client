@@ -207,7 +207,7 @@ styles:
   ".commandLineSelectorRow":
     container-type: inline-size
   # A narrow picker gives the folder list's room to the cards.
-  '@container (max-width: 480px)':
+  '@container (max-width: 400px)':
     ".commandLineSelectorExplorer":
       display: none
 template:
