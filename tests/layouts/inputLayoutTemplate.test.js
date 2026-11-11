@@ -151,6 +151,7 @@ const buildInputLayoutInLayoutEditor = async ({ i18n, textStyles }) => {
       ["anchor", topCenter],
       ["x", "960"],
       ["y", "390"],
+      ["field", "Name input"],
     ],
   );
   const submitContainerElement = editInPanel(
@@ -279,12 +280,26 @@ describe("createInputLayoutElements", () => {
       text: "Enter your name",
       textStyleId: "style-1",
     });
+    expect(items[tree[1].id]).toMatchObject({
+      name: "Input",
+      field: "Name input",
+    });
     expect(items[tree[2].id].formRole).toBe("submit");
     expect(items[tree[2].children[0].id]).toMatchObject({
       type: "text",
       text: "Submit",
       textStyleId: "style-1",
     });
+  });
+
+  it("keeps the input's field name in English in every app language", () => {
+    const elements = createInputLayoutElements({
+      projectResolution,
+      textStylesData,
+      copy: selectInputLayoutTemplateCopy(JA_I18N),
+    });
+
+    expect(toTemplateElements(elements).inputElement.field).toBe("Name input");
   });
 
   it("scales to the project's resolution", () => {

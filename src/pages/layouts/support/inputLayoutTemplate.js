@@ -6,7 +6,8 @@ import { scaleLayoutElementsForProjectResolution } from "../../../internal/proje
 // button below that, centered horizontally and placed above the middle of the
 // screen. Each element is what the layout editor's Add
 // Element menu creates, changed only through the edit panel: the same
-// defaults, names, and first text style. tests/layouts/inputLayoutTemplate
+// defaults, names, and first text style, except that the input's field is
+// "Name input" in every app language. tests/layouts/inputLayoutTemplate
 // adds the elements that way and compares, so when an editor default
 // changes, change it here too, and in the Default Input layout of
 // static/templates/default/repository.json.
@@ -52,7 +53,7 @@ export const createInputLayoutElements = ({
     scaleX: 1,
     scaleY: 1,
     rotation: 0,
-    field: "field",
+    field: "Name input",
     width: 330,
     height: 52,
   };
