@@ -1608,12 +1608,38 @@
         "id": "KfJVu6EFb3es",
         "type": "folder",
         "name": "Default"
+      },
+      "oWnh8ESbicFT": {
+        "id": "oWnh8ESbicFT",
+        "type": "folder",
+        "name": "Player Name"
+      },
+      "nHQaT2pu9m1E": {
+        "id": "nHQaT2pu9m1E",
+        "type": "variable",
+        "name": "Player Name",
+        "description": "",
+        "variableType": "string",
+        "scope": "context",
+        "default": "Player Name",
+        "value": "Player Name",
+        "isEnum": false,
+        "enumValues": []
       }
     },
     "tree": [
       {
         "id": "KfJVu6EFb3es",
         "children": []
+      },
+      {
+        "id": "oWnh8ESbicFT",
+        "children": [
+          {
+            "id": "nHQaT2pu9m1E",
+            "children": []
+          }
+        ]
       }
     ]
   },
@@ -5590,7 +5616,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "field": "field",
+              "field": "Name input",
               "width": 330,
               "height": 52
             },
