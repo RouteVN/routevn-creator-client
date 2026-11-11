@@ -546,7 +546,6 @@ export const selectViewData = ({ state, i18n }) => {
       i18n,
     }),
     showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
-    resourceSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorHorizontalPadding: state.isTouchMode ? "none" : "md",
     resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,

@@ -174,9 +174,9 @@ template:
                       - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery} :columns=${imageSelectorColumns} :minCardWidth=${resourceSelectorMinCardWidth}: null
+                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery} :minCardWidth=${resourceSelectorMinCardWidth}: null
                     $elif tab == 'spritesheet':
-                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :columns=${spritesheetSelectorColumns} :minCardWidth=${resourceSelectorMinCardWidth}: null
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :minCardWidth=${resourceSelectorMinCardWidth}: null
                     $elif selectorEmptyMessage:
                       - rtgl-view w=f h=1fg av=c ah=c p=md:
                           - rtgl-text s=sm c=mu-fg ta=c: ${selectorEmptyMessage}

@@ -104,12 +104,11 @@ describe("commandLineSoundEffects.store", () => {
     ).toEqual([{ type: "item", label: "自定义通道名称", key: "custom" }]);
   });
 
-  it("uses two audio columns and hides the explorer in touch mode", () => {
+  it("fills rows with cards and hides the explorer in touch mode", () => {
     const state = createInitialState();
 
     expect(selectViewData({ state, i18n })).toMatchObject({
       showResourceSelectorFileExplorer: true,
-      resourceSelectorColumns: undefined,
       // Cards fill each row, two a row or more where the picker has room.
       resourceSelectorGridStyle:
         "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
@@ -121,9 +120,8 @@ describe("commandLineSoundEffects.store", () => {
 
     expect(selectViewData({ state, i18n })).toMatchObject({
       showResourceSelectorFileExplorer: false,
-      resourceSelectorColumns: 2,
       resourceSelectorGridStyle:
-        "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
     });
   });
 

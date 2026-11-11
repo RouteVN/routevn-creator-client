@@ -1873,7 +1873,6 @@ export const selectViewData = ({ state, i18n }) => {
       i18n,
     }),
     showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
-    resourceSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
     resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,

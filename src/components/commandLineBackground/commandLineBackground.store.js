@@ -1416,8 +1416,6 @@ export const selectViewData = ({ state, i18n }) => {
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
     items: flatItems,
     showImageSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
-    imageSelectorColumns: resourceSelectorLayout.columns,
-    spritesheetSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorMinCardWidth: resourceSelectorLayout.minCardWidth,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,

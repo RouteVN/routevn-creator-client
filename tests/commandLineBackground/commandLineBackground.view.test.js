@@ -25,7 +25,7 @@ describe("commandLineBackground view", () => {
     expect(view).toContain(
       'rtgl-view br=md w=200 pos=rel overflow=hidden style="${selectedResource.resourceCardStyle}"',
     );
-    expect(view).toContain(":columns=${imageSelectorColumns}");
+    expect(view).toContain(":minCardWidth=${resourceSelectorMinCardWidth}");
     expect(view).toContain(
       'rtgl-view w=1fg sh style="min-width: 0; overscroll-behavior-x: contain;"',
     );
