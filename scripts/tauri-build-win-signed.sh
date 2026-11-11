@@ -6,16 +6,13 @@
 
 set -euo pipefail
 
-: "${WINDOWS_SIGN_CERT_SHA1:?Set WINDOWS_SIGN_CERT_SHA1 to the SHA-1 thumbprint of the code signing certificate.}"
-: "${WINDOWS_SIGN_TIMESTAMP_URL:?Set WINDOWS_SIGN_TIMESTAMP_URL to the RFC 3161 timestamp server of the certificate authority.}"
-
 # Tauri needs an absolute path to the sign command.
 SIGN_COMMAND="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sign-windows.sh"
+
+# Fail before the build when signing cannot run.
+"$SIGN_COMMAND" --check
+
 SIGN_CONFIG="$(SIGN_COMMAND="$SIGN_COMMAND" node -e 'console.log(JSON.stringify({ bundle: { windows: { signCommand: { cmd: process.env.SIGN_COMMAND, args: ["%1"] } } } }))')"
 
-bun run build:tauri
-tauri build \
-  --config src-tauri/tauri.prod.conf.json \
-  --config "$SIGN_CONFIG" \
-  --runner cargo-xwin \
-  --target x86_64-pc-windows-msvc
+# The extra config is appended to the `tauri build` command of `tauri:build:win`.
+bun run tauri:build:win --config "$SIGN_CONFIG"
