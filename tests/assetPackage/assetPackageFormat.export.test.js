@@ -31,13 +31,24 @@ describe("asset package format: export", () => {
     generated = await generateAssetPackageFixtures();
   });
 
-  it("has a committed folder for every case of the current schema, and no other", () => {
-    const versionDir = join(ASSET_PACKAGE_FIXTURES_DIR, generated.version);
-    const committedCases = readdirSync(versionDir).filter((name) =>
-      statSync(join(versionDir, name)).isDirectory(),
-    );
+  it("has a committed folder for every case, under the schema it is written with, and no other", () => {
+    const committedCases = readdirSync(ASSET_PACKAGE_FIXTURES_DIR)
+      .filter((version) => /^v\d+$/.test(version))
+      .flatMap((version) =>
+        readdirSync(join(ASSET_PACKAGE_FIXTURES_DIR, version))
+          .filter((name) =>
+            statSync(
+              join(ASSET_PACKAGE_FIXTURES_DIR, version, name),
+            ).isDirectory(),
+          )
+          .map((name) => `${version}/${name}`),
+      );
 
-    expect(committedCases.sort()).toEqual([...generated.cases.keys()].sort());
+    expect(committedCases.sort()).toEqual(
+      [...generated.cases]
+        .map(([name, { version }]) => `${version}/${name}`)
+        .sort(),
+    );
   });
 
   // A failure here means the exporter writes something else than it did.
@@ -46,8 +57,8 @@ describe("asset package format: export", () => {
   it.each(ASSET_PACKAGE_FIXTURE_CASES.map(({ name }) => name))(
     "%s: the exporter writes exactly the committed package",
     (name) => {
-      const caseDir = join(ASSET_PACKAGE_FIXTURES_DIR, generated.version, name);
-      const files = generated.cases.get(name);
+      const { version, files } = generated.cases.get(name);
+      const caseDir = join(ASSET_PACKAGE_FIXTURES_DIR, version, name);
 
       expect(listFiles(caseDir)).toEqual([...files.keys()].sort());
       expect(

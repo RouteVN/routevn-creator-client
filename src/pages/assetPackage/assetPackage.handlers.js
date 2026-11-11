@@ -18,6 +18,7 @@ export const handleBeforeMount = (deps) => {
   store.setUiConfig({ uiConfig });
   store.setFilesData({ filesData: repositoryState?.files });
   store.setScenesData({ scenesData: repositoryState?.scenes });
+  store.setTagsData({ tagsData: repositoryState?.tags });
   store.setResourceData({ resourceDataByType });
   const { assetPackId } = resolveAssetPackEditorPayload(
     appService.getPayload() ?? {},

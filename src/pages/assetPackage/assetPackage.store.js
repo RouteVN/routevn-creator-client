@@ -103,6 +103,7 @@ export const createInitialState = () => ({
   filesData: { items: {} },
   // The project's scenes and sections, which name the story links.
   scenesData: { items: {}, tree: [] },
+  tagsData: {},
   resourceDataByType: createResourceDataByType(),
   selectedFolderIdsByType: createSelectedFolderIdsByType(),
   // The picker ticks a copy of the selection, applied by Done.
@@ -139,6 +140,10 @@ export const setFilesData = ({ state }, { filesData } = {}) => {
 
 export const setScenesData = ({ state }, { scenesData } = {}) => {
   state.scenesData = scenesData ?? { items: {}, tree: [] };
+};
+
+export const setTagsData = ({ state }, { tagsData } = {}) => {
+  state.tagsData = tagsData ?? {};
 };
 
 export const setResourceData = ({ state }, { resourceDataByType } = {}) => {
@@ -368,6 +373,7 @@ export const selectAssetPackageData = ({ state }) =>
       state.resourceTypeOrder,
     ),
     scenesData: state.scenesData,
+    tagsData: state.tagsData,
   });
 
 export const selectAssetPackage = ({ state }) => ({

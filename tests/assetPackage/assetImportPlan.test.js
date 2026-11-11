@@ -1145,3 +1145,231 @@ describe("links in v2 packages", () => {
     );
   });
 });
+
+describe("character sprite tags in v3 packages", () => {
+  const createSpriteTagManifest = () => {
+    const manifest = createManifest();
+    manifest.schema = "routevn.import-pack.v3";
+    manifest.repository.files.items["file-sprite"] = {
+      id: "file-sprite",
+      mimeType: "image/png",
+      source: { url: "./files/file-sprite" },
+    };
+    const sprite = (id, tagIds) => {
+      const item = { id, type: "image", name: id, fileId: "file-sprite" };
+      if (tagIds) item.tagIds = tagIds;
+      return item;
+    };
+    manifest.repository.characters.items["character-1"] = {
+      id: "character-1",
+      type: "character",
+      name: "Character One",
+      sprites: {
+        items: {
+          "sprite-1": sprite("sprite-1", ["tag-1"]),
+          "sprite-2": sprite("sprite-2", ["tag-1", "tag-2"]),
+          "sprite-3": sprite("sprite-3"),
+        },
+        tree: [
+          { id: "sprite-1", children: [] },
+          { id: "sprite-2", children: [] },
+          { id: "sprite-3", children: [] },
+        ],
+      },
+      spriteTags: {
+        items: {
+          "tag-1": { id: "tag-1", type: "tag", name: "Tag One" },
+          "tag-2": {
+            id: "tag-2",
+            type: "tag",
+            name: "Tag Two",
+            color: "#112233",
+          },
+        },
+        tree: [{ id: "tag-1" }, { id: "tag-2" }],
+      },
+      spriteGroups: [
+        { id: "group-1", name: "Group One", tags: ["tag-1"] },
+        { id: "group-2", name: "Group Two", tags: ["tag-2"] },
+      ],
+    };
+    manifest.repository.characters.tree[0].children = [{ id: "character-1" }];
+    return manifest;
+  };
+  const plan = (manifest) => {
+    let id = 0;
+    return createAssetImportPlan({
+      manifest,
+      repositoryState: {},
+      createId: () => `generated-${++id}`,
+    });
+  };
+  const findCharacter = (resources) =>
+    resources.find(({ sourceId }) => sourceId === "characters:character-1");
+
+  it("creates the character without its tags, which follow under new ids", () => {
+    const character = findCharacter(plan(createSpriteTagManifest()).resources);
+
+    expect(character.data.spriteTags).toBeUndefined();
+    expect(character.data.spriteGroups).toBeUndefined();
+    for (const sprite of Object.values(character.data.sprites.items)) {
+      expect(sprite.tagIds).toBeUndefined();
+    }
+
+    const { tags, sprites, spriteGroups } = character.characterSpriteTags;
+    expect(tags.map(({ data }) => data)).toEqual([
+      { type: "tag", name: "Tag One" },
+      { type: "tag", name: "Tag Two", color: "#112233" },
+    ]);
+    const [tagOne, tagTwo] = tags.map(({ tagId }) => tagId);
+    expect(tagOne).not.toBe("tag-1");
+    expect(
+      sprites.map(({ spriteId, tagIds }) => ({ spriteId, tagIds })),
+    ).toEqual([
+      { spriteId: "sprite-1", tagIds: [tagOne] },
+      { spriteId: "sprite-2", tagIds: [tagOne, tagTwo] },
+    ]);
+    // The groups keep their ids, which previews pick sprites by.
+    expect(spriteGroups.items).toEqual([
+      { id: "group-1", name: "Group One", tags: [tagOne] },
+      { id: "group-2", name: "Group Two", tags: [tagTwo] },
+    ]);
+    const commandIds = [
+      character.commandId,
+      ...tags.map(({ commandId }) => commandId),
+      ...sprites.map(({ commandId }) => commandId),
+      spriteGroups.commandId,
+    ];
+    expect(new Set(commandIds).size).toBe(commandIds.length);
+  });
+
+  it("keeps the tags on the entry that is committed, also once references are rewritten", () => {
+    const created = plan(createSpriteTagManifest());
+    const entry = created.entries.find(
+      ({ sourceId }) => sourceId === "characters:character-1",
+    );
+    const rewritten = findCharacter(
+      rewriteAssetImportPlanReferences({ resources: created.resources }),
+    );
+
+    expect(entry.characterSpriteTags.tags).toHaveLength(2);
+    expect(rewritten.characterSpriteTags).toEqual(entry.characterSpriteTags);
+  });
+
+  it("carries tags without groups, and adds nothing for a character without tags", () => {
+    const withoutGroups = createSpriteTagManifest();
+    delete withoutGroups.repository.characters.items["character-1"]
+      .spriteGroups;
+    expect(
+      findCharacter(plan(withoutGroups).resources).characterSpriteTags
+        .spriteGroups,
+    ).toBeUndefined();
+
+    const withoutTags = createSpriteTagManifest();
+    const character = withoutTags.repository.characters.items["character-1"];
+    delete character.spriteGroups;
+    delete character.spriteTags;
+    for (const sprite of Object.values(character.sprites.items)) {
+      delete sprite.tagIds;
+    }
+    const planned = plan(withoutTags);
+    expect(findCharacter(planned.resources)).not.toHaveProperty(
+      "characterSpriteTags",
+    );
+    // The same ids as the package gets without the schema that has tags.
+    withoutTags.schema = "routevn.import-pack.v2";
+    expect(plan(withoutTags).entries).toEqual(planned.entries);
+  });
+
+  it.each([
+    [
+      "a sprite's tag the character does not have",
+      (character) => {
+        character.sprites.items["sprite-1"].tagIds = ["tag-missing"];
+      },
+    ],
+    [
+      "a group's tag the character does not have",
+      (character) => {
+        character.spriteGroups[0].tags = ["tag-missing"];
+      },
+    ],
+    [
+      "sprite tags without the tags themselves",
+      (character) => {
+        delete character.spriteTags;
+      },
+    ],
+    [
+      "two tags of one name",
+      (character) => {
+        character.spriteTags.items["tag-2"].name = " tag one ";
+      },
+    ],
+    [
+      "a tag whose id is not its key",
+      (character) => {
+        character.spriteTags.items["tag-2"].id = "tag-other";
+      },
+    ],
+    [
+      "a tag left out of the tree",
+      (character) => {
+        character.spriteTags.tree.pop();
+      },
+    ],
+    [
+      "a tag with a field that is not a tag's",
+      (character) => {
+        character.spriteTags.items["tag-1"].scopeKey = "images";
+      },
+    ],
+    [
+      "two groups of one id",
+      (character) => {
+        character.spriteGroups[1].id = "group-1";
+      },
+    ],
+    [
+      "a tag whose color is not one",
+      (character) => {
+        character.spriteTags.items["tag-2"].color = "red";
+      },
+    ],
+    [
+      "a group without tags",
+      (character) => {
+        character.spriteGroups[0].tags = [];
+      },
+    ],
+    [
+      "tags on a folder of sprites",
+      (character) => {
+        character.sprites.items["sprite-3"].type = "folder";
+        character.sprites.items["sprite-3"].tagIds = ["tag-1"];
+      },
+    ],
+    [
+      "a group without a name",
+      (character) => {
+        character.spriteGroups[0].name = "";
+      },
+    ],
+  ])("rejects %s", (_name, change) => {
+    const manifest = createSpriteTagManifest();
+    change(manifest.repository.characters.items["character-1"]);
+
+    expect(() => plan(manifest)).toThrow(
+      expect.objectContaining({ name: "AssetImportPlanError" }),
+    );
+  });
+
+  it("still leaves out a resource's own tags", () => {
+    const manifest = createSpriteTagManifest();
+    manifest.repository.characters.items["character-1"].tagIds = ["tag-1"];
+
+    expect(() => plan(manifest)).toThrow(
+      expect.objectContaining({ code: "unsupported_tag_scope" }),
+    );
+  });
+});

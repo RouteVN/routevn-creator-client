@@ -29,6 +29,7 @@ import {
   setFilesData,
   setResourceData,
   setScenesData,
+  setTagsData,
 } from "../src/pages/assetPackage/assetPackage.store.js";
 import { createAssetPackageManifest } from "../src/internal/assetPackageManifest.js";
 
@@ -1320,11 +1321,157 @@ const NESTED_PICKS_CASE = {
   },
 };
 
+// A character's sprite tags: the tags of its sprites and its sprite groups,
+// which the package carries with the character, picked or a dependency.
+const spriteImage = (id, name, fileId) => ({
+  id,
+  type: "image",
+  name,
+  fileId,
+  width: 1,
+  height: 1,
+});
+const spriteTag = (characterId, tagId, data) => ({
+  type: "tag.create",
+  payload: {
+    scopeKey: `characterSprites:${characterId}`,
+    tagId,
+    data: { type: "tag", ...data },
+  },
+});
+const spriteTagIds = (characterId, spriteId, tagIds) => ({
+  type: "character.sprite.update",
+  payload: { characterId, spriteId, data: { tagIds } },
+});
+const spriteGroups = (characterId, groups) => ({
+  type: "character.update",
+  payload: { characterId, data: { spriteGroups: groups } },
+});
+
+const CHARACTER_SPRITE_GROUPS_CASE = {
+  name: "character-sprite-groups",
+  files: [
+    file("file-sprite-happy", "image/png", PNG.red),
+    file("file-sprite-sad", "image/png", PNG.blue),
+    file("file-sprite-coat", "image/png", PNG.green),
+    file("file-sprite-plain", "image/png", PNG.gold),
+    file("file-sprite-two", "image/png", PNG.purple),
+  ],
+  scenes: [],
+  resources: {
+    characters: [
+      folder("folder-characters", "Characters", [
+        item("character-one", {
+          type: "character",
+          name: "Character One",
+          sprites: {
+            items: {
+              "sprite-folder-faces": {
+                id: "sprite-folder-faces",
+                type: "folder",
+                name: "Faces",
+              },
+              "sprite-happy": spriteImage(
+                "sprite-happy",
+                "Happy",
+                "file-sprite-happy",
+              ),
+              "sprite-sad": spriteImage("sprite-sad", "Sad", "file-sprite-sad"),
+              "sprite-coat": spriteImage(
+                "sprite-coat",
+                "Coat",
+                "file-sprite-coat",
+              ),
+              "sprite-plain": spriteImage(
+                "sprite-plain",
+                "Plain",
+                "file-sprite-plain",
+              ),
+            },
+            tree: [
+              {
+                id: "sprite-folder-faces",
+                children: [
+                  { id: "sprite-happy", children: [] },
+                  { id: "sprite-sad", children: [] },
+                ],
+              },
+              { id: "sprite-coat", children: [] },
+              { id: "sprite-plain", children: [] },
+            ],
+          },
+        }),
+      ]),
+      folder("folder-character-library", "Character Library", [
+        item("character-two", {
+          type: "character",
+          name: "Character Two",
+          sprites: {
+            items: {
+              "sprite-two": spriteImage(
+                "sprite-two",
+                "Sprite Two",
+                "file-sprite-two",
+              ),
+            },
+            tree: [{ id: "sprite-two", children: [] }],
+          },
+        }),
+      ]),
+    ],
+    transforms: [
+      folder("folder-transforms", "Transforms", [
+        item("transform-one", {
+          type: "transform",
+          name: "Transform One",
+          x: 640,
+          y: 360,
+          scaleX: 1,
+          scaleY: 1,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          rotation: 0,
+          preview: {
+            target: {
+              characterId: "character-two",
+              sprites: [{ id: "sprite-group-body", resourceId: "sprite-two" }],
+            },
+          },
+        }),
+      ]),
+    ],
+  },
+  commands: [
+    spriteTag("character-one", "tag-face", { name: "Face", color: "#CC3355" }),
+    spriteTag("character-one", "tag-outfit", { name: "Outfit" }),
+    // No sprite or group uses it; it comes with the character all the same.
+    spriteTag("character-one", "tag-spare", { name: "Spare" }),
+    spriteTagIds("character-one", "sprite-happy", ["tag-face"]),
+    spriteTagIds("character-one", "sprite-sad", ["tag-face"]),
+    spriteTagIds("character-one", "sprite-coat", ["tag-outfit"]),
+    spriteGroups("character-one", [
+      { id: "sprite-group-face", name: "Face", tags: ["tag-face"] },
+      { id: "sprite-group-outfit", name: "Outfit", tags: ["tag-outfit"] },
+    ]),
+    // Character Two is a dependency: the transform's preview shows it.
+    spriteTag("character-two", "tag-body", { name: "Body" }),
+    spriteTagIds("character-two", "sprite-two", ["tag-body"]),
+    spriteGroups("character-two", [
+      { id: "sprite-group-body", name: "Body", tags: ["tag-body"] },
+    ]),
+  ],
+  picks: {
+    characters: ["folder-characters"],
+    transforms: ["folder-transforms"],
+  },
+};
+
 export const ASSET_PACKAGE_FIXTURE_CASES = [
   ALL_TYPES_CASE,
   DEPENDENCIES_CASE,
   LINKS_CASE,
   NESTED_PICKS_CASE,
+  CHARACTER_SPRITE_GROUPS_CASE,
 ];
 
 // The order the source projects create their types in, so each resource
@@ -1439,6 +1586,7 @@ const createSourceCommands = (fixtureCase) => [
       fixtureCase.resources[resourceType] ?? [],
     ),
   ),
+  ...(fixtureCase.commands ?? []),
 ];
 
 /** The case's source project, built with commands. */
@@ -1478,6 +1626,7 @@ export const exportAssetPackageFiles = async ({
   const state = createInitialState();
   setFilesData({ state }, { filesData: repositoryState.files });
   setScenesData({ state }, { scenesData: repositoryState.scenes });
+  setTagsData({ state }, { tagsData: repositoryState.tags });
   setResourceData(
     { state },
     {
@@ -1535,12 +1684,12 @@ export const exportAssetPackageFiles = async ({
 };
 
 /**
- * Every case's package files by path, and the version folder they belong
- * in, without writing anything.
+ * Every case's package files by path and the version folder they belong in,
+ * without writing anything. A case's folder is that of the schema its
+ * package is written with, which depends on what it carries.
  */
 export const generateAssetPackageFixtures = async () => {
   const cases = new Map();
-  let version;
   for (const fixtureCase of ASSET_PACKAGE_FIXTURE_CASES) {
     const { repository } = await createSourceProject(fixtureCase);
     const files = await exportAssetPackageFiles({
@@ -1553,15 +1702,17 @@ export const generateAssetPackageFixtures = async () => {
     const { schema } = JSON.parse(
       new TextDecoder().decode(files.get(ASSET_PACKAGE_MANIFEST_PATH)),
     );
-    version = getAssetPackageFixtureVersion(schema);
-    cases.set(fixtureCase.name, files);
+    cases.set(fixtureCase.name, {
+      version: getAssetPackageFixtureVersion(schema),
+      files,
+    });
   }
-  return { version, cases };
+  return { cases };
 };
 
 const writeAssetPackageFixtures = async () => {
-  const { version, cases } = await generateAssetPackageFixtures();
-  for (const [name, files] of cases) {
+  const { cases } = await generateAssetPackageFixtures();
+  for (const [name, { version, files }] of cases) {
     const caseDir = join(ASSET_PACKAGE_FIXTURES_DIR, version, name);
     await rm(caseDir, { recursive: true, force: true });
     for (const [path, bytes] of files) {
