@@ -10,7 +10,8 @@ import { scaleLayoutElementsForProjectResolution } from "../../../internal/proje
 // "Name input" in every app language. tests/layouts/inputLayoutTemplate
 // adds the elements that way and compares, so when an editor default
 // changes, change it here too, and in the Default Input layout of
-// static/templates/default/repository.json.
+// static/templates/default/repository.json. That layout's thumbnail is the
+// app's own drawing of it, so draw it again when its elements move.
 //
 // Positions are for 1920x1080 and are scaled to the project's resolution.
 export const createInputLayoutElements = ({
@@ -30,7 +31,7 @@ export const createInputLayoutElements = ({
     type: "text",
     name: copy.textName ?? "Text",
     x: 960,
-    y: 340,
+    y: 300,
     anchorX: 0.5,
     anchorY: 0,
     scaleX: 1,
@@ -47,7 +48,7 @@ export const createInputLayoutElements = ({
     type: "input",
     name: copy.inputName ?? "Input",
     x: 960,
-    y: 390,
+    y: 350,
     anchorX: 0.5,
     anchorY: 0,
     scaleX: 1,

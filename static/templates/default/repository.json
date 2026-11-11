@@ -455,6 +455,13 @@
         "mimeType": "image/jpeg",
         "size": 1768,
         "sha256": "e0dcc5fc5d9b5bcb34ed1276a62ee98d2ac6d75f36a5bf3b7f7351d78ff8fd6c"
+      },
+      "ojQvZCmy6A5e": {
+        "id": "ojQvZCmy6A5e",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 1887,
+        "sha256": "e01fbcfe9082e6fc270ee2cbc86b925f5cefee57a774f01bd72c3e0ead66da17"
       }
     },
     "tree": [
@@ -592,6 +599,9 @@
       },
       {
         "id": "PMnoNokyMvDz"
+      },
+      {
+        "id": "ojQvZCmy6A5e"
       }
     ]
   },
@@ -1609,11 +1619,6 @@
         "type": "folder",
         "name": "Default"
       },
-      "oWnh8ESbicFT": {
-        "id": "oWnh8ESbicFT",
-        "type": "folder",
-        "name": "Player Name"
-      },
       "nHQaT2pu9m1E": {
         "id": "nHQaT2pu9m1E",
         "type": "variable",
@@ -1630,10 +1635,6 @@
     "tree": [
       {
         "id": "KfJVu6EFb3es",
-        "children": []
-      },
-      {
-        "id": "oWnh8ESbicFT",
         "children": [
           {
             "id": "nHQaT2pu9m1E",
@@ -5588,7 +5589,7 @@
               "type": "text",
               "name": "Text",
               "x": 960,
-              "y": 340,
+              "y": 300,
               "anchorX": 0.5,
               "anchorY": 0,
               "scaleX": 1,
@@ -5610,7 +5611,7 @@
               "type": "input",
               "name": "Input",
               "x": 960,
-              "y": 390,
+              "y": 350,
               "anchorX": 0.5,
               "anchorY": 0,
               "scaleX": 1,
@@ -5678,6 +5679,10 @@
               ]
             }
           ]
+        },
+        "thumbnailFileId": "ojQvZCmy6A5e",
+        "preview": {
+          "backgroundImageId": "c5xw9bBcNAxD"
         }
       }
     },
