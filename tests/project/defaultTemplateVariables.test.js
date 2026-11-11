@@ -10,13 +10,16 @@ const defaultRepositoryTemplate = JSON.parse(
 );
 
 describe("default template variables", () => {
-  it("has a Player Name folder holding the Player Name variable", () => {
+  it("has one Default folder holding the Player Name variable", () => {
     const { items, tree } = defaultRepositoryTemplate.variables;
-    const folderNode = tree.find(
-      (node) =>
-        items[node.id].type === "folder" &&
-        items[node.id].name === "Player Name",
-    );
+
+    expect(tree).toHaveLength(1);
+    const [folderNode] = tree;
+    expect(items[folderNode.id]).toEqual({
+      id: folderNode.id,
+      type: "folder",
+      name: "Default",
+    });
 
     expect(folderNode.children).toHaveLength(1);
     const [variableNode] = folderNode.children;

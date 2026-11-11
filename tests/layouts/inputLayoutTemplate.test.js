@@ -140,7 +140,7 @@ const buildInputLayoutInLayoutEditor = async ({ i18n, textStyles }) => {
     [
       ["anchor", topCenter],
       ["x", "960"],
-      ["y", "340"],
+      ["y", "300"],
       ["textStyle.align", "center"],
       ["content", [{ text: promptText }]],
     ],
@@ -150,7 +150,7 @@ const buildInputLayoutInLayoutEditor = async ({ i18n, textStyles }) => {
     [
       ["anchor", topCenter],
       ["x", "960"],
-      ["y", "390"],
+      ["y", "350"],
       ["field", "Name input"],
     ],
   );
@@ -314,10 +314,10 @@ describe("createInputLayoutElements", () => {
     const { promptTextElement, inputElement, submitContainerElement } =
       toTemplateElements(elements);
 
-    expect(promptTextElement).toMatchObject({ x: 640, y: 227 });
+    expect(promptTextElement).toMatchObject({ x: 640, y: 200 });
     expect(inputElement).toMatchObject({
       x: 640,
-      y: 260,
+      y: 233,
       width: 220,
       height: 35,
     });
@@ -334,6 +334,14 @@ describe("createInputLayoutElements", () => {
       layoutType: "input",
       isFragment: false,
     });
+    expect(
+      defaultRepositoryTemplate.images.items[
+        templateLayout.preview.backgroundImageId
+      ],
+    ).toMatchObject({ type: "image", name: "menu_background" });
+    expect(
+      defaultRepositoryTemplate.files.items[templateLayout.thumbnailFileId],
+    ).toMatchObject({ type: "image", mimeType: "image/jpeg" });
     expect(withTreeOrderIds(templateLayout.elements)).toEqual(
       withTreeOrderIds(
         createInputLayoutElements({
