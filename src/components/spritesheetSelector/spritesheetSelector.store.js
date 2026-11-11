@@ -107,7 +107,11 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     props.selectedSpritesheetValue ?? state.selectedSpritesheetValue;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
   const columns = parseSelectorColumnCount(props.columns);
-  const spritesheetGridStyle = createSelectorGridStyle(columns);
+  const minCardWidth = parseSelectorColumnCount(props.minCardWidth);
+  const cardsFillCells = columns !== undefined || minCardWidth !== undefined;
+  const spritesheetGridStyle = createSelectorGridStyle(columns, {
+    minCardWidth,
+  });
   const { resourceId, animationName } = parseSpritesheetAnimationSelectionValue(
     selectedSpritesheetValue,
   );
@@ -120,7 +124,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     )
     .filter((group) => group.children.length > 0 || group.id !== ROOT_GROUP_ID)
     .filter((group) => group.shouldDisplay);
-  const spritesheetCardStyle = columns
+  const spritesheetCardStyle = cardsFillCells
     ? "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;"
     : "max-width: 100%; box-sizing: border-box;";
 
@@ -133,7 +137,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     }),
     spritesheetGridStyle,
     spritesheetCardStyle,
-    spritesheetPreviewCardStyle: columns
+    spritesheetPreviewCardStyle: cardsFillCells
       ? spritesheetCardStyle
       : "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
     selectedSpritesheetValue,

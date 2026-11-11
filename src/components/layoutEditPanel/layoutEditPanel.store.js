@@ -2108,7 +2108,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     tempSelectedImageId: state.tempSelectedImageId,
     imageFolderItems,
     showImageSelectorFileExplorer: selectorLayout.showFileExplorer,
-    selectorColumns: selectorLayout.columns,
+    selectorColumns: state.isTouchMode ? 2 : undefined,
     soundSelectorDialog: state.soundSelectorDialog,
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,

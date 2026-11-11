@@ -1,29 +1,31 @@
-const MOBILE_RESOURCE_SELECTOR_GRID_STYLE =
-  "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));";
+import { createFillSelectorGridStyle } from "../resourcePages/selectorGrid.js";
+
 // A card that fills its grid cell.
 const GRID_CELL_STYLE =
   "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;";
-const MOBILE_RESOURCE_SELECTOR_ITEM_STYLE = GRID_CELL_STYLE;
+const MIN_CARD_WIDTH = 180;
 
+// Pickers fill each row with cards at least MIN_CARD_WIDTH wide, on desktop
+// and touch layouts alike; see createFillSelectorGridStyle for how a narrow
+// picker lays them out. Touch layouts drop the folder list. `minCardWidth` is
+// for the shared selector components, which build their own grid.
 export const createCommandLineResourceSelectorLayout = ({
   isTouchMode,
 } = {}) => ({
   showFileExplorer: !isTouchMode,
-  columns: isTouchMode ? 2 : undefined,
-  gridStyle: isTouchMode ? MOBILE_RESOURCE_SELECTOR_GRID_STYLE : "",
-  itemStyle: isTouchMode ? MOBILE_RESOURCE_SELECTOR_ITEM_STYLE : "",
-  cardStyle: isTouchMode ? MOBILE_RESOURCE_SELECTOR_ITEM_STYLE : "",
-  previewStyle: isTouchMode ? "width: 100%;" : "",
+  minCardWidth: MIN_CARD_WIDTH,
+  gridStyle: createFillSelectorGridStyle(MIN_CARD_WIDTH),
+  itemStyle: GRID_CELL_STYLE,
+  cardStyle: GRID_CELL_STYLE,
 });
 
-// Character and sprite cards keep 16:9 images and fill each row, at least
-// `minCardWidth` wide, so wider areas show more of them.
+// Character and sprite cards also keep 16:9 images.
 export const createCharacterSelectorLayout = ({
   isTouchMode,
-  minCardWidth = 180,
+  minCardWidth = MIN_CARD_WIDTH,
 } = {}) => ({
   showFileExplorer: !isTouchMode,
-  gridStyle: `display: grid; grid-template-columns: repeat(auto-fill, minmax(${minCardWidth}px, 1fr));`,
+  gridStyle: createFillSelectorGridStyle(minCardWidth),
   itemStyle: GRID_CELL_STYLE,
   cardStyle: GRID_CELL_STYLE,
   previewStyle: "width: 100%; aspect-ratio: 16 / 9;",

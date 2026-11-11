@@ -90,6 +90,12 @@ styles:
     background-position: "0 0, 0 6px, 6px -6px, -6px 0"
     background-repeat: repeat
     background-size: 12px 12px
+  ".commandLineSelectorRow":
+    container-type: inline-size
+  # A narrow picker gives the folder list's room to the cards.
+  '@container (max-width: 400px)':
+    ".commandLineSelectorExplorer":
+      display: none
 template:
   - 'rtgl-view w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - rtgl-view w=f h=24 av=c ph=md mb=md:
@@ -162,28 +168,28 @@ template:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showSearchButton:
                   - 'rtgl-button#searchButton sq pre=search v=ol aria-label="${searchButtonLabel}" title="${searchButtonLabel}"': null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=md style="min-height: 0;"':
+          - 'rtgl-view.commandLineSelectorRow d=h w=f g=lg mt=sm h=1fg ph=md style="min-height: 0;"':
               - $if showImageSelectorFileExplorer:
-                  - rtgl-view h=f w=1fg sv:
+                  - rtgl-view.commandLineSelectorExplorer h=f w=1fg sv:
                       - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery} :columns=${imageSelectorColumns}: null
+                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery} :minCardWidth=${resourceSelectorMinCardWidth}: null
                     $elif tab == 'spritesheet':
-                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :columns=${spritesheetSelectorColumns}: null
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :minCardWidth=${resourceSelectorMinCardWidth}: null
                     $elif selectorEmptyMessage:
                       - rtgl-view w=f h=1fg av=c ah=c p=md:
                           - rtgl-text s=sm c=mu-fg ta=c: ${selectorEmptyMessage}
                     $elif tab == 'layout':
                       - $for group, i in groups:
-                          - rtgl-view g=md:
+                          - rtgl-view g=md w=f:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg svg=folder wh=16: null
                                   - rtgl-text: ${group.fullLabel}
                               - 'rtgl-view d=h w=f wrap g=lg style="${resourceSelectorGridStyle}"':
                                   - $for item, j in group.children:
                                       - 'rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${resourceSelectorItemStyle}"':
-                                          - 'rtgl-view w=225 br=md overflow=hidden style="${item.resourceCardStyle}"':
+                                          - 'rtgl-view br=md overflow=hidden style="${item.resourceCardStyle}"':
                                               - 'rtgl-view w=f style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                   - $if item.previewFileId:
                                                       - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
@@ -196,14 +202,14 @@ template:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.typeInfo}
                     $elif tab == 'video':
                       - $for group, i in groups:
-                          - rtgl-view g=md:
+                          - rtgl-view g=md w=f:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg svg=folder wh=16: null
                                   - rtgl-text: ${group.fullLabel}
                               - 'rtgl-view d=h w=f wrap g=lg style="${resourceSelectorGridStyle}"':
                                   - $for item, j in group.children:
                                       - 'rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${resourceSelectorItemStyle}"':
-                                          - 'rtgl-view br=md pos=rel w=200 overflow=hidden style="${item.resourceCardStyle}"':
+                                          - 'rtgl-view br=md pos=rel overflow=hidden style="${item.resourceCardStyle}"':
                                               - 'rtgl-view w=f pos=rel style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                   - rvn-file-image w=f h=f fileId=${item.previewFileId}: null
                                                   - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
