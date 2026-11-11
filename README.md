@@ -237,6 +237,21 @@ Cross-compile for Windows:
 bun run tauri:build:win
 ```
 
+Cross-compile for Windows with code signing:
+
+```shell
+WINDOWS_SIGN_CERT_SHA1=<certificate thumbprint> \
+WINDOWS_SIGN_TIMESTAMP_URL=<timestamp server URL> \
+bun run tauri:build:win:signed
+```
+
+Run this from WSL on a Windows host whose certificate store holds the code
+signing certificate. Tauri signs the application executable, the uninstaller,
+and the installer with `signtool.exe` during the build, and creates the updater
+signature after the installer is signed. The bundled player template stays
+unsigned. Set `WINDOWS_SIGNTOOL` to the WSL path of `signtool.exe` when the
+Windows SDK is not in its default location.
+
 Build and notarize the macOS DMG:
 
 ```shell
