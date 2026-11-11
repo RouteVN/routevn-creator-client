@@ -16,16 +16,20 @@ export const createCommandLineResourceSelectorLayout = ({
   previewStyle: isTouchMode ? "width: 100%;" : "",
 });
 
+// Below this width two cards a row are too small to read, so a row holds one.
+const MIN_TWO_COLUMN_CARD_WIDTH = 120;
+
 // Character and sprite cards keep 16:9 images and fill each row, at least
-// `minCardWidth` wide, so wider areas show more of them. A row always holds at
-// least two cards: in a narrow area the minimum drops to half the row, less
-// the gap between the two cards.
+// `minCardWidth` wide, so wider areas show more of them. An area too narrow
+// for two such cards still shows two a row, each half the row less the gap,
+// until they would be narrower than MIN_TWO_COLUMN_CARD_WIDTH; then one card
+// fills the row.
 export const createCharacterSelectorLayout = ({
   isTouchMode,
   minCardWidth = 180,
 } = {}) => ({
   showFileExplorer: !isTouchMode,
-  gridStyle: `display: grid; grid-template-columns: repeat(auto-fill, minmax(min(${minCardWidth}px, calc((100% - var(--spacing-lg)) / 2)), 1fr));`,
+  gridStyle: `display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(${MIN_TWO_COLUMN_CARD_WIDTH}px, min(${minCardWidth}px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));`,
   itemStyle: GRID_CELL_STYLE,
   cardStyle: GRID_CELL_STYLE,
   previewStyle: "width: 100%; aspect-ratio: 16 / 9;",
