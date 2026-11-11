@@ -312,7 +312,14 @@ const withoutKeys = (value, keys) =>
     Object.entries(value).filter(([key]) => !keys.includes(key)),
   );
 
-// Every id a package gives a resource, folder, file or link.
+// The package's characters, picks and dependencies, by id.
+const listPackageCharacters = (manifest) =>
+  [
+    ...Object.entries(manifest.repository.characters?.items ?? {}),
+    ...Object.entries(manifest.dependencies?.characters?.items ?? {}),
+  ].filter(([, item]) => item.type === "character");
+
+// Every id a package gives a resource, folder, file, link or sprite tag.
 const listPackageIds = (manifest) => [
   ...Object.keys(manifest.repository.files.items),
   ...ASSET_PACKAGE_RESOURCE_TYPES.flatMap((type) => [
@@ -320,6 +327,9 @@ const listPackageIds = (manifest) => [
     ...Object.keys(manifest.dependencies?.[type]?.items ?? {}),
   ]),
   ...Object.keys(manifest.links?.items ?? {}),
+  ...listPackageCharacters(manifest).flatMap(([, character]) =>
+    Object.keys(character.spriteTags?.items ?? {}),
+  ),
 ];
 
 // The strings and keys of `value` that are, or contain, a package id.
@@ -352,7 +362,8 @@ const findPackageIds = (value, packageIds, found = []) => {
 
 // The package with each id replaced by a name for its place: a resource or
 // folder by its type and folder path, a dependency by its type and name, a
-// link by what it names, and a file by its hash. Two packages of the same
+// link by what it names, a file by its hash, and a character's sprite tag by
+// its character and name. Two packages of the same
 // resources then compare equal whatever ids they use.
 const normalizePackage = (manifest) => {
   const labels = new Map();
@@ -378,6 +389,11 @@ const normalizePackage = (manifest) => {
   }
   for (const [id, link] of Object.entries(manifest.links?.items ?? {})) {
     addLabel(id, `link:${link.kind}:${link.sceneName ?? ""}/${link.name}`);
+  }
+  for (const [characterId, character] of listPackageCharacters(manifest)) {
+    for (const [id, tag] of Object.entries(character.spriteTags?.items ?? {})) {
+      addLabel(id, `spriteTag:${labels.get(characterId)}/${tag.name}`);
+    }
   }
   const files = {};
   for (const [id, descriptor] of Object.entries(
@@ -543,6 +559,21 @@ describe.each(PACKAGE_DIRS)(
             }
           }
         }
+        // A character's sprite tags are imported under new ids, in its own
+        // tags, and are told apart by name.
+        for (const { type, packageId, item } of importedItems) {
+          if (type !== "characters") continue;
+          const importedTags =
+            imported.state.tags[`characterSprites:${idMap.get(packageId)}`];
+          for (const [tagId, tag] of Object.entries(
+            item.spriteTags?.items ?? {},
+          )) {
+            const [importedTagId] = Object.entries(importedTags.items).find(
+              ([, importedTag]) => importedTag.name === tag.name,
+            );
+            idMap.set(tagId, importedTagId);
+          }
+        }
       });
 
       it("leaves a project the model accepts", () => {
@@ -618,8 +649,9 @@ describe.each(PACKAGE_DIRS)(
       it("points every reference at what the project has: imports, replaced dependencies, files and chosen links", () => {
         expect(importedItems.length).toBeGreaterThan(0);
         for (const { type, packageId, item, pick } of importedItems) {
+          // A character's sprite tags go into the project's tags.
           const expected = translateIds(
-            withoutKeys(item, ["id", ...PREVIEW_FIELDS]),
+            withoutKeys(item, ["id", "spriteTags", ...PREVIEW_FIELDS]),
             idMap,
           );
           // The import dialog sends each pick's description, empty when it
@@ -630,6 +662,32 @@ describe.each(PACKAGE_DIRS)(
           expect(withoutKeys(actual, ["id"]), `${type} ${packageId}`).toEqual(
             expected,
           );
+        }
+      });
+
+      it("imports each character's sprite tags under new ids, with its sprite groups as they were", () => {
+        for (const { type, packageId, item } of importedItems) {
+          if (type !== "characters") continue;
+          const characterId = idMap.get(packageId);
+          const packageTags = item.spriteTags ?? { items: {}, tree: [] };
+          const importedTags = imported.state.tags[
+            `characterSprites:${characterId}`
+          ] ?? { items: {}, tree: [] };
+
+          expect(importedTags.tree, packageId).toEqual(
+            packageTags.tree.map(({ id }) => ({ id: idMap.get(id) })),
+          );
+          expect(importedTags.items, packageId).toEqual(
+            translateIds(packageTags.items, idMap),
+          );
+          for (const tagId of Object.keys(packageTags.items)) {
+            expect(idMap.get(tagId), tagId).not.toBe(tagId);
+          }
+          // The groups keep their ids, which previews pick sprites by.
+          expect(
+            imported.state.characters.items[characterId].spriteGroups,
+            packageId,
+          ).toEqual(translateIds(item.spriteGroups, idMap));
         }
       });
 

@@ -122,7 +122,53 @@ none.
 
 `routevn.import-pack.v1` packages have no `dependencies` or `links`:
 everything is in `repository`, and the importer treats every resource as a
-pick. The creator exports v2.
+pick.
+
+`routevn.import-pack.v3` is v2 with a character's sprite tags. A character,
+picked or a dependency, may carry:
+
+- `spriteTags`: the tags of its sprites, as `{ items, tree }`, each tag
+  `{ id, type: "tag", name }` with an optional `color`;
+- `tagIds` on its sprites, naming those tags;
+- `spriteGroups`: its sprite groups, each `{ id, name, tags }`, naming those
+  tags.
+
+```json
+"character-one": {
+  "id": "character-one",
+  "type": "character",
+  "name": "Character One",
+  "sprites": {
+    "items": {
+      "sprite-happy": {
+        "id": "sprite-happy",
+        "type": "image",
+        "name": "Happy",
+        "fileId": "file-sprite-happy",
+        "tagIds": ["tag-face"]
+      }
+    },
+    "tree": [{ "id": "sprite-happy", "children": [] }]
+  },
+  "spriteTags": {
+    "items": {
+      "tag-face": { "id": "tag-face", "type": "tag", "name": "Face" }
+    },
+    "tree": [{ "id": "tag-face" }]
+  },
+  "spriteGroups": [{ "id": "sprite-group-face", "name": "Face", "tags": ["tag-face"] }]
+}
+```
+
+Import creates the character, then its tags under new ids, then sets the tags
+of its sprites and its sprite groups, in the same commit. Sprites and sprite
+groups keep their ids, as previews pick a character's sprites by them. A
+dependency the importer replaces with one of the project's characters brings
+no tags. Every other tag, such as a resource's own `tagIds`, is left out of a
+package, and import rejects one that has them.
+
+The creator exports v3 when a character it carries has sprite tags, and v2
+otherwise, so a package without them opens in apps that read only v2.
 
 The creator exports only `package.kind`. Catalog metadata such as package id,
 name, version, description, publisher, or source may be supplied by a publishing

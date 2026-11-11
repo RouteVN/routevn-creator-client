@@ -2,6 +2,10 @@ export const IMPORT_PACK_SCHEMA = "routevn.import-pack.v1";
 // Adds `dependencies`: the resources the author's picks use but the author
 // did not pick. `repository` then holds only the picks.
 export const IMPORT_PACK_SCHEMA_V2 = "routevn.import-pack.v2";
+// Adds a character's sprite tags: `spriteTags` and `spriteGroups` on a
+// character, and `tagIds` on its sprites. Written only by a package that has
+// them.
+export const IMPORT_PACK_SCHEMA_V3 = "routevn.import-pack.v3";
 export const IMPORT_FOLDER_ROOT_VALUE = "_root";
 
 const IMPORT_PACKAGE_VALIDATION_ERROR_NAME = "ImportPackageValidationError";

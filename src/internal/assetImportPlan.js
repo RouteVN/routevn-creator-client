@@ -17,8 +17,10 @@ import {
 import {
   IMPORT_PACK_SCHEMA,
   IMPORT_PACK_SCHEMA_V2,
+  IMPORT_PACK_SCHEMA_V3,
   isPlainObject,
 } from "./importPackages.js";
+import { getCharacterSpriteTagScopeKey } from "./project/commands.js";
 
 const ENVELOPE_KEYS = new Set(["schema", "package", "repository"]);
 const ENVELOPE_KEYS_V2 = new Set([...ENVELOPE_KEYS, "dependencies", "links"]);
@@ -102,6 +104,8 @@ const assertOptionalString = (value, path) => {
   }
 };
 
+// A character's sprite tags are not part of creating it: its tags can only
+// be created once it exists, so they follow it as `characterSpriteTags`.
 const createResourceData = (item) => {
   const data = structuredClone(item);
   delete data.id;
@@ -110,7 +114,185 @@ const createResourceData = (item) => {
   delete data.resolvedTags;
   delete data.previewMediaFileId;
   delete data.thumbnailMediaFileId;
+  if (data.type === "character") {
+    delete data.spriteTags;
+    delete data.spriteGroups;
+    for (const sprite of Object.values(data.sprites?.items ?? {})) {
+      delete sprite.tagIds;
+    }
+  }
   return data;
+};
+
+const SPRITE_TAG_KEYS = new Set(["id", "type", "name", "color"]);
+const SPRITE_GROUP_KEYS = new Set(["id", "name", "tags"]);
+
+const assertSpriteTagIds = ({ tagIds, tagItems, path, resourceId }) => {
+  if (!Array.isArray(tagIds)) {
+    fail("invalid_package", `${path} must be a list of tags.`, {
+      path,
+      resourceId,
+    });
+  }
+  for (const tagId of tagIds) {
+    if (typeof tagId !== "string" || !Object.hasOwn(tagItems, tagId)) {
+      fail("invalid_package", `${path} must name the character's tags.`, {
+        path,
+        resourceId,
+      });
+    }
+  }
+};
+
+// A character's sprite tags: `spriteTags`, the tags themselves, which its
+// sprites' `tagIds` and its `spriteGroups` name.
+const validateCharacterSpriteTags = ({ item, itemPath, resourceId }) => {
+  const sprites = isPlainObject(item.sprites?.items)
+    ? Object.entries(item.sprites.items).filter(
+        ([, sprite]) => sprite?.tagIds !== undefined,
+      )
+    : [];
+  if (
+    item.spriteTags === undefined &&
+    item.spriteGroups === undefined &&
+    sprites.length === 0
+  ) {
+    return;
+  }
+
+  const tagsPath = `${itemPath}.spriteTags`;
+  const spriteTags = item.spriteTags ?? { items: {}, tree: [] };
+  assertPlainObject(spriteTags, tagsPath);
+  assertAllowedKeys(spriteTags, new Set(["items", "tree"]), tagsPath);
+  assertPlainObject(spriteTags.items, `${tagsPath}.items`);
+  const tagEntries = Object.entries(spriteTags.items);
+  if (tagEntries.length > MAX_RESOURCE_COUNT) {
+    fail("too_many_resources", `${tagsPath} contains too many tags.`, {
+      path: tagsPath,
+      resourceId,
+    });
+  }
+  const names = new Set();
+  for (const [tagId, tag] of tagEntries) {
+    const tagPath = `${tagsPath}.items.${tagId}`;
+    assertPlainObject(tag, tagPath);
+    assertAllowedKeys(tag, SPRITE_TAG_KEYS, tagPath);
+    assertNonEmptyString(tag.name, `${tagPath}.name`);
+    assertOptionalString(tag.color, `${tagPath}.color`);
+    const name = tag.name.trim().toLowerCase();
+    if (tag.id !== tagId || tag.type !== "tag" || names.has(name)) {
+      fail("invalid_package", `${tagPath} is not a valid tag.`, {
+        path: tagPath,
+        resourceId,
+      });
+    }
+    names.add(name);
+  }
+  const treeIds = Array.isArray(spriteTags.tree)
+    ? spriteTags.tree.map((node) => node?.id)
+    : [];
+  if (
+    treeIds.length !== tagEntries.length ||
+    new Set(treeIds).size !== treeIds.length ||
+    treeIds.some((tagId) => !Object.hasOwn(spriteTags.items, tagId))
+  ) {
+    fail("invalid_tree", `${tagsPath}.tree must list each tag once.`, {
+      path: `${tagsPath}.tree`,
+      resourceId,
+    });
+  }
+
+  for (const [spriteId, sprite] of sprites) {
+    if (sprite.type === "folder") {
+      fail("invalid_package", "A folder of sprites has no tags.", {
+        path: `${itemPath}.sprites.items.${spriteId}.tagIds`,
+        resourceId,
+      });
+    }
+    assertSpriteTagIds({
+      tagIds: sprite.tagIds,
+      tagItems: spriteTags.items,
+      path: `${itemPath}.sprites.items.${spriteId}.tagIds`,
+      resourceId,
+    });
+  }
+
+  if (item.spriteGroups === undefined) {
+    return;
+  }
+  const groupsPath = `${itemPath}.spriteGroups`;
+  if (!Array.isArray(item.spriteGroups)) {
+    fail("invalid_package", `${groupsPath} must be a list.`, {
+      path: groupsPath,
+      resourceId,
+    });
+  }
+  const groupIds = new Set();
+  item.spriteGroups.forEach((spriteGroup, index) => {
+    const groupPath = `${groupsPath}[${index}]`;
+    assertPlainObject(spriteGroup, groupPath);
+    assertAllowedKeys(spriteGroup, SPRITE_GROUP_KEYS, groupPath);
+    assertNonEmptyString(spriteGroup.id, `${groupPath}.id`);
+    assertNonEmptyString(spriteGroup.name, `${groupPath}.name`);
+    if (groupIds.has(spriteGroup.id)) {
+      fail("invalid_package", `${groupPath}.id is used twice.`, {
+        path: `${groupPath}.id`,
+        resourceId,
+      });
+    }
+    groupIds.add(spriteGroup.id);
+    assertSpriteTagIds({
+      tagIds: spriteGroup.tags,
+      tagItems: spriteTags.items,
+      path: `${groupPath}.tags`,
+      resourceId,
+    });
+  });
+};
+
+// What follows creating a character that has sprite tags: its tags, under
+// new ids, then the tags of each sprite and its sprite groups, which name
+// them. Sprites and groups keep their ids, as previews pick sprites by them.
+const createCharacterSpriteTags = ({ item, createId }) => {
+  const sourceTagIds = (item.spriteTags?.tree ?? []).map((node) => node.id);
+  if (sourceTagIds.length === 0) {
+    return undefined;
+  }
+  const destinationTagIdBySourceId = new Map();
+  const tags = sourceTagIds.map((sourceTagId) => {
+    const sourceTag = item.spriteTags.items[sourceTagId];
+    const tagId = createId();
+    destinationTagIdBySourceId.set(sourceTagId, tagId);
+    const data = { type: "tag", name: sourceTag.name };
+    if (sourceTag.color !== undefined) {
+      data.color = sourceTag.color;
+    }
+    return { tagId, commandId: createId(), data };
+  });
+  const toDestinationTagIds = (tagIds) =>
+    tagIds.map((sourceTagId) => destinationTagIdBySourceId.get(sourceTagId));
+
+  const characterSpriteTags = {
+    tags,
+    sprites: Object.entries(item.sprites?.items ?? {})
+      .filter(([, sprite]) => (sprite.tagIds?.length ?? 0) > 0)
+      .map(([spriteId, sprite]) => ({
+        spriteId,
+        commandId: createId(),
+        tagIds: toDestinationTagIds(sprite.tagIds),
+      })),
+  };
+  if ((item.spriteGroups?.length ?? 0) > 0) {
+    characterSpriteTags.spriteGroups = {
+      commandId: createId(),
+      items: item.spriteGroups.map((spriteGroup) => ({
+        id: spriteGroup.id,
+        name: spriteGroup.name,
+        tags: toDestinationTagIds(spriteGroup.tags),
+      })),
+    };
+  }
+  return characterSpriteTags;
 };
 
 const validateResourcePayload = ({
@@ -134,6 +316,42 @@ const validateResourcePayload = ({
       result.error?.message ?? "An imported asset is invalid.",
       { resourceId, details: result.error },
     );
+  }
+};
+
+// The tags and sprite groups that follow a character, checked as the
+// commands that add them, so the review rejects what the commit would.
+const validateCharacterSpriteTagPayloads = ({
+  characterSpriteTags,
+  destinationId,
+  resourceId,
+}) => {
+  const payloads = characterSpriteTags.tags.map(({ tagId, data }) => ({
+    type: "tag.create",
+    payload: {
+      scopeKey: getCharacterSpriteTagScopeKey(destinationId),
+      tagId,
+      data,
+    },
+  }));
+  if (characterSpriteTags.spriteGroups) {
+    payloads.push({
+      type: "character.update",
+      payload: {
+        characterId: destinationId,
+        data: { spriteGroups: characterSpriteTags.spriteGroups.items },
+      },
+    });
+  }
+  for (const payload of payloads) {
+    const result = validatePayload(payload);
+    if (result?.valid === false) {
+      fail(
+        "resource_validation_failed",
+        result.error?.message ?? "An imported asset is invalid.",
+        { resourceId, details: result.error },
+      );
+    }
   }
 };
 
@@ -268,6 +486,9 @@ const validateAssetCollection = ({ collection, resourceType, config }) => {
         { resourceId: itemId },
       );
     }
+    if (item.type === "character") {
+      validateCharacterSpriteTags({ item, itemPath, resourceId: itemId });
+    }
   }
 };
 
@@ -330,6 +551,9 @@ const validateDependencyCollections = (manifest) => {
           "Asset package tags are not supported yet.",
           { resourceId: itemId },
         );
+      }
+      if (item.type === "character") {
+        validateCharacterSpriteTags({ item, itemPath, resourceId: itemId });
       }
     }
   }
@@ -418,7 +642,9 @@ const isLayoutLinkReference = ({
 
 const validateManifest = (manifest) => {
   assertPlainObject(manifest, "package");
-  const v2 = manifest.schema === IMPORT_PACK_SCHEMA_V2;
+  const v2 =
+    manifest.schema === IMPORT_PACK_SCHEMA_V2 ||
+    manifest.schema === IMPORT_PACK_SCHEMA_V3;
   if (!v2 && manifest.schema !== IMPORT_PACK_SCHEMA) {
     fail("unsupported_schema", "This package format is not supported.", {
       path: "schema",
@@ -1012,7 +1238,7 @@ export const createAssetImportPlan = ({
       destinationId: entry.destinationId,
       resourceId: entry.packageSourceId,
     });
-    return {
+    const preparedEntry = {
       sourceId: entry.sourceId,
       packageSourceId: entry.packageSourceId,
       destinationId: entry.destinationId,
@@ -1030,6 +1256,19 @@ export const createAssetImportPlan = ({
       linkIds: entry.folder ? [] : collectResourceLinkIds({ data, manifest }),
       data,
     };
+    const characterSpriteTags =
+      entry.item.type === "character"
+        ? createCharacterSpriteTags({ item: entry.item, createId })
+        : undefined;
+    if (characterSpriteTags) {
+      validateCharacterSpriteTagPayloads({
+        characterSpriteTags,
+        destinationId: entry.destinationId,
+        resourceId: entry.packageSourceId,
+      });
+      preparedEntry.characterSpriteTags = characterSpriteTags;
+    }
+    return preparedEntry;
   });
   const orderedEntries = orderEntriesByDependencies(preparedEntries);
   const resources = [];

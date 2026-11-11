@@ -122,6 +122,7 @@ const createDeps = () => ({
     setAssetPack: vi.fn(),
     setFilesData: vi.fn(),
     setScenesData: vi.fn(),
+    setTagsData: vi.fn(),
     setAssetPackage: vi.fn(),
     setResourceData: vi.fn(),
     setUiConfig: vi.fn(),
@@ -157,6 +158,10 @@ describe("asset package handlers", () => {
     // The scenes name the story links.
     expect(deps.store.setScenesData).toHaveBeenCalledWith({
       scenesData: repositoryState.scenes,
+    });
+    // The tags hold each character's sprite tags.
+    expect(deps.store.setTagsData).toHaveBeenCalledWith({
+      tagsData: repositoryState.tags,
     });
     expect(deps.store.setResourceData).toHaveBeenCalledWith({
       resourceDataByType: Object.fromEntries(

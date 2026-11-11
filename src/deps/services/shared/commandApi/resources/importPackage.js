@@ -1,4 +1,8 @@
 import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../../../../internal/assetPackageResources.js";
+import {
+  COMMAND_TYPES,
+  getCharacterSpriteTagScopeKey,
+} from "../../../../../internal/project/commands.js";
 
 const COMMAND_CONFIG = Object.freeze(
   Object.fromEntries(
@@ -34,6 +38,59 @@ const createResourceCommand = ({ shared, context, entry, config }) => ({
     ),
   },
 });
+
+// A character's sprite tags follow it: its tags, which need the character,
+// then the sprites and sprite groups that name them.
+const createCharacterSpriteTagCommands = ({ shared, context, entry }) => {
+  const { tags, sprites, spriteGroups } = entry.characterSpriteTags;
+  const characterId = entry.destinationId;
+  const createCommand = ({ commandId, type, payload }) => ({
+    commandId,
+    scope: "resources",
+    basePartition: shared.resourceTypePartitionFor(
+      context.projectId,
+      "characters",
+    ),
+    type,
+    payload,
+  });
+  const commands = [];
+  for (const { tagId, commandId, data } of tags) {
+    commands.push(
+      createCommand({
+        commandId,
+        type: COMMAND_TYPES.TAG_CREATE,
+        payload: {
+          scopeKey: getCharacterSpriteTagScopeKey(characterId),
+          tagId,
+          data: structuredClone(data),
+        },
+      }),
+    );
+  }
+  for (const { spriteId, commandId, tagIds } of sprites) {
+    commands.push(
+      createCommand({
+        commandId,
+        type: COMMAND_TYPES.CHARACTER_SPRITE_UPDATE,
+        payload: { characterId, spriteId, data: { tagIds: [...tagIds] } },
+      }),
+    );
+  }
+  if (spriteGroups) {
+    commands.push(
+      createCommand({
+        commandId: spriteGroups.commandId,
+        type: COMMAND_TYPES.CHARACTER_UPDATE,
+        payload: {
+          characterId,
+          data: { spriteGroups: structuredClone(spriteGroups.items) },
+        },
+      }),
+    );
+  }
+  return commands;
+};
 
 export const createImportPackageCommandApi = (shared) => ({
   async commitAssetImportPackage({
@@ -105,6 +162,11 @@ export const createImportPackageCommandApi = (shared) => ({
           config: COMMAND_CONFIG[entry.resourceType],
         }),
       );
+      if (entry.characterSpriteTags) {
+        commands.push(
+          ...createCharacterSpriteTagCommands({ shared, context, entry }),
+        );
+      }
     }
 
     const result = await shared.submitCommandsWithContext({
