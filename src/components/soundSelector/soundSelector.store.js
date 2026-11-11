@@ -42,10 +42,13 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
   const selectedSoundId = state.selectedSoundId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
   const columns = parseSelectorColumnCount(props.columns);
+  const minCardWidth = parseSelectorColumnCount(props.minCardWidth);
+  const cardsFillCells = columns !== undefined || minCardWidth !== undefined;
   const soundGridStyle = createSelectorGridStyle(columns, {
     minColumnWidth: parseSelectorColumnCount(props.minColumnWidth),
+    minCardWidth,
   });
-  const soundPreviewStyle = columns
+  const soundPreviewStyle = cardsFillCells
     ? "aspect-ratio: 16 / 9;"
     : "height: 120px;";
   const sourceGroups = prependRootItemsGroup({
@@ -66,7 +69,7 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
           const selectedSoundInsetStyle = isSelected
             ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
             : "";
-          const soundCardStyle = `width: ${columns ? "100%" : "220px"}; min-width: 0; max-width: 100%; box-sizing: border-box;${selectedSoundInsetStyle}`;
+          const soundCardStyle = `width: ${cardsFillCells ? "100%" : "220px"}; min-width: 0; max-width: 100%; box-sizing: border-box;${selectedSoundInsetStyle}`;
 
           return {
             ...child,

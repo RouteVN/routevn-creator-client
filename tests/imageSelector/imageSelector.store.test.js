@@ -216,4 +216,19 @@ describe("imageSelector.store", () => {
       "width: 100%",
     );
   });
+
+  it("fills each row with cards of a minimum width", () => {
+    const state = createInitialState();
+    setImages({ state }, { images: createImages() });
+
+    const viewData = selectViewData({ state, props: { minCardWidth: 180 } });
+
+    // Two a row down to 120px cards, then one; more where there is room.
+    expect(viewData.imageGridStyle).toBe(
+      "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
+    );
+    expect(viewData.groups[0].children[0].imageCardStyle).toContain(
+      "width: 100%",
+    );
+  });
 });

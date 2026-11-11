@@ -52,6 +52,10 @@ describe("commandLineBackground.store", () => {
     expect(selectViewData({ state })).toMatchObject({
       showImageSelectorFileExplorer: true,
       spritesheetSelectorColumns: undefined,
+      // Cards fill each row, two a row or more where the picker has room.
+      resourceSelectorMinCardWidth: 180,
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
       showInlineSearch: true,
       showSearchButton: false,
     });

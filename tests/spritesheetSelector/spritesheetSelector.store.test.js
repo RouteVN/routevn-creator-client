@@ -48,5 +48,13 @@ describe("spritesheetSelector columns", () => {
       spritesheetCardStyle:
         "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;",
     });
+    expect(
+      selectViewData({ state, props: { minCardWidth: 180 } }),
+    ).toMatchObject({
+      spritesheetGridStyle:
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
+      spritesheetCardStyle:
+        "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;",
+    });
   });
 });

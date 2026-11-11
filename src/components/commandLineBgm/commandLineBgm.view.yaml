@@ -204,6 +204,12 @@ styles:
     padding: "0 8px"
     text-align: left
     width: 100%
+  ".commandLineSelectorRow":
+    container-type: inline-size
+  # A narrow picker gives the folder list's room to the cards.
+  '@container (max-width: 480px)':
+    ".commandLineSelectorExplorer":
+      display: none
 template:
   - rtgl-view w=f h=f pv=md:
       - rtgl-view w=f h=24 av=c ph=md mb=md:
@@ -274,9 +280,9 @@ template:
               - rtgl-view d=h w=f av=c g=md ph=md:
                   - rtgl-view w=1fg: null
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-              - 'rtgl-view d=h w=f g=lg h=1fg ph=${resourceSelectorHorizontalPadding} style="min-height: 0;"':
+              - 'rtgl-view.commandLineSelectorRow d=h w=f g=lg h=1fg ph=${resourceSelectorHorizontalPadding} style="min-height: 0;"':
                   - $if showResourceSelectorFileExplorer:
-                      - rtgl-view h=f w=1fg sv sbv=touch:
+                      - rtgl-view.commandLineSelectorExplorer h=f w=1fg sv sbv=touch:
                           - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
                   - rtgl-view#galleryScroll h=f w=2fg sv sbv=touch g=lg:
                       - $if selectorEmptyMessage:

@@ -22,3 +22,8 @@ propsSchema:
     minColumnWidth:
       type: integer
       minimum: 1
+    # Without columns, cards fill each row, at least this many pixels wide
+    # where the grid has room for two of them.
+    minCardWidth:
+      type: integer
+      minimum: 1

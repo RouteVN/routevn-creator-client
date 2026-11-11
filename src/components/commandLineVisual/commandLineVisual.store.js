@@ -1876,9 +1876,8 @@ export const selectViewData = ({ state, i18n }) => {
     resourceSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
-    resourceSelectorCardStyle: state.isTouchMode
-      ? resourceSelectorLayout.cardStyle
-      : "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
+    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
+    resourceSelectorMinCardWidth: resourceSelectorLayout.minCardWidth,
     tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
       state.tempSelectedResourceId,
       state.tempSelectedAnimationName,

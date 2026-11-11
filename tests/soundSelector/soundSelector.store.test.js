@@ -130,4 +130,17 @@ describe("soundSelector.store", () => {
     );
     expect(upToFourColumns.soundPreviewStyle).toBe("aspect-ratio: 16 / 9;");
   });
+
+  it("fills each row with cards of a minimum width", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: { minCardWidth: 180 },
+      i18n: EN_I18N,
+    });
+
+    expect(viewData.soundGridStyle).toBe(
+      "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
+    );
+    expect(viewData.soundPreviewStyle).toBe("aspect-ratio: 16 / 9;");
+  });
 });

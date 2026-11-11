@@ -549,9 +549,7 @@ export const selectViewData = ({ state, i18n }) => {
     resourceSelectorColumns: resourceSelectorLayout.columns,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorHorizontalPadding: state.isTouchMode ? "none" : "md",
-    resourceSelectorCardStyle:
-      resourceSelectorLayout.cardStyle ||
-      "width: 200px; min-width: 0; max-width: 100%; box-sizing: border-box;",
+    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
     sounds,
     showChannelControls: sounds.length > 0,
     isChannelEditorOpen: state.isChannelEditorOpen,

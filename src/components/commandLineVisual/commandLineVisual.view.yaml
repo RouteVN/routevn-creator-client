@@ -161,6 +161,12 @@ styles:
     background-position: "0 0, 0 6px, 6px -6px, -6px 0"
     background-repeat: repeat
     background-size: 12px 12px
+  ".commandLineSelectorRow":
+    container-type: inline-size
+  # A narrow picker gives the folder list's room to the cards.
+  '@container (max-width: 480px)':
+    ".commandLineSelectorExplorer":
+      display: none
 template:
   - 'rtgl-view w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - $if mode == 'current':
@@ -251,13 +257,13 @@ template:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showSearchButton:
                   - 'rtgl-button#searchButton sq pre=search v=ol aria-label="${searchButtonLabel}" title="${searchButtonLabel}"': null
-          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg ph=md style="min-height: 0;"':
+          - 'rtgl-view.commandLineSelectorRow d=h w=f g=lg mt=sm h=1fg ph=md style="min-height: 0;"':
               - $if showResourceSelectorFileExplorer:
-                  - rtgl-view h=f w=1fg sv:
+                  - rtgl-view.commandLineSelectorExplorer h=f w=1fg sv:
                       - rvn-base-file-explorer#baseFileExplorer :items=${resourceItems}: null
               - 'rtgl-view#galleryScroll h=f w=2fg sv g=lg style="min-width: 0;"':
                   - $if tab == 'spritesheet':
-                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :columns=${resourceSelectorColumns}: null
+                      - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} searchQuery=${searchQuery} :columns=${resourceSelectorColumns} :minCardWidth=${resourceSelectorMinCardWidth}: null
                     $elif selectorEmptyMessage:
                       - rtgl-view w=f h=1fg av=c ah=c p=md:
                           - rtgl-text s=sm c=mu-fg ta=c: ${selectorEmptyMessage}

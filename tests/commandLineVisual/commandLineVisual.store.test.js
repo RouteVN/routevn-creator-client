@@ -217,7 +217,12 @@ describe("commandLineVisual mobile resource selector", () => {
     expect(selectViewData({ state })).toMatchObject({
       showResourceSelectorFileExplorer: true,
       resourceSelectorColumns: undefined,
-      resourceSelectorGridStyle: "",
+      resourceSelectorMinCardWidth: 180,
+      // Cards fill each row, two a row or more where the picker has room.
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
+      resourceSelectorCardStyle:
+        "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;",
     });
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });

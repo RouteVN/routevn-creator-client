@@ -1001,9 +1001,7 @@ export const selectViewData = ({ state, i18n }) => {
             ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
             : "";
           const resourceCardStyle =
-            (resourceSelectorLayout.cardStyle ||
-              "max-width: 100%; box-sizing: border-box;") +
-            selectedResourceInsetStyle;
+            resourceSelectorLayout.cardStyle + selectedResourceInsetStyle;
           const layoutTypeLabels = {
             general: localizeCommandLineText("General", copy),
             "save-load": localizeCommandLineText("Save / Load", copy),
@@ -1420,6 +1418,7 @@ export const selectViewData = ({ state, i18n }) => {
     showImageSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
     imageSelectorColumns: resourceSelectorLayout.columns,
     spritesheetSelectorColumns: resourceSelectorLayout.columns,
+    resourceSelectorMinCardWidth: resourceSelectorLayout.minCardWidth,
     resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
     resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
     groups: flatGroups,
