@@ -211,6 +211,12 @@ Do not join a label and a value with `: ` in code either. French puts a
 non-breaking space before the colon, so use a catalog template such as
 `labelValue: "{label}: {value}"` in `resourcePages` or `resourceImport`.
 
+Do not join list items with `", "` in code either. `formatList` in
+`src/internal/dates.js` joins them with `dateTime.listSeparator`: `, ` in most
+catalogs, and the enumeration comma `、` in `ja`, `zh-hans`, and `zh-hant`.
+App lists have no "and" before the last item, so a list can end with a count
+from the catalog, such as `usedByMore`.
+
 ## Code Style
 
 - Prefer direct values and `??` defaults over verbose string guards like

@@ -6,6 +6,7 @@ import {
   formatDimensions,
   formatDurationLabel,
   formatElapsedSeconds,
+  formatList,
   formatMilliseconds,
   formatNumber,
   formatNumberWithUnit,
@@ -20,6 +21,7 @@ import {
   PL_I18N,
   PT_I18N,
   RU_I18N,
+  ZH_HANS_I18N,
   ZH_HANT_I18N,
 } from "../support/i18n.js";
 
@@ -217,5 +219,22 @@ describe("number formatting", () => {
     expect(formatDimensions(1920, 1080, FR_I18N.dateTime)).toBe(
       "1920\u00a0×\u00a01080",
     );
+  });
+});
+
+describe("formatList", () => {
+  it("joins items with the catalog's separator and no final and", () => {
+    const items = ["Alpha", "Beta", "3 more"];
+
+    expect(formatList(items)).toBe("Alpha, Beta, 3 more");
+    expect(formatList(items, EN_I18N.dateTime)).toBe("Alpha, Beta, 3 more");
+    expect(formatList(items, KO_I18N.dateTime)).toBe("Alpha, Beta, 3 more");
+    expect(formatList(items, ZH_HANS_I18N.dateTime)).toBe(
+      "Alpha、Beta、3 more",
+    );
+    expect(formatList(items, ZH_HANT_I18N.dateTime)).toBe(
+      "Alpha、Beta、3 more",
+    );
+    expect(formatList(["Alpha"], ZH_HANS_I18N.dateTime)).toBe("Alpha");
   });
 });

@@ -1,3 +1,4 @@
+import { formatList } from "../../internal/dates.js";
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../internal/runtimeActions.js";
@@ -117,7 +118,10 @@ const getKeyboardLabel = (key, copy = {}) => {
   );
 };
 
-const toKeyboardItems = (keyboardValue = {}, { copy = {} } = {}) => {
+const toKeyboardItems = (
+  keyboardValue = {},
+  { copy = {}, dateTime = {} } = {},
+) => {
   const keyboard =
     keyboardValue && typeof keyboardValue === "object" ? keyboardValue : {};
   const systemActionLabels = createSystemActionLabels(copy);
@@ -127,9 +131,10 @@ const toKeyboardItems = (keyboardValue = {}, { copy = {} } = {}) => {
       const actions = getInteractionActions(interaction);
       const actionIds = Object.keys(actions);
       const actionLabel =
-        actionIds
-          .map((actionId) => systemActionLabels[actionId] ?? actionId)
-          .join(", ") ||
+        formatList(
+          actionIds.map((actionId) => systemActionLabels[actionId] ?? actionId),
+          dateTime,
+        ) ||
         (copy.noActionLabel ?? "No action");
 
       return {
@@ -238,7 +243,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
-  extendViewData: ({ state, selectedItem, baseViewData, copy }) => ({
+  extendViewData: ({ state, selectedItem, baseViewData, copy, i18n }) => ({
     ...baseViewData,
     isDialogOpen: state.isDialogOpen,
     dialogForm: createControlForm({
@@ -246,8 +251,14 @@ const {
       copy,
     }),
     dialogDefaultValues: state.dialogDefaultValues,
-    keydownKeyboardItems: toKeyboardItems(selectedItem?.keyboard, { copy }),
-    keyupKeyboardItems: toKeyboardItems(selectedItem?.keyup, { copy }),
+    keydownKeyboardItems: toKeyboardItems(selectedItem?.keyboard, {
+      copy,
+      dateTime: i18n.dateTime,
+    }),
+    keyupKeyboardItems: toKeyboardItems(selectedItem?.keyup, {
+      copy,
+      dateTime: i18n.dateTime,
+    }),
     keyboardEditorKey: state.keyboardEditorKey,
     keyboardEditorPhase: state.keyboardEditorPhase,
     keyboardEditorActions: state.keyboardEditorActions,

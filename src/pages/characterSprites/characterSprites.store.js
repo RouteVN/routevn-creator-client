@@ -1,4 +1,4 @@
-import { formatDimensions } from "../../internal/dates.js";
+import { formatDimensions, formatList } from "../../internal/dates.js";
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
@@ -95,6 +95,7 @@ const buildSelectedItemSpriteGroups = ({
   spriteGroups,
   tagsById,
   copy,
+  dateTime,
 } = {}) => {
   if (!item) {
     return [];
@@ -116,7 +117,7 @@ const buildSelectedItemSpriteGroups = ({
           spriteGroup.name.trim() ||
           copy.groupNameFallback.replace("{index}", String(index + 1)),
         tags: spriteGroup.tags,
-        tagSummary: tagNames.join(", "),
+        tagSummary: formatList(tagNames, dateTime),
       };
     })
     .filter(Boolean);
@@ -1405,6 +1406,7 @@ export const selectViewData = ({ state, i18n }) => {
     spriteGroups: state.characterSpriteGroups,
     tagsById: state.tagsData.items ?? {},
     copy,
+    dateTime: i18n.dateTime,
   });
   const detailSelection = buildClipOptions(
     selectedItem?.type === "spritesheet" ? selectedItem.animations : {},

@@ -1,3 +1,4 @@
+import { formatList } from "../dates.js";
 import { generateId } from "../id.js";
 import { formatI18nCopy } from "./i18nCopy.js";
 import { getResourcePageErrorMessage } from "./resourcePages/resourcePageErrors.js";
@@ -421,6 +422,7 @@ const validateVariableDeletion = async ({
   currentItem,
   itemId,
   copy,
+  dateTime,
 }) => {
   const resourceValidation = await validateResourceDeletion({
     projectService,
@@ -446,7 +448,10 @@ const validateVariableDeletion = async ({
       copy.computedVariableDeleteBlocked ??
       "This variable is used by: {dependents}"
     ).replace("{dependents}", () =>
-      dependents.map((item) => item.name).join(", "),
+      formatList(
+        dependents.map((item) => item.name),
+        dateTime,
+      ),
     ),
   };
 };
@@ -458,6 +463,7 @@ export const checkVariableDeletion = async ({
   projectService,
   itemId,
   copy = {},
+  dateTime,
 }) => {
   const currentItem = projectService.getState()?.variables?.items?.[itemId];
   const deletion = await validateVariableDeletion({
@@ -466,6 +472,7 @@ export const checkVariableDeletion = async ({
     currentItem,
     itemId,
     copy,
+    dateTime,
   });
   if (deletion.canDelete) {
     return deletion;
@@ -580,6 +587,7 @@ export const createResourceFileExplorerHandlers = ({
           currentItem,
           itemId,
           copy: resolvedCopy,
+          dateTime: deps.i18n.dateTime,
         });
         if (!deleteValidation.canDelete) {
           appService.showAlert({

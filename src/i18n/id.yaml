@@ -3154,6 +3154,7 @@ dateTime:
   relativeTimeStyle: "long"
   monthStyle: "short"
   hourStyle: "2-digit"
+  listSeparator: ", "
   justNow: "Baru saja"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

@@ -3182,6 +3182,7 @@ dateTime:
   relativeTimeStyle: "short"
   monthStyle: "short"
   hourStyle: "2-digit"
+  listSeparator: ", "
   justNow: "Щойно"
   fileSizeBytes: "{value} Б"
   fileSizeKilobytes: "{value} кБ"

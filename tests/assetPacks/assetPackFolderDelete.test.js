@@ -120,6 +120,7 @@ describe("deleting a folder an asset pack picks", () => {
 
   it("keeps showing the general message for other refused deletes", async () => {
     const deps = {
+      i18n: EN_I18N,
       appService: { showAlert: vi.fn() },
       projectService: {
         ensureRepository: vi.fn(async () => {}),
@@ -163,6 +164,7 @@ describe("deleting a folder an asset pack picks", () => {
     async ({ resourceType, createHandlers, deleteMethod }) => {
       const refresh = vi.fn(async () => {});
       const deps = {
+        i18n: EN_I18N,
         appService: { showAlert: vi.fn() },
         projectService: {
           ensureRepository: vi.fn(async () => {}),

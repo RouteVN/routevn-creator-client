@@ -3154,6 +3154,7 @@ dateTime:
   relativeTimeStyle: "short"
   monthStyle: "short"
   hourStyle: "numeric"
+  listSeparator: "、"
   justNow: "剛剛"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"
