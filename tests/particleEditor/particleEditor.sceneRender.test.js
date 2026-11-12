@@ -8,7 +8,7 @@ import { buildLayoutRenderElements } from "../../src/internal/project/layout.js"
 import {
   createParticlePreviewState,
   getParticleSettleMs,
-  getParticleVideoMs,
+  getParticleVideoTiming,
 } from "../../src/internal/particlePreview.js";
 import {
   MAX_PARTICLE_COUNT,
@@ -335,55 +335,83 @@ describe("particle thumbnail settle time", () => {
 });
 
 describe("particle video timing", () => {
-  const video = (emission, settleMs) =>
-    getParticleVideoMs({ emission }, { settleMs, maxVideoMs: 5000 });
+  const timing = (emission) =>
+    getParticleVideoTiming(
+      { emission },
+      { runningSettleMs: 3000, maxVideoMs: 5000 },
+    );
 
-  it("lets a running effect settle for as long as the caller allows", () => {
+  it("lets a running effect fill out, then records the whole video", () => {
+    const running = { settleMs: 3000, videoMs: 5000 };
+    expect(timing({ mode: "continuous" })).toEqual(running);
+    expect(timing({ duration: "infinite", rate: 20 })).toEqual(running);
     expect(
-      getParticleSettleMs({ emission: { mode: "continuous" } }, 3000),
-    ).toBe(3000);
-    expect(
-      getParticleSettleMs(
-        { emission: { mode: "burst", particleLifetime: { min: 2, max: 3 } } },
-        3000,
-      ),
-    ).toBe(1000);
-    expect(
-      getParticleSettleMs(
-        { emission: { mode: "burst", particleLifetime: 10 } },
-        3000,
-      ),
-    ).toBe(3000);
+      getParticleVideoTiming(undefined, {
+        runningSettleMs: 3000,
+        maxVideoMs: 5000,
+      }),
+    ).toEqual(running);
+    for (const presetId of ["snow", "rain", "sparkle"]) {
+      const particle = createParticlePreset({
+        presetId,
+        projectResolution: { width: 1920, height: 1080 },
+      });
+      expect(timing(particle.modules.emission)).toEqual(running);
+    }
   });
 
-  it("records a running effect for the whole video", () => {
-    expect(video({ mode: "continuous" }, 3000)).toBe(5000);
-    expect(video({ duration: "infinite", rate: 20 }, 3000)).toBe(5000);
-    expect(
-      getParticleVideoMs(undefined, { settleMs: 0, maxVideoMs: 5000 }),
-    ).toBe(5000);
+  it("treats a duration of 0 as running on, as the renderer does", () => {
+    expect(timing({ duration: 0, particleLifetime: 1 })).toEqual({
+      settleMs: 3000,
+      videoMs: 5000,
+    });
   });
 
-  it("stops a burst's video when its last particle is gone", () => {
+  it("records a burst from its start until its last particle is gone", () => {
     expect(
-      video({ mode: "burst", particleLifetime: { min: 2, max: 3 } }, 1000),
-    ).toBe(2000);
-    expect(video({ mode: "burst", particleLifetime: 4 }, 2000)).toBe(2000);
-    expect(video({ mode: "burst", particleLifetime: 20 }, 3000)).toBe(5000);
+      timing({ mode: "burst", particleLifetime: { min: 2, max: 3 } }),
+    ).toEqual({ settleMs: 0, videoMs: 3000 });
+    expect(timing({ mode: "burst", particleLifetime: 4 })).toEqual({
+      settleMs: 0,
+      videoMs: 4000,
+    });
+    expect(timing({ mode: "burst", particleLifetime: 20 })).toEqual({
+      settleMs: 0,
+      videoMs: 5000,
+    });
+    expect(timing({ mode: "burst", duration: 9, particleLifetime: 2 })).toEqual(
+      { settleMs: 0, videoMs: 2000 },
+    );
   });
 
-  it("stops a timed effect's video after its emission and last particle", () => {
+  it("records a timed effect from its start through its emission and last particle", () => {
     expect(
-      video({ duration: 1, particleLifetime: { min: 2, max: 3 } }, 2000),
-    ).toBe(2000);
+      timing({ duration: 1, particleLifetime: { min: 2, max: 3 } }),
+    ).toEqual({ settleMs: 0, videoMs: 4000 });
     expect(
-      video({ duration: 30, particleLifetime: { min: 2, max: 3 } }, 3000),
-    ).toBe(5000);
+      timing({ duration: 30, particleLifetime: { min: 2, max: 3 } }),
+    ).toEqual({ settleMs: 0, videoMs: 5000 });
   });
 
-  it("never records less than a second", () => {
+  it("never records less than a second, and falls back to a 1s life", () => {
     expect(
-      video({ mode: "burst", particleLifetime: { min: 0.3, max: 0.8 } }, 150),
-    ).toBe(1000);
+      timing({ mode: "burst", particleLifetime: { min: 0.3, max: 0.8 } }),
+    ).toEqual({ settleMs: 0, videoMs: 1000 });
+    expect(timing({ mode: "burst", particleLifetime: 0 })).toEqual({
+      settleMs: 0,
+      videoMs: 1000,
+    });
+    expect(timing({ mode: "burst" })).toEqual({ settleMs: 0, videoMs: 1000 });
+  });
+
+  // The preview rests a third of the way through its video.
+  it("rests a burst's preview while its particles are still alive", () => {
+    for (const life of [0.5, 1, 3, 12]) {
+      const { settleMs, videoMs } = timing({
+        mode: "burst",
+        particleLifetime: life,
+      });
+      expect(settleMs + videoMs / 3).toBeLessThan(life * 1000);
+    }
   });
 });

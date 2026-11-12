@@ -3,8 +3,7 @@ import { createAnimationResourcePreviewStates } from "../../../internal/animatio
 import { createFontPreviewGlyphText } from "../../../internal/fontPreviewGlyphs.js";
 import {
   createParticlePreviewState,
-  getParticleSettleMs,
-  getParticleVideoMs,
+  getParticleVideoTiming,
 } from "../../../internal/particlePreview.js";
 import { createRenderableParticleData } from "../../../internal/particles.js";
 import { requireProjectResolution } from "../../../internal/projectResolution.js";
@@ -34,7 +33,7 @@ const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
 const ANIMATION_THUMBNAIL_LOAD_TIMEOUT_MS = 10000;
 const ANIMATION_THUMBNAIL_PLAYBACK_GRACE_MS = 5000;
 const PARTICLE_PREVIEW_DURATION_MS = 5000;
-const PARTICLE_PREVIEW_WARMUP_MS = 3000;
+const PARTICLE_PREVIEW_SETTLE_MS = 3000;
 const SPRITESHEET_PREVIEW_PADDING = 16;
 const CHECKERBOARD_CELL_SIZE = 12;
 const CHECKERBOARD_LIGHT_COLOR = "#eef2f7";
@@ -1044,16 +1043,15 @@ export const renderParticlePreviewVideo = async ({
       createParticlePreviewState(renderableParticle),
     );
     await waitForPaint();
-    // A preview rests on its first frame until it is hovered, so the effect
-    // runs first: recording from the start would rest on an empty frame.
-    const settleMs = getParticleSettleMs(
+    // A preview rests a third of the way through its video until it is
+    // hovered, so a running effect fills out before the recording starts.
+    const { settleMs, videoMs } = getParticleVideoTiming(
       renderableParticle.modules,
-      PARTICLE_PREVIEW_WARMUP_MS,
+      {
+        runningSettleMs: PARTICLE_PREVIEW_SETTLE_MS,
+        maxVideoMs: PARTICLE_PREVIEW_DURATION_MS,
+      },
     );
-    const videoMs = getParticleVideoMs(renderableParticle.modules, {
-      settleMs,
-      maxVideoMs: PARTICLE_PREVIEW_DURATION_MS,
-    });
     await wait(settleMs);
     recording = startDualVideoRecording({
       sourceCanvas: graphicsService.getCanvas(),
