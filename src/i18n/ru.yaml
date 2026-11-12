@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "Не удалось открыть базу данных проекта. Убедитесь, что папка проекта существует и у RouteVN есть к ней доступ."
   projectOpenFailed: "Не удалось открыть проект. При подготовке проекта произошла непредвиденная ошибка."
   loadingProjectProgress: "Открытие проекта… {percent}"
+  helpMenuDocs: "Документация"
+  helpMenuVideo: "Видеоурок"
+  helpMenuChat: "Поддержка в чате"
 sidebarPage:
   animatedAssetsTitle: "Анимированные ресурсы"
   assetsTitle: "Ресурсы"
@@ -2872,8 +2875,14 @@ tutorialsPage:
   title: "Обучение"
   desktopFolder: "Компьютер"
   mobileFolder: "Мобильные устройства"
+youtubePlayer:
   openOnYouTubeButton: "Открыть на YouTube"
-  closePlayerLabel: "Закрыть"
+  closeLabel: "Закрыть"
+chatSupportDialog:
+  title: "Поддержка в чате"
+  emailLabel: "Электронная почта"
+  description: "Напишите нам в любой из этих каналов, и мы ответим."
+  closeLabel: "Закрыть"
 settingsUserPage:
   placeholderMessage: "Здесь появятся настройки пользователя"
   placeholderNote: "Это временная заглушка для настроек пользователя"

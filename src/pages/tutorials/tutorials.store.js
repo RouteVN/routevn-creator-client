@@ -3,33 +3,26 @@ import {
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
-  buildYouTubeEmbedUrl,
-  buildYouTubeThumbnailUrl,
-  buildYouTubeWatchUrl,
-} from "../../internal/youtube.js";
+  findTutorialVideo,
+  TUTORIAL_FOLDERS,
+} from "../../internal/tutorialVideos.js";
+import { buildYouTubeThumbnailUrl } from "../../internal/youtube.js";
 import { selectTutorialsPageCopy } from "./support/tutorialsPageCopy.js";
-import tutorialVideos from "./support/tutorialVideos.json";
 
 // Phones and tablets list the tutorials recorded on them first.
 const TOUCH_FIRST_FOLDER_ID = "mobile";
 const VIDEO_CARD_MIN_WIDTH = 240;
 
 const selectOrderedFolders = (state) => {
-  const { folders } = tutorialVideos;
   if (!state.isTouchMode) {
-    return folders;
+    return TUTORIAL_FOLDERS;
   }
 
   return [
-    ...folders.filter((folder) => folder.id === TOUCH_FIRST_FOLDER_ID),
-    ...folders.filter((folder) => folder.id !== TOUCH_FIRST_FOLDER_ID),
+    ...TUTORIAL_FOLDERS.filter((folder) => folder.id === TOUCH_FIRST_FOLDER_ID),
+    ...TUTORIAL_FOLDERS.filter((folder) => folder.id !== TOUCH_FIRST_FOLDER_ID),
   ];
 };
-
-const findVideo = (videoId) =>
-  tutorialVideos.folders
-    .flatMap((folder) => folder.videos)
-    .find((video) => video.youtubeId === videoId);
 
 export const createInitialState = () => ({
   resourceCategory: "settings",
@@ -68,11 +61,6 @@ export const closeVideoPlayer = ({ state }) => {
   state.playingVideoId = undefined;
 };
 
-export const selectPlayingVideoId = ({ state }) => state.playingVideoId;
-
-export const selectVideoWatchUrl = (_context, { videoId } = {}) =>
-  buildYouTubeWatchUrl(videoId);
-
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectTutorialsPageCopy(i18n);
   const folderNames = {
@@ -93,7 +81,7 @@ export const selectViewData = ({ state, i18n }) => {
     })),
   }));
 
-  const playingVideo = findVideo(state.playingVideoId);
+  const playingVideo = findTutorialVideo(state.playingVideoId);
 
   return {
     resourceCategory: state.resourceCategory,
@@ -106,13 +94,6 @@ export const selectViewData = ({ state, i18n }) => {
     title: copy.title ?? "Tutorials",
     groups,
     gridColumns: `repeat(auto-fill, minmax(min(${VIDEO_CARD_MIN_WIDTH}px, 100%), 1fr))`,
-    playingVideo: playingVideo
-      ? {
-          title: playingVideo.title,
-          embedUrl: buildYouTubeEmbedUrl(playingVideo.youtubeId),
-        }
-      : undefined,
-    openOnYouTubeButton: copy.openOnYouTubeButton ?? "Open on YouTube",
-    closePlayerLabel: copy.closePlayerLabel ?? "Close",
+    playingVideo,
   };
 };

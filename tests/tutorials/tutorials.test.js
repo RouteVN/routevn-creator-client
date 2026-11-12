@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import * as handlers from "../../src/pages/tutorials/tutorials.handlers.js";
 import * as storeModule from "../../src/pages/tutorials/tutorials.store.js";
-import tutorialVideos from "../../src/pages/tutorials/support/tutorialVideos.json";
+import tutorialVideos from "../../src/internal/tutorialVideos.json";
 import {
   buildYouTubeWatchUrl,
   canEmbedYouTubeFrom,
@@ -113,12 +113,8 @@ describe("tutorials page", () => {
     handlers.handleVideoCardClick(page.deps, cardEvent(youtubeId));
 
     expect(page.deps.appService.openUrl).not.toHaveBeenCalled();
-    const html = page.html();
-    expect(html).toContain(
-      `src="https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&amp;rel=0&amp;playsinline=1"`,
-    );
-    expect(html).toContain('referrerpolicy="strict-origin-when-cross-origin"');
-    expect(html).toContain(`title="${title}"`);
+    expect(page.viewData().playingVideo).toEqual({ youtubeId, title });
+    expect(page.html()).toContain("<rvn-youtube-player");
   });
 
   it("opens the video on YouTube where the player cannot play in the app", () => {
@@ -188,20 +184,16 @@ describe("tutorials page", () => {
     expect(page.viewData().groups[0].isCollapsed).toBe(false);
   });
 
-  it("closes the player, or hands the video over to YouTube", () => {
+  it("closes the player", () => {
     const page = createPage({ uiConfig: { inputMode: "pointer" } });
-    const { youtubeId } = FIRST_DESKTOP_VIDEO;
 
-    handlers.handleVideoCardClick(page.deps, cardEvent(youtubeId));
-    handlers.handleVideoPlayerClose(page.deps);
-    expect(page.html()).not.toContain("<iframe");
-
-    handlers.handleVideoCardClick(page.deps, cardEvent(youtubeId));
-    handlers.handleOpenOnYouTubeClick(page.deps);
-    expect(page.html()).not.toContain("<iframe");
-    expect(page.deps.appService.openUrl).toHaveBeenCalledWith(
-      `https://www.youtube.com/watch?v=${youtubeId}`,
+    handlers.handleVideoCardClick(
+      page.deps,
+      cardEvent(FIRST_DESKTOP_VIDEO.youtubeId),
     );
+    handlers.handleVideoPlayerClose(page.deps);
+
+    expect(page.html()).not.toContain("<rvn-youtube-player");
   });
 });
 

@@ -1,4 +1,5 @@
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { playTutorialVideo } from "../../internal/ui/tutorialVideoPlayback.js";
 
 export const handleBeforeMount = (deps) => {
   const { store, uiConfig } = deps;
@@ -6,23 +7,15 @@ export const handleBeforeMount = (deps) => {
   return mountMobileResourceWindowLayout(deps);
 };
 
-// Where YouTube's player cannot play inside the app, the video opens on
-// YouTube instead of showing the player's error.
-const playVideo = (deps, { videoId }) => {
-  const { appService, store, render } = deps;
-
-  if (!appService.canEmbedYouTube()) {
-    appService.openUrl(store.selectVideoWatchUrl({ videoId }));
-    return;
-  }
-
-  store.openVideoPlayer({ videoId });
-  render();
-};
-
 export const handleVideoCardClick = (deps, payload) => {
+  const { appService, store, render } = deps;
   const { videoId } = payload._event.currentTarget.dataset;
-  playVideo(deps, { videoId });
+  const openPlayer = () => {
+    store.openVideoPlayer({ videoId });
+    render();
+  };
+
+  playTutorialVideo({ appService, openPlayer }, { youtubeId: videoId });
 };
 
 export const handleVideoCardKeyDown = (deps, payload) => {
@@ -47,13 +40,4 @@ export const handleVideoPlayerClose = (deps) => {
   const { store, render } = deps;
   store.closeVideoPlayer();
   render();
-};
-
-export const handleOpenOnYouTubeClick = (deps) => {
-  const { appService, store, render } = deps;
-  const videoId = store.selectPlayingVideoId();
-
-  store.closeVideoPlayer();
-  render();
-  appService.openUrl(store.selectVideoWatchUrl({ videoId }));
 };

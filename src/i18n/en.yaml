@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "Failed to open the project database. Make sure the project folder still exists and RouteVN can access it."
   projectOpenFailed: "Failed to open project. An unexpected error occurred while preparing the project."
   loadingProjectProgress: "Loading project... {percent}"
+  helpMenuDocs: "Documentation"
+  helpMenuVideo: "Video Tutorial"
+  helpMenuChat: "Chat Support"
 sidebarPage:
   animatedAssetsTitle: "Animated Assets"
   assetsTitle: "Assets"
@@ -2848,8 +2851,14 @@ tutorialsPage:
   title: "Tutorials"
   desktopFolder: "Desktop"
   mobileFolder: "Mobile"
+youtubePlayer:
   openOnYouTubeButton: "Open on YouTube"
-  closePlayerLabel: "Close"
+  closeLabel: "Close"
+chatSupportDialog:
+  title: "Chat Support"
+  emailLabel: "Email"
+  description: "Message us on any of these, and we'll get back to you."
+  closeLabel: "Close"
 settingsUserPage:
   placeholderMessage: "User settings content will go here"
   placeholderNote: "This is a placeholder for the user settings interface"

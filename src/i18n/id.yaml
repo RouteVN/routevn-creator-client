@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "Gagal membuka database proyek. Pastikan folder proyek masih ada dan RouteVN dapat mengaksesnya."
   projectOpenFailed: "Gagal membuka proyek. Terjadi kesalahan yang tidak terduga saat menyiapkan proyek."
   loadingProjectProgress: "Memuat proyek… {percent}"
+  helpMenuDocs: "Dokumentasi"
+  helpMenuVideo: "Video tutorial"
+  helpMenuChat: "Dukungan melalui chat"
 sidebarPage:
   animatedAssetsTitle: "Aset animasi"
   assetsTitle: "Aset"
@@ -2848,8 +2851,14 @@ tutorialsPage:
   title: "Tutorial"
   desktopFolder: "Desktop"
   mobileFolder: "Seluler"
+youtubePlayer:
   openOnYouTubeButton: "Buka di YouTube"
-  closePlayerLabel: "Tutup"
+  closeLabel: "Tutup"
+chatSupportDialog:
+  title: "Dukungan melalui chat"
+  emailLabel: "Email"
+  description: "Kirim pesan kepada kami melalui salah satu saluran ini, dan kami akan membalas Anda."
+  closeLabel: "Tutup"
 settingsUserPage:
   placeholderMessage: "Konten pengaturan akun akan muncul di sini"
   placeholderNote: "Ini adalah tampilan sementara untuk antarmuka pengaturan akun"

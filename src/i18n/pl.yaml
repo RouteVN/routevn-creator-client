@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "Nie udało się otworzyć bazy danych projektu. Upewnij się, że folder projektu nadal istnieje i aplikacja RouteVN Creator ma do niego dostęp."
   projectOpenFailed: "Nie udało się otworzyć projektu. Podczas jego przygotowywania wystąpił nieoczekiwany błąd."
   loadingProjectProgress: "Wczytywanie projektu… {percent}"
+  helpMenuDocs: "Dokumentacja"
+  helpMenuVideo: "Samouczek wideo"
+  helpMenuChat: "Pomoc na czacie"
 sidebarPage:
   animatedAssetsTitle: "Zasoby animowane"
   assetsTitle: "Zasoby"
@@ -2872,8 +2875,14 @@ tutorialsPage:
   title: "Samouczki"
   desktopFolder: "Komputer"
   mobileFolder: "Urządzenia mobilne"
+youtubePlayer:
   openOnYouTubeButton: "Otwórz w YouTube"
-  closePlayerLabel: "Zamknij"
+  closeLabel: "Zamknij"
+chatSupportDialog:
+  title: "Pomoc na czacie"
+  emailLabel: "E-mail"
+  description: "Napisz do nas w dowolny z tych sposobów, a odpowiemy."
+  closeLabel: "Zamknij"
 settingsUserPage:
   placeholderMessage: "Tutaj pojawią się ustawienia konta"
   placeholderNote: "To miejsce jest zarezerwowane na interfejs ustawień konta"
