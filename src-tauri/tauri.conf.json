@@ -65,6 +65,7 @@
           "http://project-file.localhost",
           "blob:"
         ],
+        "frame-src": ["https://www.youtube-nocookie.com"],
         "font-src": ["'self'", "asset:", "http://asset.localhost", "blob:"],
         "script-src": ["'self'", "'unsafe-eval'", "'wasm-unsafe-eval'"],
         "worker-src": ["'self'", "blob:"]

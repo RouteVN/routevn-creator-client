@@ -28,6 +28,7 @@ import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { isVisualTestMode } from "./internal/visualTestMode.js";
+import { canEmbedYouTubeFrom } from "./internal/youtube.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -119,6 +120,7 @@ const appService = createAppService({
   openUrl: (url) => window.open(url, "_blank"),
   appVersion,
   platform: "web",
+  youtubeEmbedsSupported: canEmbedYouTubeFrom(window.location),
   audioService,
   projectService,
   subject,

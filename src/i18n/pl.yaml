@@ -2870,8 +2870,10 @@ aboutPage:
   websiteButton: "Strona internetowa"
 tutorialsPage:
   title: "Samouczki"
-  description: "Poznaj aplikację RouteVN Creator dzięki filmom krok po kroku."
-  watchTutorialsButton: "Obejrzyj samouczki wideo"
+  desktopFolder: "Komputer"
+  mobileFolder: "Urządzenia mobilne"
+  openOnYouTubeButton: "Otwórz w YouTube"
+  closePlayerLabel: "Zamknij"
 settingsUserPage:
   placeholderMessage: "Tutaj pojawią się ustawienia konta"
   placeholderNote: "To miejsce jest zarezerwowane na interfejs ustawień konta"

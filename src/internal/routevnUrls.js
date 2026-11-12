@@ -9,8 +9,6 @@ export const ROUTEVN_CREATOR_PLAY_STORE_URL =
 export const ROUTEVN_DOWNLOAD_DOMAIN = "routevn.com";
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;
 export const ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/page-index/`;
-export const ROUTEVN_CREATOR_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials/`;
-export const ROUTEVN_CREATOR_MOBILE_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials-mobile/`;
 
 const creatorDocsPathByRoutePattern = {
   "/project": "/projects/",

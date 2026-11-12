@@ -2846,8 +2846,10 @@ aboutPage:
   websiteButton: "Site"
 tutorialsPage:
   title: "Tutoriais"
-  description: "Aprenda a usar o RouteVN Creator com vídeos passo a passo."
-  watchTutorialsButton: "Ver tutoriais em vídeo"
+  desktopFolder: "Computador"
+  mobileFolder: "Dispositivos móveis"
+  openOnYouTubeButton: "Abrir no YouTube"
+  closePlayerLabel: "Fechar"
 settingsUserPage:
   placeholderMessage: "O conteúdo das configurações da conta aparecerá aqui"
   placeholderNote: "Esta é uma página provisória para as configurações da conta"

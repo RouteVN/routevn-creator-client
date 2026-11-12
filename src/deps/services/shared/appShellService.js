@@ -98,6 +98,7 @@ export const createAppShellService = ({
   distribution = "direct",
   updatesEnabled = false,
   updater,
+  youtubeEmbedsSupported = false,
   audioService,
   triggerTestCrash,
 }) => {
@@ -399,6 +400,11 @@ export const createAppShellService = ({
 
     areUpdatesEnabled() {
       return Boolean(updatesEnabled);
+    },
+
+    // Whether YouTube's player can play inside the app on this platform.
+    canEmbedYouTube() {
+      return youtubeEmbedsSupported;
     },
 
     checkForUpdates(silent, options = {}) {

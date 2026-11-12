@@ -2846,8 +2846,10 @@ aboutPage:
   websiteButton: "Trang web"
 tutorialsPage:
   title: "Hướng dẫn"
-  description: "Học cách dùng RouteVN Creator qua video hướng dẫn từng bước."
-  watchTutorialsButton: "Xem video hướng dẫn"
+  desktopFolder: "Máy tính"
+  mobileFolder: "Thiết bị di động"
+  openOnYouTubeButton: "Mở trên YouTube"
+  closePlayerLabel: "Đóng"
 settingsUserPage:
   placeholderMessage: "Nội dung cài đặt tài khoản sẽ hiện ở đây"
   placeholderNote: "Đây là nội dung tạm thời của trang cài đặt tài khoản"

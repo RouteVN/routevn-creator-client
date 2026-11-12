@@ -2846,8 +2846,10 @@ aboutPage:
   websiteButton: "ウェブサイト"
 tutorialsPage:
   title: "チュートリアル"
-  description: "ステップごとの動画でRouteVN Creatorの使い方を学べます。"
-  watchTutorialsButton: "動画チュートリアルを見る"
+  desktopFolder: "デスクトップ"
+  mobileFolder: "モバイル"
+  openOnYouTubeButton: "YouTubeで開く"
+  closePlayerLabel: "閉じる"
 settingsUserPage:
   placeholderMessage: "ユーザー設定の内容はここに表示されます"
   placeholderNote: "これはユーザー設定画面のプレースホルダーです"

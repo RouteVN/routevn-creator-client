@@ -2846,8 +2846,10 @@ aboutPage:
   websiteButton: "网站"
 tutorialsPage:
   title: "教程"
-  description: "通过分步视频学习 RouteVN Creator 的使用方法。"
-  watchTutorialsButton: "观看视频教程"
+  desktopFolder: "桌面端"
+  mobileFolder: "移动端"
+  openOnYouTubeButton: "在 YouTube 中打开"
+  closePlayerLabel: "关闭"
 settingsUserPage:
   placeholderMessage: "用户设置内容会显示在这里"
   placeholderNote: "这是用户设置界面的占位内容"
