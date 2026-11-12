@@ -76,6 +76,7 @@ describe("tutorials page", () => {
       `src="https://i.ytimg.com/vi/${FIRST_DESKTOP_VIDEO.youtubeId}/hqdefault.jpg"`,
     );
     expect(html).toContain(FIRST_DESKTOP_VIDEO.title);
+    expect(html).not.toContain('svg="play"');
     expect(html).not.toContain("<iframe");
   });
 
