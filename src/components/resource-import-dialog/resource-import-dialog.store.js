@@ -1,6 +1,10 @@
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { USE_PACK_DEPENDENCY } from "../../internal/assetImportPlan.js";
-import { formatCalendarDate, formatPercent } from "../../internal/dates.js";
+import {
+  formatCalendarDate,
+  formatList,
+  formatPercent,
+} from "../../internal/dates.js";
 import { generateId } from "../../internal/id.js";
 
 const STORE_STEP = "store";
@@ -240,7 +244,7 @@ const listImportedResources = ({ plan, values }) => {
 
 // A select for each link the selection jumps through or opens, which must be
 // chosen: where it goes in this project.
-const createLinkFields = ({ plan, values, copy, projectTargets }) => {
+const createLinkFields = ({ plan, values, copy, dateTime, projectTargets }) => {
   if (!plan || (plan.links ?? []).length === 0) return [];
   const importedResources = listImportedResources({ plan, values });
   return plan.links.flatMap((link, index) => {
@@ -255,7 +259,10 @@ const createLinkFields = ({ plan, values, copy, projectTargets }) => {
         type: "select",
         label: formatLinkLabel({ copy, ...link }),
         description: formatI18nCopy(copy.linkUsedBy ?? "Used by {names}", {
-          names: users.map((resource) => resource.name).join(", "),
+          names: formatList(
+            users.map((resource) => resource.name),
+            dateTime,
+          ),
         }),
         placeholder: copy.chooseOption ?? "Choose",
         required: {
@@ -969,6 +976,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
             plan,
             values: state.reviewValues,
             copy,
+            dateTime: i18n.dateTime,
             projectTargets: state.projectTargets,
           }),
         })

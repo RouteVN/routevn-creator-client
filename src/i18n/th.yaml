@@ -3154,6 +3154,7 @@ dateTime:
   relativeTimeStyle: "short"
   monthStyle: "short"
   hourStyle: "2-digit"
+  listSeparator: ", "
   justNow: "เมื่อสักครู่"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

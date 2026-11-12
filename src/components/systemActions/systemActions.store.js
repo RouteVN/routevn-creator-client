@@ -9,6 +9,7 @@ import {
   buildDialogueSpritePreviewLayers,
 } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
+import { formatList } from "../../internal/dates.js";
 import {
   NEUTRAL_PRESENTATION_ACTION_CSS_ORDER,
   PRESENTATION_ACTION_CSS_ORDER,
@@ -797,10 +798,12 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       ...sfx,
       sound: sounds[sfx.resourceId],
     }));
-    const names = soundEffectsData
-      .map((sfx) => sfx.sound?.name ?? sfx.resourceId ?? "")
-      .filter((name) => name !== "")
-      .join(", ");
+    const names = formatList(
+      soundEffectsData
+        .map((sfx) => sfx.sound?.name ?? sfx.resourceId ?? "")
+        .filter((name) => name !== ""),
+      dateTime,
+    );
 
     actionsObject.sfx = sfxAction;
     if (names || props.actionType !== "presentation") {
@@ -1361,8 +1364,8 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       : [];
 
     const summary =
-      operations
-        .map((op) => {
+      formatList(
+        operations.map((op) => {
           const variable = variableItems[op.variableId];
           const varName = variable?.name || op.variableId;
           if (op.op === "toggle") {
@@ -1383,8 +1386,9 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
             return `${varName} /${op.value}`;
           }
           return `${varName} ${op.op}`;
-        })
-        .join(", ") || localizeCommandLineText("No operations", copy);
+        }),
+        dateTime,
+      ) || localizeCommandLineText("No operations", copy);
 
     preview.updateVariable = {
       summary,

@@ -3182,6 +3182,7 @@ dateTime:
   relativeTimeStyle: "short"
   monthStyle: "2-digit"
   hourStyle: "2-digit"
+  listSeparator: ", "
   justNow: "Przed chwilą"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} kB"

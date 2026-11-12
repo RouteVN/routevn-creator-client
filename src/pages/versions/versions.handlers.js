@@ -1,7 +1,7 @@
 import { withErrorDetails } from "../../internal/errorDetails.js";
 import { createAndroidApkFileName } from "../../internal/androidExport.js";
 import { generateId } from "../../internal/id.js";
-import { formatElapsedSeconds } from "../../internal/dates.js";
+import { formatElapsedSeconds, formatList } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { normalizeExportFileMimeType } from "../../internal/bundleRuntimeAssets.js";
 import {
@@ -244,7 +244,11 @@ const getMacosExportErrorMessage = (error, copy) => {
   return message;
 };
 
-const getMacosExportUnavailableMessage = (availability = {}, copy = {}) => {
+const getMacosExportUnavailableMessage = (
+  availability = {},
+  copy = {},
+  dateTime = {},
+) => {
   if (!availability.hostSupported) {
     return (
       copy.macosExportHostUnsupported ??
@@ -285,7 +289,7 @@ const getMacosExportUnavailableMessage = (availability = {}, copy = {}) => {
     return formatI18nCopy(
       copy.macosToolsMissing ??
         "macOS application export requires these system tools: {tools}.",
-      { tools: missingTools.join(", ") },
+      { tools: formatList(missingTools, dateTime) },
     );
   }
 
@@ -1577,7 +1581,13 @@ const runMacosApplicationExport = async (deps, confirmation) => {
       message: formatI18nCopy(
         copy.failedSaveMacosApplication ??
           "Failed to save macOS application: {message}",
-        { message: getMacosExportUnavailableMessage(availability, copy) },
+        {
+          message: getMacosExportUnavailableMessage(
+            availability,
+            copy,
+            i18n.dateTime,
+          ),
+        },
       ),
       title: copy.errorTitle ?? "Error",
     });

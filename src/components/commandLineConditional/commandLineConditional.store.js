@@ -1,3 +1,4 @@
+import { formatList } from "../../internal/dates.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import {
   buildVariableEnumOptions,
@@ -162,9 +163,12 @@ const getSimpleCondition = (when = {}) => {
 };
 
 // A boolean is shown with the same label as in the value select.
-const formatConditionValue = (value, copy) => {
+const formatConditionValue = (value, copy, dateTime) => {
   if (Array.isArray(value)) {
-    return value.map((item) => formatConditionValue(item, copy)).join(", ");
+    return formatList(
+      value.map((item) => formatConditionValue(item, copy, dateTime)),
+      dateTime,
+    );
   }
 
   if (typeof value === "string") {
@@ -182,7 +186,12 @@ const formatConditionValue = (value, copy) => {
   return JSON.stringify(value);
 };
 
-const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
+const getBranchSummary = (
+  branch,
+  variablesData = {},
+  copy = {},
+  dateTime = {},
+) => {
   if (!Object.hasOwn(toPlainObject(branch), "when")) {
     return localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy);
   }
@@ -203,7 +212,7 @@ const getBranchSummary = (branch, variablesData = {}, copy = {}) => {
       CONDITION_SUMMARY_TEMPLATES[simpleCondition.op],
       {
         variable: variable?.name ?? simpleCondition.variableId,
-        value: formatConditionValue(simpleCondition.value, copy),
+        value: formatConditionValue(simpleCondition.value, copy, dateTime),
       },
       copy,
     );
@@ -480,7 +489,12 @@ export const selectViewData = ({ state, props, i18n }) => {
       ...branch,
       index,
       menuKeyShortcuts: "Delete",
-      summary: getBranchSummary(branch, state.variablesData, copy),
+      summary: getBranchSummary(
+        branch,
+        state.variablesData,
+        copy,
+        i18n.dateTime,
+      ),
       actionsSummary:
         branchActionCount > 0
           ? formatCommandLineActionCount(branchActionCount, copy, i18n.dateTime)

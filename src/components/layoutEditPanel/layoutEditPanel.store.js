@@ -1846,7 +1846,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         variablesData: state.variablesData,
         copy,
       }),
-      childInteractionSummary: getChildInteractionSummary(values, copy),
+      childInteractionSummary: getChildInteractionSummary(
+        values,
+        copy,
+        i18n.dateTime,
+      ),
       childInteractionItems: getChildInteractionItems(values, copy),
       choiceItemOptions: createChoiceItemOptions(copy),
       hasChildInteractionInheritance: hasChildInteractionInheritance(values),

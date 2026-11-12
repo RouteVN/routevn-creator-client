@@ -219,6 +219,18 @@ export const formatNumber = (value, { intlLocale = "en-US" } = {}) => {
   return numberFormats.get(intlLocale).format(value === 0 ? 0 : value);
 };
 
+/**
+ * Join list items with the locale's separator, such as "A, B" or "A、B" in
+ * Chinese and Japanese. App lists have no "and" before the last item, so one
+ * can end with a count such as "3 more".
+ * @param {string[]} items - The items, already in display order
+ * @param {Object} [dateTime] - The `dateTime` catalog of the active locale
+ * @param {string} [dateTime.listSeparator] - Text between two items
+ * @returns {string} The joined list
+ */
+export const formatList = (items, { listSeparator = ", " } = {}) =>
+  items.join(listSeparator);
+
 // The English unit templates. Seconds keep the space here that the compact
 // `durationSeconds` of timeline labels leaves out.
 const UNIT_TEMPLATES = {

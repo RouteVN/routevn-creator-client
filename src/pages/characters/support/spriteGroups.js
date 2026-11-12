@@ -1,3 +1,4 @@
+import { formatList } from "../../../internal/dates.js";
 import { generateId } from "../../../internal/id.js";
 
 export const createEmptySpriteGroup = () => ({
@@ -129,6 +130,7 @@ const resolveSpriteGroupTagNames = ({ tagIds, tagsById } = {}) =>
 export const buildSpriteGroupViewData = ({
   spriteGroups,
   tagsById,
+  dateTime,
   displayTopFirst = false,
 } = {}) => {
   const viewData = normalizeSpriteGroupsForDraft({
@@ -144,7 +146,7 @@ export const buildSpriteGroupViewData = ({
       name: spriteGroup.name.trim(),
       tags: spriteGroup.tags,
       tagNames,
-      tagSummary: tagNames.join(", "),
+      tagSummary: formatList(tagNames, dateTime),
     };
   });
 
@@ -155,6 +157,7 @@ export const buildDraftSpriteGroupViewData = ({
   spriteGroups,
   tagsById,
   copy,
+  dateTime,
   displayTopFirst = false,
 } = {}) => {
   const viewData = normalizeSpriteGroupsForDraft({
@@ -170,7 +173,7 @@ export const buildDraftSpriteGroupViewData = ({
       name: spriteGroup.name,
       tags: spriteGroup.tags,
       tagNames,
-      tagSummary: tagNames.join(", "),
+      tagSummary: formatList(tagNames, dateTime),
       sourceIndex: index,
       label: copy.spriteGroupLabel.replace("{index}", String(index + 1)),
     };
