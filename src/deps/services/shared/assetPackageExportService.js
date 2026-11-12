@@ -21,8 +21,8 @@ const renderDefaultTextStylePreview = (options) =>
   renderPreviewWith("renderTextStylePreviewImages", options);
 const renderDefaultAnimationPreviews = (options) =>
   renderPreviewWith("renderAnimationPreviewVideos", options);
-const renderDefaultParticlePreview = (options) =>
-  renderPreviewWith("renderParticlePreviewVideo", options);
+const renderDefaultParticlePreviews = (options) =>
+  renderPreviewWith("renderParticlePreviewVideos", options);
 const createDefaultLayoutPreviewRenderer = () =>
   renderPreviewWith("createLayoutPreviewRenderer");
 
@@ -598,11 +598,12 @@ const addParticlePreviews = async ({
   sourceRepository,
   fileBytesById,
   readSourceFile,
-  renderPreview,
+  renderPreviews,
 }) => {
   const files = manifest.repository?.files?.items ?? {};
   const particles = packageItems(manifest, "particles");
   const imageItems = sourceRepository.images?.items ?? {};
+  const previewInputs = [];
   for (const [particleId, particle] of Object.entries(particles)) {
     if (particle.type !== "particle") {
       continue;
@@ -621,8 +622,27 @@ const addParticlePreviews = async ({
         },
       ),
     );
+    previewInputs.push({ particleId, particle, imageAssets });
+  }
+
+  if (previewInputs.length === 0) {
+    return;
+  }
+
+  const previews = await renderPreviews({
+    particles: previewInputs,
+    imageItems,
+  });
+  const previewByParticleId = new Map(
+    previews.map((preview) => [preview.particleId, preview]),
+  );
+  for (const { particleId, particle } of previewInputs) {
+    const preview = previewByParticleId.get(particleId);
+    if (!preview) {
+      throw new Error(`Particle preview '${particleId}' was not generated.`);
+    }
     await addGeneratedVideoPreviews({
-      preview: await renderPreview({ particle, imageItems, imageAssets }),
+      preview,
       files,
       fileBytesById,
       item: particle,
@@ -641,7 +661,7 @@ export const createAssetPackageExportService = ({
   renderFontPreview = renderDefaultFontPreview,
   renderTextStylePreview = renderDefaultTextStylePreview,
   renderAnimationPreviews = renderDefaultAnimationPreviews,
-  renderParticlePreview = renderDefaultParticlePreview,
+  renderParticlePreviews = renderDefaultParticlePreviews,
   createLayoutPreviewRenderer = createDefaultLayoutPreviewRenderer,
 }) => ({
   async createAssetPackageBundle({ manifest } = {}) {
@@ -723,7 +743,7 @@ export const createAssetPackageExportService = ({
           sourceRepository,
           fileBytesById,
           readSourceFile,
-          renderPreview: renderParticlePreview,
+          renderPreviews: renderParticlePreviews,
         }),
     });
     await generatePreviewStage({

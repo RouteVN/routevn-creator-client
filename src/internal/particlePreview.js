@@ -150,7 +150,8 @@ const getParticleEndMs = (modules) => {
 // How long an effect runs before a video of it starts, and how long the video
 // is. A running effect fills out first, so the whole video shows it in full.
 // A burst or a timed effect is recorded from its start until its last
-// particle is gone, and for no less than a second.
+// particle is gone. Its video may stop sooner once it has run `minVideoMs`,
+// as its particles can leave the scene before their life ends.
 export const getParticleVideoTiming = (
   modules,
   { runningSettleMs, maxVideoMs },
@@ -159,9 +160,11 @@ export const getParticleVideoTiming = (
   if (endMs === undefined) {
     return { settleMs: runningSettleMs, videoMs: maxVideoMs };
   }
+  const videoMs = Math.min(maxVideoMs, Math.max(PARTICLE_VIDEO_MIN_MS, endMs));
   return {
     settleMs: 0,
-    videoMs: Math.min(maxVideoMs, Math.max(PARTICLE_VIDEO_MIN_MS, endMs)),
+    videoMs,
+    minVideoMs: Math.min(PARTICLE_VIDEO_MIN_MS, videoMs),
   };
 };
 

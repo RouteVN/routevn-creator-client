@@ -370,38 +370,38 @@ describe("particle video timing", () => {
   it("records a burst from its start until its last particle is gone", () => {
     expect(
       timing({ mode: "burst", particleLifetime: { min: 2, max: 3 } }),
-    ).toEqual({ settleMs: 0, videoMs: 3000 });
+    ).toEqual({ settleMs: 0, videoMs: 3000, minVideoMs: 1000 });
     expect(timing({ mode: "burst", particleLifetime: 4 })).toEqual({
       settleMs: 0,
       videoMs: 4000,
+      minVideoMs: 1000,
     });
     expect(timing({ mode: "burst", particleLifetime: 20 })).toEqual({
       settleMs: 0,
       videoMs: 5000,
+      minVideoMs: 1000,
     });
     expect(timing({ mode: "burst", duration: 9, particleLifetime: 2 })).toEqual(
-      { settleMs: 0, videoMs: 2000 },
+      { settleMs: 0, videoMs: 2000, minVideoMs: 1000 },
     );
   });
 
   it("records a timed effect from its start through its emission and last particle", () => {
     expect(
       timing({ duration: 1, particleLifetime: { min: 2, max: 3 } }),
-    ).toEqual({ settleMs: 0, videoMs: 4000 });
+    ).toEqual({ settleMs: 0, videoMs: 4000, minVideoMs: 1000 });
     expect(
       timing({ duration: 30, particleLifetime: { min: 2, max: 3 } }),
-    ).toEqual({ settleMs: 0, videoMs: 5000 });
+    ).toEqual({ settleMs: 0, videoMs: 5000, minVideoMs: 1000 });
   });
 
   it("never records less than a second, and falls back to a 1s life", () => {
+    const shortest = { settleMs: 0, videoMs: 1000, minVideoMs: 1000 };
     expect(
       timing({ mode: "burst", particleLifetime: { min: 0.3, max: 0.8 } }),
-    ).toEqual({ settleMs: 0, videoMs: 1000 });
-    expect(timing({ mode: "burst", particleLifetime: 0 })).toEqual({
-      settleMs: 0,
-      videoMs: 1000,
-    });
-    expect(timing({ mode: "burst" })).toEqual({ settleMs: 0, videoMs: 1000 });
+    ).toEqual(shortest);
+    expect(timing({ mode: "burst", particleLifetime: 0 })).toEqual(shortest);
+    expect(timing({ mode: "burst" })).toEqual(shortest);
   });
 
   // The preview rests a third of the way through its video.
