@@ -19,6 +19,7 @@ pub mod proto_resources;
 pub mod proto_xml;
 pub mod protobuf;
 pub mod signing;
+pub mod space;
 pub mod template;
 pub mod zip;
 
@@ -79,6 +80,11 @@ pub struct AndroidExportRequest {
     /// directory. Mobile hosts pass their cache directory.
     #[serde(default)]
     pub work_dir: Option<PathBuf>,
+    /// Set by hosts that copy the finished APK to the creator's chosen
+    /// location after the export, as the Android and iOS Creator do, so the
+    /// free-space check also leaves room for that copy.
+    #[serde(default)]
+    pub copy_after_export: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -295,6 +301,7 @@ pub fn export_android_apk_with_key(
 
     progress.emit("prepareApk", 0, 0);
     let descriptor = template::load_descriptor(&request.template_path, &request.descriptor_path)?;
+    check_free_space(request)?;
     let icons = load_icons(request)?;
     let work = create_work_dir(request, "routevn-apk-")?;
     let PreparedPackage {
@@ -494,6 +501,44 @@ fn prepare_package(
     })
 }
 
+/// Stops the export before it writes anything when a volume it writes to is
+/// too full. The game package holds the assets uncompressed with the
+/// instructions, and the APK or app bundle holds the encrypted package and the template.
+fn check_free_space(request: &AndroidExportRequest) -> Result<()> {
+    let work_root = request.work_dir.clone().unwrap_or_else(std::env::temp_dir);
+    let output_dir = output_dir_of(&request.output_path);
+    // An asset that cannot be read is reported by packaging with its own
+    // message, so it only drops out of the estimate here.
+    let asset_bytes: u64 = request
+        .assets
+        .iter()
+        .filter_map(|asset| std::fs::metadata(&asset.path).ok())
+        .map(|metadata| metadata.len())
+        .sum();
+    let package_bytes = asset_bytes.saturating_add(request.instructions_json.len() as u64);
+    let template_bytes = std::fs::metadata(&request.template_path)
+        .map(|metadata| metadata.len())
+        .unwrap_or(0);
+    let output_bytes = package_bytes.saturating_add(template_bytes);
+    let needs = space::space_needs(
+        &work_root,
+        output_dir,
+        space::same_volume(&work_root, output_dir),
+        package_bytes,
+        output_bytes,
+        request.copy_after_export,
+    );
+    space::check_space(&needs, space::available_space)
+}
+
+/// The folder `output_path` is in.
+fn output_dir_of(output_path: &Path) -> &Path {
+    output_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."))
+}
+
 fn checksum_file(
     file: &mut File,
     length: u64,
@@ -532,10 +577,7 @@ fn create_partial_output(
     extension: &str,
     label: &str,
 ) -> Result<(tempfile::NamedTempFile, File)> {
-    let output_dir = output_path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
+    let output_dir = output_dir_of(output_path);
     let partial = tempfile::Builder::new()
         .prefix(&format!(".routevn-{extension}-"))
         .suffix(".partial")

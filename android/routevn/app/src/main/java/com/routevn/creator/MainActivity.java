@@ -3442,6 +3442,9 @@ public class MainActivity extends Activity {
             if (signingKey != null) {
                 request.put("signingKey", signingKey);
             }
+            // The file is copied to the chosen location after the export, so
+            // the exporter's free-space check leaves room for that copy.
+            request.put("copyAfterExport", true);
 
             long startedNanos = System.nanoTime();
             NativeExporter.ProgressListener listener =
