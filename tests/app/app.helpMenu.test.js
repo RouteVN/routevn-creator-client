@@ -172,6 +172,30 @@ describe("help button menu", () => {
     expect(app.viewData().isChatSupportDialogOpen).toBe(false);
   });
 
+  it("closes the help video and Chat Support when the page changes", async () => {
+    const video = createApp({ route: "/project/images", menuKey: "video" });
+    await video.click();
+    appStore.setCurrentRoute(
+      { state: video.state },
+      { route: "/project/images", payload: { p: "project-1" } },
+    );
+    expect(video.viewData().helpVideo).toBeDefined();
+
+    appStore.setCurrentRoute(
+      { state: video.state },
+      { route: "/project/sounds", payload: { p: "project-1" } },
+    );
+    expect(video.viewData().helpVideo).toBeUndefined();
+
+    const chat = createApp({ route: "/project/images", menuKey: "chat" });
+    await chat.click();
+    appStore.setCurrentRoute(
+      { state: chat.state },
+      { route: "/project/sounds" },
+    );
+    expect(chat.viewData().isChatSupportDialogOpen).toBe(false);
+  });
+
   it("does nothing when the menu is dismissed", async () => {
     const app = createApp({ route: "/project/images" });
 

@@ -259,6 +259,9 @@ export const setAppWindowMetrics = ({ state }, { width, height }) => {
 export const setCurrentRoute = ({ state }, { route, payload } = {}) => {
   if (route !== state.currentRoute) {
     state.isSceneEditorKeyboardVisible = false;
+    // Help opened on the previous page doesn't stay over the next one.
+    state.helpVideoId = undefined;
+    state.isChatSupportDialogOpen = false;
   }
   state.currentRoute = route;
   state.currentRoutePayload = { ...payload };
