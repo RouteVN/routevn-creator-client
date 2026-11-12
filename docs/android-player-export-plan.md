@@ -15,8 +15,9 @@ model. Exporting a game must not run Gradle, the Android SDK, a JDK, or the NDK
 on the creator's machine.
 
 Signing is out of scope for this phase. The creator signs the exported APK with
-a tool and key of their choice. A RouteVN-provided signing option may follow in
-a separate plan; the output defined here stays compatible with it.
+a tool and key of their choice. Signing in Creator and Android App Bundle
+export are planned in `docs/android-signing-and-aab-plan.md`; the output
+defined here stays compatible with it.
 
 ## Product Contract
 
@@ -55,7 +56,8 @@ The creator signs the APK before distributing it:
   account
 
 Google Play does not accept APKs for new apps. Play distribution needs an
-Android App Bundle and is out of scope.
+Android App Bundle and is out of scope here; see
+`docs/android-signing-and-aab-plan.md`.
 
 ## Why No Server Is Needed
 
@@ -702,8 +704,9 @@ signing, and the large-project export stays within memory.
 
 ## Out Of Scope
 
-- signing
-- Android App Bundles and Google Play publishing
+- signing (planned in `docs/android-signing-and-aab-plan.md`)
+- Android App Bundles (planned in the same document) and Google Play
+  publishing
 - the web Creator as an export host
 - per-game custom native code
 - separate adaptive icon layers, round icons, and themed icons

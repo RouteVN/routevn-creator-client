@@ -31,6 +31,10 @@ creator signs it with their own key before installing or distributing it:
 - do not run `zipalign` after signing; the APK is already aligned and
   realigning it invalidates the signature
 
+Signing inside Creator and Android App Bundle export are not implemented. They
+are planned in `../android-signing-and-aab-plan.md`; this document changes
+when they ship.
+
 The APK contains `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64` native code,
 has minimum SDK 24 and target SDK 37, requests no permissions, and declares one
 launcher activity.
