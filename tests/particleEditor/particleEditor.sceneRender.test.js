@@ -392,7 +392,15 @@ describe("particle video timing", () => {
     ).toEqual({ settleMs: 0, videoMs: 4000, minVideoMs: 1000 });
     expect(
       timing({ duration: 30, particleLifetime: { min: 2, max: 3 } }),
-    ).toEqual({ settleMs: 0, videoMs: 5000, minVideoMs: 1000 });
+    ).toEqual({ settleMs: 0, videoMs: 5000, minVideoMs: 5000 });
+  });
+
+  it("does not let a timed effect's video stop while it still emits", () => {
+    expect(timing({ duration: 4, rate: 0.5, particleLifetime: 0.5 })).toEqual({
+      settleMs: 0,
+      videoMs: 4500,
+      minVideoMs: 4000,
+    });
   });
 
   it("never records less than a second, and falls back to a 1s life", () => {

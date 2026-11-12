@@ -125,11 +125,11 @@ export const getParticleSettleMs = (modules) => {
 
 const PARTICLE_VIDEO_MIN_MS = 1000;
 
-// When an effect's last particle is gone, or nothing for an effect that runs
-// on. A burst emits once and a timed effect stops emitting, and the last
-// particle lives its longest life after that. The renderer never stops an
-// effect whose duration is 0.
-const getParticleEndMs = (modules) => {
+// When an effect stops emitting and when its last particle is gone, or
+// nothing for an effect that runs on. A burst emits once and a timed effect
+// stops emitting, and the last particle lives its longest life after that.
+// The renderer never stops an effect whose duration is 0.
+const getParticleEnd = (modules) => {
   const emission = modules?.emission ?? {};
   const lifetime = emission.particleLifetime;
   const longestLife = Number(
@@ -138,11 +138,12 @@ const getParticleEndMs = (modules) => {
   const longestLifeMs =
     (Number.isFinite(longestLife) && longestLife >= 0 ? longestLife : 1) * 1000;
   if (emission.mode === "burst") {
-    return longestLifeMs;
+    return { emittingMs: 0, endMs: longestLifeMs };
   }
   const duration = Number(emission.duration);
   if (Number.isFinite(duration) && duration > 0) {
-    return duration * 1000 + longestLifeMs;
+    const emittingMs = duration * 1000;
+    return { emittingMs, endMs: emittingMs + longestLifeMs };
   }
   return undefined;
 };
@@ -151,20 +152,27 @@ const getParticleEndMs = (modules) => {
 // is. A running effect fills out first, so the whole video shows it in full.
 // A burst or a timed effect is recorded from its start until its last
 // particle is gone. Its video may stop sooner once it has run `minVideoMs`,
-// as its particles can leave the scene before their life ends.
+// when it no longer emits, as its particles can leave the scene before their
+// life ends.
 export const getParticleVideoTiming = (
   modules,
   { runningSettleMs, maxVideoMs },
 ) => {
-  const endMs = getParticleEndMs(modules);
-  if (endMs === undefined) {
+  const end = getParticleEnd(modules);
+  if (!end) {
     return { settleMs: runningSettleMs, videoMs: maxVideoMs };
   }
-  const videoMs = Math.min(maxVideoMs, Math.max(PARTICLE_VIDEO_MIN_MS, endMs));
+  const videoMs = Math.min(
+    maxVideoMs,
+    Math.max(PARTICLE_VIDEO_MIN_MS, end.endMs),
+  );
   return {
     settleMs: 0,
     videoMs,
-    minVideoMs: Math.min(PARTICLE_VIDEO_MIN_MS, videoMs),
+    minVideoMs: Math.min(
+      videoMs,
+      Math.max(PARTICLE_VIDEO_MIN_MS, end.emittingMs),
+    ),
   };
 };
 

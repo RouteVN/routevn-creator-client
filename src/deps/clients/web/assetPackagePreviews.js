@@ -35,7 +35,7 @@ const ANIMATION_THUMBNAIL_PLAYBACK_GRACE_MS = 5000;
 const PARTICLE_PREVIEW_DURATION_MS = 5000;
 const PARTICLE_PREVIEW_SETTLE_MS = 3000;
 const PARTICLE_BLANK_CHECK_INTERVAL_MS = 100;
-const PARTICLE_BLANK_STOP_MS = 300;
+const PARTICLE_BLANK_STOP_MS = 500;
 const PARTICLE_BLANK_CHANNEL_MAX = 8;
 const SPRITESHEET_PREVIEW_PADDING = 16;
 const CHECKERBOARD_CELL_SIZE = 12;
@@ -1041,15 +1041,7 @@ const isBlankParticleFrame = ({ data }) => {
   return true;
 };
 
-// Starts a particle's graphics context, and for a running effect starts the
-// effect too, so it fills out while the particle before it is recorded.
-// `record` returns the videos and frees the context; `destroy` frees a
-// context that is never recorded.
-const prepareParticlePreview = async ({
-  particle,
-  imageItems,
-  imageAssets,
-}) => {
+const recordParticlePreview = async ({ particle, imageItems, imageAssets }) => {
   const renderableParticle = createRenderableParticleData(particle, imageItems);
   const width = Math.max(1, Math.round(Number(renderableParticle.width) || 1));
   const height = Math.max(
@@ -1068,18 +1060,7 @@ const prepareParticlePreview = async ({
   const host = document.createElement("div");
   const graphicsService = await createGraphicsService();
   const objectUrls = [];
-  const destroy = async () => {
-    await graphicsService.destroy();
-    objectUrls.forEach((url) => URL.revokeObjectURL(url));
-    host.remove();
-  };
-  const startEffect = async () => {
-    await graphicsService.render(
-      createParticlePreviewState(renderableParticle),
-    );
-    await waitForPaint();
-  };
-  let settledAtMs;
+  let recording;
 
   try {
     await graphicsService.init({ canvas: host, width, height });
@@ -1088,122 +1069,91 @@ const prepareParticlePreview = async ({
       imageAssets,
       objectUrls,
     });
-    if (settleMs > 0) {
-      await startEffect();
-      settledAtMs = performance.now() + settleMs;
-    }
-  } catch (error) {
-    await destroy();
-    throw error;
-  }
 
-  const record = async () => {
-    let recording;
-    try {
-      if (settledAtMs === undefined) {
-        await startEffect();
-      } else {
-        await wait(Math.max(0, settledAtMs - performance.now()));
-      }
-      recording = startDualVideoRecording({
-        sourceCanvas: graphicsService.getCanvas(),
-        startFullRecording: () =>
-          graphicsService.startCanvasVideoRecording({ frameRate: 60 }),
-      });
+    await graphicsService.render(
+      createParticlePreviewState(renderableParticle),
+    );
+    await waitForPaint();
+    await wait(settleMs);
+    recording = startDualVideoRecording({
+      sourceCanvas: graphicsService.getCanvas(),
+      startFullRecording: () =>
+        graphicsService.startCanvasVideoRecording({ frameRate: 60 }),
+    });
+    recording.drawThumbnail();
+    const startedAtMs = performance.now();
+    let elapsedMs = 0;
+    let lastCheckedAtMs = 0;
+    let hasShownParticles = false;
+    let blankSinceMs;
+    while (elapsedMs < videoMs) {
+      await wait(Math.min(16, videoMs - elapsedMs));
       recording.drawThumbnail();
-      const startedAtMs = performance.now();
-      let elapsedMs = 0;
-      let lastCheckedAtMs = 0;
-      let hasShownParticles = false;
-      let blankSinceMs;
-      while (elapsedMs < videoMs) {
-        await wait(Math.min(16, videoMs - elapsedMs));
-        recording.drawThumbnail();
-        elapsedMs = Math.max(0, performance.now() - startedAtMs);
-        if (
-          minVideoMs === undefined ||
-          elapsedMs - lastCheckedAtMs < PARTICLE_BLANK_CHECK_INTERVAL_MS
-        ) {
-          continue;
-        }
-        lastCheckedAtMs = elapsedMs;
-        if (!isBlankParticleFrame(recording.readThumbnail())) {
-          hasShownParticles = true;
-          blankSinceMs = undefined;
-          continue;
-        }
-        if (!hasShownParticles) {
-          continue;
-        }
-        blankSinceMs ??= elapsedMs;
-        // The effect's particles are gone before their life ended, such as
-        // ones that left its bounds.
-        if (
-          elapsedMs >= minVideoMs &&
-          elapsedMs - blankSinceMs >= PARTICLE_BLANK_STOP_MS
-        ) {
-          break;
-        }
+      elapsedMs = Math.max(0, performance.now() - startedAtMs);
+      if (
+        minVideoMs === undefined ||
+        elapsedMs - lastCheckedAtMs < PARTICLE_BLANK_CHECK_INTERVAL_MS
+      ) {
+        continue;
       }
-      const videos = await recording.stop();
-      recording = undefined;
-      return videos;
-    } finally {
-      await recording?.cancel();
-      await destroy();
+      lastCheckedAtMs = elapsedMs;
+      if (!isBlankParticleFrame(recording.readThumbnail())) {
+        hasShownParticles = true;
+        blankSinceMs = undefined;
+        continue;
+      }
+      if (!hasShownParticles) {
+        continue;
+      }
+      blankSinceMs ??= elapsedMs;
+      // The effect has stopped emitting and its particles are gone before
+      // their life ended, such as ones that left its bounds.
+      if (
+        elapsedMs >= minVideoMs &&
+        elapsedMs - blankSinceMs >= PARTICLE_BLANK_STOP_MS
+      ) {
+        break;
+      }
     }
-  };
-
-  return { destroy, record };
+    const videos = await recording.stop();
+    recording = undefined;
+    return videos;
+  } finally {
+    await recording?.cancel();
+    await graphicsService.destroy();
+    objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    host.remove();
+  }
 };
 
-// Records particles one after another, so only one video is encoded at a
-// time. While one fills out and is recorded, the next one's context starts
-// and a running effect in it fills out.
+// Records particles one after another, each in its own graphics context.
+// Freeing a context frees the textures it loaded, which another context that
+// drew the same image would lose, so only one is alive at a time.
 export const renderParticlePreviewVideos = async ({
   particles,
   imageItems,
 }) => {
-  const prepare = (index) => {
-    const { particle, imageAssets } = particles[index];
-    const prepared = prepareParticlePreview({
-      particle,
-      imageItems,
-      imageAssets,
-    });
-    // It is awaited once the particle before it is recorded.
-    prepared.catch(() => undefined);
-    return prepared;
-  };
   const previews = [];
-  let next = particles.length > 0 ? prepare(0) : undefined;
-
-  try {
-    for (let index = 0; index < particles.length; index += 1) {
-      const { particleId, particle } = particles[index];
-      try {
-        const session = await next;
-        next = index + 1 < particles.length ? prepare(index + 1) : undefined;
-        const videos = await session.record();
-        previews.push({
-          particleId,
-          previewBlob: videos.previewBlob,
-          thumbnailBlob: videos.thumbnailBlob,
-        });
-      } catch (error) {
-        throw new Error(
-          `Could not generate preview for particle '${particle.name}' (${particleId}): ${error.message ?? "Unknown error"}`,
-          { cause: error },
-        );
-      }
+  for (const { particleId, particle, imageAssets } of particles) {
+    try {
+      const videos = await recordParticlePreview({
+        particle,
+        imageItems,
+        imageAssets,
+      });
+      previews.push({
+        particleId,
+        previewBlob: videos.previewBlob,
+        thumbnailBlob: videos.thumbnailBlob,
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not generate preview for particle '${particle.name}' (${particleId}): ${error.message ?? "Unknown error"}`,
+        { cause: error },
+      );
     }
-    return previews;
-  } finally {
-    await next?.then(
-      (session) => session.destroy(),
-      () => undefined,
-    );
   }
+  return previews;
 };
 
 // Draws layouts one after another at the project's resolution, and returns

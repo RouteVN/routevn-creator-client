@@ -638,7 +638,10 @@ describe("particle preview videos", () => {
     expect(services[0].stop).not.toHaveBeenCalled();
 
     frames.lit = false;
-    await vi.advanceTimersByTimeAsync(600);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(400);
     await previews;
     expect(services[0].stop).toHaveBeenCalledOnce();
   });
@@ -682,43 +685,60 @@ describe("particle preview videos", () => {
     expect(services[0].stop).toHaveBeenCalledOnce();
   });
 
-  it("fills out the next running effect while one is recorded, and records one at a time", async () => {
-    const { events, previews, services } = record([running, running, burst]);
+  it("keeps recording a timed effect that still emits while its scene is empty", async () => {
+    const { frames, previews, services } = record([
+      { duration: 3, rate: 0.5, particleLifetime: 0.5 },
+    ]);
+    await vi.advanceTimersByTimeAsync(600);
+    frames.lit = false;
 
-    await vi.advanceTimersByTimeAsync(3100);
-    expect(events).toEqual(["render 0", "render 1", "record 0"]);
+    await vi.advanceTimersByTimeAsync(2300);
+    expect(services[0].stop).not.toHaveBeenCalled();
 
-    // The second effect has run for 8s by now, so it is recorded at once.
-    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(300);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+  });
+
+  it("keeps recording a burst whose scene is empty for a moment", async () => {
+    const { frames, previews, services } = record([
+      { mode: "burst", burstCount: 20, particleLifetime: 3 },
+    ]);
+    await vi.advanceTimersByTimeAsync(1200);
+    frames.lit = false;
+    await vi.advanceTimersByTimeAsync(300);
+    frames.lit = true;
+
+    await vi.advanceTimersByTimeAsync(1300);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+  });
+
+  it("records one particle at a time, and frees each context before the next starts", async () => {
+    const { events, previews } = record([running, burst]);
+
+    await vi.advanceTimersByTimeAsync(8100);
     expect(events).toEqual([
       "render 0",
-      "render 1",
       "record 0",
       "stop 0",
       "destroy 0",
+      "render 1",
       "record 1",
-    ]);
-    expect(services).toHaveLength(3);
-    expect(services[2].render).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(5100);
-    expect(events.slice(6)).toEqual([
-      "stop 1",
-      "destroy 1",
-      "render 2",
-      "record 2",
     ]);
 
     await vi.advanceTimersByTimeAsync(2100);
     expect((await previews).map(({ particleId }) => particleId)).toEqual([
       "particle-0",
       "particle-1",
-      "particle-2",
     ]);
-    expect(events.slice(10)).toEqual(["stop 2", "destroy 2"]);
+    expect(events.slice(6)).toEqual(["stop 1", "destroy 1"]);
   });
 
-  it("frees the next particle's context when a recording fails", async () => {
+  it("names the particle whose recording fails, and frees its context", async () => {
     const { previews, services } = record([running, running]);
     await vi.advanceTimersByTimeAsync(3100);
     services[0].stop.mockRejectedValueOnce(new Error("encoder failed"));
@@ -728,10 +748,10 @@ describe("particle preview videos", () => {
       "Could not generate preview for particle 'Particle 0' (particle-0): encoder failed",
     );
     expect(services[0].destroy).toHaveBeenCalledOnce();
-    expect(services[1].destroy).toHaveBeenCalledOnce();
+    expect(services).toHaveLength(1);
   });
 
-  it("names the particle whose context cannot start", async () => {
+  it("names the particle whose context cannot start, and frees it", async () => {
     const { previews, services } = record([running, running], {
       failingInitIndex: 1,
     });
@@ -741,7 +761,6 @@ describe("particle preview videos", () => {
       "Could not generate preview for particle 'Particle 1' (particle-1): no context",
     );
     expect(services[0].stop).toHaveBeenCalledOnce();
-    expect(services[0].destroy).toHaveBeenCalledOnce();
     expect(services[1].destroy).toHaveBeenCalledOnce();
   });
 });
