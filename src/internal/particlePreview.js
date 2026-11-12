@@ -104,7 +104,10 @@ const PARTICLE_PREVIEW_SETTLE_MS = 1500;
 // How long an effect runs before a still picture of it is taken. A burst
 // emits once, and a timed effect stops emitting, so their picture is taken
 // while the particles are still there, halfway through the shortest life.
-export const getParticleSettleMs = (modules) => {
+export const getParticleSettleMs = (
+  modules,
+  maxSettleMs = PARTICLE_PREVIEW_SETTLE_MS,
+) => {
   const emission = modules?.emission ?? {};
   const lifetime = emission.particleLifetime;
   const shortestLife = Number(
@@ -114,13 +117,41 @@ export const getParticleSettleMs = (modules) => {
     (Number.isFinite(shortestLife) && shortestLife >= 0 ? shortestLife : 1) *
     500;
   if (emission.mode === "burst") {
-    return Math.min(PARTICLE_PREVIEW_SETTLE_MS, halfLifeMs);
+    return Math.min(maxSettleMs, halfLifeMs);
   }
   const duration = Number(emission.duration);
   if (Number.isFinite(duration) && duration >= 0) {
-    return Math.min(PARTICLE_PREVIEW_SETTLE_MS, duration * 1000 + halfLifeMs);
+    return Math.min(maxSettleMs, duration * 1000 + halfLifeMs);
   }
-  return PARTICLE_PREVIEW_SETTLE_MS;
+  return maxSettleMs;
+};
+
+const PARTICLE_VIDEO_MIN_MS = 1000;
+
+// How long a video of an effect runs once the effect has settled. A burst and
+// a timed effect end, so their video stops when the last particle is gone
+// instead of showing an empty scene, and is never shorter than a second.
+export const getParticleVideoMs = (modules, { settleMs, maxVideoMs }) => {
+  const emission = modules?.emission ?? {};
+  const lifetime = emission.particleLifetime;
+  const longestLife = Number(
+    typeof lifetime === "number" ? lifetime : (lifetime?.max ?? lifetime?.min),
+  );
+  const longestLifeMs =
+    (Number.isFinite(longestLife) && longestLife >= 0 ? longestLife : 1) * 1000;
+  const duration = Number(emission.duration);
+  let emittingMs;
+  if (emission.mode === "burst") {
+    emittingMs = 0;
+  } else if (Number.isFinite(duration) && duration >= 0) {
+    emittingMs = duration * 1000;
+  } else {
+    return maxVideoMs;
+  }
+  return Math.min(
+    maxVideoMs,
+    Math.max(PARTICLE_VIDEO_MIN_MS, emittingMs + longestLifeMs - settleMs),
+  );
 };
 
 // Bump when a particle's preview starts drawing the same saved particle

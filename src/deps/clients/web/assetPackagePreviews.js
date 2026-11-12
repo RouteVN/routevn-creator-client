@@ -1,7 +1,11 @@
 import createRouteGraphics, { textPlugin } from "route-graphics";
 import { createAnimationResourcePreviewStates } from "../../../internal/animationPreview.js";
 import { createFontPreviewGlyphText } from "../../../internal/fontPreviewGlyphs.js";
-import { createParticlePreviewState } from "../../../internal/particlePreview.js";
+import {
+  createParticlePreviewState,
+  getParticleSettleMs,
+  getParticleVideoMs,
+} from "../../../internal/particlePreview.js";
 import { createRenderableParticleData } from "../../../internal/particles.js";
 import { requireProjectResolution } from "../../../internal/projectResolution.js";
 import { createRouteGraphicsTextPreviewState } from "../../../internal/routeGraphicsTextPreview.js";
@@ -29,7 +33,8 @@ const STATIC_ANIMATION_PREVIEW_DURATION_MS = 1000;
 const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
 const ANIMATION_THUMBNAIL_LOAD_TIMEOUT_MS = 10000;
 const ANIMATION_THUMBNAIL_PLAYBACK_GRACE_MS = 5000;
-const PARTICLE_PREVIEW_DURATION_MS = 3000;
+const PARTICLE_PREVIEW_DURATION_MS = 5000;
+const PARTICLE_PREVIEW_WARMUP_MS = 3000;
 const SPRITESHEET_PREVIEW_PADDING = 16;
 const CHECKERBOARD_CELL_SIZE = 12;
 const CHECKERBOARD_LIGHT_COLOR = "#eef2f7";
@@ -1039,6 +1044,17 @@ export const renderParticlePreviewVideo = async ({
       createParticlePreviewState(renderableParticle),
     );
     await waitForPaint();
+    // A preview rests on its first frame until it is hovered, so the effect
+    // runs first: recording from the start would rest on an empty frame.
+    const settleMs = getParticleSettleMs(
+      renderableParticle.modules,
+      PARTICLE_PREVIEW_WARMUP_MS,
+    );
+    const videoMs = getParticleVideoMs(renderableParticle.modules, {
+      settleMs,
+      maxVideoMs: PARTICLE_PREVIEW_DURATION_MS,
+    });
+    await wait(settleMs);
     recording = startDualVideoRecording({
       sourceCanvas: graphicsService.getCanvas(),
       startFullRecording: () =>
@@ -1047,8 +1063,8 @@ export const renderParticlePreviewVideo = async ({
     recording.drawThumbnail();
     const startedAtMs = performance.now();
     let elapsedMs = 0;
-    while (elapsedMs < PARTICLE_PREVIEW_DURATION_MS) {
-      await wait(Math.min(16, PARTICLE_PREVIEW_DURATION_MS - elapsedMs));
+    while (elapsedMs < videoMs) {
+      await wait(Math.min(16, videoMs - elapsedMs));
       recording.drawThumbnail();
       elapsedMs = Math.max(0, performance.now() - startedAtMs);
     }

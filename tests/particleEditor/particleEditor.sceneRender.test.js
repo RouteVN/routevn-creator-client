@@ -8,6 +8,7 @@ import { buildLayoutRenderElements } from "../../src/internal/project/layout.js"
 import {
   createParticlePreviewState,
   getParticleSettleMs,
+  getParticleVideoMs,
 } from "../../src/internal/particlePreview.js";
 import {
   MAX_PARTICLE_COUNT,
@@ -330,5 +331,59 @@ describe("particle thumbnail settle time", () => {
       });
       expect(getParticleSettleMs(particle.modules)).toBe(1500);
     }
+  });
+});
+
+describe("particle video timing", () => {
+  const video = (emission, settleMs) =>
+    getParticleVideoMs({ emission }, { settleMs, maxVideoMs: 5000 });
+
+  it("lets a running effect settle for as long as the caller allows", () => {
+    expect(
+      getParticleSettleMs({ emission: { mode: "continuous" } }, 3000),
+    ).toBe(3000);
+    expect(
+      getParticleSettleMs(
+        { emission: { mode: "burst", particleLifetime: { min: 2, max: 3 } } },
+        3000,
+      ),
+    ).toBe(1000);
+    expect(
+      getParticleSettleMs(
+        { emission: { mode: "burst", particleLifetime: 10 } },
+        3000,
+      ),
+    ).toBe(3000);
+  });
+
+  it("records a running effect for the whole video", () => {
+    expect(video({ mode: "continuous" }, 3000)).toBe(5000);
+    expect(video({ duration: "infinite", rate: 20 }, 3000)).toBe(5000);
+    expect(
+      getParticleVideoMs(undefined, { settleMs: 0, maxVideoMs: 5000 }),
+    ).toBe(5000);
+  });
+
+  it("stops a burst's video when its last particle is gone", () => {
+    expect(
+      video({ mode: "burst", particleLifetime: { min: 2, max: 3 } }, 1000),
+    ).toBe(2000);
+    expect(video({ mode: "burst", particleLifetime: 4 }, 2000)).toBe(2000);
+    expect(video({ mode: "burst", particleLifetime: 20 }, 3000)).toBe(5000);
+  });
+
+  it("stops a timed effect's video after its emission and last particle", () => {
+    expect(
+      video({ duration: 1, particleLifetime: { min: 2, max: 3 } }, 2000),
+    ).toBe(2000);
+    expect(
+      video({ duration: 30, particleLifetime: { min: 2, max: 3 } }, 3000),
+    ).toBe(5000);
+  });
+
+  it("never records less than a second", () => {
+    expect(
+      video({ mode: "burst", particleLifetime: { min: 0.3, max: 0.8 } }, 150),
+    ).toBe(1000);
   });
 });
