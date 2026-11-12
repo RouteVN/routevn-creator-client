@@ -42,37 +42,52 @@ describe("routevnUrls", () => {
       "https://routevn.com/en/creator/docs/characters/#character-sprites",
     );
     expect(getRoutevnCreatorDocsUrl("/project/animation-editor")).toBe(
-      "https://routevn.com/en/creator/docs/animations/#animation-editor-page",
+      "https://routevn.com/en/creator/docs/animations/#parts-of-the-animation-editor",
+    );
+    expect(getRoutevnCreatorDocsUrl("/project/audio-effects-editor")).toBe(
+      "https://routevn.com/en/creator/docs/audio-effects/#audio-effect-editor",
     );
     expect(getRoutevnCreatorDocsUrl("/project/layout-editor")).toBe(
       "https://routevn.com/en/creator/docs/layouts/#layout-editor",
     );
     expect(getRoutevnCreatorDocsUrl("/project/transform-editor")).toBe(
-      "https://routevn.com/en/creator/docs/transforms/",
+      "https://routevn.com/en/creator/docs/transforms/#parts-of-the-transform-editor",
     );
     expect(getRoutevnCreatorDocsUrl("/project/particle-editor")).toBe(
-      "https://routevn.com/en/creator/docs/particles/",
+      "https://routevn.com/en/creator/docs/particles/#parts-of-the-particle-editor",
     );
     expect(getRoutevnCreatorDocsUrl("/project/text-style-editor")).toBe(
       "https://routevn.com/en/creator/docs/text-styles/",
     );
   });
 
-  it("maps settings routes to the docs settings section", () => {
+  it("maps pages that have their own docs page", () => {
+    expect(getRoutevnCreatorDocsUrl("/project")).toBe(
+      "https://routevn.com/en/creator/docs/projects/#project-details",
+    );
+    expect(getRoutevnCreatorDocsUrl("/project/audio-effects")).toBe(
+      "https://routevn.com/en/creator/docs/audio-effects/",
+    );
+    expect(getRoutevnCreatorDocsUrl("/project/releases/platform-details")).toBe(
+      "https://routevn.com/en/creator/docs/platform-details/",
+    );
+  });
+
+  it("maps settings routes to the Settings docs page", () => {
     expect(getRoutevnCreatorDocsUrl("/project/about")).toBe(
-      "https://routevn.com/en/creator/docs/page-index/#settings",
+      "https://routevn.com/en/creator/docs/settings/#about",
     );
     expect(getRoutevnCreatorDocsUrl("/project/config")).toBe(
-      "https://routevn.com/en/creator/docs/page-index/#settings",
+      "https://routevn.com/en/creator/docs/settings/#config",
     );
     expect(getRoutevnCreatorDocsUrl("/project/language")).toBe(
-      "https://routevn.com/en/creator/docs/page-index/#settings",
+      "https://routevn.com/en/creator/docs/settings/#config",
+    );
+    expect(getRoutevnCreatorDocsUrl("/project/user")).toBe(
+      "https://routevn.com/en/creator/docs/settings/",
     );
     expect(getRoutevnCreatorDocsUrl("/project/asset-package")).toBe(
       "https://routevn.com/en/creator/docs/page-index/#release",
-    );
-    expect(getRoutevnCreatorDocsUrl("/project/user")).toBe(
-      "https://routevn.com/en/creator/docs/page-index/#settings",
     );
   });
 
@@ -100,8 +115,20 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorSystemActionDocsUrl("background")).toBe(
       "https://routevn.com/en/creator/docs/line-actions/background/",
     );
-    expect(getRoutevnCreatorSystemActionDocsUrl("screen")).toBe(
-      "https://routevn.com/en/creator/docs/line-actions/visual/",
+    expect(getRoutevnCreatorSystemActionDocsUrl("visual")).toBe(
+      "https://routevn.com/en/creator/docs/line-actions/visuals/",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("voice")).toBe(
+      "https://routevn.com/en/creator/docs/line-actions/voice/",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("pushOverlay")).toBe(
+      "https://routevn.com/en/creator/docs/line-actions/push-layered-view/",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("popOverlay")).toBe(
+      "https://routevn.com/en/creator/docs/line-actions/pop-layered-view/",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("resetStoryAtSection")).toBe(
+      "https://routevn.com/en/creator/docs/line-actions/reset-story-at-section/",
     );
     expect(getRoutevnCreatorSystemActionDocsUrl("setNextLineConfig")).toBe(
       "https://routevn.com/en/creator/docs/line-actions/next-line-config/",
@@ -130,11 +157,20 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorSystemActionDocsUrl("setSoundVolume")).toBe(
       "https://routevn.com/en/creator/docs/line-actions/sfx/",
     );
+    expect(getRoutevnCreatorSystemActionDocsUrl("setAutoForwardDelay")).toBe(
+      "https://routevn.com/en/creator/docs/line-actions/toggle-auto-mode/",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("setSkipUnseenText")).toBe(
+      "https://routevn.com/en/creator/docs/line-actions/toggle-skip-mode/",
+    );
   });
 
   it("maps generic system action modes and falls back for undocumented modes", () => {
     expect(getRoutevnCreatorSystemActionDocsUrl("actions")).toBe(
-      "https://routevn.com/en/creator/docs/scene-editor/",
+      "https://routevn.com/en/creator/docs/scene-editor/#add-an-action-to-a-line",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("screen")).toBe(
+      "https://routevn.com/en/creator/docs/scene-editor/#add-an-action-to-a-line",
     );
     expect(getRoutevnCreatorSystemActionDocsUrl(undefined)).toBe(
       ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL,
