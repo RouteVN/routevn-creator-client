@@ -87,6 +87,11 @@ For Simplified Chinese localization, follow the RouteVN Simplified Chinese
 translation style guide. Use it as the terminology and tone reference for
 RouteVN `zh-hans` UI and docs copy.
 
+For Traditional Chinese localization, follow the RouteVN Traditional Chinese
+translation style guide. The `zh-hant` catalog uses Taiwan usage for Taiwan,
+Hong Kong, and Macau. Translate it from English, not by converting the
+`zh-hans` catalog, because many software words differ between the two.
+
 For Russian localization, follow the RouteVN Russian translation style guide.
 Use it as the terminology and tone reference for RouteVN `ru` UI copy.
 

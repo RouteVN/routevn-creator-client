@@ -19,6 +19,7 @@ import {
   PL_I18N,
   PT_I18N,
   RU_I18N,
+  ZH_HANT_I18N,
 } from "../support/i18n.js";
 
 const minutesAgo = (minutes) =>
@@ -95,6 +96,16 @@ describe("formatDate", () => {
     // period that Polish abbreviations take.
     expect(formatDate(value, PL_I18N.dateTime)).toMatch(
       /^15\.01\.2026, \d{2}:\d{2}$/,
+    );
+  });
+
+  it("writes the hour the way the catalog asks", () => {
+    const value = "2026-01-15T10:30:00.000Z";
+
+    expect(formatDate(value, EN_I18N.dateTime)).toMatch(/\b\d{2}:\d{2} [AP]M$/);
+    // Traditional Chinese clocks do not pad the hour, as in "下午2:05".
+    expect(formatDate(value, ZH_HANT_I18N.dateTime)).toMatch(
+      /^2026年1月15日 (上午|下午)[1-9]\d?:\d{2}$/,
     );
   });
 });

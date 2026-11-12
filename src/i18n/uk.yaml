@@ -3181,6 +3181,7 @@ dateTime:
   pluralRulesLocale: "uk"
   relativeTimeStyle: "short"
   monthStyle: "short"
+  hourStyle: "2-digit"
   justNow: "Щойно"
   fileSizeBytes: "{value} Б"
   fileSizeKilobytes: "{value} кБ"

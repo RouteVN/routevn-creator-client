@@ -3153,6 +3153,7 @@ dateTime:
   pluralRulesLocale: "it"
   relativeTimeStyle: "long"
   monthStyle: "short"
+  hourStyle: "2-digit"
   justNow: "Proprio ora"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

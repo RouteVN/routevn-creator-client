@@ -3153,6 +3153,7 @@ dateTime:
   pluralRulesLocale: "ja"
   relativeTimeStyle: "short"
   monthStyle: "short"
+  hourStyle: "2-digit"
   justNow: "たった今"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"
