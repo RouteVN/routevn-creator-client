@@ -1892,6 +1892,21 @@ it.each(["capability", "picker", "export"])(
   },
 );
 
+it("tells the creator to free up space when the Android export lacks it", async () => {
+  const deps = createAndroidDeps();
+  await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+  deps.projectService.createAndroidApkToPath.mockRejectedValue({
+    code: "not-enough-space",
+    message: "Not enough free space to export: about 2.3 GB is needed.",
+  });
+  await submitAndroidExport(deps);
+  expect(deps.appService.showAlert).toHaveBeenCalledWith({
+    message: `${EN_I18N.versionsPage.androidExportNotEnoughSpace}\n\n${EN_I18N.versionsPage.errorDetailsLabel}\nNot enough free space to export: about 2.3 GB is needed.`,
+    title: EN_I18N.versionsPage.errorTitle,
+  });
+  expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
+});
+
 it("refreshes Android availability during Versions setup", async () => {
   const deps = createAndroidDeps();
   deps.store.setAndroidExportAvailability = vi.fn();

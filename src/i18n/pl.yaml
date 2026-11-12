@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "Zapisz APK na Androida"
   androidApkFileTypeName: "APK na Androida"
   androidExportFailed: "Nie udało się wyeksportować APK na Androida."
+  androidExportNotEnoughSpace: "Za mało wolnego miejsca, aby wyeksportować APK na Androida. Zwolnij trochę miejsca i spróbuj ponownie."
   androidUnsignedApkNotice: "Przed instalacją podpisz ten APK samodzielnie przy użyciu APK Signature Scheme v2 lub nowszego. Nie uruchamiaj zipalign po podpisaniu."
   androidExportBuildNumberDescription: "Musi być wyższy niż numer kompilacji wydania już zainstalowanego przez graczy. Wpisz liczbę całkowitą od 1 do 2100000000."
   androidExportBuildNumberInvalid: "Numer kompilacji musi być liczbą całkowitą od 1 do 2100000000, bez zer wiodących."

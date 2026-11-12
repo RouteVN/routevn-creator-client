@@ -12,6 +12,7 @@ pub mod axml;
 pub mod error;
 pub mod icons;
 pub mod signing;
+pub mod space;
 pub mod template;
 pub mod zip;
 
@@ -71,6 +72,11 @@ pub struct AndroidExportRequest {
     /// directory. Mobile hosts pass their cache directory.
     #[serde(default)]
     pub work_dir: Option<PathBuf>,
+    /// Set by hosts that copy the finished APK to the creator's chosen
+    /// location after the export, as the Android and iOS Creator do, so the
+    /// free-space check also leaves room for that copy.
+    #[serde(default)]
+    pub copy_after_export: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -280,6 +286,13 @@ pub fn export_android_apk_with_key(
 
     progress.emit("prepareApk", 0, 0);
     let descriptor = template::load_descriptor(&request.template_path, &request.descriptor_path)?;
+    let work_root = request.work_dir.clone().unwrap_or_else(std::env::temp_dir);
+    let output_dir = request
+        .output_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    check_free_space(request, &work_root, output_dir)?;
     let icons = icons::IconImages {
         app: icons::load_icon(&request.icon_path, "app icon")?,
         adaptive: request
@@ -294,13 +307,10 @@ pub fn export_android_apk_with_key(
             .transpose()?,
     };
 
-    let work = match &request.work_dir {
-        Some(dir) => tempfile::Builder::new()
-            .prefix("routevn-apk-")
-            .tempdir_in(dir),
-        None => tempfile::Builder::new().prefix("routevn-apk-").tempdir(),
-    }
-    .map_err(|error| ExportError::write(format!("Failed to create a work folder: {error}")))?;
+    let work = tempfile::Builder::new()
+        .prefix("routevn-apk-")
+        .tempdir_in(&work_root)
+        .map_err(|error| ExportError::write(format!("Failed to create a work folder: {error}")))?;
 
     let plain_path = work.path().join("package.bin");
     let stats = routevn_exporter::create_package_bin_file_with_progress(
@@ -378,11 +388,6 @@ pub fn export_android_apk_with_key(
         );
     }
 
-    let output_dir = request
-        .output_path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
     let partial = tempfile::Builder::new()
         .prefix(".routevn-apk-")
         .suffix(".partial")
@@ -469,6 +474,38 @@ pub fn export_android_apk_with_key(
         stats,
         signing_certificate_sha256,
     })
+}
+
+/// Stops the export before it writes anything when a volume it writes to is
+/// too full. The game package holds the assets uncompressed with the
+/// instructions, and the APK holds the encrypted package and the template.
+fn check_free_space(
+    request: &AndroidExportRequest,
+    work_root: &Path,
+    output_dir: &Path,
+) -> Result<()> {
+    // An asset that cannot be read is reported by packaging with its own
+    // message, so it only drops out of the estimate here.
+    let asset_bytes: u64 = request
+        .assets
+        .iter()
+        .filter_map(|asset| std::fs::metadata(&asset.path).ok())
+        .map(|metadata| metadata.len())
+        .sum();
+    let package_bytes = asset_bytes.saturating_add(request.instructions_json.len() as u64);
+    let template_bytes = std::fs::metadata(&request.template_path)
+        .map(|metadata| metadata.len())
+        .unwrap_or(0);
+    let apk_bytes = package_bytes.saturating_add(template_bytes);
+    let needs = space::space_needs(
+        work_root,
+        output_dir,
+        space::same_volume(work_root, output_dir),
+        package_bytes,
+        apk_bytes,
+        request.copy_after_export,
+    );
+    space::check_space(&needs, space::available_space)
 }
 
 fn crc_of_file(file: &mut File, length: u64) -> Result<u32> {

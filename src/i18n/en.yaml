@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "Save Android APK"
   androidApkFileTypeName: "Android APK"
   androidExportFailed: "Failed to export the Android APK."
+  androidExportNotEnoughSpace: "There is not enough free storage space to export the Android APK. Free up some space, then try again."
   androidUnsignedApkNotice: "Sign this APK yourself before installing it, with APK Signature Scheme v2 or later. Don't run zipalign after signing."
   androidExportBuildNumberDescription: "Must be higher than the Build Number of the release players already installed. Enter an integer from 1 to 2100000000."
   androidExportBuildNumberInvalid: "Build Number must be an integer from 1 to 2100000000, without leading zeros."

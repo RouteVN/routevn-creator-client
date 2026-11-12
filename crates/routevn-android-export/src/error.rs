@@ -13,6 +13,9 @@ pub enum ErrorCode {
     IconInvalid,
     PackageFailed,
     TooLarge,
+    /// A volume the export writes to has less free space than the export
+    /// needs, so it stopped before writing anything.
+    NotEnoughSpace,
     WriteFailed,
     ValidationFailed,
     /// Creating or using a key failed unexpectedly.

@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "Guardar APK Android"
   androidApkFileTypeName: "APK Android"
   androidExportFailed: "Não foi possível exportar o APK Android."
+  androidExportNotEnoughSpace: "Não há espaço de armazenamento suficiente para exportar o APK Android. Apague alguns arquivos para ter mais espaço e tente novamente."
   androidUnsignedApkNotice: "Assine este APK por conta própria antes de o instalar, com APK Signature Scheme v2 ou posterior. Não execute zipalign depois de assinar."
   androidExportBuildNumberDescription: "Deve ser superior ao número de compilação do lançamento já instalado pelos jogadores. Introduza um inteiro entre 1 e 2100000000."
   androidExportBuildNumberInvalid: "O número de compilação deve ser um inteiro entre 1 e 2100000000, sem zeros iniciais."

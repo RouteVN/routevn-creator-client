@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "Android APK 저장"
   androidApkFileTypeName: "Android APK"
   androidExportFailed: "Android APK를 내보내지 못했어요."
+  androidExportNotEnoughSpace: "저장 공간이 부족해 Android APK를 내보낼 수 없어요. 여유 공간을 확보하고 다시 시도해 주세요."
   androidUnsignedApkNotice: "설치하기 전에 APK Signature Scheme v2 이상으로 이 APK에 직접 서명하세요. 서명한 후에는 zipalign을 실행하지 마세요."
   androidExportBuildNumberDescription: "플레이어가 이미 설치한 출시 버전의 빌드 번호보다 커야 해요. 1~2100000000 사이의 정수를 입력하세요."
   androidExportBuildNumberInvalid: "빌드 번호는 앞에 0을 붙이지 않은 1~2100000000 사이의 정수여야 해요."

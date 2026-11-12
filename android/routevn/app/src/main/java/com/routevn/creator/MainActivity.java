@@ -1990,12 +1990,30 @@ public class MainActivity extends Activity {
                 "message",
                 error.getMessage() == null ? "Android bridge call failed" : error.getMessage()
             );
-            errorBody.put("code", error instanceof ProjectBackup.Failure ? ProjectBackup.errorCode(error) : error.getClass().getSimpleName());
+            errorBody.put("code", bridgeErrorCode(error));
             result.put("error", errorBody);
             return result.toString();
         } catch (Exception jsonError) {
             return "{\"ok\":false,\"error\":{\"message\":\"Android bridge call failed\"}}";
         }
+    }
+
+    /**
+     * The code JavaScript reads from a failed bridge call. An APK export
+     * failure keeps the exporter's code even when the save step wrapped it.
+     */
+    private static String bridgeErrorCode(Throwable error) {
+        if (error instanceof ProjectBackup.Failure) {
+            return ProjectBackup.errorCode(error);
+        }
+        Throwable cause = error;
+        for (int depth = 0; cause != null && depth < 4; depth += 1) {
+            if (cause instanceof NativeExporter.ExportFailure) {
+                return ((NativeExporter.ExportFailure) cause).code;
+            }
+            cause = cause.getCause();
+        }
+        return error.getClass().getSimpleName();
     }
 
     private void initializeAppDatabase(boolean withEvents) throws Exception {
@@ -3377,6 +3395,9 @@ public class MainActivity extends Activity {
                 payload.getString("splashBackgroundColor")
             );
             request.put("workDir", workDir.getAbsolutePath());
+            // The APK is copied to the chosen location after the export, so
+            // the exporter's free-space check leaves room for that copy.
+            request.put("copyAfterExport", true);
 
             long startedNanos = System.nanoTime();
             JSONObject result = NativeExporter.exportAndroidApk(

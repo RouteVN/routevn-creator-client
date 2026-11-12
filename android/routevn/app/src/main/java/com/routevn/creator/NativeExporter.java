@@ -33,6 +33,19 @@ final class NativeExporter {
         return result.getJSONObject("stats");
     }
 
+    /**
+     * An APK export failure with the exporter's stable error code, such as
+     * "not-enough-space", which the bridge passes to JavaScript.
+     */
+    static final class ExportFailure extends IllegalStateException {
+        final String code;
+
+        ExportFailure(String code, String message) {
+            super(message);
+            this.code = code;
+        }
+    }
+
     /** Receives Android APK export progress. Called from exporter threads. */
     interface ProgressListener {
         void onProgress(String phase, long current, long total);
@@ -59,7 +72,10 @@ final class NativeExporter {
             String message = error == null
                 ? "Native Android APK export failed."
                 : error.optString("message", "Native Android APK export failed.");
-            throw new IllegalStateException(message);
+            String code = error == null
+                ? "write-failed"
+                : error.optString("code", "write-failed");
+            throw new ExportFailure(code, message);
         }
         return response.getJSONObject("result");
     }

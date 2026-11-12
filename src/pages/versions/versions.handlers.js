@@ -1,5 +1,8 @@
 import { withErrorDetails } from "../../internal/errorDetails.js";
-import { createAndroidApkFileName } from "../../internal/androidExport.js";
+import {
+  createAndroidApkFileName,
+  isAndroidExportSpaceError,
+} from "../../internal/androidExport.js";
 import { generateId } from "../../internal/id.js";
 import { formatElapsedSeconds, formatList } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
@@ -1884,6 +1887,9 @@ const runAndroidApkExport = async (deps, confirmation) => {
     progressDialog.close();
   }
   if (exportError !== undefined) {
+    const failureMessage = isAndroidExportSpaceError(exportError)
+      ? copy.androidExportNotEnoughSpace
+      : exportFailedMessage;
     if (appService.getPlatform() === "android") {
       try {
         await appService.discardPendingSaveDocument(outputPath);
@@ -1896,7 +1902,7 @@ const runAndroidApkExport = async (deps, confirmation) => {
     }
     appService.showAlert({
       message: withErrorDetails(
-        exportFailedMessage,
+        failureMessage,
         exportError,
         copy.errorDetailsLabel,
       ),

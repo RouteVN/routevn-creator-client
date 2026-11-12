@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "保存 Android APK"
   androidApkFileTypeName: "Android APK"
   androidExportFailed: "无法导出 Android APK。"
+  androidExportNotEnoughSpace: "可用存储空间不足，无法导出 Android APK。请释放一些空间后重试。"
   androidUnsignedApkNotice: "安装前，请自行使用 APK Signature Scheme v2 或更高版本为此 APK 签名。签名后不要运行 zipalign。"
   androidExportBuildNumberDescription: "必须高于玩家已安装版本的构建号。请输入 1 到 2100000000 之间的整数。"
   androidExportBuildNumberInvalid: "构建号必须是 1 到 2100000000 之间的整数，不能以 0 开头。"
