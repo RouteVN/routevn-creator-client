@@ -21,6 +21,8 @@ describe("resolveAppLocaleSuggestion", () => {
     [["zh-MO"], "zh-hant"],
     [["zh-Hant-HK"], "zh-hant"],
     [["zh_Hant_TW"], "zh-hant"],
+    [["ko-KR"], "ko"],
+    [["ko"], "ko"],
     [["pt-BR"], "pt"],
     [["fr-CA", "en-US"], "fr"],
     [["in-ID"], "id"],

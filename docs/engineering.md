@@ -92,6 +92,13 @@ translation style guide. The `zh-hant` catalog uses Taiwan usage for Taiwan,
 Hong Kong, and Macau. Translate it from English, not by converting the
 `zh-hans` catalog, because many software words differ between the two.
 
+For Korean localization, follow the RouteVN Korean translation style guide.
+The `ko` catalog writes messages in polite 해요체. Some particles, such as
+`을` and `를`, change with the last sound of the word before them, so a
+placeholder whose text is unknown is followed by a noun or a particle that
+does not change; the guide lists the forms. Lines in Korean break at spaces
+(`word-break: keep-all` for `:lang(ko)` in `static/public/theme.css`).
+
 For Russian localization, follow the RouteVN Russian translation style guide.
 Use it as the terminology and tone reference for RouteVN `ru` UI copy.
 

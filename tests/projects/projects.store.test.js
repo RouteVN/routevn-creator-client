@@ -282,6 +282,10 @@ describe("projects.store addProject", () => {
               label: "繁體中文 (Beta)",
             },
             {
+              value: "ko",
+              label: "한국어 (Beta)",
+            },
+            {
               value: "es",
               label: "Español (Beta)",
             },

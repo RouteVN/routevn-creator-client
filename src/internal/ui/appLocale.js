@@ -10,6 +10,7 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "ja", label: "日本語 (Beta)" }),
   Object.freeze({ value: "zh-hans", label: "简体中文 (Beta)" }),
   Object.freeze({ value: "zh-hant", label: "繁體中文 (Beta)" }),
+  Object.freeze({ value: "ko", label: "한국어 (Beta)" }),
   Object.freeze({ value: "es", label: "Español (Beta)" }),
   Object.freeze({ value: "th", label: "ไทย (Beta)" }),
   Object.freeze({ value: "ru", label: "Русский (Beta)" }),

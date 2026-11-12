@@ -90,6 +90,8 @@ export const formatCalendarDate = (
 
 /**
  * Format a timestamp as a date and time with seconds, in 24-hour time.
+ * The day is padded only when the month is a number, as in "05.10.2026";
+ * next to a month name it is not, as in "Oct 5, 2026" or "2026년 10월 5일".
  * @param {string} value - ISO date string
  * @param {Object} [options] - The `dateTime` catalog of the active locale
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
@@ -101,7 +103,7 @@ export const formatDateTimeWithSeconds = (
   { intlLocale = "en-US", monthStyle = "short" } = {},
 ) =>
   new Intl.DateTimeFormat(intlLocale, {
-    day: "2-digit",
+    day: monthStyle === "2-digit" ? "2-digit" : "numeric",
     month: monthStyle,
     year: "numeric",
     hour: "2-digit",
