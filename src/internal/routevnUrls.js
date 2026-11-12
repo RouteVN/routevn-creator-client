@@ -1,6 +1,11 @@
 const ROUTEVN_CREATOR_DOCS_BASE_URL = "https://routevn.com/en/creator/docs";
 
 export const ROUTEVN_CONTACT_URL = "https://routevn.com/en/contact/";
+// Chat support channels, offered on About and from the help button.
+export const ROUTEVN_WHATSAPP_URL = "https://wa.me/6589113417";
+export const ROUTEVN_TELEGRAM_URL = "https://t.me/routevn";
+export const ROUTEVN_DISCORD_URL = "https://discord.gg/8J9dyZSu9C";
+export const ROUTEVN_CONTACT_EMAIL_URL = "mailto:contact@routevn.com";
 export const ROUTEVN_CREATOR_APP_STORE_URL =
   "https://apps.apple.com/sg/app/id6810571721";
 export const ROUTEVN_CREATOR_PLAY_STORE_URL =

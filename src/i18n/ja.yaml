@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "プロジェクトデータベースを開けませんでした。プロジェクトフォルダーが存在し、RouteVNからアクセスできることを確認してください。"
   projectOpenFailed: "プロジェクトを開けませんでした。プロジェクトの準備中に予期しないエラーが発生しました。"
   loadingProjectProgress: "プロジェクトを読み込んでいます… {percent}"
+  helpMenuDocs: "ドキュメント"
+  helpMenuVideo: "動画チュートリアル"
+  helpMenuChat: "チャットサポート"
 sidebarPage:
   animatedAssetsTitle: "アニメーション素材"
   assetsTitle: "素材"
@@ -2848,8 +2851,14 @@ tutorialsPage:
   title: "チュートリアル"
   desktopFolder: "デスクトップ"
   mobileFolder: "モバイル"
+youtubePlayer:
   openOnYouTubeButton: "YouTubeで開く"
-  closePlayerLabel: "閉じる"
+  closeLabel: "閉じる"
+chatSupportDialog:
+  title: "チャットサポート"
+  emailLabel: "メール"
+  description: "いずれかの方法でメッセージをお送りください。折り返しご連絡します。"
+  closeLabel: "閉じる"
 settingsUserPage:
   placeholderMessage: "ユーザー設定の内容はここに表示されます"
   placeholderNote: "これはユーザー設定画面のプレースホルダーです"

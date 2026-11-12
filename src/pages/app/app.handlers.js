@@ -25,6 +25,7 @@ import {
 } from "../../internal/navigationTiming.js";
 import { getLocalProjectPathFromPayload } from "../../internal/localProjectRoute.js";
 import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
+import { playTutorialVideo } from "../../internal/ui/tutorialVideoPlayback.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import {
   activateAppLocale,
@@ -774,15 +775,83 @@ export const handleUpdateColor = async (deps, payload) => {
   });
 };
 
-export const handleHelpFloatingButtonClick = (deps) => {
-  const { appService, store } = deps;
-  const currentRoutePattern = store.selectCurrentRoutePattern();
+const createHelpMenuItems = ({ i18n = {}, hasVideo } = {}) => {
+  const copy = i18n.appPage ?? {};
+  const items = [
+    {
+      type: "item",
+      key: "docs",
+      label: copy.helpMenuDocs ?? "Documentation",
+      icon: "book",
+    },
+  ];
 
-  appService.openUrl(
-    getRoutevnCreatorDocsUrl(currentRoutePattern, {
-      isTouchMode: store.selectIsTouchMode(),
-    }),
-  );
+  if (hasVideo) {
+    items.push({
+      type: "item",
+      key: "video",
+      label: copy.helpMenuVideo ?? "Video Tutorial",
+      icon: "video",
+    });
+  }
+
+  items.push({
+    type: "item",
+    key: "chat",
+    label: copy.helpMenuChat ?? "Chat Support",
+    icon: "chat",
+  });
+  return items;
+};
+
+// The help button offers the page's docs, its tutorial video when it has one,
+// and chat support.
+export const handleHelpFloatingButtonClick = async (deps, payload) => {
+  const { appService, store, render, i18n } = deps;
+  const docsUrl = getRoutevnCreatorDocsUrl(store.selectCurrentRoutePattern(), {
+    isTouchMode: store.selectIsTouchMode(),
+  });
+  const video = store.selectCurrentPageTutorialVideo();
+
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  const result = await appService.showDropdownMenu({
+    items: createHelpMenuItems({ i18n, hasVideo: Boolean(video) }),
+    x: rect.right,
+    y: rect.top - 8,
+    place: "te",
+  });
+  const key = result?.item?.key;
+
+  if (key === "docs") {
+    appService.openUrl(docsUrl);
+    return;
+  }
+
+  if (key === "video" && video) {
+    const openPlayer = () => {
+      store.openHelpVideo({ youtubeId: video.youtubeId });
+      render();
+    };
+    playTutorialVideo({ appService, openPlayer }, video);
+    return;
+  }
+
+  if (key === "chat") {
+    store.openChatSupportDialog();
+    render();
+  }
+};
+
+export const handleChatSupportDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeChatSupportDialog();
+  render();
+};
+
+export const handleHelpVideoClose = (deps) => {
+  const { store, render } = deps;
+  store.closeHelpVideo();
+  render();
 };
 
 export const handleMobileTabClick = (deps, payload = {}) => {

@@ -842,8 +842,13 @@ public class MainActivity extends Activity {
             return false;
         }
 
+        // Web pages, and mailto: for the support email in Chat Support.
         String scheme = uri.getScheme();
-        if (!"http".equals(scheme) && !"https".equals(scheme)) {
+        if (
+            !"http".equals(scheme) &&
+            !"https".equals(scheme) &&
+            !"mailto".equals(scheme)
+        ) {
             return false;
         }
 

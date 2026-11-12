@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "Не вдалося відкрити базу даних проєкту. Переконайтеся, що тека проєкту досі існує й RouteVN має до неї доступ."
   projectOpenFailed: "Не вдалося відкрити проєкт. Під час підготовки проєкту сталася неочікувана помилка."
   loadingProjectProgress: "Завантаження проєкту… {percent}"
+  helpMenuDocs: "Документація"
+  helpMenuVideo: "Відеопосібник"
+  helpMenuChat: "Підтримка в чаті"
 sidebarPage:
   animatedAssetsTitle: "Анімовані ресурси"
   assetsTitle: "Ресурси"
@@ -2872,8 +2875,14 @@ tutorialsPage:
   title: "Посібники"
   desktopFolder: "Комп’ютер"
   mobileFolder: "Мобільні пристрої"
+youtubePlayer:
   openOnYouTubeButton: "Відкрити на YouTube"
-  closePlayerLabel: "Закрити"
+  closeLabel: "Закрити"
+chatSupportDialog:
+  title: "Підтримка в чаті"
+  emailLabel: "Електронна пошта"
+  description: "Напишіть нам у будь-який із цих каналів, і ми відповімо."
+  closeLabel: "Закрити"
 settingsUserPage:
   placeholderMessage: "Тут з’являться налаштування облікового запису"
   placeholderNote: "Це тимчасова заглушка інтерфейсу налаштувань облікового запису"

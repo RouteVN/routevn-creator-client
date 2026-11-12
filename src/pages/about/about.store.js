@@ -3,6 +3,10 @@ import {
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import {
+  ROUTEVN_TELEGRAM_URL,
+  ROUTEVN_WHATSAPP_URL,
+} from "../../internal/routevnUrls.js";
 import { selectAboutPageCopy } from "./support/aboutPageCopy.js";
 
 const social = [
@@ -62,13 +66,13 @@ const chatSupport = [
     id: "whatsapp",
     label: "WhatsApp",
     svg: "whatsapp",
-    href: "https://wa.me/6589113417",
+    href: ROUTEVN_WHATSAPP_URL,
   },
   {
     id: "telegram",
     label: "Telegram",
     svg: "telegram",
-    href: "https://t.me/routevn",
+    href: ROUTEVN_TELEGRAM_URL,
   },
 ];
 

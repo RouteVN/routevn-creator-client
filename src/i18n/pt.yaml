@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "Não foi possível abrir os dados do projeto. Verifique se a pasta do projeto ainda existe e se o RouteVN tem acesso a ela."
   projectOpenFailed: "Não foi possível abrir o projeto. Ocorreu um erro inesperado ao preparar o projeto."
   loadingProjectProgress: "Aguarde o carregamento do projeto… {percent}"
+  helpMenuDocs: "Documentação"
+  helpMenuVideo: "Tutorial em vídeo"
+  helpMenuChat: "Suporte por chat"
 sidebarPage:
   animatedAssetsTitle: "Recursos animados"
   assetsTitle: "Recursos"
@@ -2848,8 +2851,14 @@ tutorialsPage:
   title: "Tutoriais"
   desktopFolder: "Computador"
   mobileFolder: "Dispositivos móveis"
+youtubePlayer:
   openOnYouTubeButton: "Abrir no YouTube"
-  closePlayerLabel: "Fechar"
+  closeLabel: "Fechar"
+chatSupportDialog:
+  title: "Suporte por chat"
+  emailLabel: "E-mail"
+  description: "Envie-nos uma mensagem por qualquer um destes canais e responderemos."
+  closeLabel: "Fechar"
 settingsUserPage:
   placeholderMessage: "O conteúdo das configurações da conta aparecerá aqui"
   placeholderNote: "Esta é uma página provisória para as configurações da conta"

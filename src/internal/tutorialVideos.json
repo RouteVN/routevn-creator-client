@@ -38,5 +38,35 @@
         }
       ]
     }
-  ]
+  ],
+  "pageVideos": {
+    "/projects": {
+      "desktop": "ijrdTYZA1eA",
+      "mobile": "7RsQlggwVbI"
+    },
+    "/project/scene-editor": {
+      "desktop": "ijrdTYZA1eA",
+      "mobile": "7RsQlggwVbI"
+    },
+    "/project/images": {
+      "desktop": "Sngq78OLSB8",
+      "mobile": "Sngq78OLSB8"
+    },
+    "/project/colors": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    },
+    "/project/fonts": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    },
+    "/project/text-styles": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    },
+    "/project/text-style-editor": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    }
+  }
 }

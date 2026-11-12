@@ -16,6 +16,7 @@ import {
 } from "../../src/pages/app/app.handlers.js";
 import {
   createInitialState as createAppState,
+  selectCurrentPageTutorialVideo,
   selectCurrentRoutePattern,
   selectIsTouchMode,
   setCurrentRoute,
@@ -24,26 +25,37 @@ import {
 import { EN_I18N, FR_I18N, PT_I18N } from "../support/i18n.js";
 
 describe("app help button", () => {
-  const openedDocsUrl = (uiConfig) => {
+  const openedDocsUrl = async (uiConfig) => {
     const state = createAppState();
     setUiConfig({ state }, { uiConfig });
     setCurrentRoute({ state }, { route: "/project/tutorials" });
     const deps = {
-      appService: { openUrl: vi.fn() },
+      appService: {
+        openUrl: vi.fn(),
+        showDropdownMenu: vi.fn(async () => ({ item: { key: "docs" } })),
+      },
       store: {
         selectCurrentRoutePattern: () => selectCurrentRoutePattern({ state }),
         selectIsTouchMode: () => selectIsTouchMode({ state }),
+        selectCurrentPageTutorialVideo: () =>
+          selectCurrentPageTutorialVideo({ state }),
       },
     };
-    handleHelpFloatingButtonClick(deps);
+    await handleHelpFloatingButtonClick(deps, {
+      _event: {
+        currentTarget: {
+          getBoundingClientRect: () => ({ right: 0, top: 0 }),
+        },
+      },
+    });
     return deps.appService.openUrl.mock.calls[0][0];
   };
 
-  it("opens the mobile video tutorials from Tutorials in touch mode", () => {
-    expect(openedDocsUrl({ id: "normal", inputMode: "pointer" })).toBe(
+  it("opens the mobile video tutorials from Tutorials in touch mode", async () => {
+    expect(await openedDocsUrl({ id: "normal", inputMode: "pointer" })).toBe(
       "https://routevn.com/en/creator/docs/video-tutorials/",
     );
-    expect(openedDocsUrl({ id: "touch", inputMode: "touch" })).toBe(
+    expect(await openedDocsUrl({ id: "touch", inputMode: "touch" })).toBe(
       "https://routevn.com/en/creator/docs/video-tutorials-mobile/",
     );
   });

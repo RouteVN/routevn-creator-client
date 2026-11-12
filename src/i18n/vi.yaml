@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "Không mở được cơ sở dữ liệu của dự án. Hãy đảm bảo thư mục dự án vẫn tồn tại và RouteVN có quyền truy cập thư mục đó."
   projectOpenFailed: "Không mở được dự án. Đã xảy ra lỗi không mong muốn khi chuẩn bị dự án."
   loadingProjectProgress: "Đang tải dự án… {percent}"
+  helpMenuDocs: "Tài liệu"
+  helpMenuVideo: "Video hướng dẫn"
+  helpMenuChat: "Hỗ trợ qua chat"
 sidebarPage:
   animatedAssetsTitle: "Tài nguyên chuyển động"
   assetsTitle: "Tài nguyên"
@@ -2848,8 +2851,14 @@ tutorialsPage:
   title: "Hướng dẫn"
   desktopFolder: "Máy tính"
   mobileFolder: "Thiết bị di động"
+youtubePlayer:
   openOnYouTubeButton: "Mở trên YouTube"
-  closePlayerLabel: "Đóng"
+  closeLabel: "Đóng"
+chatSupportDialog:
+  title: "Hỗ trợ qua chat"
+  emailLabel: "Email"
+  description: "Nhắn tin cho chúng tôi qua một trong các kênh này, chúng tôi sẽ phản hồi bạn."
+  closeLabel: "Đóng"
 settingsUserPage:
   placeholderMessage: "Nội dung cài đặt tài khoản sẽ hiện ở đây"
   placeholderNote: "Đây là nội dung tạm thời của trang cài đặt tài khoản"

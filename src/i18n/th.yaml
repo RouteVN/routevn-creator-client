@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "เปิดฐานข้อมูลโปรเจกต์ไม่สำเร็จ ตรวจสอบว่าโฟลเดอร์โปรเจกต์ยังอยู่และ RouteVN เข้าถึงโฟลเดอร์ได้"
   projectOpenFailed: "เปิดโปรเจกต์ไม่สำเร็จ เกิดข้อผิดพลาดที่ไม่คาดคิดระหว่างเตรียมโปรเจกต์"
   loadingProjectProgress: "กำลังโหลดโปรเจกต์... {percent}"
+  helpMenuDocs: "เอกสาร"
+  helpMenuVideo: "วิดีโอวิธีใช้"
+  helpMenuChat: "ช่วยเหลือทางแชท"
 sidebarPage:
   animatedAssetsTitle: "ทรัพยากรแอนิเมชัน"
   assetsTitle: "ทรัพยากร"
@@ -2848,8 +2851,14 @@ tutorialsPage:
   title: "วิธีใช้"
   desktopFolder: "เดสก์ท็อป"
   mobileFolder: "มือถือ"
+youtubePlayer:
   openOnYouTubeButton: "เปิดใน YouTube"
-  closePlayerLabel: "ปิด"
+  closeLabel: "ปิด"
+chatSupportDialog:
+  title: "ช่วยเหลือทางแชท"
+  emailLabel: "อีเมล"
+  description: "ส่งข้อความหาเราผ่านช่องทางใดก็ได้ แล้วเราจะติดต่อกลับ"
+  closeLabel: "ปิด"
 settingsUserPage:
   placeholderMessage: "เนื้อหาการตั้งค่าผู้ใช้จะแสดงที่นี่"
   placeholderNote: "นี่คือพื้นที่ชั่วคราวสำหรับหน้าจอการตั้งค่าผู้ใช้"

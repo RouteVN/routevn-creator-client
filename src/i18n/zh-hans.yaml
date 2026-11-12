@@ -335,6 +335,9 @@ appPage:
   projectOpenDatabaseUnavailable: "无法打开项目数据库。请确认项目文件夹仍然存在，并且 RouteVN 可以访问它。"
   projectOpenFailed: "无法打开项目。准备项目时发生意外错误。"
   loadingProjectProgress: "正在加载项目……{percent}"
+  helpMenuDocs: "文档"
+  helpMenuVideo: "视频教程"
+  helpMenuChat: "在线客服"
 sidebarPage:
   animatedAssetsTitle: "动画素材"
   assetsTitle: "素材"
@@ -2848,8 +2851,14 @@ tutorialsPage:
   title: "教程"
   desktopFolder: "桌面端"
   mobileFolder: "移动端"
+youtubePlayer:
   openOnYouTubeButton: "在 YouTube 中打开"
-  closePlayerLabel: "关闭"
+  closeLabel: "关闭"
+chatSupportDialog:
+  title: "在线客服"
+  emailLabel: "邮箱"
+  description: "通过以下任一方式给我们留言，我们会尽快回复。"
+  closeLabel: "关闭"
 settingsUserPage:
   placeholderMessage: "用户设置内容会显示在这里"
   placeholderNote: "这是用户设置界面的占位内容"
