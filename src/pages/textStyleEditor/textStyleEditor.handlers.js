@@ -7,6 +7,7 @@ import {
   isStrictFontMimeType,
 } from "../../internal/fontCapabilities.js";
 import { normalizeFontFileType } from "../../internal/fileTypes.js";
+import { nameFromFileName } from "../../internal/files.js";
 import { generateId } from "../../internal/id.js";
 import {
   createTextStyleEditorPayload,
@@ -608,7 +609,7 @@ export const handleFontFileSelected = async (deps, payload) => {
   const [uploadResult] = uploadResults;
   uploadResult.fontCapabilities = fontCapabilities;
   store.setSelectedFontFile({
-    fileName: file.name.replace(/\.(ttf|otf|woff2)$/i, ""),
+    fileName: nameFromFileName(file.name, /\.(ttf|otf|woff2)$/i),
     uploadResult,
   });
   render();
