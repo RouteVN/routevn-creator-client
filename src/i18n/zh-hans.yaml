@@ -3153,6 +3153,7 @@ dateTime:
   pluralRulesLocale: "zh-Hans"
   relativeTimeStyle: "short"
   monthStyle: "short"
+  hourStyle: "2-digit"
   justNow: "刚刚"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

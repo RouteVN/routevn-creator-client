@@ -3181,6 +3181,7 @@ dateTime:
   pluralRulesLocale: "ru"
   relativeTimeStyle: "short"
   monthStyle: "short"
+  hourStyle: "2-digit"
   justNow: "Только что"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

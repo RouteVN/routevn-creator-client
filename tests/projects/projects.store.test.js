@@ -278,6 +278,10 @@ describe("projects.store addProject", () => {
               label: "简体中文 (Beta)",
             },
             {
+              value: "zh-hant",
+              label: "繁體中文 (Beta)",
+            },
+            {
               value: "es",
               label: "Español (Beta)",
             },

@@ -3153,6 +3153,7 @@ dateTime:
   pluralRulesLocale: "id"
   relativeTimeStyle: "long"
   monthStyle: "short"
+  hourStyle: "2-digit"
   justNow: "Baru saja"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

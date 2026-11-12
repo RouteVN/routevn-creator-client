@@ -3181,6 +3181,7 @@ dateTime:
   pluralRulesLocale: "pl"
   relativeTimeStyle: "short"
   monthStyle: "2-digit"
+  hourStyle: "2-digit"
   justNow: "Przed chwilą"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} kB"

@@ -9,6 +9,7 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "en", label: "English" }),
   Object.freeze({ value: "ja", label: "日本語 (Beta)" }),
   Object.freeze({ value: "zh-hans", label: "简体中文 (Beta)" }),
+  Object.freeze({ value: "zh-hant", label: "繁體中文 (Beta)" }),
   Object.freeze({ value: "es", label: "Español (Beta)" }),
   Object.freeze({ value: "th", label: "ไทย (Beta)" }),
   Object.freeze({ value: "ru", label: "Русский (Beta)" }),
@@ -78,9 +79,12 @@ export const activateAppLocale = async ({
 
 // Regions whose Chinese is written in Simplified characters.
 const SIMPLIFIED_CHINESE_REGIONS = new Set(["cn", "sg", "my"]);
+// Regions whose Chinese is written in Traditional characters.
+const TRADITIONAL_CHINESE_REGIONS = new Set(["tw", "hk", "mo"]);
 
-// The app locale for a BCP 47 language tag, such as "ja" for "ja-JP" or
-// "zh-hans" for "zh-CN". Traditional Chinese has no app locale.
+// The app locale for a BCP 47 language tag, such as "ja" for "ja-JP",
+// "zh-hans" for "zh-CN", or "zh-hant" for "zh-TW". A script subtag wins over
+// the region, so "zh-Hans-HK" is Simplified Chinese.
 const toAppLocale = (languageTag) => {
   const [language, ...subtags] = `${languageTag ?? ""}`
     .toLowerCase()
@@ -90,13 +94,17 @@ const toAppLocale = (languageTag) => {
 
   if (language === "zh") {
     if (subtags.includes("hant")) {
-      return undefined;
+      return "zh-hant";
     }
-    const isSimplified =
-      subtags.length === 0 ||
-      subtags.includes("hans") ||
-      subtags.some((subtag) => SIMPLIFIED_CHINESE_REGIONS.has(subtag));
-    return isSimplified ? "zh-hans" : undefined;
+    if (subtags.includes("hans") || subtags.length === 0) {
+      return "zh-hans";
+    }
+    if (subtags.some((subtag) => TRADITIONAL_CHINESE_REGIONS.has(subtag))) {
+      return "zh-hant";
+    }
+    return subtags.some((subtag) => SIMPLIFIED_CHINESE_REGIONS.has(subtag))
+      ? "zh-hans"
+      : undefined;
   }
 
   // Older Android versions report Indonesian as "in".

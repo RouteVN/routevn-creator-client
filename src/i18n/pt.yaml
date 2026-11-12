@@ -3153,6 +3153,7 @@ dateTime:
   pluralRulesLocale: "pt-PT"
   relativeTimeStyle: "short"
   monthStyle: "short"
+  hourStyle: "2-digit"
   justNow: "Agora mesmo"
   fileSizeBytes: "{value} B"
   fileSizeKilobytes: "{value} KB"

@@ -19,6 +19,7 @@ fe:
       - "en"
       - "ja"
       - "zh-hans"
+      - "zh-hant"
       - "es"
       - "th"
       - "ru"

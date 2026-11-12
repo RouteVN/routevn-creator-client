@@ -10,6 +10,9 @@ const capitalizeFirst = (text, intlLocale) =>
  *   relative times, such as "5 min. ago" for short or "5 minutes ago" for long
  * @param {"short"|"2-digit"} [options.monthStyle] - How older dates show the
  *   month, such as "Oct 18, 2026" for short or "18.10.2026" in Polish for 2-digit
+ * @param {"2-digit"|"numeric"} [options.hourStyle] - How older dates show the
+ *   hour, such as "02:05 PM" for 2-digit or "下午2:05" in Traditional Chinese
+ *   for numeric
  * @param {string} [options.justNow] - Label for dates less than a minute old
  * @returns {string} Formatted date string
  */
@@ -19,6 +22,7 @@ export const formatDate = (
     intlLocale = "en-US",
     relativeTimeStyle = "short",
     monthStyle = "short",
+    hourStyle = "2-digit",
     justNow = "Just now",
   } = {},
 ) => {
@@ -57,7 +61,7 @@ export const formatDate = (
     year: "numeric",
     month: monthStyle,
     day: "numeric",
-    hour: "2-digit",
+    hour: hourStyle,
     minute: "2-digit",
   };
   return date.toLocaleDateString(intlLocale, options);
