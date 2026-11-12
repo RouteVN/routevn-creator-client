@@ -1,26 +1,81 @@
 refs:
-  watchTutorialsButton:
+  folderHeader*:
     eventListeners:
       click:
-        handler: handleWatchTutorialsClick
+        handler: handleFolderHeaderClick
+  videoCard*:
+    eventListeners:
+      click:
+        handler: handleVideoCardClick
+      keydown:
+        handler: handleVideoCardKeyDown
+  videoPlayerDialog:
+    eventListeners:
+      close:
+        handler: handleVideoPlayerClose
+  videoPlayerClose:
+    eventListeners:
+      click:
+        handler: handleVideoPlayerClose
+  openOnYouTubeButton:
+    eventListeners:
+      click:
+        handler: handleOpenOnYouTubeClick
+styles:
+  ".tutorialThumbnail":
+    display: block
+    width: 100%
+    height: 100%
+    object-fit: cover
+    # Let the card own gestures; native image long-press can stall Android WebView input.
+    pointer-events: none
+    user-select: none
+    "-webkit-user-select": none
+    "-webkit-touch-callout": none
+  ".tutorialVideoCard:focus-visible":
+    outline: 2px solid var(--primary)
+    outline-offset: 2px
+  # Every title takes two lines, so all cards are the same height.
+  ".tutorialTitle":
+    display: -webkit-box
+    "-webkit-box-orient": vertical
+    "-webkit-line-clamp": "2"
+    overflow: hidden
+    height: calc(2 * var(--sm-line-height))
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - $if showExplorerPanel:
-          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+          - rvn-resizable-panel#resourceTypesPanel w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-      - 'rtgl-view w=1fg h=f p=${contentPadding} d=v style="min-width: 0; min-height: 0;"':
-          - $if isTouchMode:
-              - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-                  - rtgl-text: ${title}
-            $else:
-              - rtgl-text s=h2: ${title}
-          - 'rtgl-view w=f h=1fg mt=${contentBodyMarginTop} p=${contentBodyPadding} sv style="min-width: 0; min-height: 0; ${tabletLandscapeContentStyle}"':
-              - 'rtgl-view w=560 sm-w=f g=md style="max-width: 100%;"':
-                  - rtgl-text s=sm c=mu-fg: ${description}
-                  - rtgl-view d=h w=f:
-                      - $if isTouchMode:
-                          - rtgl-button#watchTutorialsButton v=se pre=play-circle w=f: ${watchTutorialsButton}
-                        $else:
-                          - rtgl-button#watchTutorialsButton v=se pre=play-circle: ${watchTutorialsButton}
+      - 'rtgl-view w=1fg h=f d=v style="min-width: 0; min-height: 0;"':
+          - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="flex-shrink: 0;"':
+              - rtgl-text: ${title}
+          - 'rtgl-view w=f h=1fg sv style="min-width: 0; min-height: 0; ${tabletLandscapeContentStyle}"':
+              - $for group, groupIndex in groups:
+                  - rtgl-view w=f ph=md:
+                      - 'rtgl-view#folderHeader${groupIndex} data-folder-id=${group.id} d=h w=f av=c g=md pv=sm bgc=bg cur=pointer style="position: sticky; top: 0px; z-index: 100;"':
+                          - $if group.isCollapsed:
+                              - rtgl-svg wh=16 svg=folderArrowRight: null
+                            $else:
+                              - rtgl-svg wh=16 svg=folderArrowDown: null
+                          - rtgl-svg wh=16 svg=folder: null
+                          - rtgl-text: ${group.name}
+                      - $if !group.isCollapsed:
+                          - 'rtgl-grid w=f pt=md pb=sm mb=lg g=md cols="${gridColumns}" style="min-width: 0; align-content: start; align-items: start;"':
+                              - $for video in group.videos:
+                                  - 'rtgl-view#videoCard${video.refKey}.tutorialVideoCard data-video-id=${video.id} role=button tabindex=0 aria-label="${video.title}" w=f cur=pointer bw=xs bc=bo h-bc=ac br=md overflow=hidden':
+                                      - 'rtgl-view w=f bgc=mu style="aspect-ratio: 16 / 9; overflow: hidden;"':
+                                          - img.tutorialThumbnail src=${video.thumbnailUrl} alt="" loading=lazy draggable=false: null
+                                      - rtgl-view w=f p=md:
+                                          - rtgl-text.tutorialTitle s=sm: ${video.title}
               - 'rtgl-view h=240 aria-hidden=true style="flex: 0 0 240px;"': null
+  - $if playingVideo:
+      - rtgl-dialog#videoPlayerDialog open layout=fixed bare p=none:
+          - 'div slot=content tabindex=-1 autofocus style="display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; box-sizing: border-box; padding-top: var(--rvn-mobile-overlay-top-inset, env(safe-area-inset-top, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background-color: var(--background); outline: none;"':
+              - 'rtgl-view d=h w=f h=56 av=c g=md bgc=bg style="flex-shrink: 0; box-sizing: border-box; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px));"':
+                  - 'rtgl-text w=1fg ellipsis=true style="min-width: 0;"': ${playingVideo.title}
+                  - rtgl-button#openOnYouTubeButton v=ol: ${openOnYouTubeButton}
+                  - 'rtgl-button#videoPlayerClose sq pre=x v=ol aria-label="${closePlayerLabel}" style="min-height: 44px; min-width: 44px; align-items: center; justify-content: center;"': null
+              - 'div style="display: flex; flex: 1; min-width: 0; min-height: 0; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); background-color: #000;"':
+                  - 'iframe src=${playingVideo.embedUrl} title="${playingVideo.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="display: block; flex: 1; width: 100%; height: 100%; border: 0;"': null

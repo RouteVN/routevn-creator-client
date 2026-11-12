@@ -33,6 +33,7 @@ import Router from "./deps/clients/router";
 import { createGraphicsService } from "./deps/services/graphicsService";
 import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
+import { canEmbedYouTubeFrom } from "./internal/youtube.js";
 import { registerPrimitives } from "./primitives/registerPrimitives";
 
 registerPrimitives();
@@ -102,6 +103,7 @@ const appService = createAppService({
   distribution,
   updatesEnabled,
   updater,
+  youtubeEmbedsSupported: canEmbedYouTubeFrom(window.location),
   audioService,
   projectService,
   subject,

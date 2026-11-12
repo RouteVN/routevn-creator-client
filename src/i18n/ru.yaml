@@ -2870,8 +2870,10 @@ aboutPage:
   websiteButton: "Сайт"
 tutorialsPage:
   title: "Обучение"
-  description: "Изучайте RouteVN Creator по пошаговым видео."
-  watchTutorialsButton: "Смотреть видеоуроки"
+  desktopFolder: "Компьютер"
+  mobileFolder: "Мобильные устройства"
+  openOnYouTubeButton: "Открыть на YouTube"
+  closePlayerLabel: "Закрыть"
 settingsUserPage:
   placeholderMessage: "Здесь появятся настройки пользователя"
   placeholderNote: "Это временная заглушка для настроек пользователя"

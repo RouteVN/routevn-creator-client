@@ -2846,8 +2846,10 @@ aboutPage:
   websiteButton: "Situs web"
 tutorialsPage:
   title: "Tutorial"
-  description: "Pelajari RouteVN Creator melalui video langkah demi langkah."
-  watchTutorialsButton: "Tonton video tutorial"
+  desktopFolder: "Desktop"
+  mobileFolder: "Seluler"
+  openOnYouTubeButton: "Buka di YouTube"
+  closePlayerLabel: "Tutup"
 settingsUserPage:
   placeholderMessage: "Konten pengaturan akun akan muncul di sini"
   placeholderNote: "Ini adalah tampilan sementara untuk antarmuka pengaturan akun"
