@@ -123,6 +123,59 @@ export const getParticleSettleMs = (modules) => {
   return PARTICLE_PREVIEW_SETTLE_MS;
 };
 
+const PARTICLE_VIDEO_MIN_MS = 1000;
+
+// When an effect stops emitting and when its last particle is gone, or
+// nothing for an effect that runs on. A burst emits once and a timed effect
+// stops emitting, and the last particle lives its longest life after that.
+// The renderer never stops an effect whose duration is 0.
+const getParticleEnd = (modules) => {
+  const emission = modules?.emission ?? {};
+  const lifetime = emission.particleLifetime;
+  const longestLife = Number(
+    typeof lifetime === "number" ? lifetime : (lifetime?.max ?? lifetime?.min),
+  );
+  const longestLifeMs =
+    (Number.isFinite(longestLife) && longestLife >= 0 ? longestLife : 1) * 1000;
+  if (emission.mode === "burst") {
+    return { emittingMs: 0, endMs: longestLifeMs };
+  }
+  const duration = Number(emission.duration);
+  if (Number.isFinite(duration) && duration > 0) {
+    const emittingMs = duration * 1000;
+    return { emittingMs, endMs: emittingMs + longestLifeMs };
+  }
+  return undefined;
+};
+
+// How long an effect runs before a video of it starts, and how long the video
+// is. A running effect fills out first, so the whole video shows it in full.
+// A burst or a timed effect is recorded from its start until its last
+// particle is gone. Its video may stop sooner once it has run `minVideoMs`,
+// when it no longer emits, as its particles can leave the scene before their
+// life ends.
+export const getParticleVideoTiming = (
+  modules,
+  { runningSettleMs, maxVideoMs },
+) => {
+  const end = getParticleEnd(modules);
+  if (!end) {
+    return { settleMs: runningSettleMs, videoMs: maxVideoMs };
+  }
+  const videoMs = Math.min(
+    maxVideoMs,
+    Math.max(PARTICLE_VIDEO_MIN_MS, end.endMs),
+  );
+  return {
+    settleMs: 0,
+    videoMs,
+    minVideoMs: Math.min(
+      videoMs,
+      Math.max(PARTICLE_VIDEO_MIN_MS, end.emittingMs),
+    ),
+  };
+};
+
 // Bump when a particle's preview starts drawing the same saved particle
 // differently, so saved thumbnails are drawn again.
 export const PARTICLE_THUMBNAIL_VERSION = 1;

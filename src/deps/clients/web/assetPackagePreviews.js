@@ -1,7 +1,10 @@
 import createRouteGraphics, { textPlugin } from "route-graphics";
 import { createAnimationResourcePreviewStates } from "../../../internal/animationPreview.js";
 import { createFontPreviewGlyphText } from "../../../internal/fontPreviewGlyphs.js";
-import { createParticlePreviewState } from "../../../internal/particlePreview.js";
+import {
+  createParticlePreviewState,
+  getParticleVideoTiming,
+} from "../../../internal/particlePreview.js";
 import { createRenderableParticleData } from "../../../internal/particles.js";
 import { requireProjectResolution } from "../../../internal/projectResolution.js";
 import { createRouteGraphicsTextPreviewState } from "../../../internal/routeGraphicsTextPreview.js";
@@ -29,7 +32,11 @@ const STATIC_ANIMATION_PREVIEW_DURATION_MS = 1000;
 const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
 const ANIMATION_THUMBNAIL_LOAD_TIMEOUT_MS = 10000;
 const ANIMATION_THUMBNAIL_PLAYBACK_GRACE_MS = 5000;
-const PARTICLE_PREVIEW_DURATION_MS = 3000;
+const PARTICLE_PREVIEW_DURATION_MS = 5000;
+const PARTICLE_PREVIEW_SETTLE_MS = 3000;
+const PARTICLE_BLANK_CHECK_INTERVAL_MS = 100;
+const PARTICLE_BLANK_STOP_MS = 500;
+const PARTICLE_BLANK_CHANNEL_MAX = 8;
 const SPRITESHEET_PREVIEW_PADDING = 16;
 const CHECKERBOARD_CELL_SIZE = 12;
 const CHECKERBOARD_LIGHT_COLOR = "#eef2f7";
@@ -135,7 +142,15 @@ const startDualVideoRecording = ({ sourceCanvas, startFullRecording }) => {
     thumbnailCanvas.remove();
   };
 
-  return { cancel, drawThumbnail, stop };
+  const readThumbnail = () =>
+    thumbnailContext.getImageData(
+      0,
+      0,
+      thumbnailCanvas.width,
+      thumbnailCanvas.height,
+    );
+
+  return { cancel, drawThumbnail, readThumbnail, stop };
 };
 
 const waitForVideoFrameData = (video) => {
@@ -1011,16 +1026,36 @@ export const renderAnimationPreviewVideo = async (options) => {
   return preview;
 };
 
-export const renderParticlePreviewVideo = async ({
-  particle,
-  imageItems,
-  imageAssets,
-}) => {
+// A particle preview draws on black, so a frame with no particle left in it
+// is black all over.
+const isBlankParticleFrame = ({ data }) => {
+  for (let index = 0; index < data.length; index += 4) {
+    if (
+      data[index] > PARTICLE_BLANK_CHANNEL_MAX ||
+      data[index + 1] > PARTICLE_BLANK_CHANNEL_MAX ||
+      data[index + 2] > PARTICLE_BLANK_CHANNEL_MAX
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const recordParticlePreview = async ({ particle, imageItems, imageAssets }) => {
   const renderableParticle = createRenderableParticleData(particle, imageItems);
   const width = Math.max(1, Math.round(Number(renderableParticle.width) || 1));
   const height = Math.max(
     1,
     Math.round(Number(renderableParticle.height) || 1),
+  );
+  // A preview rests a third of the way through its video until it is
+  // hovered, so a running effect fills out before the recording starts.
+  const { settleMs, videoMs, minVideoMs } = getParticleVideoTiming(
+    renderableParticle.modules,
+    {
+      runningSettleMs: PARTICLE_PREVIEW_SETTLE_MS,
+      maxVideoMs: PARTICLE_PREVIEW_DURATION_MS,
+    },
   );
   const host = document.createElement("div");
   const graphicsService = await createGraphicsService();
@@ -1039,6 +1074,7 @@ export const renderParticlePreviewVideo = async ({
       createParticlePreviewState(renderableParticle),
     );
     await waitForPaint();
+    await wait(settleMs);
     recording = startDualVideoRecording({
       sourceCanvas: graphicsService.getCanvas(),
       startFullRecording: () =>
@@ -1047,10 +1083,37 @@ export const renderParticlePreviewVideo = async ({
     recording.drawThumbnail();
     const startedAtMs = performance.now();
     let elapsedMs = 0;
-    while (elapsedMs < PARTICLE_PREVIEW_DURATION_MS) {
-      await wait(Math.min(16, PARTICLE_PREVIEW_DURATION_MS - elapsedMs));
+    let lastCheckedAtMs = 0;
+    let hasShownParticles = false;
+    let blankSinceMs;
+    while (elapsedMs < videoMs) {
+      await wait(Math.min(16, videoMs - elapsedMs));
       recording.drawThumbnail();
       elapsedMs = Math.max(0, performance.now() - startedAtMs);
+      if (
+        minVideoMs === undefined ||
+        elapsedMs - lastCheckedAtMs < PARTICLE_BLANK_CHECK_INTERVAL_MS
+      ) {
+        continue;
+      }
+      lastCheckedAtMs = elapsedMs;
+      if (!isBlankParticleFrame(recording.readThumbnail())) {
+        hasShownParticles = true;
+        blankSinceMs = undefined;
+        continue;
+      }
+      if (!hasShownParticles) {
+        continue;
+      }
+      blankSinceMs ??= elapsedMs;
+      // The effect has stopped emitting and its particles are gone before
+      // their life ended, such as ones that left its bounds.
+      if (
+        elapsedMs >= minVideoMs &&
+        elapsedMs - blankSinceMs >= PARTICLE_BLANK_STOP_MS
+      ) {
+        break;
+      }
     }
     const videos = await recording.stop();
     recording = undefined;
@@ -1061,6 +1124,36 @@ export const renderParticlePreviewVideo = async ({
     objectUrls.forEach((url) => URL.revokeObjectURL(url));
     host.remove();
   }
+};
+
+// Records particles one after another, each in its own graphics context.
+// Freeing a context frees the textures it loaded, which another context that
+// drew the same image would lose, so only one is alive at a time.
+export const renderParticlePreviewVideos = async ({
+  particles,
+  imageItems,
+}) => {
+  const previews = [];
+  for (const { particleId, particle, imageAssets } of particles) {
+    try {
+      const videos = await recordParticlePreview({
+        particle,
+        imageItems,
+        imageAssets,
+      });
+      previews.push({
+        particleId,
+        previewBlob: videos.previewBlob,
+        thumbnailBlob: videos.thumbnailBlob,
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not generate preview for particle '${particle.name}' (${particleId}): ${error.message ?? "Unknown error"}`,
+        { cause: error },
+      );
+    }
+  }
+  return previews;
 };
 
 // Draws layouts one after another at the project's resolution, and returns
