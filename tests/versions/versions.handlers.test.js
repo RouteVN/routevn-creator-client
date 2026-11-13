@@ -1897,6 +1897,7 @@ it("refreshes Android availability during Versions setup", async () => {
   deps.store.setAndroidExportAvailability = vi.fn();
   deps.store.setMacosExportAvailability = vi.fn();
   deps.store.setWindowsExportAvailability = vi.fn();
+  deps.store.setIosExportAvailability = vi.fn();
   deps.store.setVersions = vi.fn();
   deps.projectService.getWindowsExportAvailability = vi.fn(async () => ({}));
   deps.projectService.loadVersionsFromProject = vi.fn(async () => []);

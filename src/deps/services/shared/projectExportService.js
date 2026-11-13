@@ -1,4 +1,5 @@
 import { getAndroidExportOrientation } from "../../../internal/androidExport.js";
+import { getIosExportOrientation } from "../../../internal/iosExport.js";
 
 /**
  * Bundle format v4:
@@ -1475,6 +1476,59 @@ export const createProjectExportService = ({
       iconBackgroundColor: metadata.iconBackgroundColor,
       splashBackgroundColor: metadata.splashBackgroundColor,
       signingKey: metadata.signingKey,
+      options,
+      getCurrentReference,
+    });
+
+  service.getIosExportAvailability = async (options = {}) => {
+    if (typeof fileAdapter.getIosExportAvailability !== "function") {
+      return {
+        available: false,
+        hostSupported: false,
+        templateAvailable: false,
+      };
+    }
+    return fileAdapter.getIosExportAvailability({ options });
+  };
+
+  service.getIosExportRequirements = async () =>
+    fileAdapter.getIosExportRequirements();
+
+  service.listIosDevices = async () => fileAdapter.listIosDevices();
+
+  service.promptIosApplicationPath = async (
+    { defaultFileName },
+    options = {},
+  ) =>
+    fileAdapter.promptIosApplicationPath({
+      defaultFileName,
+      options,
+      filePicker,
+    });
+
+  // `outputPath` is absent when a development build only installs on
+  // `metadata.installDeviceId`.
+  service.exportIosApplication = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.exportIosApplication({
+      projectData,
+      fileEntries: normalizeExportFileEntries(fileEntries),
+      outputPath,
+      installDeviceId: metadata.installDeviceId,
+      applicationName: metadata.applicationName,
+      bundleIdentifier: metadata.bundleIdentifier,
+      version: metadata.version,
+      buildNumber: metadata.buildNumber,
+      orientation: getIosExportOrientation(projectData.projectData.screen),
+      iconFileId: metadata.iconFileId,
+      teamId: metadata.teamId,
+      distribution: metadata.distribution,
+      upload: metadata.upload,
       options,
       getCurrentReference,
     });

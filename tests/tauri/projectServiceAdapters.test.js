@@ -1382,4 +1382,125 @@ describe("tauri project service adapters preflight reads", () => {
     expect(onProgress).toHaveBeenCalledWith(progress);
     expect(mocked.readFile).not.toHaveBeenCalled();
   });
+
+  it("offers iOS export only on a Mac with the bundled template", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    vi.stubGlobal("navigator", { platform: "Win32" });
+    expect(await fileAdapter.getIosExportAvailability()).toEqual({
+      available: false,
+      hostSupported: false,
+      templateAvailable: false,
+    });
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    expect(await fileAdapter.getIosExportAvailability()).toEqual({
+      available: true,
+      hostSupported: true,
+      templateAvailable: true,
+    });
+    expect(mocked.exists).toHaveBeenCalledWith(
+      "/resources/player-templates/ios/RouteVNPlayerTemplate.app.zip",
+    );
+  });
+
+  it("passes the exact iOS request using disk paths and a progress channel", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const result = { outputPath: "/exports/project.ipa", uploaded: true };
+    mocked.invoke.mockResolvedValue(result);
+    const onProgress = vi.fn();
+    const projectData = {
+      projectData: { screen: { width: 1920, height: 1080 } },
+    };
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const request = {
+      projectData,
+      fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
+      outputPath: "/exports/project.ipa",
+      applicationName: " Project One ",
+      bundleIdentifier: "com.example.project-one",
+      version: "1.2.3",
+      buildNumber: "7",
+      orientation: "landscape",
+      iconFileId: "icon-1",
+      teamId: "ABCDE12345",
+      distribution: "appStore",
+      upload: true,
+      options: { onProgress },
+      getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+    };
+    expect(await fileAdapter.exportIosApplication(request)).toBe(result);
+    expect(mocked.invoke).toHaveBeenCalledWith("export_ios_application", {
+      request: {
+        templatePath:
+          "/resources/player-templates/ios/RouteVNPlayerTemplate.app.zip",
+        outputPath: "/exports/project.ipa",
+        installDeviceId: undefined,
+        assets: [
+          {
+            id: "image-1",
+            path: "/projects/project-one/files/image-1",
+            mime: "image/png",
+          },
+        ],
+        instructionsJson: JSON.stringify(projectData),
+        applicationName: "Project One",
+        bundleIdentifier: "com.example.project-one",
+        version: "1.2.3",
+        buildNumber: "7",
+        orientation: "landscape",
+        iconPath: "/projects/project-one/files/icon-1",
+        teamId: "ABCDE12345",
+        distribution: "appStore",
+        upload: true,
+      },
+      onProgress: mocked.channels[0],
+    });
+    const progress = { phase: "signApplication", current: 0, total: 0 };
+    mocked.channels[0].messageHandler(progress);
+    expect(onProgress).toHaveBeenCalledWith(progress);
+
+    // A development build for a device has no output path.
+    mocked.invoke.mockClear();
+    await fileAdapter.exportIosApplication({
+      ...request,
+      outputPath: undefined,
+      installDeviceId: "device-1",
+      distribution: "development",
+      upload: false,
+    });
+    expect(mocked.invoke.mock.calls[0][1].request).toEqual(
+      expect.objectContaining({
+        outputPath: undefined,
+        installDeviceId: "device-1",
+        distribution: "development",
+      }),
+    );
+
+    mocked.invoke.mockClear();
+    await expect(
+      fileAdapter.exportIosApplication({ ...request, teamId: "team" }),
+    ).rejects.toThrow("Invalid Apple team ID.");
+    await expect(
+      fileAdapter.exportIosApplication({ ...request, buildNumber: "0" }),
+    ).rejects.toThrow("Invalid iOS version or build number.");
+    await expect(
+      fileAdapter.exportIosApplication({
+        ...request,
+        bundleIdentifier: "com.example.project_one",
+      }),
+    ).rejects.toThrow("Invalid iOS platform details: ios-identifier-invalid");
+    expect(mocked.invoke).not.toHaveBeenCalled();
+  });
 });

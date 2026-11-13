@@ -1,6 +1,11 @@
 import { validatePlatformDetails } from "../../../internal/platformDetailsValidation.js";
 import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
 import {
+  isValidIosBuildNumber,
+  isValidIosTeamId,
+  isValidIosVersion,
+} from "../../../internal/iosExport.js";
+import {
   mkdir,
   writeFile,
   readFile,
@@ -83,6 +88,8 @@ const WINDOWS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/windows/RouteVNPlayerTemplate.exe";
 const MACOS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/macos/RouteVNPlayerTemplate.app.zip";
+const IOS_PLAYER_TEMPLATE_RESOURCE =
+  "player-templates/ios/RouteVNPlayerTemplate.app.zip";
 const WINDOWS_APPLICATION_ICON_SIZE = 256;
 const WINDOWS_ICON_MIME_TYPES = new Set([
   "image/png",
@@ -1168,6 +1175,113 @@ export const createTauriProjectServiceAdapters = ({
     return invoke("export_android_apk", { request, signingKey, onProgress });
   };
 
+  const resolveIosPlayerTemplatePath = async (options = {}) =>
+    options.templatePath ?? resolveResource(IOS_PLAYER_TEMPLATE_RESOURCE);
+
+  // iOS export runs only on a Mac; whether Xcode is ready is checked when an
+  // export starts (getIosExportRequirements).
+  const getIosExportAvailability = async ({ options = {} } = {}) => {
+    const hostSupported = isMacosHost();
+    let templateAvailable = false;
+    if (hostSupported) {
+      try {
+        templateAvailable = await exists(
+          await resolveIosPlayerTemplatePath(options),
+        );
+      } catch {}
+    }
+    return {
+      available: hostSupported && templateAvailable,
+      hostSupported,
+      templateAvailable,
+    };
+  };
+
+  // The Xcode status and the Apple teams signed in to Xcode.
+  const getIosExportRequirements = async () =>
+    invoke("get_ios_export_requirements");
+
+  const listIosDevices = async () => invoke("list_ios_devices");
+
+  const promptIosApplicationPath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    filePicker.saveFilePicker({
+      title: options.title ?? "Save iOS App",
+      defaultPath: defaultFileName,
+      filters: [
+        { name: options.fileTypeName ?? "iOS App", extensions: ["ipa"] },
+      ],
+    });
+
+  // Saves the IPA to `outputPath`, or, for a development build with
+  // `installDeviceId`, installs it on that device without saving it.
+  const exportIosApplication = async ({
+    projectData,
+    fileEntries,
+    outputPath,
+    installDeviceId,
+    applicationName,
+    bundleIdentifier,
+    version,
+    buildNumber,
+    orientation,
+    iconFileId,
+    teamId,
+    distribution,
+    upload,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const validation = validatePlatformDetails({
+      platform: "ios",
+      applicationInfo: {
+        applicationName,
+        applicationIdentifier: bundleIdentifier,
+        iconFileId,
+      },
+    });
+    if (!validation.valid) {
+      throw new Error(`Invalid iOS platform details: ${validation.code}`);
+    }
+    if (!isValidIosVersion(version) || !isValidIosBuildNumber(buildNumber)) {
+      throw new Error("Invalid iOS version or build number.");
+    }
+    if (!isValidIosTeamId(teamId)) {
+      throw new Error("Invalid Apple team ID.");
+    }
+    const { filePath: iconPath } = await resolveReferenceFilePath(
+      getCurrentReference(),
+      iconFileId,
+      { label: "Project icon file id" },
+    );
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const onProgress = new Channel();
+    if (options.onProgress) onProgress.onmessage = options.onProgress;
+    const request = {
+      templatePath: await resolveIosPlayerTemplatePath(options),
+      outputPath,
+      installDeviceId,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      applicationName: applicationName.trim(),
+      bundleIdentifier,
+      version,
+      buildNumber,
+      orientation,
+      iconPath,
+      teamId,
+      distribution,
+      upload: !!upload,
+    };
+    return invoke("export_ios_application", { request, onProgress });
+  };
+
   const createAndroidSigningKey = async ({ applicationName, applicationId }) =>
     invoke("create_android_signing_key", { applicationName, applicationId });
 
@@ -1542,6 +1656,11 @@ export const createTauriProjectServiceAdapters = ({
     createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath,
     createMacosApplicationToPath,
+    getIosExportAvailability,
+    getIosExportRequirements,
+    listIosDevices,
+    promptIosApplicationPath,
+    exportIosApplication,
   };
 
   const collabAdapter = {

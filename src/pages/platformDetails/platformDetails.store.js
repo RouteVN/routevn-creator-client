@@ -3,10 +3,11 @@ import {
   formatAndroidCertificateFingerprint,
 } from "../../internal/androidExport.js";
 import { formatDate } from "../../internal/dates.js";
+import { IOS_EXPORT_RELEASED } from "../../internal/iosExport.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   createPlatformEditForm,
-  PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+  getPlatformIconOutputSize,
 } from "../../internal/ui/platformDetailsForm.js";
 import {
   buildTabletLandscapeContentColumnStyle,
@@ -14,10 +15,12 @@ import {
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
-// Android stays out of the tabs and the Add menu until its export ships.
-const PLATFORM_IDS = ANDROID_EXPORT_RELEASED
-  ? ["web", "windows", "macos", "android"]
-  : ["web", "windows", "macos"];
+// A platform stays out of the tabs and the Add menu until its export ships.
+// iOS export needs a Mac with Xcode, so Creator on Android and iOS leaves it
+// out.
+const PLATFORM_IDS = ["web", "windows", "macos"];
+if (ANDROID_EXPORT_RELEASED) PLATFORM_IDS.push("android");
+if (IOS_EXPORT_RELEASED) PLATFORM_IDS.push("ios");
 const MOBILE_PLATFORM_IDS = ANDROID_EXPORT_RELEASED
   ? ["web", "android"]
   : ["web"];
@@ -67,6 +70,7 @@ const getPlatformTitle = (platform, copy) => {
     return copy.macosPlatformDetailsTitle;
   }
   if (platform === "android") return copy.androidPlatformDetailsTitle;
+  if (platform === "ios") return copy.iosPlatformDetailsTitle;
   return copy.webPlatformDetailsTitle;
 };
 
@@ -78,6 +82,7 @@ const getPlatformTabLabel = (platform, copy) => {
     return copy.macosTabLabel;
   }
   if (platform === "android") return copy.androidTabLabel;
+  if (platform === "ios") return copy.iosTabLabel;
   return copy.webTabLabel;
 };
 
@@ -122,7 +127,7 @@ const buildPlatformDetailFields = (
     type: "slot",
     slot: "platform-application-identifier",
     label:
-      platform === "macos"
+      platform === "macos" || platform === "ios"
         ? copy.macosApplicationIdentifierLabel
         : copy.applicationIdentifierLabel,
   });
@@ -412,12 +417,10 @@ export const selectViewData = ({ state, i18n }) => {
     platformDialogKey: `${formMode}-${formPlatform ?? "none"}`,
     platformEditIconFileId: state.platformEditIconFileId,
     platformEditIconCropFile: state.platformEditIconCropFile,
-    platformEditIconOutputSize:
-      state.platformEditIconCropTarget === "splash"
-        ? 768
-        : formPlatform === "android"
-          ? 512
-          : PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+    platformEditIconOutputSize: getPlatformIconOutputSize(
+      formPlatform,
+      state.platformEditIconCropTarget,
+    ),
     isPlatformEditDialogOpen: state.isPlatformEditDialogOpen,
     isPlatformEditIconCropDialogOpen: state.isPlatformEditIconCropDialogOpen,
     showPlatformApplicationIcon: state.selectedPlatform !== "web",
@@ -447,6 +450,10 @@ export const setPlatformApplicationInfo = (
   target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
   if (platform !== "web") {
     target.iconFileId = applicationInfo?.iconFileId ?? undefined;
+  }
+
+  if (platform === "ios") {
+    target.teamId = applicationInfo.teamId ?? "";
   }
 
   if (platform === "android") {

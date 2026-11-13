@@ -31,6 +31,10 @@ refs:
     eventListeners:
       click:
         handler: handleDownloadMacosApplicationClick
+  detailIosApplicationBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadIosApplicationClick
   detailHeader:
     eventListeners:
       click:
@@ -71,6 +75,10 @@ refs:
     eventListeners:
       form-action:
         handler: handleMacosExportFormAction
+  iosExportForm:
+    eventListeners:
+      form-action:
+        handler: handleIosExportFormAction
   dropdownMenu:
     eventListeners:
       close:
@@ -129,6 +137,8 @@ template:
                                           - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidApkButton}
                                       - $if canExportMacosApplication:
                                           - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
+                                      - $if canExportIosApplication:
+                                          - rtgl-button#detailIosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportIosApplicationButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -150,6 +160,8 @@ template:
                               - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidApkButton}
                           - $if canExportMacosApplication:
                               - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
+                          - $if canExportIosApplication:
+                              - rtgl-button#detailIosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportIosApplicationButton}
   - $if isVersionDialogOpen:
       - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
@@ -176,6 +188,8 @@ template:
                   - rtgl-form#androidExportForm :form=${androidExportForm} w=f: null
                 $elif showMacosExportForm:
                   - rtgl-form#macosExportForm :form=${macosExportForm} w=f: null
+                $elif showIosExportForm:
+                  - rtgl-form#iosExportForm :form=${iosExportForm} w=f: null
                 $else:
                   - rtgl-view w=f d=h ah=e av=c g=sm:
                       - rtgl-button#exportConfirmationConfirmButton v=pr pre=download: ${exportConfirmationConfirmLabel}

@@ -15,6 +15,7 @@ static/public/@rettangoli
 static/bundle/main.js
 static/bundle/player-runtime-persistence-host.js
 static/bundle/player-runtime-persistence-host-android.js
+static/bundle/player-runtime-persistence-host-ios.js
 /task
 /keys
 /temp
@@ -68,3 +69,5 @@ src/setup.js
 /ios/routevn/**/*.xcuserdata
 /ios/routevn/**/xcuserdata/
 /ios/routevn/**/*.xcuserstate
+/ios/player/RouteVNPlayer/web
+/ios/player/**/xcuserdata/

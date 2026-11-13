@@ -1,5 +1,6 @@
 import { isValidAndroidApplicationId } from "./androidApplicationId.js";
 import { isValidAndroidBackgroundColor } from "./androidExport.js";
+import { isValidIosBundleIdentifier } from "./iosExport.js";
 import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifier.js";
 
 const WEB_APPLICATION_IDENTIFIER_PATTERN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9.-]+$/;
@@ -50,6 +51,18 @@ export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
       !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
     ) {
       return { valid: false, code: "macos-identifier-invalid" };
+    }
+  }
+
+  if (platform === "ios") {
+    if (!applicationInfo.iconFileId) {
+      return { valid: false, code: "ios-icon-required" };
+    }
+    if (!applicationInfo.applicationIdentifier) {
+      return { valid: false, code: "ios-identifier-required" };
+    }
+    if (!isValidIosBundleIdentifier(applicationInfo.applicationIdentifier)) {
+      return { valid: false, code: "ios-identifier-invalid" };
     }
   }
 

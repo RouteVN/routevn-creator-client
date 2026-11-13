@@ -1,5 +1,12 @@
 import { withErrorDetails } from "../../internal/errorDetails.js";
 import { createAndroidApkFileName } from "../../internal/androidExport.js";
+import {
+  createIosIpaFileName,
+  IOS_XCODE_DOWNLOAD_URL,
+  isValidIosBuildNumber,
+  isValidIosVersion,
+  pickIosTeamId,
+} from "../../internal/iosExport.js";
 import { generateId } from "../../internal/id.js";
 import { formatElapsedSeconds, formatList } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
@@ -17,6 +24,12 @@ import {
   getAndroidApkExportStepForPhase,
   getAndroidApkExportSteps,
 } from "./support/androidApkExportSteps.js";
+import {
+  createIosExportStepsView,
+  getIosExportErrorMessage,
+  getIosExportStepForPhase,
+  getIosExportSteps,
+} from "./support/iosExportSteps.js";
 import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import {
   createAndroidNativeVersion,
@@ -128,6 +141,17 @@ const refreshAndroidExportAvailability = async (deps) => {
     });
   } catch {
     store.setAndroidExportAvailability({ availability: { available: false } });
+  }
+};
+
+const refreshIosExportAvailability = async (deps) => {
+  const { store, projectService } = deps;
+  try {
+    store.setIosExportAvailability({
+      availability: await projectService.getIosExportAvailability(),
+    });
+  } catch {
+    store.setIosExportAvailability({ availability: { available: false } });
   }
 };
 
@@ -373,6 +397,11 @@ const getPlatformDetailsValidationMessage = (code, copy) => {
     return copy.platformDetailsAndroidIdentifierInvalid;
   if (code === "android-color-invalid")
     return copy.platformDetailsAndroidColorInvalid;
+  if (code === "ios-icon-required") return copy.platformDetailsIosIconRequired;
+  if (code === "ios-identifier-required")
+    return copy.platformDetailsIosIdentifierRequired;
+  if (code === "ios-identifier-invalid")
+    return copy.platformDetailsIosIdentifierInvalid;
   return copy.platformDetailsLoadFailed ?? "Platform details are invalid.";
 };
 
@@ -611,6 +640,7 @@ export const handleAfterMount = async (deps) => {
     refreshWindowsExportAvailability(deps),
     refreshMacosExportAvailability(deps),
     refreshAndroidExportAvailability(deps),
+    refreshIosExportAvailability(deps),
   ]);
   await refreshVersionsData(deps);
 };
@@ -845,6 +875,9 @@ const startExportConfirmation = async (
   if (exportType === "android-apk" && !(await loadAndroidSigningStatus(deps))) {
     return;
   }
+  if (exportType === "ios-application" && !(await loadIosExportOptions(deps))) {
+    return;
+  }
 
   store.closeDropdownMenu();
   store.setSelectedItemId({ itemId: versionId });
@@ -883,6 +916,96 @@ const startExportConfirmation = async (
       },
     });
   }
+
+  if (exportType === "ios-application") {
+    const { iosExportForm } = refs;
+    const { teams } = store.selectIosExportOptions();
+    iosExportForm.reset();
+    iosExportForm.setValues({
+      values: {
+        version: isValidIosVersion(version.name) ? version.name : "",
+        buildNumber: "",
+        teamId: pickIosTeamId(teams, applicationInfo.teamId),
+        distribution: "appStore",
+        upload: false,
+      },
+    });
+  }
+};
+
+// Explains what this Mac needs before it can export for iOS.
+const showXcodeSetupDialog = async (deps, xcode) => {
+  const { appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  if (xcode.status === "notInstalled" || xcode.status === "outdated") {
+    const confirmed = await appService.showDialog({
+      title: copy.iosXcodeRequiredTitle,
+      message: formatI18nCopy(
+        xcode.status === "notInstalled"
+          ? copy.iosXcodeNotInstalledMessage
+          : copy.iosXcodeOutdatedMessage,
+        { minimum: xcode.minimumVersion, version: xcode.version },
+      ),
+      confirmText: copy.iosGetXcodeButton,
+      cancelText: copy.cancelButton,
+    });
+    if (confirmed) {
+      await appService.openUrl(IOS_XCODE_DOWNLOAD_URL);
+    }
+    return;
+  }
+  appService.showAlert({
+    title: copy.iosXcodeRequiredTitle,
+    message:
+      xcode.status === "iosPlatformMissing"
+        ? copy.iosPlatformMissingMessage
+        : xcode.status === "needsSetup"
+          ? copy.iosXcodeSetupMessage
+          : copy.iosXcodeNotReady,
+  });
+};
+
+// Checks Xcode and reads the Apple teams and connected devices the iOS
+// export dialog offers.
+const loadIosExportOptions = async (deps) => {
+  const { appService, i18n, projectService, store } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  let requirements;
+  try {
+    requirements = await projectService.getIosExportRequirements();
+  } catch (error) {
+    appService.showAlert({
+      message: withErrorDetails(
+        copy.iosRequirementsFailed,
+        error,
+        copy.errorDetailsLabel,
+      ),
+      title: copy.errorTitle,
+    });
+    return false;
+  }
+  if (requirements.xcode.status !== "ready") {
+    await showXcodeSetupDialog(deps, requirements.xcode);
+    return false;
+  }
+  if (requirements.teams.length === 0) {
+    appService.showAlert({
+      message: copy.iosNoTeamsMessage,
+      title: copy.iosNoTeamsTitle,
+    });
+    return false;
+  }
+  // Devices only feed the optional install, so a failed listing offers none
+  // instead of stopping the export.
+  let devices = [];
+  try {
+    devices = await projectService.listIosDevices();
+  } catch {}
+  store.setIosExportOptions({
+    teams: requirements.teams,
+    devices: devices.filter((device) => device.available),
+  });
+  return true;
 };
 
 // Whether this host signs and the project's current key, read before the
@@ -967,6 +1090,12 @@ export const handleDownloadMacosApplicationClick = (deps, payload) =>
   prepareExportConfirmation(deps, payload, {
     exportType: "macos-application",
     platform: "macos",
+  });
+
+export const handleDownloadIosApplicationClick = (deps, payload) =>
+  prepareExportConfirmation(deps, payload, {
+    exportType: "ios-application",
+    platform: "ios",
   });
 
 export const handleExportConfirmationClose = (deps) => {
@@ -1954,7 +2083,8 @@ export const handleExportConfirmationConfirm = async (deps) => {
   const confirmation = store.selectExportConfirmation();
   if (
     confirmation.exportType === "macos-application" ||
-    confirmation.exportType === "android-apk"
+    confirmation.exportType === "android-apk" ||
+    confirmation.exportType === "ios-application"
   ) {
     return;
   }
@@ -2017,6 +2147,209 @@ export const handleMacosExportFormAction = async (deps, payload) => {
   store.closeExportConfirmation();
   render();
   await runMacosApplicationExport(deps, { ...confirmation, nativeVersion });
+};
+
+const runIosApplicationExport = async (deps, confirmation) => {
+  const { store, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  const { versionId, applicationInfo, options } = confirmation;
+  const version = store.selectVersion(versionId);
+  if (!version) {
+    appService.showAlert({
+      message: copy.versionNotFound,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  // A build installed on a device is not saved, so it needs no location.
+  const install = options.device !== undefined;
+  let outputPath;
+  try {
+    const availability = await projectService.getIosExportAvailability();
+    if (!availability.available) {
+      appService.showAlert({
+        message: copy.iosExportUnavailable,
+        title: copy.errorTitle,
+      });
+      return;
+    }
+    if (!install) {
+      outputPath = await projectService.promptIosApplicationPath(
+        {
+          defaultFileName: createIosIpaFileName(
+            applicationInfo.applicationName,
+            options.version,
+          ),
+        },
+        {
+          title: copy.saveIosApplicationDialogTitle,
+          fileTypeName: copy.iosApplicationFileTypeName,
+        },
+      );
+    }
+  } catch (error) {
+    appService.showAlert({
+      message: withErrorDetails(
+        copy.iosExportFailed,
+        error,
+        copy.errorDetailsLabel,
+      ),
+      title: copy.errorTitle,
+    });
+    return;
+  }
+  if (!install && !outputPath) return;
+
+  const steps = getIosExportSteps({ upload: options.upload, install });
+  let currentStep = steps[0];
+  let currentDetail;
+  const progressDialog = appService.showProgressDialog({
+    message: copy.iosApplicationInProgressMessage,
+    title: copy.iosApplicationInProgressTitle,
+    steps: createIosExportStepsView({ copy, steps, current: currentStep }),
+  });
+  // Steps only move forward. Within the running step, only its numbers change.
+  const showStep = (step, detail) => {
+    const index = steps.indexOf(step);
+    const currentIndex = steps.indexOf(currentStep);
+    if (index < currentIndex) return;
+    if (index === currentIndex && detail === currentDetail) return;
+    currentStep = step;
+    currentDetail = detail;
+    progressDialog.update({
+      steps: createIosExportStepsView({
+        copy,
+        steps,
+        current: currentStep,
+        detail: currentDetail,
+      }),
+    });
+  };
+  const countFormat = new Intl.NumberFormat(
+    i18n.dateTime?.intlLocale ?? "en-US",
+  );
+  const progressFormats = {
+    formatBytes: (value) => formatBundleByteCount(value, i18n.dateTime),
+    formatCount: (value) => countFormat.format(value),
+  };
+  let result;
+  let exportError;
+  try {
+    await progressDialog.waitForPaint();
+    // The next export selects the team this one used.
+    if (options.teamId !== applicationInfo.teamId) {
+      await projectService.updateCurrentPlatformDetails("ios", {
+        teamId: options.teamId,
+      });
+    }
+    const { transformedData, fileEntries } = await createVersionExportData({
+      appService,
+      applicationInfo,
+      platform: "ios",
+      projectService,
+      version,
+    });
+    result = await projectService.exportIosApplication(
+      transformedData,
+      fileEntries,
+      outputPath,
+      {
+        installDeviceId: options.device?.id,
+        applicationName: applicationInfo.applicationName,
+        bundleIdentifier: applicationInfo.applicationIdentifier,
+        version: options.version,
+        buildNumber: options.buildNumber,
+        iconFileId: applicationInfo.iconFileId,
+        teamId: options.teamId,
+        distribution: options.distribution,
+        upload: options.upload,
+      },
+      {
+        onProgress: (progress) =>
+          showStep(
+            getIosExportStepForPhase(progress.phase),
+            formatAndroidApkExportProgress(progress, progressFormats),
+          ),
+      },
+    );
+  } catch (error) {
+    exportError = error;
+  } finally {
+    progressDialog.close();
+  }
+  const path = outputPath && appService.getFileDisplayPath(outputPath);
+  if (exportError !== undefined) {
+    let message = getIosExportErrorMessage(exportError, copy);
+    // A failed upload leaves the saved IPA.
+    if (exportError?.ipaSaved) {
+      message = `${message}\n${formatI18nCopy(copy.iosIpaSavedNotice, { path })}`;
+    }
+    appService.showAlert({
+      message: withErrorDetails(message, exportError, copy.errorDetailsLabel),
+      title: copy.errorTitle,
+    });
+    return;
+  }
+  let message;
+  if (install) {
+    message = formatI18nCopy(
+      result.launched
+        ? copy.iosInstalledMessage
+        : copy.iosInstalledNotOpenedMessage,
+      { device: options.device.name },
+    );
+  } else if (result.uploaded) {
+    message = formatI18nCopy(copy.iosUploadedMessage, { path });
+  } else if (options.distribution === "appStore") {
+    message = formatI18nCopy(copy.iosAppStoreExportCompletedMessage, { path });
+  } else {
+    message = formatI18nCopy(copy.iosDevelopmentExportCompletedMessage, {
+      path,
+    });
+  }
+  appService.showAlert({ message, title: copy.exportCompletedTitle });
+};
+
+export const handleIosExportFormAction = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") return;
+  const copy = selectVersionsPageCopy(i18n);
+  const confirmation = store.selectExportConfirmation();
+  if (confirmation.exportType !== "ios-application") return;
+  const { teams, devices } = store.selectIosExportOptions();
+  const version = values.version.trim();
+  const buildNumber = values.buildNumber.trim();
+  const team = teams.find(({ id }) => id === values.teamId);
+  const distribution =
+    values.distribution === "development" ? "development" : "appStore";
+  let message;
+  if (!version) message = copy.iosExportVersionRequired;
+  else if (!isValidIosVersion(version)) message = copy.iosExportVersionInvalid;
+  else if (!buildNumber) message = copy.iosExportBuildNumberRequired;
+  else if (!isValidIosBuildNumber(buildNumber))
+    message = copy.iosExportBuildNumberInvalid;
+  else if (!team) message = copy.iosTeamRequired;
+  else if (team.free && distribution === "appStore")
+    message = copy.iosPersonalTeamAppStore;
+  if (message) {
+    appService.showAlert({ message, title: copy.warningTitle });
+    return;
+  }
+  const options = {
+    version,
+    buildNumber,
+    teamId: team.id,
+    distribution,
+    upload: distribution === "appStore" && values.upload === true,
+  };
+  if (distribution === "development") {
+    options.device = devices.find(({ id }) => id === values.deviceId);
+  }
+  store.closeExportConfirmation();
+  render();
+  await runIosApplicationExport(deps, { ...confirmation, options });
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {

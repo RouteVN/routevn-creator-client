@@ -57,7 +57,7 @@
   "scripts": {
     "test:updates": "vitest run tests/updates",
     "test:error-reporting": "vitest run tests/errorReporting",
-    "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js && vite build --config scripts/vite.player-runtime-host-android.config.js",
+    "build:bundle": "vite build --config scripts/vite.bundle.config.js && vite build --config scripts/vite.player-runtime-host.config.js && vite build --config scripts/vite.player-runtime-host-android.config.js && vite build --config scripts/vite.player-runtime-host-ios.config.js",
     "build:web": "./scripts/build.sh web",
     "build:icons": "node --input-type=module -e \"import { buildSvg } from '@rettangoli/ui/cli'; buildSvg({ dir: 'svg', outfile: 'static/public/rtgl-icons.js' });\"",
     "build:tauri": "./scripts/build.sh tauri",
@@ -124,7 +124,9 @@
     "player-template:prepare:mac": "bun run build:bundle && node scripts/build-macos-player-template.js --prepare-only",
     "player-template:build:mac": "bun run build:bundle && node scripts/build-macos-player-template.js",
     "player-template:prepare:android": "bun run build:bundle && node scripts/build-android-player-template.js --prepare-only",
-    "player-template:build:android": "bun run build:bundle && node scripts/build-android-player-template.js"
+    "player-template:build:android": "bun run build:bundle && node scripts/build-android-player-template.js",
+    "player-template:prepare:ios": "bun run build:bundle && node scripts/build-ios-player-template.js --prepare-only",
+    "player-template:build:ios": "bun run build:bundle && node scripts/build-ios-player-template.js"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.1",
