@@ -34,6 +34,16 @@ import {
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import * as storeModule from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 import {
+  handleActionItemRightClick as handleSystemActionsItemRightClick,
+  handleDropdownMenuClickItem as handleSystemActionsDropdownMenuClickItem,
+} from "../../src/components/systemActions/systemActions.handlers.js";
+import {
+  createInitialState as createSystemActionsState,
+  hideDropdownMenu as hideSystemActionsDropdownMenu,
+  selectDropdownMenuActionType as selectSystemActionsDropdownMenuActionType,
+  showDropdownMenu as showSystemActionsDropdownMenu,
+} from "../../src/components/systemActions/systemActions.store.js";
+import {
   EN_I18N,
   ES_I18N,
   FR_I18N,
@@ -2392,6 +2402,117 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       data: {
         dialogue: { content: [{ text: "Still raining" }] },
         sfx: { channels: [] },
+      },
+      replace: true,
+    });
+  });
+
+  // Deletes one action of a line that holds an Input action among others,
+  // and returns what the page saved.
+  const saveAfterDeleting = async (payload) => {
+    const saveError = new Error("stop after assertion");
+    const updateLineActions = vi.fn(async () => {
+      throw saveError;
+    });
+    const selectedLine = {
+      id: "line-1",
+      actions: {
+        dialogue: { content: [{ text: "What is your name?" }] },
+        form: {
+          resourceId: "layout-input",
+          fields: { name: { variableId: "variable-name" } },
+        },
+        choice: { resourceId: "layout-choice", items: [{ content: "Go on" }] },
+      },
+    };
+    const store = {
+      ...editHistoryStore({ line: selectedLine }),
+      selectSelectedLine: vi.fn(() => selectedLine),
+      selectDraftSection: vi.fn(() => undefined),
+    };
+
+    await expect(
+      handleSystemActionsActionDelete(
+        {
+          store,
+          render: vi.fn(),
+          subject: { dispatch: vi.fn() },
+          projectService: { updateLineActions },
+        },
+        payload,
+      ),
+    ).rejects.toThrow("stop after assertion");
+
+    return { updateLineActions, selectedLine };
+  };
+
+  it("removes the Input action when deleting its presentation card", async () => {
+    const { updateLineActions, selectedLine } = await saveAfterDeleting({
+      _event: { detail: { actionType: "form" } },
+    });
+
+    expect(updateLineActions).toHaveBeenCalledOnce();
+    expect(updateLineActions).toHaveBeenCalledWith({
+      lineId: "line-1",
+      data: {
+        dialogue: { content: [{ text: "What is your name?" }] },
+        choice: { resourceId: "layout-choice", items: [{ content: "Go on" }] },
+      },
+      replace: true,
+    });
+    // The saved actions are a copy; the line itself is left for the refresh.
+    expect(selectedLine.actions.form).toBeDefined();
+  });
+
+  it("removes the Input action through the presentation card's Delete menu", async () => {
+    const menuState = createSystemActionsState();
+    const menuEvents = [];
+    const menuDeps = {
+      store: {
+        showDropdownMenu: (payload) =>
+          showSystemActionsDropdownMenu({ state: menuState }, payload),
+        hideDropdownMenu: () =>
+          hideSystemActionsDropdownMenu({ state: menuState }),
+        selectDropdownMenuActionType: () =>
+          selectSystemActionsDropdownMenuActionType({ state: menuState }),
+      },
+      render: vi.fn(),
+      dispatchEvent: (event) => menuEvents.push(event),
+    };
+    handleSystemActionsItemRightClick(menuDeps, {
+      _event: {
+        preventDefault: vi.fn(),
+        clientX: 0,
+        clientY: 0,
+        currentTarget: { dataset: { mode: "input" } },
+      },
+    });
+    handleSystemActionsDropdownMenuClickItem(menuDeps, {
+      _event: { detail: { item: menuState.dropdownMenu.items[0] } },
+    });
+    expect(menuEvents).toHaveLength(1);
+
+    const { updateLineActions } = await saveAfterDeleting({
+      _event: menuEvents[0],
+    });
+
+    const { data } = updateLineActions.mock.calls[0][0];
+    expect(Object.keys(data)).toEqual(["dialogue", "choice"]);
+  });
+
+  it("keeps the Input action when another presentation card is deleted", async () => {
+    const { updateLineActions } = await saveAfterDeleting({
+      _event: { detail: { actionType: "choice" } },
+    });
+
+    expect(updateLineActions).toHaveBeenCalledWith({
+      lineId: "line-1",
+      data: {
+        dialogue: { content: [{ text: "What is your name?" }] },
+        form: {
+          resourceId: "layout-input",
+          fields: { name: { variableId: "variable-name" } },
+        },
       },
       replace: true,
     });

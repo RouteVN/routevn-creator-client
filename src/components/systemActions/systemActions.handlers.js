@@ -516,13 +516,20 @@ export const handleActionItemRightClick = (deps, payload) => {
   render();
 };
 
+// An action row is tagged with the mode that opens its editor. The host removes
+// an action by the key it is stored under, which differs for these modes.
+const ACTION_TYPE_BY_ROW_MODE = {
+  input: "form",
+};
+
 export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
   const { detail } = payload._event;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
-  const actionType = store.selectDropdownMenuActionType();
+  const rowMode = store.selectDropdownMenuActionType();
+  const actionType = ACTION_TYPE_BY_ROW_MODE[rowMode] ?? rowMode;
 
   store.hideDropdownMenu();
 
