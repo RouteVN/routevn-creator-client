@@ -1,7 +1,6 @@
 import { sanitizeArtifactFileName } from "./artifactFileName.js";
 import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifier.js";
 import { isValidNativeApplicationVersion } from "./nativeApplicationVersion.js";
-import { requireProjectResolution } from "./projectResolution.js";
 
 // Switches iOS export off: when false, the Versions page hides its export
 // button and Platform Details hides the iOS platform.
@@ -36,11 +35,6 @@ export const isValidIosTeamId = (value) =>
 
 export const createIosIpaFileName = (applicationName, version) =>
   `${sanitizeArtifactFileName(`${applicationName}-${version}`)}.ipa`;
-
-export const getIosExportOrientation = (resolution) => {
-  const { width, height } = requireProjectResolution(resolution);
-  return height > width ? "portrait" : "landscape";
-};
 
 // The team the export dialog selects first: the one the game last used when
 // Xcode still has it, else the first team that can publish to the App Store.

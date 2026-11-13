@@ -28,9 +28,12 @@ The export dialog asks for:
 - Version (`CFBundleShortVersionString`, three numbers of up to nine digits)
   and Build Number (`CFBundleVersion`, 1 to 999999999). They are not saved.
 - Apple Team: one of the teams Xcode is signed in to. The dialog selects the
-  team the game last exported with (`platformDetails.ios.teamId`), else the
-  first paid team.
-- Build For:
+  team the game last signed with (`platformDetails.ios.teamId`), else the
+  first paid team. When Xcode lists no teams, the dialog asks for the
+  10-character Team ID instead. The team is remembered once an export has
+  signed with it, including an export whose upload failed.
+- Build For, which starts on Development when the selected team is a
+  Personal Team:
   - App Store: signed for distribution (TestFlight and the App Store). A
     Personal Team cannot make these builds. Optionally uploads the build to
     App Store Connect after saving the IPA; the app must already exist in App
@@ -94,13 +97,15 @@ Xcode project directly.
    upload only with App Store builds
 2. find Xcode (below) and check that it is ready
 3. expand the template with `ditto` and check that it is an unsigned player
-4. write the game package and encrypt it as a standalone chunked
-   XChaCha20-Poly1305 payload at `RouteVNPlayer.app/routevn-package.bin`
+4. write the game package to a file in the workspace and encrypt it from
+   that file as a standalone chunked XChaCha20-Poly1305 payload at
+   `RouteVNPlayer.app/routevn-package.bin`, so the game is never held in
+   memory
 5. stamp `Info.plist`: bundle identifier, display name, version, build
    number, and the iPhone and iPad orientations
-6. render the icon: crop to the centered square, scale to 1024 pixels, and
-   draw transparent pixels over white (the App Store refuses icons with
-   alpha); compile it and the black launch background with `actool`, and
+6. render the icon: crop to the centered square, draw transparent pixels
+   over white (the App Store refuses icons with alpha), then scale to 1024
+   pixels; compile it and the black launch background with `actool`, and
    merge the icon keys `actool` reports into `Info.plist`
 7. write the archive: `RouteVNPlayer.xcarchive/Products/Applications/` holds
    the app, and its `Info.plist` names the app path, bundle identifier,
@@ -138,7 +143,9 @@ to `signing-failed` or `upload-failed`.
 teams. Xcode is looked for at the folder `xcode-select -p` names, then
 `/Applications/Xcode.app`, then any Xcode Spotlight finds; the Command Line
 Tools alone do not count. Every Xcode command runs with `DEVELOPER_DIR` set
-to the chosen Xcode. The status is `ready`, `notInstalled`, `outdated`,
+to the chosen Xcode: the first one that is new enough, else one that does
+not report its version yet (it may be new but not set up), else the newest.
+The status is `ready`, `notInstalled`, `outdated`,
 `needsSetup` (`xcodebuild -checkFirstLaunchStatus` fails or no version is
 reported), `iosPlatformMissing` (no iOS SDK or `actool`), or
 `unsupportedHost` on Windows and Linux. The Versions page explains each one;
@@ -147,10 +154,14 @@ for a missing or outdated Xcode it offers to open Xcode's Mac App Store page.
 Teams come from Xcode's preferences (`IDEProvisioningTeamByIdentifier` in
 `com.apple.dt.Xcode`): team ID, name, kind, and whether it is a free Personal
 Team. The key is not documented; a missing or changed key gives no teams,
-and the Versions page then asks the creator to sign in to Xcode.
+and the export dialog then asks for the Team ID, with a note to sign in to
+Xcode.
 
 `list_ios_devices` reads `devicectl list devices` and keeps physical iPhones
-and iPads that are paired and reachable. A device install runs
+and iPads that are paired and reachable. The Versions page reads the
+requirements and the devices at once, and ignores other export clicks until
+the dialog opens. A failed device listing shows a notice and offers no
+devices; saving the IPA still works. A device install runs
 `devicectl device install app` and opens the app with
 `devicectl device process launch`; opening fails while the device is locked,
 which the result reports as `launched: false`.

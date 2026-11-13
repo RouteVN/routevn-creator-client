@@ -4,6 +4,10 @@
 //! Store Connect, or a development build installed on a connected device.
 //! Runs only on macOS with Xcode.
 
+// Other hosts only report that iOS export is unsupported, so the request
+// fields and helpers that the macOS export uses go unread there.
+#![cfg_attr(not(target_os = "macos"), allow(dead_code))]
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -147,17 +151,8 @@ async fn run_blocking<T: Send + 'static>(
 /// The Xcode status and the teams signed in to Xcode. Slow (it runs Xcode's
 /// tools), so the frontend asks when the creator starts an export.
 #[tauri::command]
-pub async fn get_ios_export_requirements() -> IosExportRequirements {
-    tauri::async_runtime::spawn_blocking(imp::requirements)
-        .await
-        .unwrap_or_else(|_| IosExportRequirements {
-            xcode: XcodeStatus {
-                status: "notInstalled",
-                version: None,
-                minimum_version: format!("{MINIMUM_XCODE_MAJOR}.0"),
-            },
-            teams: Vec::new(),
-        })
+pub async fn get_ios_export_requirements() -> Result<IosExportRequirements, IosExportError> {
+    run_blocking(|| Ok(imp::requirements())).await
 }
 
 #[tauri::command]
@@ -284,7 +279,7 @@ pub fn classify_xcodebuild_failure(output: &str, uploading: bool) -> &'static st
         || lower.contains("no suitable application records")
     {
         "app-record-missing"
-    } else if lower.contains("agreement") || lower.contains("pla update") {
+    } else if lower.contains("license agreement") || lower.contains("pla update") {
         "agreement-required"
     } else if lower.contains("bundle version must be higher")
         || lower.contains("redundant binary upload")
@@ -300,6 +295,47 @@ pub fn classify_xcodebuild_failure(output: &str, uploading: bool) -> &'static st
     }
 }
 
+/// The error code for a failed `devicectl device install app`.
+pub fn classify_install_failure(output: &str) -> &'static str {
+    let lower = output.to_lowercase();
+    if lower.contains("provisioning profile") || lower.contains("not registered") {
+        "device-not-registered"
+    } else if lower.contains("device was not found")
+        || lower.contains("not connected")
+        || lower.contains("device is unavailable")
+        || lower.contains("device is not available")
+    {
+        "device-unavailable"
+    } else {
+        "install-failed"
+    }
+}
+
+/// The Xcode to use, from each candidate's version (`None` when it does not
+/// report one). The first Xcode that is new enough, else one that does not
+/// report its version yet, since it may be new but not set up, else the
+/// newest one.
+pub fn pick_xcode<T>(
+    candidates: &[(T, Option<(String, u32)>)],
+) -> Option<&(T, Option<(String, u32)>)> {
+    candidates
+        .iter()
+        .find(|(_, version)| {
+            version
+                .as_ref()
+                .is_some_and(|(_, major)| *major >= MINIMUM_XCODE_MAJOR)
+        })
+        .or_else(|| candidates.iter().find(|(_, version)| version.is_none()))
+        .or_else(|| {
+            candidates
+                .iter()
+                .max_by_key(|(_, version)| version.as_ref().map_or(0, |(_, major)| *major))
+        })
+}
+
+/// The most lines of Xcode's output an error keeps.
+const MAX_DETAIL_LINES: usize = 20;
+
 /// The error lines of Xcode's output, without its log bundle noise.
 fn xcodebuild_details(output: &str) -> String {
     let lines: Vec<&str> = output
@@ -311,7 +347,12 @@ fn xcodebuild_details(output: &str) -> String {
         .iter()
         .position(|line| line.starts_with("error:"))
         .unwrap_or_else(|| lines.len().saturating_sub(12));
-    lines[start..].join("\n")
+    lines[start..]
+        .iter()
+        .take(MAX_DETAIL_LINES)
+        .copied()
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Parses the teams Xcode keeps for its signed-in accounts. The key is not
@@ -399,15 +440,17 @@ pub fn render_app_icon(bytes: &[u8]) -> Result<Vec<u8>, String> {
         side,
     )
     .to_image();
-    let resized = imageops::resize(&square, SIZE, SIZE, FilterType::Lanczos3);
-    let opaque = RgbImage::from_fn(SIZE, SIZE, |x, y| {
-        let [red, green, blue, alpha] = resized.get_pixel(x, y).0;
+    // Drawn over white before scaling: scaling first would blend the hidden
+    // color of transparent pixels into the edges.
+    let opaque = RgbImage::from_fn(side, side, |x, y| {
+        let [red, green, blue, alpha] = square.get_pixel(x, y).0;
         let over_white = |channel: u8| {
             let alpha = u32::from(alpha);
             ((u32::from(channel) * alpha + 255 * (255 - alpha) + 127) / 255) as u8
         };
         image::Rgb([over_white(red), over_white(green), over_white(blue)])
     });
+    let opaque = imageops::resize(&opaque, SIZE, SIZE, FilterType::Lanczos3);
     let mut png = Vec::new();
     PngEncoder::new(&mut png)
         .write_image(opaque.as_raw(), SIZE, SIZE, ExtendedColorType::Rgb8)
@@ -577,7 +620,6 @@ mod imp {
         if candidates.is_empty() {
             return (status("notInstalled", None), None);
         }
-        // The first Xcode that is new enough, or else the newest one.
         let versions: Vec<(PathBuf, Option<(String, u32)>)> = candidates
             .into_iter()
             .map(|dir| {
@@ -585,19 +627,7 @@ mod imp {
                 (dir, version)
             })
             .collect();
-        let chosen = versions
-            .iter()
-            .find(|(_, version)| {
-                version
-                    .as_ref()
-                    .is_some_and(|(_, major)| *major >= MINIMUM_XCODE_MAJOR)
-            })
-            .or_else(|| {
-                versions
-                    .iter()
-                    .max_by_key(|(_, version)| version.as_ref().map_or(0, |(_, major)| *major))
-            });
-        let Some((developer_dir, version)) = chosen else {
+        let Some((developer_dir, version)) = pick_xcode(&versions) else {
             return (status("notInstalled", None), None);
         };
         let Some((version, major)) = version.clone() else {
@@ -712,30 +742,46 @@ mod imp {
         }
         fs::rename(&template_app, &app).map_err(io_error("move the player into the archive"))?;
 
-        let package_bin = routevn_exporter::create_package_bin_with_progress(
-            assets,
-            instructions_json,
+        // The package goes through files, so a large game is never held in
+        // memory.
+        let package_path = temp.path().join("package.bin");
+        let stats = routevn_exporter::create_package_bin_file_with_progress(
+            &package_path,
+            &assets,
+            &instructions_json,
             on_progress,
         )
         .map_err(|error| {
             IosExportError::failed(format!("Failed to create the game package: {error}"))
         })?;
-        let package_bin_bytes = package_bin.package_bin.len() as u64;
+        drop(assets);
+        let package_bin_bytes = stats.package_bin_bytes;
         emit(on_progress, "encryptPayload");
         let (key, nonce) = routevn_packager::payload::generate_payload_key_material();
-        let payload = routevn_packager::payload::write_standalone_chunked_encrypted_payload(
-            routevn_packager::payload::WriteStandaloneChunkedPayloadRequest {
-                output_path: &app.join(PACKAGE_RESOURCE_NAME),
-                payload: &package_bin.package_bin,
-                key,
-                nonce,
-                chunk_size: routevn_packager::payload::DEFAULT_PAYLOAD_CHUNK_SIZE,
-            },
-        )
-        .map_err(|error| {
-            IosExportError::failed(format!("Failed to encrypt the game package: {error}"))
-        })?;
-        drop(package_bin.package_bin);
+        let payload =
+            routevn_packager::payload::write_standalone_chunked_encrypted_payload_from_file(
+                routevn_packager::payload::WriteStandaloneChunkedPayloadFromFileRequest {
+                    input_path: &package_path,
+                    output_path: &app.join(PACKAGE_RESOURCE_NAME),
+                    key,
+                    nonce,
+                    chunk_size: routevn_packager::payload::DEFAULT_PAYLOAD_CHUNK_SIZE,
+                },
+                |current, total| {
+                    if let Some(on_progress) = on_progress {
+                        on_progress(routevn_exporter::ZipExportProgress {
+                            phase: "encryptPayload".to_string(),
+                            current,
+                            total,
+                            elapsed_ms: 0,
+                        });
+                    }
+                },
+            )
+            .map_err(|error| {
+                IosExportError::failed(format!("Failed to encrypt the game package: {error}"))
+            })?;
+        fs::remove_file(&package_path).map_err(io_error("remove the game package"))?;
 
         emit(on_progress, "compileAssets");
         let minimum_os = stamp_info_plist(&app, request)?;
@@ -792,7 +838,7 @@ mod imp {
             launched,
             package_bin_bytes,
             encrypted_payload_bytes: payload.footer.encrypted_len,
-            stats: package_bin.stats,
+            stats,
         })
     }
 
@@ -1044,7 +1090,10 @@ mod imp {
         let mut part = destination.as_os_str().to_os_string();
         part.push(".part");
         let part = PathBuf::from(part);
-        let bytes = fs::copy(ipa, &part).map_err(io_error("save the IPA"))?;
+        let bytes = fs::copy(ipa, &part).map_err(|error| {
+            let _ = fs::remove_file(&part);
+            IosExportError::failed(format!("Failed to save the IPA: {error}"))
+        })?;
         fs::rename(&part, destination).map_err(|error| {
             let _ = fs::remove_file(&part);
             IosExportError::failed(format!("Failed to save the IPA: {error}"))
@@ -1088,19 +1137,10 @@ mod imp {
             .map_err(io_error("run devicectl"))?;
         if !output.status.success() {
             let text = output_text(&output);
-            let lower = text.to_lowercase();
-            let code = if lower.contains("provisioning profile") || lower.contains("not registered")
-            {
-                "device-not-registered"
-            } else if lower.contains("not connected")
-                || lower.contains("unavailable")
-                || lower.contains("not found")
-            {
-                "device-unavailable"
-            } else {
-                "install-failed"
-            };
-            return Err(IosExportError::new(code, xcodebuild_details(&text)));
+            return Err(IosExportError::new(
+                classify_install_failure(&text),
+                xcodebuild_details(&text),
+            ));
         }
         let launched = xcode
             .xcrun()
@@ -1274,6 +1314,16 @@ mod tests {
                 "agreement-required",
             ),
             (
+                "You must accept the latest Program License Agreement in your developer account.",
+                true,
+                "agreement-required",
+            ),
+            (
+                "error: exportArchive The agreement field is not a signing error",
+                false,
+                "signing-failed",
+            ),
+            (
                 "The bundle version must be higher than the previously uploaded version.",
                 true,
                 "build-number-used",
@@ -1306,6 +1356,65 @@ mod tests {
             xcodebuild_details(output),
             "error: exportArchive No Account for Team \"X\".\n  Add a new account.\n** EXPORT FAILED **"
         );
+    }
+
+    #[test]
+    fn keeps_at_most_twenty_lines_of_xcode_output() {
+        let output: String = (1..=30)
+            .map(|line| format!("error: line {line}\n"))
+            .collect();
+        let details = xcodebuild_details(&output);
+        assert_eq!(details.lines().count(), 20);
+        assert!(details.ends_with("error: line 20"));
+    }
+
+    #[test]
+    fn classifies_install_failures() {
+        let cases = [
+            (
+                "ERROR: The specified device was not found. (Name: 00000000-0000) (com.apple.dt.CoreDeviceError error 1000 (0x3E8))",
+                "device-unavailable",
+            ),
+            (
+                "ERROR: Failed to install the app on the device.\n  The application's provisioning profile doesn't include this device.",
+                "device-not-registered",
+            ),
+            (
+                "ERROR: Failed to install the app on the device.\n  The file couldn't be opened because it doesn't exist.",
+                "install-failed",
+            ),
+            ("ERROR: No provider was found.", "install-failed"),
+        ];
+        for (output, code) in cases {
+            assert_eq!(classify_install_failure(output), code, "{output}");
+        }
+    }
+
+    #[test]
+    fn picks_the_xcode_to_use() {
+        let version = |major: u32| Some((format!("{major}.0"), major));
+        // A new enough Xcode wins.
+        assert_eq!(
+            pick_xcode(&[("old", version(16)), ("new", version(26))])
+                .unwrap()
+                .0,
+            "new"
+        );
+        // An Xcode that needs setup beats an outdated one.
+        assert_eq!(
+            pick_xcode(&[("old", version(16)), ("unset", None)])
+                .unwrap()
+                .0,
+            "unset"
+        );
+        // Else the newest.
+        assert_eq!(
+            pick_xcode(&[("older", version(15)), ("old", version(16))])
+                .unwrap()
+                .0,
+            "old"
+        );
+        assert!(pick_xcode::<&str>(&[]).is_none());
     }
 
     #[test]
@@ -1382,6 +1491,9 @@ mod tests {
         // The centered square holds one transparent column and one red one.
         assert_eq!(icon.get_pixel(100, 512).0, [255, 255, 255]);
         assert_eq!(icon.get_pixel(923, 512).0, [255, 0, 0]);
+        // The edge blends white into red, never darker: transparent pixels
+        // are drawn over white before scaling.
+        assert!(icon.pixels().all(|pixel| pixel.0[0] == 255));
         assert!(render_app_icon(b"not an image").is_err());
     }
 

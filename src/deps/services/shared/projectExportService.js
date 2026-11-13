@@ -1,5 +1,4 @@
-import { getAndroidExportOrientation } from "../../../internal/androidExport.js";
-import { getIosExportOrientation } from "../../../internal/iosExport.js";
+import { getProjectOrientation } from "../../../internal/projectResolution.js";
 
 /**
  * Bundle format v4:
@@ -1469,7 +1468,7 @@ export const createProjectExportService = ({
       applicationId: metadata.applicationId,
       versionName: metadata.versionName,
       versionCode: metadata.versionCode,
-      orientation: getAndroidExportOrientation(projectData.projectData.screen),
+      orientation: getProjectOrientation(projectData.projectData.screen),
       iconFileId: metadata.iconFileId,
       adaptiveIconFileId: metadata.adaptiveIconFileId,
       splashIconFileId: metadata.splashIconFileId,
@@ -1524,7 +1523,7 @@ export const createProjectExportService = ({
       bundleIdentifier: metadata.bundleIdentifier,
       version: metadata.version,
       buildNumber: metadata.buildNumber,
-      orientation: getIosExportOrientation(projectData.projectData.screen),
+      orientation: getProjectOrientation(projectData.projectData.screen),
       iconFileId: metadata.iconFileId,
       teamId: metadata.teamId,
       distribution: metadata.distribution,

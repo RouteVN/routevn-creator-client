@@ -59,22 +59,8 @@ export const formatAndroidApkExportProgress = (
   return `${format(current)} / ${format(total)}`;
 };
 
-// Steps before the current one are done, and the steps after it have not
-// started. The current step shows `detail`, when there is one.
-export const createAndroidApkExportStepsView = ({
-  copy,
-  steps,
-  current,
-  detail,
-}) => {
-  const currentIndex = steps.indexOf(current);
-  return steps.map((step, index) => {
-    const row = { label: copy[STEP_LABEL_KEYS[step]], state: "pending" };
-    if (index < currentIndex) row.state = "done";
-    if (index === currentIndex) {
-      row.state = "active";
-      if (detail !== undefined) row.detail = detail;
-    }
-    return row;
-  });
-};
+// Each step's label, for the progress dialog.
+export const getAndroidApkExportStepLabels = (copy) =>
+  Object.fromEntries(
+    Object.entries(STEP_LABEL_KEYS).map(([step, key]) => [step, copy[key]]),
+  );

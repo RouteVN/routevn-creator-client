@@ -143,6 +143,30 @@ describe("iOS export switched on", () => {
     ]);
   });
 
+  it("asks for a typed team ID when Xcode lists no teams", () => {
+    const state = createVersionsState({ platform: "tauri", available: true });
+    versionsStore.setIosExportOptions({ state }, { teams: [], devices: [] });
+    versionsStore.openExportConfirmation(
+      { state },
+      {
+        exportType: "ios-application",
+        platform: "ios",
+        versionId: "version-1",
+      },
+    );
+    const { iosExportForm } = versionsStore.selectViewData({
+      state,
+      i18n: EN_I18N,
+    });
+    expect(iosExportForm.fields.find(({ name }) => name === "teamId")).toEqual({
+      name: "teamId",
+      type: "input-text",
+      label: VERSIONS_COPY.iosTeamIdLabel,
+      description: VERSIONS_COPY.iosTeamIdDescription,
+      required: true,
+    });
+  });
+
   it.each([
     ["appStore", "upload", "deviceId"],
     ["development", "deviceId", "upload"],

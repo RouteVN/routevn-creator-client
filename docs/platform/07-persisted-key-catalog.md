@@ -236,7 +236,8 @@ Current keys:
     and a blank `teamId`
   - created explicitly from Platform Details or export setup, like Android
   - `teamId` is the Apple Developer team the last iOS export signed with; the
-    export dialog writes it and selects it first next time
+    Versions page writes it after the export signs and the export dialog
+    selects it first next time
   - Version and Build Number are required per-export inputs and are not
     persisted
   - the icon is cropped to 1024 by 1024 pixels, the App Store icon size

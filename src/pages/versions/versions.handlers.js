@@ -4,6 +4,7 @@ import {
   createIosIpaFileName,
   IOS_XCODE_DOWNLOAD_URL,
   isValidIosBuildNumber,
+  isValidIosTeamId,
   isValidIosVersion,
   pickIosTeamId,
 } from "../../internal/iosExport.js";
@@ -19,17 +20,19 @@ import {
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
 import {
-  createAndroidApkExportStepsView,
   formatAndroidApkExportProgress,
   getAndroidApkExportStepForPhase,
+  getAndroidApkExportStepLabels,
   getAndroidApkExportSteps,
 } from "./support/androidApkExportSteps.js";
 import {
-  createIosExportStepsView,
   getIosExportErrorMessage,
   getIosExportStepForPhase,
+  getIosExportStepLabels,
   getIosExportSteps,
+  withIosExportErrorDetails,
 } from "./support/iosExportSteps.js";
+import { openExportStepsProgress } from "./support/exportStepsProgress.js";
 import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import {
   createAndroidNativeVersion,
@@ -846,7 +849,20 @@ const openPlatformDetailsDialog = async (
   render();
 };
 
-const startExportConfirmation = async (
+// Opening an export can wait on slow checks, such as Xcode's. Export clicks
+// during that wait are ignored, so a late dialog cannot replace a newer one.
+const startExportConfirmation = async (deps, request) => {
+  const { store } = deps;
+  if (store.selectExportConfirmationPending()) return;
+  store.setExportConfirmationPending({ pending: true });
+  try {
+    await checkAndOpenExportConfirmation(deps, request);
+  } finally {
+    store.setExportConfirmationPending({ pending: false });
+  }
+};
+
+const checkAndOpenExportConfirmation = async (
   deps,
   { exportType, platform, versionId },
 ) => {
@@ -920,13 +936,20 @@ const startExportConfirmation = async (
   if (exportType === "ios-application") {
     const { iosExportForm } = refs;
     const { teams } = store.selectIosExportOptions();
+    // Without teams from Xcode, the creator types the team ID.
+    const teamId =
+      teams.length > 0
+        ? pickIosTeamId(teams, applicationInfo.teamId)
+        : (applicationInfo.teamId ?? "");
+    // A Personal Team makes development builds only.
+    const personalTeam = teams.some((team) => team.id === teamId && team.free);
     iosExportForm.reset();
     iosExportForm.setValues({
       values: {
         version: isValidIosVersion(version.name) ? version.name : "",
         buildNumber: "",
-        teamId: pickIosTeamId(teams, applicationInfo.teamId),
-        distribution: "appStore",
+        teamId,
+        distribution: personalTeam ? "development" : "appStore",
         upload: false,
       },
     });
@@ -966,45 +989,38 @@ const showXcodeSetupDialog = async (deps, xcode) => {
 };
 
 // Checks Xcode and reads the Apple teams and connected devices the iOS
-// export dialog offers.
+// export dialog offers. Both load at once. Devices only feed the optional
+// install, so a failed listing offers none instead of stopping the export.
 const loadIosExportOptions = async (deps) => {
   const { appService, i18n, projectService, store } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  let requirements;
-  try {
-    requirements = await projectService.getIosExportRequirements();
-  } catch (error) {
+  const [requirementsResult, devicesResult] = await Promise.allSettled([
+    projectService.getIosExportRequirements(),
+    projectService.listIosDevices(),
+  ]);
+  if (requirementsResult.status === "rejected") {
     appService.showAlert({
       message: withErrorDetails(
         copy.iosRequirementsFailed,
-        error,
+        requirementsResult.reason,
         copy.errorDetailsLabel,
       ),
       title: copy.errorTitle,
     });
     return false;
   }
+  const requirements = requirementsResult.value;
   if (requirements.xcode.status !== "ready") {
     await showXcodeSetupDialog(deps, requirements.xcode);
     return false;
   }
-  if (requirements.teams.length === 0) {
-    appService.showAlert({
-      message: copy.iosNoTeamsMessage,
-      title: copy.iosNoTeamsTitle,
-    });
-    return false;
-  }
-  // Devices only feed the optional install, so a failed listing offers none
-  // instead of stopping the export.
   let devices = [];
-  try {
-    devices = await projectService.listIosDevices();
-  } catch {}
-  store.setIosExportOptions({
-    teams: requirements.teams,
-    devices: devices.filter((device) => device.available),
-  });
+  if (devicesResult.status === "fulfilled") {
+    devices = devicesResult.value.filter((device) => device.available);
+  } else {
+    appService.showToast({ message: copy.iosDevicesFailed });
+  }
+  store.setIosExportOptions({ teams: requirements.teams, devices });
   return true;
 };
 
@@ -1106,6 +1122,17 @@ export const handleExportConfirmationClose = (deps) => {
 
 // Whole kilobytes below 1 MB, then megabytes with one decimal, formatted with
 // the `dateTime` catalog of the active locale.
+// Formats for the numbers a running export step shows.
+const createExportProgressFormats = (i18n) => {
+  const countFormat = new Intl.NumberFormat(
+    i18n.dateTime?.intlLocale ?? "en-US",
+  );
+  return {
+    formatBytes: (value) => formatBundleByteCount(value, i18n.dateTime),
+    formatCount: (value) => countFormat.format(value),
+  };
+};
+
 const formatBundleByteCount = (value, dateTime = {}) => {
   const {
     intlLocale = "en-US",
@@ -1925,41 +1952,14 @@ const runAndroidApkExport = async (deps, confirmation) => {
     signed,
     createsKey: signed && !store.selectAndroidSigningStatus().currentKey,
   });
-  let currentStep = steps[0];
-  let currentDetail;
-  const progressDialog = appService.showProgressDialog({
+  const { progressDialog, showStep } = openExportStepsProgress({
+    appService,
     message: copy.androidApkInProgressMessage,
     title: copy.androidApkInProgressTitle,
-    steps: createAndroidApkExportStepsView({
-      copy,
-      steps,
-      current: currentStep,
-    }),
+    labels: getAndroidApkExportStepLabels(copy),
+    steps,
   });
-  // Steps only move forward. Within the running step, only its numbers change.
-  const showStep = (step, detail) => {
-    const index = steps.indexOf(step);
-    const currentIndex = steps.indexOf(currentStep);
-    if (index < currentIndex) return;
-    if (index === currentIndex && detail === currentDetail) return;
-    currentStep = step;
-    currentDetail = detail;
-    progressDialog.update({
-      steps: createAndroidApkExportStepsView({
-        copy,
-        steps,
-        current: currentStep,
-        detail: currentDetail,
-      }),
-    });
-  };
-  const countFormat = new Intl.NumberFormat(
-    i18n.dateTime?.intlLocale ?? "en-US",
-  );
-  const progressFormats = {
-    formatBytes: (value) => formatBundleByteCount(value, i18n.dateTime),
-    formatCount: (value) => countFormat.format(value),
-  };
+  const progressFormats = createExportProgressFormats(i18n);
   let result;
   let exportError;
   let exportFailedMessage = copy.androidExportFailed;
@@ -2202,47 +2202,18 @@ const runIosApplicationExport = async (deps, confirmation) => {
   if (!install && !outputPath) return;
 
   const steps = getIosExportSteps({ upload: options.upload, install });
-  let currentStep = steps[0];
-  let currentDetail;
-  const progressDialog = appService.showProgressDialog({
+  const { progressDialog, showStep } = openExportStepsProgress({
+    appService,
     message: copy.iosApplicationInProgressMessage,
     title: copy.iosApplicationInProgressTitle,
-    steps: createIosExportStepsView({ copy, steps, current: currentStep }),
+    labels: getIosExportStepLabels(copy),
+    steps,
   });
-  // Steps only move forward. Within the running step, only its numbers change.
-  const showStep = (step, detail) => {
-    const index = steps.indexOf(step);
-    const currentIndex = steps.indexOf(currentStep);
-    if (index < currentIndex) return;
-    if (index === currentIndex && detail === currentDetail) return;
-    currentStep = step;
-    currentDetail = detail;
-    progressDialog.update({
-      steps: createIosExportStepsView({
-        copy,
-        steps,
-        current: currentStep,
-        detail: currentDetail,
-      }),
-    });
-  };
-  const countFormat = new Intl.NumberFormat(
-    i18n.dateTime?.intlLocale ?? "en-US",
-  );
-  const progressFormats = {
-    formatBytes: (value) => formatBundleByteCount(value, i18n.dateTime),
-    formatCount: (value) => countFormat.format(value),
-  };
+  const progressFormats = createExportProgressFormats(i18n);
   let result;
   let exportError;
   try {
     await progressDialog.waitForPaint();
-    // The next export selects the team this one used.
-    if (options.teamId !== applicationInfo.teamId) {
-      await projectService.updateCurrentPlatformDetails("ios", {
-        teamId: options.teamId,
-      });
-    }
     const { transformedData, fileEntries } = await createVersionExportData({
       appService,
       applicationInfo,
@@ -2278,6 +2249,18 @@ const runIosApplicationExport = async (deps, confirmation) => {
   } finally {
     progressDialog.close();
   }
+  // The next export selects the team this one signed with. A failed upload
+  // was still signed.
+  const signed = exportError === undefined || exportError.ipaSaved === true;
+  if (signed && options.teamId !== applicationInfo.teamId) {
+    try {
+      await projectService.updateCurrentPlatformDetails("ios", {
+        teamId: options.teamId,
+      });
+    } catch {
+      appService.showToast({ message: copy.iosTeamSaveFailed });
+    }
+  }
   const path = outputPath && appService.getFileDisplayPath(outputPath);
   if (exportError !== undefined) {
     let message = getIosExportErrorMessage(exportError, copy);
@@ -2286,7 +2269,11 @@ const runIosApplicationExport = async (deps, confirmation) => {
       message = `${message}\n${formatI18nCopy(copy.iosIpaSavedNotice, { path })}`;
     }
     appService.showAlert({
-      message: withErrorDetails(message, exportError, copy.errorDetailsLabel),
+      message: withIosExportErrorDetails(
+        message,
+        exportError,
+        copy.errorDetailsLabel,
+      ),
       title: copy.errorTitle,
     });
     return;
@@ -2321,7 +2308,12 @@ export const handleIosExportFormAction = async (deps, payload) => {
   const { teams, devices } = store.selectIosExportOptions();
   const version = values.version.trim();
   const buildNumber = values.buildNumber.trim();
-  const team = teams.find(({ id }) => id === values.teamId);
+  // Without teams from Xcode, the creator typed the team ID.
+  const typedTeam = teams.length === 0;
+  const teamId = typedTeam
+    ? (values.teamId ?? "").trim().toUpperCase()
+    : values.teamId;
+  const team = teams.find(({ id }) => id === teamId);
   const distribution =
     values.distribution === "development" ? "development" : "appStore";
   let message;
@@ -2330,8 +2322,10 @@ export const handleIosExportFormAction = async (deps, payload) => {
   else if (!buildNumber) message = copy.iosExportBuildNumberRequired;
   else if (!isValidIosBuildNumber(buildNumber))
     message = copy.iosExportBuildNumberInvalid;
-  else if (!team) message = copy.iosTeamRequired;
-  else if (team.free && distribution === "appStore")
+  else if (!teamId || (!typedTeam && !team)) message = copy.iosTeamRequired;
+  else if (typedTeam && !isValidIosTeamId(teamId))
+    message = copy.iosTeamIdInvalid;
+  else if (team?.free && distribution === "appStore")
     message = copy.iosPersonalTeamAppStore;
   if (message) {
     appService.showAlert({ message, title: copy.warningTitle });
@@ -2340,7 +2334,7 @@ export const handleIosExportFormAction = async (deps, payload) => {
   const options = {
     version,
     buildNumber,
-    teamId: team.id,
+    teamId,
     distribution,
     upload: distribution === "appStore" && values.upload === true,
   };

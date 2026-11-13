@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   createIosIpaFileName,
-  getIosExportOrientation,
   isValidIosBuildNumber,
   isValidIosBundleIdentifier,
   isValidIosTeamId,
@@ -33,15 +32,9 @@ describe("iOS export helpers", () => {
     expect(isValidIosTeamId("ABCDE1234")).toBe(false);
   });
 
-  it("names the IPA and picks its orientation", () => {
+  it("names the IPA", () => {
     expect(createIosIpaFileName("Project: One", "1.2.3")).toBe(
       "Project- One-1.2.3.ipa",
-    );
-    expect(getIosExportOrientation({ width: 1920, height: 1080 })).toBe(
-      "landscape",
-    );
-    expect(getIosExportOrientation({ width: 1080, height: 1920 })).toBe(
-      "portrait",
     );
   });
 

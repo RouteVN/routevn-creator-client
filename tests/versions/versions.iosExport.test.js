@@ -27,6 +27,7 @@ const createDeps = ({ teamId = "", requirements, devices } = {}) => {
     waitForPaint: vi.fn(async () => {}),
   };
   let exportConfirmation;
+  let exportConfirmationPending = false;
   let iosExportOptions = { teams: [], devices: [] };
   return {
     appService: {
@@ -34,6 +35,7 @@ const createDeps = ({ teamId = "", requirements, devices } = {}) => {
       getAppVersion: vi.fn(() => "1.0.0"),
       getFileDisplayPath: vi.fn((path) => path),
       showAlert: vi.fn(),
+      showToast: vi.fn(),
       showDialog: vi.fn(async () => true),
       showProgressDialog: vi.fn(() => progressDialog),
       openUrl: vi.fn(async () => {}),
@@ -85,6 +87,10 @@ const createDeps = ({ teamId = "", requirements, devices } = {}) => {
       }),
       selectExportConfirmation: vi.fn(() => exportConfirmation),
       closeExportConfirmation: vi.fn(),
+      setExportConfirmationPending: vi.fn(({ pending }) => {
+        exportConfirmationPending = pending;
+      }),
+      selectExportConfirmationPending: vi.fn(() => exportConfirmationPending),
       setIosExportOptions: vi.fn((options) => {
         iosExportOptions = options;
       }),
@@ -154,18 +160,56 @@ describe("iOS export", () => {
       new Error("devicectl failed"),
     );
     await openIosExport(deps);
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.iosDevicesFailed,
+    });
     expect(deps.store.setIosExportOptions).toHaveBeenCalledWith({
       teams: TEAMS,
       devices: [],
     });
+    expect(deps.store.openExportConfirmation).toHaveBeenCalled();
   });
 
-  it("selects the team the game used last", async () => {
+  it("selects the team the game used last, and Development for a Personal Team", async () => {
     const deps = createDeps({ teamId: "PERSONAL12" });
     await openIosExport(deps);
     expect(deps.refs.iosExportForm.setValues).toHaveBeenCalledWith({
-      values: expect.objectContaining({ teamId: "PERSONAL12" }),
+      values: expect.objectContaining({
+        teamId: "PERSONAL12",
+        distribution: "development",
+      }),
     });
+  });
+
+  it("ignores export clicks while the checks run", async () => {
+    const deps = createDeps();
+    let finishChecks;
+    deps.projectService.getIosExportRequirements.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishChecks = () =>
+            resolve({
+              xcode: {
+                status: "ready",
+                version: "27.2",
+                minimumVersion: "26.0",
+              },
+              teams: TEAMS,
+            });
+        }),
+    );
+    const first = openIosExport(deps);
+    await vi.waitFor(() => expect(finishChecks).toBeDefined());
+    await openIosExport(deps);
+    finishChecks();
+    await first;
+    expect(deps.projectService.getIosExportRequirements).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(deps.store.openExportConfirmation).toHaveBeenCalledTimes(1);
+    // The next click works once the dialog has opened.
+    await openIosExport(deps);
+    expect(deps.store.openExportConfirmation).toHaveBeenCalledTimes(2);
   });
 
   it("offers to get Xcode when it is not installed", async () => {
@@ -204,7 +248,7 @@ describe("iOS export", () => {
     expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
   });
 
-  it("asks to sign in to Xcode when it has no teams", async () => {
+  it("asks for the team ID when Xcode lists no teams", async () => {
     const deps = createDeps({
       requirements: {
         xcode: { status: "ready", version: "27.2", minimumVersion: "26.0" },
@@ -212,11 +256,23 @@ describe("iOS export", () => {
       },
     });
     await openIosExport(deps);
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      title: COPY.iosNoTeamsTitle,
-      message: COPY.iosNoTeamsMessage,
+    expect(deps.store.openExportConfirmation).toHaveBeenCalled();
+    expect(deps.refs.iosExportForm.setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({ teamId: "", distribution: "appStore" }),
     });
-    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    await submitIosExport(deps, { teamId: "team" });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: COPY.iosTeamIdInvalid,
+      title: COPY.warningTitle,
+    });
+    expect(deps.projectService.exportIosApplication).not.toHaveBeenCalled();
+    await submitIosExport(deps, { teamId: " abcde12345 " });
+    expect(
+      deps.projectService.exportIosApplication.mock.calls[0][3].teamId,
+    ).toBe("ABCDE12345");
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("ios", { teamId: "ABCDE12345" });
   });
 
   it("exports and uploads an App Store build, and remembers the team", async () => {
@@ -229,6 +285,13 @@ describe("iOS export", () => {
     expect(
       deps.projectService.updateCurrentPlatformDetails,
     ).toHaveBeenCalledWith("ios", { teamId: "COMPANY123" });
+    // The team is remembered once the export has signed with it.
+    expect(
+      deps.projectService.updateCurrentPlatformDetails.mock
+        .invocationCallOrder[0],
+    ).toBeGreaterThan(
+      deps.projectService.exportIosApplication.mock.invocationCallOrder[0],
+    );
     expect(deps.projectService.exportIosApplication).toHaveBeenCalledWith(
       expect.any(Object),
       expect.any(Array),
@@ -400,6 +463,49 @@ describe("iOS export", () => {
       COPY.iosIpaSavedNotice.replace("{path}", "/exports/Project One.ipa"),
     );
     expect(message).toContain("App record with bundle identifier not found.");
+    // The build was signed, so its team is remembered.
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("ios", { teamId: "COMPANY123" });
+  });
+
+  it("keeps Xcode's error lines whole", async () => {
+    const deps = createDeps();
+    const xcodeLines = [
+      "error: exportArchive No profiles for 'com.example.project-one' were found",
+      `  ${"Xcode couldn't find any iOS App Store provisioning profiles. ".repeat(6)}`,
+      "** EXPORT FAILED **",
+    ].join("\n");
+    deps.projectService.exportIosApplication.mockRejectedValue({
+      code: "signing-failed",
+      message: xcodeLines,
+      ipaSaved: false,
+    });
+    await openIosExport(deps);
+    await submitIosExport(deps);
+    const { message } = deps.appService.showAlert.mock.calls[0][0];
+    expect(message).toBe(
+      `${COPY.iosSigningFailed}\n\n${COPY.errorDetailsLabel}\n${xcodeLines.trim()}`,
+    );
+  });
+
+  it("tells when the team cannot be remembered, after a finished export", async () => {
+    const deps = createDeps();
+    deps.projectService.updateCurrentPlatformDetails.mockRejectedValue(
+      new Error("write failed"),
+    );
+    await openIosExport(deps);
+    await submitIosExport(deps);
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.iosTeamSaveFailed,
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: COPY.iosAppStoreExportCompletedMessage.replace(
+        "{path}",
+        "/exports/Project One.ipa",
+      ),
+      title: COPY.exportCompletedTitle,
+    });
   });
 
   it("does not claim an IPA when signing failed", async () => {
@@ -414,5 +520,9 @@ describe("iOS export", () => {
     const { message } = deps.appService.showAlert.mock.calls[0][0];
     expect(message).toContain(COPY.iosTeamNotSignedIn);
     expect(message).not.toContain("/exports/Project One.ipa");
+    // A team that did not sign is not remembered.
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
   });
 });

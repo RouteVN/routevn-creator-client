@@ -217,6 +217,35 @@ const createAndroidExportForm = (copy, signing) => {
 const APP_STORE = "formValues.distribution == 'appStore'";
 const DEVELOPMENT = "formValues.distribution == 'development'";
 
+// The team Xcode signs with: one of the teams from Xcode's accounts, or a
+// typed team ID when Xcode lists none.
+const createIosTeamField = (copy, teams) => {
+  if (teams.length === 0) {
+    return {
+      name: "teamId",
+      type: "input-text",
+      label: copy.iosTeamIdLabel,
+      description: copy.iosTeamIdDescription,
+      required: true,
+    };
+  }
+  return {
+    name: "teamId",
+    type: "select",
+    label: copy.iosTeamLabel,
+    description: copy.iosTeamDescription,
+    clearable: false,
+    required: true,
+    options: teams.map((team) => ({
+      value: team.id,
+      label: formatI18nCopy(
+        team.free ? copy.iosPersonalTeamOption : copy.iosTeamOption,
+        { name: team.name, id: team.id },
+      ),
+    })),
+  };
+};
+
 // The teams come from Xcode's accounts and the devices from the connected
 // iPhones and iPads, read when the dialog opens.
 const createIosExportForm = (copy, { teams, devices }) => ({
@@ -240,21 +269,7 @@ const createIosExportForm = (copy, { teams, devices }) => ({
         },
       ],
     },
-    {
-      name: "teamId",
-      type: "select",
-      label: copy.iosTeamLabel,
-      description: copy.iosTeamDescription,
-      clearable: false,
-      required: true,
-      options: teams.map((team) => ({
-        value: team.id,
-        label: formatI18nCopy(
-          team.free ? copy.iosPersonalTeamOption : copy.iosTeamOption,
-          { name: team.name, id: team.id },
-        ),
-      })),
-    },
+    createIosTeamField(copy, teams),
     {
       name: "distribution",
       type: "segmented-control",
@@ -404,6 +419,8 @@ export const createInitialState = () => ({
   // The open iOS export's choices: the Apple teams signed in to Xcode and
   // the connected devices.
   iosExportOptions: { teams: [], devices: [] },
+  // Set while an export runs its checks before its dialog opens.
+  exportConfirmationPending: false,
   ...createMobileResourcePageState(),
   isVersionDialogOpen: false,
   editingVersionId: undefined,
@@ -526,6 +543,13 @@ export const setIosExportOptions = ({ state }, { teams, devices } = {}) => {
 };
 
 export const selectIosExportOptions = ({ state }) => state.iosExportOptions;
+
+export const setExportConfirmationPending = ({ state }, { pending } = {}) => {
+  state.exportConfirmationPending = pending;
+};
+
+export const selectExportConfirmationPending = ({ state }) =>
+  state.exportConfirmationPending;
 
 export const openVersionDialog = ({ state }, { versionId } = {}) => {
   state.isVersionDialogOpen = true;

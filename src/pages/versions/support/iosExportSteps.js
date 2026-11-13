@@ -1,3 +1,5 @@
+import { withErrorDetails } from "../../../internal/errorDetails.js";
+
 // The iOS export shows the same kind of step list as the Android export. The
 // exporter reports its phases. A build installed on a device is not saved.
 
@@ -33,20 +35,11 @@ export const getIosExportSteps = ({ upload, install }) => {
 
 export const getIosExportStepForPhase = (phase) => STEP_BY_PHASE[phase];
 
-// Steps before the current one are done, and the steps after it have not
-// started. The current step shows `detail`, when there is one.
-export const createIosExportStepsView = ({ copy, steps, current, detail }) => {
-  const currentIndex = steps.indexOf(current);
-  return steps.map((step, index) => {
-    const row = { label: copy[STEP_LABEL_KEYS[step]], state: "pending" };
-    if (index < currentIndex) row.state = "done";
-    if (index === currentIndex) {
-      row.state = "active";
-      if (detail !== undefined) row.detail = detail;
-    }
-    return row;
-  });
-};
+// Each step's label, for the progress dialog.
+export const getIosExportStepLabels = (copy) =>
+  Object.fromEntries(
+    Object.entries(STEP_LABEL_KEYS).map(([step, key]) => [step, copy[key]]),
+  );
 
 // The message for an export failure the exporter could name.
 const ERROR_MESSAGE_KEYS = {
@@ -67,3 +60,15 @@ const ERROR_MESSAGE_KEYS = {
 
 export const getIosExportErrorMessage = (error, copy) =>
   copy[ERROR_MESSAGE_KEYS[error?.code]] ?? copy.iosExportFailed;
+
+// The alert text for a failed export. The exporter's errors carry Xcode's
+// own lines, which stay as lines: the general error description would join
+// them into one and shorten it. Other errors get the general description.
+export const withIosExportErrorDetails = (message, error, detailsLabel) => {
+  const exporterError =
+    typeof error?.code === "string" && typeof error.message === "string";
+  if (!exporterError || !error.message.trim()) {
+    return withErrorDetails(message, error, detailsLabel);
+  }
+  return `${message}\n\n${detailsLabel}\n${error.message.trim()}`;
+};

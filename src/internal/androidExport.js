@@ -1,5 +1,4 @@
 import { sanitizeArtifactFileName } from "./artifactFileName.js";
-import { requireProjectResolution } from "./projectResolution.js";
 
 // Switches Android APK export off again if needed: when false, the Versions
 // page hides its export button and Platform Details hides the Android platform.
@@ -159,8 +158,3 @@ export const formatAndroidCertificateFingerprint = (certificateSha256) =>
 export const MIN_ANDROID_KEYSTORE_PASSWORD_LENGTH = 6;
 // The alias of the key in a copy saved with Save a Copy.
 export const ANDROID_KEY_COPY_ALIAS = "key0";
-
-export const getAndroidExportOrientation = (resolution) => {
-  const { width, height } = requireProjectResolution(resolution);
-  return height > width ? "portrait" : "landscape";
-};
