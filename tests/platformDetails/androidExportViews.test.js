@@ -96,9 +96,11 @@ describe("Android export views", () => {
       );
       const dialogHtml = render();
       expect(dialogHtml).toContain('id="androidExportForm"');
-      expect(dialogHtml).toContain(
+      const dialog = new JSDOM(dialogHtml);
+      expect(dialog.window.document.body.textContent).toContain(
         EN_I18N.versionsPage.androidUnsignedApkNotice,
       );
+      dialog.window.close();
       expect(dialogHtml).not.toContain('id="exportConfirmationConfirmButton"');
     },
   );

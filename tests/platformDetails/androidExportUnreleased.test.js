@@ -1,13 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ANDROID_EXPORT_RELEASED } from "../../src/internal/androidExport.js";
 import * as platformStore from "../../src/pages/platformDetails/platformDetails.store.js";
 import * as versionsStore from "../../src/pages/versions/versions.store.js";
 import { renderViewYaml } from "../support/renderView.js";
 import { EN_I18N } from "../support/i18n.js";
 
-// Android export is built but not released: no page offers it yet.
-describe("Android export before release", () => {
-  it("is not released", () => {
+// ANDROID_EXPORT_RELEASED can switch Android export off again; with it off, no
+// page offers it.
+vi.mock("../../src/internal/androidExport.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ANDROID_EXPORT_RELEASED: false,
+}));
+
+describe("Android export switched off", () => {
+  it("reads the switch as off", () => {
     expect(ANDROID_EXPORT_RELEASED).toBe(false);
   });
 

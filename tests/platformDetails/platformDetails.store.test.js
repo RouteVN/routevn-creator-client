@@ -7,6 +7,8 @@ import {
   openPlatformEditDialog,
   selectCanAddPlatform,
   selectViewData,
+  setAndroidSigning,
+  setAndroidSigningBusy,
   setAppWindowMetrics,
   setPlatform,
   setPlatformApplicationInfo,
@@ -405,3 +407,80 @@ it.each(["web", "tauri", "android", "ios"])(
     expect(view.platformEditIconOutputSize).toBe(512);
   },
 );
+
+describe("platformDetails Android signing view", () => {
+  const openAndroid = () => {
+    const state = createInitialState();
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "android",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.example.project_one",
+          iconFileId: "icon-1",
+        },
+      },
+    );
+    return state;
+  };
+  const slotsOf = (view) =>
+    view.platformDetailFields
+      .filter((field) => field.type === "slot")
+      .map((field) => field.slot);
+
+  it("shows no signing fields on a host that cannot sign", () => {
+    const view = selectViewData({ state: openAndroid(), i18n: EN_I18N });
+    expect(view.showAndroidSigning).toBe(false);
+    expect(slotsOf(view)).not.toContain("android-signing-key");
+  });
+
+  it("shows the current key and the previous keys with their dates", () => {
+    const state = openAndroid();
+    setAndroidSigning(
+      { state },
+      {
+        supported: true,
+        currentKey: {
+          certificateSha256: "ab".repeat(32),
+          origin: "uploaded",
+          addedAt: Date.UTC(2026, 0, 2),
+        },
+        previousKeys: [
+          {
+            certificateSha256: "cd".repeat(32),
+            origin: "created",
+            addedAt: Date.UTC(2026, 0, 1),
+          },
+        ],
+      },
+    );
+    setAndroidSigningBusy({ state }, { busy: true });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(slotsOf(view).slice(-2)).toEqual([
+      "android-signing-key",
+      "android-previous-signing-keys",
+    ]);
+    expect(view.androidSigningKey.fingerprint).toBe(
+      `SHA-256 ${Array(32).fill("AB").join(":")}`,
+    );
+    expect(view.androidSigningKey.detail).toMatch(/^Uploaded · .*2026/);
+    expect(view.androidPreviousKeys).toEqual([
+      expect.objectContaining({
+        certificateSha256: "cd".repeat(32),
+        detail: expect.stringMatching(/^Made by Creator · .*2026/),
+      }),
+    ]);
+    expect(view.androidSigningBusy).toBe(true);
+  });
+
+  it("offers Create Key when the project has no key yet", () => {
+    const state = openAndroid();
+    setAndroidSigning({ state }, { supported: true, previousKeys: [] });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.androidSigningKey).toBeUndefined();
+    expect(view.showAndroidPreviousKeys).toBe(false);
+    expect(slotsOf(view)).toContain("android-signing-key");
+    expect(slotsOf(view)).not.toContain("android-previous-signing-keys");
+  });
+});

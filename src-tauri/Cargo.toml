@@ -38,6 +38,7 @@ time = { version = "0.3", features = ["formatting"] }
 url = "2"
 urlencoding = "2.1"
 routevn-android-export = { path = "../crates/routevn-android-export" }
+zeroize = "1.8"
 routevn-exporter = { path = "../crates/routevn-exporter" }
 routevn-packager = { path = "../crates/routevn-packager" }
 tempfile = "3"

@@ -194,9 +194,19 @@ Android Version and Build Number are per-export inputs and are not persisted.
 Version uses the shared three-component numeric native version rule. Build
 Number is an integer from 1 to 2100000000. Orientation comes from the selected
 release's screen resolution: portrait when height exceeds width, landscape
-otherwise. Export writes an unsigned APK that must be signed with APK
-Signature Scheme v2 or later before installation or distribution. The APK is
-already aligned; running zipalign after signing invalidates the signature.
+otherwise. Export writes a signed APK, or an unsigned APK that must be signed
+with APK Signature Scheme v2 or later before installation or distribution. The
+APK is already aligned; running zipalign after signing invalidates the
+signature.
+
+The project's separate `androidSigning` key holds the game's signing keys:
+the current key, which signs new APKs (and later App Bundles), and every key
+it replaced. It is not part of `platformDetails.android`, so editing Platform
+Details in a Creator version that does not know the field cannot drop it. The
+keys travel with the project database, so copying or backing up the project
+folder copies them. Changing the application identifier keeps the key; after
+a key exists, Platform Details warns that installed copies will not update to
+builds with a new identifier.
 
 All hosts use the shared Platform Details normalizer. Their app-store adapters
 preserve the platform record as JSON, and project-folder imports and exports
