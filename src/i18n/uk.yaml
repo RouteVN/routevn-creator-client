@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "Зберегти APK для Android"
   androidApkFileTypeName: "APK для Android"
   androidExportFailed: "Не вдалося експортувати APK для Android."
+  androidExportNotEnoughSpace: "Бракує вільного місця, щоб експортувати APK для Android. Звільніть місце й спробуйте ще раз."
   androidUnsignedApkNotice: "Перед установленням підпишіть цей APK самостійно за схемою APK Signature Scheme v2 або новішою. Не запускайте zipalign після підписання."
   androidExportBuildNumberDescription: "Має бути вищим за номер збірки випуску, уже встановленого у гравців. Введіть ціле число від 1 до 2100000000."
   androidExportBuildNumberInvalid: "Номер збірки має бути цілим числом від 1 до 2100000000 без початкових нулів."

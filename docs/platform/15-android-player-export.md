@@ -90,7 +90,8 @@ changing code.
 1. validate the request: application ID (Android package-name rules, reserved
    IDs rejected), application name, three-part numeric version, build number
    from 1 to 2100000000, and opaque `#RRGGBB` colors
-2. check the descriptor and template hash, and decode the icon
+2. check the descriptor and template hash, then check free space (see below),
+   and decode the icon
 3. stream the game package to a work folder, then encrypt it in 1 MiB
    XChaCha20-Poly1305 segments as a standalone chunked payload
 4. rewrite the binary manifest: replace the template application ID and the
@@ -114,6 +115,20 @@ changing code.
    no signing data or template ID remains, and that the package decrypts to
    the expected length
 9. rename the finished file onto the destination
+
+The free-space check runs before anything is written. It estimates the game
+package as the sum of the asset files plus the instructions, and the APK as
+that plus the template. The work folder holds the plain and the encrypted
+package at once, then the encrypted package while the APK is written. When
+the request sets `copyAfterExport`, as the Android and iOS hosts do, the APK
+also exists twice while the host copies it, on the assumption that the
+destination shares the output folder's volume. Phases on one volume add up,
+and 64 MiB is kept free on top. A volume with less free space stops the export
+with the error code `not-enough-space`; one whose free space cannot be
+measured is not checked. macOS and iOS count space the system can purge, as
+reported for important usage. The Versions page shows a localized message to
+free up space for this code, and for a write that fails on a full volume
+during the export.
 
 Memory stays bounded by the largest asset and the icon images, so mobile hosts
 use the same code. Progress phases are `prepareApk`, the package phases shared
@@ -234,18 +249,22 @@ template and the exporter accepts its descriptor.
 - Desktop: the Tauri commands `get_android_export_host_capabilities` and
   `export_android_apk` run the exporter on a blocking task and forward
   throttled progress through a Tauri channel. `export_android_apk` takes an
-  optional `signingKey`. The signing commands `create_android_signing_key`,
-  `read_android_keystore`, and `write_android_keystore` pass keys as
-  `{ certificateSha256, certificate, privateKey }` and reject with
-  `{ code, message }`.
+  optional `signingKey`. It and the signing commands
+  `create_android_signing_key`, `read_android_keystore`, and
+  `write_android_keystore` reject with the exporter's `{ code, message }`; the
+  signing commands pass keys as `{ certificateSha256, certificate, privateKey }`.
 - Android: the Creator bundles the template in its assets, copies it to
   no-backup storage once per template version, and runs the exporter through
   `NativeExporter.exportAndroidApk` on a dedicated thread. The APK is written
   to the cache folder and then copied to the Storage Access Framework
-  destination and size-checked.
+  destination and size-checked. A failed export carries the exporter's error
+  code to JavaScript, even when the save step wraps the failure.
 - iOS: the Creator links the `routevn-exporter-ffi` static library, bundles
   the template as an app resource, and copies the finished APK to the chosen
-  save destination.
+  save destination. Long bridge calls, including the export, request
+  background time, so leaving the app does not suspend the work at once. iOS
+  allows about 30 seconds; after that the app is suspended and the export
+  continues when the creator returns, unless iOS ends the app first.
 
 Mobile hosts implement the bridge methods `getAndroidExportAvailability` and
 `exportAndroidApkToUri` and report progress through

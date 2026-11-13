@@ -52,6 +52,7 @@ fn request(work: &Path, template: &Path, descriptor: &Path) -> AndroidExportRequ
         icon_background_color: "#12AB34".to_string(),
         splash_background_color: "#000000".to_string(),
         work_dir: Some(work.to_path_buf()),
+        copy_after_export: false,
     }
 }
 

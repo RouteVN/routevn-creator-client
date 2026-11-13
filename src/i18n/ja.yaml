@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "Android APKを保存"
   androidApkFileTypeName: "Android APK"
   androidExportFailed: "Android APKをエクスポートできませんでした。"
+  androidExportNotEnoughSpace: "空きストレージ容量が足りないため、Android APKをエクスポートできません。空き容量を増やしてから、もう一度お試しください。"
   androidUnsignedApkNotice: "インストールする前に、APK Signature Scheme v2以降を使ってこのAPKに自分で署名してください。署名後にzipalignを実行しないでください。"
   androidExportBuildNumberDescription: "プレイヤーがインストール済みのリリースのビルド番号より大きくする必要があります。1〜2100000000の整数を入力してください。"
   androidExportBuildNumberInvalid: "ビルド番号は先頭に0を付けず、1〜2100000000の整数にしてください。"

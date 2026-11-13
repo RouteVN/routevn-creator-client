@@ -1,5 +1,6 @@
 import { sanitizeArtifactFileName } from "./artifactFileName.js";
 import { requireProjectResolution } from "./projectResolution.js";
+import { isStorageFullError } from "./storageFullError.js";
 
 // Switches Android APK export off again if needed: when false, the Versions
 // page hides its export button and Platform Details hides the Android platform.
@@ -159,6 +160,12 @@ export const formatAndroidCertificateFingerprint = (certificateSha256) =>
 export const MIN_ANDROID_KEYSTORE_PASSWORD_LENGTH = 6;
 // The alias of the key in a copy saved with Save a Copy.
 export const ANDROID_KEY_COPY_ALIAS = "key0";
+
+// The export stopped for lack of space: either the exporter measured too
+// little free space before it started (`not-enough-space`, from every host),
+// or a write failed because the storage filled up during the export.
+export const isAndroidExportSpaceError = (error) =>
+  error?.code === "not-enough-space" || isStorageFullError(error);
 
 export const getAndroidExportOrientation = (resolution) => {
   const { width, height } = requireProjectResolution(resolution);

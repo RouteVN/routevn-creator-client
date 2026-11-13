@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createAndroidApkFileName,
   getAndroidExportOrientation,
+  isAndroidExportSpaceError,
   isValidAndroidBackgroundColor,
   normalizeAndroidBackgroundColor,
 } from "../../src/internal/androidExport.js";
@@ -115,4 +116,52 @@ describe("Android export inputs", () => {
       ).toBe(EN_I18N.platformDetailsPage[key]);
     },
   );
+});
+
+describe("Android export space failures", () => {
+  it.each([
+    [
+      "the exporter's free-space check",
+      {
+        code: "not-enough-space",
+        message: "Not enough free space to export: about 2.3 GB is needed.",
+      },
+    ],
+    [
+      "a desktop write on a full disk",
+      {
+        code: "write-failed",
+        message:
+          "Failed to write the APK: No space left on device (os error 28)",
+      },
+    ],
+    [
+      "an Android copy to a full location",
+      Object.assign(
+        new Error("write failed: ENOSPC (No space left on device)"),
+        {
+          code: "IllegalStateException",
+        },
+      ),
+    ],
+    [
+      "an iOS write refused for lack of space",
+      Object.assign(new Error("The file couldn’t be saved."), {
+        code: "storageFull",
+      }),
+    ],
+  ])("recognizes %s", (_label, error) => {
+    expect(isAndroidExportSpaceError(error)).toBe(true);
+  });
+
+  it("does not treat other failures as a lack of space", () => {
+    expect(
+      isAndroidExportSpaceError({
+        code: "template-missing",
+        message: "The Android player template is not installed.",
+      }),
+    ).toBe(false);
+    expect(isAndroidExportSpaceError(new Error("Failure One"))).toBe(false);
+    expect(isAndroidExportSpaceError(undefined)).toBe(false);
+  });
 });

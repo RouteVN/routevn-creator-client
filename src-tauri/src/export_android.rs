@@ -80,19 +80,20 @@ pub async fn write_android_keystore(
 }
 
 /// Exports an APK, signed with the project's `signing_key` when one is
-/// given, or unsigned.
+/// given, or unsigned. Rejects with the exporter's `{ code, message }`, so the
+/// frontend can tell a stable failure category, such as `not-enough-space`,
+/// from the details.
 #[tauri::command]
 pub async fn export_android_apk(
     request: AndroidExportRequest,
     signing_key: Option<SigningKeyMaterial>,
     on_progress: Channel<routevn_exporter::ZipExportProgress>,
-) -> Result<AndroidExportResult, String> {
+) -> Result<AndroidExportResult, ExportError> {
     tauri::async_runtime::spawn_blocking(move || {
         let signing_key = signing_key
             .as_ref()
             .map(SigningKey::from_material)
-            .transpose()
-            .map_err(|error| error.to_string())?;
+            .transpose()?;
         let export_started = Instant::now();
         let progress_state = Mutex::new((String::new(), Instant::now()));
         let progress_callback = |mut progress: routevn_exporter::ZipExportProgress| {
@@ -119,8 +120,7 @@ pub async fn export_android_apk(
             signing_key.as_ref(),
             Some(&progress_callback),
         )
-        .map_err(|error| error.to_string())
     })
     .await
-    .map_err(|error| format!("Failed to run Android export task: {error}"))?
+    .map_err(|error| ExportError::write(format!("Failed to run Android export task: {error}")))?
 }

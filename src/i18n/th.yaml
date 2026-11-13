@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "บันทึก APK สำหรับ Android"
   androidApkFileTypeName: "APK สำหรับ Android"
   androidExportFailed: "ส่งออก APK สำหรับ Android ไม่สำเร็จ"
+  androidExportNotEnoughSpace: "พื้นที่จัดเก็บว่างไม่เพียงพอสำหรับการส่งออก APK สำหรับ Android โปรดเพิ่มพื้นที่ว่างแล้วลองอีกครั้ง"
   androidUnsignedApkNotice: "ลงนาม APK นี้ด้วยตัวเองก่อนติดตั้ง โดยใช้ APK Signature Scheme v2 หรือใหม่กว่า ห้ามเรียกใช้ zipalign หลังลงนาม"
   androidExportBuildNumberDescription: "ต้องสูงกว่าหมายเลขบิลด์ของรุ่นที่ผู้เล่นติดตั้งอยู่แล้ว ป้อนจำนวนเต็มตั้งแต่ 1 ถึง 2100000000"
   androidExportBuildNumberInvalid: "หมายเลขบิลด์ต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง 2100000000 โดยไม่มีศูนย์นำหน้า"

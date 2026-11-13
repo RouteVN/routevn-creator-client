@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "儲存 Android APK"
   androidApkFileTypeName: "Android APK"
   androidExportFailed: "無法匯出 Android APK。"
+  androidExportNotEnoughSpace: "儲存空間不足，無法匯出 Android APK。請釋放一些空間，然後再試一次。"
   androidUnsignedApkNotice: "安裝前，請自行使用 APK Signature Scheme v2 或更新版本簽署此 APK。簽署後請勿執行 zipalign。"
   androidExportBuildNumberDescription: "必須大於玩家已安裝版本的建置編號。請輸入 1 到 2100000000 之間的整數。"
   androidExportBuildNumberInvalid: "建置編號必須是 1 到 2100000000 之間的整數，且不能以 0 開頭。"

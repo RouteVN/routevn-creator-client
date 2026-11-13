@@ -95,6 +95,9 @@ enum AndroidApkExport {
         nativeRequest["descriptorPath"] = templates.descriptor.path
         nativeRequest["outputPath"] = output.path
         nativeRequest["workDir"] = work.path
+        // The APK is copied to the chosen location after the export, so the
+        // exporter's free-space check leaves room for that copy.
+        nativeRequest["copyAfterExport"] = true
         let data = try JSONSerialization.data(withJSONObject: nativeRequest)
         let json = String(decoding: data, as: UTF8.self)
         let response = withExtendedLifetime(progress) {

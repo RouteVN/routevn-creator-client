@@ -555,6 +555,7 @@ versionsPage:
   saveAndroidApkDialogTitle: "Lưu APK Android"
   androidApkFileTypeName: "APK Android"
   androidExportFailed: "Không thể xuất APK Android."
+  androidExportNotEnoughSpace: "Không đủ dung lượng trống để xuất APK Android. Hãy giải phóng dung lượng rồi thử lại."
   androidUnsignedApkNotice: "Hãy tự ký APK này trước khi cài đặt, bằng APK Signature Scheme v2 trở lên. Không chạy zipalign sau khi ký."
   androidExportBuildNumberDescription: "Phải lớn hơn số bản dựng của bản phát hành người chơi đã cài đặt. Nhập số nguyên từ 1 đến 2100000000."
   androidExportBuildNumberInvalid: "Số bản dựng phải là số nguyên từ 1 đến 2100000000, không có số 0 ở đầu."

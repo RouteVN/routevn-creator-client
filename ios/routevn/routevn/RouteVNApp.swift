@@ -657,7 +657,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         payload: [String: Any],
         requestId: String?
     ) {
+        let backgroundTime = BridgeBackgroundTime(name: "RouteVN \(method)")
         backgroundBridgeQueue.async { [weak self] in
+            defer { DispatchQueue.main.async { backgroundTime.end() } }
             guard let self else {
                 return
             }
@@ -2850,6 +2852,31 @@ private struct RouteVNCRC32 {
 
     func finalize() -> UInt32 {
         value ^ 0xffffffff
+    }
+}
+
+/// Background time for one long bridge call, such as an export or an import,
+/// so that leaving the app does not suspend the work at once. iOS allows
+/// about 30 seconds. Past that the app is suspended, and the work continues
+/// when the creator returns unless iOS ends the app in the meantime.
+///
+/// Create it, and call `end()`, on the main thread. iOS also calls the
+/// expiration handler there, so the identifier needs no lock.
+final class BridgeBackgroundTime {
+    private var identifier = UIBackgroundTaskIdentifier.invalid
+
+    init(name: String) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            self?.end()
+        }
+    }
+
+    func end() {
+        guard identifier != .invalid else {
+            return
+        }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
     }
 }
 
