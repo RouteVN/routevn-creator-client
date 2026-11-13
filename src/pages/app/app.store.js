@@ -1,5 +1,9 @@
 import { formatPercent } from "../../internal/dates.js";
 import { isTouchLandscape } from "../../internal/touchLayout.js";
+import {
+  findPageTutorialVideo,
+  findTutorialVideo,
+} from "../../internal/tutorialVideos.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 
 export const createInitialState = () => ({
@@ -11,6 +15,8 @@ export const createInitialState = () => ({
   isTouchMode: false,
   appWindowMetrics: { width: 0, height: 0 },
   showHelpButton: true,
+  isChatSupportDialogOpen: false,
+  helpVideoId: undefined,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
   pressedMobileTabId: undefined,
@@ -212,6 +218,28 @@ export const setHelpButtonVisible = ({ state }, { visible }) => {
   state.showHelpButton = visible;
 };
 
+// The tutorial video the help menu offers on the current page, if any.
+export const selectCurrentPageTutorialVideo = ({ state }) =>
+  findPageTutorialVideo(selectCurrentRoutePattern({ state }), {
+    isTouchMode: state.isTouchMode,
+  });
+
+export const openChatSupportDialog = ({ state }) => {
+  state.isChatSupportDialogOpen = true;
+};
+
+export const closeChatSupportDialog = ({ state }) => {
+  state.isChatSupportDialogOpen = false;
+};
+
+export const openHelpVideo = ({ state }, { youtubeId } = {}) => {
+  state.helpVideoId = youtubeId;
+};
+
+export const closeHelpVideo = ({ state }) => {
+  state.helpVideoId = undefined;
+};
+
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
@@ -231,6 +259,9 @@ export const setAppWindowMetrics = ({ state }, { width, height }) => {
 export const setCurrentRoute = ({ state }, { route, payload } = {}) => {
   if (route !== state.currentRoute) {
     state.isSceneEditorKeyboardVisible = false;
+    // Help opened on the previous page doesn't stay over the next one.
+    state.helpVideoId = undefined;
+    state.isChatSupportDialogOpen = false;
   }
   state.currentRoute = route;
   state.currentRoutePayload = { ...payload };
@@ -372,6 +403,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
       Boolean(currentRoutePattern) &&
       currentRoutePattern !== "/project-folder-setup",
     currentRoutePattern,
+    helpVideo: findTutorialVideo(state.helpVideoId),
     showSidebar,
     showMobileTabBar,
     mountMobileTabBar,

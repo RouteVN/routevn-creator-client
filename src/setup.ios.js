@@ -29,6 +29,7 @@ import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphi
 import { createBundleInstructions } from "./deps/services/shared/projectExportService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
+import { canEmbedYouTubeFrom } from "./internal/youtube.js";
 import { withErrorDetails } from "./internal/errorDetails.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import { installNativeBackOverlays } from "./primitives/nativeBackOverlays.js";
@@ -173,6 +174,7 @@ const appService = createAppService({
   distribution: updateContext?.distribution,
   updatesEnabled: true,
   updater,
+  youtubeEmbedsSupported: canEmbedYouTubeFrom(window.location),
   audioService,
   projectService,
   subject,

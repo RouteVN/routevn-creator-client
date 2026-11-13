@@ -2,6 +2,7 @@ import { createProjectAssetService } from "./projectAssetService.js";
 import { createAssetPackageExportService } from "./assetPackageExportService.js";
 import { createEditorThumbnailService } from "./editorThumbnailService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
+import { createAndroidSigningService } from "./androidSigningService.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
 import { createResourcePackageImportService } from "./resourcePackageImportService.js";
@@ -126,6 +127,39 @@ export const createProjectServiceCore = ({
 
   const getCurrentProjectId = () =>
     repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
+
+  const androidSigningService = createAndroidSigningService({
+    fileAdapter,
+    filePicker,
+    getProjectId: getCurrentProjectId,
+    getAndroidSigningByProjectId:
+      repositoryService.getAndroidSigningByProjectId,
+    setAndroidSigningByProjectId:
+      repositoryService.setAndroidSigningByProjectId,
+  });
+
+  // A signed export names its key by fingerprint; the key comes from the
+  // project.
+  const createAndroidApkToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    const signingKey = metadata.signingCertificateSha256
+      ? await androidSigningService.getAndroidSigningKeyMaterial(
+          metadata.signingCertificateSha256,
+        )
+      : undefined;
+    return exportService.createAndroidApkToPath(
+      projectData,
+      fileEntries,
+      outputPath,
+      { ...metadata, signingKey },
+      options,
+    );
+  };
 
   const contentPatchesByProject = new Map();
   // The repositories whose content patches completed. The route opens a project
@@ -831,7 +865,16 @@ export const createProjectServiceCore = ({
     createWindowsInstallerToPath: exportService.createWindowsInstallerToPath,
     getAndroidExportAvailability: exportService.getAndroidExportAvailability,
     promptAndroidApkPath: exportService.promptAndroidApkPath,
-    createAndroidApkToPath: exportService.createAndroidApkToPath,
+    createAndroidApkToPath,
+    supportsAndroidSigning: androidSigningService.supportsAndroidSigning,
+    getAndroidSigningSummary: androidSigningService.getAndroidSigningSummary,
+    ensureAndroidSigningKey: androidSigningService.ensureAndroidSigningKey,
+    createAndroidSigningKey: androidSigningService.createAndroidSigningKey,
+    promptAndroidKeystorePath: androidSigningService.promptAndroidKeystorePath,
+    importAndroidSigningKey: androidSigningService.importAndroidSigningKey,
+    useAndroidSigningKeyAgain: androidSigningService.useAndroidSigningKeyAgain,
+    promptAndroidKeyCopyPath: androidSigningService.promptAndroidKeyCopyPath,
+    saveAndroidSigningKeyCopy: androidSigningService.saveAndroidSigningKeyCopy,
     promptMacosApplicationPath: exportService.promptMacosApplicationPath,
     getMacosExportAvailability: exportService.getMacosExportAvailability,
     createMacosApplicationToPath: exportService.createMacosApplicationToPath,

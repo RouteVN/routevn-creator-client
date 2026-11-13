@@ -1,3 +1,4 @@
+import { formatList } from "../../internal/dates.js";
 import {
   ASSET_PACKAGE_RESOURCE_CONFIGS,
   ASSET_PACKAGE_SCHEMA_VERSION,
@@ -519,15 +520,19 @@ const INVALID_SELECTION_COPY_KEYS = Object.freeze({
 });
 
 // "Used by A, B, C, 2 more".
-const formatUsedBy = ({ copy, nameById, ids }) => {
+const formatUsedBy = ({ copy, dateTime, nameById, ids }) => {
   const users = ids.map((id) => nameById.get(id) ?? id);
-  let names = users.slice(0, MAX_LISTED_USERS).join(", ");
+  const listed = users.slice(0, MAX_LISTED_USERS);
   if (users.length > MAX_LISTED_USERS) {
-    names = `${names}, ${formatI18nCopy(copy.usedByMore, {
-      count: users.length - MAX_LISTED_USERS,
-    })}`;
+    listed.push(
+      formatI18nCopy(copy.usedByMore, {
+        count: users.length - MAX_LISTED_USERS,
+      }),
+    );
   }
-  return formatI18nCopy(copy.usedByLabel, { names });
+  return formatI18nCopy(copy.usedByLabel, {
+    names: formatList(listed, dateTime),
+  });
 };
 
 const LINK_ICONS = Object.freeze({
@@ -575,7 +580,12 @@ const describeInvalidSelection = ({
 // "Comes with": what the picks use that is not a pick, by type, and the
 // links: the places in the story they jump to and the layouts they open. A selection that cannot be exported
 // lists nothing and says so.
-const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
+const buildComesWithViewData = ({
+  state,
+  copy,
+  dateTime,
+  resourceTypesCopy,
+}) => {
   let dependencies;
   let links;
   let isInvalid = false;
@@ -622,7 +632,12 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
     group.items.push({
       id: dependency.itemId,
       name: dependency.name,
-      usedBy: formatUsedBy({ copy, nameById, ids: dependency.usedBy }),
+      usedBy: formatUsedBy({
+        copy,
+        dateTime,
+        nameById,
+        ids: dependency.usedBy,
+      }),
       preview: previewOf(state, dependency.resourceType, dependency.itemId, {
         showName: true,
       }),
@@ -643,7 +658,7 @@ const buildComesWithViewData = ({ state, copy, resourceTypesCopy }) => {
         id: link.id,
         icon: LINK_ICONS[link.kind],
         label: formatLinkLabel({ copy, link }),
-        usedBy: formatUsedBy({ copy, nameById, ids: link.usedBy }),
+        usedBy: formatUsedBy({ copy, dateTime, nameById, ids: link.usedBy }),
       })),
     },
   };
@@ -810,7 +825,12 @@ export const selectViewData = ({ state, i18n }) => {
         resourceType: state.pickerResourceType,
       })
     : { folders: [] };
-  const comesWith = buildComesWithViewData({ state, copy, resourceTypesCopy });
+  const comesWith = buildComesWithViewData({
+    state,
+    copy,
+    dateTime: i18n.dateTime,
+    resourceTypesCopy,
+  });
   const pickedCount = pickedSections.reduce(
     (count, section) =>
       count +

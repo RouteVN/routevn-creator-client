@@ -137,6 +137,11 @@ export const createProjectRepositoryService = ({
   const CREATOR_VERSION_KEY = "creatorVersion";
   const PROJECT_INFO_KEY = "projectInfo";
   const ASSET_PACKAGE_KEY = "assetPackage";
+  // The project's signing keys. A separate key, not a field of
+  // platformDetails.android: released Creator versions drop Platform Details
+  // fields they do not know when they save. The project app store stays in
+  // the project database; it is not part of the shared project state.
+  const ANDROID_SIGNING_KEY = "androidSigning";
   const PLATFORM_DETAILS_KEYS = {
     web: "platformDetails.web",
     windows: "platformDetails.windows",
@@ -1108,6 +1113,20 @@ export const createProjectRepositoryService = ({
     return updateAssetPackageByProjectId(projectId, assetPackage);
   };
 
+  // The stored `androidSigning` record as written, including entries this
+  // version cannot read; callers decide which keys are usable.
+  const getAndroidSigningByProjectId = async (projectId) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    return await store.app.get(ANDROID_SIGNING_KEY);
+  };
+
+  const setAndroidSigningByProjectId = async (projectId, signing) => {
+    const store = await getStoreByProject(projectId);
+    await ensureStoreOpenCompatible(store);
+    await store.app.set(ANDROID_SIGNING_KEY, signing);
+  };
+
   const getPlatformDetailsByProjectId = async (projectId, platform) => {
     const store = await getStoreByProject(projectId);
     await ensureCompatibleCreatorVersion(store);
@@ -1749,6 +1768,8 @@ export const createProjectRepositoryService = ({
     updateCurrentAssetPackage,
     getAssetPackageByProjectId,
     updateAssetPackageByProjectId,
+    getAndroidSigningByProjectId,
+    setAndroidSigningByProjectId,
     getCurrentPlatformDetails,
     getCurrentPlatformDetailsDefaults,
     createCurrentPlatformDetails,

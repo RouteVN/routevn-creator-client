@@ -139,8 +139,37 @@ const createMacosExportForm = (copy = {}) => ({
   },
 });
 
-const createAndroidExportForm = (copy) => ({
-  fields: [
+const SIGNED = "values.signing == 'signed'";
+
+// Signed or Unsigned, for a host that can sign. The key is the project's; a
+// game without one gets a new key at its first signed export.
+const createAndroidSigningFields = (copy, signing) => [
+  {
+    name: "signing",
+    type: "segmented-control",
+    label: copy.androidSigningLabel,
+    clearable: false,
+    options: [
+      { value: "signed", label: copy.androidSignedOption },
+      { value: "unsigned", label: copy.androidUnsignedOption },
+    ],
+  },
+  {
+    $when: "values.signing == 'unsigned'",
+    type: "read-only-text",
+    content: copy.androidUnsignedApkNotice,
+  },
+  {
+    $when: SIGNED,
+    type: "read-only-text",
+    content: signing.currentKey
+      ? copy.androidSignedWithKeyNotice
+      : copy.androidNewKeyNotice,
+  },
+];
+
+const createAndroidExportForm = (copy, signing) => {
+  const fields = [
     {
       type: "row",
       fields: [
@@ -160,19 +189,25 @@ const createAndroidExportForm = (copy) => ({
         },
       ],
     },
-  ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        validate: true,
-        label: copy.exportAndroidApkButton,
-      },
-    ],
-  },
-});
+  ];
+  if (signing.supported) {
+    fields.push(...createAndroidSigningFields(copy, signing));
+  }
+  return {
+    fields,
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: copy.exportAndroidApkButton,
+        },
+      ],
+    },
+  };
+};
 
 const buildExportConfirmationFields = (
   confirmation,
@@ -248,6 +283,12 @@ export const createInitialState = () => ({
     installerToolAvailable: false,
   },
   androidExportAvailability: { available: false },
+  // The open Android export's signing state: whether this host signs, and
+  // the fingerprint of the project's current key, if it has one.
+  androidSigning: {
+    supported: false,
+    currentKey: undefined,
+  },
   macosExportAvailability: {
     application: false,
     templateAvailable: false,
@@ -341,6 +382,19 @@ export const setAndroidExportAvailability = (
 ) => {
   state.androidExportAvailability.available = !!availability?.available;
 };
+
+export const setAndroidSigningStatus = (
+  { state },
+  { supported, currentKey } = {},
+) => {
+  state.androidSigning.supported = !!supported;
+  state.androidSigning.currentKey = currentKey;
+};
+
+export const selectAndroidSigningStatus = ({ state }) => ({
+  supported: state.androidSigning.supported,
+  currentKey: state.androidSigning.currentKey,
+});
 
 export const setMacosExportAvailability = (
   { state },
@@ -543,8 +597,11 @@ export const selectViewData = ({ state, i18n }) => {
     ),
     showAndroidExportForm:
       state.exportConfirmation.exportType === "android-apk",
-    androidExportForm: createAndroidExportForm(copy),
+    androidExportForm: createAndroidExportForm(copy, state.androidSigning),
+    // A host that signs shows this notice in the form, for Unsigned only.
+    showAndroidUnsignedNotice: !state.androidSigning.supported,
     androidUnsignedApkNotice: copy.androidUnsignedApkNotice,
+
     exportAndroidApkButton: copy.exportAndroidApkButton,
     canExportAndroidApk:
       ANDROID_EXPORT_RELEASED &&

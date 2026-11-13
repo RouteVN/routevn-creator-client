@@ -69,6 +69,15 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Korean puts spaces between words, so lines break at spaces instead of
+   between any two syllables. A word too long for its line still wraps. Both
+   properties inherit, so they also reach text inside component shadow
+   roots. */
+:root:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 :root {
   --spacing-xs: 2px;
   --spacing-sm: 4px;

@@ -126,6 +126,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             export_android::export_android_apk,
             export_android::get_android_export_host_capabilities,
+            export_android::create_android_signing_key,
+            export_android::read_android_keystore,
+            export_android::write_android_keystore,
             export_macos::export_macos_application,
             export_macos::get_macos_export_host_capabilities,
             export_zip::create_distribution_zip_streamed,

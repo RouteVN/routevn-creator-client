@@ -49,17 +49,17 @@ impl IconImages {
     pub fn render(&self, kind: ImageKind, size: u32) -> Result<Vec<u8>> {
         let (source, fraction) = match kind {
             ImageKind::Legacy => (&self.app, 1.0),
-            ImageKind::AdaptiveForeground => match &self.adaptive {
-                Some(image) => (image, 72.0 / 108.0),
-                None => (&self.app, 66.0 / std::f64::consts::SQRT_2 / 108.0),
-            },
+            // Without an adaptive icon, the app icon fills the visible square
+            // too, and the launcher's mask trims its corners.
+            ImageKind::AdaptiveForeground => {
+                (self.adaptive.as_ref().unwrap_or(&self.app), 72.0 / 108.0)
+            }
             ImageKind::Splash => match &self.splash {
                 Some(image) => (image, 192.0 / 288.0),
                 None => (&self.app, 192.0 / std::f64::consts::SQRT_2 / 288.0),
             },
         };
-        let round_down = kind == ImageKind::AdaptiveForeground && self.adaptive.is_none();
-        render(source, fraction, size, round_down)
+        render(source, fraction, size)
     }
 }
 
@@ -78,19 +78,8 @@ pub fn load_icon(path: &Path, label: &str) -> Result<RgbaImage> {
 
 /// Renders `icon` scaled to fit the specified fraction of the canvas,
 /// centered on a transparent square canvas of `size` pixels.
-pub fn render(
-    icon: &RgbaImage,
-    content_fraction: f64,
-    size: u32,
-    round_down: bool,
-) -> Result<Vec<u8>> {
-    let exact_content = f64::from(size) * content_fraction;
-    let content = if round_down {
-        exact_content.floor()
-    } else {
-        exact_content.round()
-    };
-    let content = (content as u32).clamp(1, size);
+pub fn render(icon: &RgbaImage, content_fraction: f64, size: u32) -> Result<Vec<u8>> {
+    let content = ((f64::from(size) * content_fraction).round() as u32).clamp(1, size);
     let scale = f64::from(content) / f64::from(icon.width().max(icon.height()));
     let width = ((f64::from(icon.width()) * scale).round() as u32).clamp(1, content);
     let height = ((f64::from(icon.height()) * scale).round() as u32).clamp(1, content);
@@ -168,26 +157,11 @@ mod tests {
     fn renders_icons_inside_their_safe_areas() {
         let icon = RgbaImage::from_pixel(64, 64, Rgba([200, 40, 40, 255]));
 
-        let legacy = decode(&render(&icon, 1.0, 48, false).unwrap());
+        let legacy = decode(&render(&icon, 1.0, 48).unwrap());
         assert_eq!(legacy.dimensions(), (48, 48));
         assert_eq!(legacy.get_pixel(0, 0)[3], 255);
 
-        let foreground =
-            decode(&render(&icon, 66.0 / std::f64::consts::SQRT_2 / 108.0, 108, true).unwrap());
-        assert_eq!(foreground.get_pixel(29, 54)[3], 0);
-        assert_eq!(foreground.get_pixel(31, 54)[3], 255);
-        assert_eq!(foreground.get_pixel(54, 54)[3], 255);
-
-        for (x, y, pixel) in foreground.enumerate_pixels() {
-            if pixel[3] > 0 {
-                let dx = f64::from(x) + 0.5 - 54.0;
-                let dy = f64::from(y) + 0.5 - 54.0;
-                assert!(dx * dx + dy * dy <= 33.0 * 33.0);
-            }
-        }
-
-        let splash =
-            decode(&render(&icon, 192.0 / std::f64::consts::SQRT_2 / 288.0, 288, false).unwrap());
+        let splash = decode(&render(&icon, 192.0 / std::f64::consts::SQRT_2 / 288.0, 288).unwrap());
         let inside_circle = |x: u32, y: u32| {
             let dx = f64::from(x) + 0.5 - 144.0;
             let dy = f64::from(y) + 0.5 - 144.0;
@@ -202,6 +176,21 @@ mod tests {
             }
         }
         assert_eq!(splash.get_pixel(144, 144)[3], 255);
+    }
+
+    #[test]
+    fn app_icon_fills_the_visible_square_without_an_adaptive_icon() {
+        let icon = RgbaImage::from_pixel(64, 64, Rgba([200, 40, 40, 255]));
+        let images = IconImages {
+            app: icon,
+            adaptive: None,
+            splash: None,
+        };
+        let image = decode(&images.render(ImageKind::AdaptiveForeground, 108).unwrap());
+        assert_eq!(image.get_pixel(18, 18)[3], 255);
+        assert_eq!(image.get_pixel(89, 89)[3], 255);
+        assert_eq!(image.get_pixel(17, 18)[3], 0);
+        assert_eq!(image.get_pixel(90, 89)[3], 0);
     }
 
     #[test]
@@ -241,7 +230,7 @@ mod tests {
     #[test]
     fn fits_non_square_icons() {
         let wide = RgbaImage::from_pixel(100, 50, Rgba([0, 0, 255, 255]));
-        let rendered = decode(&render(&wide, 1.0, 48, false).unwrap());
+        let rendered = decode(&render(&wide, 1.0, 48).unwrap());
         assert_eq!(rendered.get_pixel(24, 2)[3], 0);
         assert_eq!(rendered.get_pixel(24, 24)[3], 255);
     }

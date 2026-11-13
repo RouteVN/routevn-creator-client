@@ -439,10 +439,15 @@ describe("asset package export service", () => {
         }),
       })),
     );
-    const renderParticlePreview = vi.fn(async () => ({
-      previewBlob: new Blob(["particle-video"], { type: "video/mp4" }),
-      thumbnailBlob: new Blob(["particle-thumbnail"], { type: "video/mp4" }),
-    }));
+    const renderParticlePreviews = vi.fn(async ({ particles }) =>
+      particles.map(({ particleId }) => ({
+        particleId,
+        previewBlob: new Blob(["particle-video"], { type: "video/mp4" }),
+        thumbnailBlob: new Blob(["particle-thumbnail"], {
+          type: "video/mp4",
+        }),
+      })),
+    );
     const service = createAssetPackageExportService({
       getFileContent: vi.fn(async (fileId) => ({
         url: `project-file://${fileId}`,
@@ -457,7 +462,7 @@ describe("asset package export service", () => {
       renderFontPreview,
       renderTextStylePreview,
       renderAnimationPreviews,
-      renderParticlePreview,
+      renderParticlePreviews,
     });
 
     const bundle = await service.createAssetPackageBundle({ manifest });
@@ -589,7 +594,7 @@ describe("asset package export service", () => {
     expect(
       exported.repository.files.items["file-animation-target"],
     ).toBeUndefined();
-    expect(renderParticlePreview).toHaveBeenCalledOnce();
+    expect(renderParticlePreviews).toHaveBeenCalledOnce();
   });
 
   describe("layout previews", () => {

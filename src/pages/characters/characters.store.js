@@ -978,6 +978,7 @@ export const selectViewData = ({ state, i18n }) => {
   const selectedItemSpriteGroups = buildSpriteGroupViewData({
     spriteGroups: selectedItem?.spriteGroups,
     tagsById: selectedItemSpriteTagsCollection.items ?? {},
+    dateTime: i18n.dateTime,
     displayTopFirst: true,
   });
   const nameVariableOptions = createCharacterNameVariableOptions(
@@ -1191,6 +1192,7 @@ export const selectViewData = ({ state, i18n }) => {
       spriteGroups: state.dialogSpriteGroups,
       tagsById: {},
       copy,
+      dateTime: i18n.dateTime,
     }),
     dialogForm,
     spriteGroupDropdownMenu: state.spriteGroupDropdownMenu,
@@ -1216,6 +1218,7 @@ export const selectViewData = ({ state, i18n }) => {
       spriteGroups: state.editSpriteGroups,
       tagsById: editSpriteTagsCollection.items ?? {},
       copy,
+      dateTime: i18n.dateTime,
     }),
   };
 };

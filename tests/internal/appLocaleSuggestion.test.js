@@ -16,6 +16,13 @@ describe("resolveAppLocaleSuggestion", () => {
     [["zh-Hans-HK"], "zh-hans"],
     [["zh-SG"], "zh-hans"],
     [["zh"], "zh-hans"],
+    [["zh-TW"], "zh-hant"],
+    [["zh-HK"], "zh-hant"],
+    [["zh-MO"], "zh-hant"],
+    [["zh-Hant-HK"], "zh-hant"],
+    [["zh_Hant_TW"], "zh-hant"],
+    [["ko-KR"], "ko"],
+    [["ko"], "ko"],
     [["pt-BR"], "pt"],
     [["fr-CA", "en-US"], "fr"],
     [["in-ID"], "id"],
@@ -26,8 +33,7 @@ describe("resolveAppLocaleSuggestion", () => {
 
   it.each([
     ["English first", ["en-US", "ja-JP"]],
-    ["Traditional Chinese", ["zh-TW"]],
-    ["Traditional Chinese by script", ["zh-Hant-HK"]],
+    ["Chinese for a region with no clear script", ["zh-US"]],
     ["a language the app does not have", ["de-DE"]],
     ["no device languages", []],
   ])("suggests nothing for %s", (_case, deviceLanguages) => {

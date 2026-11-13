@@ -26,6 +26,7 @@ import Subject from "./deps/subject.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
+import { canEmbedYouTubeFrom } from "./internal/youtube.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import { installNativeBackOverlays } from "./primitives/nativeBackOverlays.js";
 import { setAndroidDebugBuild } from "./internal/navigationTiming.js";
@@ -157,6 +158,7 @@ const appService = createAppService({
   distribution: updateContext?.distribution,
   updatesEnabled: Boolean(updater),
   updater,
+  youtubeEmbedsSupported: canEmbedYouTubeFrom(window.location),
   audioService,
   projectService,
   subject,

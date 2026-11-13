@@ -1670,7 +1670,11 @@ export const exportAssetPackageFiles = async ({
         animationId,
         ...videoPreviews(),
       })),
-    renderParticlePreview: async () => videoPreviews(),
+    renderParticlePreviews: async ({ particles }) =>
+      particles.map(({ particleId }) => ({
+        particleId,
+        ...videoPreviews(),
+      })),
   });
   const bundle = await exportService.createAssetPackageBundle({ manifest });
   const zip = await JSZip.loadAsync(await bundle.arrayBuffer());

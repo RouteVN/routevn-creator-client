@@ -87,6 +87,18 @@ For Simplified Chinese localization, follow the RouteVN Simplified Chinese
 translation style guide. Use it as the terminology and tone reference for
 RouteVN `zh-hans` UI and docs copy.
 
+For Traditional Chinese localization, follow the RouteVN Traditional Chinese
+translation style guide. The `zh-hant` catalog uses Taiwan usage for Taiwan,
+Hong Kong, and Macau. Translate it from English, not by converting the
+`zh-hans` catalog, because many software words differ between the two.
+
+For Korean localization, follow the RouteVN Korean translation style guide.
+The `ko` catalog writes messages in polite 해요체. Some particles, such as
+`을` and `를`, change with the last sound of the word before them, so a
+placeholder whose text is unknown is followed by a noun or a particle that
+does not change; the guide lists the forms. Lines in Korean break at spaces
+(`word-break: keep-all` for `:lang(ko)` in `static/public/theme.css`).
+
 For Russian localization, follow the RouteVN Russian translation style guide.
 Use it as the terminology and tone reference for RouteVN `ru` UI copy.
 
@@ -198,6 +210,12 @@ French can put non-breaking spaces around `×`.
 Do not join a label and a value with `: ` in code either. French puts a
 non-breaking space before the colon, so use a catalog template such as
 `labelValue: "{label}: {value}"` in `resourcePages` or `resourceImport`.
+
+Do not join list items with `", "` in code either. `formatList` in
+`src/internal/dates.js` joins them with `dateTime.listSeparator`: `, ` in most
+catalogs, and the enumeration comma `、` in `ja`, `zh-hans`, and `zh-hant`.
+App lists have no "and" before the last item, so a list can end with a count
+from the catalog, such as `usedByMore`.
 
 ## Code Style
 

@@ -19,6 +19,7 @@ export const createAppServiceCore = ({
   distribution,
   updatesEnabled,
   updater,
+  youtubeEmbedsSupported,
   audioService,
   projectService,
   subject,
@@ -56,6 +57,7 @@ export const createAppServiceCore = ({
     distribution,
     updatesEnabled,
     updater,
+    youtubeEmbedsSupported,
     audioService,
     triggerTestCrash,
   });

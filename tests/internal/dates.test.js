@@ -6,6 +6,7 @@ import {
   formatDimensions,
   formatDurationLabel,
   formatElapsedSeconds,
+  formatList,
   formatMilliseconds,
   formatNumber,
   formatNumberWithUnit,
@@ -16,9 +17,12 @@ import {
   FR_I18N,
   ID_I18N,
   IT_I18N,
+  KO_I18N,
   PL_I18N,
   PT_I18N,
   RU_I18N,
+  ZH_HANS_I18N,
+  ZH_HANT_I18N,
 } from "../support/i18n.js";
 
 const minutesAgo = (minutes) =>
@@ -97,6 +101,20 @@ describe("formatDate", () => {
       /^15\.01\.2026, \d{2}:\d{2}$/,
     );
   });
+
+  it("writes the hour the way the catalog asks", () => {
+    const value = "2026-01-15T10:30:00.000Z";
+
+    expect(formatDate(value, EN_I18N.dateTime)).toMatch(/\b\d{2}:\d{2} [AP]M$/);
+    // Traditional Chinese clocks do not pad the hour, as in "下午2:05".
+    expect(formatDate(value, ZH_HANT_I18N.dateTime)).toMatch(
+      /^2026年1月15日 (上午|下午)[1-9]\d?:\d{2}$/,
+    );
+    // Korean clocks do not pad the hour either, as in "오후 2:05".
+    expect(formatDate(value, KO_I18N.dateTime)).toMatch(
+      /^2026년 1월 15일 (오전|오후) [1-9]\d?:\d{2}$/,
+    );
+  });
 });
 
 describe("formatDateTimeWithSeconds", () => {
@@ -106,6 +124,21 @@ describe("formatDateTimeWithSeconds", () => {
     expect(formatDateTimeWithSeconds(value, EN_I18N.dateTime)).toMatch(/Oct/);
     expect(formatDateTimeWithSeconds(value, PL_I18N.dateTime)).toMatch(
       /^\d{2}\.10\.2026, \d{2}:05:07$/,
+    );
+  });
+
+  it("pads the day only when the month is a number", () => {
+    // Local time, so the day is the 5th in any time zone.
+    const value = new Date(2026, 9, 5, 9, 5, 7).toISOString();
+
+    expect(formatDateTimeWithSeconds(value, EN_I18N.dateTime)).toBe(
+      "Oct 5, 2026, 09:05:07",
+    );
+    expect(formatDateTimeWithSeconds(value, KO_I18N.dateTime)).toBe(
+      "2026년 10월 5일 09:05:07",
+    );
+    expect(formatDateTimeWithSeconds(value, PL_I18N.dateTime)).toBe(
+      "05.10.2026, 09:05:07",
     );
   });
 });
@@ -186,5 +219,22 @@ describe("number formatting", () => {
     expect(formatDimensions(1920, 1080, FR_I18N.dateTime)).toBe(
       "1920\u00a0×\u00a01080",
     );
+  });
+});
+
+describe("formatList", () => {
+  it("joins items with the catalog's separator and no final and", () => {
+    const items = ["Alpha", "Beta", "3 more"];
+
+    expect(formatList(items)).toBe("Alpha, Beta, 3 more");
+    expect(formatList(items, EN_I18N.dateTime)).toBe("Alpha, Beta, 3 more");
+    expect(formatList(items, KO_I18N.dateTime)).toBe("Alpha, Beta, 3 more");
+    expect(formatList(items, ZH_HANS_I18N.dateTime)).toBe(
+      "Alpha、Beta、3 more",
+    );
+    expect(formatList(items, ZH_HANT_I18N.dateTime)).toBe(
+      "Alpha、Beta、3 more",
+    );
+    expect(formatList(["Alpha"], ZH_HANS_I18N.dateTime)).toBe("Alpha");
   });
 });

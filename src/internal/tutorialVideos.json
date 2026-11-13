@@ -1,0 +1,72 @@
+{
+  "folders": [
+    {
+      "id": "desktop",
+      "videos": [
+        {
+          "youtubeId": "ijrdTYZA1eA",
+          "title": "Creating Your First Visual Novel Project"
+        }
+      ]
+    },
+    {
+      "id": "mobile",
+      "videos": [
+        {
+          "youtubeId": "7RsQlggwVbI",
+          "title": "Make Visual Novels From Your Phone"
+        },
+        {
+          "youtubeId": "vpIG6jQqo9c",
+          "title": "How to Change Backgrounds"
+        },
+        {
+          "youtubeId": "7_U-GN0UGXA",
+          "title": "How to Layer Visuals on Mobile"
+        },
+        {
+          "youtubeId": "LjKw3fx84BM",
+          "title": "How to Change Colors, Font and Text Styles on Mobile"
+        },
+        {
+          "youtubeId": "Sngq78OLSB8",
+          "title": "How to Customise Images on Mobile"
+        },
+        {
+          "youtubeId": "yIbe1GWUvgk",
+          "title": "How to Arrange Folders"
+        }
+      ]
+    }
+  ],
+  "pageVideos": {
+    "/projects": {
+      "desktop": "ijrdTYZA1eA",
+      "mobile": "7RsQlggwVbI"
+    },
+    "/project/scene-editor": {
+      "desktop": "ijrdTYZA1eA",
+      "mobile": "7RsQlggwVbI"
+    },
+    "/project/images": {
+      "desktop": "Sngq78OLSB8",
+      "mobile": "Sngq78OLSB8"
+    },
+    "/project/colors": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    },
+    "/project/fonts": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    },
+    "/project/text-styles": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    },
+    "/project/text-style-editor": {
+      "desktop": "LjKw3fx84BM",
+      "mobile": "LjKw3fx84BM"
+    }
+  }
+}

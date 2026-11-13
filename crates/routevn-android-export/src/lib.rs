@@ -1,16 +1,17 @@
-//! Builds an unsigned Android APK for a RouteVN game from the prebuilt player
-//! template.
+//! Builds an Android APK for a RouteVN game from the prebuilt player
+//! template, unsigned or signed with APK Signature Scheme v2.
 //!
 //! The exporter streams the game package to disk, encrypts it in segments,
 //! rewrites the template manifest and resources for the game, renders its
-//! icons, and writes an aligned APK. Memory use stays bounded by the largest
-//! single asset and the icon images, so the same code runs on desktop and
-//! mobile hosts.
+//! icons, writes an aligned APK, and signs it in place when given a key.
+//! Memory use stays bounded by the largest single asset and the icon images,
+//! so the same code runs on desktop and mobile hosts.
 
 pub mod arsc;
 pub mod axml;
 pub mod error;
 pub mod icons;
+pub mod signing;
 pub mod template;
 pub mod zip;
 
@@ -29,6 +30,7 @@ use routevn_packager::payload::{
 use serde::{Deserialize, Serialize};
 
 pub use error::{ErrorCode, ExportError, Result};
+pub use signing::{SigningKey, SigningKeyMaterial};
 use template::{
     ColorSlot, MANIFEST_ENTRY, PACKAGE_ASSET_ENTRY, RESOURCES_ENTRY, TEMPLATE_APPLICATION_ID,
     TemplateDescriptor,
@@ -79,6 +81,9 @@ pub struct AndroidExportResult {
     pub package_bin_bytes: u64,
     pub encrypted_payload_bytes: u64,
     pub stats: routevn_exporter::PackageBinExportStats,
+    /// The SHA-256 of the signing certificate, for a signed APK.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signing_certificate_sha256: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -254,8 +259,19 @@ impl<'a> Progress<'a> {
     }
 }
 
+/// Exports an unsigned APK.
 pub fn export_android_apk(
     request: &AndroidExportRequest,
+    on_progress: Option<&ZipExportProgressCallback<'_>>,
+) -> Result<AndroidExportResult> {
+    export_android_apk_with_key(request, None, on_progress)
+}
+
+/// Exports an APK, signed with `signing_key` when one is given. The signed
+/// file is verified against the key before it is renamed into place.
+pub fn export_android_apk_with_key(
+    request: &AndroidExportRequest,
+    signing_key: Option<&SigningKey>,
     on_progress: Option<&ZipExportProgressCallback<'_>>,
 ) -> Result<AndroidExportResult> {
     let progress = Progress::new(on_progress);
@@ -411,6 +427,24 @@ pub fn export_android_apk(
     progress.emit("verifyApk", 0, 0);
     verify_apk(partial.path(), &customization, package_bin_bytes)?;
 
+    let signing_certificate_sha256 = match signing_key {
+        Some(key) => {
+            signing::sign_apk(partial.path(), key, &|current, total| {
+                progress.emit("signApk", current, total)
+            })?;
+            let signed_by = signing::verify_apk_signature(partial.path(), &|current, total| {
+                progress.emit("verifySignature", current, total)
+            })?;
+            if signed_by != key.certificate_sha256() {
+                return Err(ExportError::validation(
+                    "The APK was signed with a different key.",
+                ));
+            }
+            Some(key.certificate_sha256_hex())
+        }
+        None => None,
+    };
+
     progress.emit("finalizeApk", 0, 0);
     #[cfg(unix)]
     {
@@ -433,6 +467,7 @@ pub fn export_android_apk(
         package_bin_bytes,
         encrypted_payload_bytes,
         stats,
+        signing_certificate_sha256,
     })
 }
 

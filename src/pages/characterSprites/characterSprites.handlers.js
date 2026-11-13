@@ -1,4 +1,5 @@
 import { filterImageUploadFiles } from "../../internal/ui/imageUploadValidation.js";
+import { nameFromFileName } from "../../internal/files.js";
 import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
@@ -80,7 +81,7 @@ const createPendingUploads = ({ files, parentId } = {}) => {
     id: generatePrefixedId("pending-sprite-"),
     file,
     parentId,
-    name: file.name.replace(/\.[^.]+$/, ""),
+    name: nameFromFileName(file.name),
   }));
 };
 

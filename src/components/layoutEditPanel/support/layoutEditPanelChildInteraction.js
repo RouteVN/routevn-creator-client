@@ -1,3 +1,5 @@
+import { formatList } from "../../../internal/dates.js";
+
 const CHILD_INTERACTION_ITEMS = [
   { label: "Hover", key: "hover", name: "hover.inheritToChildren" },
   { label: "Click", key: "click", name: "click.inheritToChildren" },
@@ -34,7 +36,11 @@ const getChildInteractionItemLabel = (item, copy = {}) => {
   return key ? (copy[key] ?? item.label) : item.label;
 };
 
-export const getChildInteractionSummary = (values = {}, copy = {}) => {
+export const getChildInteractionSummary = (
+  values = {},
+  copy = {},
+  dateTime = {},
+) => {
   const labels = [];
 
   CHILD_INTERACTION_ITEMS.forEach((item) => {
@@ -47,7 +53,7 @@ export const getChildInteractionSummary = (values = {}, copy = {}) => {
     return copy.noChildInteractionLabel ?? "None";
   }
 
-  return labels.join(", ");
+  return formatList(labels, dateTime);
 };
 
 export const hasChildInteractionInheritance = (values = {}) => {
