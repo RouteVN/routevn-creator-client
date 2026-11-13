@@ -72,37 +72,54 @@ console.log(`Prepared Android player frontend: ${webDir}`);
 
 if (!args.includes("--prepare-only")) {
   await run("bash", ["scripts/build-android-player-rust.sh"]);
-  await run("./gradlew", [":app:assembleRelease"], projectDir);
+  await run(
+    "./gradlew",
+    [":app:assembleRelease", ":app:bundleRelease"],
+    projectDir,
+  );
   const apk = path.join(
     projectDir,
     "app/build/outputs/apk/release/app-release-unsigned.apk",
+  );
+  const aab = path.join(
+    projectDir,
+    "app/build/outputs/bundle/release/app-release.aab",
   );
   const temporaryDir = await mkdtemp(
     path.join(os.tmpdir(), "routevn-android-template-"),
   );
   try {
+    const describe = (command, flag, template, out) =>
+      run("cargo", [
+        "run",
+        "--release",
+        "--manifest-path",
+        "crates/routevn-android-export/Cargo.toml",
+        "--bin",
+        "routevn-android-template",
+        "--",
+        command,
+        flag,
+        template,
+        "--out",
+        out,
+      ]);
     const descriptor = path.join(temporaryDir, "template.json");
-    await run("cargo", [
-      "run",
-      "--release",
-      "--manifest-path",
-      "crates/routevn-android-export/Cargo.toml",
-      "--bin",
-      "routevn-android-template",
-      "--",
-      "describe",
-      "--apk",
-      apk,
-      "--out",
-      descriptor,
-    ]);
+    const bundleDescriptor = path.join(temporaryDir, "template.aab.json");
+    await describe("describe", "--apk", apk, descriptor);
+    await describe("describe-bundle", "--aab", aab, bundleDescriptor);
     await mkdir(templateDir, { recursive: true });
     await copyFile(apk, path.join(templateDir, "RouteVNPlayerTemplate.apk"));
     await copyFile(
       descriptor,
       path.join(templateDir, "RouteVNPlayerTemplate.json"),
     );
-    console.log(`Android player template and descriptor: ${templateDir}`);
+    await copyFile(aab, path.join(templateDir, "RouteVNPlayerTemplate.aab"));
+    await copyFile(
+      bundleDescriptor,
+      path.join(templateDir, "RouteVNPlayerTemplate.aab.json"),
+    );
+    console.log(`Android player templates and descriptors: ${templateDir}`);
   } finally {
     await rm(temporaryDir, { recursive: true, force: true });
   }

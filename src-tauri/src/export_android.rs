@@ -4,8 +4,8 @@ use std::time::{Duration, Instant};
 
 use routevn_android_export::signing::write_private_file;
 use routevn_android_export::{
-    AndroidExportRequest, AndroidExportResult, ErrorCode, ExportError, HostCapabilities,
-    SigningKey, SigningKeyMaterial,
+    AndroidBundleExportResult, AndroidExportRequest, AndroidExportResult, ErrorCode, ExportError,
+    HostCapabilities, SigningKey, SigningKeyMaterial,
 };
 use tauri::ipc::Channel;
 use zeroize::Zeroizing;
@@ -16,6 +16,18 @@ pub fn get_android_export_host_capabilities(
     descriptor_path: String,
 ) -> HostCapabilities {
     routevn_android_export::host_capabilities(
+        &PathBuf::from(template_path),
+        &PathBuf::from(descriptor_path),
+    )
+}
+
+/// Whether the App Bundle template is installed.
+#[tauri::command]
+pub fn get_android_bundle_export_capabilities(
+    template_path: String,
+    descriptor_path: String,
+) -> HostCapabilities {
+    routevn_android_export::bundle::host_capabilities(
         &PathBuf::from(template_path),
         &PathBuf::from(descriptor_path),
     )
@@ -79,20 +91,16 @@ pub async fn write_android_keystore(
     .await
 }
 
-/// Exports an APK, signed with the project's `signing_key` when one is
-/// given, or unsigned.
-#[tauri::command]
-pub async fn export_android_apk(
-    request: AndroidExportRequest,
-    signing_key: Option<SigningKeyMaterial>,
+/// Runs an export off the async runtime, forwarding its progress to
+/// `on_progress` with `elapsed_ms` set, at most every 150 ms except for phase
+/// changes and completed phases.
+async fn run_export<T: Send + 'static>(
     on_progress: Channel<routevn_exporter::ZipExportProgress>,
-) -> Result<AndroidExportResult, String> {
+    export: impl FnOnce(&routevn_exporter::ZipExportProgressCallback<'_>) -> Result<T, ExportError>
+    + Send
+    + 'static,
+) -> Result<T, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let signing_key = signing_key
-            .as_ref()
-            .map(SigningKey::from_material)
-            .transpose()
-            .map_err(|error| error.to_string())?;
         let export_started = Instant::now();
         let progress_state = Mutex::new((String::new(), Instant::now()));
         let progress_callback = |mut progress: routevn_exporter::ZipExportProgress| {
@@ -114,13 +122,45 @@ pub async fn export_android_apk(
             drop(state);
             let _ = on_progress.send(progress);
         };
-        routevn_android_export::export_android_apk_with_key(
-            &request,
-            signing_key.as_ref(),
-            Some(&progress_callback),
-        )
-        .map_err(|error| error.to_string())
+        export(&progress_callback).map_err(|error| error.to_string())
     })
     .await
     .map_err(|error| format!("Failed to run Android export task: {error}"))?
+}
+
+/// Exports an APK, signed with the project's `signing_key` when one is
+/// given, or unsigned.
+#[tauri::command]
+pub async fn export_android_apk(
+    request: AndroidExportRequest,
+    signing_key: Option<SigningKeyMaterial>,
+    on_progress: Channel<routevn_exporter::ZipExportProgress>,
+) -> Result<AndroidExportResult, String> {
+    run_export(on_progress, move |progress| {
+        let signing_key = signing_key
+            .as_ref()
+            .map(SigningKey::from_material)
+            .transpose()?;
+        routevn_android_export::export_android_apk_with_key(
+            &request,
+            signing_key.as_ref(),
+            Some(progress),
+        )
+    })
+    .await
+}
+
+/// Exports an App Bundle for Google Play, signed with the project's
+/// `signing_key`, which Google Play registers as the upload key.
+#[tauri::command]
+pub async fn export_android_app_bundle(
+    request: AndroidExportRequest,
+    signing_key: SigningKeyMaterial,
+    on_progress: Channel<routevn_exporter::ZipExportProgress>,
+) -> Result<AndroidBundleExportResult, String> {
+    run_export(on_progress, move |progress| {
+        let signing_key = SigningKey::from_material(&signing_key)?;
+        routevn_android_export::export_android_app_bundle(&request, &signing_key, Some(progress))
+    })
+    .await
 }

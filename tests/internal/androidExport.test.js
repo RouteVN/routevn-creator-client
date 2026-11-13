@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createAndroidApkFileName,
+  createAndroidBundleFileName,
   isValidAndroidBackgroundColor,
   normalizeAndroidBackgroundColor,
 } from "../../src/internal/androidExport.js";
@@ -18,6 +19,9 @@ describe("Android export inputs", () => {
     );
     expect(createAndroidApkFileName("Project:/One?*", "1.2.3")).toBe(
       "Project--One---1.2.3-unsigned.apk",
+    );
+    expect(createAndroidBundleFileName("Project:/One?*", "1.2.3")).toBe(
+      "Project--One---1.2.3.aab",
     );
   });
   it.each(["#ffffff", "#Ab123F", "#000000"])(

@@ -83,7 +83,7 @@ describe("Android export views", () => {
       );
       const html = render();
       expect(html).toContain('id="detailAndroidApkBtn"');
-      expect(html).toContain(EN_I18N.versionsPage.exportAndroidApkButton);
+      expect(html).toContain(EN_I18N.versionsPage.exportAndroidButton);
       versionsStore.openExportConfirmation(
         { state },
         {

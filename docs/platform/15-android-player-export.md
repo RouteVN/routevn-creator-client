@@ -6,7 +6,9 @@ Status: implemented and switched on. Template build, export, and APK
 validation with the Android build tools (`zipalign -c -P 16 4`,
 `apksigner sign` and `apksigner verify --min-sdk-version 24`,
 `aapt2 dump badging`) pass locally, and Creator-signed APKs install and run on
-a physical Android 16 tablet. The remaining checks are listed under
+a physical Android 16 tablet. App Bundles pass `bundletool validate` and
+`jarsigner -verify`, and the APKs `bundletool build-apks` makes from them
+install and run on the same tablet. The remaining checks are listed under
 [Release Gate](#release-gate).
 
 `ANDROID_EXPORT_RELEASED` in `src/internal/androidExport.js` switches the
@@ -15,18 +17,22 @@ button and Platform Details hides the Android platform.
 
 ## Product Contract
 
-RouteVN Creator exports an APK, signed or unsigned:
+RouteVN Creator exports an APK, signed or unsigned, or an Android App Bundle
+for Google Play:
 
 ```text
-<game-name>-<version>.apk           (signed)
-<game-name>-<version>-unsigned.apk  (unsigned)
+<game-name>-<version>.apk           (signed APK)
+<game-name>-<version>-unsigned.apk  (unsigned APK)
+<game-name>-<version>.aab           (App Bundle, always signed)
 ```
 
-Export runs on the desktop (Windows, macOS, Linux), Android, and iOS Creator
-hosts. Web does not export APKs. No host runs Gradle, the Android SDK,
-`apksigner`, a JDK, or a network service: export rewrites a prebuilt player
-template, and the exporter signs the APK itself. Desktop hosts sign; the
-Android and iOS Creator apps export unsigned APKs.
+APK export runs on the desktop (Windows, macOS, Linux), Android, and iOS
+Creator hosts. Web does not export. No host runs Gradle, the Android SDK,
+`apksigner`, bundletool, a JDK, or a network service: export rewrites a
+prebuilt player template, and the exporter signs the file itself. Desktop
+hosts sign; the Android and iOS Creator apps export unsigned APKs only. App
+Bundles are signed, so only desktop hosts export them (see
+[App Bundle](#app-bundle)).
 
 A signed APK installs directly. An unsigned APK is for creators who sign with
 their own tools:
@@ -49,15 +55,19 @@ Creator ships these committed resources:
 ```text
 player-templates/android/RouteVNPlayerTemplate.apk
 player-templates/android/RouteVNPlayerTemplate.json
+player-templates/android/RouteVNPlayerTemplate.aab       (desktop only)
+player-templates/android/RouteVNPlayerTemplate.aab.json  (desktop only)
 ```
 
 `bun run player-template:build:android` stages the standalone player
 (`main.js`, its assets, the Android persistence host, and
 `scripts/player-templates/android/index.html`), builds the
-`routevn-player-jni` library for the four ABIs, assembles `android/player` in
-release mode without signing, and runs
-`routevn-android-template describe` from `crates/routevn-android-export`.
-The descriptor command refuses the template unless:
+`routevn-player-jni` library for the four ABIs, builds the APK
+(`:app:assembleRelease`) and the App Bundle (`:app:bundleRelease`) of
+`android/player` in release mode without signing, and runs
+`routevn-android-template describe` and `describe-bundle` from
+`crates/routevn-android-export`. Both builds are reproducible. The descriptor
+command refuses the APK template unless:
 
 - the APK has no signature files and no APK Signing Block
 - the package is `vn.routevn.androidplayer.template`, minimum SDK 24, target
@@ -82,6 +92,15 @@ template's SHA-256. Export refuses a template whose hash differs.
 The player's Java classes live in `vn.routevn.androidplayer`, outside the
 template application ID, so changing the application ID never requires
 changing code.
+
+`describe-bundle` makes the same manifest, code, and icon checks on the
+bundle's protocol buffer manifest and resource table, and also requires no
+signature files, no game package, one resource package named after the
+template ID, and a `BundleConfig.pb` that keeps
+`assets/routevn-package.bin` uncompressed. Gradle writes that setting from
+`androidResources.noCompress` in `android/player/app/build.gradle.kts`. The
+bundle descriptor records the template version, ABIs, the manifest strings
+derived from the template ID, every icon file, and the bundle's SHA-256.
 
 ## Export Transaction
 
@@ -233,18 +252,99 @@ checks the signature and the content digest, and checks that the certificate
 is the chosen key's, before the rename. The extra progress phases are
 `signApk` and `verifySignature`.
 
+## App Bundle
+
+Google Play takes App Bundles, not APKs, for new apps. An exported bundle holds
+the same player and game package as an APK. Google Play builds the APKs each
+device installs from it.
+
+The Android export dialog shows a Format choice, APK or App Bundle (AAB), when
+the host signs and has the bundle template. APK is the default. App Bundle
+asks no signing question and explains that Play Console registers the
+bundle's key as the game's upload key, that Google Play signs the app players
+download with its own key, and that an exported APK cannot update a copy of
+the game installed from Google Play. The game package is in the bundle's base
+module, so Google Play's size limit for the base module applies to the whole
+game; see
+[Google Play's App Bundle help](https://support.google.com/googleplay/android-developer/answer/9859372)
+for the current limits. Asset packs are not used.
+
+`export_android_app_bundle` in `crates/routevn-android-export/src/bundle.rs`
+follows the APK steps on the bundle layout:
+
+1. validate the request and check the bundle descriptor and template hash,
+   the same as for an APK
+2. stream and encrypt the game package, and compute its SHA-256 while it is
+   written
+3. rewrite `base/manifest/AndroidManifest.xml`, a protocol buffer XML
+   document: replace the template application ID and the values derived from
+   it, and set `versionCode`, `versionName`, the application and activity
+   labels, and `screenOrientation`; each value must occur as many times as in
+   the template, or export stops
+4. rewrite `base/resources.pb`: replace the two reserved colors in one pass,
+   so a color the creator picked is never replaced twice, and rename the
+   resource package to the application ID
+5. render the icon images, the same as for an APK
+6. digest every entry and JAR-sign the bundle with the project key:
+   `META-INF/MANIFEST.MF` lists each entry's SHA-256, `META-INF/UPLOAD.SF`
+   digests the manifest and each of its sections, and `META-INF/UPLOAD.RSA` is
+   a PKCS #7 signature over the signature file with the key's certificate, as
+   `jarsigner` writes with SHA-256 and an RSA key
+7. write the bundle next to the destination: the three signature entries
+   first, then the template entries in order with unchanged entries copied
+   without recompression and changed entries stored, then the encrypted
+   package stored as `base/assets/routevn-package.bin`
+8. reopen the bundle and verify that no entry repeats, the package stays
+   uncompressed in Play's APKs, the manifest values match the request, no
+   manifest string names the template ID, the resource table equals the
+   template's with only the two colors and the package name changed, the
+   package decrypts to the expected length, and the JAR signature covers
+   every entry and was made by the chosen key
+9. rename the finished file onto the destination
+
+Protocol buffers are edited at the wire level: fields the exporter does not
+change are kept byte for byte, so the template's manifest and resource table
+re-encode unchanged. Progress phases are `prepareBundle`, the package phases,
+`encryptPayload`, `rewriteManifest`, `renderIcons`, `signBundle`,
+`writeBundle`, `verifyBundle`, and `finalizeBundle`. The dialog steps are the
+APK's, with Build App Bundle, Sign App Bundle, and Save App Bundle in place of
+the APK steps.
+
+Every bundle export is signed, so the first bundle export of a game makes its
+key like the first signed APK export. The bundle and signed APKs use the same
+project key.
+
+To check an exported bundle without Google Play, save a copy of the key from
+Platform Details and run:
+
+```bash
+bundletool validate --bundle=<game>.aab
+jarsigner -verify <game>.aab
+bundletool build-apks --bundle=<game>.aab --output=<game>.apks \
+  --ks=<key>.p12 --ks-pass=pass:<password> --ks-key-alias=key0
+bundletool install-apks --apks=<game>.apks
+```
+
+`jarsigner -verify -strict` reports the self-signed certificate as a signer
+error, as it does for any bundle signed with a self-signed key; Google Play
+accepts self-signed upload keys.
+
 ## Creator Hosts
 
 The shared project export facade exposes `getAndroidExportAvailability`,
-`promptAndroidApkPath`, and `createAndroidApkToPath`. The project service
-also exposes the signing key operations, and `supportsAndroidSigning` reports
-whether the host signs. Availability is true only when the host has the
-template and the exporter accepts its descriptor.
+`promptAndroidApkPath`, `createAndroidApkToPath`, `promptAndroidBundlePath`,
+and `createAndroidBundleToPath`. The project service also exposes the signing
+key operations, and `supportsAndroidSigning` reports whether the host signs.
+Availability is true only when the host has the APK template and the exporter
+accepts its descriptor; `bundleAvailable` says the same of the bundle
+template.
 
 - Desktop: the Tauri commands `get_android_export_host_capabilities` and
   `export_android_apk` run the exporter on a blocking task and forward
   throttled progress through a Tauri channel. `export_android_apk` takes an
-  optional `signingKey`. The signing commands `create_android_signing_key`,
+  optional `signingKey`. `get_android_bundle_export_capabilities` and
+  `export_android_app_bundle` do the same for bundles, and the bundle command
+  requires `signingKey`. The signing commands `create_android_signing_key`,
   `read_android_keystore`, and `write_android_keystore` pass keys as
   `{ certificateSha256, certificate, privateKey }` and reject with
   `{ code, message }`.
@@ -268,7 +368,10 @@ elapsedMs })`.
 - template build: `scripts/build-android-player-template.js`,
   `scripts/build-android-player-rust.sh`
 - player package reader: `crates/routevn-player-jni/`
-- exporter: `crates/routevn-android-export/` (signing in `signing.rs`)
+- exporter: `crates/routevn-android-export/` (APK signing in `signing.rs`;
+  App Bundles in `bundle.rs`, with `jar.rs` for JAR signing and
+  `protobuf.rs`, `proto_xml.rs`, and `proto_resources.rs` for the protocol
+  buffer manifest and resource table)
 - shared payload: `crates/routevn-packager/src/payload.rs`
 - desktop command: `src-tauri/src/export_android.rs`
 - Android Creator host: `crates/routevn-exporter-jni/`,
@@ -289,4 +392,5 @@ Before release, install a Creator-signed APK, and an unsigned one signed with
 Check launch, the splash screen and icon on each launcher shape, portrait and
 landscape games, audio, saving and reloading, Back, a reinstall of a higher
 Build Number signed with the same key, and an export from the Android and iOS
-Creator apps.
+Creator apps. Upload an exported App Bundle to a Play Console internal test
+track and install it from Google Play.

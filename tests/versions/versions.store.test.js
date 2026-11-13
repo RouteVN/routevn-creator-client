@@ -1,8 +1,10 @@
+import { parseAndRender } from "jempl";
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
   closeExportConfirmation,
   openExportConfirmation,
+  selectCanExportAndroidBundle,
   selectExportConfirmation,
   selectViewData,
   setAppWindowMetrics,
@@ -442,7 +444,7 @@ it("shows Android release details, native version fields, and the unsigned signi
     view.androidExportForm.fields[0].fields.map((field) => field.name),
   ).toEqual(["version", "buildNumber"]);
   expect(view.androidExportForm.actions.buttons[0].label).toBe(
-    EN_I18N.versionsPage.exportAndroidApkButton,
+    EN_I18N.versionsPage.exportAndroidButton,
   );
   expect(view.androidUnsignedApkNotice).toBe(
     EN_I18N.versionsPage.androidUnsignedApkNotice,
@@ -468,7 +470,8 @@ const openAndroidExport = (state) =>
     },
   );
 
-// Each signing field with the `$when` condition rtgl-form renders it under.
+// Each field after Version and Build Number with the `$when` condition
+// rtgl-form renders it under.
 const describeSigningFields = (form) =>
   form.fields.slice(1).map((field) => ({
     when: field.$when,
@@ -477,36 +480,39 @@ const describeSigningFields = (form) =>
     options: field.options?.map((option) => option.value),
   }));
 
-describe("Android signing fields", () => {
-  const SIGNED = "values.signing == 'signed'";
+// The names or notices rtgl-form shows for these values: it renders a field
+// under `$if <$when>` with the values as `formValues`.
+const visibleFields = (form, formValues) =>
+  parseAndRender(
+    {
+      fields: form.fields
+        .slice(1)
+        .map(({ $when, ...field }) =>
+          $when ? { [`$if ${$when}`]: field } : field,
+        ),
+    },
+    { formValues },
+  ).fields.map((field) => field.name ?? field.content);
 
+describe("Android signing fields", () => {
   it("offers Signed and Unsigned and explains a new key for a game with none", () => {
     const state = createInitialState();
     openAndroidExport(state);
     setAndroidSigningStatus({ state }, { supported: true });
     const view = selectViewData({ state, i18n: EN_I18N });
     expect(view.showAndroidUnsignedNotice).toBe(false);
-    const fields = describeSigningFields(view.androidExportForm);
-    expect(fields).toEqual([
-      {
-        when: undefined,
-        name: "signing",
-        content: undefined,
-        options: ["signed", "unsigned"],
-      },
-      {
-        when: "values.signing == 'unsigned'",
-        name: undefined,
-        content: EN_I18N.versionsPage.androidUnsignedApkNotice,
-        options: undefined,
-      },
-      {
-        when: SIGNED,
-        name: undefined,
-        content: EN_I18N.versionsPage.androidNewKeyNotice,
-        options: undefined,
-      },
+    const form = view.androidExportForm;
+    expect(describeSigningFields(form)[0]).toMatchObject({
+      name: "signing",
+      options: ["signed", "unsigned"],
+    });
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
+      "signing",
+      EN_I18N.versionsPage.androidNewKeyNotice,
     ]);
+    expect(visibleFields(form, { format: "apk", signing: "unsigned" })).toEqual(
+      ["signing", EN_I18N.versionsPage.androidUnsignedApkNotice],
+    );
   });
 
   it("says the project's key signs and asks nothing else", () => {
@@ -516,19 +522,63 @@ describe("Android signing fields", () => {
       { state },
       { supported: true, currentKey: "ab".repeat(32) },
     );
-    const fields = describeSigningFields(
-      selectViewData({ state, i18n: EN_I18N }).androidExportForm,
-    );
-    expect(fields.map((field) => field.name).filter(Boolean)).toEqual([
+    const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+    expect(
+      describeSigningFields(form)
+        .map((field) => field.name)
+        .filter(Boolean),
+    ).toEqual(["signing"]);
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
       "signing",
+      EN_I18N.versionsPage.androidSignedWithKeyNotice,
     ]);
-    expect(fields[2]).toEqual({
-      when: SIGNED,
-      name: undefined,
-      content: EN_I18N.versionsPage.androidSignedWithKeyNotice,
-      options: undefined,
+  });
+
+  it("offers an App Bundle, always signed, when the host has the bundle template", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus({ state }, { supported: true });
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: true, bundleAvailable: true } },
+    );
+    expect(selectCanExportAndroidBundle({ state })).toBe(true);
+    const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+    expect(describeSigningFields(form)[0]).toMatchObject({
+      name: "format",
+      options: ["apk", "aab"],
     });
-    expect(fields).toHaveLength(3);
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
+      "format",
+      "signing",
+      EN_I18N.versionsPage.androidNewKeyNotice,
+    ]);
+    // Signing is not a choice for a bundle, whatever the APK choice was.
+    expect(visibleFields(form, { format: "aab", signing: "unsigned" })).toEqual(
+      [
+        "format",
+        EN_I18N.versionsPage.androidBundleNotice,
+        EN_I18N.versionsPage.androidNewKeyNotice,
+      ],
+    );
+  });
+
+  it("offers no App Bundle without the bundle template or signing", () => {
+    for (const [supported, bundleAvailable] of [
+      [true, false],
+      [false, true],
+    ]) {
+      const state = createInitialState();
+      openAndroidExport(state);
+      setAndroidSigningStatus({ state }, { supported });
+      setAndroidExportAvailability(
+        { state },
+        { availability: { available: true, bundleAvailable } },
+      );
+      expect(selectCanExportAndroidBundle({ state })).toBe(false);
+      const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+      expect(form.fields.some((field) => field.name === "format")).toBe(false);
+    }
   });
 
   it("shows no signing choice on a host that cannot sign", () => {

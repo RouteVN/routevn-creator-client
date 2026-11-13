@@ -1453,6 +1453,31 @@ export const createProjectExportService = ({
   service.promptAndroidApkPath = async ({ defaultFileName }, options = {}) =>
     fileAdapter.promptAndroidApkPath({ defaultFileName, options, filePicker });
 
+  const toAndroidExportPayload = (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata,
+    options,
+  ) => ({
+    projectData,
+    fileEntries: normalizeExportFileEntries(fileEntries),
+    outputPath,
+    applicationName: metadata.applicationName,
+    applicationId: metadata.applicationId,
+    versionName: metadata.versionName,
+    versionCode: metadata.versionCode,
+    orientation: getProjectOrientation(projectData.projectData.screen),
+    iconFileId: metadata.iconFileId,
+    adaptiveIconFileId: metadata.adaptiveIconFileId,
+    splashIconFileId: metadata.splashIconFileId,
+    iconBackgroundColor: metadata.iconBackgroundColor,
+    splashBackgroundColor: metadata.splashBackgroundColor,
+    signingKey: metadata.signingKey,
+    options,
+    getCurrentReference,
+  });
+
   service.createAndroidApkToPath = async (
     projectData,
     fileEntries,
@@ -1460,24 +1485,39 @@ export const createProjectExportService = ({
     metadata = {},
     options = {},
   ) =>
-    fileAdapter.createAndroidApkToPath({
-      projectData,
-      fileEntries: normalizeExportFileEntries(fileEntries),
-      outputPath,
-      applicationName: metadata.applicationName,
-      applicationId: metadata.applicationId,
-      versionName: metadata.versionName,
-      versionCode: metadata.versionCode,
-      orientation: getProjectOrientation(projectData.projectData.screen),
-      iconFileId: metadata.iconFileId,
-      adaptiveIconFileId: metadata.adaptiveIconFileId,
-      splashIconFileId: metadata.splashIconFileId,
-      iconBackgroundColor: metadata.iconBackgroundColor,
-      splashBackgroundColor: metadata.splashBackgroundColor,
-      signingKey: metadata.signingKey,
+    fileAdapter.createAndroidApkToPath(
+      toAndroidExportPayload(
+        projectData,
+        fileEntries,
+        outputPath,
+        metadata,
+        options,
+      ),
+    );
+
+  service.promptAndroidBundlePath = async ({ defaultFileName }, options = {}) =>
+    fileAdapter.promptAndroidBundlePath({
+      defaultFileName,
       options,
-      getCurrentReference,
+      filePicker,
     });
+
+  service.createAndroidBundleToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.createAndroidBundleToPath(
+      toAndroidExportPayload(
+        projectData,
+        fileEntries,
+        outputPath,
+        metadata,
+        options,
+      ),
+    );
 
   service.getIosExportAvailability = async (options = {}) => {
     if (typeof fileAdapter.getIosExportAvailability !== "function") {

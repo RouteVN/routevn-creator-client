@@ -255,6 +255,45 @@ pub fn read_entry(file: &mut File, entry: &ZipEntry) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+/// Passes an entry's uncompressed bytes to `consume` and checks its CRC. A
+/// stored entry is read in chunks, so a large one is never held in memory.
+pub fn for_each_chunk(
+    file: &mut File,
+    entry: &ZipEntry,
+    consume: &mut dyn FnMut(&[u8]),
+) -> Result<()> {
+    if entry.method != METHOD_STORED {
+        consume(&read_entry(file, entry)?);
+        return Ok(());
+    }
+    if entry.compressed_size != entry.uncompressed_size {
+        return Err(ExportError::template(format!(
+            "APK entry {} failed its integrity check.",
+            entry.name
+        )));
+    }
+    file.seek(SeekFrom::Start(entry.data_offset))
+        .map_err(|error| io_error("Failed to seek in the APK", error))?;
+    let mut crc = Crc32::default();
+    let mut buffer = vec![0u8; 1024 * 1024];
+    let mut remaining = entry.compressed_size;
+    while remaining > 0 {
+        let length = remaining.min(buffer.len() as u64) as usize;
+        file.read_exact(&mut buffer[..length])
+            .map_err(|error| io_error("Failed to read the APK", error))?;
+        crc.update(&buffer[..length]);
+        consume(&buffer[..length]);
+        remaining -= length as u64;
+    }
+    if crc.finish() != entry.crc32 {
+        return Err(ExportError::template(format!(
+            "APK entry {} failed its integrity check.",
+            entry.name
+        )));
+    }
+    Ok(())
+}
+
 static CRC_TABLE: std::sync::LazyLock<[u32; 256]> = std::sync::LazyLock::new(|| {
     let mut table = [0u32; 256];
     for (index, value) in table.iter_mut().enumerate() {
