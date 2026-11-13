@@ -21,7 +21,6 @@
 17. [Client Updates And Mock Server](./client-updates.md)
 18. [Project Import](./project-import.md)
 19. [Android Player Export Plan](./android-player-export-plan.md)
-20. [Android Signing And App Bundle Plan](./android-signing-and-aab-plan.md)
 
 ## Runbooks
 

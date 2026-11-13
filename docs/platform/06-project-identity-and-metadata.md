@@ -200,13 +200,13 @@ APK is already aligned; running zipalign after signing invalidates the
 signature.
 
 The project's separate `androidSigning` key holds the game's signing keys:
-the current key, which signs new APKs (and later App Bundles), and every key
-it replaced. It is not part of `platformDetails.android`, so editing Platform
-Details in a Creator version that does not know the field cannot drop it. The
-keys travel with the project database, so copying or backing up the project
-folder copies them. Changing the application identifier keeps the key; after
-a key exists, Platform Details warns that installed copies will not update to
-builds with a new identifier.
+the current key, which signs new APKs, and every key it replaced. It is not
+part of `platformDetails.android`, so editing Platform Details in a Creator
+version that does not know the field cannot drop it. The keys travel with the
+project database, so copying or backing up the project folder copies them.
+Changing the application identifier keeps the key; after a key exists,
+Platform Details warns that installed copies will not update to builds with a
+new identifier.
 
 All hosts use the shared Platform Details normalizer. Their app-store adapters
 preserve the platform record as JSON, and project-folder imports and exports
