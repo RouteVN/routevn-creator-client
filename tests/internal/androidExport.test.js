@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   createAndroidApkFileName,
-  getAndroidExportOrientation,
   isValidAndroidBackgroundColor,
   normalizeAndroidBackgroundColor,
 } from "../../src/internal/androidExport.js";
@@ -20,16 +19,6 @@ describe("Android export inputs", () => {
     expect(createAndroidApkFileName("Project:/One?*", "1.2.3")).toBe(
       "Project--One---1.2.3-unsigned.apk",
     );
-  });
-  it.each([
-    [1920, 1080, "landscape"],
-    [1080, 1920, "portrait"],
-    [512, 512, "landscape"],
-  ])("derives orientation from %s × %s", (width, height, orientation) => {
-    expect(getAndroidExportOrientation({ width, height })).toBe(orientation);
-  });
-  it("refuses a missing project resolution", () => {
-    expect(() => getAndroidExportOrientation()).toThrow("Project resolution");
   });
   it.each(["#ffffff", "#Ab123F", "#000000"])(
     "normalizes opaque color %s",

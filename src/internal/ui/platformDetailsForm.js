@@ -2,8 +2,17 @@ import {
   normalizeAndroidBackgroundColor,
   isValidAndroidBackgroundColor,
 } from "../androidExport.js";
+import { IOS_APPLICATION_ICON_OUTPUT_SIZE } from "../iosExport.js";
 
-export const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
+const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
+
+// The size the crop dialog makes an icon for each platform.
+export const getPlatformIconOutputSize = (platform, target) => {
+  if (target === "splash") return 768;
+  if (platform === "android") return 512;
+  if (platform === "ios") return IOS_APPLICATION_ICON_OUTPUT_SIZE;
+  return PLATFORM_APPLICATION_ICON_OUTPUT_SIZE;
+};
 
 export const PLATFORM_APPLICATION_ICON_VALIDATIONS = [
   {
@@ -21,6 +30,7 @@ const getPlatformEditTitle = (platform, copy) => {
     return copy.editMacosPlatformDetailsTitle;
   }
   if (platform === "android") return copy.editAndroidPlatformDetailsTitle;
+  if (platform === "ios") return copy.editIosPlatformDetailsTitle;
   return copy.editWebPlatformDetailsTitle;
 };
 
@@ -32,6 +42,7 @@ const getPlatformCreateTitle = (platform, copy) => {
     return copy.createMacosPlatformDetailsTitle;
   }
   if (platform === "android") return copy.createAndroidPlatformDetailsTitle;
+  if (platform === "ios") return copy.createIosPlatformDetailsTitle;
   return copy.createWebPlatformDetailsTitle;
 };
 
@@ -76,7 +87,7 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     name: "applicationIdentifier",
     type: "input-text",
     label:
-      platform === "macos"
+      platform === "macos" || platform === "ios"
         ? copy.macosApplicationIdentifierLabel
         : copy.applicationIdentifierLabel,
     description: copy[`${platform}ApplicationIdentifierDescription`],
@@ -222,5 +233,10 @@ export const getPlatformDetailsValidationMessage = (copy, code) => {
   if (code === "android-identifier-invalid")
     return copy.androidApplicationIdentifierInvalid;
   if (code === "android-color-invalid") return copy.androidColorInvalid;
+  if (code === "ios-icon-required") return copy.iosIconRequired;
+  if (code === "ios-identifier-required")
+    return copy.iosApplicationIdentifierRequired;
+  if (code === "ios-identifier-invalid")
+    return copy.macosApplicationIdentifierInvalid;
   return copy.failedSavePlatformMessage;
 };

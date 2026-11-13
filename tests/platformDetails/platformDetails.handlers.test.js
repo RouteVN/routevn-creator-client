@@ -166,7 +166,7 @@ describe("platformDetails handlers", () => {
     await handleAfterMount(deps);
 
     expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
-      4,
+      5,
     );
     expect(deps.store.setPlatformApplicationInfo).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -189,7 +189,7 @@ describe("platformDetails handlers", () => {
     await handleAfterMount(deps);
 
     expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
-      4,
+      5,
     );
     expect(deps.store.setPlatformApplicationInfo).toHaveBeenCalledWith({
       platform: "web",

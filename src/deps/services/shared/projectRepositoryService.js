@@ -147,6 +147,7 @@ export const createProjectRepositoryService = ({
     windows: "platformDetails.windows",
     macos: "platformDetails.macos",
     android: "platformDetails.android",
+    ios: "platformDetails.ios",
   };
   const LEGACY_PLATFORM_DETAILS_KEYS = {
     web: "releaseInfo.web",
@@ -294,6 +295,11 @@ export const createProjectRepositoryService = ({
       platformDetails.publisher = "";
       platformDetails.description = "";
       platformDetails.copyright = "";
+    }
+
+    // The Apple team the last iOS export used. The export dialog sets it.
+    if (platform === "ios") {
+      platformDetails.teamId = sourceInfo?.teamId ?? "";
     }
 
     return platformDetails;

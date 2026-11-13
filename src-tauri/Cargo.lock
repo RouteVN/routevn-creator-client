@@ -4513,6 +4513,7 @@ dependencies = [
  "discord-rich-presence",
  "dotenvy",
  "futures-util",
+ "image",
  "log",
  "plist",
  "reqwest",

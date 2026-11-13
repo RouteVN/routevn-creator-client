@@ -37,6 +37,7 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
     update: vi.fn(),
     waitForPaint: vi.fn(async () => {}),
   };
+  let exportConfirmationPending = false;
   let exportConfirmation;
   let platformDetailsDialog;
 
@@ -151,6 +152,10 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       }),
       selectExportConfirmation: vi.fn(() => exportConfirmation),
       closeExportConfirmation: vi.fn(),
+      setExportConfirmationPending: vi.fn(({ pending }) => {
+        exportConfirmationPending = pending;
+      }),
+      selectExportConfirmationPending: vi.fn(() => exportConfirmationPending),
       openPlatformDetailsDialog: vi.fn((dialog) => {
         platformDetailsDialog = dialog;
       }),
@@ -1897,6 +1902,7 @@ it("refreshes Android availability during Versions setup", async () => {
   deps.store.setAndroidExportAvailability = vi.fn();
   deps.store.setMacosExportAvailability = vi.fn();
   deps.store.setWindowsExportAvailability = vi.fn();
+  deps.store.setIosExportAvailability = vi.fn();
   deps.store.setVersions = vi.fn();
   deps.projectService.getWindowsExportAvailability = vi.fn(async () => ({}));
   deps.projectService.loadVersionsFromProject = vi.fn(async () => []);

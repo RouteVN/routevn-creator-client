@@ -16,6 +16,7 @@ mod download;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod error_reporting;
 mod export_android;
+mod export_ios;
 mod export_macos;
 mod export_windows;
 mod export_zip;
@@ -129,6 +130,9 @@ pub fn run() {
             export_android::create_android_signing_key,
             export_android::read_android_keystore,
             export_android::write_android_keystore,
+            export_ios::export_ios_application,
+            export_ios::get_ios_export_requirements,
+            export_ios::list_ios_devices,
             export_macos::export_macos_application,
             export_macos::get_macos_export_host_capabilities,
             export_zip::create_distribution_zip_streamed,

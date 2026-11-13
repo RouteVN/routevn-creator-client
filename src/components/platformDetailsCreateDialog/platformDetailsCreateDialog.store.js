@@ -1,6 +1,6 @@
 import {
   createPlatformEditForm,
-  PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+  getPlatformIconOutputSize,
 } from "../../internal/ui/platformDetailsForm.js";
 
 export const createInitialState = () => ({
@@ -108,12 +108,10 @@ export const selectViewData = ({ state, i18n }) => {
     formKey: state.formKey,
     iconCropFile: state.iconCropFile,
     iconFileId: state.iconFileId,
-    iconOutputSize:
-      state.iconCropTarget === "splash"
-        ? 768
-        : state.platform === "android"
-          ? 512
-          : PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
+    iconOutputSize: getPlatformIconOutputSize(
+      state.platform,
+      state.iconCropTarget,
+    ),
     isIconCropDialogOpen: state.isIconCropDialogOpen,
     showIcon: state.platform !== "web",
   };

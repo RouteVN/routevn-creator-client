@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createPlayerRuntimeBridge,
   createPlayerRuntimeDb,
-} from "../../src/deps/clients/android/playerRuntimeDb.js";
+} from "../../src/deps/clients/shared/mobilePlayerRuntimeDb.js";
 import { createPlayerRuntimePersistenceHost } from "../../src/deps/clients/shared/playerRuntimePersistenceHost.js";
 import { createSaveSlot } from "../playerRuntimePersistenceFixtures.js";
 
@@ -35,7 +35,7 @@ const createDatabase = async () => {
 
 afterEach(() => vi.useRealTimers());
 
-describe("Android player bridge", () => {
+describe("Mobile player bridge", () => {
   it("uses numeric ids and object payloads and matches replies out of order", async () => {
     const { bridge, call, requests, respond } = createFakeBridge();
     const first = call("player.ready");
@@ -71,7 +71,7 @@ describe("Android player bridge", () => {
   });
 });
 
-describe("Android player runtime database", () => {
+describe("Mobile player runtime database", () => {
   it("round trips JSON text including null and preserves malformed rows for host validation", async () => {
     const { db, requests, respond } = await createDatabase();
     const write = db.set("example", { nested: [null, false, 2.5] });

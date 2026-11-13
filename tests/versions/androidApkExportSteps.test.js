@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  createAndroidApkExportStepsView,
   formatAndroidApkExportProgress,
   getAndroidApkExportStepForPhase,
+  getAndroidApkExportStepLabels,
   getAndroidApkExportSteps,
 } from "../../src/pages/versions/support/androidApkExportSteps.js";
+import { createExportStepsView } from "../../src/pages/versions/support/exportStepsProgress.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const copy = EN_I18N.versionsPage;
@@ -81,8 +82,8 @@ describe("Android APK export steps", () => {
   it("marks earlier steps done and later steps not started", () => {
     const steps = getAndroidApkExportSteps({ signed: true, createsKey: false });
     expect(
-      createAndroidApkExportStepsView({
-        copy,
+      createExportStepsView({
+        labels: getAndroidApkExportStepLabels(copy),
         steps,
         current: "build",
         detail: "3 / 9",

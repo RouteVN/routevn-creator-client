@@ -43,6 +43,7 @@ routevn-exporter = { path = "../crates/routevn-exporter" }
 routevn-packager = { path = "../crates/routevn-packager" }
 tempfile = "3"
 plist = "=1.8.0"
+image = { version = "=0.25.6", default-features = false, features = ["jpeg", "png", "webp"] }
 # Device language for update-check usage fields (desktop shells).
 sys-locale = "0.3"
 

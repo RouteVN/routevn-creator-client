@@ -1,11 +1,15 @@
+// The persistence bridge of the Android and iOS players. The native player
+// exposes an object with postMessage(text) and calls its onmessage({ data })
+// with each JSON reply; `name` labels its errors, such as "Android player".
 const RESPONSE_TIMEOUT_MS = 30_000;
 
 export const createPlayerRuntimeBridge = ({
-  bridge = globalThis.RouteVNPlayerAndroid,
+  bridge,
+  name = "Player",
   timeoutMs = RESPONSE_TIMEOUT_MS,
 } = {}) => {
   if (typeof bridge?.postMessage !== "function") {
-    throw new Error("Android player bridge is not available.");
+    throw new Error(`${name} bridge is not available.`);
   }
   let nextId = 1;
   const pending = new Map();
@@ -23,9 +27,7 @@ export const createPlayerRuntimeBridge = ({
     if (response.ok === true) {
       request.resolve(response.value);
     } else {
-      request.reject(
-        new Error(response.error ?? "Android player request failed."),
-      );
+      request.reject(new Error(response.error ?? `${name} request failed.`));
     }
   };
 
@@ -34,7 +36,7 @@ export const createPlayerRuntimeBridge = ({
       const id = nextId++;
       const timer = setTimeout(() => {
         pending.delete(id);
-        reject(new Error(`Android player request timed out: ${method}`));
+        reject(new Error(`${name} request timed out: ${method}`));
       }, timeoutMs);
       pending.set(id, { resolve, reject, timer });
       try {
@@ -47,10 +49,14 @@ export const createPlayerRuntimeBridge = ({
     });
 };
 
-let callBridge;
-export const callPlayerRuntimeBridge = (method, payload) => {
-  callBridge ??= createPlayerRuntimeBridge();
-  return callBridge(method, payload);
+// Connects to the bridge on the first call, when the native player has
+// installed it.
+export const createLazyPlayerRuntimeBridge = ({ getBridge, name }) => {
+  let call;
+  return (method, payload) => {
+    call ??= createPlayerRuntimeBridge({ bridge: getBridge(), name });
+    return call(method, payload);
+  };
 };
 
 const requireKey = (key, label = "Db key") => {
@@ -80,7 +86,8 @@ export const createPlayerRuntimeDb = ({
   path = "sqlite:runtime.db",
   durability = "full",
   schemaVersion = 1,
-  call = callPlayerRuntimeBridge,
+  call,
+  name = "Player",
 } = {}) => {
   if (
     path !== "sqlite:runtime.db" ||
@@ -88,7 +95,7 @@ export const createPlayerRuntimeDb = ({
     schemaVersion !== 1
   ) {
     throw new Error(
-      "Android player requires runtime.db with full durability and schema version 1.",
+      `${name} requires runtime.db with full durability and schema version 1.`,
     );
   }
   let initialized = false;

@@ -29,17 +29,20 @@ export const handleAfterMount = async (deps) => {
       windowsPlatformDetails,
       macosPlatformDetails,
       androidPlatformDetails,
+      iosPlatformDetails,
     ] = await Promise.all([
       projectService.getCurrentPlatformDetails("web"),
       projectService.getCurrentPlatformDetails("windows"),
       projectService.getCurrentPlatformDetails("macos"),
       projectService.getCurrentPlatformDetails("android"),
+      projectService.getCurrentPlatformDetails("ios"),
     ]);
     const platformDetails = [
       ["web", webPlatformDetails],
       ["windows", windowsPlatformDetails],
       ["macos", macosPlatformDetails],
       ["android", androidPlatformDetails],
+      ["ios", iosPlatformDetails],
     ];
     for (const [platform, applicationInfo] of platformDetails) {
       if (applicationInfo) {

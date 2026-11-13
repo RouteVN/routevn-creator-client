@@ -11,6 +11,31 @@ describe("platform details validation", () => {
     ).toEqual({ valid: false, code: "application-name-required" });
   });
 
+  it("requires an iOS icon and a valid bundle identifier", () => {
+    const validate = (applicationInfo) =>
+      validatePlatformDetails({
+        platform: "ios",
+        applicationInfo: {
+          applicationName: "Project One",
+          iconFileId: "ios-icon",
+          applicationIdentifier: "com.example.project-one",
+          ...applicationInfo,
+        },
+      });
+    expect(validate({})).toEqual({ valid: true });
+    expect(validate({ iconFileId: undefined })).toEqual({
+      valid: false,
+      code: "ios-icon-required",
+    });
+    expect(validate({ applicationIdentifier: "" })).toEqual({
+      valid: false,
+      code: "ios-identifier-required",
+    });
+    expect(
+      validate({ applicationIdentifier: "com.example.project_one" }),
+    ).toEqual({ valid: false, code: "ios-identifier-invalid" });
+  });
+
   it("requires a valid Windows identifier", () => {
     expect(
       validatePlatformDetails({

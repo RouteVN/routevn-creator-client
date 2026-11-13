@@ -25,6 +25,7 @@ const createHarness = ({
     windows: clone(initialPlatformDetails.windows),
     macos: clone(initialPlatformDetails.macos),
     android: clone(initialPlatformDetails.android),
+    ios: clone(initialPlatformDetails.ios),
   };
   const legacyPlatformDetails = {
     web: clone(initialLegacyPlatformDetails.web),
@@ -49,6 +50,7 @@ const createHarness = ({
         }
         if (key === "platformDetails.android")
           return clone(platformDetails.android);
+        if (key === "platformDetails.ios") return clone(platformDetails.ios);
         if (key === "platformDetails.macos") {
           return clone(platformDetails.macos);
         }
@@ -75,6 +77,7 @@ const createHarness = ({
         }
         if (key === "platformDetails.android")
           platformDetails.android = JSON.parse(JSON.stringify(value));
+        if (key === "platformDetails.ios") platformDetails.ios = clone(value);
         if (key === "platformDetails.macos") {
           platformDetails.macos = clone(value);
         }
@@ -115,6 +118,31 @@ const createHarness = ({
 };
 
 describe("projectRepositoryService platform details", () => {
+  it("creates iOS details and keeps the team through later edits", async () => {
+    const { service, getPlatformDetails } = createHarness();
+    await service.createCurrentPlatformDetails("ios", {
+      applicationIdentifier: "com.example.project-one",
+    });
+    expect(getPlatformDetails("ios")).toEqual({
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project-one",
+      iconFileId: "project-icon-1",
+      teamId: "",
+    });
+    await service.updateCurrentPlatformDetails("ios", { teamId: "ABCDE12345" });
+    await service.updateCurrentPlatformDetails("ios", {
+      applicationName: "Project One HD",
+      applicationIdentifier: "com.example.project-one",
+      iconFileId: "ios-icon-1",
+    });
+    expect(await service.getCurrentPlatformDetails("ios")).toEqual({
+      applicationName: "Project One HD",
+      applicationIdentifier: "com.example.project-one",
+      iconFileId: "ios-icon-1",
+      teamId: "ABCDE12345",
+    });
+  });
+
   it("persists optional Android icons and clears them on a later save", async () => {
     const { service, getPlatformDetails } = createHarness();
     await service.createCurrentPlatformDetails("android", {
