@@ -73,6 +73,30 @@ refs:
         handler: handleRemovePlatformEditOptionalIcon
         payload:
           target: splash
+  androidSaveKeyCopyButton:
+    eventListeners:
+      click:
+        handler: handleAndroidSaveKeyCopyClick
+  androidSavePreviousKeyCopyButton*:
+    eventListeners:
+      click:
+        handler: handleAndroidSaveKeyCopyClick
+  androidUploadKeyButton:
+    eventListeners:
+      click:
+        handler: handleAndroidUploadKeyClick
+  androidCreateKeyButton:
+    eventListeners:
+      click:
+        handler: handleAndroidCreateKeyClick
+  androidReplaceKeyButton:
+    eventListeners:
+      click:
+        handler: handleAndroidReplaceKeyClick
+  androidUseKeyAgainButton*:
+    eventListeners:
+      click:
+        handler: handleAndroidUseKeyAgainClick
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -130,6 +154,31 @@ template:
                                               - rvn-file-image fileId=${androidSplashPreviewFileId} w=${androidSplashPreviewSize} h=${androidSplashPreviewSize}: null
                               - rtgl-view#platformApplicationIdentifier slot=platform-application-identifier cur=pointer:
                                   - rtgl-text: ${platformApplicationIdentifier}
+                              - $if showAndroidSigning:
+                                  - rtgl-view slot=android-signing-key d=v g=sm w=f:
+                                      - $if androidSigningKey:
+                                          - 'rtgl-text s=sm style="font-family: ui-monospace, monospace; overflow-wrap: anywhere;"': ${androidSigningKey.fingerprint}
+                                          - rtgl-text s=sm c=mu-fg: ${androidSigningKey.detail}
+                                          - rtgl-text s=sm c=mu-fg: ${androidSigningKeyNotice}
+                                        $else:
+                                          - rtgl-text s=sm c=mu-fg: ${androidNoSigningKeyMessage}
+                                      - rtgl-view d=h g=sm wrap:
+                                          - $if androidSigningKey:
+                                              - rtgl-button#androidSaveKeyCopyButton data-certificate-sha256="${androidSigningKey.certificateSha256}" v=ol s=sm ?disabled=${androidSigningBusy}: ${androidSaveKeyCopyLabel}
+                                          - rtgl-button#androidUploadKeyButton v=ol s=sm ?disabled=${androidSigningBusy}: ${androidUploadKeyLabel}
+                                          - $if androidSigningKey:
+                                              - rtgl-button#androidReplaceKeyButton v=ol s=sm ?disabled=${androidSigningBusy}: ${androidReplaceKeyLabel}
+                                            $else:
+                                              - rtgl-button#androidCreateKeyButton v=ol s=sm ?disabled=${androidSigningBusy}: ${androidCreateKeyLabel}
+                              - $if showAndroidPreviousKeys:
+                                  - rtgl-view slot=android-previous-signing-keys d=v g=md w=f:
+                                      - $for key, keyIndex in androidPreviousKeys:
+                                          - rtgl-view d=v g=xs w=f:
+                                              - 'rtgl-text s=sm style="font-family: ui-monospace, monospace; overflow-wrap: anywhere;"': ${key.fingerprint}
+                                              - rtgl-text s=sm c=mu-fg: ${key.detail}
+                                              - rtgl-view d=h g=sm wrap:
+                                                  - rtgl-button#androidUseKeyAgainButton${keyIndex} data-certificate-sha256="${key.certificateSha256}" v=ol s=sm ?disabled=${androidSigningBusy}: ${androidUseKeyAgainLabel}
+                                                  - rtgl-button#androidSavePreviousKeyCopyButton${keyIndex} data-certificate-sha256="${key.certificateSha256}" v=ol s=sm ?disabled=${androidSigningBusy}: ${androidSaveKeyCopyLabel}
                     $else:
                       - rtgl-view w=f h=f av=c ah=c ph=md:
                           - rtgl-text c=mu-fg ta=c: ${emptyPlatformsMessage}

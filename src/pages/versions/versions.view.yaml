@@ -171,7 +171,8 @@ template:
                         $else:
                           - rtgl-image slot=export-confirmation-icon src="/public/project_logo_placeholder.png" w=96 h=96 bw=xs bc=bo br=md: null
               - $if showAndroidExportForm:
-                  - rtgl-text: ${androidUnsignedApkNotice}
+                  - $if showAndroidUnsignedNotice:
+                      - rtgl-text: ${androidUnsignedApkNotice}
                   - rtgl-form#androidExportForm :form=${androidExportForm} w=f: null
                 $elif showMacosExportForm:
                   - rtgl-form#macosExportForm :form=${macosExportForm} w=f: null

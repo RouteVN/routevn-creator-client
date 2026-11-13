@@ -15,6 +15,19 @@ pub enum ErrorCode {
     TooLarge,
     WriteFailed,
     ValidationFailed,
+    /// Creating or using a key failed unexpectedly.
+    SigningFailed,
+    /// The file is not a keystore with a usable key and certificate, or a
+    /// stored key is damaged.
+    SigningKeyInvalid,
+    /// The key is not RSA, or has fewer than 2048 bits.
+    SigningKeyUnsupported,
+    KeystorePasswordIncorrect,
+    /// A legacy JKS or JCEKS keystore, which must be converted to PKCS #12.
+    KeystoreLegacyFormat,
+    /// The keystore holds several keys and no alias was given.
+    KeystoreAliasRequired,
+    KeystoreAliasNotFound,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

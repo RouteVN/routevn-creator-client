@@ -18,6 +18,87 @@ const createRtglElement = (root, tagName, attributes = {}, textContent) => {
   return element;
 };
 
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+const createSvgElement = (root, tagName, attributes) => {
+  const element = root.createElementNS(SVG_NAMESPACE, tagName);
+  Object.entries(attributes).forEach(([name, value]) => {
+    element.setAttribute(name, value);
+  });
+  return element;
+};
+
+// A check in a filled circle for a finished step, a spinning arc for the
+// running one, and a faded ring for a step that has not started.
+const createStepIcon = (root, state) => {
+  const icon = createSvgElement(root, "svg", {
+    width: "20",
+    height: "20",
+    viewBox: "0 0 20 20",
+    "aria-hidden": "true",
+    "data-progress-step-icon": state,
+    style: "flex-shrink: 0;",
+  });
+  if (state === "done") {
+    icon.append(
+      createSvgElement(root, "circle", {
+        cx: "10",
+        cy: "10",
+        r: "9",
+        fill: "var(--primary)",
+      }),
+      createSvgElement(root, "path", {
+        d: "M6 10.5l2.75 2.75L14 8",
+        fill: "none",
+        stroke: "var(--primary-foreground)",
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+      }),
+    );
+    return icon;
+  }
+  if (state === "active") {
+    icon.setAttribute(
+      "style",
+      "flex-shrink: 0; animation: routevn-progress-step-spin 0.8s linear infinite;",
+    );
+    icon.append(
+      createSvgElement(root, "circle", {
+        cx: "10",
+        cy: "10",
+        r: "8",
+        fill: "none",
+        stroke: "var(--border)",
+        "stroke-width": "2.5",
+      }),
+      createSvgElement(root, "circle", {
+        cx: "10",
+        cy: "10",
+        r: "8",
+        fill: "none",
+        stroke: "var(--primary)",
+        "stroke-width": "2.5",
+        "stroke-linecap": "round",
+        "stroke-dasharray": "14 37",
+      }),
+    );
+    return icon;
+  }
+  icon.append(
+    createSvgElement(root, "circle", {
+      cx: "10",
+      cy: "10",
+      r: "8",
+      fill: "none",
+      stroke: "var(--muted-foreground)",
+      "stroke-width": "2",
+      opacity: "0.5",
+    }),
+  );
+  return icon;
+};
+
 export const createProgressDialog = (
   {
     id = DEFAULT_PROGRESS_DIALOG_ID,
@@ -25,6 +106,7 @@ export const createProgressDialog = (
     message = "",
     status,
     progress,
+    steps,
     announceTitle = false,
   } = {},
   root = typeof document === "undefined" ? undefined : document,
@@ -104,6 +186,86 @@ export const createProgressDialog = (
   `;
   progressTrack.append(progressStyle, progressFill);
 
+  // Steps replace the progress bar for work made of several stages, so the
+  // dialog never shows a bar that starts over at each stage.
+  const stepList = createRtglElement(root, "rtgl-view", {
+    "data-progress-steps": "",
+    role: "list",
+    "aria-label": title,
+    g: "md",
+    w: "f",
+  });
+  const stepStyle = createRtglElement(root, "style");
+  stepStyle.textContent = `
+    @keyframes routevn-progress-step-spin {
+      to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [data-progress-step-icon="active"] { animation-duration: 3s !important; }
+    }
+  `;
+
+  // The running step may show how far it is, such as "12 / 423".
+  const createStepRow = ({ label, state, detail }) => {
+    const row = createRtglElement(root, "rtgl-view", {
+      "data-progress-step": state,
+      role: "listitem",
+      "aria-current": state === "active" ? "step" : undefined,
+      d: "h",
+      av: "c",
+      g: "md",
+      w: "f",
+    });
+    const detailText = createRtglElement(
+      root,
+      "rtgl-text",
+      {
+        "data-progress-step-detail": "",
+        c: "mu-fg",
+        style: "margin-left: auto; font-variant-numeric: tabular-nums;",
+      },
+      detail ?? "",
+    );
+    row.append(
+      createStepIcon(root, state),
+      createRtglElement(
+        root,
+        "rtgl-text",
+        { c: state === "pending" ? "mu-fg" : undefined },
+        label,
+      ),
+      detailText,
+    );
+    return { row, detailText, label, state };
+  };
+  let stepRows = [];
+
+  const setSteps = (value) => {
+    if (value === undefined) {
+      stepList.remove();
+      stepRows = [];
+      return;
+    }
+    const sameSteps =
+      value.length === stepRows.length &&
+      value.every(
+        ({ label, state }, index) =>
+          stepRows[index].label === label && stepRows[index].state === state,
+      );
+    if (sameSteps) {
+      // Only the numbers changed: keep the rows, so the spinner keeps turning.
+      value.forEach(({ detail }, index) => {
+        stepRows[index].detailText.textContent = detail ?? "";
+      });
+      return;
+    }
+    stepRows = value.map(createStepRow);
+    stepList.replaceChildren(stepStyle, ...stepRows.map(({ row }) => row));
+    if (stepList.parentNode !== content) {
+      header.after(stepList);
+    }
+  };
+
   const setStatus = (value) => {
     if (value === undefined || value === "") {
       statusText.remove();
@@ -162,6 +324,7 @@ export const createProgressDialog = (
 
   header.append(titleText, messageText);
   content.append(header);
+  setSteps(steps);
   setStatus(status);
   setProgress(progress);
   dialog.append(content);
@@ -176,6 +339,7 @@ export const createProgressDialog = (
       if (options.title !== undefined) {
         titleText.textContent = options.title;
         progressTrack.setAttribute("aria-label", options.title);
+        stepList.setAttribute("aria-label", options.title);
       }
       if (options.message !== undefined) {
         messageText.textContent = options.message;
@@ -185,6 +349,9 @@ export const createProgressDialog = (
       }
       if (Object.hasOwn(options, "progress")) {
         setProgress(options.progress);
+      }
+      if (Object.hasOwn(options, "steps")) {
+        setSteps(options.steps);
       }
     },
     async waitForPaint() {

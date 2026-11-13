@@ -1094,6 +1094,7 @@ export const createTauriProjectServiceAdapters = ({
     splashIconFileId,
     iconBackgroundColor,
     splashBackgroundColor,
+    signingKey,
     options = {},
     getCurrentReference,
   }) => {
@@ -1164,8 +1165,42 @@ export const createTauriProjectServiceAdapters = ({
       );
       request.splashIconPath = filePath;
     }
-    return invoke("export_android_apk", { request, onProgress });
+    return invoke("export_android_apk", { request, signingKey, onProgress });
   };
+
+  const createAndroidSigningKey = async ({ applicationName, applicationId }) =>
+    invoke("create_android_signing_key", { applicationName, applicationId });
+
+  const promptAndroidKeystorePath = async ({ options = {}, filePicker }) =>
+    (await filePicker.openFilePicker({
+      title: options.title,
+      multiple: false,
+      filters: [
+        {
+          name: options.fileTypeName ?? "Keystore",
+          extensions: ["p12", "pfx", "keystore", "jks"],
+        },
+      ],
+    })) ?? undefined;
+
+  const readAndroidKeystore = async ({ path, password, alias }) =>
+    invoke("read_android_keystore", { path, password, alias });
+
+  const promptAndroidKeyCopyPath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    (await filePicker.saveFilePicker({
+      title: options.title,
+      defaultPath: defaultFileName,
+      filters: [
+        { name: options.fileTypeName ?? "PKCS #12", extensions: ["p12"] },
+      ],
+    })) ?? undefined;
+
+  const writeAndroidKeystore = async ({ path, password, alias, key }) =>
+    invoke("write_android_keystore", { path, password, alias, key });
 
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
@@ -1496,6 +1531,11 @@ export const createTauriProjectServiceAdapters = ({
     getAndroidExportAvailability,
     promptAndroidApkPath,
     createAndroidApkToPath,
+    createAndroidSigningKey,
+    promptAndroidKeystorePath,
+    readAndroidKeystore,
+    promptAndroidKeyCopyPath,
+    writeAndroidKeystore,
     promptMacosApplicationPath,
     getWindowsExportAvailability,
     getMacosExportAvailability,

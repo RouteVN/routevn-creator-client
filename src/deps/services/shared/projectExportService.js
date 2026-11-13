@@ -1474,6 +1474,7 @@ export const createProjectExportService = ({
       splashIconFileId: metadata.splashIconFileId,
       iconBackgroundColor: metadata.iconBackgroundColor,
       splashBackgroundColor: metadata.splashBackgroundColor,
+      signingKey: metadata.signingKey,
       options,
       getCurrentReference,
     });

@@ -11,6 +11,12 @@ import {
 } from "../../internal/project/projection.js";
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 import { selectVersionsPageCopy } from "./support/versionsPageCopy.js";
+import {
+  createAndroidApkExportStepsView,
+  formatAndroidApkExportProgress,
+  getAndroidApkExportStepForPhase,
+  getAndroidApkExportSteps,
+} from "./support/androidApkExportSteps.js";
 import { sanitizeArtifactFileName } from "../../internal/artifactFileName.js";
 import {
   createAndroidNativeVersion,
@@ -836,6 +842,9 @@ const startExportConfirmation = async (
   if (!applicationInfo) {
     return;
   }
+  if (exportType === "android-apk" && !(await loadAndroidSigningStatus(deps))) {
+    return;
+  }
 
   store.closeDropdownMenu();
   store.setSelectedItemId({ itemId: versionId });
@@ -857,6 +866,7 @@ const startExportConfirmation = async (
           ? version.name
           : "",
         buildNumber: "",
+        signing: "signed",
       },
     });
   }
@@ -872,6 +882,35 @@ const startExportConfirmation = async (
         buildNumber: "",
       },
     });
+  }
+};
+
+// Whether this host signs and the project's current key, read before the
+// Android export dialog renders.
+const loadAndroidSigningStatus = async (deps) => {
+  const { store, projectService, appService, i18n } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  if (!projectService.supportsAndroidSigning()) {
+    store.setAndroidSigningStatus({ supported: false });
+    return true;
+  }
+  try {
+    const { currentKey } = await projectService.getAndroidSigningSummary();
+    store.setAndroidSigningStatus({
+      supported: true,
+      currentKey: currentKey?.certificateSha256,
+    });
+    return true;
+  } catch (error) {
+    appService.showAlert({
+      message: withErrorDetails(
+        copy.androidSigningStatusFailed,
+        error,
+        copy.errorDetailsLabel,
+      ),
+      title: copy.errorTitle,
+    });
+    return false;
   }
 };
 
@@ -1707,7 +1746,7 @@ const runMacosApplicationExport = async (deps, confirmation) => {
 const runAndroidApkExport = async (deps, confirmation) => {
   const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  const { versionId, applicationInfo, nativeVersion } = confirmation;
+  const { versionId, applicationInfo, nativeVersion, signed } = confirmation;
   const version = store.selectVersion(versionId);
   if (!version) {
     appService.showAlert({
@@ -1732,6 +1771,7 @@ const runAndroidApkExport = async (deps, confirmation) => {
         defaultFileName: createAndroidApkFileName(
           applicationInfo.applicationName,
           nativeVersion.versionName,
+          signed,
         ),
       },
       {
@@ -1752,16 +1792,61 @@ const runAndroidApkExport = async (deps, confirmation) => {
   }
   if (!outputPath) return;
 
+  const steps = getAndroidApkExportSteps({
+    signed,
+    createsKey: signed && !store.selectAndroidSigningStatus().currentKey,
+  });
+  let currentStep = steps[0];
+  let currentDetail;
   const progressDialog = appService.showProgressDialog({
     message: copy.androidApkInProgressMessage,
     title: copy.androidApkInProgressTitle,
-    status: copy.bundlePreparingProjectStatus,
-    progress: {},
+    steps: createAndroidApkExportStepsView({
+      copy,
+      steps,
+      current: currentStep,
+    }),
   });
+  // Steps only move forward. Within the running step, only its numbers change.
+  const showStep = (step, detail) => {
+    const index = steps.indexOf(step);
+    const currentIndex = steps.indexOf(currentStep);
+    if (index < currentIndex) return;
+    if (index === currentIndex && detail === currentDetail) return;
+    currentStep = step;
+    currentDetail = detail;
+    progressDialog.update({
+      steps: createAndroidApkExportStepsView({
+        copy,
+        steps,
+        current: currentStep,
+        detail: currentDetail,
+      }),
+    });
+  };
+  const countFormat = new Intl.NumberFormat(
+    i18n.dateTime?.intlLocale ?? "en-US",
+  );
+  const progressFormats = {
+    formatBytes: (value) => formatBundleByteCount(value, i18n.dateTime),
+    formatCount: (value) => countFormat.format(value),
+  };
   let result;
   let exportError;
+  let exportFailedMessage = copy.androidExportFailed;
   try {
     await progressDialog.waitForPaint();
+    let signingCertificateSha256;
+    if (signed) {
+      exportFailedMessage = copy.androidSigningKeyFailed;
+      const signingKey = await projectService.ensureAndroidSigningKey({
+        applicationName: applicationInfo.applicationName,
+        applicationId: applicationInfo.applicationIdentifier,
+      });
+      signingCertificateSha256 = signingKey.certificateSha256;
+      exportFailedMessage = copy.androidExportFailed;
+    }
+    showStep("prepare");
     const { transformedData, fileEntries } = await createVersionExportData({
       appService,
       applicationInfo,
@@ -1783,15 +1868,13 @@ const runAndroidApkExport = async (deps, confirmation) => {
         splashIconFileId: applicationInfo.splashIconFileId,
         iconBackgroundColor: applicationInfo.iconBackgroundColor,
         splashBackgroundColor: applicationInfo.splashBackgroundColor,
+        signingCertificateSha256,
       },
       {
         onProgress: (progress) =>
-          progressDialog.update(
-            createAndroidApkProgressView({
-              copy,
-              dateTime: i18n.dateTime,
-              progress,
-            }),
+          showStep(
+            getAndroidApkExportStepForPhase(progress.phase),
+            formatAndroidApkExportProgress(progress, progressFormats),
           ),
       },
     );
@@ -1813,7 +1896,7 @@ const runAndroidApkExport = async (deps, confirmation) => {
     }
     appService.showAlert({
       message: withErrorDetails(
-        copy.androidExportFailed,
+        exportFailedMessage,
         exportError,
         copy.errorDetailsLabel,
       ),
@@ -1822,37 +1905,16 @@ const runAndroidApkExport = async (deps, confirmation) => {
     return;
   }
   appService.showAlert({
-    message: formatI18nCopy(copy.androidApkExportCompletedMessage, {
-      path: appService.getFileDisplayPath(result?.outputPath ?? outputPath),
-    }),
+    message: formatI18nCopy(
+      signed
+        ? copy.androidSignedApkExportCompletedMessage
+        : copy.androidApkExportCompletedMessage,
+      {
+        path: appService.getFileDisplayPath(result?.outputPath ?? outputPath),
+      },
+    ),
     title: copy.exportCompletedTitle,
   });
-};
-
-const createAndroidApkProgressView = ({ copy, dateTime, progress }) => {
-  const statuses = {
-    prepareApk: copy.androidPreparingApkStatus,
-    encryptPayload: copy.androidEncryptingPayloadStatus,
-    rewriteManifest: copy.androidPreparingApkStatus,
-    renderIcons: copy.androidPreparingApkStatus,
-    writeApk: copy.androidWritingApkStatus,
-    saveApk: copy.androidWritingApkStatus,
-    verifyApk: copy.androidVerifyingApkStatus,
-    finalizeApk: copy.androidFinalizingApkStatus,
-    finalize: copy.androidFinalizingApkStatus,
-  };
-  const status = statuses[progress.phase];
-  if (!status) return createBundleProgressView({ copy, dateTime, progress });
-  const elapsed = formatBundleElapsedTime(progress.elapsedMs, dateTime);
-  return {
-    status: elapsed
-      ? formatI18nCopy(copy.bundleElapsedStatus, { status, elapsed })
-      : status,
-    progress:
-      progress.total > 0
-        ? { current: progress.current, total: progress.total }
-        : {},
-  };
 };
 
 export const handleAndroidExportFormAction = async (deps, payload) => {
@@ -1876,9 +1938,15 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
   const confirmation = store.selectExportConfirmation();
   if (confirmation.exportType !== "android-apk") return;
   const nativeVersion = createAndroidNativeVersion(version, buildNumber);
+  const signed =
+    store.selectAndroidSigningStatus().supported && values.signing === "signed";
   store.closeExportConfirmation();
   render();
-  await runAndroidApkExport(deps, { ...confirmation, nativeVersion });
+  await runAndroidApkExport(deps, {
+    ...confirmation,
+    nativeVersion,
+    signed,
+  });
 };
 
 export const handleExportConfirmationConfirm = async (deps) => {

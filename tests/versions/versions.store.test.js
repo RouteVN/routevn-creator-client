@@ -9,6 +9,7 @@ import {
   setSelectedItemId,
   setPlatform,
   setAndroidExportAvailability,
+  setAndroidSigningStatus,
   setMacosExportAvailability,
   setUiConfig,
   setVisualTestMode,
@@ -446,4 +447,96 @@ it("shows Android release details, native version fields, and the unsigned signi
   expect(view.androidUnsignedApkNotice).toBe(
     EN_I18N.versionsPage.androidUnsignedApkNotice,
   );
+  // A host that cannot sign shows only the unsigned notice and no choices.
+  expect(view.showAndroidUnsignedNotice).toBe(true);
+  expect(view.androidExportForm.fields).toHaveLength(1);
+});
+
+const openAndroidExport = (state) =>
+  openExportConfirmation(
+    { state },
+    {
+      exportType: "android-apk",
+      platform: "android",
+      versionId: "version-1",
+      versionName: "1.0.0",
+      applicationInfo: {
+        applicationName: "Project One",
+        applicationIdentifier: "com.example.project_one",
+        iconFileId: "icon-1",
+      },
+    },
+  );
+
+// Each signing field with the `$when` condition rtgl-form renders it under.
+const describeSigningFields = (form) =>
+  form.fields.slice(1).map((field) => ({
+    when: field.$when,
+    name: field.name,
+    content: field.content,
+    options: field.options?.map((option) => option.value),
+  }));
+
+describe("Android signing fields", () => {
+  const SIGNED = "values.signing == 'signed'";
+
+  it("offers Signed and Unsigned and explains a new key for a game with none", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus({ state }, { supported: true });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.showAndroidUnsignedNotice).toBe(false);
+    const fields = describeSigningFields(view.androidExportForm);
+    expect(fields).toEqual([
+      {
+        when: undefined,
+        name: "signing",
+        content: undefined,
+        options: ["signed", "unsigned"],
+      },
+      {
+        when: "values.signing == 'unsigned'",
+        name: undefined,
+        content: EN_I18N.versionsPage.androidUnsignedApkNotice,
+        options: undefined,
+      },
+      {
+        when: SIGNED,
+        name: undefined,
+        content: EN_I18N.versionsPage.androidNewKeyNotice,
+        options: undefined,
+      },
+    ]);
+  });
+
+  it("says the project's key signs and asks nothing else", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus(
+      { state },
+      { supported: true, currentKey: "ab".repeat(32) },
+    );
+    const fields = describeSigningFields(
+      selectViewData({ state, i18n: EN_I18N }).androidExportForm,
+    );
+    expect(fields.map((field) => field.name).filter(Boolean)).toEqual([
+      "signing",
+    ]);
+    expect(fields[2]).toEqual({
+      when: SIGNED,
+      name: undefined,
+      content: EN_I18N.versionsPage.androidSignedWithKeyNotice,
+      options: undefined,
+    });
+    expect(fields).toHaveLength(3);
+  });
+
+  it("shows no signing choice on a host that cannot sign", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus({ state }, { supported: false });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.showAndroidUnsignedNotice).toBe(true);
+    expect(describeSigningFields(view.androidExportForm)).toEqual([]);
+  });
 });

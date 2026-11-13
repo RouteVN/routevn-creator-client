@@ -98,11 +98,7 @@ pub fn sha256_file(path: &Path) -> Result<String> {
         }
         hasher.update(&buffer[..read]);
     }
-    Ok(hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
+    Ok(crate::signing::hex(&hasher.finalize()))
 }
 
 fn missing(path: &Path, error: std::io::Error) -> ExportError {

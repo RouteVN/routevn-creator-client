@@ -62,3 +62,99 @@ describe("progress dialog status text", () => {
     expect(lines(status)).toEqual(["Finishing up…"]);
   });
 });
+
+describe("progress dialog steps", () => {
+  const stepRows = (document) =>
+    [...document.querySelectorAll("[data-progress-step]")].map((row) => [
+      row.textContent,
+      row.dataset.progressStep,
+      row.querySelector("[data-progress-step-icon]").dataset.progressStepIcon,
+      row.getAttribute("aria-current"),
+    ]);
+
+  it("lists every step under the title instead of a progress bar", () => {
+    const document = createDocument();
+    createProgressDialog(
+      {
+        title: "Exporting",
+        message: "Please wait",
+        steps: [
+          { label: "Step one", state: "done" },
+          { label: "Step two", state: "active" },
+          { label: "Step three", state: "pending" },
+        ],
+      },
+      document,
+    );
+
+    expect(stepRows(document)).toEqual([
+      ["Step one", "done", "done", null],
+      ["Step two", "active", "active", "step"],
+      ["Step three", "pending", "pending", null],
+    ]);
+    expect(document.querySelector("[data-progress-track]")).toBeNull();
+    const list = document.querySelector("[data-progress-steps]");
+    expect(list.getAttribute("role")).toBe("list");
+    expect(list.getAttribute("aria-label")).toBe("Exporting");
+    // The header comes first, then the steps.
+    expect(list.previousElementSibling.textContent).toContain("Exporting");
+  });
+
+  it("redraws the steps on update and keeps them above a later status", () => {
+    const document = createDocument();
+    const dialog = createProgressDialog(
+      {
+        title: "Exporting",
+        steps: [
+          { label: "Step one", state: "active" },
+          { label: "Step two", state: "pending" },
+        ],
+      },
+      document,
+    );
+    dialog.update({ status: "Almost done" });
+    dialog.update({
+      steps: [
+        { label: "Step one", state: "done" },
+        { label: "Step two", state: "active" },
+      ],
+    });
+
+    expect(stepRows(document)).toEqual([
+      ["Step one", "done", "done", null],
+      ["Step two", "active", "active", "step"],
+    ]);
+    expect(document.querySelectorAll("[data-progress-steps]")).toHaveLength(1);
+    const list = document.querySelector("[data-progress-steps]");
+    expect(list.nextElementSibling.textContent).toBe("Almost done");
+  });
+
+  it("changes only the running step's numbers, so its spinner keeps turning", () => {
+    const document = createDocument();
+    const steps = (detail) => [
+      { label: "Step one", state: "done" },
+      { label: "Step two", state: "active", detail },
+    ];
+    const dialog = createProgressDialog(
+      { title: "Exporting", steps: steps("1 / 423") },
+      document,
+    );
+    const spinner = document.querySelector(
+      '[data-progress-step-icon="active"]',
+    );
+    const detail = () =>
+      [...document.querySelectorAll("[data-progress-step-detail]")].map(
+        (element) => element.textContent,
+      );
+    expect(detail()).toEqual(["", "1 / 423"]);
+
+    dialog.update({ steps: steps("12 / 423") });
+    expect(detail()).toEqual(["", "12 / 423"]);
+    expect(document.querySelector('[data-progress-step-icon="active"]')).toBe(
+      spinner,
+    );
+
+    dialog.update({ steps: steps(undefined) });
+    expect(detail()).toEqual(["", ""]);
+  });
+});

@@ -228,6 +228,23 @@ Current keys:
   - Version and Build Number are required per-export inputs and are not persisted
   - project DB import/export preserves the record on every host; no legacy
     `releaseInfo.android` key is read because Android has no preview storage key
+- `androidSigning`
+  - the game's Android signing keys: `keys`, a list of
+    `{ certificateSha256, certificate, privateKey, origin, addedAt }`, and
+    `currentKey`, the fingerprint of the key that signs new builds
+  - `certificateSha256` is 64 lowercase hex digits; `certificate` (DER) and
+    `privateKey` (PKCS #8 DER) are base64; `origin` is `created` or
+    `uploaded`; `addedAt` is milliseconds since the epoch
+  - Creator uses only entries it can read, and `currentKey` only when its key
+    is one of them; writes keep every other entry and field as stored, so a
+    key written by a later version is never lost
+  - a separate key, not a field of `platformDetails.android`: released Creator
+    versions drop Platform Details fields they do not know when they save
+  - written when the first signed export makes a key, and by Create Key,
+    Upload Key, Replace Key, and Use Again in Platform Details; a replaced key
+    stays in the list
+  - the private keys are not encrypted: anyone with a copy of the project
+    folder can sign builds of the game; see `15-android-player-export.md`
 - `creatorVersion`
   - stored project format version gate for compatibility checks
 - `versions`

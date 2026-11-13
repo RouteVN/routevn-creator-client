@@ -1,4 +1,9 @@
-import { ANDROID_EXPORT_RELEASED } from "../../internal/androidExport.js";
+import {
+  ANDROID_EXPORT_RELEASED,
+  formatAndroidCertificateFingerprint,
+} from "../../internal/androidExport.js";
+import { formatDate } from "../../internal/dates.js";
+import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   createPlatformEditForm,
   PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
@@ -76,7 +81,12 @@ const getPlatformTabLabel = (platform, copy) => {
   return copy.webTabLabel;
 };
 
-const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
+const buildPlatformDetailFields = (
+  platform,
+  _applicationInfo,
+  copy,
+  androidSigning,
+) => {
   const fields = [
     {
       type: "slot",
@@ -156,9 +166,37 @@ const buildPlatformDetailFields = (platform, _applicationInfo, copy) => {
         label: copy.androidPreviewLabel,
       },
     );
+    if (androidSigning.supported) {
+      fields.push({
+        type: "slot",
+        slot: "android-signing-key",
+        label: copy.androidSigningKeyLabel,
+      });
+      if (androidSigning.previousKeys.length > 0) {
+        fields.push({
+          type: "slot",
+          slot: "android-previous-signing-keys",
+          label: copy.androidPreviousSigningKeysLabel,
+        });
+      }
+    }
   }
   return fields;
 };
+
+// A key as the Signing Key section shows it.
+const describeAndroidSigningKey = (key, copy, dateTime) => ({
+  certificateSha256: key.certificateSha256,
+  fingerprint: formatI18nCopy(copy.androidSigningKeyFingerprint, {
+    fingerprint: formatAndroidCertificateFingerprint(key.certificateSha256),
+  }),
+  detail: formatI18nCopy(
+    key.origin === "uploaded"
+      ? copy.androidSigningKeyUploadedDetail
+      : copy.androidSigningKeyCreatedDetail,
+    { date: formatDate(new Date(key.addedAt).toISOString(), dateTime) },
+  ),
+});
 
 export const createInitialState = () => ({
   platform: "web",
@@ -184,7 +222,37 @@ export const createInitialState = () => ({
   platformEditSplashIconFileId: undefined,
   platformEditIconCropTarget: "icon",
   platformEditIconCropFile: undefined,
+  // The project's Android signing keys, without key material. `busy` while a
+  // key change runs.
+  androidSigning: {
+    supported: false,
+    currentKey: undefined,
+    previousKeys: [],
+    busy: false,
+  },
 });
+
+export const setAndroidSigning = (
+  { state },
+  { supported, currentKey, previousKeys } = {},
+) => {
+  state.androidSigning.supported = !!supported;
+  state.androidSigning.currentKey = currentKey;
+  state.androidSigning.previousKeys = previousKeys ?? [];
+};
+
+export const setAndroidSigningBusy = ({ state }, { busy } = {}) => {
+  state.androidSigning.busy = !!busy;
+};
+
+export const selectAndroidSigning = ({ state }) => ({
+  supported: state.androidSigning.supported,
+  currentKey: state.androidSigning.currentKey,
+  busy: state.androidSigning.busy,
+});
+
+export const selectAndroidApplicationInfo = ({ state }) =>
+  state.platformApplicationInfo.android;
 
 export const selectSelectedPlatform = ({ state }) => {
   return state.selectedPlatform;
@@ -274,8 +342,33 @@ export const selectViewData = ({ state, i18n }) => {
           state.selectedPlatform,
           selectedPlatformInfo,
           copy,
+          state.androidSigning,
         )
       : [],
+    showAndroidSigning:
+      state.selectedPlatform === "android" && state.androidSigning.supported,
+    showAndroidPreviousKeys:
+      state.selectedPlatform === "android" &&
+      state.androidSigning.supported &&
+      state.androidSigning.previousKeys.length > 0,
+    androidSigningKey: state.androidSigning.currentKey
+      ? describeAndroidSigningKey(
+          state.androidSigning.currentKey,
+          copy,
+          i18n.dateTime,
+        )
+      : undefined,
+    androidPreviousKeys: state.androidSigning.previousKeys.map((key) =>
+      describeAndroidSigningKey(key, copy, i18n.dateTime),
+    ),
+    androidSigningBusy: state.androidSigning.busy,
+    androidSigningKeyNotice: copy.androidSigningKeyNotice,
+    androidNoSigningKeyMessage: copy.androidNoSigningKeyMessage,
+    androidSaveKeyCopyLabel: copy.androidSaveKeyCopyButton,
+    androidUploadKeyLabel: copy.androidUploadKeyButton,
+    androidReplaceKeyLabel: copy.androidReplaceKeyButton,
+    androidCreateKeyLabel: copy.androidCreateKeyButton,
+    androidUseKeyAgainLabel: copy.androidUseKeyAgainButton,
     adaptiveIconFileId: selectedPlatformInfo?.adaptiveIconFileId,
     splashIconFileId: selectedPlatformInfo?.splashIconFileId,
     platformEditAdaptiveIconFileId: state.platformEditAdaptiveIconFileId,
@@ -297,9 +390,8 @@ export const selectViewData = ({ state, i18n }) => {
     androidLauncherPreviewFileId:
       selectedPlatformInfo?.adaptiveIconFileId ??
       selectedPlatformInfo?.iconFileId,
-    androidLauncherPreviewSize: selectedPlatformInfo?.adaptiveIconFileId
-      ? 96
-      : 62,
+    // Either icon fills the launcher shape, which trims its corners.
+    androidLauncherPreviewSize: 96,
     androidSplashPreviewFileId:
       selectedPlatformInfo?.splashIconFileId ??
       selectedPlatformInfo?.iconFileId,
