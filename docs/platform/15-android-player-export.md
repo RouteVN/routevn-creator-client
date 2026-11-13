@@ -26,7 +26,7 @@ Export runs on the desktop (Windows, macOS, Linux), Android, and iOS Creator
 hosts. Web does not export APKs. No host runs Gradle, the Android SDK,
 `apksigner`, a JDK, or a network service: export rewrites a prebuilt player
 template, and the exporter signs the APK itself. Desktop hosts sign; the
-Android and iOS Creator apps export unsigned APKs for now.
+Android and iOS Creator apps export unsigned APKs.
 
 A signed APK installs directly. An unsigned APK is for creators who sign with
 their own tools:
@@ -102,9 +102,9 @@ changing code.
    the app icon fills the legacy square. The adaptive foreground, or the app
    icon when there is none, fits the centered 72 dp square of its 108 dp
    canvas, so it fills the launcher shape and the mask trims its corners. An
-   optional splash
-   icon fits the centered 192 dp square of its 288 dp canvas; otherwise the app
-   icon fits the largest square inside the centered 192 dp circle.
+   optional splash icon fits the centered 192 dp square of its 288 dp canvas;
+   otherwise the app icon fits the largest square inside the centered 192 dp
+   circle.
 7. write a new ZIP next to the destination: template entries in their original
    order with signature files dropped, unchanged entries copied without
    recompression, changed entries stored, and the encrypted package stored last
@@ -120,6 +120,13 @@ use the same code. Progress phases are `prepareApk`, the package phases shared
 with other exports, `encryptPayload`, `rewriteManifest`, `renderIcons`,
 `writeApk`, `verifyApk`, and `finalizeApk`. Mobile hosts add `saveApk` while
 they copy the APK to the chosen destination.
+
+The Versions export dialog groups the phases into steps: Create signing key
+(only when the export makes the key), Prepare project, Pack game files, Build
+APK, Sign APK (signed exports only), and Save APK. Each step shows as done,
+running, or not started, and the running step shows its phase's count or size,
+such as `12 / 423`. The mapping is in
+`src/pages/versions/support/androidApkExportSteps.js`.
 
 ## Player Runtime
 
@@ -169,15 +176,18 @@ replaced. The export dialog asks only Signed or Unsigned. The first signed
 export of a game makes its key, after the save location is chosen and while
 the progress dialog shows; the dialog closes before the key is made, and key
 changes run one at a time, so repeated clicks make one key. Later signed
-exports reuse it. Android accepts an update only when it is signed with the
-same key, so the dialog and Platform Details say that the key is in the
-project, that the project needs a backup, and that the project folder must not
-be shared publicly.
+exports reuse it. A new key is saved in the project before the APK is signed;
+if saving fails, the export stops with an error. Android accepts an update
+only when it is signed with the same key, so the dialog and Platform Details
+say that the key is in the project, that the project needs a backup, and that
+the project folder must not be shared publicly.
 
 The key is not protected by a password: for creators who are not technical, a
 forgotten password is a likelier way to lose the key than a leak. Copying or
 backing up the project copies the key, and the keys never leave the project
-database except through Save a Copy. The certificate names only the game.
+database except through Save a Copy. They are in the project's local `app`
+store, not in the shared project state, so collaborators do not receive them.
+The certificate names only the game.
 
 The Android tab of Platform Details has a Signing Key section on hosts that
 sign:
