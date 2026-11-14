@@ -277,13 +277,14 @@ follows the APK steps on the bundle layout:
 
 1. validate the request and check the bundle descriptor and template hash,
    the same as for an APK
-2. stream and encrypt the game package, and compute its SHA-256 while it is
-   written
+2. stream and encrypt the game package, and compute its SHA-256 in the same
+   pass as its CRC-32
 3. rewrite `base/manifest/AndroidManifest.xml`, a protocol buffer XML
    document: replace the template application ID and the values derived from
    it, and set `versionCode`, `versionName`, the application and activity
-   labels, and `screenOrientation`; each value must occur as many times as in
-   the template, or export stops
+   labels, and `screenOrientation`; export stops unless the template ID occurs,
+   `versionCode`, `versionName`, and `screenOrientation` occur once each, and
+   there is at least one label and every label is a literal string
 4. rewrite `base/resources.pb`: replace the two reserved colors in one pass,
    so a color the creator picked is never replaced twice, and rename the
    resource package to the application ID

@@ -1081,24 +1081,25 @@ export const createTauriProjectServiceAdapters = ({
   };
 
   // `bundleAvailable` tells whether the App Bundle template is installed
-  // too.
+  // too. A failed bundle check leaves APK export available.
   const getAndroidExportAvailability = async ({ options = {} } = {}) => {
+    let capabilities;
     try {
-      const capabilities = await getAndroidTemplateCapabilities(
+      capabilities = await getAndroidTemplateCapabilities(
         options,
         "apk",
         "get_android_export_host_capabilities",
       );
-      if (!capabilities.available) return capabilities;
-      const bundle = await getAndroidTemplateCapabilities(
-        {},
-        "aab",
-        "get_android_bundle_export_capabilities",
-      );
-      return { ...capabilities, bundleAvailable: bundle.available };
     } catch (error) {
       return { available: false, reason: String(error?.message ?? error) };
     }
+    if (!capabilities.available) return capabilities;
+    const bundle = await getAndroidTemplateCapabilities(
+      {},
+      "aab",
+      "get_android_bundle_export_capabilities",
+    ).catch(() => ({ available: false }));
+    return { ...capabilities, bundleAvailable: bundle.available };
   };
 
   const promptAndroidApkPath = async ({

@@ -195,7 +195,7 @@ const createAndroidSigningFields = (copy, signing) => [
   },
 ];
 
-const createAndroidExportForm = (copy, signing, bundleAvailable) => {
+const createAndroidExportForm = (copy, signing, canExportBundle) => {
   const fields = [
     {
       type: "row",
@@ -218,7 +218,7 @@ const createAndroidExportForm = (copy, signing, bundleAvailable) => {
     },
   ];
   if (signing.supported) {
-    if (bundleAvailable) fields.push(createAndroidFormatField(copy));
+    if (canExportBundle) fields.push(createAndroidFormatField(copy));
     fields.push(...createAndroidSigningFields(copy, signing));
   }
   return {
@@ -776,7 +776,7 @@ export const selectViewData = ({ state, i18n }) => {
     androidExportForm: createAndroidExportForm(
       copy,
       state.androidSigning,
-      state.androidExportAvailability.bundleAvailable,
+      selectCanExportAndroidBundle({ state }),
     ),
     // A host that signs shows this notice in the form, for Unsigned only.
     showAndroidUnsignedNotice: !state.androidSigning.supported,

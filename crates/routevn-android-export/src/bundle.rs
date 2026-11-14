@@ -101,15 +101,41 @@ fn glob_matches(pattern: &[u8], path: &[u8]) -> bool {
     }
 }
 
+/// Whether `glob_matches` reads `pattern` the way bundletool does: it has no
+/// `{a,b}` alternatives or escapes, and each `[...]` is a plain list of
+/// characters, with no range or negation.
+fn is_supported_glob(pattern: &[u8]) -> bool {
+    if pattern
+        .iter()
+        .any(|byte| matches!(byte, b'{' | b'}' | b'\\'))
+    {
+        return false;
+    }
+    let mut rest = pattern;
+    while let Some(open) = rest.iter().position(|byte| *byte == b'[') {
+        let class = &rest[open + 1..];
+        let Some(close) = class.iter().position(|byte| *byte == b']') else {
+            return false;
+        };
+        let list = &class[..close];
+        if list.is_empty() || matches!(list[0], b'!' | b'^') || list.contains(&b'-') {
+            return false;
+        }
+        rest = &class[close + 1..];
+    }
+    true
+}
+
 /// Whether the bundle keeps `apk_path` uncompressed in the APKs built from
-/// it.
+/// it. A glob this matcher cannot read is not counted, so an unexpected
+/// pattern refuses the template instead of passing it.
 fn keeps_uncompressed(config: &[u8], apk_path: &str) -> Result<bool> {
     let config = Message::parse(config)?;
     let Some(compression) = config.message(CONFIG_COMPRESSION)? else {
         return Ok(false);
     };
     for glob in compression.bytes(COMPRESSION_UNCOMPRESSED_GLOB) {
-        if glob_matches(glob, apk_path.as_bytes()) {
+        if is_supported_glob(glob) && glob_matches(glob, apk_path.as_bytes()) {
             return Ok(true);
         }
     }
@@ -631,5 +657,26 @@ mod tests {
         assert!(!glob_matches(b"assets/*.bin", b"assets/web/game.bin"));
         assert!(glob_matches(b"assets/?.bin", b"assets/a.bin"));
         assert!(!glob_matches(b"assets/?.bin", b"assets/ab.bin"));
+    }
+
+    #[test]
+    fn skips_globs_it_cannot_read() {
+        assert!(is_supported_glob(b"**[rR][oO][uU][tT][eE].[bB][iI][nN]"));
+        assert!(is_supported_glob(b"assets/*.bin"));
+        for pattern in [
+            &b"**.{bin,dat}"[..],
+            b"assets/[!a].bin",
+            b"assets/[^a].bin",
+            b"assets/[a-z].bin",
+            b"assets/[].bin",
+            b"assets/[ab.bin",
+            b"assets/\\*.bin",
+        ] {
+            assert!(
+                !is_supported_glob(pattern),
+                "{:?}",
+                String::from_utf8_lossy(pattern)
+            );
+        }
     }
 }

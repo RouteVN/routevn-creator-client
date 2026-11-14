@@ -1260,6 +1260,28 @@ describe("tauri project service adapters preflight reads", () => {
     );
   });
 
+  it("keeps APK export when the App Bundle check fails", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    mocked.invoke.mockImplementation(async (command) => {
+      if (command === "get_android_bundle_export_capabilities") {
+        throw new Error("command unavailable");
+      }
+      return { available: true, signingSupported: true };
+    });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: true,
+      signingSupported: true,
+      bundleAvailable: false,
+    });
+  });
+
   it("prompts for an App Bundle with localized dialog copy", async () => {
     const { fileAdapter } = createTauriProjectServiceAdapters({
       collabLog: () => {},
