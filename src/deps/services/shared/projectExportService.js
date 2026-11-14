@@ -90,6 +90,8 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
       #loading.has-loading-background,
       #loading.has-start-background {
         background: #000;
+        /* Artwork dissolves into the first scene instead of cutting to it. */
+        transition: opacity 600ms ease-in-out, visibility 0s 600ms;
       }
 
       .loading-background {
@@ -255,7 +257,9 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
 
       @media (prefers-reduced-motion: reduce) {
         #loading,
-        .loading-background,
+        #loading.has-loading-background,
+        #loading.has-start-background,
+        #loading-start-background,
         .loading-progress,
         #loading-start,
         #loading.ready #loading-start {
