@@ -42,6 +42,8 @@ const PLATFORM_DETAILS_IMAGE_PROPERTIES = [
   "iconFileId",
   "adaptiveIconFileId",
   "splashIconFileId",
+  "loadingBackgroundFileId",
+  "startBackgroundFileId",
 ];
 const MENU_ITEM_TEXT_STYLE_ID = "e2WbW3vcPZR9";
 const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";

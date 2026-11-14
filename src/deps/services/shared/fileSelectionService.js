@@ -1,5 +1,6 @@
 import {
   validateIconDimensions,
+  validateImageAspectRatio,
   validateImageMinimumDimensions,
 } from "../../clients/web/fileProcessors.js";
 
@@ -17,6 +18,10 @@ const VALIDATION_MESSAGES = {
   "image-too-small": [
     "filePickerImageTooSmall",
     "Image size must be at least {minWidth} × {minHeight} pixels. Current size: {width} × {height}.",
+  ],
+  "image-wrong-aspect-ratio": [
+    "filePickerImageWrongAspectRatio",
+    "Image must have the same aspect ratio as {expectedWidth} × {expectedHeight}. Current size: {width} × {height}.",
   ],
 };
 
@@ -40,6 +45,13 @@ const runFileValidation = async ({ file, validation } = {}) => {
     return validateImageMinimumDimensions(file, {
       minWidth: validation.minWidth ?? 1,
       minHeight: validation.minHeight ?? 1,
+    });
+  }
+
+  if (validation.type === "image-aspect-ratio") {
+    return validateImageAspectRatio(file, {
+      width: validation.width,
+      height: validation.height,
     });
   }
 

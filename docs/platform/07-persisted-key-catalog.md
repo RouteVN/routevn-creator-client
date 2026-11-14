@@ -158,6 +158,10 @@ Current keys:
   - current fields:
     - `applicationName`
     - `applicationIdentifier`
+    - `loadingBackgroundFileId` (optional loading screen background image)
+    - `startBackgroundFileId` (optional start screen background image)
+    - `loadingFadeDuration` (ms, fade from the loading to the start background)
+    - `startFadeDuration` (ms, fade from the background to the first scene)
 - `platformDetails.windows`
   - independently customizable Windows release metadata
   - current fields:

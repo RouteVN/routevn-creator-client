@@ -1,10 +1,13 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 import { waitForPlayerStart } from "../../scripts/playerStartGate.js";
-import { BUNDLE_PLAYER_INDEX_HTML } from "../../src/deps/services/shared/projectExportService.js";
+import {
+  BUNDLE_PLAYER_INDEX_HTML,
+  createBundlePlayerIndexHtml,
+} from "../../src/deps/services/shared/projectExportService.js";
 
-const createWebPlayer = (touch = false) => {
-  const dom = new JSDOM(BUNDLE_PLAYER_INDEX_HTML);
+const createWebPlayer = (touch = false, html = BUNDLE_PLAYER_INDEX_HTML) => {
+  const dom = new JSDOM(html);
   dom.window.matchMedia = vi.fn(() => ({ matches: touch }));
   return dom;
 };
@@ -60,6 +63,32 @@ describe("player start gate", () => {
     await startPromise;
 
     expect(loadingElement.classList.contains("ready")).toBe(true);
+    dom.window.close();
+  });
+
+  it("keeps a labelled start button when a start background replaces the text", async () => {
+    const dom = createWebPlayer(
+      false,
+      createBundlePlayerIndexHtml({
+        startBackgroundDataUrl: "data:image/jpeg;base64,U1RBUlQ=",
+      }),
+    );
+    const loadingElement = dom.window.document.querySelector("#loading");
+    const startButton = loadingElement.querySelector("#loading-start");
+    const startPromise = waitForPlayerStart({
+      loadingElement,
+      startMode: "click",
+    });
+
+    expect(loadingElement.classList.contains("has-start-background")).toBe(
+      true,
+    );
+    expect(startButton.textContent).toBe("Click to start");
+    expect(startButton.disabled).toBe(false);
+    startButton.click();
+    await startPromise;
+
+    expect(startButton.disabled).toBe(true);
     dom.window.close();
   });
 

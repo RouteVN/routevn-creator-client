@@ -7,7 +7,13 @@ const IMAGE_SIZES = {
   "icon.png": { width: 512, height: 512 },
   "small.png": { width: 300, height: 200 },
   "wide.png": { width: 600, height: 512 },
+  "hd.png": { width: 1280, height: 720 },
+  "laptop.png": { width: 1366, height: 768 },
 };
+
+const ASPECT_RATIO_VALIDATIONS = [
+  { type: "image-aspect-ratio", width: 1920, height: 1080 },
+];
 
 // Loads the size listed for the object URL, which is the file name here, and
 // fails for any other file, as a browser does for a file it cannot decode.
@@ -75,6 +81,33 @@ describe("fileSelectionService.pickFiles validations", () => {
     expect(globalUI.showAlert).toHaveBeenCalledWith({
       message:
         "Image size must be at least 512 × 512 pixels. Current size: 300 × 200.",
+      title: "Error",
+    });
+  });
+
+  it.each(["hd.png", "laptop.png"])(
+    "accepts %s as an image with the required aspect ratio",
+    async (name) => {
+      const { file, globalUI } = await pickFile({
+        name,
+        validations: ASPECT_RATIO_VALIDATIONS,
+      });
+
+      expect(file).toEqual({ name });
+      expect(globalUI.showAlert).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects an image with a different aspect ratio", async () => {
+    const { file, globalUI } = await pickFile({
+      name: "wide.png",
+      validations: ASPECT_RATIO_VALIDATIONS,
+    });
+
+    expect(file).toBeNull();
+    expect(globalUI.showAlert).toHaveBeenCalledWith({
+      message:
+        "Image must have the same aspect ratio as 1920 × 1080. Current size: 600 × 512.",
       title: "Error",
     });
   });

@@ -227,6 +227,40 @@ export const validateImageMinimumDimensions = async (
   };
 };
 
+// Sizes that round to the same shape count as a match, so 1366 × 768 passes
+// for a 16:9 project.
+const ASPECT_RATIO_TOLERANCE = 0.01;
+
+export const validateImageAspectRatio = async (
+  file,
+  { width: expectedWidth, height: expectedHeight } = {},
+) => {
+  const dimensions = await getImageDimensions(file);
+
+  if (!dimensions) {
+    return {
+      isValid: false,
+      code: "image-unreadable",
+    };
+  }
+
+  const { width, height } = dimensions;
+  const expectedRatio = expectedWidth / expectedHeight;
+  const difference = Math.abs(width / height - expectedRatio) / expectedRatio;
+
+  if (!(difference <= ASPECT_RATIO_TOLERANCE)) {
+    return {
+      isValid: false,
+      code: "image-wrong-aspect-ratio",
+      values: { expectedWidth, expectedHeight, width, height },
+    };
+  }
+
+  return {
+    isValid: true,
+  };
+};
+
 export const createSquareCroppedImageFile = async ({
   file,
   sourceX = 0,

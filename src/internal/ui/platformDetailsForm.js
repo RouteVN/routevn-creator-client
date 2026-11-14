@@ -3,6 +3,10 @@ import {
   isValidAndroidBackgroundColor,
 } from "../androidExport.js";
 import { IOS_APPLICATION_ICON_OUTPUT_SIZE } from "../iosExport.js";
+import {
+  normalizeWebScreenFadeDuration,
+  WEB_SCREEN_FADE_DURATION_MAX,
+} from "../webExport.js";
 
 const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
 
@@ -94,6 +98,41 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     required: true,
   });
 
+  if (platform === "web") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "platform-web-loading-background-edit",
+        label: copy.webLoadingBackgroundLabel,
+        description: copy.webLoadingBackgroundDescription,
+      },
+      {
+        type: "slot",
+        slot: "platform-web-start-background-edit",
+        label: copy.webStartBackgroundLabel,
+        description: copy.webStartBackgroundDescription,
+      },
+      {
+        name: "loadingFadeDuration",
+        type: "input-number",
+        label: copy.webLoadingFadeDurationLabel,
+        description: copy.webLoadingFadeDurationDescription,
+        min: 0,
+        max: WEB_SCREEN_FADE_DURATION_MAX,
+        step: 100,
+      },
+      {
+        name: "startFadeDuration",
+        type: "input-number",
+        label: copy.webStartFadeDurationLabel,
+        description: copy.webStartFadeDurationDescription,
+        min: 0,
+        max: WEB_SCREEN_FADE_DURATION_MAX,
+        step: 100,
+      },
+    );
+  }
+
   if (platform === "android") {
     fields.push(
       {
@@ -167,12 +206,23 @@ export const createPlatformDetailsPatch = ({
   iconFileId,
   adaptiveIconFileId,
   splashIconFileId,
+  loadingBackgroundFileId,
+  startBackgroundFileId,
 }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
   };
 
-  if (platform !== "web") {
+  if (platform === "web") {
+    patch.loadingBackgroundFileId = loadingBackgroundFileId;
+    patch.startBackgroundFileId = startBackgroundFileId;
+    patch.loadingFadeDuration = normalizeWebScreenFadeDuration(
+      values.loadingFadeDuration,
+    );
+    patch.startFadeDuration = normalizeWebScreenFadeDuration(
+      values.startFadeDuration,
+    );
+  } else {
     patch.iconFileId = iconFileId;
   }
 
