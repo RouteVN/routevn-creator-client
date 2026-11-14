@@ -274,6 +274,8 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
     iconFileId: store.selectPlatformEditIconFileId(),
     adaptiveIconFileId: store.selectPlatformEditAdaptiveIconFileId(),
     splashIconFileId: store.selectPlatformEditSplashIconFileId(),
+    loadingBackgroundFileId: store.selectPlatformEditLoadingBackgroundFileId(),
+    startBackgroundFileId: store.selectPlatformEditStartBackgroundFileId(),
   });
   const validation = validatePlatformDetails({
     platform,
@@ -378,6 +380,66 @@ export const handlePlatformEditDialogIconClick = async (
   }
 
   store.openPlatformEditIconCropDialog({ file, target });
+  render();
+};
+
+// Screen backgrounds keep the picked image as is: the export fits the whole
+// image on screen, so there is nothing to crop.
+export const handlePlatformEditScreenBackgroundClick = async (
+  deps,
+  payload,
+) => {
+  const { appService, i18n, projectService, render, store } = deps;
+  const { target } = payload;
+  const copy = selectPlatformDetailsPageCopy(i18n);
+  let file;
+
+  try {
+    file = await appService.pickFiles({
+      accept: "image/png,image/jpeg,image/webp",
+      multiple: false,
+    });
+  } catch {
+    appService.showAlert({
+      message: copy.failedSelectBackground,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  if (!file) {
+    return;
+  }
+
+  let uploadResult;
+  try {
+    const uploadResults = await projectService.uploadFiles([file], {
+      skipImageThumbnail: true,
+    });
+    uploadResult = uploadResults?.[0];
+  } catch {
+    uploadResult = undefined;
+  }
+
+  if (!uploadResult?.fileId) {
+    appService.showAlert({
+      message: copy.failedUploadBackground,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  store.setPlatformEditScreenBackgroundFileId({
+    target,
+    fileId: uploadResult.fileId,
+  });
+  render();
+};
+
+export const handleRemovePlatformEditScreenBackground = (deps, payload) => {
+  const { store, render } = deps;
+  const { target } = payload;
+  store.setPlatformEditScreenBackgroundFileId({ target, fileId: undefined });
   render();
 };
 

@@ -158,6 +158,8 @@ Current keys:
   - current fields:
     - `applicationName`
     - `applicationIdentifier`
+    - `loadingBackgroundFileId` (optional loading screen background image)
+    - `startBackgroundFileId` (optional start screen background image)
 - `platformDetails.windows`
   - independently customizable Windows release metadata
   - current fields:

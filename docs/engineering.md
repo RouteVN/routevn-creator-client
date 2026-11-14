@@ -1145,6 +1145,13 @@ save-data identity; older stored Web records are backfilled once from
 both required and editable. Changing the macOS identifier changes the exported
 app and save-data identity, so builds using different identifiers do not share
 saves.
+The Web record may also name two optional project files,
+`loadingBackgroundFileId` and `startBackgroundFileId`. Web export re-encodes
+them and inlines them into the exported `index.html`, so they show before the
+player script and package load. The whole image is fitted to the window. A
+start background replaces the start prompt text; without one, the start screen
+keeps the loading background and the prompt. Creator versions that do not know
+these fields drop them when they save Web platform details.
 Preview records stored under the former
 `releaseInfo.<platform>` keys are copied into the `platformDetails.<platform>`
 namespace when read. A later project icon update fills an existing macOS

@@ -148,6 +148,13 @@ export const createProjectRepositoryService = ({
     macos: "platformDetails.macos",
     android: "platformDetails.android",
   };
+  // Optional images: unset stays undefined instead of an empty value.
+  const OPTIONAL_PLATFORM_IMAGE_KEYS = [
+    "adaptiveIconFileId",
+    "splashIconFileId",
+    "loadingBackgroundFileId",
+    "startBackgroundFileId",
+  ];
   const LEGACY_PLATFORM_DETAILS_KEYS = {
     web: "releaseInfo.web",
     windows: "releaseInfo.windows",
@@ -276,6 +283,12 @@ export const createProjectRepositoryService = ({
     // project-owned icon.
     if (platform !== "web") {
       platformDetails.iconFileId = sourceInfo?.iconFileId ?? null;
+    }
+
+    if (platform === "web") {
+      platformDetails.loadingBackgroundFileId =
+        sourceInfo?.loadingBackgroundFileId;
+      platformDetails.startBackgroundFileId = sourceInfo?.startBackgroundFileId;
     }
 
     if (platform === "android") {
@@ -407,7 +420,7 @@ export const createProjectRepositoryService = ({
       if (!Object.hasOwn(patch, key)) {
         continue;
       }
-      if (key === "adaptiveIconFileId" || key === "splashIconFileId") {
+      if (OPTIONAL_PLATFORM_IMAGE_KEYS.includes(key)) {
         nextPlatformDetails[key] = patch[key];
       } else {
         nextPlatformDetails[key] =

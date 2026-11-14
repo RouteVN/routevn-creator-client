@@ -127,6 +127,21 @@ const buildPlatformDetailFields = (
         : copy.applicationIdentifierLabel,
   });
 
+  if (platform === "web") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "web-loading-background",
+        label: copy.webLoadingBackgroundLabel,
+      },
+      {
+        type: "slot",
+        slot: "web-start-background",
+        label: copy.webStartBackgroundLabel,
+      },
+    );
+  }
+
   // TODO: Restore optional Windows release metadata in the read-only details.
   // if (platform === "windows") {
   //   fields.push(
@@ -220,6 +235,8 @@ export const createInitialState = () => ({
   platformEditIconFileId: undefined,
   platformEditAdaptiveIconFileId: undefined,
   platformEditSplashIconFileId: undefined,
+  platformEditLoadingBackgroundFileId: undefined,
+  platformEditStartBackgroundFileId: undefined,
   platformEditIconCropTarget: "icon",
   platformEditIconCropFile: undefined,
   // The project's Android signing keys, without key material. `busy` while a
@@ -275,6 +292,20 @@ export const selectPlatformEditAdaptiveIconFileId = ({ state }) =>
 
 export const selectPlatformEditSplashIconFileId = ({ state }) =>
   state.platformEditSplashIconFileId;
+
+export const selectPlatformEditLoadingBackgroundFileId = ({ state }) =>
+  state.platformEditLoadingBackgroundFileId;
+
+export const selectPlatformEditStartBackgroundFileId = ({ state }) =>
+  state.platformEditStartBackgroundFileId;
+
+export const setPlatformEditScreenBackgroundFileId = (
+  { state },
+  { target, fileId },
+) => {
+  if (target === "loading") state.platformEditLoadingBackgroundFileId = fileId;
+  else state.platformEditStartBackgroundFileId = fileId;
+};
 
 export const selectPlatformEditIconCropTarget = ({ state }) =>
   state.platformEditIconCropTarget;
@@ -374,6 +405,15 @@ export const selectViewData = ({ state, i18n }) => {
     platformEditAdaptiveIconFileId: state.platformEditAdaptiveIconFileId,
     platformEditSplashIconFileId: state.platformEditSplashIconFileId,
     showAndroidIcons: formPlatform === "android",
+    showWebScreenBackgrounds: state.selectedPlatform === "web",
+    showWebScreenBackgroundsEdit: formPlatform === "web",
+    webLoadingBackgroundFileId: selectedPlatformInfo?.loadingBackgroundFileId,
+    webStartBackgroundFileId: selectedPlatformInfo?.startBackgroundFileId,
+    platformEditLoadingBackgroundFileId:
+      state.platformEditLoadingBackgroundFileId,
+    platformEditStartBackgroundFileId: state.platformEditStartBackgroundFileId,
+    webDefaultScreenLabel: copy.webDefaultScreenLabel,
+
     removeIconLabel: copy.removeIconButton,
     usesAppIconLabel: copy.androidUsesAppIcon,
     editIconBackgroundStyle: `background-color: ${state.platformEditAdaptiveIconFileId ? state.iconPreviewColor : "transparent"};`,
@@ -445,7 +485,10 @@ export const setPlatformApplicationInfo = (
   state.platformApplicationInfo[platform] = target;
   target.applicationName = applicationInfo?.applicationName ?? "";
   target.applicationIdentifier = applicationInfo?.applicationIdentifier ?? "";
-  if (platform !== "web") {
+  if (platform === "web") {
+    target.loadingBackgroundFileId = applicationInfo.loadingBackgroundFileId;
+    target.startBackgroundFileId = applicationInfo.startBackgroundFileId;
+  } else {
     target.iconFileId = applicationInfo?.iconFileId ?? undefined;
   }
 
@@ -544,6 +587,10 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
     platform === "web" ? undefined : applicationInfo.iconFileId;
   state.platformEditAdaptiveIconFileId = applicationInfo.adaptiveIconFileId;
   state.platformEditSplashIconFileId = applicationInfo.splashIconFileId;
+  state.platformEditLoadingBackgroundFileId =
+    applicationInfo.loadingBackgroundFileId;
+  state.platformEditStartBackgroundFileId =
+    applicationInfo.startBackgroundFileId;
 };
 
 export const openPlatformCreateDialog = (

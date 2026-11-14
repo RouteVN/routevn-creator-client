@@ -83,6 +83,23 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     required: true,
   });
 
+  if (platform === "web") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "platform-web-loading-background-edit",
+        label: copy.webLoadingBackgroundLabel,
+        description: copy.webLoadingBackgroundDescription,
+      },
+      {
+        type: "slot",
+        slot: "platform-web-start-background-edit",
+        label: copy.webStartBackgroundLabel,
+        description: copy.webStartBackgroundDescription,
+      },
+    );
+  }
+
   if (platform === "android") {
     fields.push(
       {
@@ -156,12 +173,17 @@ export const createPlatformDetailsPatch = ({
   iconFileId,
   adaptiveIconFileId,
   splashIconFileId,
+  loadingBackgroundFileId,
+  startBackgroundFileId,
 }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
   };
 
-  if (platform !== "web") {
+  if (platform === "web") {
+    patch.loadingBackgroundFileId = loadingBackgroundFileId;
+    patch.startBackgroundFileId = startBackgroundFileId;
+  } else {
     patch.iconFileId = iconFileId;
   }
 

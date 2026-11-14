@@ -1215,6 +1215,10 @@ const runWebExport = async (deps, confirmation) => {
           createBundleProgressView({ copy, dateTime: i18n.dateTime, progress }),
         );
       },
+      webScreenBackgrounds: {
+        loadingBackgroundFileId: applicationInfo.loadingBackgroundFileId,
+        startBackgroundFileId: applicationInfo.startBackgroundFileId,
+      },
     };
     savedPath = outputPath
       ? await projectService.createDistributionZipStreamedToPath(
