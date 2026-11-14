@@ -396,7 +396,7 @@ export const handlePlatformEditScreenBackgroundClick = async (
   deps,
   payload,
 ) => {
-  const { appService, i18n, projectService, render, store } = deps;
+  const { appService, i18n, render, store } = deps;
   const { target } = payload;
   const copy = selectPlatformDetailsPageCopy(i18n);
   const projectResolution = store.selectProjectResolution();
@@ -406,6 +406,7 @@ export const handlePlatformEditScreenBackgroundClick = async (
     file = await appService.pickFiles({
       accept: "image/png,image/jpeg,image/webp",
       multiple: false,
+      upload: true,
       validations: [
         {
           type: "image-aspect-ratio",
@@ -426,17 +427,7 @@ export const handlePlatformEditScreenBackgroundClick = async (
     return;
   }
 
-  let uploadResult;
-  try {
-    const uploadResults = await projectService.uploadFiles([file], {
-      skipImageThumbnail: true,
-    });
-    uploadResult = uploadResults?.[0];
-  } catch {
-    uploadResult = undefined;
-  }
-
-  if (!uploadResult?.fileId) {
+  if (!file.uploadSucessful || !file.uploadResult?.fileId) {
     appService.showAlert({
       message: copy.failedUploadBackground,
       title: copy.errorTitle,
@@ -446,7 +437,7 @@ export const handlePlatformEditScreenBackgroundClick = async (
 
   store.setPlatformEditScreenBackgroundFileId({
     target,
-    fileId: uploadResult.fileId,
+    fileId: file.uploadResult.fileId,
   });
   render();
 };

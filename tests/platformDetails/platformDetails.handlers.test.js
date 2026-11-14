@@ -725,21 +725,19 @@ describe("platformDetails handlers", () => {
 
   it("uploads a picked Web screen background into platform edit state", async () => {
     const deps = createDeps();
-    const file = { name: "loading.png" };
-    deps.appService.pickFiles.mockResolvedValue(file);
-    deps.projectService.uploadFiles.mockResolvedValue([
-      { fileId: "loading-background-1" },
-    ]);
+    deps.appService.pickFiles.mockResolvedValue({
+      name: "loading.png",
+      uploadSucessful: true,
+      uploadResult: { fileId: "loading-background-1" },
+    });
 
     await handlePlatformEditScreenBackgroundClick(deps, { target: "loading" });
 
     expect(deps.appService.pickFiles).toHaveBeenCalledWith({
       accept: "image/png,image/jpeg,image/webp",
       multiple: false,
+      upload: true,
       validations: [{ type: "image-aspect-ratio", width: 1920, height: 1080 }],
-    });
-    expect(deps.projectService.uploadFiles).toHaveBeenCalledWith([file], {
-      skipImageThumbnail: true,
     });
     expect(
       deps.store.setPlatformEditScreenBackgroundFileId,
@@ -755,7 +753,6 @@ describe("platformDetails handlers", () => {
 
     await handlePlatformEditScreenBackgroundClick(deps, { target: "start" });
 
-    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
     expect(
       deps.store.setPlatformEditScreenBackgroundFileId,
     ).not.toHaveBeenCalled();
@@ -763,8 +760,11 @@ describe("platformDetails handlers", () => {
 
   it("alerts when a Web screen background cannot be uploaded", async () => {
     const deps = createDeps();
-    deps.appService.pickFiles.mockResolvedValue({ name: "start.png" });
-    deps.projectService.uploadFiles.mockRejectedValue(new Error("failed"));
+    deps.appService.pickFiles.mockResolvedValue({
+      name: "start.png",
+      uploadSucessful: false,
+      uploadResult: null,
+    });
 
     await handlePlatformEditScreenBackgroundClick(deps, { target: "start" });
 
