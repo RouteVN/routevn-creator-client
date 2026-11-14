@@ -7,6 +7,7 @@ import {
   openPlatformEditDialog,
   selectCanAddPlatform,
   selectPlatformEditLoadingBackgroundFileId,
+  selectPlatformEditScreenBackgroundFileId,
   selectPlatformEditStartBackgroundFileId,
   selectViewData,
   setAndroidSigning,
@@ -15,6 +16,7 @@ import {
   setPlatform,
   setPlatformApplicationInfo,
   setPlatformEditScreenBackgroundFileId,
+  setProjectResolution,
   setSelectedPlatform,
   setUiConfig,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
@@ -478,6 +480,21 @@ describe("platformDetails Android signing view", () => {
       webLoadingBackgroundFileId: "loading-background-1",
       platformEditLoadingBackgroundFileId: undefined,
       platformEditStartBackgroundFileId: "start-background-1",
+      screenBackgroundPreviewWidth: 240,
+      screenBackgroundPreviewHeight: 135,
+    });
+    expect(
+      selectPlatformEditScreenBackgroundFileId({ state }, { target: "start" }),
+    ).toBe("start-background-1");
+
+    // Previews follow the project's shape.
+    setProjectResolution(
+      { state },
+      { projectResolution: { width: 1080, height: 1920 } },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      screenBackgroundPreviewWidth: 135,
+      screenBackgroundPreviewHeight: 240,
     });
     expect(viewData.platformEditForm.fields.map((field) => field.slot)).toEqual(
       expect.arrayContaining([

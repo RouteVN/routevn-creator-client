@@ -11,7 +11,7 @@ import {
   handlePlatformEditFormAction,
   handlePlatformEditIconCropDialogConfirm,
   handlePlatformEditScreenBackgroundClick,
-  handleRemovePlatformEditScreenBackground,
+  handlePlatformEditScreenBackgroundRightClick,
 } from "../../src/pages/platformDetails/platformDetails.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 import {
@@ -24,6 +24,7 @@ const createDeps = () => ({
   appService: {
     getPlatform: vi.fn(() => "android"),
     pickFiles: vi.fn(),
+    showDropdownMenu: vi.fn(),
     showAlert: vi.fn(),
     showDialog: vi.fn(async () => true),
     showToast: vi.fn(),
@@ -33,6 +34,9 @@ const createDeps = () => ({
     createCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetailsDefaults: vi.fn(),
+    getRepositoryState: vi.fn(() => ({
+      project: { resolution: { width: 1920, height: 1080 } },
+    })),
     updateCurrentPlatformDetails: vi.fn(),
     uploadFiles: vi.fn(),
     supportsAndroidSigning: vi.fn(() => false),
@@ -67,6 +71,9 @@ const createDeps = () => ({
     selectPlatformEditLoadingBackgroundFileId: vi.fn(() => undefined),
     selectPlatformEditStartBackgroundFileId: vi.fn(() => undefined),
     setPlatformEditScreenBackgroundFileId: vi.fn(),
+    selectPlatformEditScreenBackgroundFileId: vi.fn(() => undefined),
+    selectProjectResolution: vi.fn(() => ({ width: 1920, height: 1080 })),
+    setProjectResolution: vi.fn(),
     selectPlatformEditIconCropTarget: vi.fn(() => "icon"),
     selectSelectedPlatform: vi.fn(() => "windows"),
     setPlatformApplicationInfo: vi.fn(),
@@ -710,6 +717,11 @@ describe("platformDetails handlers", () => {
 
     await handlePlatformEditScreenBackgroundClick(deps, { target: "loading" });
 
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: "image/png,image/jpeg,image/webp",
+      multiple: false,
+      validations: [{ type: "image-aspect-ratio", width: 1920, height: 1080 }],
+    });
     expect(deps.projectService.uploadFiles).toHaveBeenCalledWith([file], {
       skipImageThumbnail: true,
     });
@@ -749,14 +761,64 @@ describe("platformDetails handlers", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("removes a Web screen background from platform edit state", () => {
+  it("removes a Web screen background from its right-click menu", async () => {
     const deps = createDeps();
+    const event = {
+      clientX: 10,
+      clientY: 20,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    deps.store.selectPlatformEditScreenBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.appService.showDropdownMenu.mockResolvedValue({
+      item: { key: "remove" },
+    });
 
-    handleRemovePlatformEditScreenBackground(deps, { target: "start" });
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: event,
+      target: "start",
+    });
 
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith({
+      items: [{ type: "item", label: "Remove", key: "remove" }],
+      x: 10,
+      y: 20,
+      place: "bs",
+    });
     expect(
       deps.store.setPlatformEditScreenBackgroundFileId,
     ).toHaveBeenCalledWith({ target: "start", fileId: undefined });
+  });
+
+  it("keeps the Web screen background when its menu is dismissed", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformEditScreenBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.appService.showDropdownMenu.mockResolvedValue(undefined);
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
+      target: "start",
+    });
+
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("shows no menu for an empty Web screen background", async () => {
+    const deps = createDeps();
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
+      target: "loading",
+    });
+
+    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
   });
 });
 

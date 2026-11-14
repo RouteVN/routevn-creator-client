@@ -46,6 +46,10 @@ export const handleAfterMount = async (deps) => {
         store.setPlatformApplicationInfo({ platform, applicationInfo });
       }
     }
+    store.setProjectResolution({
+      projectResolution:
+        projectService.getRepositoryState().project?.resolution,
+    });
     await loadAndroidSigning(deps);
     render();
   } catch {
@@ -383,8 +387,8 @@ export const handlePlatformEditDialogIconClick = async (
   render();
 };
 
-// Screen backgrounds keep the picked image as is: the export fits the whole
-// image on screen, so there is nothing to crop.
+// Screen backgrounds must have the project's shape, so they line up with the
+// game and need no cropping.
 export const handlePlatformEditScreenBackgroundClick = async (
   deps,
   payload,
@@ -392,12 +396,20 @@ export const handlePlatformEditScreenBackgroundClick = async (
   const { appService, i18n, projectService, render, store } = deps;
   const { target } = payload;
   const copy = selectPlatformDetailsPageCopy(i18n);
+  const projectResolution = store.selectProjectResolution();
   let file;
 
   try {
     file = await appService.pickFiles({
       accept: "image/png,image/jpeg,image/webp",
       multiple: false,
+      validations: [
+        {
+          type: "image-aspect-ratio",
+          width: projectResolution.width,
+          height: projectResolution.height,
+        },
+      ],
     });
   } catch {
     appService.showAlert({
@@ -436,9 +448,31 @@ export const handlePlatformEditScreenBackgroundClick = async (
   render();
 };
 
-export const handleRemovePlatformEditScreenBackground = (deps, payload) => {
-  const { store, render } = deps;
-  const { target } = payload;
+export const handlePlatformEditScreenBackgroundRightClick = async (
+  deps,
+  payload,
+) => {
+  const { appService, i18n, render, store } = deps;
+  const { _event: event, target } = payload;
+  const copy = selectPlatformDetailsPageCopy(i18n);
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (!store.selectPlatformEditScreenBackgroundFileId({ target })) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items: [{ type: "item", label: copy.removeIconButton, key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
   store.setPlatformEditScreenBackgroundFileId({ target, fileId: undefined });
   render();
 };

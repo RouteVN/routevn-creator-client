@@ -1148,7 +1148,9 @@ saves.
 The Web record may also name two optional project files,
 `loadingBackgroundFileId` and `startBackgroundFileId`. Web export re-encodes
 them and inlines them into the exported `index.html`, so they show before the
-player script and package load. The whole image is fitted to the window. A
+player script and package load. Each image must have the project's aspect
+ratio; the picker rejects any other shape, so the image lines up with the game
+canvas. A
 start background replaces the start prompt text; without one, the start screen
 keeps the loading background and the prompt. Creator versions that do not know
 these fields drop them when they save Web platform details.

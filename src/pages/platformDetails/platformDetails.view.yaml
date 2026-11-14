@@ -63,10 +63,8 @@ refs:
         handler: handlePlatformEditScreenBackgroundClick
         payload:
           target: loading
-  loadingBackgroundRemove:
-    eventListeners:
-      click:
-        handler: handleRemovePlatformEditScreenBackground
+      contextmenu:
+        handler: handlePlatformEditScreenBackgroundRightClick
         payload:
           target: loading
   startBackgroundButton:
@@ -75,10 +73,8 @@ refs:
         handler: handlePlatformEditScreenBackgroundClick
         payload:
           target: start
-  startBackgroundRemove:
-    eventListeners:
-      click:
-        handler: handleRemovePlatformEditScreenBackground
+      contextmenu:
+        handler: handlePlatformEditScreenBackgroundRightClick
         payload:
           target: start
   adaptiveIconButton:
@@ -189,15 +185,15 @@ template:
                               - $if showWebScreenBackgrounds:
                                   - rtgl-view#webLoadingBackground slot=web-loading-background cur=pointer:
                                       - $if webLoadingBackgroundFileId:
-                                          - 'div style="width: 240px; height: 135px; background: #000; border-radius: 6px; overflow: hidden;"':
-                                              - rvn-file-image fileId=${webLoadingBackgroundFileId} w=240 h=135: null
+                                          - 'div style="${screenBackgroundPreviewStyle}"':
+                                              - rvn-file-image fileId=${webLoadingBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
                                         $else:
                                           - rtgl-text c=mu-fg: ${webDefaultScreenLabel}
                               - $if showWebScreenBackgrounds:
                                   - rtgl-view#webStartBackground slot=web-start-background cur=pointer:
                                       - $if webStartBackgroundFileId:
-                                          - 'div style="width: 240px; height: 135px; background: #000; border-radius: 6px; overflow: hidden;"':
-                                              - rvn-file-image fileId=${webStartBackgroundFileId} w=240 h=135: null
+                                          - 'div style="${screenBackgroundPreviewStyle}"':
+                                              - rvn-file-image fileId=${webStartBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
                                         $else:
                                           - rtgl-text c=mu-fg: ${webDefaultScreenLabel}
                               - $if showAndroidSigning:
@@ -263,24 +259,20 @@ template:
                               - rtgl-button#splashIconRemove v=ol: ${removeIconLabel}
                   - $if showWebScreenBackgroundsEdit:
                       - rtgl-view slot=platform-web-loading-background-edit d=v g=sm:
-                          - 'button#loadingBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="width: 240px; height: 135px; padding: 0; border: 0; background: transparent; cursor: pointer;"':
+                          - 'button#loadingBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="${screenBackgroundButtonStyle}"':
                               - $if platformEditLoadingBackgroundFileId:
-                                  - 'div style="width: 240px; height: 135px; background: #000; border-radius: 6px; overflow: hidden;"':
-                                      - rvn-file-image fileId=${platformEditLoadingBackgroundFileId} w=240 h=135: null
+                                  - 'div style="${screenBackgroundPreviewStyle}"':
+                                      - rvn-file-image fileId=${platformEditLoadingBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
                                 $else:
-                                  - rtgl-view w=240 h=135 ah=c av=c ph=sm bw=xs bc=bo br=md:
+                                  - rtgl-view w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight} ah=c av=c ph=sm bw=xs bc=bo br=md:
                                       - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
-                          - $if platformEditLoadingBackgroundFileId:
-                              - rtgl-button#loadingBackgroundRemove v=ol: ${removeIconLabel}
                   - $if showWebScreenBackgroundsEdit:
                       - rtgl-view slot=platform-web-start-background-edit d=v g=sm:
-                          - 'button#startBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="width: 240px; height: 135px; padding: 0; border: 0; background: transparent; cursor: pointer;"':
+                          - 'button#startBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="${screenBackgroundButtonStyle}"':
                               - $if platformEditStartBackgroundFileId:
-                                  - 'div style="width: 240px; height: 135px; background: #000; border-radius: 6px; overflow: hidden;"':
-                                      - rvn-file-image fileId=${platformEditStartBackgroundFileId} w=240 h=135: null
+                                  - 'div style="${screenBackgroundPreviewStyle}"':
+                                      - rvn-file-image fileId=${platformEditStartBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
                                 $else:
-                                  - rtgl-view w=240 h=135 ah=c av=c ph=sm bw=xs bc=bo br=md:
+                                  - rtgl-view w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight} ah=c av=c ph=sm bw=xs bc=bo br=md:
                                       - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
-                          - $if platformEditStartBackgroundFileId:
-                              - rtgl-button#startBackgroundRemove v=ol: ${removeIconLabel}
   - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile} :outputSize=${platformEditIconOutputSize} :guideCircle=${guideCircle} :title=${cropTitle} :description=${cropDescription}: null

@@ -3,6 +3,7 @@ import {
   formatAndroidCertificateFingerprint,
 } from "../../internal/androidExport.js";
 import { formatDate } from "../../internal/dates.js";
+import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   createPlatformEditForm,
@@ -48,6 +49,18 @@ const createPlatformApplicationInfo = (platform) => {
   // }
 
   return applicationInfo;
+};
+
+// Screen background previews use the project's shape, with the longer side
+// at this many pixels.
+const SCREEN_BACKGROUND_PREVIEW_SIZE = 240;
+
+const getScreenBackgroundPreviewSize = ({ width, height }) => {
+  const scale = SCREEN_BACKGROUND_PREVIEW_SIZE / Math.max(width, height);
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
 };
 
 const createPlatformEditDefaultValues = () => ({
@@ -215,6 +228,7 @@ const describeAndroidSigningKey = (key, copy, dateTime) => ({
 
 export const createInitialState = () => ({
   platform: "web",
+  projectResolution: DEFAULT_PROJECT_RESOLUTION,
   iconPreviewColor: "#FFFFFF",
   splashPreviewColor: "#000000",
   platformApplicationInfo: {},
@@ -293,6 +307,20 @@ export const selectPlatformEditAdaptiveIconFileId = ({ state }) =>
 export const selectPlatformEditSplashIconFileId = ({ state }) =>
   state.platformEditSplashIconFileId;
 
+export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
+  state.projectResolution = projectResolution ?? DEFAULT_PROJECT_RESOLUTION;
+};
+
+export const selectProjectResolution = ({ state }) => state.projectResolution;
+
+export const selectPlatformEditScreenBackgroundFileId = (
+  { state },
+  { target },
+) =>
+  target === "loading"
+    ? state.platformEditLoadingBackgroundFileId
+    : state.platformEditStartBackgroundFileId;
+
 export const selectPlatformEditLoadingBackgroundFileId = ({ state }) =>
   state.platformEditLoadingBackgroundFileId;
 
@@ -344,8 +372,16 @@ export const selectViewData = ({ state, i18n }) => {
     : undefined;
   const formPlatform = state.platformDialogPlatform ?? state.selectedPlatform;
   const formMode = state.platformDialogMode ?? "edit";
+  const screenBackgroundPreview = getScreenBackgroundPreviewSize(
+    state.projectResolution,
+  );
+  const screenBackgroundPreviewSizeStyle = `width: ${screenBackgroundPreview.width}px; height: ${screenBackgroundPreview.height}px;`;
 
   return {
+    screenBackgroundPreviewWidth: screenBackgroundPreview.width,
+    screenBackgroundPreviewHeight: screenBackgroundPreview.height,
+    screenBackgroundPreviewStyle: `${screenBackgroundPreviewSizeStyle} background: #000; border-radius: 6px; overflow: hidden;`,
+    screenBackgroundButtonStyle: `${screenBackgroundPreviewSizeStyle} padding: 0; border: 0; background: transparent; cursor: pointer;`,
     addPlatformButtonLabel: copy.addPlatformButtonLabel,
     addPlatformMenu: state.addPlatformMenu,
     canAddPlatform: availablePlatformIds.some(
