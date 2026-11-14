@@ -266,10 +266,9 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
       }
 
       @media (prefers-reduced-motion: reduce) {
+        /* The custom background fades are opacity only and their length is
+           chosen in Platform Details, so they still play here. */
         #loading,
-        #loading.has-loading-background,
-        #loading.has-start-background,
-        #loading-start-background,
         .loading-progress,
         #loading-start,
         #loading.ready #loading-start {
