@@ -1,16 +1,22 @@
-//! Builds an Android APK for a RouteVN game from the prebuilt player
-//! template, unsigned or signed with APK Signature Scheme v2.
+//! Builds an Android APK or App Bundle for a RouteVN game from the prebuilt
+//! player templates. An APK is unsigned or signed with APK Signature Scheme
+//! v2; a bundle for Google Play is JAR-signed with the upload key.
 //!
 //! The exporter streams the game package to disk, encrypts it in segments,
 //! rewrites the template manifest and resources for the game, renders its
-//! icons, writes an aligned APK, and signs it in place when given a key.
-//! Memory use stays bounded by the largest single asset and the icon images,
-//! so the same code runs on desktop and mobile hosts.
+//! icons, writes the archive, and signs it when given a key. Memory use
+//! stays bounded by the largest single asset and the icon images, so the
+//! same code runs on desktop and mobile hosts.
 
 pub mod arsc;
 pub mod axml;
+pub mod bundle;
 pub mod error;
 pub mod icons;
+pub mod jar;
+pub mod proto_resources;
+pub mod proto_xml;
+pub mod protobuf;
 pub mod signing;
 pub mod template;
 pub mod zip;
@@ -29,6 +35,7 @@ use routevn_packager::payload::{
 };
 use serde::{Deserialize, Serialize};
 
+pub use bundle::{AndroidBundleExportResult, export_android_app_bundle};
 pub use error::{ErrorCode, ExportError, Result};
 pub use signing::{SigningKey, SigningKeyMaterial};
 use template::{
@@ -167,7 +174,7 @@ pub fn parse_opaque_color(value: &str) -> Option<u32> {
         .map(|rgb| 0xFF00_0000 | rgb)
 }
 
-fn validate_request(request: &AndroidExportRequest) -> Result<(u32, u32)> {
+fn validate_request(request: &AndroidExportRequest) -> Result<Customization<'_>> {
     let name = request.application_name.trim();
     if name.is_empty() {
         return Err(ExportError::invalid_request(
@@ -202,7 +209,15 @@ fn validate_request(request: &AndroidExportRequest) -> Result<(u32, u32)> {
         parse_opaque_color(&request.splash_background_color).ok_or_else(|| {
             ExportError::invalid_request("The splash background color must be #RRGGBB.")
         })?;
-    Ok((icon_background, splash_background))
+    Ok(Customization {
+        application_id: &request.application_id,
+        application_name: name,
+        version_name: &request.version_name,
+        version_code: request.version_code,
+        orientation: request.orientation,
+        icon_background,
+        splash_background,
+    })
 }
 
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
@@ -275,89 +290,22 @@ pub fn export_android_apk_with_key(
     on_progress: Option<&ZipExportProgressCallback<'_>>,
 ) -> Result<AndroidExportResult> {
     let progress = Progress::new(on_progress);
-    let forward_package_progress = |event: ZipExportProgress| progress.forward(event);
-    let (icon_background, splash_background) = validate_request(request)?;
+    let customization = validate_request(request)?;
 
     progress.emit("prepareApk", 0, 0);
     let descriptor = template::load_descriptor(&request.template_path, &request.descriptor_path)?;
-    let icons = icons::IconImages {
-        app: icons::load_icon(&request.icon_path, "app icon")?,
-        adaptive: request
-            .adaptive_icon_path
-            .as_deref()
-            .map(|path| icons::load_icon(path, "adaptive icon"))
-            .transpose()?,
-        splash: request
-            .splash_icon_path
-            .as_deref()
-            .map(|path| icons::load_icon(path, "splash icon"))
-            .transpose()?,
-    };
-
-    let work = match &request.work_dir {
-        Some(dir) => tempfile::Builder::new()
-            .prefix("routevn-apk-")
-            .tempdir_in(dir),
-        None => tempfile::Builder::new().prefix("routevn-apk-").tempdir(),
-    }
-    .map_err(|error| ExportError::write(format!("Failed to create a work folder: {error}")))?;
-
-    let plain_path = work.path().join("package.bin");
-    let stats = routevn_exporter::create_package_bin_file_with_progress(
-        &plain_path,
-        &request.assets,
-        &request.instructions_json,
-        Some(&forward_package_progress),
-    )
-    .map_err(|message| ExportError::new(ErrorCode::PackageFailed, message))?;
+    let icons = load_icons(request)?;
+    let work = create_work_dir(request, "routevn-apk-")?;
+    let PreparedPackage {
+        file: mut encrypted,
+        encrypted_bytes: encrypted_payload_bytes,
+        crc32: payload_crc,
+        stats,
+        ..
+    } = prepare_package(request, work.path(), &progress, false)?;
     let package_bin_bytes = stats.package_bin_bytes;
 
-    progress.emit("encryptPayload", 0, package_bin_bytes);
-    let encrypted_path = work.path().join("routevn-package.bin");
-    let (key, nonce) = generate_payload_key_material();
-    write_standalone_chunked_encrypted_payload_from_file(
-        WriteStandaloneChunkedPayloadFromFileRequest {
-            input_path: &plain_path,
-            output_path: &encrypted_path,
-            key,
-            nonce,
-            chunk_size: DEFAULT_PAYLOAD_CHUNK_SIZE,
-        },
-        |current, total| progress.emit("encryptPayload", current, total),
-    )
-    .map_err(|error| {
-        ExportError::new(
-            ErrorCode::PackageFailed,
-            format!("Failed to encrypt the game package: {error}"),
-        )
-    })?;
-    std::fs::remove_file(&plain_path).map_err(|error| {
-        ExportError::write(format!("Failed to remove an intermediate file: {error}"))
-    })?;
-
-    let mut encrypted = File::open(&encrypted_path)
-        .map_err(|error| ExportError::write(format!("Failed to open the game package: {error}")))?;
-    let encrypted_payload_bytes = encrypted
-        .metadata()
-        .map_err(|error| ExportError::write(format!("Failed to read the game package: {error}")))?
-        .len();
-    let payload_crc = crc_of_file(&mut encrypted, encrypted_payload_bytes)?;
-
-    let customization = Customization {
-        application_id: &request.application_id,
-        application_name: request.application_name.trim(),
-        version_name: &request.version_name,
-        version_code: request.version_code,
-        orientation: request.orientation,
-        icon_background,
-        splash_background,
-    };
-    let mut template_file = File::open(&request.template_path).map_err(|error| {
-        ExportError::new(
-            ErrorCode::TemplateMissing,
-            format!("Failed to open the Android player template: {error}"),
-        )
-    })?;
+    let mut template_file = open_template(&request.template_path)?;
     let template_index = zip::read_index(&mut template_file)?;
     progress.emit("rewriteManifest", 0, 0);
     let manifest = customize_manifest(&mut template_file, &template_index, &customization)?;
@@ -378,19 +326,7 @@ pub fn export_android_apk_with_key(
         );
     }
 
-    let output_dir = request
-        .output_path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
-    let partial = tempfile::Builder::new()
-        .prefix(".routevn-apk-")
-        .suffix(".partial")
-        .tempfile_in(output_dir)
-        .map_err(|error| ExportError::write(format!("Failed to create the APK file: {error}")))?;
-    let output_file = partial
-        .reopen()
-        .map_err(|error| ExportError::write(format!("Failed to open the APK file: {error}")))?;
+    let (partial, output_file) = create_partial_output(&request.output_path, "apk", "APK")?;
 
     let total_entries = template_index.entries.len() as u64 + 1;
     let mut writer = zip::ZipWriter::new(output_file);
@@ -446,20 +382,7 @@ pub fn export_android_apk_with_key(
     };
 
     progress.emit("finalizeApk", 0, 0);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(partial.path(), std::fs::Permissions::from_mode(0o644)).map_err(
-            |error| ExportError::write(format!("Failed to set APK permissions: {error}")),
-        )?;
-    }
-    let persisted = partial
-        .persist(&request.output_path)
-        .map_err(|error| ExportError::write(format!("Failed to save the APK: {}", error.error)))?;
-    let apk_bytes = persisted
-        .metadata()
-        .map_err(|error| ExportError::write(format!("Failed to read the APK size: {error}")))?
-        .len();
+    let apk_bytes = persist_output(partial, &request.output_path, "APK")?;
 
     Ok(AndroidExportResult {
         output_path: request.output_path.clone(),
@@ -471,8 +394,113 @@ pub fn export_android_apk_with_key(
     })
 }
 
-fn crc_of_file(file: &mut File, length: u64) -> Result<u32> {
+fn load_icons(request: &AndroidExportRequest) -> Result<icons::IconImages> {
+    Ok(icons::IconImages {
+        app: icons::load_icon(&request.icon_path, "app icon")?,
+        adaptive: request
+            .adaptive_icon_path
+            .as_deref()
+            .map(|path| icons::load_icon(path, "adaptive icon"))
+            .transpose()?,
+        splash: request
+            .splash_icon_path
+            .as_deref()
+            .map(|path| icons::load_icon(path, "splash icon"))
+            .transpose()?,
+    })
+}
+
+fn create_work_dir(request: &AndroidExportRequest, prefix: &str) -> Result<tempfile::TempDir> {
+    match &request.work_dir {
+        Some(dir) => tempfile::Builder::new().prefix(prefix).tempdir_in(dir),
+        None => tempfile::Builder::new().prefix(prefix).tempdir(),
+    }
+    .map_err(|error| ExportError::write(format!("Failed to create a work folder: {error}")))
+}
+
+fn open_template(path: &Path) -> Result<File> {
+    File::open(path).map_err(|error| {
+        ExportError::new(
+            ErrorCode::TemplateMissing,
+            format!("Failed to open the Android player template: {error}"),
+        )
+    })
+}
+
+/// The encrypted game package, ready to add to the archive.
+struct PreparedPackage {
+    file: File,
+    encrypted_bytes: u64,
+    crc32: u32,
+    /// Only computed when asked for, for signing an app bundle.
+    sha256: Option<[u8; 32]>,
+    stats: routevn_exporter::PackageBinExportStats,
+}
+
+/// Writes the game package into `work` and encrypts it in segments.
+fn prepare_package(
+    request: &AndroidExportRequest,
+    work: &Path,
+    progress: &Progress<'_>,
+    with_sha256: bool,
+) -> Result<PreparedPackage> {
+    let forward_package_progress = |event: ZipExportProgress| progress.forward(event);
+    let plain_path = work.join("package.bin");
+    let stats = routevn_exporter::create_package_bin_file_with_progress(
+        &plain_path,
+        &request.assets,
+        &request.instructions_json,
+        Some(&forward_package_progress),
+    )
+    .map_err(|message| ExportError::new(ErrorCode::PackageFailed, message))?;
+
+    progress.emit("encryptPayload", 0, stats.package_bin_bytes);
+    let encrypted_path = work.join("routevn-package.bin");
+    let (key, nonce) = generate_payload_key_material();
+    write_standalone_chunked_encrypted_payload_from_file(
+        WriteStandaloneChunkedPayloadFromFileRequest {
+            input_path: &plain_path,
+            output_path: &encrypted_path,
+            key,
+            nonce,
+            chunk_size: DEFAULT_PAYLOAD_CHUNK_SIZE,
+        },
+        |current, total| progress.emit("encryptPayload", current, total),
+    )
+    .map_err(|error| {
+        ExportError::new(
+            ErrorCode::PackageFailed,
+            format!("Failed to encrypt the game package: {error}"),
+        )
+    })?;
+    std::fs::remove_file(&plain_path).map_err(|error| {
+        ExportError::write(format!("Failed to remove an intermediate file: {error}"))
+    })?;
+
+    let mut file = File::open(&encrypted_path)
+        .map_err(|error| ExportError::write(format!("Failed to open the game package: {error}")))?;
+    let encrypted_bytes = file
+        .metadata()
+        .map_err(|error| ExportError::write(format!("Failed to read the game package: {error}")))?
+        .len();
+    let (crc32, sha256) = checksum_file(&mut file, encrypted_bytes, with_sha256)?;
+    Ok(PreparedPackage {
+        file,
+        encrypted_bytes,
+        crc32,
+        sha256,
+        stats,
+    })
+}
+
+fn checksum_file(
+    file: &mut File,
+    length: u64,
+    with_sha256: bool,
+) -> Result<(u32, Option<[u8; 32]>)> {
+    use sha2::Digest as _;
     let mut crc = zip::Crc32::default();
+    let mut sha256 = with_sha256.then(sha2::Sha256::new);
     let mut buffer = vec![0u8; 1024 * 1024];
     let mut read_total = 0u64;
     loop {
@@ -483,6 +511,9 @@ fn crc_of_file(file: &mut File, length: u64) -> Result<u32> {
             break;
         }
         crc.update(&buffer[..read]);
+        if let Some(hasher) = &mut sha256 {
+            hasher.update(&buffer[..read]);
+        }
         read_total += read as u64;
     }
     if read_total != length {
@@ -490,7 +521,53 @@ fn crc_of_file(file: &mut File, length: u64) -> Result<u32> {
             "The game package changed while it was read.",
         ));
     }
-    Ok(crc.finish())
+    Ok((crc.finish(), sha256.map(|hasher| hasher.finalize().into())))
+}
+
+/// A hidden file next to `output_path` to write into, renamed into place by
+/// [`persist_output`] once it is complete. `label` names the file in errors.
+fn create_partial_output(
+    output_path: &Path,
+    extension: &str,
+    label: &str,
+) -> Result<(tempfile::NamedTempFile, File)> {
+    let output_dir = output_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let partial = tempfile::Builder::new()
+        .prefix(&format!(".routevn-{extension}-"))
+        .suffix(".partial")
+        .tempfile_in(output_dir)
+        .map_err(|error| {
+            ExportError::write(format!("Failed to create the {label} file: {error}"))
+        })?;
+    let file = partial
+        .reopen()
+        .map_err(|error| ExportError::write(format!("Failed to open the {label} file: {error}")))?;
+    Ok((partial, file))
+}
+
+/// Renames a finished file into place and returns its size.
+fn persist_output(
+    partial: tempfile::NamedTempFile,
+    output_path: &Path,
+    label: &str,
+) -> Result<u64> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(partial.path(), std::fs::Permissions::from_mode(0o644)).map_err(
+            |error| ExportError::write(format!("Failed to set {label} permissions: {error}")),
+        )?;
+    }
+    let persisted = partial.persist(output_path).map_err(|error| {
+        ExportError::write(format!("Failed to save the {label}: {}", error.error))
+    })?;
+    Ok(persisted
+        .metadata()
+        .map_err(|error| ExportError::write(format!("Failed to read the {label} size: {error}")))?
+        .len())
 }
 
 struct Customization<'a> {

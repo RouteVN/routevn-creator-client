@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  createAndroidApkExportStepsView,
   formatAndroidApkExportProgress,
   getAndroidApkExportStepForPhase,
+  getAndroidApkExportStepLabels,
   getAndroidApkExportSteps,
 } from "../../src/pages/versions/support/androidApkExportSteps.js";
+import { createExportStepsView } from "../../src/pages/versions/support/exportStepsProgress.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const copy = EN_I18N.versionsPage;
@@ -81,8 +82,8 @@ describe("Android APK export steps", () => {
   it("marks earlier steps done and later steps not started", () => {
     const steps = getAndroidApkExportSteps({ signed: true, createsKey: false });
     expect(
-      createAndroidApkExportStepsView({
-        copy,
+      createExportStepsView({
+        labels: getAndroidApkExportStepLabels(copy),
         steps,
         current: "build",
         detail: "3 / 9",
@@ -94,5 +95,48 @@ describe("Android APK export steps", () => {
       { label: copy.androidSignApkStep, state: "pending" },
       { label: copy.androidSaveApkStep, state: "pending" },
     ]);
+  });
+
+  it("puts every bundle exporter phase in a step, in export order", () => {
+    const phases = [
+      "prepareBundle",
+      "scanAssets",
+      "optimizeImages",
+      "writePackage",
+      "encryptPayload",
+      "rewriteManifest",
+      "renderIcons",
+      "signBundle",
+      "writeBundle",
+      "verifyBundle",
+      "finalizeBundle",
+    ];
+    const order = getAndroidApkExportSteps({ signed: true, createsKey: false });
+    const stepIndexes = phases.map((phase) =>
+      order.indexOf(getAndroidApkExportStepForPhase(phase)),
+    );
+    expect(stepIndexes.every((index) => index >= 0)).toBe(true);
+    expect(stepIndexes).toEqual([...stepIndexes].sort((a, b) => a - b));
+    const formats = {
+      formatBytes: (value) => `${value / 1024 / 1024} MB`,
+      formatCount: (value) => value.toLocaleString("en-US"),
+    };
+    expect(
+      formatAndroidApkExportProgress(
+        { phase: "verifyBundle", current: 1048576, total: 2097152 },
+        formats,
+      ),
+    ).toBe("1 MB / 2 MB");
+  });
+
+  it("names the bundle steps for an App Bundle export", () => {
+    const labels = getAndroidApkExportStepLabels(copy, "aab");
+    expect(labels.build).toBe(copy.androidBuildBundleStep);
+    expect(labels.sign).toBe(copy.androidSignBundleStep);
+    expect(labels.save).toBe(copy.androidSaveBundleStep);
+    expect(labels.prepare).toBe(copy.androidPrepareProjectStep);
+    expect(getAndroidApkExportStepLabels(copy).build).toBe(
+      copy.androidBuildApkStep,
+    );
   });
 });

@@ -113,3 +113,42 @@ it("creates Android details using normalized colors", async () => {
   );
   expect(deps.dispatchEvent.mock.calls[0][0].detail.platform).toBe("android");
 });
+
+it("creates iOS details with the bundle identifier and icon", async () => {
+  const deps = createDeps({ platform: "ios", iconFileId: "icon-1" });
+  await handleFormAction(
+    deps,
+    createSubmitPayload({
+      applicationName: "Project One",
+      applicationIdentifier: " com.example.project-one ",
+    }),
+  );
+  expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  expect(deps.projectService.createCurrentPlatformDetails).toHaveBeenCalledWith(
+    "ios",
+    {
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project-one",
+      iconFileId: "icon-1",
+    },
+  );
+  expect(deps.dispatchEvent.mock.calls[0][0].detail.platform).toBe("ios");
+});
+
+it("refuses an iOS bundle identifier with an underscore", async () => {
+  const deps = createDeps({ platform: "ios", iconFileId: "icon-1" });
+  await handleFormAction(
+    deps,
+    createSubmitPayload({
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+    }),
+  );
+  expect(
+    deps.projectService.createCurrentPlatformDetails,
+  ).not.toHaveBeenCalled();
+  expect(deps.appService.showAlert).toHaveBeenCalledWith({
+    message: EN_I18N.platformDetailsPage.macosApplicationIdentifierInvalid,
+    title: EN_I18N.platformDetailsPage.warningTitle,
+  });
+});

@@ -16,6 +16,7 @@ mod download;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod error_reporting;
 mod export_android;
+mod export_ios;
 mod export_macos;
 mod export_windows;
 mod export_zip;
@@ -125,10 +126,15 @@ pub fn run() {
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
             export_android::export_android_apk,
+            export_android::export_android_app_bundle,
+            export_android::get_android_bundle_export_capabilities,
             export_android::get_android_export_host_capabilities,
             export_android::create_android_signing_key,
             export_android::read_android_keystore,
             export_android::write_android_keystore,
+            export_ios::export_ios_application,
+            export_ios::get_ios_export_requirements,
+            export_ios::list_ios_devices,
             export_macos::export_macos_application,
             export_macos::get_macos_export_host_capabilities,
             export_zip::create_distribution_zip_streamed,

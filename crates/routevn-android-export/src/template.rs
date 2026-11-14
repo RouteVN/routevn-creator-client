@@ -101,7 +101,7 @@ pub fn sha256_file(path: &Path) -> Result<String> {
     Ok(crate::signing::hex(&hasher.finalize()))
 }
 
-fn missing(path: &Path, error: std::io::Error) -> ExportError {
+pub(crate) fn missing(path: &Path, error: std::io::Error) -> ExportError {
     ExportError::new(
         ErrorCode::TemplateMissing,
         format!(
@@ -241,6 +241,156 @@ pub fn is_application_id_derived(value: &str, application_id: &str) -> bool {
             .is_some_and(|rest| rest.starts_with('.'))
 }
 
+/// Checks the manifest rules both template formats follow.
+pub(crate) fn check_template_manifest(facts: &ManifestFacts) -> Result<()> {
+    if facts.package != TEMPLATE_APPLICATION_ID {
+        return Err(ExportError::template(format!(
+            "The template package is {}, expected {TEMPLATE_APPLICATION_ID}.",
+            facts.package
+        )));
+    }
+    if facts.debuggable {
+        return Err(ExportError::template(
+            "The template must not be debuggable.",
+        ));
+    }
+    if facts.min_sdk != EXPECTED_MIN_SDK || facts.target_sdk != EXPECTED_TARGET_SDK {
+        return Err(ExportError::template(format!(
+            "The template targets SDK {}..{}, expected {EXPECTED_MIN_SDK}..{EXPECTED_TARGET_SDK}.",
+            facts.min_sdk, facts.target_sdk
+        )));
+    }
+    for component in &facts.components {
+        if !ALLOWED_COMPONENTS.contains(&component.as_str()) {
+            return Err(ExportError::template(format!(
+                "The template declares an unexpected component {component}."
+            )));
+        }
+    }
+    for permission in &facts.permissions {
+        if !is_application_id_derived(permission, TEMPLATE_APPLICATION_ID)
+            && !ALLOWED_PERMISSIONS.contains(&permission.as_str())
+        {
+            return Err(ExportError::template(format!(
+                "The template uses an unexpected permission {permission}."
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// The manifest strings export rewrites: the template application ID and
+/// names derived from it. Refuses one that embeds it any other way.
+pub(crate) fn template_application_id_strings(strings: &[String]) -> Result<Vec<String>> {
+    if strings.iter().any(|value| {
+        value.contains(TEMPLATE_APPLICATION_ID)
+            && !is_application_id_derived(value, TEMPLATE_APPLICATION_ID)
+    }) {
+        return Err(ExportError::template(
+            "The template manifest embeds its application ID inside another value.",
+        ));
+    }
+    Ok(strings
+        .iter()
+        .filter(|value| is_application_id_derived(value, TEMPLATE_APPLICATION_ID))
+        .cloned()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect())
+}
+
+/// Refuses code that names the template application ID, which export
+/// cannot change. `prefix` is the folder of the dex files, such as
+/// `base/dex/`.
+pub(crate) fn check_dex_files(file: &mut File, index: &ZipIndex, prefix: &str) -> Result<()> {
+    for entry in index.entries.iter().filter(|entry| {
+        entry
+            .name
+            .strip_prefix(prefix)
+            .is_some_and(|name| name.starts_with("classes") && name.ends_with(".dex"))
+    }) {
+        let dex = zip::read_entry(file, entry)?;
+        if dex
+            .windows(TEMPLATE_APPLICATION_ID.len())
+            .any(|window| window == TEMPLATE_APPLICATION_ID.as_bytes())
+        {
+            return Err(ExportError::template(format!(
+                "{} references the template application ID, which export cannot change.",
+                entry.name
+            )));
+        }
+    }
+    Ok(())
+}
+
+type FilePaths<'a> = dyn Fn(&str, &str) -> Result<Vec<(u32, String)>> + 'a;
+
+/// Finds the PNG files of the icon slots, which export replaces, and checks
+/// their sizes. `file_paths` lists a resource's files with their densities;
+/// `entry_prefix` is the folder of `res/` in the archive.
+pub(crate) fn describe_images(
+    file: &mut File,
+    index: &ZipIndex,
+    entry_prefix: &str,
+    file_paths: &FilePaths<'_>,
+) -> Result<Vec<ImageSlotDescriptor>> {
+    let mut images = Vec::new();
+    for (type_name, key, kind) in [
+        ("mipmap", "ic_launcher", ImageKind::Legacy),
+        (
+            "mipmap",
+            "ic_launcher_foreground",
+            ImageKind::AdaptiveForeground,
+        ),
+        ("drawable", "splash_icon", ImageKind::Splash),
+    ] {
+        let paths: Vec<_> = file_paths(type_name, key)?
+            .into_iter()
+            .filter(|(_, path)| path.ends_with(".png"))
+            .collect();
+        if paths.len() < 5 {
+            return Err(ExportError::template(format!(
+                "Expected PNG {type_name}/{key} for five densities, found {}.",
+                paths.len()
+            )));
+        }
+        for (density, path) in paths {
+            let density = u16::try_from(density)
+                .map_err(|_| ExportError::template(format!("{path} has an unexpected density.")))?;
+            let size = kind.pixel_size(density);
+            let path = format!("{entry_prefix}{path}");
+            let entry = index
+                .entry(&path)
+                .ok_or_else(|| ExportError::template(format!("Missing icon file {path}.")))?;
+            let dimensions = icons::png_dimensions(&zip::read_entry(file, entry)?);
+            if dimensions != Some((size, size)) {
+                return Err(ExportError::template(format!(
+                    "{path} should be {size}x{size} pixels, found {dimensions:?}."
+                )));
+            }
+            images.push(ImageSlotDescriptor {
+                entry: path,
+                kind,
+                size,
+            });
+        }
+    }
+    images.sort_by(|a, b| a.entry.cmp(&b.entry));
+    Ok(images)
+}
+
+/// The ABI folders under `lib_prefix`, such as `lib/`.
+pub(crate) fn abis(index: &ZipIndex, lib_prefix: &str) -> Vec<String> {
+    index
+        .entries
+        .iter()
+        .filter_map(|entry| entry.name.strip_prefix(lib_prefix))
+        .filter_map(|rest| rest.split_once('/').map(|(abi, _)| abi.to_string()))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
 /// Validates a freshly built template APK and describes it.
 pub fn describe(apk_path: &Path) -> Result<TemplateDescriptor> {
     let mut file = File::open(apk_path).map_err(|error| missing(apk_path, error))?;
@@ -268,73 +418,9 @@ pub fn describe(apk_path: &Path) -> Result<TemplateDescriptor> {
         .ok_or_else(|| ExportError::template("The template APK has no AndroidManifest.xml."))?;
     let manifest = BinaryXml::parse(&zip::read_entry(&mut file, manifest_entry)?)?;
     let facts = manifest_facts(&manifest)?;
-    if facts.package != TEMPLATE_APPLICATION_ID {
-        return Err(ExportError::template(format!(
-            "The template package is {}, expected {TEMPLATE_APPLICATION_ID}.",
-            facts.package
-        )));
-    }
-    if facts.debuggable {
-        return Err(ExportError::template(
-            "The template APK must not be debuggable.",
-        ));
-    }
-    if facts.min_sdk != EXPECTED_MIN_SDK || facts.target_sdk != EXPECTED_TARGET_SDK {
-        return Err(ExportError::template(format!(
-            "The template targets SDK {}..{}, expected {EXPECTED_MIN_SDK}..{EXPECTED_TARGET_SDK}.",
-            facts.min_sdk, facts.target_sdk
-        )));
-    }
-    for component in &facts.components {
-        if !ALLOWED_COMPONENTS.contains(&component.as_str()) {
-            return Err(ExportError::template(format!(
-                "The template declares an unexpected component {component}."
-            )));
-        }
-    }
-    for permission in &facts.permissions {
-        if !is_application_id_derived(permission, TEMPLATE_APPLICATION_ID)
-            && !ALLOWED_PERMISSIONS.contains(&permission.as_str())
-        {
-            return Err(ExportError::template(format!(
-                "The template uses an unexpected permission {permission}."
-            )));
-        }
-    }
-    let application_id_strings: Vec<String> = manifest
-        .pool
-        .strings
-        .iter()
-        .filter(|value| is_application_id_derived(value, TEMPLATE_APPLICATION_ID))
-        .cloned()
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect();
-    if manifest.pool.strings.iter().any(|value| {
-        value.contains(TEMPLATE_APPLICATION_ID)
-            && !is_application_id_derived(value, TEMPLATE_APPLICATION_ID)
-    }) {
-        return Err(ExportError::template(
-            "The template manifest embeds its application ID inside another value.",
-        ));
-    }
-
-    for entry in index
-        .entries
-        .iter()
-        .filter(|entry| entry.name.starts_with("classes") && entry.name.ends_with(".dex"))
-    {
-        let dex = zip::read_entry(&mut file, entry)?;
-        if dex
-            .windows(TEMPLATE_APPLICATION_ID.len())
-            .any(|window| window == TEMPLATE_APPLICATION_ID.as_bytes())
-        {
-            return Err(ExportError::template(format!(
-                "{} references the template application ID, which export cannot change.",
-                entry.name
-            )));
-        }
-    }
+    check_template_manifest(&facts)?;
+    let application_id_strings = template_application_id_strings(&manifest.pool.strings)?;
+    check_dex_files(&mut file, &index, "")?;
 
     let resources_entry = index
         .entry(RESOURCES_ENTRY)
@@ -366,55 +452,14 @@ pub fn describe(apk_path: &Path) -> Result<TemplateDescriptor> {
         });
     }
 
-    let mut images = Vec::new();
-    for (type_name, key, kind) in [
-        ("mipmap", "ic_launcher", ImageKind::Legacy),
-        (
-            "mipmap",
-            "ic_launcher_foreground",
-            ImageKind::AdaptiveForeground,
-        ),
-        ("drawable", "splash_icon", ImageKind::Splash),
-    ] {
-        let paths: Vec<_> = table
+    let images = describe_images(&mut file, &index, "", &|type_name, key| {
+        Ok(table
             .file_paths(type_name, key)
             .into_iter()
-            .filter(|(_, path)| path.ends_with(".png"))
-            .collect();
-        if paths.len() < 5 {
-            return Err(ExportError::template(format!(
-                "Expected PNG {type_name}/{key} for five densities, found {}.",
-                paths.len()
-            )));
-        }
-        for (density, path) in paths {
-            let size = kind.pixel_size(density);
-            let entry = index
-                .entry(&path)
-                .ok_or_else(|| ExportError::template(format!("Missing icon file {path}.")))?;
-            let dimensions = icons::png_dimensions(&zip::read_entry(&mut file, entry)?);
-            if dimensions != Some((size, size)) {
-                return Err(ExportError::template(format!(
-                    "{path} should be {size}x{size} pixels, found {dimensions:?}."
-                )));
-            }
-            images.push(ImageSlotDescriptor {
-                entry: path,
-                kind,
-                size,
-            });
-        }
-    }
-    images.sort_by(|a, b| a.entry.cmp(&b.entry));
-
-    let abis: Vec<String> = index
-        .entries
-        .iter()
-        .filter_map(|entry| entry.name.strip_prefix("lib/"))
-        .filter_map(|rest| rest.split_once('/').map(|(abi, _)| abi.to_string()))
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect();
+            .map(|(density, path)| (u32::from(density), path))
+            .collect())
+    })?;
+    let abis = abis(&index, "lib/");
 
     Ok(TemplateDescriptor {
         format_version: DESCRIPTOR_FORMAT_VERSION,

@@ -1,6 +1,11 @@
 import { validatePlatformDetails } from "../../../internal/platformDetailsValidation.js";
 import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
 import {
+  isValidIosBuildNumber,
+  isValidIosTeamId,
+  isValidIosVersion,
+} from "../../../internal/iosExport.js";
+import {
   mkdir,
   writeFile,
   readFile,
@@ -83,6 +88,8 @@ const WINDOWS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/windows/RouteVNPlayerTemplate.exe";
 const MACOS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/macos/RouteVNPlayerTemplate.app.zip";
+const IOS_PLAYER_TEMPLATE_RESOURCE =
+  "player-templates/ios/RouteVNPlayerTemplate.app.zip";
 const WINDOWS_APPLICATION_ICON_SIZE = 256;
 const WINDOWS_ICON_MIME_TYPES = new Set([
   "image/png",
@@ -1040,31 +1047,59 @@ export const createTauriProjectServiceAdapters = ({
     return result;
   };
 
-  const resolveAndroidPlayerTemplatePaths = async (options = {}) => ({
+  const ANDROID_PLAYER_TEMPLATES = {
+    apk: {
+      templatePath: "player-templates/android/RouteVNPlayerTemplate.apk",
+      descriptorPath: "player-templates/android/RouteVNPlayerTemplate.json",
+    },
+    aab: {
+      templatePath: "player-templates/android/RouteVNPlayerTemplate.aab",
+      descriptorPath: "player-templates/android/RouteVNPlayerTemplate.aab.json",
+    },
+  };
+
+  const resolveAndroidPlayerTemplatePaths = async (
+    options = {},
+    format = "apk",
+  ) => ({
     templatePath:
       options.templatePath ??
-      (await resolveResource(
-        "player-templates/android/RouteVNPlayerTemplate.apk",
-      )),
+      (await resolveResource(ANDROID_PLAYER_TEMPLATES[format].templatePath)),
     descriptorPath:
       options.descriptorPath ??
-      (await resolveResource(
-        "player-templates/android/RouteVNPlayerTemplate.json",
-      )),
+      (await resolveResource(ANDROID_PLAYER_TEMPLATES[format].descriptorPath)),
   });
 
+  const getAndroidTemplateCapabilities = async (options, format, command) => {
+    const paths = await resolveAndroidPlayerTemplatePaths(options, format);
+    const [templateExists, descriptorExists] = await Promise.all([
+      exists(paths.templatePath),
+      exists(paths.descriptorPath),
+    ]);
+    if (!templateExists || !descriptorExists) return { available: false };
+    return invoke(command, paths);
+  };
+
+  // `bundleAvailable` tells whether the App Bundle template is installed
+  // too. A failed bundle check leaves APK export available.
   const getAndroidExportAvailability = async ({ options = {} } = {}) => {
+    let capabilities;
     try {
-      const paths = await resolveAndroidPlayerTemplatePaths(options);
-      const [templateExists, descriptorExists] = await Promise.all([
-        exists(paths.templatePath),
-        exists(paths.descriptorPath),
-      ]);
-      if (!templateExists || !descriptorExists) return { available: false };
-      return await invoke("get_android_export_host_capabilities", paths);
+      capabilities = await getAndroidTemplateCapabilities(
+        options,
+        "apk",
+        "get_android_export_host_capabilities",
+      );
     } catch (error) {
       return { available: false, reason: String(error?.message ?? error) };
     }
+    if (!capabilities.available) return capabilities;
+    const bundle = await getAndroidTemplateCapabilities(
+      {},
+      "aab",
+      "get_android_bundle_export_capabilities",
+    ).catch(() => ({ available: false }));
+    return { ...capabilities, bundleAvailable: bundle.available };
   };
 
   const promptAndroidApkPath = async ({
@@ -1080,7 +1115,25 @@ export const createTauriProjectServiceAdapters = ({
       ],
     });
 
-  const createAndroidApkToPath = async ({
+  const promptAndroidBundlePath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    filePicker.saveFilePicker({
+      title: options.title ?? "Save Android App Bundle",
+      defaultPath: defaultFileName,
+      filters: [
+        {
+          name: options.fileTypeName ?? "Android App Bundle",
+          extensions: ["aab"],
+        },
+      ],
+    });
+
+  // The exporter request both formats share.
+  const createAndroidExportRequest = async ({
+    format,
     projectData,
     fileEntries,
     outputPath,
@@ -1094,7 +1147,6 @@ export const createTauriProjectServiceAdapters = ({
     splashIconFileId,
     iconBackgroundColor,
     splashBackgroundColor,
-    signingKey,
     options = {},
     getCurrentReference,
   }) => {
@@ -1120,7 +1172,7 @@ export const createTauriProjectServiceAdapters = ({
     if (orientation !== "portrait" && orientation !== "landscape") {
       throw new Error("Invalid Android export orientation.");
     }
-    const paths = await resolveAndroidPlayerTemplatePaths(options);
+    const paths = await resolveAndroidPlayerTemplatePaths(options, format);
     const { filePath: iconPath } = await resolveReferenceFilePath(
       getCurrentReference(),
       iconFileId,
@@ -1130,8 +1182,6 @@ export const createTauriProjectServiceAdapters = ({
       fileEntries,
       getCurrentReference,
     });
-    const onProgress = new Channel();
-    if (options.onProgress) onProgress.onmessage = options.onProgress;
     const request = {
       templatePath: paths.templatePath,
       descriptorPath: paths.descriptorPath,
@@ -1165,7 +1215,149 @@ export const createTauriProjectServiceAdapters = ({
       );
       request.splashIconPath = filePath;
     }
-    return invoke("export_android_apk", { request, signingKey, onProgress });
+    return request;
+  };
+
+  const createProgressChannel = (options = {}) => {
+    const onProgress = new Channel();
+    if (options.onProgress) onProgress.onmessage = options.onProgress;
+    return onProgress;
+  };
+
+  const createAndroidApkToPath = async (payload) => {
+    const request = await createAndroidExportRequest({
+      ...payload,
+      format: "apk",
+    });
+    return invoke("export_android_apk", {
+      request,
+      signingKey: payload.signingKey,
+      onProgress: createProgressChannel(payload.options),
+    });
+  };
+
+  // An App Bundle is always signed: Google Play registers its key as the
+  // upload key.
+  const createAndroidBundleToPath = async (payload) => {
+    if (!payload.signingKey) {
+      throw new Error("An Android App Bundle needs a signing key.");
+    }
+    const request = await createAndroidExportRequest({
+      ...payload,
+      format: "aab",
+    });
+    return invoke("export_android_app_bundle", {
+      request,
+      signingKey: payload.signingKey,
+      onProgress: createProgressChannel(payload.options),
+    });
+  };
+
+  const resolveIosPlayerTemplatePath = async (options = {}) =>
+    options.templatePath ?? resolveResource(IOS_PLAYER_TEMPLATE_RESOURCE);
+
+  // iOS export runs only on a Mac; whether Xcode is ready is checked when an
+  // export starts (getIosExportRequirements).
+  const getIosExportAvailability = async ({ options = {} } = {}) => {
+    const hostSupported = isMacosHost();
+    let templateAvailable = false;
+    if (hostSupported) {
+      try {
+        templateAvailable = await exists(
+          await resolveIosPlayerTemplatePath(options),
+        );
+      } catch {}
+    }
+    return {
+      available: hostSupported && templateAvailable,
+      hostSupported,
+      templateAvailable,
+    };
+  };
+
+  // The Xcode status and the Apple teams signed in to Xcode.
+  const getIosExportRequirements = async () =>
+    invoke("get_ios_export_requirements");
+
+  const listIosDevices = async () => invoke("list_ios_devices");
+
+  const promptIosApplicationPath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    filePicker.saveFilePicker({
+      title: options.title ?? "Save iOS App",
+      defaultPath: defaultFileName,
+      filters: [
+        { name: options.fileTypeName ?? "iOS App", extensions: ["ipa"] },
+      ],
+    });
+
+  // Saves the IPA to `outputPath`, or, for a development build with
+  // `installDeviceId`, installs it on that device without saving it.
+  const exportIosApplication = async ({
+    projectData,
+    fileEntries,
+    outputPath,
+    installDeviceId,
+    applicationName,
+    bundleIdentifier,
+    version,
+    buildNumber,
+    orientation,
+    iconFileId,
+    teamId,
+    distribution,
+    upload,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const validation = validatePlatformDetails({
+      platform: "ios",
+      applicationInfo: {
+        applicationName,
+        applicationIdentifier: bundleIdentifier,
+        iconFileId,
+      },
+    });
+    if (!validation.valid) {
+      throw new Error(`Invalid iOS platform details: ${validation.code}`);
+    }
+    if (!isValidIosVersion(version) || !isValidIosBuildNumber(buildNumber)) {
+      throw new Error("Invalid iOS version or build number.");
+    }
+    if (!isValidIosTeamId(teamId)) {
+      throw new Error("Invalid Apple team ID.");
+    }
+    const { filePath: iconPath } = await resolveReferenceFilePath(
+      getCurrentReference(),
+      iconFileId,
+      { label: "Project icon file id" },
+    );
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const onProgress = new Channel();
+    if (options.onProgress) onProgress.onmessage = options.onProgress;
+    const request = {
+      templatePath: await resolveIosPlayerTemplatePath(options),
+      outputPath,
+      installDeviceId,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      applicationName: applicationName.trim(),
+      bundleIdentifier,
+      version,
+      buildNumber,
+      orientation,
+      iconPath,
+      teamId,
+      distribution,
+      upload: !!upload,
+    };
+    return invoke("export_ios_application", { request, onProgress });
   };
 
   const createAndroidSigningKey = async ({ applicationName, applicationId }) =>
@@ -1531,6 +1723,8 @@ export const createTauriProjectServiceAdapters = ({
     getAndroidExportAvailability,
     promptAndroidApkPath,
     createAndroidApkToPath,
+    promptAndroidBundlePath,
+    createAndroidBundleToPath,
     createAndroidSigningKey,
     promptAndroidKeystorePath,
     readAndroidKeystore,
@@ -1542,6 +1736,11 @@ export const createTauriProjectServiceAdapters = ({
     createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath,
     createMacosApplicationToPath,
+    getIosExportAvailability,
+    getIosExportRequirements,
+    listIosDevices,
+    promptIosApplicationPath,
+    exportIosApplication,
   };
 
   const collabAdapter = {

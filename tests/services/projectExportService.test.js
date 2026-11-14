@@ -921,3 +921,57 @@ it.each([
     );
   },
 );
+
+it("passes an App Bundle export to the adapter with the APK fields and the key", async () => {
+  const fileAdapter = {
+    promptAndroidBundlePath: vi.fn(async () => "/exports/project.aab"),
+    createAndroidBundleToPath: vi.fn(async () => ({
+      outputPath: "/exports/project.aab",
+    })),
+  };
+  const filePicker = {};
+  const getCurrentReference = () => ({ projectPath: "/projects/project-one" });
+  const service = createProjectExportService({
+    fileAdapter,
+    filePicker,
+    getCurrentReference,
+  });
+  await service.promptAndroidBundlePath(
+    { defaultFileName: "project.aab" },
+    { title: "Save One" },
+  );
+  expect(fileAdapter.promptAndroidBundlePath).toHaveBeenCalledWith({
+    defaultFileName: "project.aab",
+    options: { title: "Save One" },
+    filePicker,
+  });
+  const projectData = {
+    projectData: { screen: { width: 1920, height: 1080 } },
+  };
+  const signingKey = { certificateSha256: "a".repeat(64) };
+  await service.createAndroidBundleToPath(
+    projectData,
+    [{ fileId: "image-1", mimeType: "image/png" }],
+    "/exports/project.aab",
+    {
+      applicationName: "Project One",
+      applicationId: "com.example.project_one",
+      versionName: "1.2.3",
+      versionCode: 42,
+      iconFileId: "icon-1",
+      iconBackgroundColor: "#FFFFFF",
+      splashBackgroundColor: "#000000",
+      signingKey,
+    },
+  );
+  expect(fileAdapter.createAndroidBundleToPath).toHaveBeenCalledWith(
+    expect.objectContaining({
+      fileEntries: [{ id: "image-1", mimeType: "image/png" }],
+      outputPath: "/exports/project.aab",
+      applicationId: "com.example.project_one",
+      orientation: "landscape",
+      signingKey,
+      getCurrentReference,
+    }),
+  );
+});

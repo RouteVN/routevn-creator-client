@@ -321,6 +321,14 @@ impl SigningKey {
             .map_err(|error| signing_error(format!("Failed to encode the private key: {error}")))
     }
 
+    /// An RSA PKCS #1 v1.5 signature of `message` with SHA-256.
+    pub(crate) fn sign_sha256(&self, message: &[u8]) -> Result<Vec<u8>> {
+        Ok(RsaSigningKey::<Sha256>::new(self.private_key.clone())
+            .try_sign(message)
+            .map_err(|error| signing_error(format!("Failed to sign: {error}")))?
+            .to_vec())
+    }
+
     pub fn certificate_der(&self) -> &[u8] {
         &self.certificate_der
     }

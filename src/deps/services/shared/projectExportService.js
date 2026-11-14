@@ -1,4 +1,4 @@
-import { getAndroidExportOrientation } from "../../../internal/androidExport.js";
+import { getProjectOrientation } from "../../../internal/projectResolution.js";
 import { normalizeWebScreenFadeDuration } from "../../../internal/webExport.js";
 import { extractImageThumbnail } from "../../clients/web/fileProcessors.js";
 
@@ -1722,6 +1722,31 @@ export const createProjectExportService = ({
   service.promptAndroidApkPath = async ({ defaultFileName }, options = {}) =>
     fileAdapter.promptAndroidApkPath({ defaultFileName, options, filePicker });
 
+  const toAndroidExportPayload = (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata,
+    options,
+  ) => ({
+    projectData,
+    fileEntries: normalizeExportFileEntries(fileEntries),
+    outputPath,
+    applicationName: metadata.applicationName,
+    applicationId: metadata.applicationId,
+    versionName: metadata.versionName,
+    versionCode: metadata.versionCode,
+    orientation: getProjectOrientation(projectData.projectData.screen),
+    iconFileId: metadata.iconFileId,
+    adaptiveIconFileId: metadata.adaptiveIconFileId,
+    splashIconFileId: metadata.splashIconFileId,
+    iconBackgroundColor: metadata.iconBackgroundColor,
+    splashBackgroundColor: metadata.splashBackgroundColor,
+    signingKey: metadata.signingKey,
+    options,
+    getCurrentReference,
+  });
+
   service.createAndroidApkToPath = async (
     projectData,
     fileEntries,
@@ -1729,21 +1754,89 @@ export const createProjectExportService = ({
     metadata = {},
     options = {},
   ) =>
-    fileAdapter.createAndroidApkToPath({
+    fileAdapter.createAndroidApkToPath(
+      toAndroidExportPayload(
+        projectData,
+        fileEntries,
+        outputPath,
+        metadata,
+        options,
+      ),
+    );
+
+  service.promptAndroidBundlePath = async ({ defaultFileName }, options = {}) =>
+    fileAdapter.promptAndroidBundlePath({
+      defaultFileName,
+      options,
+      filePicker,
+    });
+
+  service.createAndroidBundleToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.createAndroidBundleToPath(
+      toAndroidExportPayload(
+        projectData,
+        fileEntries,
+        outputPath,
+        metadata,
+        options,
+      ),
+    );
+
+  service.getIosExportAvailability = async (options = {}) => {
+    if (typeof fileAdapter.getIosExportAvailability !== "function") {
+      return {
+        available: false,
+        hostSupported: false,
+        templateAvailable: false,
+      };
+    }
+    return fileAdapter.getIosExportAvailability({ options });
+  };
+
+  service.getIosExportRequirements = async () =>
+    fileAdapter.getIosExportRequirements();
+
+  service.listIosDevices = async () => fileAdapter.listIosDevices();
+
+  service.promptIosApplicationPath = async (
+    { defaultFileName },
+    options = {},
+  ) =>
+    fileAdapter.promptIosApplicationPath({
+      defaultFileName,
+      options,
+      filePicker,
+    });
+
+  // `outputPath` is absent when a development build only installs on
+  // `metadata.installDeviceId`.
+  service.exportIosApplication = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.exportIosApplication({
       projectData,
       fileEntries: normalizeExportFileEntries(fileEntries),
       outputPath,
+      installDeviceId: metadata.installDeviceId,
       applicationName: metadata.applicationName,
-      applicationId: metadata.applicationId,
-      versionName: metadata.versionName,
-      versionCode: metadata.versionCode,
-      orientation: getAndroidExportOrientation(projectData.projectData.screen),
+      bundleIdentifier: metadata.bundleIdentifier,
+      version: metadata.version,
+      buildNumber: metadata.buildNumber,
+      orientation: getProjectOrientation(projectData.projectData.screen),
       iconFileId: metadata.iconFileId,
-      adaptiveIconFileId: metadata.adaptiveIconFileId,
-      splashIconFileId: metadata.splashIconFileId,
-      iconBackgroundColor: metadata.iconBackgroundColor,
-      splashBackgroundColor: metadata.splashBackgroundColor,
-      signingKey: metadata.signingKey,
+      teamId: metadata.teamId,
+      distribution: metadata.distribution,
+      upload: metadata.upload,
       options,
       getCurrentReference,
     });

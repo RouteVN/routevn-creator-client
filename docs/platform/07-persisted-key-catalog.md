@@ -232,6 +232,20 @@ Current keys:
   - Version and Build Number are required per-export inputs and are not persisted
   - project DB import/export preserves the record on every host; no legacy
     `releaseInfo.android` key is read because Android has no preview storage key
+- `platformDetails.ios`
+  - independently customizable iOS release metadata in the project `app` store
+  - fields: `applicationName`, `iconFileId`, `applicationIdentifier` (the
+    bundle identifier), and `teamId`
+  - defaults copy the project name and icon, with a blank bundle identifier
+    and a blank `teamId`
+  - created explicitly from Platform Details or export setup, like Android
+  - `teamId` is the Apple Developer team the last iOS export signed with; the
+    Versions page writes it after the export signs and the export dialog
+    selects it first next time
+  - Version and Build Number are required per-export inputs and are not
+    persisted
+  - the icon is cropped to 1024 by 1024 pixels, the App Store icon size
+  - see `16-ios-player-export.md`
 - `androidSigning`
   - the game's Android signing keys: `keys`, a list of
     `{ certificateSha256, certificate, privateKey, origin, addedAt }`, and

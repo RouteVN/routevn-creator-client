@@ -50,7 +50,7 @@ const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";
 const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
 const LOAD_MENU_ELEMENT_ID = "icn4dknq2kyp";
 const LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID = "5rwEfyx2GBEi";
-const RELEASE_PLATFORM_IDS = ["web", "windows", "macos", "android"];
+const RELEASE_PLATFORM_IDS = ["web", "windows", "macos", "android", "ios"];
 
 export const createProjectServiceCore = ({
   router,
@@ -155,6 +155,27 @@ export const createProjectServiceCore = ({
         )
       : undefined;
     return exportService.createAndroidApkToPath(
+      projectData,
+      fileEntries,
+      outputPath,
+      { ...metadata, signingKey },
+      options,
+    );
+  };
+
+  // An App Bundle is always signed, with the project key named by
+  // `metadata.signingCertificateSha256`.
+  const createAndroidBundleToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    const signingKey = await androidSigningService.getAndroidSigningKeyMaterial(
+      metadata.signingCertificateSha256,
+    );
+    return exportService.createAndroidBundleToPath(
       projectData,
       fileEntries,
       outputPath,
@@ -868,6 +889,8 @@ export const createProjectServiceCore = ({
     getAndroidExportAvailability: exportService.getAndroidExportAvailability,
     promptAndroidApkPath: exportService.promptAndroidApkPath,
     createAndroidApkToPath,
+    promptAndroidBundlePath: exportService.promptAndroidBundlePath,
+    createAndroidBundleToPath,
     supportsAndroidSigning: androidSigningService.supportsAndroidSigning,
     getAndroidSigningSummary: androidSigningService.getAndroidSigningSummary,
     ensureAndroidSigningKey: androidSigningService.ensureAndroidSigningKey,
@@ -880,5 +903,10 @@ export const createProjectServiceCore = ({
     promptMacosApplicationPath: exportService.promptMacosApplicationPath,
     getMacosExportAvailability: exportService.getMacosExportAvailability,
     createMacosApplicationToPath: exportService.createMacosApplicationToPath,
+    getIosExportAvailability: exportService.getIosExportAvailability,
+    getIosExportRequirements: exportService.getIosExportRequirements,
+    listIosDevices: exportService.listIosDevices,
+    promptIosApplicationPath: exportService.promptIosApplicationPath,
+    exportIosApplication: exportService.exportIosApplication,
   };
 };

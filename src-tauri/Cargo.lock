@@ -4489,6 +4489,7 @@ name = "routevn-android-export"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "cms",
  "image",
  "miniz_oxide",
  "p12-keystore",
@@ -4513,6 +4514,7 @@ dependencies = [
  "discord-rich-presence",
  "dotenvy",
  "futures-util",
+ "image",
  "log",
  "plist",
  "reqwest",

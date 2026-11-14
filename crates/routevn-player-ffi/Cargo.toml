@@ -1,0 +1,21 @@
+[package]
+name = "routevn-player-ffi"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+description = "C reader for the encrypted game package inside exported iOS players"
+
+[lib]
+name = "routevn_player"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+routevn-packager = { path = "../routevn-packager" }
+
+[dev-dependencies]
+tempfile = "3.23.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"

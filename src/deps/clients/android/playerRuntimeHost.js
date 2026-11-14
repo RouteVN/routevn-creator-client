@@ -1,12 +1,23 @@
 import { createAndroidAudioRuntime } from "./audioRuntime.js";
 import { createPlayerRuntimePersistenceHost } from "../shared/playerRuntimePersistenceHost.js";
 import {
-  callPlayerRuntimeBridge,
+  createLazyPlayerRuntimeBridge,
   createPlayerRuntimeDb,
-} from "./playerRuntimeDb.js";
+} from "../shared/mobilePlayerRuntimeDb.js";
+
+const NAME = "Android player";
+const callPlayerRuntimeBridge = createLazyPlayerRuntimeBridge({
+  getBridge: () => globalThis.RouteVNPlayerAndroid,
+  name: NAME,
+});
 
 const host = createPlayerRuntimePersistenceHost({
-  createDatabase: createPlayerRuntimeDb,
+  createDatabase: (options) =>
+    createPlayerRuntimeDb({
+      ...options,
+      call: callPlayerRuntimeBridge,
+      name: NAME,
+    }),
 });
 
 const audioRuntime = createAndroidAudioRuntime();
