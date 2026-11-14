@@ -153,6 +153,7 @@ const createAndroidFormatField = (copy) => ({
   name: "format",
   type: "segmented-control",
   label: copy.androidFormatLabel,
+  tooltip: { content: copy.androidFormatTooltip },
   clearable: false,
   options: [
     { value: "apk", label: copy.androidApkFormatOption },
@@ -168,6 +169,7 @@ const createAndroidSigningFields = (copy, signing) => [
     name: "signing",
     type: "segmented-control",
     label: copy.androidSigningLabel,
+    tooltip: { content: copy.androidSigningTooltip },
     clearable: false,
     options: [
       { value: "signed", label: copy.androidSignedOption },

@@ -191,15 +191,17 @@ task to the back on Back instead of finishing.
 
 Each project has one current signing key, saved in the project's
 `androidSigning` key (see `07-persisted-key-catalog.md`) with every key it
-replaced. The export dialog asks only Signed or Unsigned. The first signed
-export of a game makes its key, after the save location is chosen and while
-the progress dialog shows; the dialog closes before the key is made, and key
-changes run one at a time, so repeated clicks make one key. Later signed
-exports reuse it. A new key is saved in the project before the APK is signed;
-if saving fails, the export stops with an error. Android accepts an update
-only when it is signed with the same key, so the dialog and Platform Details
-say that the key is in the project, that the project needs a backup, and that
-the project folder must not be shared publicly.
+replaced. The export dialog asks only Signed or Unsigned. Its hint says that
+Creator signs a Signed APK with a key it manages and stores with the project,
+and that an Unsigned APK must be signed with Android tools such as `apksigner`.
+The first signed export of a game makes its key, after the save location is
+chosen and while the progress dialog shows; the dialog closes before the key is
+made, and key changes run one at a time, so repeated clicks make one key. Later
+signed exports reuse it. A new key is saved in the project before the APK is
+signed; if saving fails, the export stops with an error. Android accepts an
+update only when it is signed with the same key, so the dialog and Platform
+Details say that the key is in the project, that the project needs a backup,
+and that the project folder must not be shared publicly.
 
 The key is not protected by a password: for creators who are not technical, a
 forgotten password is a likelier way to lose the key than a leak. Copying or
@@ -259,14 +261,15 @@ the same player and game package as an APK. Google Play builds the APKs each
 device installs from it.
 
 The Android export dialog shows a Format choice, APK or App Bundle (AAB), when
-the host signs and has the bundle template. APK is the default. App Bundle
-asks no signing question and explains that Play Console registers the
-bundle's key as the game's upload key, that Google Play signs the app players
-download with its own key, and that an exported APK cannot update a copy of
-the game installed from Google Play. The game package is in the bundle's base
-module, so Google Play's size limit for the base module applies to the whole
-game; see
-[Google Play's App Bundle help](https://support.google.com/googleplay/android-developer/answer/9859372)
+the host signs and has the bundle template. APK is the default. The Format hint
+says that an App Bundle is for publishing on the Google Play Store and an APK
+is for sideloading. App Bundle asks no signing question and explains that Play
+Console registers the bundle's key as the game's upload key, that Google Play
+signs the app players download with its own key, and that an exported APK
+cannot update a copy of the game installed from Google Play. The game package
+is in the bundle's base module, so Google Play's size limit for the base module
+applies to the whole game; see [Google Play's App Bundle
+help](https://support.google.com/googleplay/android-developer/answer/9859372)
 for the current limits. Asset packs are not used.
 
 `export_android_app_bundle` in `crates/routevn-android-export/src/bundle.rs`

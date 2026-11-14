@@ -506,6 +506,10 @@ describe("Android signing fields", () => {
       name: "signing",
       options: ["signed", "unsigned"],
     });
+    // The hint says who signs in each case.
+    expect(form.fields[1].tooltip).toEqual({
+      content: EN_I18N.versionsPage.androidSigningTooltip,
+    });
     expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
       "signing",
       EN_I18N.versionsPage.androidNewKeyNotice,
@@ -547,6 +551,10 @@ describe("Android signing fields", () => {
     expect(describeSigningFields(form)[0]).toMatchObject({
       name: "format",
       options: ["apk", "aab"],
+    });
+    // The hint says which format is for what.
+    expect(form.fields[1].tooltip).toEqual({
+      content: EN_I18N.versionsPage.androidFormatTooltip,
     });
     expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
       "format",
