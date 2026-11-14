@@ -93,6 +93,8 @@
       "assets/player-templates/macos/RouteVNPlayerTemplate.app.zip": "player-templates/macos/RouteVNPlayerTemplate.app.zip",
       "assets/player-templates/android/RouteVNPlayerTemplate.apk": "player-templates/android/RouteVNPlayerTemplate.apk",
       "assets/player-templates/android/RouteVNPlayerTemplate.json": "player-templates/android/RouteVNPlayerTemplate.json",
+      "assets/player-templates/android/RouteVNPlayerTemplate.aab": "player-templates/android/RouteVNPlayerTemplate.aab",
+      "assets/player-templates/android/RouteVNPlayerTemplate.aab.json": "player-templates/android/RouteVNPlayerTemplate.aab.json",
       "assets/player-templates/ios/RouteVNPlayerTemplate.app.zip": "player-templates/ios/RouteVNPlayerTemplate.app.zip"
     },
     "icon": [

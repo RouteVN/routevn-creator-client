@@ -63,7 +63,7 @@ describe("Android export switched off", () => {
 
       expect(html).toContain('id="detailDownloadBtn"');
       expect(html).not.toContain('id="detailAndroidApkBtn"');
-      expect(html).not.toContain(EN_I18N.versionsPage.exportAndroidApkButton);
+      expect(html).not.toContain(EN_I18N.versionsPage.exportAndroidButton);
     },
   );
 

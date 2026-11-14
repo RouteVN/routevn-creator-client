@@ -1683,6 +1683,13 @@ const createAndroidDeps = () => {
   deps.projectService.createAndroidApkToPath = vi.fn(async () => ({
     outputPath: "/exports/project.apk",
   }));
+  deps.projectService.promptAndroidBundlePath = vi.fn(
+    async () => "/exports/project.aab",
+  );
+  deps.projectService.createAndroidBundleToPath = vi.fn(async () => ({
+    outputPath: "/exports/project.aab",
+  }));
+  deps.store.selectCanExportAndroidBundle = vi.fn(() => false);
   deps.refs.androidExportForm = { reset: vi.fn(), setValues: vi.fn() };
   let signingStatus = { supported: false };
   deps.store.setAndroidSigningStatus = vi.fn((status) => {
@@ -1693,7 +1700,7 @@ const createAndroidDeps = () => {
   return deps;
 };
 
-const UNSIGNED_FORM_DEFAULTS = { signing: "signed" };
+const FORM_DEFAULTS = { format: "apk", signing: "signed" };
 const submitAndroidExport = (
   deps,
   values = { version: "1.2.3", buildNumber: "42" },
@@ -1730,7 +1737,7 @@ it("prefills Android native version inputs and exports with the entered version 
   await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
   expect(deps.refs.androidExportForm.reset).toHaveBeenCalledTimes(1);
   expect(deps.refs.androidExportForm.setValues).toHaveBeenCalledWith({
-    values: { version: "1.2.3", buildNumber: "", ...UNSIGNED_FORM_DEFAULTS },
+    values: { version: "1.2.3", buildNumber: "", ...FORM_DEFAULTS },
   });
   deps.projectService.createAndroidApkToPath.mockImplementation(
     async (_data, _files, outputPath, _metadata, options) => {
@@ -1833,7 +1840,7 @@ it("leaves the Android Version blank for a nonnumeric release name", async () =>
   });
   await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
   expect(deps.refs.androidExportForm.setValues).toHaveBeenCalledWith({
-    values: { version: "", buildNumber: "", ...UNSIGNED_FORM_DEFAULTS },
+    values: { version: "", buildNumber: "", ...FORM_DEFAULTS },
   });
 });
 
@@ -1928,6 +1935,7 @@ const createSigningDeps = ({ currentKey } = {}) => {
     certificateSha256: currentKey ?? KEY_TWO,
     created: !currentKey,
   }));
+  deps.store.selectCanExportAndroidBundle = vi.fn(() => true);
   return deps;
 };
 
@@ -1945,6 +1953,9 @@ const STEP_KEYS = [
   "androidBuildApkStep",
   "androidSignApkStep",
   "androidSaveApkStep",
+  "androidBuildBundleStep",
+  "androidSignBundleStep",
+  "androidSaveBundleStep",
 ];
 const stepLabels = ({ steps }) =>
   steps.map(({ label, state }) => [
@@ -2083,5 +2094,133 @@ describe("signed Android export", () => {
     expect(deps.appService.showAlert.mock.calls[0][0].message).toContain(
       EN_I18N.versionsPage.androidSigningStatusFailed,
     );
+  });
+});
+
+describe("Android App Bundle export", () => {
+  it("signs the bundle with the project's key and saves it", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.projectService.getAndroidExportAvailability.mockResolvedValue({
+      available: true,
+      bundleAvailable: true,
+    });
+    deps.projectService.createAndroidBundleToPath.mockImplementation(
+      async (_data, _files, outputPath, _metadata, options) => {
+        options.onProgress({ phase: "signBundle", current: 3, total: 9 });
+        return { outputPath };
+      },
+    );
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues({ format: "aab" }));
+
+    expect(deps.projectService.promptAndroidBundlePath).toHaveBeenCalledWith(
+      { defaultFileName: "Project One-1.2.3.aab" },
+      {
+        title: EN_I18N.versionsPage.saveAndroidBundleDialogTitle,
+        fileTypeName: EN_I18N.versionsPage.androidBundleFileTypeName,
+      },
+    );
+    expect(deps.projectService.promptAndroidApkPath).not.toHaveBeenCalled();
+    expect(deps.projectService.createAndroidApkToPath).not.toHaveBeenCalled();
+    expect(deps.projectService.createAndroidBundleToPath).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Array),
+      "/exports/project.aab",
+      expect.objectContaining({
+        applicationId: "com.example.project_one",
+        versionName: "1.2.3",
+        versionCode: 42,
+        signingCertificateSha256: KEY_ONE,
+      }),
+      { onProgress: expect.any(Function) },
+    );
+    expect(
+      stepLabels(deps.appService.showProgressDialog.mock.calls[0][0]),
+    ).toEqual([
+      ["androidPrepareProjectStep", "active"],
+      ["androidPackGameStep", "pending"],
+      ["androidBuildBundleStep", "pending"],
+      ["androidSignBundleStep", "pending"],
+      ["androidSaveBundleStep", "pending"],
+    ]);
+    expect(stepLabels(deps.progressDialog.update.mock.calls.at(-1)[0])).toEqual(
+      [
+        ["androidPrepareProjectStep", "done"],
+        ["androidPackGameStep", "done"],
+        ["androidBuildBundleStep", "done"],
+        ["androidSignBundleStep", "active"],
+        ["androidSaveBundleStep", "pending"],
+      ],
+    );
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.androidBundleExportCompletedMessage.replace(
+        "{path}",
+        "/exports/project.aab",
+      ),
+      title: EN_I18N.versionsPage.exportCompletedTitle,
+    });
+  });
+
+  it("makes the project's first key for a bundle even when Unsigned was picked for an APK", async () => {
+    const deps = createSigningDeps();
+    deps.projectService.getAndroidExportAvailability.mockResolvedValue({
+      available: true,
+      bundleAvailable: true,
+    });
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(
+      deps,
+      signedValues({ format: "aab", signing: "unsigned" }),
+    );
+    expect(deps.projectService.ensureAndroidSigningKey).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(
+      stepLabels(deps.appService.showProgressDialog.mock.calls[0][0])[0],
+    ).toEqual(["androidCreateKeyStep", "active"]);
+    expect(
+      deps.projectService.createAndroidBundleToPath.mock.calls[0][3]
+        .signingCertificateSha256,
+    ).toBe(KEY_TWO);
+  });
+
+  it("exports an APK when this host cannot make bundles", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.store.selectCanExportAndroidBundle.mockReturnValue(false);
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues({ format: "aab" }));
+    expect(
+      deps.projectService.createAndroidBundleToPath,
+    ).not.toHaveBeenCalled();
+    expect(deps.projectService.createAndroidApkToPath).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops when the bundle template is missing", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues({ format: "aab" }));
+    expect(deps.projectService.promptAndroidBundlePath).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.androidExportUnavailable,
+      title: EN_I18N.versionsPage.errorTitle,
+    });
+  });
+
+  it("explains a failed bundle export", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.projectService.getAndroidExportAvailability.mockResolvedValue({
+      available: true,
+      bundleAvailable: true,
+    });
+    deps.projectService.createAndroidBundleToPath.mockRejectedValue(
+      new Error("Failure One"),
+    );
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues({ format: "aab" }));
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: `${EN_I18N.versionsPage.androidBundleExportFailed}\n\n${EN_I18N.versionsPage.errorDetailsLabel}\nFailure One`,
+      title: EN_I18N.versionsPage.errorTitle,
+    });
+    expect(deps.progressDialog.close).toHaveBeenCalledTimes(1);
   });
 });

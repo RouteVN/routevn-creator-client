@@ -3,7 +3,7 @@ name = "routevn-android-export"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.97.1"
-description = "Builds and signs Android APKs from the prebuilt RouteVN player template"
+description = "Builds and signs Android APKs and App Bundles from the prebuilt RouteVN player templates"
 
 [lib]
 name = "routevn_android_export"
@@ -15,6 +15,7 @@ path = "src/bin/routevn-android-template.rs"
 
 [dependencies]
 base64 = "0.22"
+cms = "0.2.3"
 image = { version = "=0.25.6", default-features = false, features = ["jpeg", "png", "webp"] }
 miniz_oxide = "0.8"
 p12-keystore = "0.2.1"

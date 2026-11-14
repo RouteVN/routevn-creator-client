@@ -25,6 +25,9 @@ export const createAndroidApkFileName = (applicationName, version, signed) =>
       : `${applicationName}-${version}-unsigned`,
   )}.apk`;
 
+export const createAndroidBundleFileName = (applicationName, version) =>
+  `${sanitizeArtifactFileName(`${applicationName}-${version}`)}.aab`;
+
 // A signing certificate's SHA-256 as the project records it: 64 lowercase hex
 // digits.
 export const isAndroidCertificateSha256 = (value) =>

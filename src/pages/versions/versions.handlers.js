@@ -1,5 +1,8 @@
 import { withErrorDetails } from "../../internal/errorDetails.js";
-import { createAndroidApkFileName } from "../../internal/androidExport.js";
+import {
+  createAndroidApkFileName,
+  createAndroidBundleFileName,
+} from "../../internal/androidExport.js";
 import {
   createIosIpaFileName,
   IOS_XCODE_DOWNLOAD_URL,
@@ -915,6 +918,7 @@ const checkAndOpenExportConfirmation = async (
           ? version.name
           : "",
         buildNumber: "",
+        format: "apk",
         signing: "signed",
       },
     });
@@ -1899,10 +1903,46 @@ const runMacosApplicationExport = async (deps, confirmation) => {
   }
 };
 
-const runAndroidApkExport = async (deps, confirmation) => {
+// What differs between an APK and an App Bundle export.
+const getAndroidExportFormat = (copy, projectService, { format, signed }) =>
+  format === "aab"
+    ? {
+        exportFailed: copy.androidBundleExportFailed,
+        completedMessage: copy.androidBundleExportCompletedMessage,
+        createFileName: (applicationName, versionName) =>
+          createAndroidBundleFileName(applicationName, versionName),
+        promptPath: projectService.promptAndroidBundlePath,
+        createToPath: projectService.createAndroidBundleToPath,
+        saveDialog: {
+          title: copy.saveAndroidBundleDialogTitle,
+          fileTypeName: copy.androidBundleFileTypeName,
+        },
+      }
+    : {
+        exportFailed: copy.androidExportFailed,
+        completedMessage: signed
+          ? copy.androidSignedApkExportCompletedMessage
+          : copy.androidApkExportCompletedMessage,
+        createFileName: (applicationName, versionName) =>
+          createAndroidApkFileName(applicationName, versionName, signed),
+        promptPath: projectService.promptAndroidApkPath,
+        createToPath: projectService.createAndroidApkToPath,
+        saveDialog: {
+          title: copy.saveAndroidApkDialogTitle,
+          fileTypeName: copy.androidApkFileTypeName,
+        },
+      };
+
+// Exports an APK, or, with `format` `aab`, a signed App Bundle.
+const runAndroidExport = async (deps, confirmation) => {
   const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
-  const { versionId, applicationInfo, nativeVersion, signed } = confirmation;
+  const { versionId, applicationInfo, nativeVersion, format, signed } =
+    confirmation;
+  const exportFormat = getAndroidExportFormat(copy, projectService, {
+    format,
+    signed,
+  });
   const version = store.selectVersion(versionId);
   if (!version) {
     appService.showAlert({
@@ -1915,30 +1955,29 @@ const runAndroidApkExport = async (deps, confirmation) => {
   let outputPath;
   try {
     const availability = await projectService.getAndroidExportAvailability();
-    if (!availability.available) {
+    if (
+      !availability.available ||
+      (format === "aab" && !availability.bundleAvailable)
+    ) {
       appService.showAlert({
         message: copy.androidExportUnavailable,
         title: copy.errorTitle,
       });
       return;
     }
-    outputPath = await projectService.promptAndroidApkPath(
+    outputPath = await exportFormat.promptPath(
       {
-        defaultFileName: createAndroidApkFileName(
+        defaultFileName: exportFormat.createFileName(
           applicationInfo.applicationName,
           nativeVersion.versionName,
-          signed,
         ),
       },
-      {
-        title: copy.saveAndroidApkDialogTitle,
-        fileTypeName: copy.androidApkFileTypeName,
-      },
+      exportFormat.saveDialog,
     );
   } catch (error) {
     appService.showAlert({
       message: withErrorDetails(
-        copy.androidExportFailed,
+        exportFormat.exportFailed,
         error,
         copy.errorDetailsLabel,
       ),
@@ -1956,13 +1995,13 @@ const runAndroidApkExport = async (deps, confirmation) => {
     appService,
     message: copy.androidApkInProgressMessage,
     title: copy.androidApkInProgressTitle,
-    labels: getAndroidApkExportStepLabels(copy),
+    labels: getAndroidApkExportStepLabels(copy, format),
     steps,
   });
   const progressFormats = createExportProgressFormats(i18n);
   let result;
   let exportError;
-  let exportFailedMessage = copy.androidExportFailed;
+  let exportFailedMessage = exportFormat.exportFailed;
   try {
     await progressDialog.waitForPaint();
     let signingCertificateSha256;
@@ -1973,7 +2012,7 @@ const runAndroidApkExport = async (deps, confirmation) => {
         applicationId: applicationInfo.applicationIdentifier,
       });
       signingCertificateSha256 = signingKey.certificateSha256;
-      exportFailedMessage = copy.androidExportFailed;
+      exportFailedMessage = exportFormat.exportFailed;
     }
     showStep("prepare");
     const { transformedData, fileEntries } = await createVersionExportData({
@@ -1983,7 +2022,7 @@ const runAndroidApkExport = async (deps, confirmation) => {
       projectService,
       version,
     });
-    result = await projectService.createAndroidApkToPath(
+    result = await exportFormat.createToPath(
       transformedData,
       fileEntries,
       outputPath,
@@ -2034,14 +2073,9 @@ const runAndroidApkExport = async (deps, confirmation) => {
     return;
   }
   appService.showAlert({
-    message: formatI18nCopy(
-      signed
-        ? copy.androidSignedApkExportCompletedMessage
-        : copy.androidApkExportCompletedMessage,
-      {
-        path: appService.getFileDisplayPath(result?.outputPath ?? outputPath),
-      },
-    ),
+    message: formatI18nCopy(exportFormat.completedMessage, {
+      path: appService.getFileDisplayPath(result?.outputPath ?? outputPath),
+    }),
     title: copy.exportCompletedTitle,
   });
 };
@@ -2067,13 +2101,21 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
   const confirmation = store.selectExportConfirmation();
   if (confirmation.exportType !== "android-apk") return;
   const nativeVersion = createAndroidNativeVersion(version, buildNumber);
+  // A bundle is always signed.
+  const format =
+    store.selectCanExportAndroidBundle() && values.format === "aab"
+      ? "aab"
+      : "apk";
   const signed =
-    store.selectAndroidSigningStatus().supported && values.signing === "signed";
+    format === "aab" ||
+    (store.selectAndroidSigningStatus().supported &&
+      values.signing === "signed");
   store.closeExportConfirmation();
   render();
-  await runAndroidApkExport(deps, {
+  await runAndroidExport(deps, {
     ...confirmation,
     nativeVersion,
+    format,
     signed,
   });
 };

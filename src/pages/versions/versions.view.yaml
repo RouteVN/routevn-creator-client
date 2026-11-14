@@ -134,7 +134,7 @@ template:
                                       - $if canExportWindowsInstaller:
                                           - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
                                       - $if canExportAndroidApk:
-                                          - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidApkButton}
+                                          - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidButton}
                                       - $if canExportMacosApplication:
                                           - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
                                       - $if canExportIosApplication:
@@ -157,7 +157,7 @@ template:
                           - $if canExportWindowsInstaller:
                               - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
                           - $if canExportAndroidApk:
-                              - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidApkButton}
+                              - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidButton}
                           - $if canExportMacosApplication:
                               - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
                           - $if canExportIosApplication:

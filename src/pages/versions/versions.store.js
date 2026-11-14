@@ -98,7 +98,7 @@ const getExportConfirmationButtonLabel = (exportType, copy) => {
   if (exportType === "macos-application") {
     return copy.exportMacosApplicationButton ?? "Export macOS App (Beta)";
   }
-  if (exportType === "android-apk") return copy.exportAndroidApkButton;
+  if (exportType === "android-apk") return copy.exportAndroidButton;
   if (exportType === "ios-application") return copy.exportIosApplicationButton;
   return copy.exportWebButton ?? "Export Web";
 };
@@ -142,15 +142,34 @@ const createMacosExportForm = (copy = {}) => ({
   },
 });
 
-const SIGNED = "values.signing == 'signed'";
+// Rettangoli forms evaluate `$when` against the current values as
+// `formValues`. Without a Format field, the export is an APK.
+const APK = "formValues.format != 'aab'";
+const BUNDLE = "formValues.format == 'aab'";
 
-// Signed or Unsigned, for a host that can sign. The key is the project's; a
-// game without one gets a new key at its first signed export.
+// APK or App Bundle, for a host that signs and has the bundle template. A
+// bundle is for Google Play, which needs it signed with the upload key.
+const createAndroidFormatField = (copy) => ({
+  name: "format",
+  type: "segmented-control",
+  label: copy.androidFormatLabel,
+  tooltip: { content: copy.androidFormatTooltip },
+  clearable: false,
+  options: [
+    { value: "apk", label: copy.androidApkFormatOption },
+    { value: "aab", label: copy.androidBundleFormatOption },
+  ],
+});
+
+// Signed or Unsigned for an APK, on a host that can sign. The key is the
+// project's; a game without one gets a new key at its first signed export.
 const createAndroidSigningFields = (copy, signing) => [
   {
+    $when: APK,
     name: "signing",
     type: "segmented-control",
     label: copy.androidSigningLabel,
+    tooltip: { content: copy.androidSigningTooltip },
     clearable: false,
     options: [
       { value: "signed", label: copy.androidSignedOption },
@@ -158,12 +177,17 @@ const createAndroidSigningFields = (copy, signing) => [
     ],
   },
   {
-    $when: "values.signing == 'unsigned'",
+    $when: `${APK} && formValues.signing == 'unsigned'`,
     type: "read-only-text",
     content: copy.androidUnsignedApkNotice,
   },
   {
-    $when: SIGNED,
+    $when: BUNDLE,
+    type: "read-only-text",
+    content: copy.androidBundleNotice,
+  },
+  {
+    $when: `${BUNDLE} || formValues.signing == 'signed'`,
     type: "read-only-text",
     content: signing.currentKey
       ? copy.androidSignedWithKeyNotice
@@ -171,7 +195,7 @@ const createAndroidSigningFields = (copy, signing) => [
   },
 ];
 
-const createAndroidExportForm = (copy, signing) => {
+const createAndroidExportForm = (copy, signing, canExportBundle) => {
   const fields = [
     {
       type: "row",
@@ -194,6 +218,7 @@ const createAndroidExportForm = (copy, signing) => {
     },
   ];
   if (signing.supported) {
+    if (canExportBundle) fields.push(createAndroidFormatField(copy));
     fields.push(...createAndroidSigningFields(copy, signing));
   }
   return {
@@ -205,15 +230,13 @@ const createAndroidExportForm = (copy, signing) => {
           id: "submit",
           variant: "pr",
           validate: true,
-          label: copy.exportAndroidApkButton,
+          label: copy.exportAndroidButton,
         },
       ],
     },
   };
 };
 
-// Rettangoli forms evaluate `$when` against the current values as
-// `formValues`.
 const APP_STORE = "formValues.distribution == 'appStore'";
 const DEVELOPMENT = "formValues.distribution == 'development'";
 
@@ -403,7 +426,7 @@ export const createInitialState = () => ({
     installerHostSupported: false,
     installerToolAvailable: false,
   },
-  androidExportAvailability: { available: false },
+  androidExportAvailability: { available: false, bundleAvailable: false },
   // The open Android export's signing state: whether this host signs, and
   // the fingerprint of the project's current key, if it has one.
   androidSigning: {
@@ -508,7 +531,15 @@ export const setAndroidExportAvailability = (
   { availability } = {},
 ) => {
   state.androidExportAvailability.available = !!availability?.available;
+  state.androidExportAvailability.bundleAvailable =
+    !!availability?.available && !!availability?.bundleAvailable;
 };
+
+// Whether the open Android export can make an App Bundle: the host signs
+// and has the bundle template.
+export const selectCanExportAndroidBundle = ({ state }) =>
+  state.androidSigning.supported &&
+  state.androidExportAvailability.bundleAvailable;
 
 export const setAndroidSigningStatus = (
   { state },
@@ -742,12 +773,16 @@ export const selectViewData = ({ state, i18n }) => {
     ),
     showAndroidExportForm:
       state.exportConfirmation.exportType === "android-apk",
-    androidExportForm: createAndroidExportForm(copy, state.androidSigning),
+    androidExportForm: createAndroidExportForm(
+      copy,
+      state.androidSigning,
+      selectCanExportAndroidBundle({ state }),
+    ),
     // A host that signs shows this notice in the form, for Unsigned only.
     showAndroidUnsignedNotice: !state.androidSigning.supported,
     androidUnsignedApkNotice: copy.androidUnsignedApkNotice,
 
-    exportAndroidApkButton: copy.exportAndroidApkButton,
+    exportAndroidButton: copy.exportAndroidButton,
     canExportAndroidApk:
       ANDROID_EXPORT_RELEASED &&
       state.platform !== "web" &&

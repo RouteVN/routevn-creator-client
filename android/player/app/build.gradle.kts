@@ -33,6 +33,13 @@ android {
         jniLibs.useLegacyPackaging = false
     }
 
+    androidResources {
+        // The exporter adds the game package, and the player opens it in
+        // place with openFd. The APKs Google Play builds from an exported
+        // bundle must keep it uncompressed.
+        noCompress += "routevn-package.bin"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

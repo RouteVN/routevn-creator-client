@@ -126,6 +126,8 @@ pub fn run() {
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
             export_android::export_android_apk,
+            export_android::export_android_app_bundle,
+            export_android::get_android_bundle_export_capabilities,
             export_android::get_android_export_host_capabilities,
             export_android::create_android_signing_key,
             export_android::read_android_keystore,

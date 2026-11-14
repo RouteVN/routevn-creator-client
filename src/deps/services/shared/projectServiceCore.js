@@ -161,6 +161,27 @@ export const createProjectServiceCore = ({
     );
   };
 
+  // An App Bundle is always signed, with the project key named by
+  // `metadata.signingCertificateSha256`.
+  const createAndroidBundleToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    const signingKey = await androidSigningService.getAndroidSigningKeyMaterial(
+      metadata.signingCertificateSha256,
+    );
+    return exportService.createAndroidBundleToPath(
+      projectData,
+      fileEntries,
+      outputPath,
+      { ...metadata, signingKey },
+      options,
+    );
+  };
+
   const contentPatchesByProject = new Map();
   // The repositories whose content patches completed. The route opens a project
   // once and its pages ensure it many times; only the first ensure of an opened
@@ -866,6 +887,8 @@ export const createProjectServiceCore = ({
     getAndroidExportAvailability: exportService.getAndroidExportAvailability,
     promptAndroidApkPath: exportService.promptAndroidApkPath,
     createAndroidApkToPath,
+    promptAndroidBundlePath: exportService.promptAndroidBundlePath,
+    createAndroidBundleToPath,
     supportsAndroidSigning: androidSigningService.supportsAndroidSigning,
     getAndroidSigningSummary: androidSigningService.getAndroidSigningSummary,
     ensureAndroidSigningKey: androidSigningService.ensureAndroidSigningKey,
