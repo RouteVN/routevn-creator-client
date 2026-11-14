@@ -1,4 +1,5 @@
 import { getAndroidExportOrientation } from "../../../internal/androidExport.js";
+import { normalizeWebScreenFadeDuration } from "../../../internal/webExport.js";
 import { extractImageThumbnail } from "../../clients/web/fileProcessors.js";
 
 /**
@@ -91,7 +92,9 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
       #loading.has-start-background {
         background: #000;
         /* Artwork dissolves into the first scene instead of cutting to it. */
-        transition: opacity 600ms ease-in-out, visibility 0s 600ms;
+        transition:
+          opacity var(--start-fade-duration, 600ms) ease-in-out,
+          visibility 0s var(--start-fade-duration, 600ms);
       }
 
       .loading-background {
@@ -105,16 +108,27 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
          place underneath, so the screen never dips to black in between. */
       #loading-start-background {
         opacity: 0;
-        transition: opacity 600ms ease-in-out;
+        transition: opacity var(--loading-fade-duration, 600ms) ease-in-out;
       }
 
       #loading.ready #loading-start-background {
         opacity: 1;
       }
 
-      /* The progress and the prompt sit at the bottom centre of the artwork,
-         at the same place on the image at any window size, on a backing that
-         keeps them readable. */
+      /* A loading background replaces the loading text and progress bar. They
+         stay in the page for assistive technology only. */
+      #loading.has-loading-background .loading-progress {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      /* Without a start background, the prompt sits at the bottom centre of
+         the artwork, at the same place on the image at any window size, on a
+         backing that keeps it readable. */
       #loading.has-loading-background {
         --loading-art-height: min(
           var(--rvn-app-viewport-height, 100vh),
@@ -122,7 +136,6 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
         );
       }
 
-      #loading.has-loading-background .loading-progress,
       #loading.has-loading-background:not(.has-start-background) #loading-start {
         position: absolute;
         grid-area: auto;
@@ -135,9 +148,6 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
         background: rgba(0, 0, 0, 0.6);
       }
 
-      #loading.has-loading-background .loading-progress {
-        width: min(256px, 66vw);
-      }
 
       /* A start background carries its own prompt: the button covers the
          screen and keeps its label for assistive technology only. */
@@ -548,6 +558,8 @@ const createLoadingClassAttribute = ({
   loadingBackgroundDataUrl,
   startBackgroundDataUrl,
   loadingBackgroundAspectRatio,
+  loadingFadeDuration,
+  startFadeDuration,
 }) => {
   const classNames = [];
   if (loadingBackgroundDataUrl) {
@@ -559,10 +571,14 @@ const createLoadingClassAttribute = ({
   if (classNames.length === 0) {
     return "";
   }
-  const style = loadingBackgroundAspectRatio
-    ? ` style="--loading-art-ratio: ${loadingBackgroundAspectRatio}"`
-    : "";
-  return ` class="${classNames.join(" ")}"${style}`;
+  const declarations = [
+    `--loading-fade-duration: ${loadingFadeDuration}ms`,
+    `--start-fade-duration: ${startFadeDuration}ms`,
+  ];
+  if (loadingBackgroundAspectRatio) {
+    declarations.push(`--loading-art-ratio: ${loadingBackgroundAspectRatio}`);
+  }
+  return ` class="${classNames.join(" ")}" style="${declarations.join("; ")}"`;
 };
 
 // Width divided by height, as a plain number for the stylesheet.
@@ -589,6 +605,10 @@ const normalizeWebApplicationMetadata = (web = {}) => {
     loadingBackgroundAspectRatio: normalizeScreenBackgroundAspectRatio(
       web.loadingBackgroundAspectRatio,
     ),
+    loadingFadeDuration: normalizeWebScreenFadeDuration(
+      web.loadingFadeDuration,
+    ),
+    startFadeDuration: normalizeWebScreenFadeDuration(web.startFadeDuration),
   };
 };
 
@@ -1488,6 +1508,8 @@ const getBundleStaticFiles = async (
     startBackgroundDataUrl: screenBackgroundImages.startBackgroundDataUrl,
     loadingBackgroundAspectRatio:
       screenBackgroundImages.loadingBackgroundAspectRatio,
+    loadingFadeDuration: screenBackgrounds?.loadingFadeDuration,
+    startFadeDuration: screenBackgrounds?.startFadeDuration,
   };
   const staticFiles = {
     indexHtml: createBundlePlayerIndexHtml(webMetadata),
@@ -1510,7 +1532,7 @@ export const createProjectExportService = ({
 }) => {
   const getStaticFiles = (projectData, options) =>
     getBundleStaticFiles(projectData, {
-      screenBackgrounds: options.webScreenBackgrounds,
+      screenBackgrounds: options.webScreens,
       getFileContent,
       createImageDataUrl,
     });

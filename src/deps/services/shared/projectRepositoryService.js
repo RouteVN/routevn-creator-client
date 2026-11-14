@@ -1,4 +1,5 @@
 import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
+import { normalizeWebScreenFadeDuration } from "../../../internal/webExport.js";
 import {
   assertSupportedProjectState,
   createProjectRepository,
@@ -148,12 +149,15 @@ export const createProjectRepositoryService = ({
     macos: "platformDetails.macos",
     android: "platformDetails.android",
   };
-  // Optional images: unset stays undefined instead of an empty value.
-  const OPTIONAL_PLATFORM_IMAGE_KEYS = [
+  // Taken from a patch as given: optional images stay undefined when unset,
+  // and fade durations are normalized with the rest of the record.
+  const RAW_PLATFORM_DETAILS_PATCH_KEYS = [
     "adaptiveIconFileId",
     "splashIconFileId",
     "loadingBackgroundFileId",
     "startBackgroundFileId",
+    "loadingFadeDuration",
+    "startFadeDuration",
   ];
   const LEGACY_PLATFORM_DETAILS_KEYS = {
     web: "releaseInfo.web",
@@ -289,6 +293,12 @@ export const createProjectRepositoryService = ({
       platformDetails.loadingBackgroundFileId =
         sourceInfo?.loadingBackgroundFileId;
       platformDetails.startBackgroundFileId = sourceInfo?.startBackgroundFileId;
+      platformDetails.loadingFadeDuration = normalizeWebScreenFadeDuration(
+        sourceInfo?.loadingFadeDuration,
+      );
+      platformDetails.startFadeDuration = normalizeWebScreenFadeDuration(
+        sourceInfo?.startFadeDuration,
+      );
     }
 
     if (platform === "android") {
@@ -420,7 +430,7 @@ export const createProjectRepositoryService = ({
       if (!Object.hasOwn(patch, key)) {
         continue;
       }
-      if (OPTIONAL_PLATFORM_IMAGE_KEYS.includes(key)) {
+      if (RAW_PLATFORM_DETAILS_PATCH_KEYS.includes(key)) {
         nextPlatformDetails[key] = patch[key];
       } else {
         nextPlatformDetails[key] =

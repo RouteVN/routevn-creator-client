@@ -1151,9 +1151,12 @@ them and inlines them into the exported `index.html`, so they show before the
 player script and package load. Each image must have the project's aspect
 ratio; the picker rejects any other shape, so the image lines up with the game
 canvas. A
-loading background places the progress at the bottom centre of the image. A
-start background fades in over the loading image and replaces the start prompt
-text; without one, the start screen
+loading background replaces the loading text and progress bar, which stay in
+the page for assistive technology only. A start background fades in over the
+loading image and replaces the start prompt text; `loadingFadeDuration` and
+`startFadeDuration` set, in milliseconds, how long that fade and the fade into
+the first scene take (600 by default, at most 5000). Without a start
+background, the start screen
 keeps the loading background and the prompt. Creator versions that do not know
 these fields drop them when they save Web platform details.
 Preview records stored under the former

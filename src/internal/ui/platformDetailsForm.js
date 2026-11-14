@@ -3,6 +3,11 @@ import {
   isValidAndroidBackgroundColor,
 } from "../androidExport.js";
 
+import {
+  normalizeWebScreenFadeDuration,
+  WEB_SCREEN_FADE_DURATION_MAX,
+} from "../webExport.js";
+
 export const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
 
 export const PLATFORM_APPLICATION_ICON_VALIDATIONS = [
@@ -97,6 +102,24 @@ export const createPlatformEditForm = (platform, mode, copy) => {
         label: copy.webStartBackgroundLabel,
         description: copy.webStartBackgroundDescription,
       },
+      {
+        name: "loadingFadeDuration",
+        type: "input-number",
+        label: copy.webLoadingFadeDurationLabel,
+        description: copy.webLoadingFadeDurationDescription,
+        min: 0,
+        max: WEB_SCREEN_FADE_DURATION_MAX,
+        step: 100,
+      },
+      {
+        name: "startFadeDuration",
+        type: "input-number",
+        label: copy.webStartFadeDurationLabel,
+        description: copy.webStartFadeDurationDescription,
+        min: 0,
+        max: WEB_SCREEN_FADE_DURATION_MAX,
+        step: 100,
+      },
     );
   }
 
@@ -183,6 +206,12 @@ export const createPlatformDetailsPatch = ({
   if (platform === "web") {
     patch.loadingBackgroundFileId = loadingBackgroundFileId;
     patch.startBackgroundFileId = startBackgroundFileId;
+    patch.loadingFadeDuration = normalizeWebScreenFadeDuration(
+      values.loadingFadeDuration,
+    );
+    patch.startFadeDuration = normalizeWebScreenFadeDuration(
+      values.startFadeDuration,
+    );
   } else {
     patch.iconFileId = iconFileId;
   }

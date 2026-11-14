@@ -353,6 +353,8 @@ describe("platformDetails.store", () => {
         slot: "web-start-background",
         label: "Start Screen Background",
       },
+      { type: "text", label: "Fade to Start Screen (ms)", value: "600" },
+      { type: "text", label: "Fade to First Scene (ms)", value: "600" },
     ]);
     expect(viewData).toMatchObject({
       platformApplicationName: "Web Project",
@@ -360,7 +362,7 @@ describe("platformDetails.store", () => {
       showPlatformApplicationIcon: false,
       showPlatformEditIcon: false,
     });
-    expect(viewData.platformEditForm.fields).toHaveLength(4);
+    expect(viewData.platformEditForm.fields).toHaveLength(6);
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
         id: "submit",

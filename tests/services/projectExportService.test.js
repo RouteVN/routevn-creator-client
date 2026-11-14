@@ -467,6 +467,17 @@ describe("projectExportService", () => {
     dom.window.close();
   });
 
+  it("uses the default fade durations for missing or invalid values", () => {
+    const indexHtml = createBundlePlayerIndexHtml({
+      startBackgroundDataUrl: "data:image/png;base64,U1RBUlQ=",
+      loadingFadeDuration: "abc",
+    });
+
+    expect(indexHtml).toContain(
+      'style="--loading-fade-duration: 600ms; --start-fade-duration: 600ms"',
+    );
+  });
+
   it("keeps the start prompt when only a loading background is set", () => {
     const indexHtml = createBundlePlayerIndexHtml({
       loadingBackgroundDataUrl: "data:image/png;base64,TE9BRElORw==",
@@ -526,9 +537,11 @@ describe("projectExportService", () => {
       [],
       "/tmp/export.zip",
       {
-        webScreenBackgrounds: {
+        webScreens: {
           loadingBackgroundFileId: "background-1",
           startBackgroundFileId: "background-1",
+          loadingFadeDuration: 1200,
+          startFadeDuration: 0,
         },
       },
     );
@@ -544,7 +557,7 @@ describe("projectExportService", () => {
       '#loading-background { background-image: url("data:image/jpeg;base64,U0NSRUVO"); }',
     );
     expect(staticFiles.indexHtml).toContain(
-      'class="has-loading-background has-start-background" style="--loading-art-ratio: 1.7778"',
+      'class="has-loading-background has-start-background" style="--loading-fade-duration: 1200ms; --start-fade-duration: 0ms; --loading-art-ratio: 1.7778"',
     );
   });
 
@@ -559,7 +572,7 @@ describe("projectExportService", () => {
 
     await expect(
       service.createDistributionZipStreamedToPath({}, [], "/tmp/export.zip", {
-        webScreenBackgrounds: { loadingBackgroundFileId: "background-1" },
+        webScreens: { loadingBackgroundFileId: "background-1" },
       }),
     ).rejects.toThrow("The Web screen background could not be read.");
     expect(createDistributionZipStreamedToPath).not.toHaveBeenCalled();

@@ -5,6 +5,7 @@ import {
 import { formatDate } from "../../internal/dates.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { normalizeWebScreenFadeDuration } from "../../internal/webExport.js";
 import {
   createPlatformEditForm,
   PLATFORM_APPLICATION_ICON_OUTPUT_SIZE,
@@ -151,6 +152,16 @@ const buildPlatformDetailFields = (
         type: "slot",
         slot: "web-start-background",
         label: copy.webStartBackgroundLabel,
+      },
+      {
+        type: "text",
+        label: copy.webLoadingFadeDurationLabel,
+        value: String(_applicationInfo.loadingFadeDuration),
+      },
+      {
+        type: "text",
+        label: copy.webStartFadeDurationLabel,
+        value: String(_applicationInfo.startFadeDuration),
       },
     );
   }
@@ -524,6 +535,12 @@ export const setPlatformApplicationInfo = (
   if (platform === "web") {
     target.loadingBackgroundFileId = applicationInfo.loadingBackgroundFileId;
     target.startBackgroundFileId = applicationInfo.startBackgroundFileId;
+    target.loadingFadeDuration = normalizeWebScreenFadeDuration(
+      applicationInfo.loadingFadeDuration,
+    );
+    target.startFadeDuration = normalizeWebScreenFadeDuration(
+      applicationInfo.startFadeDuration,
+    );
   } else {
     target.iconFileId = applicationInfo?.iconFileId ?? undefined;
   }
@@ -597,6 +614,12 @@ const setPlatformDialogDefaults = (state, platform, applicationInfo) => {
     applicationInfo.applicationName;
   state.platformEditDefaultValues.applicationIdentifier =
     applicationInfo.applicationIdentifier ?? "";
+  if (platform === "web") {
+    state.platformEditDefaultValues.loadingFadeDuration =
+      normalizeWebScreenFadeDuration(applicationInfo.loadingFadeDuration);
+    state.platformEditDefaultValues.startFadeDuration =
+      normalizeWebScreenFadeDuration(applicationInfo.startFadeDuration);
+  }
   if (platform === "android") {
     state.platformEditDefaultValues.iconBackgroundColor =
       applicationInfo.iconBackgroundColor ?? "#FFFFFF";

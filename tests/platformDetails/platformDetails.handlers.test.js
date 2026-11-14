@@ -406,7 +406,11 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.createCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
+    });
     expect(
       deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
@@ -488,7 +492,11 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
+    });
     expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
   });
 
@@ -525,7 +533,11 @@ describe("platformDetails handlers", () => {
     expect(deps.appService.showDialog).not.toHaveBeenCalled();
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
+    });
   });
 
   it("does not create macOS platform details without a bundle identifier", async () => {
@@ -692,6 +704,8 @@ describe("platformDetails handlers", () => {
           values: {
             applicationName: "Web Project",
             applicationIdentifier: "com.example.web-project",
+            loadingFadeDuration: "1200",
+            startFadeDuration: "",
           },
         },
       },
@@ -704,6 +718,8 @@ describe("platformDetails handlers", () => {
       applicationIdentifier: "com.example.web-project",
       loadingBackgroundFileId: "loading-background-1",
       startBackgroundFileId: "start-background-1",
+      loadingFadeDuration: 1200,
+      startFadeDuration: 600,
     });
   });
 
