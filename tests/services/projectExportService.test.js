@@ -507,9 +507,11 @@ describe("projectExportService", () => {
       url: `blob:${fileId}`,
       revoke,
     }));
-    const createImageDataUrl = vi.fn(
-      async () => "data:image/jpeg;base64,U0NSRUVO",
-    );
+    const createImageDataUrl = vi.fn(async () => ({
+      dataUrl: "data:image/jpeg;base64,U0NSRUVO",
+      width: 1920,
+      height: 1080,
+    }));
     const createDistributionZipStreamedToPath = vi.fn(
       async ({ outputPath }) => outputPath,
     );
@@ -542,7 +544,7 @@ describe("projectExportService", () => {
       '#loading-background { background-image: url("data:image/jpeg;base64,U0NSRUVO"); }',
     );
     expect(staticFiles.indexHtml).toContain(
-      'class="has-loading-background has-start-background"',
+      'class="has-loading-background has-start-background" style="--loading-art-ratio: 1.7778"',
     );
   });
 

@@ -1151,7 +1151,9 @@ them and inlines them into the exported `index.html`, so they show before the
 player script and package load. Each image must have the project's aspect
 ratio; the picker rejects any other shape, so the image lines up with the game
 canvas. A
-start background replaces the start prompt text; without one, the start screen
+loading background places the progress at the bottom centre of the image. A
+start background fades in over the loading image and replaces the start prompt
+text; without one, the start screen
 keeps the loading background and the prompt. Creator versions that do not know
 these fields drop them when they save Web platform details.
 Preview records stored under the former

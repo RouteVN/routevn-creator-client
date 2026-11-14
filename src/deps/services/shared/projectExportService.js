@@ -97,29 +97,44 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
         inset: 0;
         z-index: -1;
         background: center / contain no-repeat;
-        transition: opacity 240ms ease;
       }
 
+      /* The start image fades in over the loading image, which stays in
+         place underneath, so the screen never dips to black in between. */
       #loading-start-background {
         opacity: 0;
+        transition: opacity 600ms ease-in-out;
       }
 
       #loading.ready #loading-start-background {
         opacity: 1;
       }
 
-      #loading.has-start-background.ready #loading-background {
-        opacity: 0;
+      /* The progress and the prompt sit at the bottom centre of the artwork,
+         at the same place on the image at any window size, on a backing that
+         keeps them readable. */
+      #loading.has-loading-background {
+        --loading-art-height: min(
+          var(--rvn-app-viewport-height, 100vh),
+          calc(100vw / var(--loading-art-ratio, 1.7778))
+        );
       }
 
-      /* Keep the progress and the prompt readable on any artwork. */
       #loading.has-loading-background .loading-progress,
       #loading.has-loading-background:not(.has-start-background) #loading-start {
-        align-self: end;
-        margin-bottom: 6vh;
+        position: absolute;
+        grid-area: auto;
+        left: 50%;
+        bottom: calc(50% - var(--loading-art-height) * 0.42);
+        transform: translateX(-50%);
+        box-sizing: border-box;
         padding: 14px 18px;
         border-radius: 8px;
         background: rgba(0, 0, 0, 0.6);
+      }
+
+      #loading.has-loading-background .loading-progress {
+        width: min(256px, 66vw);
       }
 
       /* A start background carries its own prompt: the button covers the
@@ -528,6 +543,7 @@ const createScreenBackgroundStyle = ({
 const createLoadingClassAttribute = ({
   loadingBackgroundDataUrl,
   startBackgroundDataUrl,
+  loadingBackgroundAspectRatio,
 }) => {
   const classNames = [];
   if (loadingBackgroundDataUrl) {
@@ -536,7 +552,19 @@ const createLoadingClassAttribute = ({
   if (startBackgroundDataUrl) {
     classNames.push("has-start-background");
   }
-  return classNames.length > 0 ? ` class="${classNames.join(" ")}"` : "";
+  if (classNames.length === 0) {
+    return "";
+  }
+  const style = loadingBackgroundAspectRatio
+    ? ` style="--loading-art-ratio: ${loadingBackgroundAspectRatio}"`
+    : "";
+  return ` class="${classNames.join(" ")}"${style}`;
+};
+
+// Width divided by height, as a plain number for the stylesheet.
+const normalizeScreenBackgroundAspectRatio = (aspectRatio) => {
+  const ratio = Number(aspectRatio);
+  return Number.isFinite(ratio) && ratio > 0 ? Number(ratio.toFixed(4)) : 0;
 };
 
 const normalizeWebApplicationMetadata = (web = {}) => {
@@ -553,6 +581,9 @@ const normalizeWebApplicationMetadata = (web = {}) => {
     ),
     startBackgroundDataUrl: assertScreenBackgroundDataUrl(
       web.startBackgroundDataUrl,
+    ),
+    loadingBackgroundAspectRatio: normalizeScreenBackgroundAspectRatio(
+      web.loadingBackgroundAspectRatio,
     ),
   };
 };
@@ -1365,13 +1396,13 @@ export const WEB_SCREEN_BACKGROUND_MAX_SIZE = 1920;
 // Screen backgrounds are inlined into index.html so they show before the
 // player script and package load. Re-encode them to keep the page small.
 const createScreenBackgroundDataUrl = async (blob) => {
-  const { dataUrl } = await extractImageThumbnail(blob, {
+  const { dataUrl, width, height } = await extractImageThumbnail(blob, {
     maxWidth: WEB_SCREEN_BACKGROUND_MAX_SIZE,
     maxHeight: WEB_SCREEN_BACKGROUND_MAX_SIZE,
     preferredFormat: "image/jpeg",
     quality: 0.85,
   });
-  return dataUrl;
+  return { dataUrl, width, height };
 };
 
 const readScreenBackgroundDataUrls = async ({
@@ -1379,19 +1410,19 @@ const readScreenBackgroundDataUrls = async ({
   getFileContent,
   createImageDataUrl,
 }) => {
-  const dataUrlByFileId = new Map();
-  const readDataUrl = async (fileId) => {
+  const imageByFileId = new Map();
+  const readImage = async (fileId) => {
     if (!fileId) {
       return undefined;
     }
-    if (!dataUrlByFileId.has(fileId)) {
+    if (!imageByFileId.has(fileId)) {
       const content = await getFileContent(fileId);
       try {
         const response = await fetch(content.url);
         if (!response.ok) {
           throw new Error("The Web screen background could not be read.");
         }
-        dataUrlByFileId.set(
+        imageByFileId.set(
           fileId,
           await createImageDataUrl(await response.blob()),
         );
@@ -1399,17 +1430,22 @@ const readScreenBackgroundDataUrls = async ({
         content.revoke?.();
       }
     }
-    return dataUrlByFileId.get(fileId);
+    return imageByFileId.get(fileId);
   };
 
-  return {
-    loadingBackgroundDataUrl: await readDataUrl(
-      screenBackgrounds.loadingBackgroundFileId,
-    ),
-    startBackgroundDataUrl: await readDataUrl(
-      screenBackgrounds.startBackgroundFileId,
-    ),
+  const loadingImage = await readImage(
+    screenBackgrounds.loadingBackgroundFileId,
+  );
+  const startImage = await readImage(screenBackgrounds.startBackgroundFileId);
+  const result = {
+    loadingBackgroundDataUrl: loadingImage?.dataUrl,
+    startBackgroundDataUrl: startImage?.dataUrl,
   };
+  if (loadingImage) {
+    result.loadingBackgroundAspectRatio =
+      loadingImage.width / loadingImage.height;
+  }
+  return result;
 };
 
 const getBundleStaticFiles = async (
@@ -1431,12 +1467,11 @@ const getBundleStaticFiles = async (
   // Fetching /bundle/index.html in dev injects /@vite/client, which breaks
   // the exported standalone player.
   const projectMetadata = projectData?.bundleMetadata?.project ?? {};
-  const { loadingBackgroundDataUrl, startBackgroundDataUrl } =
-    await readScreenBackgroundDataUrls({
-      screenBackgrounds,
-      getFileContent,
-      createImageDataUrl,
-    });
+  const screenBackgroundImages = await readScreenBackgroundDataUrls({
+    screenBackgrounds,
+    getFileContent,
+    createImageDataUrl,
+  });
   const webMetadata = {
     title: projectMetadata.title,
     iconFileName192: projectMetadata.iconFileId
@@ -1445,8 +1480,10 @@ const getBundleStaticFiles = async (
     iconFileName512: projectMetadata.iconFileId
       ? BUNDLE_WEB_ICON_512_FILE_NAME
       : undefined,
-    loadingBackgroundDataUrl,
-    startBackgroundDataUrl,
+    loadingBackgroundDataUrl: screenBackgroundImages.loadingBackgroundDataUrl,
+    startBackgroundDataUrl: screenBackgroundImages.startBackgroundDataUrl,
+    loadingBackgroundAspectRatio:
+      screenBackgroundImages.loadingBackgroundAspectRatio,
   };
   const staticFiles = {
     indexHtml: createBundlePlayerIndexHtml(webMetadata),
