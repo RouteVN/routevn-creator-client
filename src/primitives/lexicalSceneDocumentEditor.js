@@ -3602,24 +3602,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
-      if (fallback.nativeSelection) {
-        if (isSlashText(fallback.text)) {
-          this.armMentionMenuOpenFromTypedSlash({
-            source: "keydown-fallback",
-          });
-        }
-        this.insertPlainText(fallback.text, {
-          nativeSelection: fallback.nativeSelection,
+      if (isSlashText(fallback.text)) {
+        this.armMentionMenuOpenFromTypedSlash({
+          source: "keydown-fallback",
         });
-      } else {
-        if (isSlashText(fallback.text)) {
-          this.armMentionMenuOpenFromTypedSlash({
-            source: "keydown-fallback",
-          });
-        }
-        this.insertPlainText(fallback.text);
       }
-      this.lastCommittedTextInputFallback = fallback;
+      const didInsert = fallback.nativeSelection
+        ? this.insertPlainText(fallback.text, {
+            nativeSelection: fallback.nativeSelection,
+          })
+        : this.insertPlainText(fallback.text);
+      // On iOS 16 the caret inside the shadow root cannot be read, so nothing
+      // is inserted here. The beforeinput that follows carries its own target
+      // range and must not be skipped as a duplicate of this fallback.
+      if (didInsert) {
+        this.lastCommittedTextInputFallback = fallback;
+      }
     }, 0);
   }
 
@@ -6978,6 +6976,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     // A delayed Backspace caret recovery must not rewind subsequent input.
     this.invalidatePendingFocusRestore();
     const nextText = String(text ?? "").replace(/\r\n?/g, "\n");
+    let didInsert = false;
     this.editor.update(
       () => {
         if (endComposition) {
@@ -7016,9 +7015,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         }
 
         selection.insertText(nextText);
+        didInsert = true;
       },
       { discrete: true },
     );
+    return didInsert;
   }
 
   clearEmptyLineInsertionFormatting(selection) {

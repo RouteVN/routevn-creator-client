@@ -5440,6 +5440,188 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("inserts delayed insertText when the fallback had no caret to insert at", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    vi.useFakeTimers();
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const preventDefault = vi.fn();
+
+      editorElement.state = {
+        mode: "text-editor",
+      };
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.insertPlainText = vi.fn(() => false);
+      editorElement.getNativeLineRangeSelectionContext = vi.fn();
+
+      editorElement.updatePendingTextInputFallback({
+        key: "k",
+        defaultPrevented: false,
+        isComposing: false,
+        ctrlKey: false,
+        metaKey: false,
+        timeStamp: 10000,
+      });
+
+      vi.runOnlyPendingTimers();
+
+      expect(editorElement.insertPlainText).toHaveBeenCalledTimes(1);
+      expect(editorElement.lastCommittedTextInputFallback).toBeUndefined();
+
+      editorElement.handleNativeBeforeInput({
+        inputType: "insertText",
+        data: "k",
+        isComposing: false,
+        defaultPrevented: false,
+        timeStamp: 10012,
+        preventDefault,
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      });
+
+      expect(editorElement.insertPlainText).toHaveBeenCalledTimes(2);
+      expect(editorElement.insertPlainText).toHaveBeenLastCalledWith(
+        "k",
+        expect.any(Object),
+      );
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      restoreDomGlobals();
+    }
+  });
+
+  it("types at the beforeinput target range when the editor has lost its caret and the fallback runs first", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    vi.useFakeTimers();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-hidden-caret-typing-test",
+        theme: {
+          paragraph: "editor-paragraph",
+        },
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.refs = {
+        editor: rootElement,
+      };
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+        mentionMenu: {
+          isOpen: false,
+        },
+        mode: "text-editor",
+      };
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.isEditorActiveElement = vi.fn(() => true);
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+
+      editor.update(
+        () => {
+          const line = $createParagraphNode();
+          line.append($createTextNode("ab"));
+          $getRoot().append(line);
+          lineKey = line.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+          // Older WebKit hides the caret inside the shadow root, and the
+          // editor drops its own selection after the tap.
+          $setSelection(null);
+        },
+        { discrete: true },
+      );
+
+      const readText = () => {
+        return editor.getEditorState().read(() => {
+          return $getRoot().getFirstChild().getTextContent();
+        });
+      };
+      const typeKey = (key, offset, timeStamp) => {
+        editorElement.updatePendingTextInputFallback({
+          key,
+          defaultPrevented: false,
+          isComposing: false,
+          ctrlKey: false,
+          metaKey: false,
+          timeStamp,
+        });
+        // The fallback timer runs before the browser sends beforeinput.
+        vi.runOnlyPendingTimers();
+
+        const targetRange = document.createRange();
+        targetRange.setStart(
+          editor.getElementByKey(lineKey).firstChild.firstChild,
+          offset,
+        );
+        targetRange.collapse(true);
+        const preventDefault = vi.fn();
+        editorElement.handleNativeBeforeInput({
+          inputType: "insertText",
+          data: key,
+          isComposing: false,
+          defaultPrevented: false,
+          timeStamp: timeStamp + 12,
+          getTargetRanges: () => [targetRange],
+          preventDefault,
+          stopPropagation: vi.fn(),
+          stopImmediatePropagation: vi.fn(),
+        });
+        return preventDefault;
+      };
+
+      expect(editorElement.insertPlainText("x")).toBe(false);
+      expect(readText()).toBe("ab");
+
+      const preventDefault = typeKey("k", 1, 10000);
+      expect(preventDefault).toHaveBeenCalledTimes(1);
+      expect(readText()).toBe("akb");
+
+      // The editor has a caret now, so the fallback inserts and the
+      // beforeinput that follows is skipped as its duplicate.
+      typeKey("m", 2, 10200);
+      expect(readText()).toBe("akmb");
+    } finally {
+      vi.useRealTimers();
+      restoreDomGlobals();
+    }
+  });
+
   it.each([
     [10000, 10030],
     [0, 10030],
@@ -5472,7 +5654,7 @@ describe("lexical scene document editor line editing", () => {
         editorElement.isEditorActiveElement = vi.fn(() => true);
         editorElement.hideSelectionPopover = vi.fn();
         editorElement.clearSelectedReferenceNodeKey = vi.fn();
-        editorElement.insertPlainText = vi.fn();
+        editorElement.insertPlainText = vi.fn(() => true);
         editorElement.getNativeLineRangeSelectionContext = vi.fn();
 
         editorElement.updatePendingTextInputFallback({
@@ -5533,7 +5715,7 @@ describe("lexical scene document editor line editing", () => {
       editorElement.isEditorActiveElement = vi.fn(() => true);
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
-      editorElement.insertPlainText = vi.fn();
+      editorElement.insertPlainText = vi.fn(() => true);
       editorElement.getNativeLineRangeSelectionContext = vi.fn();
 
       editorElement.updatePendingTextInputFallback({
