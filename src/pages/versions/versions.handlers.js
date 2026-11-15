@@ -2,6 +2,7 @@ import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   createAndroidApkFileName,
   createAndroidBundleFileName,
+  isAndroidExportSpaceError,
 } from "../../internal/androidExport.js";
 import {
   createIosIpaFileName,
@@ -1914,6 +1915,7 @@ const getAndroidExportFormat = (copy, projectService, { format, signed }) =>
   format === "aab"
     ? {
         exportFailed: copy.androidBundleExportFailed,
+        notEnoughSpace: copy.androidBundleExportNotEnoughSpace,
         completedMessage: copy.androidBundleExportCompletedMessage,
         createFileName: (applicationName, versionName) =>
           createAndroidBundleFileName(applicationName, versionName),
@@ -1926,6 +1928,7 @@ const getAndroidExportFormat = (copy, projectService, { format, signed }) =>
       }
     : {
         exportFailed: copy.androidExportFailed,
+        notEnoughSpace: copy.androidExportNotEnoughSpace,
         completedMessage: signed
           ? copy.androidSignedApkExportCompletedMessage
           : copy.androidApkExportCompletedMessage,
@@ -2058,6 +2061,9 @@ const runAndroidExport = async (deps, confirmation) => {
     progressDialog.close();
   }
   if (exportError !== undefined) {
+    const failureMessage = isAndroidExportSpaceError(exportError)
+      ? exportFormat.notEnoughSpace
+      : exportFailedMessage;
     if (appService.getPlatform() === "android") {
       try {
         await appService.discardPendingSaveDocument(outputPath);
@@ -2070,7 +2076,7 @@ const runAndroidExport = async (deps, confirmation) => {
     }
     appService.showAlert({
       message: withErrorDetails(
-        exportFailedMessage,
+        failureMessage,
         exportError,
         copy.errorDetailsLabel,
       ),

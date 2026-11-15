@@ -650,6 +650,8 @@ versionsPage:
   androidBundleFileTypeName: "App Bundle Android"
   androidExportFailed: "Gagal mengekspor APK Android."
   androidBundleExportFailed: "Gagal mengekspor App Bundle Android."
+  androidExportNotEnoughSpace: "Sisa ruang penyimpanan tidak cukup untuk mengekspor APK Android. Kosongkan sebagian ruang penyimpanan, lalu coba lagi."
+  androidBundleExportNotEnoughSpace: "Sisa ruang penyimpanan tidak cukup untuk mengekspor App Bundle Android. Kosongkan sebagian ruang penyimpanan, lalu coba lagi."
   androidUnsignedApkNotice: "Tandatangani sendiri APK ini sebelum memasangnya, dengan APK Signature Scheme v2 atau lebih baru. Jangan jalankan zipalign setelah penandatanganan."
   androidExportBuildNumberDescription: "Harus lebih tinggi dari Nomor Build rilis yang sudah dipasang pemain. Masukkan bilangan bulat dari 1 hingga 2100000000."
   androidExportBuildNumberInvalid: "Nomor Build harus berupa bilangan bulat dari 1 hingga 2100000000, tanpa nol di awal."

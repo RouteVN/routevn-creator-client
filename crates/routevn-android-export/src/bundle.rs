@@ -416,6 +416,7 @@ pub fn export_android_app_bundle(
 
     progress.emit("prepareBundle", 0, 0);
     let descriptor = load_descriptor(&request.template_path, &request.descriptor_path)?;
+    crate::check_free_space(request)?;
     let icons = crate::load_icons(request)?;
     let work = crate::create_work_dir(request, "routevn-aab-")?;
     let PreparedPackage {

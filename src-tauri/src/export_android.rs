@@ -99,7 +99,7 @@ async fn run_export<T: Send + 'static>(
     export: impl FnOnce(&routevn_exporter::ZipExportProgressCallback<'_>) -> Result<T, ExportError>
     + Send
     + 'static,
-) -> Result<T, String> {
+) -> Result<T, ExportError> {
     tauri::async_runtime::spawn_blocking(move || {
         let export_started = Instant::now();
         let progress_state = Mutex::new((String::new(), Instant::now()));
@@ -122,20 +122,22 @@ async fn run_export<T: Send + 'static>(
             drop(state);
             let _ = on_progress.send(progress);
         };
-        export(&progress_callback).map_err(|error| error.to_string())
+        export(&progress_callback)
     })
     .await
-    .map_err(|error| format!("Failed to run Android export task: {error}"))?
+    .map_err(|error| ExportError::write(format!("Failed to run Android export task: {error}")))?
 }
 
 /// Exports an APK, signed with the project's `signing_key` when one is
-/// given, or unsigned.
+/// given, or unsigned. Rejects with the exporter's `{ code, message }`, so the
+/// frontend can tell a stable failure category, such as `not-enough-space`,
+/// from the details.
 #[tauri::command]
 pub async fn export_android_apk(
     request: AndroidExportRequest,
     signing_key: Option<SigningKeyMaterial>,
     on_progress: Channel<routevn_exporter::ZipExportProgress>,
-) -> Result<AndroidExportResult, String> {
+) -> Result<AndroidExportResult, ExportError> {
     run_export(on_progress, move |progress| {
         let signing_key = signing_key
             .as_ref()
@@ -157,7 +159,7 @@ pub async fn export_android_app_bundle(
     request: AndroidExportRequest,
     signing_key: SigningKeyMaterial,
     on_progress: Channel<routevn_exporter::ZipExportProgress>,
-) -> Result<AndroidBundleExportResult, String> {
+) -> Result<AndroidBundleExportResult, ExportError> {
     run_export(on_progress, move |progress| {
         let signing_key = SigningKey::from_material(&signing_key)?;
         routevn_android_export::export_android_app_bundle(&request, &signing_key, Some(progress))
