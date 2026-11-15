@@ -25,7 +25,7 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
-import { normalizeUpdateVariableIds } from "../../internal/routeEngineActions.js";
+import { normalizeRouteEngineActions } from "../../internal/routeEngineActions.js";
 import {
   isGraphicsContextCreationError,
   isGraphicsUnavailableError,
@@ -2167,7 +2167,7 @@ export const createGraphicsService = async ({
       return;
     }
 
-    nextActions = normalizeUpdateVariableIds(nextActions);
+    nextActions = normalizeRouteEngineActions(nextActions);
     runEnginePlayback(
       () => engine.handleActions(nextActions, eventContext),
       generation,
@@ -2933,7 +2933,7 @@ export const createGraphicsService = async ({
       if (!engine) {
         return;
       }
-      actions = normalizeUpdateVariableIds(actions);
+      actions = normalizeRouteEngineActions(actions);
       syncRouteEngineProjectDataFromActions(actions);
       if (options.suppressRenderEffects) {
         return runWithSuppressedEngineRenderEffects(() => {

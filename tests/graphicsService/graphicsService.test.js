@@ -2685,6 +2685,67 @@ describe("graphicsService", () => {
     });
   });
 
+  it("gives Route Engine a negative Next Line Config delay from an interaction as 0", async () => {
+    const handleActions = vi.fn();
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions,
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+
+    const originalActions = {
+      setNextLineConfig: {
+        auto: { enabled: true, trigger: "fromStart", delay: -500 },
+      },
+    };
+    routeGraphicsInitOptions.eventHandler("click", {
+      _event: { id: "button-1" },
+      actions: originalActions,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(handleActions).toHaveBeenCalledWith(
+      {
+        setNextLineConfig: {
+          auto: { enabled: true, trigger: "fromStart", delay: 0 },
+        },
+      },
+      { _event: { id: "button-1" } },
+    );
+    expect(originalActions.setNextLineConfig.auto.delay).toBe(-500);
+  });
+
   it("uses a noop persistence adapter when initRouteEngine has no namespace", async () => {
     const engineInit = vi.fn();
     createRouteEngineMock.mockReturnValue({

@@ -26,8 +26,10 @@ export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent } = deps;
   const defaultValues = store.selectDefaultValues();
 
-  // Validate delay on submit - default to 1000 if empty or invalid
-  const delay = parseInt(defaultValues.autoDelay, 10) || 1000;
+  // An empty or invalid delay is 1000. Route Engine rejects a negative one, so
+  // it is 0; the field only clamps it once it loses focus.
+  const parsedDelay = parseInt(defaultValues.autoDelay, 10);
+  const delay = Number.isNaN(parsedDelay) ? 1000 : Math.max(0, parsedDelay);
 
   // The form has no field for this yet, so a new config has no value for it.
   // A saved change cannot hold undefined, so the field is then left out.
