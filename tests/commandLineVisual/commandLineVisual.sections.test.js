@@ -6,6 +6,7 @@ import {
   setAnimations,
   setExistingVisuals,
   setImages,
+  startVisualEdit,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 import { EN_I18N, JA_I18N } from "../support/i18n.js";
 
@@ -67,6 +68,7 @@ describe("commandLineVisual sections", () => {
       },
     );
 
+    startVisualEdit({ state }, { index: 0 });
     const viewData = selectViewData({ state, i18n: EN_I18N });
     const [section] = viewData.form.fields;
     const rows = section.fields
@@ -158,7 +160,7 @@ describe("commandLineVisual sections", () => {
       layerFormSlot: "visual-0-layer",
     });
     expect(viewData.formKey).toBe(
-      "0:visual-item-one:Visual One:50:preset-transform:fade:update:opacity-option:blur",
+      "0:visual-item-one:Visual One:custom:50:preset-transform:fade:update:opacity-option:blur",
     );
   });
 
@@ -229,9 +231,10 @@ describe("commandLineVisual sections", () => {
       },
     );
 
+    startVisualEdit({ state }, { index: 0 });
     const [section] = selectViewData({ state, i18n: JA_I18N }).form.fields;
 
     expect(section.label).toBe("Visuals");
-    expect(section.fields[0].fields[0].label).toBe("表示素材");
+    expect(section.fields[0].fields[0].label).toBe("レイアウト");
   });
 });

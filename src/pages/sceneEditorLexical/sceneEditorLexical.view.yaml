@@ -107,6 +107,8 @@ refs:
         handler: handleSystemActionsActionDelete
       actions-change:
         handler: handleCommandLineSubmit
+      visual-layout-edit:
+        handler: handleVisualLayoutEdit
       temporary-presentation-state-change:
         handler: handleTemporaryPresentationStateChange
       background-transform-customize:
@@ -177,6 +179,10 @@ refs:
         handler: handleHidePreviewScene
       current-line-changed:
         handler: handlePreviewCurrentLineChanged
+  visualLayoutEditor:
+    eventListeners:
+      close:
+        handler: handleVisualLayoutEditorClose
   previewCanvasHost: {}
   mobileKeyboardToolbar:
     eventListeners:
@@ -207,7 +213,7 @@ template:
                           - $if mobileSideBySide:
                               - 'rtgl-text#mobilePresentationStateTitle s=sm c=mu-fg style="flex-shrink: 0;"': ${stateTitle}
                           - 'rtgl-view#mobilePresentationStateScroll w=f ?sv=${mobileSideBySide} style="${mobilePresentationStateScrollStyle}"':
-                              - 'rvn-system-actions#systemActions :showSelected=${mobileSideBySide} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-mobile dialog-panel-top="${mobileSystemActionsDialogTop}" dialog-panel-bottom="${mobileSystemActionsDialogBottom}" dialog-panel-right="${mobileSystemActionsDialogRight}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
+                              - 'rvn-system-actions#systemActions :showSelected=${mobileSideBySide} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :visualSnapshots=${visualSnapshots} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-mobile dialog-panel-top="${mobileSystemActionsDialogTop}" dialog-panel-bottom="${mobileSystemActionsDialogBottom}" dialog-panel-right="${mobileSystemActionsDialogRight}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
                               - $if mobileSideBySide:
                                   - 'rtgl-view h=240 aria-hidden=true style="flex-shrink: 0;"': null
                   - $if sectionsGraphView:
@@ -293,7 +299,7 @@ template:
                           - rtgl-view d=h av=c:
                               - rtgl-text s=sm c=mu-fg: ${stateTitle}
                           - rtgl-view g=md w=f pv=md:
-                              - 'rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-left dialog-panel-width="${systemActionsDialogPanelWidth}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
+                              - 'rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :previousPresentationState=${previousPresentationState} :hasPreviousPresentationStateContext=${true} :visualSnapshots=${visualSnapshots} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-left dialog-panel-width="${systemActionsDialogPanelWidth}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
           - rtgl-form#form slot=content :form=${form}: null
@@ -318,6 +324,8 @@ template:
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
       - $if previewVisible:
           - rvn-vn-preview#vnPreview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}": null
+      - $if visualLayoutEditor.isOpen:
+          - rvn-visual-layout-editor#visualLayoutEditor scene-id="${visualLayoutEditor.sceneId}" section-id="${visualLayoutEditor.sectionId}" line-id="${visualLayoutEditor.lineId}" visual-id="${visualLayoutEditor.visualId}" :sceneBackdrop=${visualLayoutEditor.sceneBackdrop}: null
       - $if isScenePageLoading:
           - $if isTouchMode:
               - 'rtgl-view#scenePageLoading pos=fix bgc=bg av=c ah=c g=sm role=status style="z-index: 1101; left: 0; right: 0; top: 0; bottom: ${mobileSceneEditorBottomInset}; pointer-events: auto;"':

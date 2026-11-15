@@ -1226,6 +1226,152 @@ const constructLayoutResources = (
   };
 };
 
+// A visual's layout is saved in the layout editor's format: elements as
+// items plus a tree. The engine takes the nested elements a Layout resource is
+// built into.
+export const isStoredVisualLayout = (layout) =>
+  isObjectRecord(layout) && isObjectRecord(layout.elements);
+
+const hasStoredVisualLayouts = (actions) =>
+  Array.isArray(actions?.visual?.items) &&
+  actions.visual.items.some((item) => isStoredVisualLayout(item?.layout));
+
+// Builds visual layouts against the project's resources, the same way
+// Layout resources are built. With `keepStoredLayouts`, as in the scene
+// editor, each built layout also keeps the saved layout it was built from as
+// its `source`. The engine does not read it and keeps it in the presentation
+// state, so what the engine presents can be edited and saved in its saved form.
+export const createVisualLayoutBuilder = (
+  repositoryState = {},
+  { keepStoredLayouts = false } = {},
+) => {
+  let sources;
+  const getSources = () => {
+    if (sources) {
+      return sources;
+    }
+
+    const repositoryFiles = repositoryState.files?.items || {};
+    sources = {
+      imageItems: {
+        ...constructImageResources(
+          repositoryState.images?.items || {},
+          repositoryFiles,
+        ),
+        ...extractCharacterImages(
+          repositoryState.characters?.items || {},
+          repositoryFiles,
+        ),
+      },
+      filesData: repositoryState.files ?? { items: {}, tree: [] },
+      soundsData: repositoryState.sounds ?? { items: {}, tree: [] },
+      particlesData: repositoryState.particles ?? { items: {}, tree: [] },
+      videosData: repositoryState.videos ?? { items: {}, tree: [] },
+      spritesheetsData: repositoryState.spritesheets ?? { items: {}, tree: [] },
+      textStylesData: repositoryState.textStyles ?? { items: {}, tree: [] },
+      colors: repositoryState.colors ?? { items: {}, tree: [] },
+      fonts: repositoryState.fonts ?? { items: {}, tree: [] },
+      layoutsData: repositoryState.layouts?.items ?? {},
+    };
+    return sources;
+  };
+
+  // Returns the actions with every stored visual layout built for the engine,
+  // and the text styles those layouts add.
+  const buildActions = (actions) => {
+    if (!hasStoredVisualLayouts(actions)) {
+      return { actions, textStyles: {} };
+    }
+
+    const buildSources = getSources();
+    const textStyles = {};
+    const items = actions.visual.items.map((item) => {
+      if (!isStoredVisualLayout(item?.layout)) {
+        return item;
+      }
+
+      const { elements, resources } = buildLayoutElements(
+        toHierarchyStructure(item.layout.elements),
+        buildSources.imageItems,
+        buildSources.textStylesData,
+        buildSources.colors,
+        buildSources.fonts,
+        {
+          layoutId: `visual-${item.id}`,
+          layoutType: "general",
+          layoutSchemaVersion: item.layout.layoutSchemaVersion,
+          filesData: buildSources.filesData,
+          soundsData: buildSources.soundsData,
+          particlesData: buildSources.particlesData,
+          videosData: buildSources.videosData,
+          spritesheetsData: buildSources.spritesheetsData,
+          layoutsData: buildSources.layoutsData,
+        },
+      );
+      Object.assign(textStyles, resources.textStyles);
+
+      // The layout's width and height are the visual's canvas: its size, and
+      // what its anchor is relative to. Without them the canvas is the screen.
+      const builtLayout = { elements };
+      if (item.layout.width !== undefined) {
+        builtLayout.width = item.layout.width;
+      }
+      if (item.layout.height !== undefined) {
+        builtLayout.height = item.layout.height;
+      }
+      const builtItem = structuredClone(item);
+      if (keepStoredLayouts) {
+        builtLayout.source = builtItem.layout;
+      }
+      builtItem.layout = builtLayout;
+      return builtItem;
+    });
+
+    const builtActions = { ...actions };
+    builtActions.visual = { ...actions.visual, items };
+    return { actions: builtActions, textStyles };
+  };
+
+  return { buildActions };
+};
+
+// A presentation state from the engine with each visual layout the editor
+// built given back in its saved form.
+export const toStoredVisualPresentationState = (presentationState) => {
+  const items = presentationState?.visual?.items;
+  if (!Array.isArray(items) || !items.some((item) => item?.layout?.source)) {
+    return presentationState;
+  }
+
+  const storedState = { ...presentationState };
+  storedState.visual = { ...presentationState.visual };
+  storedState.visual.items = items.map((item) => {
+    if (!item?.layout?.source) {
+      return item;
+    }
+    const storedItem = { ...item };
+    storedItem.layout = item.layout.source;
+    return storedItem;
+  });
+  return storedState;
+};
+
+const buildStoryVisualLayouts = (scenes, visualLayoutBuilder) => {
+  const textStyles = {};
+
+  for (const scene of Object.values(scenes)) {
+    for (const section of Object.values(scene.sections)) {
+      for (const line of section.lines) {
+        const built = visualLayoutBuilder.buildActions(line.actions);
+        line.actions = built.actions;
+        Object.assign(textStyles, built.textStyles);
+      }
+    }
+  }
+
+  return textStyles;
+};
+
 const constructProjectResources = (repositoryState = {}) => {
   const repositoryImages = repositoryState.images?.items || {};
   const repositoryFiles = repositoryState.files?.items || {};
@@ -1441,6 +1587,15 @@ export function constructProjectData(state, options = {}) {
     scenes: constructStory(state.scenes),
   };
 
+  Object.assign(
+    resources.textStyles,
+    buildStoryVisualLayouts(
+      story.scenes,
+      createVisualLayoutBuilder(state, {
+        keepStoredLayouts: options.keepStoredVisualLayouts === true,
+      }),
+    ),
+  );
   alignDialogueModesWithLayouts(story, resources.layouts);
   removeUpdatesToMissingVariables(story.scenes, resources.variables);
 
@@ -1965,7 +2120,8 @@ const COLLECTION_DEFS = {
 };
 
 const RESOURCE_KEYS_MAP = {
-  scenes: SCENE_RESOURCE_KEYS,
+  // A visual on a line holds layout elements, so lines use layout keys too.
+  scenes: [...new Set([...SCENE_RESOURCE_KEYS, ...LAYOUT_RESOURCE_KEYS])],
   layouts: LAYOUT_RESOURCE_KEYS,
   controls: LAYOUT_RESOURCE_KEYS,
   textStyles: TEXT_STYLE_RESOURCE_KEYS,
