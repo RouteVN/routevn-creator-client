@@ -45,10 +45,10 @@ refs:
     eventListeners:
       close:
         handler: handleMobileDetailSheetClose
-  mobileDetailPreviewButton:
+  mobileDetailOpenButton:
     eventListeners:
       click:
-        handler: handleMobileDetailPreviewClick
+        handler: handleMobileDetailOpenClick
         preventDefault: true
         stopPropagation: true
   mobileDetailDeleteButton:
@@ -85,6 +85,26 @@ refs:
     eventListeners:
       form-action:
         handler: handleFolderNameFormAction
+  addDialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+  addForm:
+    eventListeners:
+      form-change:
+        handler: handleDialogFormChange
+      form-action:
+        handler: handleDialogFormAction
+      add-option-click:
+        handler: handleDialogFormAddOptionClick
+  addPngFileButton:
+    eventListeners:
+      click:
+        handler: handleDialogImageSourceClick
+  addJsonFileButton:
+    eventListeners:
+      click:
+        handler: handleDialogAtlasSourceClick
   spritesheetDialog:
     eventListeners:
       close:
@@ -202,68 +222,67 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - rtgl-view d=h w=f g=sm p=md bwb=xs:
-                  - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
+                  - rtgl-button#mobileDetailOpenButton w=1fg v=se pre=chevronRight: ${openButton}
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#spritesheetDialog ?open=${isDialogOpen} s=lg md-layout=fixed-top p=none:
-      - $if isDialogPreviewMode:
-          - 'rtgl-view slot="content" d=v w=f g=lg p=md style="min-width: min(960px, 100vw - 64px);"':
-              - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=320 :emptyLabel=${emptyPreviewLabel}': null
-              - rtgl-view d=v w=f g=sm:
-                  - rtgl-text s=sm c=mu-fg: ${clipsLabel}
-                  - $if dialogClipOptions.length > 0:
-                      - $for clip, clipIndex in dialogClipOptions:
-                          - 'rtgl-view#dialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
-                              - rtgl-view d=h w=f av=c g=sm:
-                                  - rtgl-text w=1fg s=sm: ${clip.name}
-                                  - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                              - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
-                    $else:
-                      - rtgl-view w=f p=sm bgc=mu br=md:
-                          - rtgl-text s=xs c=mu-fg: ${noAnimationsFound}
-        $else:
-          - 'rtgl-view slot="content" w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
-              - 'rtgl-view h=1fg sv sbv=touch w=f style="min-height: 0;"':
-                  - 'rtgl-view d=h lg-d=v w=f g=lg ph=md style="min-width: min(960px, 100vw - 64px);"':
-                      - rtgl-view w=5fg lg-w=f d=v g=md:
-                          - rtgl-view d=v g=xs:
-                              - rtgl-text s=sm: ${dialogTitle}
-                              - rtgl-text s=xs c=mu-fg: ${dialogInstructions}
-                          - rtgl-form#dialogForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${dialogForm} w=f:
-                              - rtgl-view slot=spritesheet-image-source d=v g=xs:
-                                  - rtgl-view w=120 h=120 av=c ah=c:
-                                      - $if dialogImageSourcePreviewUrl:
-                                          - rtgl-image#dialogImageSourceButton src=${dialogImageSourcePreviewUrl} w=120 h=120 of=con bw=xs bc=bo br=md cur=pointer: null
-                                        $elif dialogImageSourceFileId:
-                                          - rvn-file-image#dialogImageSourceButton fileId=${dialogImageSourceFileId} w=120 h=120 bw=xs bc=bo br=md cur=pointer: null
-                                        $else:
-                                          - rtgl-view#dialogImageSourceButton w=120 h=120 av=c ah=c ph=sm bgc=bg bc=bo bw=xs br=md cur=pointer:
-                                              - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
-                              - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
-                                  - rtgl-view d=h g=sm av=c:
-                                      - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
-                                      - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
-                      - rtgl-view w=6fg lg-w=f d=v g=md:
-                          - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=260 emptyLabel=""': null
-                          - rtgl-view d=v w=f g=sm:
-                              - rtgl-text s=sm c=mu-fg: ${clipsLabel}
-                              - $if dialogClipOptions.length > 0:
-                                  - $for clip, clipIndex in dialogClipOptions:
-                                      - 'rtgl-view#dialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
-                                          - rtgl-view d=h w=f av=c g=sm:
-                                              - rtgl-text w=1fg s=sm: ${clip.name}
-                                              - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                                          - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
-                                $else:
-                                  - rtgl-view w=f p=sm bgc=mu br=md:
-                                      - rtgl-text s=xs c=mu-fg: ${selectValidJsonToDetectClips}
-                  - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
-              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#dialogSubmitButton v=pr: ${dialogSubmitLabel}
+  - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#addForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${addForm} sticky sbv=touch bottom-spacer=96 w=f h=f:
+              - rtgl-view slot=spritesheet-files d=v w=f g=lg:
+                  - $if createFileLabels.show:
+                      - rtgl-view d=v w=f g=md:
+                          - rtgl-text: ${createFileLabels.pngFileLabel}
+                          - rtgl-view d=h w=f g=sm av=c:
+                              - rtgl-input w=f value=${createFileLabels.pngFileName} disabled=true placeholder=${createFileLabels.noFileSelected}: null
+                              - 'rtgl-button#addPngFileButton v=se pre=upload style="flex: 0 0 auto;"': ${createFileLabels.chooseFileButton}
+                      - rtgl-view d=v w=f g=md:
+                          - rtgl-text: ${createFileLabels.jsonFileLabel}
+                          - rtgl-view d=h w=f g=sm av=c:
+                              - rtgl-input w=f value=${createFileLabels.jsonFileName} disabled=true placeholder=${createFileLabels.noFileSelected}: null
+                              - 'rtgl-button#addJsonFileButton v=se pre=upload style="flex: 0 0 auto;"': ${createFileLabels.chooseFileButton}
+  - rtgl-dialog#spritesheetDialog ?open=${isEditDialogOpen} s=lg md-layout=fixed-top p=none:
+      - 'rtgl-view slot="content" w=f h=f pv=md pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
+          - 'rtgl-view h=1fg sv sbv=touch w=f style="min-height: 0;"':
+              - 'rtgl-view d=h lg-d=v w=f g=lg ph=md style="min-width: min(960px, 100vw - 64px);"':
+                  - rtgl-view w=5fg lg-w=f d=v g=md:
+                      - rtgl-view d=v g=xs:
+                          - rtgl-text s=sm: ${dialogTitle}
+                          - rtgl-text s=xs c=mu-fg: ${dialogInstructions}
+                      - rtgl-form#dialogForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${dialogForm} w=f:
+                          - rtgl-view slot=spritesheet-image-source d=v g=xs:
+                              - rtgl-view w=120 h=120 av=c ah=c:
+                                  - $if dialogImageSourcePreviewUrl:
+                                      - rtgl-image#dialogImageSourceButton src=${dialogImageSourcePreviewUrl} w=120 h=120 of=con bw=xs bc=bo br=md cur=pointer: null
+                                    $elif dialogImageSourceFileId:
+                                      - rvn-file-image#dialogImageSourceButton fileId=${dialogImageSourceFileId} w=120 h=120 bw=xs bc=bo br=md cur=pointer: null
+                                    $else:
+                                      - rtgl-view#dialogImageSourceButton w=120 h=120 av=c ah=c ph=sm bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                          - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+                          - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
+                              - rtgl-view d=h g=sm av=c:
+                                  - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
+                                  - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
+                  - rtgl-view w=6fg lg-w=f d=v g=md:
+                      - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=260 emptyLabel=""': null
+                      - rtgl-view d=v w=f g=sm:
+                          - rtgl-text s=sm c=mu-fg: ${clipsLabel}
+                          - $if dialogClipOptions.length > 0:
+                              - $for clip, clipIndex in dialogClipOptions:
+                                  - 'rtgl-view#dialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
+                                      - rtgl-view d=h w=f av=c g=sm:
+                                          - rtgl-text w=1fg s=sm: ${clip.name}
+                                          - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
+                                      - rtgl-text s=xs c=mu-fg: ${clip.summaryLabel}
+                            $else:
+                              - rtgl-view w=f p=sm bgc=mu br=md:
+                                  - rtgl-text s=xs c=mu-fg: ${selectValidJsonToDetectClips}
+              - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+              - rtgl-button#dialogSubmitButton v=pr ?disabled=${isDialogSubmitting}: ${dialogSubmitLabel}
   - rtgl-dialog#clipFpsDialog ?open=${isClipFpsDialogOpen} s=sm:
       - rtgl-form#clipFpsForm key=${clipFpsDialogKey} slot=content :defaultValues=${clipFpsDialogValues} :form=${clipFpsForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:

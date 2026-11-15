@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
-import { handleDialogFormAction } from "../../src/pages/spritesheets/spritesheets.handlers.js";
+import {
+  handleDialogFormAction,
+  handleSpritesheetItemDoubleClick,
+} from "../../src/pages/spritesheets/spritesheets.handlers.js";
 
 const existingSpritesheet = {
   id: "spritesheet-1",
@@ -21,9 +24,15 @@ const createDialogDeps = ({
   dialogItemId,
   existingItem,
   sourceFiles,
+  createsEmpty = false,
+  confirmReplace = true,
 } = {}) => {
   const appService = {
     showAlert: vi.fn(),
+    showDialog: vi.fn(async () => confirmReplace),
+    getAppCopy: vi.fn(() => ({})),
+    navigate: vi.fn(),
+    getPayload: vi.fn(() => ({ p: "project-1" })),
   };
   const projectService = {
     validateImageUploadFiles: vi.fn(async (files) => ({
@@ -55,6 +64,9 @@ const createDialogDeps = ({
     })),
   };
   const store = {
+    selectIsDialogSubmitting: vi.fn(() => false),
+    setDialogSubmitting: vi.fn(),
+    selectDialogCreatesEmpty: vi.fn(() => createsEmpty),
     selectDialogMode: vi.fn(() => dialogMode),
     selectDialogItemId: vi.fn(() => dialogItemId),
     selectDialogParentId: vi.fn(() => undefined),
@@ -163,5 +175,139 @@ describe("spritesheets dialog form action", () => {
     expect(data.fileId).toBe("walk.png-file");
     expect(data.width).toBeUndefined();
     expect(data.height).toBeUndefined();
+  });
+
+  it("creates an empty spritesheet with no sheet file", async () => {
+    const deps = createDialogDeps({
+      dialogMode: "create",
+      createsEmpty: true,
+    });
+
+    await submitDialog(deps, {
+      name: " Blink ",
+      description: "",
+      tagIds: [],
+      source: "empty",
+    });
+
+    expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+    const [{ data, fileRecords }] =
+      deps.projectService.createSpritesheet.mock.calls[0];
+    expect(data).toEqual({
+      type: "spritesheet",
+      name: "Blink",
+      description: "",
+      tagIds: [],
+      jsonData: {},
+      animations: {},
+    });
+    expect(fileRecords).toBeUndefined();
+    expect(deps.store.closeDialog).toHaveBeenCalled();
+  });
+
+  it("sends no sheet or atlas when editing an empty spritesheet without a file", async () => {
+    const emptySpritesheet = {
+      id: "spritesheet-1",
+      type: "spritesheet",
+      name: "Blink",
+      jsonData: {},
+      animations: {},
+    };
+    const deps = createDialogDeps({
+      dialogMode: "edit",
+      dialogItemId: "spritesheet-1",
+      existingItem: emptySpritesheet,
+    });
+
+    await submitDialog(deps, {
+      name: "Blink 2",
+      description: "",
+      tagIds: [],
+      width: "",
+      height: "",
+    });
+
+    const [{ data }] = deps.projectService.updateSpritesheet.mock.calls[0];
+    expect(data).not.toHaveProperty("fileId");
+    expect(data).not.toHaveProperty("jsonData");
+    expect(data.name).toBe("Blink 2");
+  });
+
+  describe("a spritesheet made in the editor", () => {
+    const framedSpritesheet = {
+      ...existingSpritesheet,
+      frameSource: {
+        frameWidth: 32,
+        frameHeight: 32,
+        frames: [{ fileId: "frame-a" }],
+      },
+    };
+    const values = {
+      name: "Walk Cycle",
+      description: "",
+      tagIds: [],
+      width: "128",
+      height: "128",
+    };
+
+    it("keeps the frames when no new file is chosen", async () => {
+      const deps = createDialogDeps({
+        dialogMode: "edit",
+        dialogItemId: "spritesheet-1",
+        existingItem: framedSpritesheet,
+      });
+
+      await submitDialog(deps, values);
+
+      expect(deps.appService.showDialog).not.toHaveBeenCalled();
+      const [{ data }] = deps.projectService.updateSpritesheet.mock.calls[0];
+      expect(data.frameSource).toEqual(framedSpritesheet.frameSource);
+    });
+
+    it("asks first, then clears the frames when a new sheet replaces them", async () => {
+      const deps = createDialogDeps({
+        dialogMode: "edit",
+        dialogItemId: "spritesheet-1",
+        existingItem: framedSpritesheet,
+        sourceFiles: { pngFile: { name: "walk.png" } },
+      });
+
+      await submitDialog(deps, values);
+
+      expect(deps.appService.showDialog).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Replace the frames?" }),
+      );
+      const [{ data }] = deps.projectService.updateSpritesheet.mock.calls[0];
+      expect(data.frameSource).toBeNull();
+      expect(data.fileId).toBe("walk.png-file");
+    });
+
+    it("does not save when the replacement is declined", async () => {
+      const deps = createDialogDeps({
+        dialogMode: "edit",
+        dialogItemId: "spritesheet-1",
+        existingItem: framedSpritesheet,
+        sourceFiles: { pngFile: { name: "walk.png" } },
+        confirmReplace: false,
+      });
+
+      await submitDialog(deps, values);
+
+      expect(deps.projectService.uploadFiles).not.toHaveBeenCalled();
+      expect(deps.projectService.updateSpritesheet).not.toHaveBeenCalled();
+    });
+  });
+
+  it("opens the spritesheet editor on double-click", () => {
+    const deps = createDialogDeps({});
+
+    handleSpritesheetItemDoubleClick(deps, {
+      _event: { detail: { itemId: "spritesheet-1" } },
+    });
+
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/spritesheet-editor",
+      { p: "project-1", ss: "spritesheet-1" },
+    );
   });
 });

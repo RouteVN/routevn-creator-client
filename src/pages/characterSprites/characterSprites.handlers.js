@@ -40,15 +40,13 @@ import {
   buildImageResourcePatchFromUploadResult,
 } from "../../deps/services/shared/resourceImports.js";
 import {
-  INITIAL_SPRITESHEET_CLIP_FPS,
+  FALLBACK_SPRITESHEET_CLIP_FPS,
   normalizeSpritesheetAnimationsFps,
   normalizeSpritesheetFps,
 } from "../../internal/spritesheets.js";
 import {
   getSpritesheetDisplayName,
   normalizeSizeInput,
-  parseSpritesheetAtlasFile,
-  parseSpritesheetImport,
 } from "../../internal/spritesheetAtlas.js";
 import { tap } from "rxjs";
 import {
@@ -56,6 +54,17 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
+import {
+  SPRITESHEET_EDITOR_PATH,
+  createSpritesheetEditorPayload,
+} from "../../internal/spritesheetEditorRoute.js";
+import {
+  SPRITESHEET_CREATE_SOURCES,
+  confirmReplaceSpritesheetFrames,
+  readSpritesheetSourceFiles,
+  resolveSpritesheetImportFiles,
+  showSpritesheetSourceFilesError,
+} from "../../internal/ui/spritesheetFramesSave.js";
 import { selectCharacterSpritesPageCopy } from "./support/characterSpritesPageCopy.js";
 import { clearResourcePageSelection } from "../../internal/ui/resourcePages/resourceViewBackground.js";
 
@@ -64,7 +73,6 @@ const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
 const IMAGE_FILE_ACCEPT = ".jpg,.jpeg,.png,.webp";
 const SPRITESHEET_IMAGE_FILE_ACCEPT = ".png";
 const SPRITESHEET_ATLAS_FILE_ACCEPT = ".json";
-const PNG_FILE_PATTERN = /\.png$/i;
 const JSON_FILE_PATTERN = /\.json$/i;
 const MAX_PARALLEL_UPLOADS = 1;
 const CREATE_SPRITE_ABORT_ERROR = "create-sprite-abort";
@@ -215,11 +223,7 @@ const {
   onEnterKey: ({ deps, selectedItemId }) => {
     const item = deps.store.selectSpriteItemById({ itemId: selectedItemId });
     if (item?.type === "spritesheet") {
-      openSpritesheetPreviewDialogForItem({
-        deps,
-        itemId: selectedItemId,
-        syncExplorer: true,
-      });
+      navigateToSpritesheetEditor({ deps, itemId: selectedItemId });
       return;
     }
 
@@ -233,7 +237,7 @@ const {
 
     const item = deps.store.selectSpriteItemById({ itemId: selectedItemId });
     if (item?.type === "spritesheet") {
-      openSpritesheetEditDialogForItem({ deps, itemId: selectedItemId });
+      navigateToSpritesheetEditor({ deps, itemId: selectedItemId });
       return;
     }
 
@@ -455,6 +459,23 @@ const openFolderNameDialogForFolder = ({ deps, folderId } = {}) => {
   refs.folderNameForm?.setValues?.({ values });
 };
 
+const navigateToSpritesheetEditor = ({ deps, itemId } = {}) => {
+  const { appService, store } = deps;
+  const characterId = store.selectCharacterId();
+  if (!characterId || !itemId) {
+    return;
+  }
+
+  appService.navigate(
+    SPRITESHEET_EDITOR_PATH,
+    createSpritesheetEditorPayload({
+      payload: appService.getPayload() ?? {},
+      characterId,
+      spriteId: itemId,
+    }),
+  );
+};
+
 const revokeSpritesheetDialogPreviewUrl = (store) => {
   const dialogPreviewUrl = store.selectSpritesheetDialogPreviewUrl?.();
   if (
@@ -465,53 +486,45 @@ const revokeSpritesheetDialogPreviewUrl = (store) => {
   }
 };
 
-const syncSpritesheetDialogFormValues = ({ refs, values } = {}) => {
-  refs.spritesheetDialogForm?.reset?.();
-  refs.spritesheetDialogForm?.setValues?.({ values });
+// Adding and editing a spritesheet each have their own dialog and form.
+const selectSpritesheetDialogFormRef = ({ refs, store }) =>
+  store.selectSpritesheetDialogMode() === "create"
+    ? refs.spritesheetAddForm
+    : refs.spritesheetDialogForm;
+
+const syncSpritesheetDialogFormValues = ({ refs, store, values } = {}) => {
+  const form = selectSpritesheetDialogFormRef({ refs, store });
+  form?.reset?.();
+  form?.setValues?.({ values });
 };
 
-const resolveImportPair = (files = []) => {
-  const normalizedFiles = Array.from(files ?? []).filter(Boolean);
-
-  if (normalizedFiles.length !== 2) {
-    return undefined;
-  }
-
-  const pngFiles = normalizedFiles.filter((file) =>
-    PNG_FILE_PATTERN.test(file?.name ?? ""),
-  );
-  const atlasFiles = normalizedFiles.filter((file) =>
-    JSON_FILE_PATTERN.test(file?.name ?? ""),
-  );
-
-  if (pngFiles.length !== 1 || atlasFiles.length !== 1) {
-    return undefined;
-  }
-
-  return {
-    pngFile: pngFiles[0],
-    atlasFile: atlasFiles[0],
-  };
-};
-
-const parseImportSelection = async ({ appService, copy, files } = {}) => {
-  const importPair = resolveImportPair(files);
-  if (!importPair) {
+const parseImportSelection = async ({ deps, copy, files } = {}) => {
+  const { appService, i18n, projectService } = deps;
+  const importFiles = resolveSpritesheetImportFiles(Array.from(files ?? []));
+  if (!importFiles) {
     showInvalidImportPairToast(appService, copy);
     return undefined;
   }
 
   try {
-    const importData = await parseSpritesheetImport(importPair);
+    const { importData, pngFile } = await readSpritesheetSourceFiles({
+      projectService,
+      pngFiles: importFiles.pngFiles,
+      atlasFile: importFiles.atlasFile,
+    });
     return {
-      ...importData,
-      pngFile: importPair.pngFile,
-      atlasFile: importPair.atlasFile,
+      importData,
+      sourceFiles: {
+        pngFiles: importFiles.pngFiles,
+        pngFile,
+        atlasFile: importFiles.atlasFile,
+      },
     };
   } catch (error) {
-    showResourcePageError({
+    showSpritesheetSourceFilesError({
       appService,
-      errorOrResult: error,
+      i18n,
+      error,
       fallbackMessage: copy.failedImportSpritesheetJson,
     });
     return undefined;
@@ -542,6 +555,7 @@ const buildSpritesheetDialogValues = ({
     name,
     description,
     tagIds: currentValues?.tagIds ?? item?.tagIds ?? [],
+    source: currentValues?.source,
     width: resolveDialogValue(
       importData?.defaultWidth,
       currentValues?.width,
@@ -584,6 +598,10 @@ const openSpritesheetCreateDialog = ({
       pngFileName: sourceFiles?.pngFile?.name,
     },
   });
+  // Dropped spritesheet files start the spritesheet from them.
+  values.source = importData
+    ? SPRITESHEET_CREATE_SOURCES.FILE
+    : SPRITESHEET_CREATE_SOURCES.EMPTY;
   store.openSpritesheetCreateDialog({
     parentId: uploadTarget.parentId,
     values,
@@ -592,7 +610,7 @@ const openSpritesheetCreateDialog = ({
     sourceFiles,
   });
   render();
-  syncSpritesheetDialogFormValues({ refs, values });
+  syncSpritesheetDialogFormValues({ refs, store, values });
   return true;
 };
 
@@ -623,7 +641,7 @@ const openSpritesheetEditDialogForItem = ({
     animations: item.animations,
   });
   render();
-  syncSpritesheetDialogFormValues({ refs, values });
+  syncSpritesheetDialogFormValues({ refs, store, values });
 };
 
 const openSpritesheetPreviewDialogForItem = ({
@@ -654,53 +672,50 @@ const openSpritesheetPreviewDialogForItem = ({
   render();
 };
 
-const pickSpritesheetSourceFile = async ({ appService, accept } = {}) => {
+const pickSpritesheetSourceFile = async ({
+  appService,
+  accept,
+  multiple = false,
+} = {}) => {
   return appService.pickFiles({
     accept,
-    multiple: false,
+    multiple,
   });
 };
 
 const applySpritesheetDialogSourceFiles = async ({
   deps,
-  nextPngFile,
+  nextPngFiles,
   nextAtlasFile,
 } = {}) => {
-  const { appService, refs, render, store } = deps;
+  const { appService, i18n, projectService, refs, render, store } = deps;
   const copy = selectCopy(deps);
   const currentSourceFiles = store.selectSpritesheetDialogSourceFiles();
-  const sourceFiles = {
-    pngFile:
-      nextPngFile !== undefined ? nextPngFile : currentSourceFiles?.pngFile,
-    atlasFile:
-      nextAtlasFile !== undefined
-        ? nextAtlasFile
-        : currentSourceFiles?.atlasFile,
-  };
+  const pngFiles = nextPngFiles ?? currentSourceFiles?.pngFiles ?? [];
+  const atlasFile = nextAtlasFile ?? currentSourceFiles?.atlasFile;
   const existingItem = store.selectSpriteItemById({
     itemId: store.selectSpritesheetDialogItemId(),
   });
 
   let importData;
+  let pngFile;
   try {
-    if (sourceFiles.atlasFile) {
-      importData = sourceFiles.pngFile
-        ? await parseSpritesheetImport({
-            pngFile: sourceFiles.pngFile,
-            atlasFile: sourceFiles.atlasFile,
-          })
-        : await parseSpritesheetAtlasFile({
-            atlasFile: sourceFiles.atlasFile,
-          });
-    }
+    ({ importData, pngFile } = await readSpritesheetSourceFiles({
+      projectService,
+      pngFiles,
+      atlasFile,
+    }));
   } catch (error) {
-    showResourcePageError({
+    showSpritesheetSourceFilesError({
       appService,
-      errorOrResult: error,
+      i18n,
+      error,
       fallbackMessage: copy.failedReadSpritesheetSourceFiles,
     });
     return;
   }
+
+  const sourceFiles = { pngFiles, pngFile, atlasFile };
 
   revokeSpritesheetDialogPreviewUrl(store);
 
@@ -723,7 +738,7 @@ const applySpritesheetDialogSourceFiles = async ({
     sourceFiles,
   });
   render();
-  syncSpritesheetDialogFormValues({ refs, values });
+  syncSpritesheetDialogFormValues({ refs, store, values });
 };
 
 const buildSpritesheetPayload = ({
@@ -733,15 +748,17 @@ const buildSpritesheetPayload = ({
   uploadResult,
   values,
 } = {}) => {
-  const width = normalizeSizeInput(values?.width);
-  const height = normalizeSizeInput(values?.height);
+  const width = normalizeSizeInput(values?.width ?? importData?.defaultWidth);
+  const height = normalizeSizeInput(
+    values?.height ?? importData?.defaultHeight,
+  );
   const sourceAnimations =
     Object.keys(dialogAnimations ?? {}).length > 0
       ? dialogAnimations
       : (importData?.animations ?? existingItem?.animations ?? {});
   const animations = normalizeSpritesheetAnimationsFps(
     sourceAnimations,
-    INITIAL_SPRITESHEET_CLIP_FPS,
+    FALLBACK_SPRITESHEET_CLIP_FPS,
   );
   const payload = {
     name: values?.name?.trim() ?? "",
@@ -1117,7 +1134,7 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 
   const item = deps.store.selectSpriteItemById({ itemId });
   if (item?.type === "spritesheet") {
-    openSpritesheetPreviewDialogForItem({ deps, itemId });
+    navigateToSpritesheetEditor({ deps, itemId });
     return;
   }
 
@@ -1148,11 +1165,7 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
 
   const item = deps.store.selectSpriteItemById({ itemId });
   if (item?.type === "spritesheet") {
-    openSpritesheetPreviewDialogForItem({
-      deps,
-      itemId,
-      syncExplorer: true,
-    });
+    navigateToSpritesheetEditor({ deps, itemId });
     return;
   }
 
@@ -1319,11 +1332,7 @@ export const handleSpriteItemEdit = (deps, payload) => {
   const item = deps.store.selectSpriteItemById({ itemId });
 
   if (item?.type === "spritesheet") {
-    openSpritesheetEditDialogForItem({
-      deps,
-      itemId,
-      syncExplorer: true,
-    });
+    navigateToSpritesheetEditor({ deps, itemId });
     return;
   }
 
@@ -1499,25 +1508,22 @@ export const handleFilesDropped = async (deps, payload) => {
     JSON_FILE_PATTERN.test(file?.name ?? ""),
   );
   if (hasJsonFile) {
-    const importData = await parseImportSelection({
-      appService,
+    const selection = await parseImportSelection({
+      deps,
       copy,
       files,
     });
-    if (!importData) {
+    if (!selection) {
       return;
     }
 
-    const previewUrl = URL.createObjectURL(importData.pngFile);
+    const previewUrl = URL.createObjectURL(selection.sourceFiles.pngFile);
     const dialogOpened = openSpritesheetCreateDialog({
       deps,
-      importData,
+      importData: selection.importData,
       parentId: uploadTarget.parentId,
       previewUrl,
-      sourceFiles: {
-        pngFile: importData.pngFile,
-        atlasFile: importData.atlasFile,
-      },
+      sourceFiles: selection.sourceFiles,
     });
     if (!dialogOpened) {
       URL.revokeObjectURL(previewUrl);
@@ -1749,12 +1755,14 @@ export const handleSpritesheetDialogClose = (deps) => {
 export const handleSpritesheetDialogImageSourceClick = async (deps) => {
   const { appService } = deps;
   const copy = selectCopy(deps);
-  let file;
+  let files;
 
   try {
-    file = await pickSpritesheetSourceFile({
+    // A sheet split over several images needs all of them.
+    files = await pickSpritesheetSourceFile({
       appService,
       accept: SPRITESHEET_IMAGE_FILE_ACCEPT,
+      multiple: true,
     });
   } catch (error) {
     showResourcePageError({
@@ -1765,13 +1773,13 @@ export const handleSpritesheetDialogImageSourceClick = async (deps) => {
     return;
   }
 
-  if (!file) {
+  if (!files?.length) {
     return;
   }
 
   await applySpritesheetDialogSourceFiles({
     deps,
-    nextPngFile: file,
+    nextPngFiles: files,
   });
 };
 
@@ -1829,8 +1837,67 @@ export const handleSpritesheetDialogFormAddOptionClick = (deps) => {
   });
 };
 
+const closeSpritesheetDialogAfterSave = async (
+  deps,
+  { createdItemId } = {},
+) => {
+  const { render, store } = deps;
+  revokeSpritesheetDialogPreviewUrl(store);
+  store.closeSpritesheetDialog();
+  if (createdItemId) {
+    store.setSelectedItemId({ itemId: createdItemId });
+  }
+  render();
+  await refreshCharacterSpritesData(deps);
+};
+
+// An empty spritesheet has no sheet yet; the spritesheet editor fills it.
+const createEmptySpritesheetSprite = async (
+  deps,
+  { values, characterId } = {},
+) => {
+  const { appService, projectService, store } = deps;
+  const copy = selectCopy(deps);
+  const uploadTarget = resolveCharacterSpriteUploadTarget({
+    appService,
+    copy,
+    store,
+    groupId: store.selectSpritesheetDialogParentId(),
+  });
+  if (!uploadTarget.ok) {
+    return;
+  }
+
+  const data = {
+    type: "spritesheet",
+    name: values.name.trim(),
+    description: values.description ?? "",
+    tagIds: Array.isArray(values.tagIds) ? values.tagIds : [],
+    jsonData: {},
+    animations: {},
+  };
+
+  const spriteId = generateId();
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedCreateSpritesheet,
+    action: () =>
+      projectService.createCharacterSpriteItem({
+        characterId,
+        spriteId,
+        data,
+        parentId: uploadTarget.parentId,
+        position: "last",
+      }),
+  });
+
+  if (createAttempt.ok) {
+    await closeSpritesheetDialogAfterSave(deps, { createdItemId: spriteId });
+  }
+};
+
 export const handleSpritesheetDialogFormAction = async (deps, payload) => {
-  const { appService, projectService, render, store } = deps;
+  const { appService, render, store } = deps;
   const copy = selectCopy(deps);
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
@@ -1855,6 +1922,31 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
     return;
   }
 
+  if (store.selectIsSpritesheetDialogSubmitting()) {
+    return;
+  }
+
+  store.setSpritesheetDialogSubmitting({ value: true });
+  render();
+  try {
+    if (store.selectSpritesheetDialogCreatesEmpty()) {
+      await createEmptySpritesheetSprite(deps, { values, characterId });
+      return;
+    }
+
+    await submitSpritesheetFileDialog(deps, { values, characterId });
+  } finally {
+    store.setSpritesheetDialogSubmitting({ value: false });
+    render();
+  }
+};
+
+const submitSpritesheetFileDialog = async (
+  deps,
+  { values, characterId } = {},
+) => {
+  const { appService, i18n, projectService, store } = deps;
+  const copy = selectCopy(deps);
   const dialogMode = store.selectSpritesheetDialogMode();
   const dialogItemId = store.selectSpritesheetDialogItemId();
   const dialogParentId = store.selectSpritesheetDialogParentId();
@@ -1878,6 +1970,32 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
       message: copy.spritesheetJsonRequired,
       title: copy.warningTitle,
     });
+    return;
+  }
+
+  // An empty spritesheet needs its image along with a JSON.
+  if (
+    existingItem &&
+    !existingItem.fileId &&
+    dialogSourceFiles?.atlasFile &&
+    !dialogSourceFiles?.pngFile
+  ) {
+    appService.showAlert({
+      message: copy.spritesheetImageRequired,
+      title: copy.warningTitle,
+    });
+    return;
+  }
+
+  // A new sheet file or JSON no longer matches frames made in the editor.
+  const replacesSheet = Boolean(
+    dialogSourceFiles?.pngFile || dialogSourceFiles?.atlasFile,
+  );
+  if (
+    existingItem?.frameSource &&
+    replacesSheet &&
+    !(await confirmReplaceSpritesheetFrames({ appService, i18n }))
+  ) {
     return;
   }
 
@@ -1938,15 +2056,9 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
         }),
     });
 
-    if (!createAttempt.ok) {
-      return;
+    if (createAttempt.ok) {
+      await closeSpritesheetDialogAfterSave(deps, { createdItemId: spriteId });
     }
-
-    revokeSpritesheetDialogPreviewUrl(store);
-    store.closeSpritesheetDialog();
-    store.setSelectedItemId({ itemId: spriteId });
-    render();
-    await refreshCharacterSpritesData(deps);
     return;
   }
 
@@ -1965,6 +2077,19 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
     }
   }
 
+  // Without a new sheet, an edit keeps the frames; a new sheet clears them.
+  if (existingItem.frameSource) {
+    spritesheetData.frameSource = replacesSheet
+      ? null
+      : existingItem.frameSource;
+  }
+
+  // A spritesheet still empty has no sheet or atlas to send.
+  if (!spritesheetData.fileId) {
+    delete spritesheetData.fileId;
+    delete spritesheetData.jsonData;
+  }
+
   const updateAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: copy.failedUpdateSpritesheet,
@@ -1977,14 +2102,9 @@ export const handleSpritesheetDialogFormAction = async (deps, payload) => {
       }),
   });
 
-  if (!updateAttempt.ok) {
-    return;
+  if (updateAttempt.ok) {
+    await closeSpritesheetDialogAfterSave(deps);
   }
-
-  revokeSpritesheetDialogPreviewUrl(store);
-  store.closeSpritesheetDialog();
-  render();
-  await refreshCharacterSpritesData(deps);
 };
 
 export const handleSpritesheetDialogSubmitClick = async (deps) => {
@@ -2163,7 +2283,7 @@ const {
 
     if (mode === "spritesheet-form") {
       appendTagIdToForm({
-        form: deps.refs.spritesheetDialogForm,
+        form: selectSpritesheetDialogFormRef(deps),
         tagId,
       });
     }

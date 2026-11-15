@@ -1,7 +1,12 @@
 import { toFlatItems } from "./project/tree.js";
 
 const SPRITESHEET_SELECTION_SEPARATOR = "::";
-export const INITIAL_SPRITESHEET_CLIP_FPS = 24;
+// The speed of a new animation: an imported clip without its own speed, or a
+// clip made in the spritesheet editor.
+export const DEFAULT_SPRITESHEET_CLIP_FPS = 12;
+// The speed of a saved animation that has no fps. Earlier versions used it as
+// the default too, so changing it would change how those animations play.
+export const FALLBACK_SPRITESHEET_CLIP_FPS = 24;
 
 export const normalizeSpritesheetFps = (value) => {
   if (value === undefined || value === null || value === "") {
@@ -29,7 +34,7 @@ export const formatSpritesheetFps = (value) => {
 
 export const resolveSpritesheetAnimationFps = (
   animation = {},
-  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+  missingClipFps = FALLBACK_SPRITESHEET_CLIP_FPS,
 ) => {
   const explicitFps = normalizeSpritesheetFps(animation?.fps);
   if (explicitFps !== undefined) {
@@ -42,7 +47,7 @@ export const resolveSpritesheetAnimationFps = (
   }
 
   return (
-    normalizeSpritesheetFps(missingClipFps) ?? INITIAL_SPRITESHEET_CLIP_FPS
+    normalizeSpritesheetFps(missingClipFps) ?? FALLBACK_SPRITESHEET_CLIP_FPS
   );
 };
 
@@ -86,7 +91,7 @@ export const resolveSpritesheetSize = (spritesheet = {}) => {
 
 export const normalizeSpritesheetAnimationsFps = (
   animations = {},
-  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+  missingClipFps = FALLBACK_SPRITESHEET_CLIP_FPS,
 ) => {
   return Object.fromEntries(
     Object.entries(animations ?? {}).map(([name, animation]) => {

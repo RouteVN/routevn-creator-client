@@ -26,8 +26,11 @@ const SIMPLE_RESOURCE_DIALOGS = [
   [
     "pages/characterSprites/characterSprites.view.yaml",
     "pages/characterSprites/characterSprites.store.js",
-    ["editDialog"],
-    [["editForm", "handleEditFormAction"]],
+    ["editDialog", "spritesheetAddDialog"],
+    [
+      ["editForm", "handleEditFormAction"],
+      ["spritesheetAddForm", "handleSpritesheetDialogFormAction"],
+    ],
   ],
   [
     "pages/characters/characters.view.yaml",
@@ -88,6 +91,12 @@ const SIMPLE_RESOURCE_DIALOGS = [
     "pages/sounds/sounds.store.js",
     ["editDialog"],
     [["editForm", "handleEditFormAction"]],
+  ],
+  [
+    "pages/spritesheets/spritesheets.view.yaml",
+    "pages/spritesheets/spritesheets.store.js",
+    ["addDialog"],
+    [["addForm", "handleDialogFormAction"]],
   ],
   [
     "pages/textStyles/textStyles.view.yaml",

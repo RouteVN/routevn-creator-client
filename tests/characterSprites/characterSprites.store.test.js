@@ -411,7 +411,7 @@ describe("characterSprites store", () => {
     expect(viewData.acceptedFileTypes).toContain(".json");
   });
 
-  it("builds spritesheet create dialog preview data from imports", () => {
+  it("opens the spritesheet add dialog from dropped spritesheet files", () => {
     const state = createInitialState();
     const importData = {
       suggestedName: "Hero Sheet",
@@ -438,6 +438,7 @@ describe("characterSprites store", () => {
         previewUrl: "blob:sheet",
         importData,
         sourceFiles: {
+          pngFiles: [{ name: "hero.png" }],
           pngFile: {
             name: "hero.png",
           },
@@ -449,6 +450,7 @@ describe("characterSprites store", () => {
           name: "Hero Sheet",
           description: "",
           tagIds: [],
+          source: "file",
           width: 64,
           height: 96,
         },
@@ -457,17 +459,20 @@ describe("characterSprites store", () => {
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
 
-    expect(viewData.isSpritesheetDialogOpen).toBe(true);
-    expect(viewData.spritesheetDialogTitle).toBe("Add Spritesheet");
-    expect(viewData.spritesheetDialogPreviewUrl).toBe("blob:sheet");
-    expect(viewData.spritesheetDialogPreviewAtlas).toBe(importData.jsonData);
-    expect(viewData.spritesheetDialogClipOptions).toEqual([
-      expect.objectContaining({
-        name: "Idle",
-        frameCount: 1,
-      }),
-    ]);
-    expect(viewData.spritesheetDialogAtlasFieldValue).toBe("hero.json");
+    expect(viewData.isSpritesheetAddDialogOpen).toBe(true);
+    expect(viewData.isSpritesheetEditDialogOpen).toBe(false);
+    expect(viewData.spritesheetAddForm.title).toBe("Add Spritesheet");
+    expect(
+      viewData.spritesheetAddForm.fields.map(
+        (field) => field.name ?? field.slot,
+      ),
+    ).toEqual(["name", "description", "tagIds", "source", "spritesheet-files"]);
+    expect(viewData.spritesheetDialogValues.source).toBe("file");
+    expect(viewData.spritesheetCreateFileLabels).toMatchObject({
+      show: true,
+      pngFileName: "hero.png",
+      jsonFileName: "hero.json",
+    });
   });
 
   it("uses the original file and exposes adjacent controls for the full preview overlay", () => {

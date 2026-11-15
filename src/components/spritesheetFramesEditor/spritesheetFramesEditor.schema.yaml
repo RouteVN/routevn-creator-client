@@ -1,0 +1,40 @@
+componentName: rvn-spritesheet-frames-editor
+propsSchema:
+  type: object
+  properties: {}
+events:
+  frames-change:
+    description: "The frames, holds, or clip FPS changed, by an edit, undo, or redo. Detail: `{ canUndo, canRedo }`."
+methods:
+  type: object
+  properties:
+    startNew:
+      description: Starts an empty draft and optionally adds the given picture files as frames.
+      params:
+        - name: payload
+          type: object
+          description: "`{ files, fps }`"
+    loadSpritesheet:
+      description: Loads a saved spritesheet. Uses its saved frames, cuts its sheet into frames when it has none, or starts empty when it has no sheet yet.
+      params:
+        - name: payload
+          type: object
+          description: "`{ spritesheet, animations }`"
+    getDraft:
+      description: Returns the current frames draft for saving.
+      params: []
+      returns: object
+    markSaved:
+      description: Records a save. Frames get the file ids they were saved with, and `content` from the saved draft becomes what later edits are compared with.
+      params:
+        - name: payload
+          type: object
+          description: "`{ fileIdByFrameKey, content }`"
+    undo:
+      description: Undoes the latest edit. Returns whether there was one.
+      params: []
+      returns: boolean
+    redo:
+      description: Redoes the latest undone edit. Returns whether there was one.
+      params: []
+      returns: boolean
