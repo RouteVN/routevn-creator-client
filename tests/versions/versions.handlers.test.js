@@ -7,10 +7,13 @@ import {
   handleDownloadAndroidApkClick,
   handleDownloadMacosApplicationClick,
   handleDownloadWindowsExecutableClick,
-  handleDownloadWindowsInstallerClick,
   handleDownloadZipClick,
   handleExportConfirmationClose,
   handleExportConfirmationConfirm,
+  handleExportConfirmationInstallerClick,
+  handleExportClick,
+  handleExportOptionClick,
+  handleExportOptionsClose,
   handleMacosExportFormAction,
   handleMobileDetailSheetClose,
   handlePlatformDetailsCreated,
@@ -161,6 +164,8 @@ const createDeps = ({ repository, version, editingVersionId } = {}) => {
       }),
       selectPlatformDetailsDialog: vi.fn(() => platformDetailsDialog),
       closePlatformDetailsDialog: vi.fn(),
+      openExportOptions: vi.fn(),
+      closeExportOptions: vi.fn(),
     },
     progressDialog,
     render: vi.fn(),
@@ -465,7 +470,7 @@ describe("versions.handleDownloadZipClick", () => {
     deps.projectService.getCurrentPlatformDetails.mockResolvedValueOnce(
       undefined,
     );
-    await handleDownloadWindowsInstallerClick(
+    await handleDownloadWindowsExecutableClick(
       deps,
       createVersionClickPayload(),
     );
@@ -475,7 +480,7 @@ describe("versions.handleDownloadZipClick", () => {
     expect(deps.store.closePlatformDetailsDialog).toHaveBeenCalled();
     expect(deps.store.openExportConfirmation).toHaveBeenCalledWith(
       expect.objectContaining({
-        exportType: "windows-installer",
+        exportType: "windows-executable",
         platform: "windows",
         versionId: "version-1",
       }),
@@ -1292,7 +1297,11 @@ describe("versions Windows export handlers", () => {
       },
     });
 
-    await chooseAndConfirmExport(handleDownloadWindowsInstallerClick, deps);
+    await handleDownloadWindowsExecutableClick(
+      deps,
+      createVersionClickPayload(),
+    );
+    await handleExportConfirmationInstallerClick(deps);
 
     expect(deps.projectService.createWindowsInstallerToPath).toHaveBeenCalled();
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
@@ -2255,5 +2264,60 @@ describe("Android App Bundle export", () => {
       message: `${EN_I18N.versionsPage.androidBundleExportNotEnoughSpace}\n\n${EN_I18N.versionsPage.errorDetailsLabel}\nNot enough free space to export: about 2.3 GB is needed.`,
       title: EN_I18N.versionsPage.errorTitle,
     });
+  });
+});
+
+describe("versions export options", () => {
+  const optionPayload = (exportOption) => {
+    const payload = createVersionClickPayload();
+    payload._event.currentTarget.dataset.exportOption = exportOption;
+    return payload;
+  };
+
+  it("opens the export options for the version of the Export button", () => {
+    const deps = createDeps();
+    handleExportClick(deps, createVersionClickPayload());
+    expect(deps.store.openExportOptions).toHaveBeenCalledWith({
+      versionId: "version-1",
+    });
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("closes the export options without exporting", () => {
+    const deps = createDeps();
+    handleExportOptionsClose(deps);
+    expect(deps.store.closeExportOptions).toHaveBeenCalled();
+    expect(deps.store.openExportConfirmation).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["web", "web", "web"],
+    ["windows", "windows-executable", "windows"],
+    ["macos", "macos-application", "macos"],
+  ])(
+    "starts the %s export from its option",
+    async (exportOption, exportType, platform) => {
+      const deps = createDeps();
+      await handleExportOptionClick(deps, optionPayload(exportOption));
+      expect(deps.store.closeExportOptions).toHaveBeenCalled();
+      expect(deps.store.openExportConfirmation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          exportType,
+          platform,
+          versionId: "version-1",
+        }),
+      );
+    },
+  );
+
+  it("does not build an installer from another platform's confirmation", async () => {
+    const deps = createDeps();
+    await handleExportOptionClick(deps, optionPayload("web"));
+    await handleExportConfirmationInstallerClick(deps);
+    expect(deps.store.closeExportConfirmation).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.createWindowsInstallerToPath,
+    ).not.toHaveBeenCalled();
   });
 });

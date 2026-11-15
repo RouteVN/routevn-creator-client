@@ -97,13 +97,17 @@ describe("iOS export switched on", () => {
     "shows the Versions iOS button on %s when available is %s: %s",
     (platform, available, shown) => {
       const state = createVersionsState({ platform, available });
+      versionsStore.openExportOptions({ state }, { versionId: "version-1" });
       const viewData = versionsStore.selectViewData({ state, i18n: EN_I18N });
       expect(viewData.canExportIosApplication).toBe(shown);
       const html = renderViewYaml(
         "src/pages/versions/versions.view.yaml",
         viewData,
       );
-      expect(html.includes('id="detailIosApplicationBtn"')).toBe(shown);
+      expect(html.includes('data-export-option="ios"')).toBe(shown);
+      expect(html.includes(EN_I18N.versionsPage.exportIosOptionLabel)).toBe(
+        shown,
+      );
     },
   );
 

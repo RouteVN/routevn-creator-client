@@ -66,16 +66,12 @@ const createDropdownMenuItems = (copy = {}) => [
 
 const formatConfirmationValue = (value) => String(value ?? "").trim();
 
-const getExportConfirmationTitle = (exportType, copy) => {
+// A Windows export that also offers the installer names neither format.
+const getExportConfirmationTitle = (exportType, copy, offersInstaller) => {
   if (exportType === "windows-executable") {
+    if (offersInstaller) return copy.confirmWindowsExportTitle;
     return (
       copy.confirmWindowsExecutableExportTitle ?? "Confirm Windows EXE Export"
-    );
-  }
-  if (exportType === "windows-installer") {
-    return (
-      copy.confirmWindowsInstallerExportTitle ??
-      "Confirm Windows Installer Export"
     );
   }
   if (exportType === "macos-application") {
@@ -89,11 +85,6 @@ const getExportConfirmationTitle = (exportType, copy) => {
 const getExportConfirmationButtonLabel = (exportType, copy) => {
   if (exportType === "windows-executable") {
     return copy.exportWindowsExecutableButton ?? "Export Windows EXE (Beta)";
-  }
-  if (exportType === "windows-installer") {
-    return (
-      copy.exportWindowsInstallerButton ?? "Export Windows Installer (Beta)"
-    );
   }
   if (exportType === "macos-application") {
     return copy.exportMacosApplicationButton ?? "Export macOS App (Beta)";
@@ -454,6 +445,11 @@ export const createInitialState = () => ({
     targetVersionId: undefined,
     items: [],
   },
+  // The dialog that offers the platforms a version can be exported for.
+  exportOptions: {
+    isOpen: false,
+    versionId: undefined,
+  },
   exportConfirmation: {
     isOpen: false,
     exportType: undefined,
@@ -592,6 +588,16 @@ export const closeVersionDialog = ({ state }, _payload = {}) => {
   state.editingVersionId = undefined;
 };
 
+export const openExportOptions = ({ state }, { versionId } = {}) => {
+  state.exportOptions.isOpen = true;
+  state.exportOptions.versionId = versionId;
+};
+
+export const closeExportOptions = ({ state }, _payload = {}) => {
+  state.exportOptions.isOpen = false;
+  state.exportOptions.versionId = undefined;
+};
+
 export const openExportConfirmation = (
   { state },
   { exportType, platform, versionId, versionName, applicationInfo } = {},
@@ -728,6 +734,58 @@ export const selectViewData = ({ state, i18n }) => {
     };
   });
 
+  const canExportAndroidApk =
+    ANDROID_EXPORT_RELEASED &&
+    state.platform !== "web" &&
+    state.androidExportAvailability.available;
+  const canExportIosApplication =
+    IOS_EXPORT_RELEASED &&
+    state.platform === "tauri" &&
+    state.iosExportAvailability.available;
+  const canExportWindowsExecutable = state.platform === "tauri";
+  const canExportWindowsInstaller =
+    state.platform === "tauri" && state.windowsExportAvailability.installer;
+  const canExportMacosApplication =
+    (state.platform === "tauri" &&
+      state.macosExportAvailability.hostSupported) ||
+    state.visualTestMode;
+  const offersWindowsInstaller =
+    state.exportConfirmation.exportType === "windows-executable" &&
+    canExportWindowsInstaller;
+
+  // The platforms this host can export for, in the order the dialog shows.
+  const exportOptions = [
+    { id: "web", icon: "website", label: platformDetailsCopy.webTabLabel },
+  ];
+  if (canExportWindowsExecutable) {
+    exportOptions.push({
+      id: "windows",
+      icon: "windows",
+      label: platformDetailsCopy.windowsTabLabel,
+    });
+  }
+  if (canExportMacosApplication) {
+    exportOptions.push({
+      id: "macos",
+      icon: "apple",
+      label: platformDetailsCopy.macosTabLabel,
+    });
+  }
+  if (canExportAndroidApk) {
+    exportOptions.push({
+      id: "android",
+      icon: "android",
+      label: platformDetailsCopy.androidTabLabel,
+    });
+  }
+  if (canExportIosApplication) {
+    exportOptions.push({
+      id: "ios",
+      icon: "apple",
+      label: copy.exportIosOptionLabel,
+    });
+  }
+
   return {
     isVersionsLoading: state.isVersionsLoading,
     versions,
@@ -751,10 +809,17 @@ export const selectViewData = ({ state, i18n }) => {
     platformDetailsDialogApplicationInfo:
       state.platformDetailsDialog.applicationInfo,
     platformDetailsDialogPlatform: state.platformDetailsDialog.platform,
+    isExportOptionsOpen: state.exportOptions.isOpen,
+    exportOptionsVersionId: state.exportOptions.versionId,
+    exportOptions,
+    exportButton: copy.exportButton,
+    exportOptionsTitle: copy.exportOptionsTitle,
     exportConfirmationTitle: getExportConfirmationTitle(
       state.exportConfirmation.exportType,
       copy,
+      offersWindowsInstaller,
     ),
+    showWindowsInstallerButton: offersWindowsInstaller,
     exportConfirmationMessage:
       copy.exportConfirmationMessage ??
       "Review the build information before exporting.",
@@ -782,41 +847,24 @@ export const selectViewData = ({ state, i18n }) => {
     showAndroidUnsignedNotice: !state.androidSigning.supported,
     androidUnsignedApkNotice: copy.androidUnsignedApkNotice,
 
-    exportAndroidButton: copy.exportAndroidButton,
-    canExportAndroidApk:
-      ANDROID_EXPORT_RELEASED &&
-      state.platform !== "web" &&
-      state.androidExportAvailability.available,
+    canExportAndroidApk,
     showMacosExportForm:
       state.exportConfirmation.exportType === "macos-application",
     macosExportForm: createMacosExportForm(copy),
     showIosExportForm:
       state.exportConfirmation.exportType === "ios-application",
     iosExportForm: createIosExportForm(copy, state.iosExportOptions),
-    exportIosApplicationButton: copy.exportIosApplicationButton,
-    canExportIosApplication:
-      IOS_EXPORT_RELEASED &&
-      state.platform === "tauri" &&
-      state.iosExportAvailability.available,
+    canExportIosApplication,
     exportConfirmationKey: `${state.exportConfirmation.exportType ?? "none"}-${state.exportConfirmation.versionId ?? "none"}`,
     title: copy.title ?? "Versions",
     createButton: copy.createButton ?? "New Version",
     loadingMessage: copy.loadingMessage ?? "Loading...",
     noVersionsMessage: copy.noVersionsMessage ?? "No versions",
-    exportWebButton: copy.exportWebButton ?? "Export Web",
-    exportWindowsExecutableButton:
-      copy.exportWindowsExecutableButton ?? "Export Windows EXE (Beta)",
     exportWindowsInstallerButton:
       copy.exportWindowsInstallerButton ?? "Export Windows Installer (Beta)",
-    exportMacosApplicationButton:
-      copy.exportMacosApplicationButton ?? "Export macOS App (Beta)",
-    canExportWindowsExecutable: state.platform === "tauri",
-    canExportWindowsInstaller:
-      state.platform === "tauri" && state.windowsExportAvailability.installer,
-    canExportMacosApplication:
-      (state.platform === "tauri" &&
-        state.macosExportAvailability.hostSupported) ||
-      state.visualTestMode,
+    canExportWindowsExecutable,
+    canExportWindowsInstaller,
+    canExportMacosApplication,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     resourceType: "versions",

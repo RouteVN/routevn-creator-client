@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
   closeExportConfirmation,
+  closeExportOptions,
+  openExportOptions,
   openExportConfirmation,
   selectCanExportAndroidBundle,
   selectExportConfirmation,
@@ -297,9 +299,10 @@ describe("versions store export actions", () => {
 
     expect(viewData.canExportWindowsExecutable).toBe(true);
     expect(viewData.canExportWindowsInstaller).toBe(false);
-    expect(viewData.exportWindowsExecutableButton).toBe(
-      "Export Windows EXE (Beta)",
-    );
+    expect(viewData.exportOptions.map((option) => option.id)).toEqual([
+      "web",
+      "windows",
+    ]);
     expect(viewData.exportWindowsInstallerButton).toBe(
       "Export Windows Installer (Beta)",
     );
@@ -596,5 +599,73 @@ describe("Android signing fields", () => {
     const view = selectViewData({ state, i18n: EN_I18N });
     expect(view.showAndroidUnsignedNotice).toBe(true);
     expect(describeSigningFields(view.androidExportForm)).toEqual([]);
+  });
+});
+
+describe("versions store export options", () => {
+  it("lists the platforms this host exports for, with their icons", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+    setMacosExportAvailability(
+      { state },
+      { availability: { hostSupported: true } },
+    );
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: true } },
+    );
+
+    expect(selectViewData({ state, i18n: EN_I18N }).exportOptions).toEqual([
+      { id: "web", icon: "website", label: "Web" },
+      { id: "windows", icon: "windows", label: "Windows" },
+      { id: "macos", icon: "apple", label: "macOS" },
+      { id: "android", icon: "android", label: "Android" },
+    ]);
+  });
+
+  it("offers only Web in the browser", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "web" });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).exportOptions.map(
+        (option) => option.id,
+      ),
+    ).toEqual(["web"]);
+  });
+
+  it("opens the options for a version and closes them again", () => {
+    const state = createInitialState();
+    openExportOptions({ state }, { versionId: "version-1" });
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.isExportOptionsOpen).toBe(true);
+    expect(viewData.exportOptionsVersionId).toBe("version-1");
+    expect(viewData.exportButton).toBe("Export");
+
+    closeExportOptions({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.isExportOptionsOpen).toBe(false);
+    expect(viewData.exportOptionsVersionId).toBeUndefined();
+  });
+
+  it("names neither format when the Windows export also offers the installer", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+    openExportConfirmation(
+      { state },
+      { exportType: "windows-executable", platform: "windows" },
+    );
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.showWindowsInstallerButton).toBe(false);
+    expect(viewData.exportConfirmationTitle).toBe(
+      EN_I18N.versionsPage.confirmWindowsExecutableExportTitle,
+    );
+
+    setWindowsExportAvailability(
+      { state },
+      { availability: { installer: true } },
+    );
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.showWindowsInstallerButton).toBe(true);
+    expect(viewData.exportConfirmationTitle).toBe("Confirm Windows Export");
   });
 });

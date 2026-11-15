@@ -76,14 +76,16 @@ describe("Android export views", () => {
           "src/pages/versions/versions.view.yaml",
           versionsStore.selectViewData({ state, i18n: EN_I18N }),
         );
-      expect(render()).not.toContain('id="detailAndroidApkBtn"');
+      versionsStore.openExportOptions({ state }, { versionId: "version-1" });
+      expect(render()).not.toContain('data-export-option="android"');
       versionsStore.setAndroidExportAvailability(
         { state },
         { availability: { available: true } },
       );
       const html = render();
-      expect(html).toContain('id="detailAndroidApkBtn"');
-      expect(html).toContain(EN_I18N.versionsPage.exportAndroidButton);
+      expect(html).toContain('data-export-option="android"');
+      expect(html).toContain(EN_I18N.platformDetailsPage.androidTabLabel);
+      versionsStore.closeExportOptions({ state });
       versionsStore.openExportConfirmation(
         { state },
         {

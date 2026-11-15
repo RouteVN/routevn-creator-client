@@ -1095,12 +1095,6 @@ export const handleDownloadWindowsExecutableClick = (deps, payload) =>
     platform: "windows",
   });
 
-export const handleDownloadWindowsInstallerClick = (deps, payload) =>
-  prepareExportConfirmation(deps, payload, {
-    exportType: "windows-installer",
-    platform: "windows",
-  });
-
 export const handleDownloadAndroidApkClick = (deps, payload) =>
   prepareExportConfirmation(deps, payload, {
     exportType: "android-apk",
@@ -1118,6 +1112,38 @@ export const handleDownloadIosApplicationClick = (deps, payload) =>
     exportType: "ios-application",
     platform: "ios",
   });
+
+// The detail panel's Export button: offers the platforms to export for.
+export const handleExportClick = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.stopPropagation();
+  store.openExportOptions({ versionId: resolveVersionIdFromPayload(payload) });
+  render();
+};
+
+export const handleExportOptionsClose = (deps) => {
+  const { store, render } = deps;
+  store.closeExportOptions();
+  render();
+};
+
+const EXPORT_OPTION_HANDLERS = {
+  web: handleDownloadZipClick,
+  windows: handleDownloadWindowsExecutableClick,
+  macos: handleDownloadMacosApplicationClick,
+  android: handleDownloadAndroidApkClick,
+  ios: handleDownloadIosApplicationClick,
+};
+
+export const handleExportOptionClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { exportOption } = payload._event.currentTarget.dataset;
+  // The option carries the version ID, so read it before the dialog closes.
+  const started = EXPORT_OPTION_HANDLERS[exportOption](deps, payload);
+  store.closeExportOptions();
+  render();
+  return started;
+};
 
 export const handleExportConfirmationClose = (deps) => {
   const { store, render } = deps;
@@ -2151,12 +2177,17 @@ export const handleExportConfirmationConfirm = async (deps) => {
   }
   if (confirmation.exportType === "windows-executable") {
     await runWindowsExecutableExport(deps, confirmation);
-    return;
   }
-  if (confirmation.exportType === "windows-installer") {
-    await runWindowsInstallerExport(deps, confirmation);
-    return;
-  }
+};
+
+// The Windows confirmation's second button, on hosts that build installers.
+export const handleExportConfirmationInstallerClick = async (deps) => {
+  const { store, render } = deps;
+  const confirmation = store.selectExportConfirmation();
+  if (confirmation.exportType !== "windows-executable") return;
+  store.closeExportConfirmation();
+  render();
+  await runWindowsInstallerExport(deps, confirmation);
 };
 
 export const handleMacosExportFormAction = async (deps, payload) => {
