@@ -17,7 +17,10 @@ import {
   getSpritesheetFrameCrops,
   getUnusedFrameKeys,
 } from "../../src/internal/spritesheetFrames.js";
-import { cropSpritesheetFrames } from "../../src/deps/clients/web/spritesheetCanvas.js";
+import {
+  cropSpritesheetFrames,
+  loadImageFromUrl,
+} from "../../src/deps/clients/web/spritesheetCanvas.js";
 import { createSpritesheetFramesService } from "../../src/deps/services/shared/spritesheetFramesService.js";
 
 const SHEET_ROW_LIMIT = 256;
@@ -31,6 +34,24 @@ const createCanvas = (width, height) => {
 
 const toPngBlob = (canvas) =>
   new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+
+// A picture's pixels, read through an image element as the app reads them.
+// On a busy machine, WebKit's createImageBitmap sometimes returned another
+// picture's pixels, which failed checks the app's own pictures passed.
+const readPixels = async (blob) => {
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = await loadImageFromUrl(url);
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+    const { context } = createCanvas(width, height);
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, width, height);
+    return { width, height, context, data };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
 
 // A frame picture: an opaque block in a color of its own with a dark mark in
 // its top-left corner, so a frame turned the wrong way does not match.
@@ -55,11 +76,7 @@ const drawFramePicture = ({ index, width, height, margin = 0 }) => {
 // What a picture shows: its size and a hash of its pixels. Fully transparent
 // pixels count as one color, whatever a canvas stored for their RGB.
 const getBlobSignature = async (blob) => {
-  const bitmap = await createImageBitmap(blob);
-  const { width, height } = bitmap;
-  const { context } = createCanvas(width, height);
-  context.drawImage(bitmap, 0, 0);
-  const { data } = context.getImageData(0, 0, width, height);
+  const { width, height, data } = await readPixels(blob);
   let hash = 2166136261;
   for (let index = 0; index < data.length; index += 4) {
     const alpha = data[index + 3];
@@ -723,11 +740,7 @@ function expandHolds(clip, frames, pictureSignatures, atlasNames) {
 // A picture's pixels. With `content`, only the box around its visible
 // pixels, so a picture centered in a larger cell still matches.
 const readPicture = async (blob, { content = false } = {}) => {
-  const bitmap = await createImageBitmap(blob);
-  const { width, height } = bitmap;
-  const { context } = createCanvas(width, height);
-  context.drawImage(bitmap, 0, 0);
-  const { data } = context.getImageData(0, 0, width, height);
+  const { width, height, context, data } = await readPixels(blob);
   if (!content) {
     return { width, height, data };
   }
