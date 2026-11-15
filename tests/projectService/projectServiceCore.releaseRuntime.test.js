@@ -1677,11 +1677,16 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     };
 
     beforeEach(() => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
       const { commandApi } = mocked.collabService;
       commandApi.updateLineActions.mockResolvedValue({ valid: true });
       commandApi.updateLayoutElement.mockResolvedValue({ valid: true });
       commandApi.updateControlItem.mockResolvedValue({ valid: true });
       commandApi.updateControlElement.mockResolvedValue({ valid: true });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
     it("rewrites reset actions in lines, layouts, and controls before recording completion", async () => {
@@ -1822,7 +1827,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
 
     it("skips the patch when already completed", async () => {
       const { commandApi } = mocked.collabService;
-      const { projectService } = await openProjectWith(
+      const { projectService, repository } = await openProjectWith(
         createLegacyResetState(),
       );
       mocked.projectStore.app.get.mockResolvedValue(true);
@@ -1834,6 +1839,8 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       expect(commandApi.updateControlItem).not.toHaveBeenCalled();
       expect(commandApi.updateControlElement).not.toHaveBeenCalled();
       expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+      // Only layout schema validation reads state; the marked content patch must not.
+      expect(repository.getState).toHaveBeenCalledOnce();
     });
 
     it("records completion without updates when the project has no reset actions", async () => {
@@ -1909,11 +1916,28 @@ describe("projectServiceCore releaseProjectRuntime", () => {
           valid: false,
           error: { message: "Update rejected." },
         });
-        const { projectService } = await openProjectWith(
+        const { projectService, repository } = await openProjectWith(
           createLegacyResetState(),
         );
 
-        await expect(projectService.ensureRepository()).rejects.toThrow(
+        await expect(projectService.ensureRepository()).resolves.toBe(
+          repository,
+        );
+
+        expect(
+          mocked.collabService.commandApi.updateLineActions,
+        ).toHaveBeenCalledTimes(2);
+        expect(
+          mocked.collabService.commandApi.updateLayoutElement,
+        ).toHaveBeenCalledOnce();
+        expect(
+          mocked.collabService.commandApi.updateControlItem,
+        ).toHaveBeenCalledOnce();
+        expect(
+          mocked.collabService.commandApi.updateControlElement,
+        ).toHaveBeenCalledOnce();
+        expect(console.warn).toHaveBeenCalledWith(
+          expect.stringContaining("Could not migrate the reset action of"),
           "Update rejected.",
         );
 
@@ -1928,12 +1952,14 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       mocked.collabService.commandApi.updateLineActions.mockRejectedValue(
         new Error("Command failed."),
       );
-      const { projectService } = await openProjectWith(
+      const { projectService, repository } = await openProjectWith(
         createLegacyResetState(),
       );
 
-      await expect(projectService.ensureRepository()).rejects.toThrow(
-        "Command failed.",
+      await expect(projectService.ensureRepository()).resolves.toBe(repository);
+      expect(console.warn).toHaveBeenCalledWith(
+        "Could not migrate reset actions to section transitions.",
+        expect.objectContaining({ message: "Command failed." }),
       );
 
       expect(mocked.projectStore.app.set).not.toHaveBeenCalledWith(
@@ -1942,37 +1968,336 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       );
     });
 
-    it("finishes on a retry after a partial run", async () => {
+    it("continues after one rejection and retries only the remaining legacy item on the next open", async () => {
       const { commandApi } = mocked.collabService;
-      const state = createLegacyResetState();
+      let state = createLegacyResetState();
       const { projectService, repository } = await openProjectWith(state);
+      repository.getState.mockImplementation(() => state);
+      commandApi.updateLineActions.mockImplementation(
+        async ({ lineId, data }) => {
+          state = structuredClone(state);
+          for (const scene of Object.values(state.scenes.items)) {
+            for (const section of Object.values(scene.sections?.items ?? {})) {
+              if (section.lines.items[lineId]) {
+                section.lines.items[lineId].actions = data;
+              }
+            }
+          }
+          return { valid: true };
+        },
+      );
+      commandApi.updateLayoutElement.mockImplementation(
+        async ({ layoutId, elementId, data }) => {
+          state = structuredClone(state);
+          Object.assign(
+            state.layouts.items[layoutId].elements.items[elementId],
+            data,
+          );
+          return { valid: true };
+        },
+      );
       commandApi.updateLayoutElement.mockResolvedValueOnce({
         valid: false,
         error: { message: "Update rejected." },
       });
-
-      await expect(projectService.ensureRepository()).rejects.toThrow(
-        "Update rejected.",
+      commandApi.updateControlItem.mockImplementation(
+        async ({ controlId, data }) => {
+          state = structuredClone(state);
+          Object.assign(state.controls.items[controlId], data);
+          return { valid: true };
+        },
+      );
+      commandApi.updateControlElement.mockImplementation(
+        async ({ controlId, elementId, data }) => {
+          state = structuredClone(state);
+          Object.assign(
+            state.controls.items[controlId].elements.items[elementId],
+            data,
+          );
+          return { valid: true };
+        },
       );
 
-      // The lines were rewritten by the first run.
-      const retryState = createLegacyResetState();
-      for (const scene of Object.values(retryState.scenes.items)) {
-        for (const section of Object.values(scene.sections?.items ?? {})) {
-          for (const line of Object.values(section.lines.items)) {
-            line.actions = {};
-          }
-        }
+      await expect(projectService.ensureRepository()).resolves.toBe(repository);
+
+      expect(commandApi.updateLineActions).toHaveBeenCalledTimes(2);
+      expect(commandApi.updateLayoutElement).toHaveBeenCalledOnce();
+      expect(commandApi.updateControlItem).toHaveBeenCalledOnce();
+      expect(commandApi.updateControlElement).toHaveBeenCalledOnce();
+      expect(mocked.projectStore.app.set).not.toHaveBeenCalledWith(
+        PATCH_KEY,
+        true,
+      );
+      expect(console.warn).toHaveBeenCalledOnce();
+      for (const update of [
+        commandApi.updateLineActions,
+        commandApi.updateLayoutElement,
+        commandApi.updateControlItem,
+        commandApi.updateControlElement,
+      ]) {
+        update.mockClear();
       }
-      repository.getState.mockReturnValue(retryState);
-      commandApi.updateLineActions.mockClear();
+
+      // A reopened repository has a fresh identity and the commands accepted on the first open.
+      const reopenedRepository = { getState: vi.fn(() => state) };
+      mocked.repositoryService.ensureRepository.mockResolvedValue(
+        reopenedRepository,
+      );
+      await expect(projectService.ensureRepository()).resolves.toBe(
+        reopenedRepository,
+      );
+
+      expect(commandApi.updateLineActions).not.toHaveBeenCalled();
+      expect(commandApi.updateControlItem).not.toHaveBeenCalled();
+      expect(commandApi.updateControlElement).not.toHaveBeenCalled();
+      expect(commandApi.updateLayoutElement).toHaveBeenCalledExactlyOnceWith({
+        layoutId: "layout-1",
+        elementId: "element-1",
+        data: {
+          click: {
+            payload: {
+              actions: {
+                showConfirmDialog: {
+                  resourceId: "layout-2",
+                  confirmActions: {
+                    popOverlay: {},
+                    sectionTransition: {
+                      sceneId: "scene-1",
+                      sectionId: "section-1",
+                      resetStory: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        replace: false,
+      });
+      expect(mocked.projectStore.app.set).toHaveBeenCalledExactlyOnceWith(
+        PATCH_KEY,
+        true,
+      );
+      expect(console.warn).toHaveBeenCalledOnce();
+    });
+
+    it("rewrites the current actions and skips an item whose reset was removed during an earlier update", async () => {
+      const { commandApi } = mocked.collabService;
+      const snapshot = createLegacyResetState();
+      const current = structuredClone(snapshot);
+      const currentLine =
+        current.scenes.items["scene-2"].sections.items["section-2"].lines.items[
+          "line-3"
+        ];
+      currentLine.actions.dialogue = {
+        content: [{ text: "Edited while opening" }],
+      };
+      currentLine.actions.playSound = { resourceId: "sound-1" };
+      current.layouts.items["layout-1"].elements.items["element-1"].click = {
+        payload: { actions: { nextLine: {} } },
+      };
+      const { projectService, repository } = await openProjectWith(snapshot);
+      commandApi.updateLineActions.mockImplementationOnce(async () => {
+        repository.getState.mockReturnValue(current);
+        return { valid: true };
+      });
 
       await projectService.ensureRepository();
 
-      expect(commandApi.updateLineActions).not.toHaveBeenCalled();
-      expect(commandApi.updateLayoutElement).toHaveBeenCalledTimes(2);
+      expect(commandApi.updateLineActions).toHaveBeenNthCalledWith(2, {
+        lineId: "line-3",
+        data: {
+          background: { resourceId: "image-1" },
+          dialogue: { content: [{ text: "Edited while opening" }] },
+          playSound: { resourceId: "sound-1" },
+          sectionTransition: {
+            sceneId: "scene-1",
+            sectionId: "section-1",
+            resetStory: true,
+            screen: { animations: { resourceId: "animation-1" } },
+          },
+        },
+        replace: true,
+      });
+      expect(commandApi.updateLayoutElement).not.toHaveBeenCalled();
+      expect(snapshot).toEqual(createLegacyResetState());
       expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
     });
+
+    it("skips a line whose containing section was deleted after the snapshot", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      const current = structuredClone(state);
+      delete current.scenes.items["scene-2"].sections.items["section-2"];
+      const { projectService, repository } = await openProjectWith(state);
+      commandApi.updateLineActions.mockImplementationOnce(async () => {
+        repository.getState.mockReturnValue(current);
+        return { valid: true };
+      });
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ lineId: "line-2" }),
+      );
+      expect(commandApi.updateControlElement).not.toHaveBeenCalled();
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+    });
+
+    it("skips a reset whose destination section was deleted after the snapshot", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      const current = structuredClone(state);
+      delete current.scenes.items["scene-1"].sections.items["section-1"];
+      const { projectService, repository } = await openProjectWith(state);
+      commandApi.updateLineActions.mockImplementationOnce(async () => {
+        repository.getState.mockReturnValue(current);
+        return { valid: true };
+      });
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ lineId: "line-2" }),
+      );
+      expect(commandApi.updateLayoutElement).not.toHaveBeenCalled();
+      expect(commandApi.updateControlItem).not.toHaveBeenCalled();
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+    });
+
+    it("submits keyboard and keyup resets as separate control updates", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      state.controls.items["control-1"].keyup.ctrl.payload.actions = {
+        stopSkipMode: {},
+        resetStoryAtSection: { sectionId: "section-2" },
+      };
+      const { projectService } = await openProjectWith(state);
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateControlItem).toHaveBeenCalledTimes(2);
+      expect(
+        Object.keys(commandApi.updateControlItem.mock.calls[0][0].data),
+      ).toEqual(["keyboard"]);
+      expect(commandApi.updateControlItem).toHaveBeenNthCalledWith(2, {
+        controlId: "control-1",
+        data: {
+          keyup: {
+            ctrl: {
+              payload: {
+                actions: {
+                  stopSkipMode: {},
+                  sectionTransition: {
+                    sceneId: "scene-2",
+                    sectionId: "section-2",
+                    resetStory: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+
+    it("rewrites resets in element conditional overrides without changing other override values", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      state.layouts.items["layout-1"].elements.items[
+        "element-2"
+      ].conditionalOverrides = [
+        {
+          when: { target: "variables.flag", op: "eq", value: true },
+          set: {
+            text: "Conditional",
+            click: {
+              payload: {
+                actions: {
+                  resetStoryAtSection: { sectionId: "section-2" },
+                },
+              },
+            },
+          },
+        },
+      ];
+      const { projectService } = await openProjectWith(state);
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLayoutElement).toHaveBeenNthCalledWith(2, {
+        layoutId: "layout-1",
+        elementId: "element-2",
+        replace: false,
+        data: {
+          conditionalOverrides: [
+            {
+              when: { target: "variables.flag", op: "eq", value: true },
+              set: {
+                text: "Conditional",
+                click: {
+                  payload: {
+                    actions: {
+                      sectionTransition: {
+                        sceneId: "scene-2",
+                        sectionId: "section-2",
+                        resetStory: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+    });
+
+    it.each(["dialogue", "choice"])(
+      "rewrites resets inside %s item actions on a line",
+      async (actionType) => {
+        const { commandApi } = mocked.collabService;
+        const state = createLegacyResetState();
+        const lines =
+          state.scenes.items["scene-1"].sections.items["section-1"].lines.items;
+        lines["line-1"].actions = {
+          [actionType]: {
+            items: [
+              {
+                id: "item-1",
+                content: [{ text: "Option One" }],
+                actions: { resetStoryAtSection: { sectionId: "section-2" } },
+              },
+            ],
+          },
+        };
+        const { projectService } = await openProjectWith(state);
+
+        await projectService.ensureRepository();
+
+        expect(commandApi.updateLineActions).toHaveBeenNthCalledWith(1, {
+          lineId: "line-1",
+          replace: true,
+          data: {
+            [actionType]: {
+              items: [
+                {
+                  id: "item-1",
+                  content: [{ text: "Option One" }],
+                  actions: {
+                    sectionTransition: {
+                      sceneId: "scene-2",
+                      sectionId: "section-2",
+                      resetStory: true,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        });
+      },
+    );
 
     it("waits for the platform to mark a synchronized project ready", async () => {
       const { commandApi } = mocked.collabService;

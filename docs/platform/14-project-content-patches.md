@@ -123,9 +123,32 @@ The patch follows these rules:
 5. A line is updated with `line.update_actions` and `replace: true`, because a
    merge would keep the deprecated action next to its replacement. Elements are
    updated with only the fields that changed and `replace: false`. Control key
-   bindings are updated with `control.update`.
-6. A rejected or failed update aborts the patch without writing the marker. A
-   retry is safe because rewritten actions no longer match.
+   bindings are updated with `control.update`, one update per binding group.
+6. The items to rewrite are selected from one snapshot, but each rewrite is
+   made from the item as it is in the current repository state, read right
+   before its update is submitted. An item that was edited while earlier
+   updates were awaited keeps that edit, and an item whose reset or section is
+   gone by then is left alone.
+7. A rejected update is logged and skipped, and the remaining items are still
+   rewritten. The marker is not written, so the patch is evaluated again the
+   next time the project is opened. A retry is safe because rewritten actions
+   no longer match.
+8. A failure never keeps the project from opening. Unlike the other patches,
+   this one touches content the user authored, so an update the model rejects
+   for an unrelated reason must not block the project. A thrown error stops
+   the patch, is logged, and leaves the marker unset.
+
+These are the only places a project holds actions: the creator model allows
+actions in `line.actions`, in layout and control element interaction fields
+, and in control `keyboard` and `keyup`
+bindings. Scenes, sections, layouts, and the other resource collections have
+fixed fields that cannot hold an action.
+
+Older clients do not know `resetStory`. A client older than 1.22.0 that opens
+a rewritten project runs the transition without resetting the story and drops
+the option when it saves that transition again. The project format version
+gate follows the application major version, so it cannot keep those clients
+out.
 
 The rewrite itself is `upgradeResetStoryActions` in
 `src/internal/navigationActions.js`. Actions left in place by rules 3 and 4,

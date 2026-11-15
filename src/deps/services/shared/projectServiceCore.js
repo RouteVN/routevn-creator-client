@@ -421,15 +421,6 @@ export const createProjectServiceCore = ({
     await store.app.set(FONT_WEIGHT_METADATA_PATCH_KEY, true);
   };
 
-  const assertPatchUpdateAccepted = (result) => {
-    if (result?.valid === false) {
-      throw new Error(
-        result.error?.message ||
-          "Failed to migrate reset actions to section transitions.",
-      );
-    }
-  };
-
   const selectSceneIdsBySectionId = (repositoryState) => {
     const sceneIdsBySectionId = new Map();
     for (const [sceneId, scene] of Object.entries(
@@ -440,6 +431,14 @@ export const createProjectServiceCore = ({
       }
     }
     return sceneIdsBySectionId;
+  };
+
+  const createResetStoryUpgrade = (repositoryState) => {
+    const sceneIdsBySectionId = selectSceneIdsBySectionId(repositoryState);
+    return (value) =>
+      upgradeResetStoryActions(value, {
+        resolveSceneId: (sectionId) => sceneIdsBySectionId.get(sectionId),
+      });
   };
 
   // The top-level fields of an item that the upgrade rewrote. Element updates
@@ -454,92 +453,124 @@ export const createProjectServiceCore = ({
     return data;
   };
 
-  const patchLineResetStoryActions = async (repositoryState, upgrade) => {
-    for (const scene of Object.values(repositoryState?.scenes?.items ?? {})) {
-      for (const section of Object.values(scene?.sections?.items ?? {})) {
-        for (const [lineId, line] of Object.entries(
-          section?.lines?.items ?? {},
-        )) {
-          const actions = upgrade(line?.actions);
-          if (actions === line?.actions) {
-            continue;
-          }
+  // Where the project holds actions: scene lines, layout elements, control
+  // elements, and control key bindings. Each target reads its item from the
+  // state it is given, so the rewrite can be made from the current state.
+  const selectResetStoryPatchTargets = (repositoryState) => {
+    const targets = [];
 
-          // A merge would keep the deprecated action next to its replacement.
-          assertPatchUpdateAccepted(
-            await collabService.commandApi.updateLineActions({
-              lineId,
-              data: actions,
-              replace: true,
-            }),
-          );
+    for (const [sceneId, scene] of Object.entries(
+      repositoryState?.scenes?.items ?? {},
+    )) {
+      for (const [sectionId, section] of Object.entries(
+        scene?.sections?.items ?? {},
+      )) {
+        for (const lineId of Object.keys(section?.lines?.items ?? {})) {
+          targets.push({
+            label: `line ${lineId}`,
+            selectItem: (state) =>
+              state?.scenes?.items?.[sceneId]?.sections?.items?.[sectionId]
+                ?.lines?.items?.[lineId]?.actions,
+            // A merge would keep the deprecated action next to its
+            // replacement.
+            submit: (actions) =>
+              collabService.commandApi.updateLineActions({
+                lineId,
+                data: actions,
+                replace: true,
+              }),
+          });
         }
       }
     }
-  };
 
-  const patchLayoutResetStoryActions = async (repositoryState, upgrade) => {
     for (const [layoutId, layout] of Object.entries(
       repositoryState?.layouts?.items ?? {},
     )) {
-      for (const [elementId, element] of Object.entries(
-        layout?.elements?.items ?? {},
-      )) {
-        const upgradedElement = upgrade(element);
-        if (upgradedElement === element) {
-          continue;
-        }
-
-        assertPatchUpdateAccepted(
-          await collabService.commandApi.updateLayoutElement({
-            layoutId,
-            elementId,
-            data: selectUpgradedFields(element, upgradedElement),
-            replace: false,
-          }),
-        );
+      for (const elementId of Object.keys(layout?.elements?.items ?? {})) {
+        targets.push({
+          label: `layout ${layoutId} element ${elementId}`,
+          selectItem: (state) =>
+            state?.layouts?.items?.[layoutId]?.elements?.items?.[elementId],
+          submit: (upgradedElement, element) =>
+            collabService.commandApi.updateLayoutElement({
+              layoutId,
+              elementId,
+              data: selectUpgradedFields(element, upgradedElement),
+              replace: false,
+            }),
+        });
       }
     }
-  };
 
-  const patchControlResetStoryActions = async (repositoryState, upgrade) => {
     for (const [controlId, control] of Object.entries(
       repositoryState?.controls?.items ?? {},
     )) {
-      const keyData = {};
       for (const key of ["keyboard", "keyup"]) {
-        const upgradedKeys = upgrade(control?.[key]);
-        if (upgradedKeys !== control?.[key]) {
-          keyData[key] = upgradedKeys;
-        }
-      }
-      if (Object.keys(keyData).length > 0) {
-        assertPatchUpdateAccepted(
-          await collabService.commandApi.updateControlItem({
-            controlId,
-            data: keyData,
-          }),
-        );
+        targets.push({
+          label: `control ${controlId} ${key}`,
+          selectItem: (state) => state?.controls?.items?.[controlId]?.[key],
+          submit: (upgradedKeys) =>
+            collabService.commandApi.updateControlItem({
+              controlId,
+              data: { [key]: upgradedKeys },
+            }),
+        });
       }
 
-      for (const [elementId, element] of Object.entries(
-        control?.elements?.items ?? {},
-      )) {
-        const upgradedElement = upgrade(element);
-        if (upgradedElement === element) {
-          continue;
-        }
+      for (const elementId of Object.keys(control?.elements?.items ?? {})) {
+        targets.push({
+          label: `control ${controlId} element ${elementId}`,
+          selectItem: (state) =>
+            state?.controls?.items?.[controlId]?.elements?.items?.[elementId],
+          submit: (upgradedElement, element) =>
+            collabService.commandApi.updateControlElement({
+              controlId,
+              elementId,
+              data: selectUpgradedFields(element, upgradedElement),
+              replace: false,
+            }),
+        });
+      }
+    }
 
-        assertPatchUpdateAccepted(
-          await collabService.commandApi.updateControlElement({
-            controlId,
-            elementId,
-            data: selectUpgradedFields(element, upgradedElement),
-            replace: false,
-          }),
+    return targets;
+  };
+
+  // Returns whether every rewrite was accepted. A rejected rewrite is skipped
+  // so that one unusual item does not keep the others from being rewritten.
+  const patchResetStoryActions = async (repository) => {
+    const snapshotState = repository.getState();
+    const snapshotUpgrade = createResetStoryUpgrade(snapshotState);
+    const targets = selectResetStoryPatchTargets(snapshotState).filter(
+      ({ selectItem }) => {
+        const item = selectItem(snapshotState);
+        return snapshotUpgrade(item) !== item;
+      },
+    );
+
+    let isComplete = true;
+    for (const { label, selectItem, submit } of targets) {
+      // Earlier updates were awaited, so the project may have changed since
+      // the snapshot. The rewrite is made from the item as it is now, and
+      // nothing is awaited between reading it and submitting it.
+      const currentState = repository.getState();
+      const item = selectItem(currentState);
+      const upgradedItem = createResetStoryUpgrade(currentState)(item);
+      if (upgradedItem === item) {
+        continue;
+      }
+
+      const result = await submit(upgradedItem, item);
+      if (result?.valid === false) {
+        isComplete = false;
+        console.warn(
+          `Could not migrate the reset action of ${label}.`,
+          result.error?.message,
         );
       }
     }
+    return isComplete;
   };
 
   const applySectionTransitionResetStoryPatch = async (repository) => {
@@ -555,17 +586,21 @@ export const createProjectServiceCore = ({
       return;
     }
 
-    const repositoryState = repository.getState();
-    const sceneIdsBySectionId = selectSceneIdsBySectionId(repositoryState);
-    const upgrade = (value) =>
-      upgradeResetStoryActions(value, {
-        resolveSceneId: (sectionId) => sceneIdsBySectionId.get(sectionId),
-      });
-
-    await patchLineResetStoryActions(repositoryState, upgrade);
-    await patchLayoutResetStoryActions(repositoryState, upgrade);
-    await patchControlResetStoryActions(repositoryState, upgrade);
-    await store.app.set(SECTION_TRANSITION_RESET_STORY_PATCH_KEY, true);
+    // Route Engine still runs the deprecated action, so a project that could
+    // not be fully rewritten keeps working. A failure here must never keep
+    // the project from opening: the marker stays unset and the patch is
+    // evaluated again the next time the project is opened.
+    try {
+      const isComplete = await patchResetStoryActions(repository);
+      if (isComplete) {
+        await store.app.set(SECTION_TRANSITION_RESET_STORY_PATCH_KEY, true);
+      }
+    } catch (error) {
+      console.warn(
+        "Could not migrate reset actions to section transitions.",
+        error,
+      );
+    }
   };
 
   const applyProjectContentPatches = async (repository) => {
