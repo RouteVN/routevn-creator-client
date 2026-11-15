@@ -1025,6 +1025,59 @@ describe("links in v2 packages", () => {
     expect(actionsOf({ "link.start": "" })).toEqual({ nextLine: {} });
   });
 
+  it("upgrades resolved legacy links while retaining nested screen options", () => {
+    const plan = planV2(createLinkManifest());
+    const resource = structuredClone(
+      plan.resources.find((resource) => resource.name === "Title Menu"),
+    );
+    const screen = {
+      animations: {
+        resourceId: "animation-1",
+        playback: { speed: 2, continuity: "render" },
+      },
+    };
+    resource.data.elements.items.start.click.payload.actions = {
+      conditional: {
+        branches: [
+          {
+            actions: {
+              resetStoryAtSection: { sectionId: "link.start", screen },
+            },
+          },
+        ],
+      },
+    };
+    const [rewritten] = rewriteAssetImportPlanReferences({
+      resources: [resource],
+      linkTargets: { "link.start": "section-9" },
+      repositoryState: {
+        scenes: {
+          items: { "scene-3": { sections: { items: { "section-9": {} } } } },
+        },
+      },
+    });
+    expect(rewritten.data.elements.items.start.click.payload.actions).toEqual({
+      conditional: {
+        branches: [
+          {
+            actions: {
+              sectionTransition: {
+                sceneId: "scene-3",
+                sectionId: "section-9",
+                resetStory: true,
+                screen,
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(
+      resource.data.elements.items.start.click.payload.actions.conditional
+        .branches[0].actions,
+    ).toHaveProperty("resetStoryAtSection");
+  });
+
   it("rejects a jump without a story link, or through one of the wrong kind", () => {
     const withoutLink = createLinkManifest();
     delete withoutLink.links;

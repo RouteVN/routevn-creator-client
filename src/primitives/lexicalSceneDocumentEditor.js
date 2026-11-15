@@ -8665,6 +8665,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       visual: lineDecoration.visual,
       screenTransition: Boolean(lineDecoration.screenTransition),
       sectionTransition: Boolean(lineDecoration.sectionTransition),
+      sectionTransitionLabel: lineDecoration.sectionTransitionLabel,
       hasDialogueLayout: Boolean(lineDecoration.hasDialogueLayout),
       dialogueChangeType: lineDecoration.dialogueChangeType,
       hasControl: Boolean(lineDecoration.hasControl),
@@ -9488,6 +9489,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       container.append(
         this.createIconPreview({
           icon: "transition",
+          label: lineDecoration.sectionTransitionLabel,
         }),
       );
     }
@@ -9716,11 +9718,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   createIconPreview({
     icon,
+    label,
     isDelete = false,
     deleteDisplay = "overlay",
   } = {}) {
     const item = document.createElement("div");
     item.className = "preview-item";
+    if (label) {
+      item.title = label;
+      item.setAttribute("aria-label", label);
+    }
     const thumb = document.createElement("div");
     thumb.className = "preview-thumb";
     thumb.dataset.size = "icon";

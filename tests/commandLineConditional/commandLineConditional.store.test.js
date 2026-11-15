@@ -177,7 +177,6 @@ describe("commandLineConditional.store", () => {
     ]);
     expect(viewData.branchActionAllowedModes).toEqual([
       "sectionTransition",
-      "resetStoryAtSection",
       "updateVariable",
     ]);
   });

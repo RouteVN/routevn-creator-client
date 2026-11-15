@@ -29,7 +29,6 @@ const ACTION_INTERACTION_LABELS = {
 };
 const SETTINGS_ACTION_MODES = new Set([
   "nextLine",
-  "resetStoryAtSection",
   "rollbackByOffset",
   "toggleSkipMode",
   "startSkipMode",
@@ -50,7 +49,7 @@ const SETTINGS_ACTION_MODES = new Set([
 const ACTION_LABELS = {
   nextLine: "Next Line",
   sectionTransition: "Section Transition",
-  resetStoryAtSection: "Reset Story At Section",
+  resetStoryAtSection: "Section Transition",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
   startSkipMode: "Start Skip Mode",
@@ -76,7 +75,7 @@ const ACTION_INTERACTION_LABEL_KEYS = {
 const ACTION_LABEL_KEYS = {
   nextLine: "actionNextLine",
   sectionTransition: "actionSectionTransition",
-  resetStoryAtSection: "actionResetStoryAtSection",
+  resetStoryAtSection: "actionSectionTransition",
   toggleAutoMode: "actionToggleAutoMode",
   toggleSkipMode: "actionToggleSkipMode",
   startSkipMode: "actionStartSkipMode",
@@ -216,7 +215,12 @@ const toLayoutActionItems = (values, hiddenActionModes, copy = {}) => {
           label: getActionInteractionLabel(interactionType, copy),
           value: getActionLabel(key, copy),
         }),
-        svg: SETTINGS_ACTION_MODES.has(key) ? "settings" : `action-${key}`,
+        svg:
+          key === "resetStoryAtSection"
+            ? "action-sectionTransition"
+            : SETTINGS_ACTION_MODES.has(key)
+              ? "settings"
+              : `action-${key}`,
       })),
   );
 };

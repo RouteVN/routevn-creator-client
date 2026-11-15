@@ -3,6 +3,7 @@ import {
   canActionsNavigate,
   isNavigationActionType,
   mergeSubmittedActions,
+  upgradeResetStoryActions,
 } from "../../src/internal/navigationActions.js";
 
 const sectionTransition = { sceneId: "scene-1", sectionId: "section-2" };
@@ -142,5 +143,152 @@ describe("navigationActions", () => {
     });
 
     expect(nextActions.bgm).toBe(currentActions.bgm);
+  });
+});
+
+describe("upgradeResetStoryActions", () => {
+  const sceneIdsBySectionId = {
+    "section-2": "scene-1",
+    "section-3": "scene-2",
+  };
+  const upgrade = (value) =>
+    upgradeResetStoryActions(value, {
+      resolveSceneId: (sectionId) => sceneIdsBySectionId[sectionId],
+    });
+
+  it("rewrites a reset as a section transition that resets the story", () => {
+    expect(
+      upgrade({ resetStoryAtSection: { sectionId: "section-3" } }),
+    ).toEqual({
+      sectionTransition: {
+        sceneId: "scene-2",
+        sectionId: "section-3",
+        resetStory: true,
+      },
+    });
+  });
+
+  it("keeps the screen transition and the position among the other actions", () => {
+    const screen = { animations: { resourceId: "animation-1" } };
+    const upgraded = upgrade({
+      popOverlay: {},
+      resetStoryAtSection: { sectionId: "section-2", screen },
+      updateVariable,
+    });
+
+    expect(upgraded).toEqual({
+      popOverlay: {},
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-2",
+        screen,
+        resetStory: true,
+      },
+      updateVariable,
+    });
+    expect(Object.keys(upgraded)).toEqual([
+      "popOverlay",
+      "sectionTransition",
+      "updateVariable",
+    ]);
+  });
+
+  it("rewrites resets nested in branches, dialogs, and interaction payloads", () => {
+    expect(
+      upgrade({
+        click: {
+          payload: {
+            actions: {
+              showConfirmDialog: {
+                resourceId: "layout-1",
+                confirmActions: {
+                  popOverlay: {},
+                  resetStoryAtSection: { sectionId: "section-2" },
+                },
+              },
+            },
+          },
+        },
+        conditional: conditionalWith(
+          { resetStoryAtSection: { sectionId: "section-3" } },
+          { updateVariable },
+        ),
+      }),
+    ).toEqual({
+      click: {
+        payload: {
+          actions: {
+            showConfirmDialog: {
+              resourceId: "layout-1",
+              confirmActions: {
+                popOverlay: {},
+                sectionTransition: {
+                  sceneId: "scene-1",
+                  sectionId: "section-2",
+                  resetStory: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      conditional: conditionalWith(
+        {
+          sectionTransition: {
+            sceneId: "scene-2",
+            sectionId: "section-3",
+            resetStory: true,
+          },
+        },
+        { updateVariable },
+      ),
+    });
+  });
+
+  it("returns the same value when there is nothing to rewrite", () => {
+    const actions = {
+      sectionTransition,
+      conditional: conditionalWith({ updateVariable }, {}),
+    };
+
+    expect(upgrade(actions)).toBe(actions);
+    expect(upgrade(undefined)).toBeUndefined();
+    expect(upgrade("text")).toBe("text");
+  });
+
+  it("leaves a reset whose section no longer exists", () => {
+    const actions = { resetStoryAtSection: { sectionId: "section-9" } };
+
+    expect(upgrade(actions)).toBe(actions);
+  });
+
+  it("leaves a reset that sits next to a section transition", () => {
+    const actions = { resetStoryAtSection, sectionTransition };
+
+    expect(upgrade(actions)).toBe(actions);
+  });
+
+  it("leaves a reset without a section", () => {
+    for (const actions of [
+      { resetStoryAtSection: {} },
+      { resetStoryAtSection: { sectionId: "" } },
+      { resetStoryAtSection: "section-2" },
+    ]) {
+      expect(upgrade(actions)).toBe(actions);
+    }
+  });
+
+  it("does not change the value it was given", () => {
+    const actions = {
+      conditional: conditionalWith(
+        { resetStoryAtSection: { sectionId: "section-2" } },
+        {},
+      ),
+    };
+    const before = structuredClone(actions);
+
+    upgrade(actions);
+
+    expect(actions).toEqual(before);
   });
 });

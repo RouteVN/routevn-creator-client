@@ -2731,6 +2731,10 @@ describe("scene editor canvas entry line", () => {
   it.each([
     ["a story reset", { resetStoryAtSection: { sectionId: "section-1" } }],
     [
+      "a resetting section transition",
+      { sectionTransition: { sectionId: "section-1", resetStory: true } },
+    ],
+    [
       "a conditional transition",
       {
         conditional: {

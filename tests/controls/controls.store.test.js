@@ -77,3 +77,32 @@ describe("controls.store", () => {
     });
   });
 });
+
+it.each([
+  [{ resetStoryAtSection: { sectionId: "section-1" } }],
+  [{ sectionTransition: { sectionId: "section-1", resetStory: true } }],
+  [{ sectionTransition: { sectionId: "section-1" } }],
+])("labels all keyboard transitions as Section Transition (%j)", (actions) => {
+  const state = createInitialState();
+  setItems(
+    { state },
+    {
+      data: {
+        items: {
+          "control-1": {
+            id: "control-1",
+            type: "control",
+            name: "Control One",
+            keyboard: { enter: { payload: { actions } } },
+          },
+        },
+        tree: [{ id: "control-1" }],
+      },
+    },
+  );
+  setSelectedItemId({ state }, { itemId: "control-1" });
+  const view = selectViewData({ state, props: {}, i18n: PT_I18N });
+  expect(view.keydownKeyboardItems[0].actionLabel).toBe(
+    PT_I18N.resourcePages.actionSectionTransition,
+  );
+});

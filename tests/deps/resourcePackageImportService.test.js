@@ -645,7 +645,11 @@ describe("resourcePackageImportService", () => {
         (entry) => entry.data.name === "Title Menu",
       );
     expect(committed.data.elements.items.start.click.payload.actions).toEqual({
-      resetStoryAtSection: { sectionId: "section-1" },
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-1",
+        resetStory: true,
+      },
       pushOverlay: { resourceId: "layout.menu" },
     });
   });

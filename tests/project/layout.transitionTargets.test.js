@@ -56,14 +56,20 @@ const createProjectData = () => ({
 });
 
 describe("transition target scene extraction", () => {
-  it("resolves target scenes from scene actions that only reference section ids", () => {
-    const projectData = createProjectData();
+  it.each([false, true])(
+    "resolves target scenes from scene actions that only reference section ids (resetStory: %s)",
+    (resetStory) => {
+      const projectData = createProjectData();
+      projectData.story.scenes["scene-1"].sections[
+        "section-1"
+      ].lines[1].actions.sectionTransition.resetStory = resetStory;
 
-    expect(extractTransitionTargetSceneIds(projectData, "scene-1")).toEqual([
-      "scene-2",
-      "scene-3",
-    ]);
-  });
+      expect(extractTransitionTargetSceneIds(projectData, "scene-1")).toEqual([
+        "scene-2",
+        "scene-3",
+      ]);
+    },
+  );
 
   it("resolves target scenes from standalone actions for resetStoryAtSection", () => {
     const projectData = createProjectData();

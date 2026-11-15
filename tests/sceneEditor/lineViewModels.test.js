@@ -1,3 +1,4 @@
+import { FR_I18N } from "../support/i18n.js";
 import { describe, expect, it } from "vitest";
 import { buildSceneDocumentLineDecorations } from "../../src/internal/ui/sceneEditor/lineViewModels.js";
 
@@ -702,3 +703,23 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[2].screenTransition).toBe(false);
   });
 });
+
+it.each([
+  [{ resetStoryAtSection: { sectionId: "section-1" } }],
+  [{ sectionTransition: { sectionId: "section-1", resetStory: true } }],
+  [{ sectionTransition: { sectionId: "section-1" } }],
+])(
+  "shows localized transition summaries in line decorations (%j)",
+  (actions) => {
+    const [decoration] = buildSceneDocumentLineDecorations({
+      lines: [{ id: "line-1", actions }],
+      repositoryState: {},
+      sectionLineChanges: {},
+      i18n: FR_I18N,
+    });
+    expect(decoration.sectionTransition).toBe(true);
+    expect(decoration.sectionTransitionLabel).toBe(
+      FR_I18N.resourcePages.actionSectionTransition,
+    );
+  },
+);

@@ -48,12 +48,6 @@ const SYSTEM_ACTION_SECTIONS = [
       mode: "sectionTransition",
     },
     {
-      id: "24",
-      label: "Reset Story At Section",
-      icon: "settings",
-      mode: "resetStoryAtSection",
-    },
-    {
       id: "19",
       label: "Rollback",
       icon: "settings",
@@ -241,12 +235,6 @@ const PRESENTATION_ACTION_SECTIONS = [
       label: "Section Transition",
       icon: "transition",
       mode: "sectionTransition",
-    },
-    {
-      id: "24",
-      label: "Reset Story At Section",
-      icon: "settings",
-      mode: "resetStoryAtSection",
     },
     {
       id: "11",

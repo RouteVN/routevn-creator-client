@@ -186,14 +186,14 @@ describe("systemActions.handlers", () => {
     });
   });
 
-  it("replaces the navigation action already in the list with a submitted one", () => {
+  it("replaces a legacy reset with a resetting section transition", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
 
     updateActions(
       { state },
       {
-        sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+        resetStoryAtSection: { sectionId: "section-2" },
         toggleAutoMode: {},
       },
     );
@@ -213,20 +213,34 @@ describe("systemActions.handlers", () => {
       {
         _event: {
           stopPropagation: () => {},
-          detail: { resetStoryAtSection: { sectionId: "section-3" } },
+          detail: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-3",
+              resetStory: true,
+            },
+          },
         },
       },
     );
 
     expect(selectAction({ state })).toEqual({
       toggleAutoMode: {},
-      resetStoryAtSection: { sectionId: "section-3" },
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-3",
+        resetStory: true,
+      },
     });
     // The host applies the same rule when it merges the submitted actions.
     expect(dispatchedEvents).toHaveLength(1);
     expect(dispatchedEvents[0].type).toBe("actions-change");
     expect(dispatchedEvents[0].detail).toEqual({
-      resetStoryAtSection: { sectionId: "section-3" },
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-3",
+        resetStory: true,
+      },
     });
   });
 

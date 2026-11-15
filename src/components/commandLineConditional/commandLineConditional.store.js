@@ -23,11 +23,7 @@ import {
 
 const DEFAULT_BRANCH_LABEL = "Default branch";
 
-const BRANCH_ACTION_ALLOWED_MODES = [
-  "sectionTransition",
-  "resetStoryAtSection",
-  "updateVariable",
-];
+const BRANCH_ACTION_ALLOWED_MODES = ["sectionTransition", "updateVariable"];
 
 const toPlainObject = (value) => {
   return value && typeof value === "object" && !Array.isArray(value)

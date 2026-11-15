@@ -1,7 +1,7 @@
 // Route Engine runs at most one navigation action per action batch. It
 // refuses a batch that holds two, and one whose conditional branch navigates
 // while the batch has a navigation action of its own. These are the action
-// types of its navigation phase (route-engine-js 1.49.0), which it does not
+// types of its navigation phase (route-engine-js 1.51.0), which it does not
 // export.
 export const NAVIGATION_ACTION_TYPES = Object.freeze([
   "loadSlot",
@@ -70,4 +70,61 @@ export const mergeSubmittedActions = (currentActions, submittedActions) => {
     ...keptActions,
     ...submittedActions,
   };
+};
+
+const isPlainObject = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const canUpgradeResetStoryAction = (actions, resolveSceneId) => {
+  const resetAction = actions.resetStoryAtSection;
+  return (
+    isPlainObject(resetAction) &&
+    typeof resetAction.sectionId === "string" &&
+    resetAction.sectionId.length > 0 &&
+    // Two navigation actions in one set is already invalid for Route Engine.
+    // Which one the author meant is not ours to guess.
+    actions.sectionTransition === undefined &&
+    resolveSceneId(resetAction.sectionId) !== undefined
+  );
+};
+
+// Rewrites every deprecated resetStoryAtSection action inside the value, at
+// any depth, as a sectionTransition that resets the story. Route Engine runs
+// both the same way. A reset whose section no longer exists is left as it is.
+// Returns the value itself when it holds nothing to rewrite.
+export const upgradeResetStoryActions = (value, { resolveSceneId }) => {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const nextItems = value.map((item) => {
+      const nextItem = upgradeResetStoryActions(item, { resolveSceneId });
+      changed = changed || nextItem !== item;
+      return nextItem;
+    });
+    return changed ? nextItems : value;
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const upgradesResetAction = canUpgradeResetStoryAction(value, resolveSceneId);
+  let changed = false;
+  const nextValue = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "resetStoryAtSection" && upgradesResetAction) {
+      // Takes the place of the action it replaces, so action order is kept.
+      nextValue.sectionTransition = {
+        sceneId: resolveSceneId(entry.sectionId),
+        ...upgradeResetStoryActions(entry, { resolveSceneId }),
+        resetStory: true,
+      };
+      changed = true;
+      continue;
+    }
+
+    const nextEntry = upgradeResetStoryActions(entry, { resolveSceneId });
+    changed = changed || nextEntry !== entry;
+    nextValue[key] = nextEntry;
+  }
+  return changed ? nextValue : value;
 };

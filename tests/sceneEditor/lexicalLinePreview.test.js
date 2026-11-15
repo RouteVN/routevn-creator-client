@@ -1,5 +1,6 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
+import { FR_I18N } from "../support/i18n.js";
 
 const installDomGlobals = () => {
   const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -486,4 +487,36 @@ describe("lexical scene document editor line previews", () => {
       restoreDomGlobals();
     }
   });
+});
+
+it("renders a localized transition label and redraws when the locale changes", async () => {
+  const restore = installDomGlobals();
+  try {
+    const { LexicalSceneDocumentEditorElement } = await import(
+      "../../src/primitives/lexicalSceneDocumentEditor.js"
+    );
+    const prototype = LexicalSceneDocumentEditorElement.prototype;
+    const host = {
+      createSvgIcon: () => document.createElement("rtgl-svg"),
+      createIconPreview: prototype.createIconPreview,
+    };
+    const decoration = {
+      sectionTransition: true,
+      sectionTransitionLabel: FR_I18N.resourcePages.actionSectionTransition,
+    };
+    const items = prototype.createPreviewItems.call(host, decoration);
+    const preview = items.querySelector(".preview-item");
+    expect(preview.title).toBe(decoration.sectionTransitionLabel);
+    expect(preview.getAttribute("aria-label")).toBe(
+      decoration.sectionTransitionLabel,
+    );
+    expect(prototype.buildRightGutterSignature(decoration)).not.toBe(
+      prototype.buildRightGutterSignature({
+        ...decoration,
+        sectionTransitionLabel: "Section Transition",
+      }),
+    );
+  } finally {
+    restore();
+  }
 });

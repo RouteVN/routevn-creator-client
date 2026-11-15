@@ -1,3 +1,5 @@
+import { upgradeResetStoryActions } from "./navigationActions.js";
+import { findSceneIdBySectionId } from "./project/projection.js";
 import { validatePayload } from "@routevn/creator-model";
 import {
   ASSET_PACKAGE_KIND,
@@ -1410,7 +1412,7 @@ export const rewriteAssetImportPlanReferences = ({
     );
   return resources.map((resource) => {
     const linkIds = new Set(resource.linkIds ?? []);
-    const data = keepAssetPackageCharacterSprites(
+    const linkedData = keepAssetPackageCharacterSprites(
       mapAssetPackageLinks(
         rewriteMappedReferences(resource.data, {
           fileIdBySourceId: fileIdMap,
@@ -1420,6 +1422,10 @@ export const rewriteAssetImportPlanReferences = ({
       ),
       isKeptCharacterSprite,
     );
+    const data = upgradeResetStoryActions(linkedData, {
+      resolveSceneId: (sectionId) =>
+        findSceneIdBySectionId(repositoryState?.scenes, sectionId),
+    });
     if (resourceNames[resource.sourceId] !== undefined) {
       data.name = resourceNames[resource.sourceId].trim();
     }

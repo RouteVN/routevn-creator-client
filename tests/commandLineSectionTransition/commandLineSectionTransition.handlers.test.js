@@ -103,6 +103,28 @@ describe("commandLineSectionTransition.handlers", () => {
     return { dispatchEvent, showAlert };
   };
 
+  it.each([undefined, false, true])(
+    "authors resetStory only when enabled (%s)",
+    (resetStory) => {
+      const { dispatchEvent } = submit({
+        sceneId: "scene-1",
+        sectionId: "section-2",
+        resetStory,
+      });
+      const action = dispatchEvent.mock.calls[0][0].detail.sectionTransition;
+      if (resetStory) {
+        expect(action).toEqual({
+          sceneId: "scene-1",
+          sectionId: "section-2",
+          resetStory: true,
+        });
+      } else {
+        expect(action).toEqual({ sceneId: "scene-1", sectionId: "section-2" });
+        expect(action).not.toHaveProperty("resetStory");
+      }
+    },
+  );
+
   it("removes the action when the scene and section are cleared", () => {
     const { dispatchEvent, showAlert } = submit({
       transitionAnimationId: "screen-crossfade",
@@ -113,6 +135,19 @@ describe("commandLineSectionTransition.handlers", () => {
     expect(dispatchEvent.mock.calls[0][0].type).toBe("action-delete");
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
       actionType: "sectionTransition",
+    });
+  });
+
+  it("deletes the legacy key when its editor is cleared", () => {
+    const dispatchEvent = vi.fn();
+    handleSubmitClick({
+      props: { resetStoryAtSection: { sectionId: "section-2" } },
+      dispatchEvent,
+      i18n: EN_I18N,
+      store: { selectSubmitData: () => ({ formValues: {}, scenes: SCENES }) },
+    });
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      actionType: "resetStoryAtSection",
     });
   });
 
@@ -217,6 +252,70 @@ describe("commandLineSectionTransition.handlers", () => {
       return selectViewData({ state, props, i18n: EN_I18N });
     };
 
+    it.each([false, true])(
+      "prefills an existing transition's reset option (%s)",
+      async (resetStory) => {
+        const viewData = await mount({
+          sectionTransition: {
+            sceneId: "scene-2",
+            sectionId: "section-2",
+            resetStory,
+          },
+        });
+        expect(viewData.defaultValues.resetStory).toBe(resetStory);
+      },
+    );
+
+    it("prefills a legacy reset with its target scene and animation", async () => {
+      const viewData = await mount({
+        currentSceneId: "scene-1",
+        resetStoryAtSection: {
+          sectionId: "section-2",
+          screen: {
+            animations: {
+              resourceId: "animation-1",
+              playback: { speed: 2, continuity: "persistent" },
+            },
+          },
+        },
+      });
+      expect(viewData.defaultValues).toEqual({
+        sceneId: "scene-2",
+        sectionId: "section-2",
+        resetStory: true,
+        transitionAnimationId: "animation-1",
+        playbackSpeed: 2,
+        playbackContinuity: "persistent",
+      });
+      const { dispatchEvent } = submit({
+        ...viewData.defaultValues,
+        sceneId: "scene-1",
+      });
+      expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+        sectionTransition: {
+          sceneId: "scene-1",
+          sectionId: "section-2",
+          resetStory: true,
+          screen: {
+            animations: {
+              resourceId: "animation-1",
+              playback: { speed: 2, continuity: "persistent" },
+            },
+          },
+        },
+      });
+    });
+
+    it("keeps a missing legacy target editable with reset enabled", async () => {
+      const viewData = await mount({
+        resetStoryAtSection: { sectionId: "section-missing" },
+      });
+      expect(viewData.defaultValues).toMatchObject({
+        sectionId: "section-missing",
+        resetStory: true,
+      });
+    });
+
     it("shows the scene of a transition saved with only its section", async () => {
       // The layout editor has no current scene.
       const viewData = await mount({
@@ -260,7 +359,10 @@ describe("commandLineSectionTransition.handlers", () => {
     it("starts a new transition in the current scene", async () => {
       const viewData = await mount({ currentSceneId: "scene-1" });
 
-      expect(viewData.defaultValues).toMatchObject({ sceneId: "scene-1" });
+      expect(viewData.defaultValues).toMatchObject({
+        sceneId: "scene-1",
+        resetStory: false,
+      });
       expect(viewData.context.sectionOptions).toEqual([
         { value: "section-1", label: "One" },
       ]);

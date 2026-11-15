@@ -209,31 +209,38 @@ describe("scene editor section operations", () => {
     expect(actions).toEqual(defaultFirstLineActions);
   });
 
-  it("does not copy navigation or line-only actions into a new section", async () => {
-    const background = { resourceId: "background-1" };
-    const actions = await createFirstLineActions({
-      presentationState: {
-        background,
-        dialogue: {
-          ui: { resourceId: "dialogue-layout" },
-          mode: "adv",
-          content: [{ text: "Hello" }],
+  it.each([false, true])(
+    "does not copy navigation or line-only actions into a new section (resetStory: %s)",
+    async (resetStory) => {
+      const background = { resourceId: "background-1" };
+      const actions = await createFirstLineActions({
+        presentationState: {
+          background,
+          dialogue: {
+            ui: { resourceId: "dialogue-layout" },
+            mode: "adv",
+            content: [{ text: "Hello" }],
+          },
+          control,
+          sectionTransition: {
+            sceneId: "scene-1",
+            sectionId: "section-3",
+            resetStory,
+          },
+          resetStoryAtSection: { sectionId: "section-1" },
+          nextLine: {},
+          conditional: { branches: [] },
+          rollbackByOffset: { offset: -1 },
+          voice: { resourceId: "voice-1" },
+          layout: { resourceId: "layout-1" },
+          animation: { resourceId: "animation-1" },
         },
-        control,
-        sectionTransition: { sceneId: "scene-1", sectionId: "section-3" },
-        resetStoryAtSection: { sectionId: "section-1" },
-        nextLine: {},
-        conditional: { branches: [] },
-        rollbackByOffset: { offset: -1 },
-        voice: { resourceId: "voice-1" },
-        layout: { resourceId: "layout-1" },
-        animation: { resourceId: "animation-1" },
-      },
-      inheritPresentationFromSelectedLine: true,
-    });
+        inheritPresentationFromSelectedLine: true,
+      });
 
-    expect(actions).toEqual({ ...defaultFirstLineActions, background });
-  });
+      expect(actions).toEqual({ ...defaultFirstLineActions, background });
+    },
+  );
 
   it("keeps only the persistent sound effect channels", async () => {
     const rain = {

@@ -241,7 +241,8 @@ const buildVisualPreview = (repositoryState, changes) => {
 
 const buildSectionTransitionPreview = (line) => {
   const lineActions = normalizeLineActions(line.actions || {});
-  const transitionData = lineActions?.sectionTransition;
+  const transitionData =
+    lineActions.sectionTransition ?? lineActions.resetStoryAtSection;
   if (!transitionData) {
     return false;
   }
@@ -310,8 +311,10 @@ const buildSceneDocumentLineViewModels = ({
   lines,
   repositoryState,
   sectionLineChanges,
+  i18n,
 }) => {
   const characterLookups = buildCharacterLookups(repositoryState);
+  const copy = i18n?.resourcePages;
 
   const viewModels = (lines || []).map((line, index) => {
     const lineActions = normalizeLineActions(line.actions || {});
@@ -356,6 +359,8 @@ const buildSceneDocumentLineViewModels = ({
       visual: buildVisualPreview(repositoryState, changes),
       screenTransition: buildScreenTransitionPreview(lineActions),
       sectionTransition: buildSectionTransitionPreview(line),
+      sectionTransitionLabel:
+        copy?.actionSectionTransition ?? "Section Transition",
       hasChoices: choicesPreview.hasChoices,
       hasConditional: buildConditionalPreview(lineActions),
       hasUpdateVariable: buildUpdateVariablePreview(lineActions),
@@ -381,10 +386,12 @@ export const buildSceneDocumentLineDecorations = ({
   lines,
   repositoryState,
   sectionLineChanges,
+  i18n,
 }) => {
   return buildSceneDocumentLineViewModels({
     lines,
     repositoryState,
     sectionLineChanges,
+    i18n,
   });
 };

@@ -6,9 +6,31 @@ import {
   setFormValues,
   setScenes,
 } from "../../src/components/commandLineSectionTransition/commandLineSectionTransition.store.js";
-import { EN_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N } from "../support/i18n.js";
 
 describe("commandLineSectionTransition.store", () => {
+  it.each([EN_I18N, JA_I18N])(
+    "localizes the reset option and helper description",
+    (i18n) => {
+      const view = selectViewData({
+        state: createInitialState(),
+        props: {},
+        i18n,
+      });
+      expect(view.defaultValues.resetStory).toBe(false);
+      expect(
+        view.form.fields.find((field) => field.name === "resetStory"),
+      ).toMatchObject({
+        label: i18n.commandLinePage["Reset story"],
+        tooltip: { content: i18n.commandLinePage.resetStoryDescription },
+        options: [
+          { value: false, label: i18n.commandLinePage.No },
+          { value: true, label: i18n.commandLinePage.Yes },
+        ],
+      });
+    },
+  );
+
   it("builds transition animation options from animation resources", () => {
     const state = createInitialState();
 
@@ -90,12 +112,12 @@ describe("commandLineSectionTransition.store", () => {
       type: "row",
       fields: [{ name: "sceneId" }, { name: "sectionId" }],
     });
-    expect(viewData.form.fields[1]).toMatchObject({
+    expect(viewData.form.fields[2]).toMatchObject({
       name: "transitionAnimationId",
       label: "Animation",
       type: "select",
     });
-    expect(viewData.form.fields[2]).toMatchObject({
+    expect(viewData.form.fields[3]).toMatchObject({
       type: "row",
       fields: [
         {
