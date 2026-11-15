@@ -1,12 +1,16 @@
 // Canvas work for spritesheets made from separate frame pictures.
 
-export const loadImageFromUrl = (url) => {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Unable to load image"));
-    image.src = url;
+// Waits until the picture is decoded, not just loaded, before it is drawn. A
+// picture that loads but fails to decode ahead of time is still drawn.
+export const loadImageFromUrl = async (url) => {
+  const image = await new Promise((resolve, reject) => {
+    const loadingImage = new Image();
+    loadingImage.onload = () => resolve(loadingImage);
+    loadingImage.onerror = () => reject(new Error("Unable to load image"));
+    loadingImage.src = url;
   });
+  await image.decode().catch(() => {});
+  return image;
 };
 
 const createCanvas = (width, height) => {

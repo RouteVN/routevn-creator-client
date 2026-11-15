@@ -699,7 +699,9 @@ export const runSpritesheetFormatCase = async (caseName) => {
     const signature = await getBlobSignature(fileStore.files.get(frame.fileId));
     const expected = await getBlobSignature(savedCrops[index]);
     if (signature !== expected) {
-      problems.push(`reopened: frame ${index} does not match the saved sheet`);
+      problems.push(
+        `reopened: frame ${index} is ${signature}, the saved sheet has ${expected}`,
+      );
     }
   }
 
