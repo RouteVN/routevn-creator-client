@@ -215,43 +215,112 @@ export const normalizeSpritesheetAtlas = (atlasInput = {}) => {
 const FRAME_FILE_EXTENSION = /\.(png|jpe?g|webp|gif|bmp|ase|aseprite)$/i;
 const NUMBERED_FRAME_NAME = /^(.*?)[\s._-]*\d+$/;
 
-// The animation a frame belongs to by its name: its folder
-// (`run/frame0003` is `run`), or its name before the number (`walk_02.png` is
-// `walk`). A name without either belongs to none.
-const getFrameSequenceName = (frameName) => {
+// A frame's name without its extension, its folder, and what its name is
+// known by within the folder: the name before its number (`walk_02` is
+// `walk`), or the whole name when it has no number.
+const parseFrameName = (frameName) => {
   const name = frameName.replace(FRAME_FILE_EXTENSION, "");
   const folderEnd = name.lastIndexOf("/");
-  if (folderEnd > 0) {
-    return name.slice(0, folderEnd);
-  }
+  const folder = folderEnd > 0 ? name.slice(0, folderEnd) : undefined;
+  const baseName = folderEnd > 0 ? name.slice(folderEnd + 1) : name;
+  const numberedPrefix = baseName.match(NUMBERED_FRAME_NAME)?.[1];
 
-  const prefix = name.match(NUMBERED_FRAME_NAME)?.[1];
-  return prefix ? prefix : undefined;
+  return {
+    name,
+    folder,
+    numberedPrefix,
+    key: numberedPrefix ?? baseName,
+  };
 };
 
-// For a sheet without named animations: frames that share a folder or a name
-// before their number become one animation each, in number order. Frames in
-// no animation stay in the sheet.
+// The animation each frame belongs to by its name. Frames in a folder belong
+// to the folder (`run/frame0003` is `run`), unless the folder holds several
+// sequences (`hero/walk_01` and `hero/run_01` are `hero/walk` and
+// `hero/run`). Other frames belong to their name before the number
+// (`walk_02.png` is `walk`). A frame without either belongs to none.
+const resolveSequenceNames = (frameNames = []) => {
+  const parsedNames = frameNames.map(parseFrameName);
+  const keysByFolder = new Map();
+  for (const { folder, key } of parsedNames) {
+    if (folder !== undefined) {
+      keysByFolder.set(
+        folder,
+        (keysByFolder.get(folder) ?? new Set()).add(key),
+      );
+    }
+  }
+
+  return parsedNames.map(({ name, folder, numberedPrefix }) => {
+    if (folder === undefined) {
+      return numberedPrefix || undefined;
+    }
+
+    if (keysByFolder.get(folder).size === 1) {
+      return folder;
+    }
+
+    return numberedPrefix === undefined
+      ? name
+      : numberedPrefix
+        ? `${folder}/${numberedPrefix}`
+        : folder;
+  });
+};
+
+// For a sheet without named animations: frames of one sequence become one
+// animation each, in number order. Once a sheet has a sequence, every other
+// frame becomes an animation of its own, so each can still be shown. A sheet
+// without sequences returns nothing.
 const groupFramesBySequenceName = (frameNames = []) => {
+  const sequenceNames = resolveSequenceNames(frameNames);
   const groups = new Map();
-  for (const frameName of frameNames) {
-    const sequenceName = getFrameSequenceName(frameName);
+  frameNames.forEach((frameName, index) => {
+    const sequenceName = sequenceNames[index];
     if (sequenceName) {
       groups.set(sequenceName, [
         ...(groups.get(sequenceName) ?? []),
         frameName,
       ]);
     }
-  }
+  });
 
-  return Object.fromEntries(
+  const sequences = new Set(
     [...groups]
       .filter(([, names]) => names.length > 1)
-      .map(([sequenceName, names]) => [
-        sequenceName,
-        [...names].sort(compareFrameFileNames),
-      ]),
+      .map(([sequenceName]) => sequenceName),
   );
+  if (sequences.size === 0) {
+    return {};
+  }
+
+  const clips = {};
+  const takeClipName = (name) => {
+    let clipName = name;
+    let suffix = 2;
+    while (clips[clipName] || sequences.has(clipName)) {
+      clipName = `${name}_${suffix}`;
+      suffix += 1;
+    }
+    return clipName;
+  };
+
+  frameNames.forEach((frameName, index) => {
+    const sequenceName = sequenceNames[index];
+    if (sequences.has(sequenceName)) {
+      if (!clips[sequenceName]) {
+        clips[sequenceName] = [...groups.get(sequenceName)].sort(
+          compareFrameFileNames,
+        );
+      }
+      return;
+    }
+
+    clips[takeClipName(parseFrameName(frameName).name || frameName)] = [
+      frameName,
+    ];
+  });
+
+  return clips;
 };
 
 const buildClipFrameNames = (atlas = {}) => {
@@ -403,6 +472,13 @@ export const mergeSpritesheetAtlasPages = ({
   return { sheetWidth, sheetHeight, placements, atlas: { frames, meta } };
 };
 
+// A frame's name without its picture's file extension. Other dots stay, so
+// `hero.idle.v2.png` is `hero.idle.v2` and `walk.001` keeps its number.
+export const getSpritesheetFrameDisplayName = (frameName = "") =>
+  String(frameName || "")
+    .replace(FRAME_FILE_EXTENSION, "")
+    .trim();
+
 export const getSpritesheetDisplayName = (fileName = "") => {
   return String(fileName || "")
     .replace(/\.[^.]+$/, "")
@@ -434,6 +510,18 @@ export const parseSpritesheetAtlasFile = async ({ atlasFile } = {}) => {
     atlasInput = JSON.parse(atlasText);
   } catch {
     throw new Error("Spritesheet JSON is invalid.");
+  }
+
+  // A sheet split over several images needs its PNG files, which merge its
+  // images into one sheet first.
+  const imageNames = getSpritesheetAtlasImageNames(atlasInput);
+  if (imageNames.length > 1) {
+    const error = new Error(
+      `The JSON needs these images: ${imageNames.join(", ")}`,
+    );
+    error.code = "spritesheet_images_missing";
+    error.missingImages = imageNames;
+    throw error;
   }
 
   const jsonData = normalizeSpritesheetAtlas(atlasInput);

@@ -73,7 +73,7 @@ template:
           - 'rtgl-view#framesPanel d=v w=f g=md p=md bw=xs bc=bo br=md style="box-sizing: border-box;"':
               - rtgl-view d=h w=f av=c g=md:
                   - rtgl-text w=1fg s=md: ${framesTitle}
-                  - rtgl-button#addPicturesButton v=se s=sm pre=plus: ${copy.addPicturesButton}
+                  - rtgl-button#addPicturesButton v=se s=sm pre=plus ?disabled=${addPicturesDisabled}: ${copy.addPicturesButton}
               - $if isLoading:
                   - 'rtgl-view w=f h=96 av=c ah=c':
                       - rtgl-text s=sm c=mu-fg: ${copy.loadingFramesLabel}
@@ -112,7 +112,7 @@ template:
                   - 'rtgl-view av=c ah=c p=md bw=xs bc=bo br=md bgc=mu style="box-sizing: border-box; ${previewBoxStyle}"':
                       - rtgl-text s=sm c=mu-fg ta=c: ${previewPlaceholderLabel}
           - $if previewErrorMessage:
-              - rtgl-text s=sm c=er: ${previewErrorMessage}
+              - 'rtgl-text s=sm c=er style="white-space: pre-line;"': ${previewErrorMessage}
           - $if showConversionNote:
               - rtgl-view d=h w=f g=sm p=sm bgc=mu br=md:
                   - rtgl-svg svg=info wh=16 c=mu-fg: null

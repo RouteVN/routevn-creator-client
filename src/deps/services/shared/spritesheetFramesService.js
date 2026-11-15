@@ -4,20 +4,25 @@ import {
   readImageSizeFromUrl,
   renderSpritesheetImage,
 } from "../../clients/web/spritesheetCanvas.js";
+import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
 import {
   getSpritesheetAtlasImageNames,
+  getSpritesheetDisplayName,
+  getSpritesheetFrameDisplayName,
   matchSpritesheetImageFiles,
   mergeSpritesheetAtlasPages,
 } from "../../../internal/spritesheetAtlas.js";
 import {
   SPRITESHEET_FRAME_PADDING,
   buildSpritesheetFramesOutput,
-  getFrameNameFromFileName,
   getSpritesheetFrameCrops,
   getSpritesheetSizeLimitError,
 } from "../../../internal/spritesheetFrames.js";
 
 const PNG_MIME_TYPE = "image/png";
+// Frame pictures are read a few at a time: in parallel, without opening
+// hundreds of files at once.
+const FRAME_READ_CONCURRENCY = 8;
 
 const createSpritesheetFramesError = (code, message, details = {}) => {
   const error = new Error(message);
@@ -50,11 +55,12 @@ const readAtlasJson = async (atlasFile) => {
 };
 
 // Every picture is copied into a blob URL the caller owns, so canvas reads
-// never depend on where a platform serves project files from.
-const createOwnedFrame = async ({ blob, name, file, fileId }) => {
+// never depend on where a platform serves project files from. A picture of
+// unknown size is decoded to read it.
+const createOwnedFrame = async ({ blob, name, file, fileId, size }) => {
   const url = URL.createObjectURL(blob);
   try {
-    const { width, height } = await readImageSizeFromUrl(url);
+    const { width, height } = size ?? (await readImageSizeFromUrl(url));
     return { name, file, fileId, url, width, height };
   } catch (error) {
     URL.revokeObjectURL(url);
@@ -98,45 +104,51 @@ export const createSpritesheetFramesService = ({
     // Reads picked or dropped pictures. Pictures that cannot be read are
     // returned in `failedFiles` instead of stopping the others.
     async readSpritesheetFrameFiles({ files = [] } = {}) {
-      const frames = [];
-      const failedFiles = [];
+      const results = await processWithConcurrency(
+        files,
+        async (file) => {
+          try {
+            return {
+              frame: await createOwnedFrame({
+                blob: file,
+                file,
+                name: getSpritesheetFrameDisplayName(file.name),
+              }),
+            };
+          } catch {
+            return { failedFile: file };
+          }
+        },
+        { concurrency: FRAME_READ_CONCURRENCY },
+      );
 
-      for (const file of files) {
-        try {
-          frames.push(
-            await createOwnedFrame({
-              blob: file,
-              file,
-              name: getFrameNameFromFileName(file.name),
-            }),
-          );
-        } catch {
-          failedFiles.push(file);
-        }
-      }
-
-      return { frames, failedFiles };
+      return {
+        frames: results.map((result) => result.frame).filter(Boolean),
+        failedFiles: results.map((result) => result.failedFile).filter(Boolean),
+      };
     },
 
     async loadSpritesheetFrameFileIds({ fileIds = [] } = {}) {
-      const frames = [];
+      const loadedFrames = [];
       try {
-        for (const fileId of fileIds) {
-          frames.push(
-            await createOwnedFrame({
+        return await processWithConcurrency(
+          fileIds,
+          async (fileId) => {
+            const frame = await createOwnedFrame({
               blob: await readFileIdBlob(fileId),
               fileId,
-            }),
-          );
-        }
+            });
+            loadedFrames.push(frame);
+            return frame;
+          },
+          { concurrency: FRAME_READ_CONCURRENCY, stopOnError: true },
+        );
       } catch (error) {
-        for (const frame of frames) {
+        for (const frame of loadedFrames) {
           URL.revokeObjectURL(frame.url);
         }
         throw error;
       }
-
-      return frames;
     },
 
     // Cuts an existing sheet into one PNG file per atlas frame, at each
@@ -155,13 +167,20 @@ export const createSpritesheetFramesService = ({
       try {
         const blobs = await cropSpritesheetFrames({ url: sheetUrl, crops });
         for (const [index, crop] of crops.entries()) {
-          const name = getFrameNameFromFileName(crop.name) || crop.name;
+          const name = getSpritesheetFrameDisplayName(crop.name) || crop.name;
           const file = new File(
             [blobs[index]],
             `${toSafeFileBaseName(name)}.png`,
             { type: PNG_MIME_TYPE },
           );
-          frames.push(await createOwnedFrame({ blob: file, file, name }));
+          frames.push(
+            await createOwnedFrame({
+              blob: file,
+              file,
+              name,
+              size: { width: crop.outputWidth, height: crop.outputHeight },
+            }),
+          );
         }
       } catch (error) {
         for (const frame of frames) {
@@ -175,17 +194,15 @@ export const createSpritesheetFramesService = ({
       return frames;
     },
 
-    getSpritesheetSizeLimitError: getSizeLimitError,
-
-    // Renders the sheet a draft would produce, for the editor preview.
-    async renderSpritesheetFramesPreview(draft = {}) {
-      const output = buildSpritesheetFramesOutput(draft);
+    // Renders the sheet of a `buildSpritesheetFramesOutput` result, for the
+    // editor preview.
+    async renderSpritesheetFramesPreview(output) {
       const limitError = getSizeLimitError(output);
       if (limitError) {
-        return { output, limitError };
+        return { limitError };
       }
 
-      return { output, blob: await renderOutputImage(output) };
+      return { blob: await renderOutputImage(output) };
     },
 
     // Pairs the picked PNG files with the JSON and returns `{ pngFile,
@@ -218,7 +235,7 @@ export const createSpritesheetFramesService = ({
       try {
         const pageSizes = await Promise.all(urls.map(readImageSizeFromUrl));
         const baseName = toSafeFileBaseName(
-          getFrameNameFromFileName(atlasFile.name),
+          getSpritesheetDisplayName(atlasFile.name),
         );
         const merged = mergeSpritesheetAtlasPages({
           atlas,
@@ -256,12 +273,11 @@ export const createSpritesheetFramesService = ({
 
     // Renders the sheet, uploads the new frame pictures and the sheet, and
     // returns the spritesheet fields to save with the file records to add.
+    // `sourceIndexByFrameKey` is each frame's index in the new sheet.
     async buildSpritesheetFromFrames({
       frames,
       clips,
       keepFrameKeys,
-      frameWidth,
-      frameHeight,
       name,
     } = {}) {
       const baseName = toSafeFileBaseName(name);
@@ -269,8 +285,6 @@ export const createSpritesheetFramesService = ({
         frames,
         clips,
         keepFrameKeys,
-        frameWidth,
-        frameHeight,
         imageName: `${baseName}.png`,
       });
       const limitError = getSizeLimitError(output);
@@ -330,6 +344,9 @@ export const createSpritesheetFramesService = ({
         data,
         fileIdByFrameKey: Object.fromEntries(
           output.frames.map((frame, index) => [frame.key, frameFileIds[index]]),
+        ),
+        sourceIndexByFrameKey: Object.fromEntries(
+          output.frames.map((frame, index) => [frame.key, index]),
         ),
         fileRecords: [
           ...frameUploads.flatMap((result) => result.fileRecords ?? []),

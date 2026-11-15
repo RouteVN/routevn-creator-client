@@ -1,7 +1,3 @@
-export function startNew(payload = {}) {
-  return this.transformedHandlers.handleStartNew(payload);
-}
-
 export function loadSpritesheet(payload = {}) {
   return this.transformedHandlers.handleLoadSpritesheet(payload);
 }

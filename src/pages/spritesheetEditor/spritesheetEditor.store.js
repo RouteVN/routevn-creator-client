@@ -28,6 +28,12 @@ export const discardChanges = ({ state }) => {
   state.discardChanges = true;
 };
 
+// An edit after choosing to leave, when the page stayed open after all,
+// saves again.
+export const keepChanges = ({ state }) => {
+  state.discardChanges = false;
+};
+
 export const selectTarget = ({ state }) => state.target;
 
 export const selectShouldDiscardChanges = ({ state }) => state.discardChanges;

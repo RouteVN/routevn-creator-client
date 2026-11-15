@@ -3,7 +3,11 @@ import {
   parseSpritesheetAtlasFile,
   parseSpritesheetImport,
 } from "../spritesheetAtlas.js";
-import { getSpritesheetFramesDraftError } from "../spritesheetFrames.js";
+import {
+  buildAnimationsFromSourceIndexes,
+  getSpritesheetFramesDraftError,
+} from "../spritesheetFrames.js";
+import { resolveSpritesheetSize } from "../spritesheets.js";
 import { formatI18nCopy, selectI18nCopy } from "./i18nCopy.js";
 import { showResourcePageError } from "./resourcePages/resourcePageErrors.js";
 
@@ -120,16 +124,21 @@ export const readSpritesheetSourceFiles = async ({
   };
 };
 
+const getMissingImagesMessage = (i18n, missingImages = []) => {
+  const copy = selectSpritesheetFramesCopy(i18n);
+  return missingImages.length > 0
+    ? formatI18nCopy(copy.missingSheetImagesMessage, {
+        names: missingImages.join(", "),
+      })
+    : copy.singleSheetImageMessage;
+};
+
 // What to tell the user about picked spritesheet files they can fix, or
 // undefined for any other failure.
 const getSourceFilesMessage = (i18n, error) => {
   const copy = selectSpritesheetFramesCopy(i18n);
   if (error?.code === "spritesheet_images_missing") {
-    return error.missingImages.length > 0
-      ? formatI18nCopy(copy.missingSheetImagesMessage, {
-          names: error.missingImages.join(", "),
-        })
-      : copy.singleSheetImageMessage;
+    return getMissingImagesMessage(i18n, error.missingImages);
   }
 
   if (error?.code === "spritesheet_too_large") {
@@ -144,6 +153,26 @@ const getSourceFilesMessage = (i18n, error) => {
   }
 
   return undefined;
+};
+
+// The PNG files a JSON for several images still needs, when it was picked
+// before them. That JSON stays picked while they are chosen.
+export const getAwaitedSpritesheetImages = ({ error, pngFiles = [] } = {}) =>
+  error?.code === "spritesheet_images_missing" && pngFiles.length === 0
+    ? error.missingImages
+    : undefined;
+
+// Tells the user which PNG files the picked JSON still needs.
+export const showMissingSpritesheetImages = ({
+  appService,
+  i18n,
+  missingImages,
+} = {}) => {
+  showWarning({
+    appService,
+    message: getMissingImagesMessage(i18n, missingImages),
+    i18n,
+  });
 };
 
 // Tells the user why the picked PNG and JSON files cannot be read.
@@ -189,23 +218,46 @@ const getDraftBlockedMessage = (draft, copy) => {
   return undefined;
 };
 
-// Clip FPS edits on a spritesheet whose frames did not change.
-const mergeDraftFps = (animations = {}, clips = []) => {
-  const nextAnimations = structuredClone(animations);
-  for (const clip of clips) {
-    if (nextAnimations[clip.name]) {
-      nextAnimations[clip.name].fps = clip.fps;
-    }
+// A default width and height the import filled in follow the frames when a
+// save changes their size. A size set by hand stays.
+const followImportedDefaultSize = ({ existingItem, data }) => {
+  const { width, height } = existingItem ?? {};
+  if (width === undefined || height === undefined) {
+    return;
   }
 
-  return nextAnimations;
+  const sizeBefore = resolveSpritesheetSize({
+    jsonData: existingItem.jsonData,
+    animations: existingItem.animations,
+    sheetWidth: existingItem.sheetWidth,
+    sheetHeight: existingItem.sheetHeight,
+  });
+  if (width !== sizeBefore.width || height !== sizeBefore.height) {
+    return;
+  }
+
+  const sizeAfter = resolveSpritesheetSize({
+    jsonData: data.jsonData ?? existingItem.jsonData,
+    animations: data.animations ?? existingItem.animations,
+    sheetWidth: data.sheetWidth ?? existingItem.sheetWidth,
+    sheetHeight: data.sheetHeight ?? existingItem.sheetHeight,
+  });
+  if (sizeAfter.width !== width || sizeAfter.height !== height) {
+    data.width = sizeAfter.width;
+    data.height = sizeAfter.height;
+  }
 };
 
 // Turns a frames editor draft into spritesheet fields to save. Returns
-// `{ ok: true, data, fileRecords, fileIdByFrameKey }`, or `{ ok: false,
-// message, error }` after telling the user why it cannot save, unless
-// `notify` is false. `error` is set only when building the sheet failed, as
-// opposed to a draft that is not ready to save.
+// `{ ok: true, data, fileRecords, fileIdByFrameKey, sourceIndexByFrameKey }`,
+// or `{ ok: false, message, error }` after telling the user why it cannot
+// save, unless `notify` is false. `error` is set only when building the
+// sheet failed, as opposed to a draft that is not ready to save.
+//
+// Only new pictures need a new sheet image. Edits that keep to the frames
+// already in the sheet save just the animations, which keeps the sheet, its
+// files, and a spritesheet that was uploaded as PNG and JSON as they are.
+// Such a save has no `sourceIndexByFrameKey`.
 export const buildSpritesheetDataFromFramesDraft = async ({
   appService,
   projectService,
@@ -234,26 +286,13 @@ export const buildSpritesheetDataFromFramesDraft = async ({
     return fail(blockedMessage);
   }
 
-  // Saved frames that did not change keep the current sheet.
-  if (
-    existingItem?.frameSource &&
-    draft.sourceKind === "frames" &&
-    !draft.framesChanged
-  ) {
-    const data = {};
-    if (draft.fpsChanged) {
-      data.animations = mergeDraftFps(existingItem.animations, draft.clips);
-    }
-    return {
-      ok: true,
-      data,
-      fileRecords: [],
-      fileIdByFrameKey: Object.fromEntries(
-        draft.frames
-          .filter((frame) => frame.fileId)
-          .map((frame) => [frame.key, frame.fileId]),
-      ),
-    };
+  const animations = existingItem?.fileId
+    ? buildAnimationsFromSourceIndexes(draft)
+    : undefined;
+  if (animations) {
+    const data = { animations };
+    followImportedDefaultSize({ existingItem, data });
+    return { ok: true, data, fileRecords: [], fileIdByFrameKey: {} };
   }
 
   try {
@@ -261,15 +300,16 @@ export const buildSpritesheetDataFromFramesDraft = async ({
       frames: draft.frames,
       clips: draft.clips,
       keepFrameKeys: draft.keepFrameKeys,
-      frameWidth: draft.frameWidth,
-      frameHeight: draft.frameHeight,
       name,
     });
+    const data = { ...result.data };
+    followImportedDefaultSize({ existingItem, data });
     return {
       ok: true,
-      data: result.data,
+      data,
       fileRecords: result.fileRecords,
       fileIdByFrameKey: result.fileIdByFrameKey,
+      sourceIndexByFrameKey: result.sourceIndexByFrameKey,
     };
   } catch (error) {
     if (error?.code === "spritesheet_too_large") {
@@ -289,8 +329,27 @@ export const buildSpritesheetDataFromFramesDraft = async ({
   }
 };
 
-// Asks before a new sheet file replaces the frames a spritesheet was made
-// from, because the frames cannot be edited afterwards.
+// An empty spritesheet gets its sheet as a PNG and its JSON together.
+// Returns which of the two is missing, or undefined.
+export const getEmptySpritesheetMissingSource = ({
+  existingItem,
+  sourceFiles,
+} = {}) => {
+  if (!existingItem || existingItem.fileId) {
+    return undefined;
+  }
+
+  const hasPng = Boolean(sourceFiles?.pngFile);
+  const hasJson = Boolean(sourceFiles?.atlasFile);
+  if (hasPng === hasJson) {
+    return undefined;
+  }
+
+  return hasPng ? "json" : "png";
+};
+
+// Asks before a new sheet file replaces the pictures a spritesheet was made
+// from. The editor then cuts its frames from the new sheet.
 export const confirmReplaceSpritesheetFrames = ({ appService, i18n }) => {
   const copy = selectSpritesheetFramesCopy(i18n);
   return appService.showDialog({

@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
   buildSpritesheetDataFromFramesDraft,
+  getAwaitedSpritesheetImages,
+  getEmptySpritesheetMissingSource,
   resolveSpritesheetImportFiles,
 } from "../../src/internal/ui/spritesheetFramesSave.js";
 
@@ -17,11 +19,13 @@ const readyDraft = (overrides = {}) => ({
     },
   ],
   keepFrameKeys: [],
-  frameWidth: 32,
-  frameHeight: 32,
-  framesChanged: true,
-  fpsChanged: false,
   ...overrides,
+});
+
+// An atlas frame of `size` at `x`, as a saved sheet's JSON has it.
+const atlasFrame = (x, size = 32) => ({
+  frame: { x, y: 0, w: size, h: size },
+  sourceSize: { w: size, h: size },
 });
 
 const createDeps = () => ({
@@ -33,6 +37,8 @@ const createDeps = () => ({
     buildSpritesheetFromFrames: vi.fn(async () => ({
       data: { fileId: "sheet" },
       fileRecords: [{ id: "sheet" }],
+      fileIdByFrameKey: { a: "file-a" },
+      sourceIndexByFrameKey: { a: 0 },
     })),
   },
   i18n: EN_I18N,
@@ -53,15 +59,14 @@ describe("buildSpritesheetDataFromFramesDraft", () => {
       ok: true,
       data: { fileId: "sheet" },
       fileRecords: [{ id: "sheet" }],
-      fileIdByFrameKey: undefined,
+      fileIdByFrameKey: { a: "file-a" },
+      sourceIndexByFrameKey: { a: 0 },
     });
     expect(deps.projectService.buildSpritesheetFromFrames).toHaveBeenCalledWith(
       {
         frames: draft.frames,
         clips: draft.clips,
         keepFrameKeys: [],
-        frameWidth: 32,
-        frameHeight: 32,
         name: "Blink",
       },
     );
@@ -104,40 +109,128 @@ describe("buildSpritesheetDataFromFramesDraft", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("keeps the saved sheet when the saved frames did not change", async () => {
+  it("saves only the animations while the frames are already in the sheet", async () => {
     const deps = createDeps();
+    // An uploaded PNG and JSON sheet: its frames come from the sheet itself.
     const existingItem = {
-      frameSource: { frameWidth: 32, frameHeight: 32, frames: [] },
-      animations: { default: { frames: [0], fps: 24, loop: true } },
+      fileId: "sheet-file",
+      jsonData: { frames: { a: atlasFrame(0), b: atlasFrame(34) } },
+      animations: { default: { frames: [0, 1], fps: 24, loop: true } },
     };
+    const draft = readyDraft({
+      sourceKind: "sheet",
+      frames: [
+        { key: "a", name: "a", width: 32, height: 32, sourceIndex: 0 },
+        { key: "b", name: "b", width: 32, height: 32, sourceIndex: 1 },
+      ],
+      clips: [
+        {
+          name: "default",
+          entries: [
+            { key: "e2", frameKey: "b", hold: 2 },
+            { key: "e1", frameKey: "a", hold: 1 },
+          ],
+          fps: 8,
+          loop: true,
+        },
+      ],
+    });
 
-    const unchanged = await buildSpritesheetDataFromFramesDraft({
+    const result = await buildSpritesheetDataFromFramesDraft({
       ...deps,
-      draft: readyDraft({ sourceKind: "frames", framesChanged: false }),
+      draft,
       existingItem,
     });
-    expect(unchanged).toEqual({
+
+    expect(result).toEqual({
       ok: true,
-      data: {},
+      data: {
+        animations: { default: { frames: [1, 1, 0], fps: 8, loop: true } },
+      },
       fileRecords: [],
       fileIdByFrameKey: {},
-    });
-
-    const fpsOnly = await buildSpritesheetDataFromFramesDraft({
-      ...deps,
-      draft: readyDraft({
-        sourceKind: "frames",
-        framesChanged: false,
-        fpsChanged: true,
-      }),
-      existingItem,
-    });
-    expect(fpsOnly.data).toEqual({
-      animations: { default: { frames: [0], fps: 12, loop: true } },
     });
     expect(
       deps.projectService.buildSpritesheetFromFrames,
     ).not.toHaveBeenCalled();
+  });
+
+  it("makes a new sheet once a picture is added", async () => {
+    const deps = createDeps();
+    const existingItem = {
+      fileId: "sheet-file",
+      jsonData: { frames: { a: atlasFrame(0) } },
+      animations: { default: { frames: [0], fps: 12, loop: true } },
+    };
+
+    await buildSpritesheetDataFromFramesDraft({
+      ...deps,
+      draft: readyDraft({
+        frames: [
+          { key: "a", name: "a", width: 32, height: 32, sourceIndex: 0 },
+          { key: "new", name: "new", width: 32, height: 32 },
+        ],
+        clips: [
+          {
+            name: "default",
+            entries: [
+              { key: "e1", frameKey: "a", hold: 1 },
+              { key: "e2", frameKey: "new", hold: 1 },
+            ],
+            fps: 12,
+          },
+        ],
+      }),
+      existingItem,
+    });
+
+    expect(deps.projectService.buildSpritesheetFromFrames).toHaveBeenCalled();
+  });
+
+  it("updates a default size the import filled in, but not one set by hand", async () => {
+    const deps = createDeps();
+    deps.projectService.buildSpritesheetFromFrames.mockResolvedValue({
+      data: {
+        fileId: "sheet",
+        jsonData: { frames: { big: atlasFrame(0, 128) } },
+        animations: { default: { frames: [0], fps: 12, loop: true } },
+      },
+      fileRecords: [],
+      fileIdByFrameKey: {},
+      sourceIndexByFrameKey: {},
+    });
+    const importedItem = {
+      fileId: "sheet-file",
+      width: 64,
+      height: 64,
+      jsonData: { frames: { a: atlasFrame(0, 64) } },
+      animations: { default: { frames: [0], fps: 12, loop: true } },
+    };
+    const draft = readyDraft({
+      frames: [{ key: "big", name: "big", width: 128, height: 128 }],
+      clips: [
+        {
+          name: "default",
+          entries: [{ key: "e1", frameKey: "big", hold: 1 }],
+          fps: 12,
+        },
+      ],
+    });
+
+    const imported = await buildSpritesheetDataFromFramesDraft({
+      ...deps,
+      draft,
+      existingItem: importedItem,
+    });
+    expect(imported.data).toMatchObject({ width: 128, height: 128 });
+
+    const handSet = await buildSpritesheetDataFromFramesDraft({
+      ...deps,
+      draft,
+      existingItem: { ...importedItem, width: 200, height: 100 },
+    });
+    expect(handSet.data.width).toBeUndefined();
+    expect(handSet.data.height).toBeUndefined();
   });
 
   it("explains a sheet that is too large for the device", async () => {
@@ -204,6 +297,66 @@ describe("resolveSpritesheetImportFiles", () => {
         file("hero.json"),
         file("notes.txt"),
       ]),
+    ).toBeUndefined();
+  });
+});
+
+describe("getEmptySpritesheetMissingSource", () => {
+  it("asks an empty spritesheet for its PNG and JSON together", () => {
+    const empty = { type: "spritesheet", jsonData: {}, animations: {} };
+    const png = { name: "hero.png" };
+    const json = { name: "hero.json" };
+
+    expect(
+      getEmptySpritesheetMissingSource({
+        existingItem: empty,
+        sourceFiles: { pngFile: png },
+      }),
+    ).toBe("json");
+    expect(
+      getEmptySpritesheetMissingSource({
+        existingItem: empty,
+        sourceFiles: { atlasFile: json },
+      }),
+    ).toBe("png");
+    expect(
+      getEmptySpritesheetMissingSource({
+        existingItem: empty,
+        sourceFiles: { pngFile: png, atlasFile: json },
+      }),
+    ).toBeUndefined();
+    // A spritesheet with a sheet can take a new PNG or JSON alone.
+    expect(
+      getEmptySpritesheetMissingSource({
+        existingItem: { ...empty, fileId: "sheet" },
+        sourceFiles: { pngFile: png },
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe("getAwaitedSpritesheetImages", () => {
+  const error = Object.assign(new Error("missing"), {
+    code: "spritesheet_images_missing",
+    missingImages: ["hero-0.png", "hero-1.png"],
+  });
+
+  it("keeps a JSON for several images picked before its PNG files", () => {
+    expect(getAwaitedSpritesheetImages({ error, pngFiles: [] })).toEqual([
+      "hero-0.png",
+      "hero-1.png",
+    ]);
+  });
+
+  it("does not wait once PNG files were picked, or for other errors", () => {
+    expect(
+      getAwaitedSpritesheetImages({ error, pngFiles: [{ name: "a.png" }] }),
+    ).toBeUndefined();
+    expect(
+      getAwaitedSpritesheetImages({
+        error: new Error("bad JSON"),
+        pngFiles: [],
+      }),
     ).toBeUndefined();
   });
 });

@@ -8,28 +8,22 @@ events:
 methods:
   type: object
   properties:
-    startNew:
-      description: Starts an empty draft and optionally adds the given picture files as frames.
-      params:
-        - name: payload
-          type: object
-          description: "`{ files, fps }`"
     loadSpritesheet:
       description: Loads a saved spritesheet. Uses its saved frames, cuts its sheet into frames when it has none, or starts empty when it has no sheet yet.
       params:
         - name: payload
           type: object
-          description: "`{ spritesheet, animations }`"
+          description: "`{ spritesheet }`"
     getDraft:
       description: Returns the current frames draft for saving.
       params: []
       returns: object
     markSaved:
-      description: Records a save. Frames get the file ids they were saved with, and `content` from the saved draft becomes what later edits are compared with.
+      description: Records a save. `content` from the saved draft becomes what later edits are compared with. A save that made a new sheet also passes each frame's index in it and the file it was saved as.
       params:
         - name: payload
           type: object
-          description: "`{ fileIdByFrameKey, content }`"
+          description: "`{ content, fileIdByFrameKey, sourceIndexByFrameKey }`"
     undo:
       description: Undoes the latest edit. Returns whether there was one.
       params: []

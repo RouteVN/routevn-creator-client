@@ -1,4 +1,5 @@
 import { formatDimensions, formatNumber } from "../../internal/dates.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import {
   areEditHistoryValuesEqual,
   createEditHistory,
@@ -19,7 +20,7 @@ import {
   moveArrayItem,
   normalizeFrameHold,
   resolveAutoFrameSize,
-  selectOutputFrames,
+  selectClipFrames,
 } from "../../internal/spritesheetFrames.js";
 import {
   formatI18nCopy,
@@ -65,11 +66,14 @@ const buildFpsField = (dateTime) => ({
 const buildPreviewBoxStyle = ({ width, height }) =>
   `width: min(100cqw, calc(${PREVIEW_MAX_HEIGHT} * ${width} / ${height})); aspect-ratio: ${width} / ${height}; min-height: 0; flex-shrink: 0;`;
 
+// `signature` says which pictures the preview sheet holds and where, so an
+// edit that only changes the animations can reuse its image.
 const createEmptyPreview = () => ({
   url: undefined,
   atlas: undefined,
   animations: {},
   error: undefined,
+  signature: undefined,
 });
 
 export const createInitialState = () => ({
@@ -103,32 +107,6 @@ const selectContent = (state) => ({
   clips: state.clips,
 });
 
-const selectClipsWithoutFps = (clips = []) =>
-  clips.map((clip) => ({
-    name: clip.name,
-    entries: clip.entries,
-    loop: clip.loop,
-  }));
-
-// Whether the frames or only clip FPS differ from what was saved, so a save
-// that only changes FPS keeps the current sheet.
-const selectContentChanges = (state) => {
-  const saved = state.savedContent;
-  const current = selectContent(state);
-  if (!saved) {
-    return { framesChanged: false, fpsChanged: false };
-  }
-
-  const framesChanged = !areEditHistoryValuesEqual(
-    selectClipsWithoutFps(current.clips),
-    selectClipsWithoutFps(saved.clips),
-  );
-  const fpsChanged =
-    !framesChanged &&
-    current.clips.some((clip, index) => clip.fps !== saved.clips[index]?.fps);
-  return { framesChanged, fpsChanged };
-};
-
 const selectClip = (state) =>
   state.clips.find((clip) => clip.name === state.selectedClipName);
 
@@ -156,15 +134,11 @@ const ensureSelectedClip = (state) => {
 const findEntryIndex = (clip, entryKey) =>
   (clip?.entries ?? []).findIndex((entry) => entry.key === entryKey);
 
-// The frame size is the largest picture's width and height, so every
-// picture fits without scaling.
+// The frame size of the clip shown: its largest picture's width and height,
+// so every picture fits without scaling.
 const resolveFrameSize = (state) =>
   resolveAutoFrameSize(
-    selectOutputFrames({
-      frames: state.frames,
-      clips: state.clips,
-      keepFrameKeys: state.keepFrameKeys,
-    }),
+    selectClipFrames({ frames: state.frames, clip: selectClip(state) }),
   );
 
 // Revisions keep counting across resets so a load or preview that finishes
@@ -305,29 +279,27 @@ export const togglePlaying = ({ state }, _payload = {}) => {
   state.isPlaying = !state.isPlaying;
 };
 
-// After a save, the saved frames get their files, so the next save uploads
-// only pictures added since. `content` is what the save was made from;
-// edits made while it ran are still unsaved.
+// Records a save. `content` is what the save was made from; edits made while
+// it ran are still unsaved. A save that made a new sheet passes each frame's
+// index in it, `sourceIndexByFrameKey`, and the files the frames were saved
+// as, so the next save uploads only pictures added since. A frame left out of
+// the new sheet, kept so undo can bring it back, has no index. A save that
+// only changed the animations keeps the sheet and its frames as they are.
 export const markSaved = (
   { state },
-  { fileIdByFrameKey = {}, content } = {},
+  { fileIdByFrameKey = {}, sourceIndexByFrameKey, content } = {},
 ) => {
-  state.frames = state.frames.map((frame) => {
-    const fileId = fileIdByFrameKey[frame.key];
-    if (!fileId) {
-      return frame;
+  if (sourceIndexByFrameKey) {
+    for (const frame of state.frames) {
+      frame.sourceIndex = sourceIndexByFrameKey[frame.key];
+      const fileId = fileIdByFrameKey[frame.key];
+      if (fileId) {
+        frame.fileId = fileId;
+        delete frame.file;
+      }
     }
-
-    return {
-      key: frame.key,
-      name: frame.name,
-      url: frame.url,
-      width: frame.width,
-      height: frame.height,
-      fileId,
-    };
-  });
-  state.sourceKind = "frames";
+    state.sourceKind = "frames";
+  }
   state.savedContent = content;
 };
 
@@ -407,7 +379,7 @@ export const startPreviewBuild = ({ state }, _payload = {}) => {
 
 export const setPreview = (
   { state },
-  { revision, url, atlas, animations, error } = {},
+  { revision, url, atlas, animations, error, signature } = {},
 ) => {
   if (revision !== state.previewRevision) {
     return;
@@ -418,6 +390,7 @@ export const setPreview = (
     atlas,
     animations: animations ?? {},
     error,
+    signature,
   };
 };
 
@@ -426,6 +399,8 @@ export const selectLoadRevision = ({ state }) => state.loadRevision;
 export const selectPreviewRevision = ({ state }) => state.previewRevision;
 
 export const selectPreviewUrl = ({ state }) => state.preview.url;
+
+export const selectPreviewSignature = ({ state }) => state.preview.signature;
 
 export const selectFrameUrls = ({ state }) =>
   state.frames.map((frame) => frame.url);
@@ -442,9 +417,7 @@ export const selectSelectedClipEntryCount = ({ state }) =>
 export const selectStatus = ({ state }) => state.status;
 
 export const selectDraft = ({ state }) => {
-  const frameSize = resolveFrameSize(state);
   const content = selectContent(state);
-  const { framesChanged, fpsChanged } = selectContentChanges(state);
 
   return {
     status: state.status,
@@ -452,10 +425,6 @@ export const selectDraft = ({ state }) => {
     frames: state.frames,
     clips: state.clips,
     keepFrameKeys: state.keepFrameKeys,
-    frameWidth: frameSize?.width,
-    frameHeight: frameSize?.height,
-    framesChanged,
-    fpsChanged,
     hasChanges:
       Boolean(state.savedContent) &&
       !areEditHistoryValuesEqual(content, state.savedContent),
@@ -487,7 +456,11 @@ const buildPreviewErrorMessage = (error, copy, dateTime) => {
     });
   }
 
-  return copy.previewFailedMessage;
+  return withErrorDetails(
+    copy.previewFailedMessage,
+    error.details,
+    copy.errorDetailsLabel,
+  );
 };
 
 export const selectViewData = ({ state, i18n = {} }) => {
@@ -528,6 +501,8 @@ export const selectViewData = ({ state, i18n = {} }) => {
     status: state.status,
     isLoading: state.status === "loading",
     isError: state.status === "error",
+    // Pictures can only join frames that loaded.
+    addPicturesDisabled: state.status === "loading" || state.status === "error",
     hasFrames: frameCount > 0,
     entries,
     showClipSelect: state.clips.length > 1,

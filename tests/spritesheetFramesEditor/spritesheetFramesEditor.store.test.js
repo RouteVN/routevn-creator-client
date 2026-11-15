@@ -63,10 +63,7 @@ describe("spritesheetFramesEditor store", () => {
     expect(store.state.clips[0]).toMatchObject({ name: "default", fps: 12 });
     expect(getEntryFrameNames(store.state)).toEqual(["a", "b"]);
     expect(store.state.status).toBe("ready");
-    expect(store.selectDraft()).toMatchObject({
-      framesChanged: true,
-      hasChanges: true,
-    });
+    expect(store.selectDraft().hasChanges).toBe(true);
   });
 
   it("starts new clips at 12 fps and keeps saved clips without fps at 24", () => {
@@ -148,10 +145,7 @@ describe("spritesheetFramesEditor store", () => {
       1, 2,
     ]);
     expect(store.state.keepFrameKeys).toEqual([store.state.frames[2].key]);
-    expect(store.selectDraft()).toMatchObject({
-      framesChanged: false,
-      hasChanges: false,
-    });
+    expect(store.selectDraft().hasChanges).toBe(false);
 
     store.setSelectedClipName({ clipName: "look" });
     expect(getEntryFrameNames(store.state)).toEqual(["b"]);
@@ -170,25 +164,31 @@ describe("spritesheetFramesEditor store", () => {
       sourceKind: "frames",
     });
 
-    expect(store.selectDraft()).toMatchObject({
-      frameWidth: 32,
-      frameHeight: 48,
-    });
     expect(store.selectViewData().frameSizeText).toBe("32 × 48");
 
     // Without the tall picture, the frames shrink to fit the rest.
     edit(store, "removeEntry", { entryKey: getEntryKey(store.state, 1) });
-    expect(store.selectDraft()).toMatchObject({
-      frameWidth: 32,
-      frameHeight: 32,
-      framesChanged: true,
-    });
+    expect(store.selectViewData().frameSizeText).toBe("32 × 32");
+    expect(store.selectDraft().hasChanges).toBe(true);
 
     edit(store, "removeEntry", { entryKey: getEntryKey(store.state, 0) });
     expect(store.selectViewData().frameSizeText).toBe("–");
   });
 
-  it("tracks a clip FPS change apart from frame changes", () => {
+  it("shows the frame size of the clip shown", () => {
+    const store = createStore();
+    store.loadDraft({
+      frames: [frame("fish", 40), frame("crab", 24)],
+      animations: { fish: { frames: [0] }, crab: { frames: [1] } },
+      sourceKind: "sheet",
+    });
+
+    expect(store.selectViewData().frameSizeText).toBe("40 × 40");
+    store.setSelectedClipName({ clipName: "crab" });
+    expect(store.selectViewData().frameSizeText).toBe("24 × 24");
+  });
+
+  it("counts a clip FPS change as a change to save", () => {
     const store = createStore();
     store.loadDraft({
       frames: [frame("a")],
@@ -198,12 +198,20 @@ describe("spritesheetFramesEditor store", () => {
 
     store.setSelectedClipFps({ fps: 6 });
 
-    expect(store.selectDraft()).toMatchObject({
-      framesChanged: false,
-      fpsChanged: true,
-      hasChanges: true,
-    });
+    expect(store.selectDraft().hasChanges).toBe(true);
     expect(getClip(store.state).fps).toBe(6);
+  });
+
+  it("only takes pictures once the frames have loaded", () => {
+    const store = createStore();
+    store.startLoading();
+    expect(store.selectViewData().addPicturesDisabled).toBe(true);
+
+    store.setLoadFailed();
+    expect(store.selectViewData().addPicturesDisabled).toBe(true);
+
+    store.loadDraft({ frames: [] });
+    expect(store.selectViewData().addPicturesDisabled).toBe(false);
   });
 
   it("gives the preview the frame's shape", () => {
@@ -251,10 +259,7 @@ describe("spritesheetFramesEditor store", () => {
 
     store.applyEditHistoryStep({ direction: "redo" });
     expect(getEntryFrameNames(store.state)).toEqual(["a", "c"]);
-    expect(store.selectDraft()).toMatchObject({
-      framesChanged: true,
-      hasChanges: true,
-    });
+    expect(store.selectDraft().hasChanges).toBe(true);
 
     // A new edit clears redo.
     edit(store, "setEntryHold", {
@@ -315,6 +320,7 @@ describe("spritesheetFramesEditor store", () => {
 
     store.markSaved({
       fileIdByFrameKey: { [keyA]: "file-a", [keyB]: "file-b" },
+      sourceIndexByFrameKey: { [keyA]: 0, [keyB]: 1 },
       content: savedDraft.content,
     });
 
@@ -323,9 +329,13 @@ describe("spritesheetFramesEditor store", () => {
       "file-b",
       undefined,
     ]);
+    expect(store.state.frames.map((item) => item.sourceIndex)).toEqual([
+      0,
+      1,
+      undefined,
+    ]);
     expect(store.selectDraft()).toMatchObject({
       sourceKind: "frames",
-      framesChanged: true,
       hasChanges: true,
     });
 
@@ -350,6 +360,7 @@ describe("spritesheetFramesEditor store", () => {
     const savedDraft = store.selectDraft();
     store.markSaved({
       fileIdByFrameKey: { [savedDraft.frames[0].key]: "file-a" },
+      sourceIndexByFrameKey: { [savedDraft.frames[0].key]: 0 },
       content: savedDraft.content,
     });
 
@@ -360,7 +371,36 @@ describe("spritesheetFramesEditor store", () => {
       "file-a",
       "file-b",
     ]);
+    // The new sheet has no picture b, so saving it again needs a new sheet.
+    expect(store.state.frames.map((item) => item.sourceIndex)).toEqual([
+      0,
+      undefined,
+    ]);
     expect(store.selectDraft().hasChanges).toBe(true);
+  });
+
+  it("keeps the frames' places when a save only changed the animations", () => {
+    const store = createStore();
+    store.loadDraft({
+      frames: [
+        { ...frame("a"), sourceIndex: 0 },
+        { ...frame("b"), sourceIndex: 1 },
+      ],
+      animations: { default: { frames: [0, 1] } },
+      sourceKind: "sheet",
+    });
+    edit(store, "moveEntryBy", {
+      entryKey: getEntryKey(store.state, 1),
+      offset: -1,
+    });
+
+    store.markSaved({ content: store.selectDraft().content });
+
+    expect(store.state.frames.map((item) => item.sourceIndex)).toEqual([0, 1]);
+    expect(store.selectDraft()).toMatchObject({
+      sourceKind: "sheet",
+      hasChanges: false,
+    });
   });
 
   it("has nothing to save before a spritesheet loads", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   animationFramesFromEntries,
+  buildAnimationsFromSourceIndexes,
   buildSpritesheetFramesOutput,
   clipsFromAnimations,
   createUniqueFrameNames,
@@ -10,10 +11,11 @@ import {
   getSpritesheetFramesDraftError,
   getSpritesheetSizeLimitError,
   getUnusedFrameKeys,
-  layoutSpritesheetGrid,
+  layoutSpritesheetCells,
   moveArrayItem,
   normalizeFrameHold,
   resolveAutoFrameSize,
+  resolveFrameCellSizes,
   sortFrameFilesByName,
 } from "../../src/internal/spritesheetFrames.js";
 
@@ -114,24 +116,97 @@ describe("layout", () => {
     ).toEqual({ x: 0, y: 10, width: 40, height: 20 });
   });
 
-  it("lays frames out in a near-square grid with padding between cells", () => {
+  it("lays frames of one size out in a near-square grid with padding", () => {
+    const square = { width: 10, height: 10 };
     expect(
-      layoutSpritesheetGrid({ frameCount: 4, cellWidth: 10, cellHeight: 10 }),
+      layoutSpritesheetCells({ sizes: [square, square, square, square] }),
     ).toEqual({
-      columns: 2,
-      rows: 2,
       sheetWidth: 22,
       sheetHeight: 22,
       cells: [
-        { x: 0, y: 0 },
-        { x: 12, y: 0 },
-        { x: 0, y: 12 },
-        { x: 12, y: 12 },
+        { x: 0, y: 0, width: 10, height: 10 },
+        { x: 12, y: 0, width: 10, height: 10 },
+        { x: 0, y: 12, width: 10, height: 10 },
+        { x: 12, y: 12, width: 10, height: 10 },
       ],
     });
     expect(
-      layoutSpritesheetGrid({ frameCount: 1, cellWidth: 10, cellHeight: 20 }),
-    ).toMatchObject({ columns: 1, rows: 1, sheetWidth: 10, sheetHeight: 20 });
+      layoutSpritesheetCells({ sizes: [{ width: 10, height: 20 }] }),
+    ).toMatchObject({ sheetWidth: 10, sheetHeight: 20 });
+  });
+
+  it("packs taller frames first, without changing frame order", () => {
+    const small = { width: 32, height: 32 };
+    const large = { width: 64, height: 48 };
+    expect(
+      layoutSpritesheetCells({ sizes: [small, small, large, large] }),
+    ).toEqual({
+      sheetWidth: 130,
+      sheetHeight: 82,
+      cells: [
+        { x: 0, y: 50, width: 32, height: 32 },
+        { x: 34, y: 50, width: 32, height: 32 },
+        { x: 0, y: 0, width: 64, height: 48 },
+        { x: 66, y: 0, width: 64, height: 48 },
+      ],
+    });
+  });
+
+  it("keeps a sheet of mixed frame sizes close to square", () => {
+    // Frames in an order that puts one tall frame in every row.
+    const sizes = Array.from({ length: 60 }, (_value, index) =>
+      index % 6 === 0 ? { width: 40, height: 200 } : { width: 120, height: 40 },
+    );
+    const { sheetWidth, sheetHeight, cells } = layoutSpritesheetCells({
+      sizes,
+    });
+    const area = sizes.reduce(
+      (total, size) => total + (size.width + 2) * (size.height + 2),
+      0,
+    );
+
+    expect(Math.max(sheetWidth, sheetHeight)).toBeLessThan(
+      Math.sqrt(area) * 1.25,
+    );
+    // No two cells overlap.
+    for (const [index, cell] of cells.entries()) {
+      for (const other of cells.slice(index + 1)) {
+        expect(
+          cell.x + cell.width <= other.x ||
+            other.x + other.width <= cell.x ||
+            cell.y + cell.height <= other.y ||
+            other.y + other.height <= cell.y,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("gives each clip's frames the size of its largest picture", () => {
+    const cells = resolveFrameCellSizes({
+      frames: [
+        { key: "a", width: 30, height: 32 },
+        { key: "b", width: 32, height: 28 },
+        { key: "c", width: 64, height: 48 },
+        { key: "loose", width: 8, height: 8 },
+      ],
+      clips: [
+        {
+          name: "small",
+          entries: [
+            { frameKey: "a", hold: 1 },
+            { frameKey: "b", hold: 1 },
+          ],
+        },
+        { name: "large", entries: [{ frameKey: "c", hold: 1 }] },
+      ],
+    });
+
+    expect(Object.fromEntries(cells)).toEqual({
+      a: { width: 32, height: 32 },
+      b: { width: 32, height: 32 },
+      c: { width: 64, height: 48 },
+      loose: { width: 8, height: 8 },
+    });
   });
 
   it("reports a sheet larger than the device texture or canvas limit", () => {
@@ -249,29 +324,135 @@ describe("buildSpritesheetFramesOutput", () => {
     });
   });
 
-  it("keeps frames that were already unused and honors a custom frame size", () => {
+  it("keeps frames that were already unused, at their own size", () => {
     const output = buildSpritesheetFramesOutput({
       frames,
       clips: [
         {
           name: "default",
-          entries: [{ key: "e1", frameKey: "open", hold: 1 }],
+          entries: [{ key: "e1", frameKey: "closed", hold: 1 }],
           fps: 24,
         },
       ],
       keepFrameKeys: ["unused"],
-      frameWidth: 64,
-      frameHeight: 48,
     });
 
-    expect(output.frames.map((frame) => frame.key)).toEqual(["open", "unused"]);
-    expect(output.frameWidth).toBe(64);
-    expect(output.frameHeight).toBe(48);
+    expect(output.frames.map((frame) => frame.key)).toEqual([
+      "unused",
+      "closed",
+    ]);
+    expect(output.jsonData.frames.unused.sourceSize).toEqual({ w: 32, h: 32 });
+    expect(output.jsonData.frames.closed.sourceSize).toEqual({ w: 16, h: 16 });
+    expect(output.frameWidth).toBe(32);
     expect(output.animations.default).toEqual({
-      frames: [0],
+      frames: [1],
       fps: 24,
       loop: true,
     });
+  });
+
+  it("keeps each animation at its own frame size", () => {
+    const output = buildSpritesheetFramesOutput({
+      frames: [
+        { key: "fish1", name: "fish1", width: 40, height: 20 },
+        { key: "fish2", name: "fish2", width: 40, height: 20 },
+        { key: "crab1", name: "crab1", width: 24, height: 24 },
+      ],
+      clips: [
+        {
+          name: "fish",
+          entries: [
+            { key: "e1", frameKey: "fish1", hold: 1 },
+            { key: "e2", frameKey: "fish2", hold: 1 },
+          ],
+          fps: 12,
+        },
+        {
+          name: "crab",
+          entries: [{ key: "e3", frameKey: "crab1", hold: 1 }],
+          fps: 12,
+        },
+      ],
+    });
+
+    expect(output.jsonData.frames.fish1.sourceSize).toEqual({ w: 40, h: 20 });
+    expect(output.jsonData.frames.crab1.sourceSize).toEqual({ w: 24, h: 24 });
+    expect(output.placements[2]).toMatchObject({ width: 24, height: 24 });
+  });
+
+  it("never names a frame with a bare number, so frames keep sheet order", () => {
+    const numbered = ["1", "0", "10", "2"].map((name) => ({
+      key: name,
+      name,
+      width: 8,
+      height: 8,
+    }));
+    const output = buildSpritesheetFramesOutput({
+      frames: numbered,
+      clips: [
+        {
+          name: "default",
+          entries: numbered.map((frame) => ({
+            key: `e${frame.key}`,
+            frameKey: frame.key,
+            hold: 1,
+          })),
+          fps: 12,
+        },
+      ],
+    });
+    const frameNames = Object.keys(output.jsonData.frames);
+
+    // The engine finds animation frame i at Object.keys(atlas.frames)[i].
+    expect(frameNames).toEqual(["1.png", "0.png", "10.png", "2.png"]);
+    expect(
+      output.animations.default.frames.map((index) => frameNames[index]),
+    ).toEqual(["1.png", "0.png", "10.png", "2.png"]);
+  });
+});
+
+describe("buildAnimationsFromSourceIndexes", () => {
+  const clip = (name, frameKeys) => ({
+    name,
+    entries: frameKeys.map(([frameKey, hold]) => ({
+      key: `e-${frameKey}`,
+      frameKey,
+      hold,
+    })),
+    fps: 8,
+    loop: false,
+  });
+
+  it("points animations at the frames already in the sheet", () => {
+    expect(
+      buildAnimationsFromSourceIndexes({
+        frames: [
+          { key: "a", sourceIndex: 0 },
+          { key: "b", sourceIndex: 1 },
+          { key: "c", sourceIndex: 2 },
+        ],
+        clips: [
+          clip("walk", [
+            ["c", 1],
+            ["a", 2],
+          ]),
+        ],
+      }),
+    ).toEqual({ walk: { frames: [2, 0, 0], fps: 8, loop: false } });
+  });
+
+  it("needs a new sheet once a clip uses a picture the sheet lacks", () => {
+    expect(
+      buildAnimationsFromSourceIndexes({
+        frames: [{ key: "a", sourceIndex: 0 }, { key: "new" }],
+        clips: [
+          clip("walk", [
+            ["a", 1],
+            ["new", 1],
+          ]),
+        ],
+      }),
+    ).toBeUndefined();
   });
 });
 
@@ -374,5 +555,28 @@ describe("moveArrayItem", () => {
   it("moves an item and ignores moves out of range", () => {
     expect(moveArrayItem(["a", "b", "c"], 0, 2)).toEqual(["b", "c", "a"]);
     expect(moveArrayItem(["a", "b", "c"], 0, 5)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("clipsFromAnimations", () => {
+  it("keeps each saved animation's speed", () => {
+    let nextKey = 0;
+    const clips = clipsFromAnimations({
+      animations: {
+        current: { frames: [0], fps: 8 },
+        older: { frames: [0, 1], animationSpeed: 0.2 },
+        unset: { frames: [1], loop: false },
+      },
+      frameKeys: ["a", "b"],
+      createEntryKey: () => `e${(nextKey += 1)}`,
+      missingClipFps: 24,
+    });
+
+    expect(clips.map(({ name, fps, loop }) => ({ name, fps, loop }))).toEqual([
+      { name: "current", fps: 8, loop: true },
+      // An older animation speed is per 60 ticks: 0.2 plays at 12 FPS.
+      { name: "older", fps: 12, loop: true },
+      { name: "unset", fps: 24, loop: false },
+    ]);
   });
 });

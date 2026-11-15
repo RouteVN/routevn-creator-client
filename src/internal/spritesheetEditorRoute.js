@@ -10,11 +10,18 @@ const getPayloadString = (payload, key) => {
 
 export const SPRITESHEET_EDITOR_PATH = "/project/spritesheet-editor";
 
-export const resolveSpritesheetEditorPayload = (payload = {}) => ({
-  spritesheetId: getPayloadString(payload, "ss"),
-  characterId: getPayloadString(payload, "characterId"),
-  spriteId: getPayloadString(payload, "sprite"),
-});
+// A character sprite needs both its character and its sprite. Pages about a
+// character keep `characterId` in the route, so it alone does not mean one.
+export const resolveSpritesheetEditorPayload = (payload = {}) => {
+  const spriteId = getPayloadString(payload, "sprite");
+  return {
+    spritesheetId: getPayloadString(payload, "ss"),
+    characterId: spriteId
+      ? getPayloadString(payload, "characterId")
+      : undefined,
+    spriteId,
+  };
+};
 
 export const createSpritesheetEditorPayload = ({
   payload = {},

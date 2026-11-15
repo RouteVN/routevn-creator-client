@@ -17,7 +17,8 @@ const selectCopy = (deps) =>
   selectI18nCopy(deps.i18n, ["spritesheetEditorPage"]);
 
 // Edits save on their own once the frames have been still this long. A save
-// draws and uploads a new sheet, so it waits longer than other editors.
+// that adds pictures draws and uploads a new sheet, so it waits longer than
+// other editors.
 const AUTOSAVE_DEBOUNCE_MS = 1000;
 const AUTOSAVE_ACTION = "spritesheetEditor.autosave";
 
@@ -60,76 +61,87 @@ const updateTarget = ({ projectService, target, data, fileRecords }) => {
   });
 };
 
-// Saves the frames when they changed. Saves run one at a time, so a save on
-// leaving waits for a running autosave and then saves what it missed. A
-// draft that cannot be saved yet, such as a clip without frames, is reported
-// back instead of shown, so leaving can offer to discard it; only a failure
-// to build or store the sheet is shown.
-const saveSpritesheetChanges = (deps) => {
+// Saves the frames when they changed. A draft that cannot be saved yet, such
+// as a clip without frames, is reported back instead of shown, so leaving can
+// offer to discard it; only a failure to build or store the sheet is shown.
+const saveDraft = async (deps) => {
   const { appService, i18n, projectService, refs, store } = deps;
+  if (store.selectShouldDiscardChanges()) {
+    return { ok: true };
+  }
+
+  const draft = refs.framesEditor.getDraft();
+  if (!draft.hasChanges) {
+    return { ok: true };
+  }
+
+  const target = store.selectTarget();
+  const item = selectTargetItem(projectService.getRepositoryState(), target);
+  if (!item) {
+    return { ok: false, message: selectCopy(deps).spritesheetNotFound };
+  }
+
+  const framesResult = await buildSpritesheetDataFromFramesDraft({
+    appService,
+    projectService,
+    i18n,
+    draft,
+    name: item.name,
+    existingItem: item,
+    notify: false,
+  });
+  if (!framesResult.ok) {
+    if (framesResult.error) {
+      showResourcePageError({
+        appService,
+        errorOrResult: framesResult.error,
+        fallbackMessage: framesResult.message,
+      });
+    }
+    return framesResult;
+  }
+
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: selectCopy(deps).failedSaveSpritesheet,
+    action: () =>
+      updateTarget({
+        projectService,
+        target,
+        data: framesResult.data,
+        fileRecords: framesResult.fileRecords,
+      }),
+  });
+  if (!updateAttempt.ok) {
+    return { ok: false };
+  }
+
+  refs.framesEditor.markSaved({
+    fileIdByFrameKey: framesResult.fileIdByFrameKey,
+    sourceIndexByFrameKey: framesResult.sourceIndexByFrameKey,
+    content: draft.content,
+  });
+  return { ok: true };
+};
+
+// Saves run one at a time, so a save on leaving waits for a running autosave
+// and then saves what it missed. An unexpected failure is shown and reported
+// back, so autosave keeps running for later edits.
+const saveSpritesheetChanges = (deps) => {
+  const { appService, projectService } = deps;
   return enqueueSceneEditorPersistence({
     owner: projectService,
     task: async () => {
-      if (store.selectShouldDiscardChanges()) {
-        return { ok: true };
-      }
-
-      const draft = refs.framesEditor.getDraft();
-      if (!draft.hasChanges) {
-        return { ok: true };
-      }
-
-      const target = store.selectTarget();
-      const item = selectTargetItem(
-        projectService.getRepositoryState(),
-        target,
-      );
-      if (!item) {
-        return { ok: false, message: selectCopy(deps).spritesheetNotFound };
-      }
-
-      const framesResult = await buildSpritesheetDataFromFramesDraft({
-        appService,
-        projectService,
-        i18n,
-        draft,
-        name: item.name,
-        existingItem: item,
-        notify: false,
-      });
-      if (!framesResult.ok) {
-        if (framesResult.error) {
-          showResourcePageError({
-            appService,
-            errorOrResult: framesResult.error,
-            fallbackMessage: framesResult.message,
-          });
-        }
-        return framesResult;
-      }
-
-      if (Object.keys(framesResult.data).length > 0) {
-        const updateAttempt = await runResourcePageMutation({
+      try {
+        return await saveDraft(deps);
+      } catch (error) {
+        showResourcePageError({
           appService,
+          errorOrResult: error,
           fallbackMessage: selectCopy(deps).failedSaveSpritesheet,
-          action: () =>
-            updateTarget({
-              projectService,
-              target,
-              data: framesResult.data,
-              fileRecords: framesResult.fileRecords,
-            }),
         });
-        if (!updateAttempt.ok) {
-          return { ok: false };
-        }
+        return { ok: false };
       }
-
-      refs.framesEditor.markSaved({
-        fileIdByFrameKey: framesResult.fileIdByFrameKey,
-        content: draft.content,
-      });
-      return { ok: true };
     },
   });
 };
@@ -230,6 +242,7 @@ export const handleAfterMount = async (deps) => {
 // An edit, undo, or redo in the frames editor saves a moment later.
 export const handleFramesChange = (deps, payload) => {
   const { render, store } = deps;
+  store.keepChanges();
   store.setEditHistoryState(payload._event.detail);
   render();
   queueAutosave(deps);

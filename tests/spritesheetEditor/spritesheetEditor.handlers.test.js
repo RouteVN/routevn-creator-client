@@ -34,7 +34,7 @@ const spritesheet = {
   animations: {},
 };
 
-const savedContent = { clips: [], customFrameSize: undefined };
+const savedContent = { clips: [] };
 const editedContent = {
   clips: [
     {
@@ -43,7 +43,6 @@ const editedContent = {
       fps: 12,
     },
   ],
-  customFrameSize: undefined,
 };
 
 const readyDraft = {
@@ -52,10 +51,6 @@ const readyDraft = {
   frames: [{ key: "a", name: "a", width: 16, height: 16 }],
   clips: editedContent.clips,
   keepFrameKeys: [],
-  frameWidth: 16,
-  frameHeight: 16,
-  framesChanged: true,
-  fpsChanged: false,
   hasChanges: true,
   content: editedContent,
 };
@@ -114,6 +109,7 @@ const createDeps = ({
         data: { fileId: "sheet", jsonData: {}, animations: {} },
         fileRecords: [{ id: "sheet" }],
         fileIdByFrameKey: { a: "frame-file-a" },
+        sourceIndexByFrameKey: { a: 0 },
       })),
       updateSpritesheet: vi.fn(async () => ({})),
       updateCharacterSpriteItem: vi.fn(async () => ({})),
@@ -121,9 +117,11 @@ const createDeps = ({
     runBeforeNavigation: (navigationPayload) =>
       beforeNavigation(navigationPayload),
     pressKey: (event) => windowListeners.keydown(event),
+    // The draft the next edit makes.
+    draft,
     // An edit in the frames editor, as its frames-change event reports it.
     editFrames: (history = { canUndo: true, canRedo: false }) => {
-      currentDraft = { ...draft, hasChanges: true };
+      currentDraft = { ...deps.draft, hasChanges: true };
       handleFramesChange(deps, { _event: { detail: history } });
     },
   };
@@ -207,8 +205,31 @@ describe("spritesheet editor page", () => {
     });
     expect(deps.refs.framesEditor.markSaved).toHaveBeenCalledWith({
       fileIdByFrameKey: { a: "frame-file-a" },
+      sourceIndexByFrameKey: { a: 0 },
       content: editedContent,
     });
+  });
+
+  it("keeps autosaving after a save fails unexpectedly", async () => {
+    const deps = createDeps();
+    deps.refs.framesEditor.getDraft.mockImplementationOnce(() => {
+      throw new Error("draft unavailable");
+    });
+    handleBeforeMount(deps);
+    await handleAfterMount(deps);
+
+    deps.editFrames();
+    await waitForAutosave();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("Failed to save the spritesheet."),
+      }),
+    );
+    expect(deps.projectService.updateSpritesheet).not.toHaveBeenCalled();
+
+    deps.editFrames();
+    await waitForAutosave();
+    expect(deps.projectService.updateSpritesheet).toHaveBeenCalledTimes(1);
   });
 
   it("saves several quick edits once", async () => {
@@ -322,6 +343,23 @@ describe("spritesheet editor page", () => {
     // Leaving after that does not ask again.
     await expect(deps.runBeforeNavigation({})).resolves.toBeUndefined();
     expect(deps.appService.showDialog).toHaveBeenCalledTimes(2);
+  });
+
+  it("saves again after choosing to leave when the page stays open", async () => {
+    const deps = createDeps({
+      draft: { ...readyDraft, frames: [], clips: [] },
+    });
+    handleBeforeMount(deps);
+    await handleAfterMount(deps);
+    deps.editFrames();
+    await expect(deps.runBeforeNavigation({})).resolves.toBeUndefined();
+
+    // The navigation did not happen, and the user kept editing.
+    deps.draft = readyDraft;
+    deps.editFrames();
+    await waitForAutosave();
+
+    expect(deps.projectService.updateSpritesheet).toHaveBeenCalledTimes(1);
   });
 
   it("shows why an autosave failed to make the sheet", async () => {

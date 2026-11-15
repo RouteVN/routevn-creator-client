@@ -47,6 +47,7 @@ const clip = (entries) => ({ name: "default", entries, fps: 12, loop: true });
 
 describe("spritesheetFramesService", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:test"),
       revokeObjectURL: vi.fn(),
@@ -120,10 +121,10 @@ describe("spritesheetFramesService", () => {
 
     await expect(
       service.buildSpritesheetFromFrames({
-        frames: [{ key: "a", name: "a", width: 16, height: 16, url: "blob:a" }],
+        frames: [
+          { key: "a", name: "a", width: 5000, height: 10, url: "blob:a" },
+        ],
         clips: [clip([{ key: "e1", frameKey: "a", hold: 1 }])],
-        frameWidth: 5000,
-        frameHeight: 10,
         name: "Wide",
       }),
     ).rejects.toMatchObject({ code: "spritesheet_too_large", limit: 4096 });
@@ -174,6 +175,62 @@ describe("spritesheetFramesService", () => {
       height: 16,
       url: "blob:test",
     });
+    // The cut pictures' sizes are known, so they are not decoded again.
+    expect(readImageSizeFromUrl).not.toHaveBeenCalled();
+  });
+
+  it("keeps dots in frame names that are not a file extension", async () => {
+    const { service } = createService();
+
+    const frames = await service.extractSpritesheetFrames({
+      fileId: "sheet-file",
+      jsonData: {
+        frames: {
+          "walk.001": { frame: { x: 0, y: 0, w: 16, h: 16 } },
+          "walk.002.png": { frame: { x: 16, y: 0, w: 16, h: 16 } },
+        },
+      },
+    });
+
+    expect(frames.map((frame) => frame.name)).toEqual(["walk.001", "walk.002"]);
+  });
+
+  it("loads saved frame pictures in their order", async () => {
+    const { service, getFileContent } = createService();
+    // Later files finish first.
+    getFileContent.mockImplementation(async (fileId) => {
+      await new Promise((resolve) =>
+        setTimeout(resolve, fileId === "frame-0" ? 20 : 0),
+      );
+      return { url: `https://files.test/${fileId}`, revoke: vi.fn() };
+    });
+
+    const frames = await service.loadSpritesheetFrameFileIds({
+      fileIds: ["frame-0", "frame-1", "frame-2"],
+    });
+
+    expect(frames.map((frame) => frame.fileId)).toEqual([
+      "frame-0",
+      "frame-1",
+      "frame-2",
+    ]);
+  });
+
+  it("frees the pictures it loaded when one cannot be read", async () => {
+    const { service, getFileContent } = createService();
+    getFileContent.mockImplementation(async (fileId) => {
+      if (fileId === "frame-1") {
+        throw new Error("missing file");
+      }
+      return { url: `https://files.test/${fileId}`, revoke: vi.fn() };
+    });
+
+    await expect(
+      service.loadSpritesheetFrameFileIds({
+        fileIds: ["frame-0", "frame-1"],
+      }),
+    ).rejects.toThrow("missing file");
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test");
   });
 
   describe("combineSpritesheetSourceFiles", () => {

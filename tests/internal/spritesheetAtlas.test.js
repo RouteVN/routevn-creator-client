@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getSpritesheetFrameDisplayName,
   mergeSpritesheetAtlasPages,
   parseSpritesheetAtlasFile,
 } from "../../src/internal/spritesheetAtlas.js";
@@ -70,13 +71,54 @@ describe("parseSpritesheetAtlasFile", () => {
       }),
     });
 
-    // A frame with no number, or alone with its name, is in no animation but
-    // stays in the sheet.
+    // A frame with no number, or alone with its name, is an animation of its
+    // own, so it can still be shown.
     expect(result.animations).toEqual({
       walk: { frames: [2, 1, 0], fps: 12, loop: true },
       jump: { frames: [3, 4], fps: 12, loop: true },
+      idle: { frames: [5], fps: 12, loop: true },
+      fall_1: { frames: [6], fps: 12, loop: true },
     });
     expect(result.frameCount).toBe(7);
+  });
+
+  it("splits a folder that holds several sequences", async () => {
+    const result = await parseSpritesheetAtlasFile({
+      atlasFile: atlasFile({
+        frames: {
+          "hero/walk_01.png": frame(0),
+          "hero/walk_02.png": frame(32),
+          "hero/run_01.png": frame(64),
+          "hero/run_02.png": frame(96),
+          "hero/idle.png": frame(128),
+          "slime/0001.png": frame(160),
+          "slime/0002.png": frame(192),
+        },
+      }),
+    });
+
+    expect(result.animations).toEqual({
+      "hero/walk": { frames: [0, 1], fps: 12, loop: true },
+      "hero/run": { frames: [2, 3], fps: 12, loop: true },
+      "hero/idle": { frames: [4], fps: 12, loop: true },
+      slime: { frames: [5, 6], fps: 12, loop: true },
+    });
+  });
+
+  it("asks for the PNG files of a sheet split over several images", async () => {
+    await expect(
+      parseSpritesheetAtlasFile({
+        atlasFile: atlasFile({
+          textures: [
+            { image: "hero-0.png", frames: [] },
+            { image: "hero-1.png", frames: [] },
+          ],
+        }),
+      }),
+    ).rejects.toMatchObject({
+      code: "spritesheet_images_missing",
+      missingImages: ["hero-0.png", "hero-1.png"],
+    });
   });
 
   it("puts every frame in one animation when names do not group", async () => {
@@ -120,5 +162,21 @@ describe("mergeSpritesheetAtlasPages", () => {
       { x: 107, y: 1, w: 4, h: 4 },
       { x: 9, y: 63, w: 4, h: 4 },
     ]);
+  });
+});
+
+describe("getSpritesheetFrameDisplayName", () => {
+  it("drops only a picture's file extension", () => {
+    expect(
+      [
+        "walk_01.png",
+        "hero.idle.v2.png",
+        "walk.001",
+        "hero 0.aseprite",
+        "10",
+      ].map(getSpritesheetFrameDisplayName),
+    ).toEqual(["walk_01", "hero.idle.v2", "walk.001", "hero 0", "10"]);
+    // A name saved without its extension stays the same when read again.
+    expect(getSpritesheetFrameDisplayName("hero.idle.v2")).toBe("hero.idle.v2");
   });
 });

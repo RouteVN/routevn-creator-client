@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { EN_I18N } from "../support/i18n.js";
 import {
+  handleDialogAtlasSourceClick,
   handleDialogFormAction,
   handleSpritesheetItemDoubleClick,
 } from "../../src/pages/spritesheets/spritesheets.handlers.js";
@@ -280,6 +281,55 @@ describe("spritesheets dialog form action", () => {
       const [{ data }] = deps.projectService.updateSpritesheet.mock.calls[0];
       expect(data.frameSource).toBeNull();
       expect(data.fileId).toBe("walk.png-file");
+    });
+
+    it("keeps a JSON for several images until its PNG files are chosen", async () => {
+      const deps = createDialogDeps({
+        dialogMode: "edit",
+        dialogItemId: "spritesheet-1",
+        existingItem: framedSpritesheet,
+      });
+      let sourceFiles = {};
+      deps.store.selectDialogSourceFiles = vi.fn(() => sourceFiles);
+      deps.store.selectDialogValues = vi.fn(() => values);
+      deps.store.setDialogImport = vi.fn((payload) => {
+        sourceFiles = payload.sourceFiles;
+      });
+      deps.refs = { dialogForm: { reset: vi.fn(), setValues: vi.fn() } };
+      const atlas = {
+        textures: [
+          { image: "walk-0.png", frames: [] },
+          { image: "walk-1.png", frames: [] },
+        ],
+      };
+      deps.appService.pickFiles = vi.fn(
+        async () =>
+          new File([JSON.stringify(atlas)], "walk.json", {
+            type: "application/json",
+          }),
+      );
+
+      await handleDialogAtlasSourceClick(deps);
+
+      const missingMessage =
+        "Choose the PNG files this JSON uses: walk-0.png, walk-1.png.";
+      expect(deps.appService.showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ message: missingMessage }),
+      );
+      expect(sourceFiles).toMatchObject({
+        atlasFile: { name: "walk.json" },
+        missingImages: ["walk-0.png", "walk-1.png"],
+      });
+
+      // Saving now would drop the frames without a new sheet.
+      deps.appService.showAlert.mockClear();
+      await submitDialog(deps, values);
+
+      expect(deps.appService.showAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ message: missingMessage }),
+      );
+      expect(deps.appService.showDialog).not.toHaveBeenCalled();
+      expect(deps.projectService.updateSpritesheet).not.toHaveBeenCalled();
     });
 
     it("does not save when the replacement is declined", async () => {

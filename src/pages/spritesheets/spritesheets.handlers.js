@@ -45,8 +45,11 @@ import {
 import {
   SPRITESHEET_CREATE_SOURCES,
   confirmReplaceSpritesheetFrames,
+  getAwaitedSpritesheetImages,
+  getEmptySpritesheetMissingSource,
   readSpritesheetSourceFiles,
   resolveSpritesheetImportFiles,
+  showMissingSpritesheetImages,
   showSpritesheetSourceFilesError,
 } from "../../internal/ui/spritesheetFramesSave.js";
 import { SPRITESHEET_TAG_SCOPE_KEY } from "./spritesheets.store.js";
@@ -106,8 +109,8 @@ const selectDialogFormRef = ({ refs, store }) =>
 
 const syncDialogFormValues = ({ refs, store, values } = {}) => {
   const form = selectDialogFormRef({ refs, store });
-  form?.reset?.();
-  form?.setValues?.({ values });
+  form.reset();
+  form.setValues({ values });
 };
 
 const syncSpritesheetData = ({ store, repositoryState } = {}) => {
@@ -332,6 +335,7 @@ const applyDialogSourceFiles = async ({
 
   let importData;
   let pngFile;
+  let missingImages;
   try {
     ({ importData, pngFile } = await readSpritesheetSourceFiles({
       projectService,
@@ -348,10 +352,14 @@ const applyDialogSourceFiles = async ({
         "Failed to read spritesheet source files.",
       title: copy.errorTitle ?? "Error",
     });
-    return;
+    // A JSON for several images stays picked while its PNG files are chosen.
+    missingImages = getAwaitedSpritesheetImages({ error, pngFiles });
+    if (!missingImages) {
+      return;
+    }
   }
 
-  const sourceFiles = { pngFiles, pngFile, atlasFile };
+  const sourceFiles = { pngFiles, pngFile, atlasFile, missingImages };
 
   revokeDialogPreviewUrl(store);
 
@@ -940,6 +948,16 @@ const submitFileDialog = async (deps, { values } = {}) => {
     ? store.selectItemById({ itemId: dialogItemId })
     : undefined;
 
+  // A JSON for several images cannot be saved without its PNG files.
+  if (dialogSourceFiles?.missingImages) {
+    showMissingSpritesheetImages({
+      appService,
+      i18n,
+      missingImages: dialogSourceFiles.missingImages,
+    });
+    return;
+  }
+
   if (dialogMode === "create" && !dialogSourceFiles?.pngFile) {
     appService.showAlert({
       message:
@@ -957,17 +975,18 @@ const submitFileDialog = async (deps, { values } = {}) => {
     return;
   }
 
-  // An empty spritesheet needs its image along with a JSON.
-  if (
-    existingItem &&
-    !existingItem.fileId &&
-    dialogSourceFiles?.atlasFile &&
-    !dialogSourceFiles?.pngFile
-  ) {
+  // An empty spritesheet needs its PNG and JSON together.
+  const missingSource = getEmptySpritesheetMissingSource({
+    existingItem,
+    sourceFiles: dialogSourceFiles,
+  });
+  if (missingSource) {
     appService.showAlert({
       message:
-        copy.spritesheetImageRequired ?? "Spritesheet image is required.",
-      title: copy.warningTitle ?? "Warning",
+        missingSource === "png"
+          ? copy.spritesheetImageRequired
+          : copy.spritesheetJsonRequired,
+      title: copy.warningTitle,
     });
     return;
   }

@@ -1,5 +1,10 @@
+import { describeError } from "../../internal/errorDetails.js";
 import { normalizeSpritesheetFps } from "../../internal/spritesheets.js";
-import { sortFrameFilesByName } from "../../internal/spritesheetFrames.js";
+import { getSpritesheetFrameDisplayName } from "../../internal/spritesheetAtlas.js";
+import {
+  buildSpritesheetFramesOutput,
+  sortFrameFilesByName,
+} from "../../internal/spritesheetFrames.js";
 import { selectI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { showResourcePageError } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
@@ -29,45 +34,90 @@ const dispatchChange = ({ dispatchEvent, store }) => {
   );
 };
 
+// Which pictures a preview sheet holds and where.
+const getPreviewSignature = (output) =>
+  JSON.stringify([
+    output.sheetWidth,
+    output.sheetHeight,
+    output.frames.map((frame) => frame.url),
+    output.placements,
+  ]);
+
+// Replaces the preview and frees the previous sheet image, unless a newer
+// preview build started meanwhile.
+const showPreview = (deps, { revision, preview = {} }) => {
+  const { render, store } = deps;
+  const previousUrl = store.selectPreviewUrl();
+  if (revision !== store.selectPreviewRevision()) {
+    if (preview.url !== previousUrl) {
+      revokeUrls([preview.url]);
+    }
+    return;
+  }
+
+  store.setPreview({ revision, ...preview });
+  if (previousUrl !== preview.url) {
+    revokeUrls([previousUrl]);
+  }
+  render();
+};
+
 const refreshPreview = async (deps) => {
-  const { projectService, render, store } = deps;
+  const { projectService, store } = deps;
   store.startPreviewBuild();
   const revision = store.selectPreviewRevision();
   const draft = store.selectDraft();
 
   if (draft.frames.length === 0) {
-    revokeUrls([store.selectPreviewUrl()]);
-    store.setPreview({ revision });
-    render();
+    showPreview(deps, { revision });
+    return;
+  }
+
+  // Reordering, holds, and FPS only change the animations, so the current
+  // sheet image still fits.
+  const output = buildSpritesheetFramesOutput(draft);
+  const signature = getPreviewSignature(output);
+  const currentUrl = store.selectPreviewUrl();
+  if (currentUrl && signature === store.selectPreviewSignature()) {
+    showPreview(deps, {
+      revision,
+      preview: {
+        url: currentUrl,
+        atlas: output.jsonData,
+        animations: output.animations,
+        signature,
+      },
+    });
     return;
   }
 
   let result;
   try {
-    result = await projectService.renderSpritesheetFramesPreview(draft);
-  } catch {
-    store.setPreview({ revision, error: { code: "preview_failed" } });
-    render();
-    return;
-  }
-
-  if (revision !== store.selectPreviewRevision()) {
-    return;
-  }
-
-  const previousUrl = store.selectPreviewUrl();
-  if (result.limitError) {
-    store.setPreview({ revision, error: result.limitError });
-  } else {
-    store.setPreview({
+    result = await projectService.renderSpritesheetFramesPreview(output);
+  } catch (error) {
+    showPreview(deps, {
       revision,
-      url: URL.createObjectURL(result.blob),
-      atlas: result.output.jsonData,
-      animations: result.output.animations,
+      preview: {
+        error: { code: "preview_failed", details: describeError(error) },
+      },
     });
+    return;
   }
-  revokeUrls([previousUrl]);
-  render();
+
+  if (result.limitError) {
+    showPreview(deps, { revision, preview: { error: result.limitError } });
+    return;
+  }
+
+  showPreview(deps, {
+    revision,
+    preview: {
+      url: URL.createObjectURL(result.blob),
+      atlas: output.jsonData,
+      animations: output.animations,
+      signature,
+    },
+  });
 };
 
 // Every edit ends here, so this is where it enters the undo history. A
@@ -85,6 +135,12 @@ const commitEdit = (deps, { preview = true } = {}) => {
 const addFrameFiles = async (deps, { files = [], afterEntryKey } = {}) => {
   const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
+  // Pictures can only join frames that loaded.
+  const status = store.selectStatus();
+  if (status === "loading" || status === "error") {
+    return;
+  }
+
   const imageFiles = sortFrameFilesByName(
     files.filter((file) => FRAME_IMAGE_PATTERN.test(file?.name ?? "")),
   );
@@ -138,23 +194,10 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-export const handleStartNew = async (deps, payload = {}) => {
-  const { render, store } = deps;
-  const { files = [], fps } = payload;
-  resetEditor(deps);
-  store.loadDraft({ frames: [], defaultFps: fps, sourceKind: "pictures" });
-  render();
-  await refreshPreview(deps);
-
-  if (files.length > 0) {
-    await addFrameFiles(deps, { files });
-  }
-};
-
 export const handleLoadSpritesheet = async (deps, payload = {}) => {
   const { appService, projectService, render, store } = deps;
   const copy = selectCopy(deps);
-  const { spritesheet, animations } = payload;
+  const { spritesheet } = payload;
   resetEditor(deps);
   const loadRevision = store.selectLoadRevision();
   const frameSource = spritesheet?.frameSource;
@@ -179,7 +222,9 @@ export const handleLoadSpritesheet = async (deps, payload = {}) => {
       });
       frames = loadedFrames.map((frame, index) => ({
         ...frame,
-        name: atlasFrameNames[index] ?? `frame_${index + 1}`,
+        name:
+          getSpritesheetFrameDisplayName(atlasFrameNames[index]) ||
+          `frame_${index + 1}`,
       }));
     } else {
       frames = await projectService.extractSpritesheetFrames({
@@ -206,9 +251,11 @@ export const handleLoadSpritesheet = async (deps, payload = {}) => {
     return;
   }
 
+  // Each frame is at its own index in the saved sheet, so edits that keep to
+  // these frames can be saved without a new sheet image.
   store.loadDraft({
-    frames,
-    animations: animations ?? spritesheet?.animations,
+    frames: frames.map((frame, index) => ({ ...frame, sourceIndex: index })),
+    animations: spritesheet?.animations,
     sourceKind: frameSource ? "frames" : "sheet",
   });
   render();
@@ -222,8 +269,8 @@ export const handleGetDraft = (deps) => {
 // Records a save so the next save only uploads pictures added after it.
 export const handleMarkSaved = (deps, payload = {}) => {
   const { render, store } = deps;
-  const { fileIdByFrameKey, content } = payload;
-  store.markSaved({ fileIdByFrameKey, content });
+  const { fileIdByFrameKey, sourceIndexByFrameKey, content } = payload;
+  store.markSaved({ fileIdByFrameKey, sourceIndexByFrameKey, content });
   render();
 };
 
