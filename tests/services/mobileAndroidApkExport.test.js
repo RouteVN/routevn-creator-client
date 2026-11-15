@@ -2,10 +2,22 @@ import { describe, expect, it, vi } from "vitest";
 import { createApkExportProgressClient } from "../../src/deps/clients/apkExportProgress.js";
 import {
   ANDROID_APK_MIME_TYPE,
+  ANDROID_BUNDLE_MIME_TYPE,
+  ANDROID_KEYSTORE_MIME_TYPE,
   createMobileAndroidApkExport,
 } from "../../src/deps/services/shared/mobileAndroidApkExport.js";
 
-const createExport = ({ callBridge, target = {} } = {}) => {
+const SIGNING_KEY = {
+  certificateSha256: "1".repeat(64),
+  certificate: "Y2VydGlmaWNhdGU=",
+  privateKey: "cHJpdmF0ZSBrZXk=",
+};
+
+const createExport = ({
+  callBridge,
+  target = {},
+  discardSaveDocument,
+} = {}) => {
   const progressClient = createApkExportProgressClient({ target });
   return {
     target,
@@ -19,6 +31,8 @@ const createExport = ({ callBridge, target = {} } = {}) => {
         }
         return fileId;
       },
+      encodeBase64: (bytes) => `base64:${[...bytes].join(",")}`,
+      discardSaveDocument,
     }),
   };
 };
@@ -164,6 +178,26 @@ describe("mobile Android APK export", () => {
     await expect(available.getAndroidExportAvailability()).resolves.toEqual({
       available: true,
       reason: undefined,
+      bundleAvailable: false,
+    });
+
+    const withBundle = createExport({
+      callBridge: async () => ({ available: true, bundleAvailable: true }),
+    }).androidApkExport;
+    await expect(withBundle.getAndroidExportAvailability()).resolves.toEqual({
+      available: true,
+      reason: undefined,
+      bundleAvailable: true,
+    });
+
+    // A host without the APK template exports no bundle either.
+    const unavailable = createExport({
+      callBridge: async () => ({ available: false, bundleAvailable: true }),
+    }).androidApkExport;
+    await expect(unavailable.getAndroidExportAvailability()).resolves.toEqual({
+      available: false,
+      reason: undefined,
+      bundleAvailable: false,
     });
 
     const failing = createExport({
@@ -193,5 +227,198 @@ describe("mobile Android APK export", () => {
       filters: [{ name: "APK", extensions: ["apk"] }],
       mimeType: ANDROID_APK_MIME_TYPE,
     });
+  });
+
+  it("signs an APK with the project key the request carries", async () => {
+    const callBridge = vi.fn(async () => ({
+      uri: "content://documents/saved.apk",
+      signingCertificateSha256: SIGNING_KEY.certificateSha256,
+    }));
+    const { androidApkExport } = createExport({ callBridge });
+
+    await androidApkExport.createAndroidApkToPath(
+      exportRequest({ signingKey: SIGNING_KEY }),
+    );
+    expect(callBridge.mock.calls[0][0]).toBe("exportAndroidApkToUri");
+    expect(callBridge.mock.calls[0][1].signingKey).toEqual(SIGNING_KEY);
+
+    await androidApkExport.createAndroidApkToPath(exportRequest());
+    expect(callBridge.mock.calls[1][1]).not.toHaveProperty("signingKey");
+  });
+
+  it("exports an App Bundle only with a signing key", async () => {
+    const callBridge = vi.fn(async () => ({
+      uri: "content://documents/saved.aab",
+      bundleBytes: 4321,
+    }));
+    const { androidApkExport } = createExport({ callBridge });
+
+    await expect(
+      androidApkExport.createAndroidBundleToPath(exportRequest()),
+    ).rejects.toThrow("needs a signing key");
+    expect(callBridge).not.toHaveBeenCalled();
+
+    const result = await androidApkExport.createAndroidBundleToPath(
+      exportRequest({
+        outputPath: "content://documents/game.aab",
+        signingKey: SIGNING_KEY,
+      }),
+    );
+    expect(callBridge).toHaveBeenCalledTimes(1);
+    const [method, payload] = callBridge.mock.calls[0];
+    expect(method).toBe("exportAndroidBundleToUri");
+    expect(payload.uri).toBe("content://documents/game.aab");
+    expect(payload.signingKey).toEqual(SIGNING_KEY);
+    expect(result).toEqual({
+      uri: "content://documents/saved.aab",
+      bundleBytes: 4321,
+      outputPath: "content://documents/saved.aab",
+    });
+  });
+
+  it("prompts for an App Bundle destination", async () => {
+    const saveFilePicker = vi.fn(async () => "content://documents/game.aab");
+    const { androidApkExport } = createExport({ callBridge: vi.fn() });
+
+    await expect(
+      androidApkExport.promptAndroidBundlePath({
+        defaultFileName: "Project One-1.2.3.aab",
+        options: { title: "Save", fileTypeName: "AAB" },
+        filePicker: { saveFilePicker },
+      }),
+    ).resolves.toBe("content://documents/game.aab");
+    expect(saveFilePicker).toHaveBeenCalledWith({
+      title: "Save",
+      defaultPath: "Project One-1.2.3.aab",
+      filters: [{ name: "AAB", extensions: ["aab"] }],
+      mimeType: ANDROID_BUNDLE_MIME_TYPE,
+    });
+  });
+
+  it("makes a signing key in the host", async () => {
+    const callBridge = vi.fn(async () => SIGNING_KEY);
+    const { androidApkExport } = createExport({ callBridge });
+
+    await expect(
+      androidApkExport.createAndroidSigningKey({
+        applicationName: "Project One",
+        applicationId: "com.example.game",
+      }),
+    ).resolves.toEqual(SIGNING_KEY);
+    expect(callBridge).toHaveBeenCalledWith("createAndroidSigningKey", {
+      applicationName: "Project One",
+      applicationId: "com.example.game",
+    });
+  });
+
+  it("reads the key in a picked keystore file", async () => {
+    const callBridge = vi.fn(async () => SIGNING_KEY);
+    const { androidApkExport } = createExport({ callBridge });
+    const file = new File([new Uint8Array([1, 2, 3])], "Project One.p12");
+    const openFilePicker = vi.fn(async () => file);
+
+    const keystore = await androidApkExport.promptAndroidKeystore({
+      options: { title: "Choose a keystore" },
+      filePicker: { openFilePicker },
+    });
+    expect(openFilePicker).toHaveBeenCalledWith({
+      title: "Choose a keystore",
+      multiple: false,
+    });
+    expect(keystore).toEqual({ name: "Project One.p12", file });
+
+    await expect(
+      androidApkExport.readAndroidKeystore({
+        keystore,
+        password: "pass one",
+        alias: "upload",
+      }),
+    ).resolves.toEqual(SIGNING_KEY);
+    expect(callBridge).toHaveBeenCalledWith("readAndroidKeystore", {
+      keystore: "base64:1,2,3",
+      password: "pass one",
+      alias: "upload",
+    });
+
+    await androidApkExport.readAndroidKeystore({
+      keystore,
+      password: "pass one",
+    });
+    expect(callBridge.mock.calls[1][1]).not.toHaveProperty("alias");
+
+    openFilePicker.mockResolvedValueOnce(null);
+    await expect(
+      androidApkExport.promptAndroidKeystore({
+        filePicker: { openFilePicker },
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("saves a copy of a key where the creator chose", async () => {
+    const callBridge = vi.fn(async (method) =>
+      method === "encodeAndroidKeystore" ? { keystore: "a2V5c3RvcmU=" } : true,
+    );
+    const { androidApkExport } = createExport({ callBridge });
+    const saveFilePicker = vi.fn(async () => "content://documents/key.p12");
+
+    const path = await androidApkExport.promptAndroidKeyCopyPath({
+      defaultFileName: "Project One-signing-key.p12",
+      options: { title: "Save a Copy", fileTypeName: "Keystore" },
+      filePicker: { saveFilePicker },
+    });
+    expect(saveFilePicker).toHaveBeenCalledWith({
+      title: "Save a Copy",
+      defaultPath: "Project One-signing-key.p12",
+      filters: [{ name: "Keystore", extensions: ["p12"] }],
+      mimeType: ANDROID_KEYSTORE_MIME_TYPE,
+    });
+
+    await androidApkExport.writeAndroidKeystore({
+      path,
+      password: "pass one",
+      alias: "key0",
+      key: SIGNING_KEY,
+    });
+    expect(callBridge.mock.calls).toEqual([
+      [
+        "encodeAndroidKeystore",
+        { key: SIGNING_KEY, password: "pass one", alias: "key0" },
+      ],
+      [
+        "writeFileToUri",
+        {
+          uri: "content://documents/key.p12",
+          mimeType: ANDROID_KEYSTORE_MIME_TYPE,
+          base64: "a2V5c3RvcmU=",
+        },
+      ],
+    ]);
+  });
+
+  it("removes the chosen document when the key cannot be encoded", async () => {
+    const failure = Object.assign(new Error("The key is damaged."), {
+      code: "signing-key-invalid",
+    });
+    const callBridge = vi.fn(async () => {
+      throw failure;
+    });
+    const discardSaveDocument = vi.fn(async () => undefined);
+    const { androidApkExport } = createExport({
+      callBridge,
+      discardSaveDocument,
+    });
+
+    await expect(
+      androidApkExport.writeAndroidKeystore({
+        path: "content://documents/key.p12",
+        password: "pass one",
+        alias: "key0",
+        key: SIGNING_KEY,
+      }),
+    ).rejects.toBe(failure);
+    expect(discardSaveDocument).toHaveBeenCalledWith(
+      "content://documents/key.p12",
+    );
+    expect(callBridge).toHaveBeenCalledTimes(1);
   });
 });

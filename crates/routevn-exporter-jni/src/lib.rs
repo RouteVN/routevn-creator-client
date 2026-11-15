@@ -1,7 +1,7 @@
 use jni::objects::{JClass, JObject, JString, JValue};
 use jni::sys::{jint, jstring};
 use jni::{JNIEnv, JavaVM};
-use routevn_android_export::{AndroidExportRequest, AndroidExportResult, ErrorCode, ExportError};
+use routevn_android_export::{ErrorCode, host};
 use routevn_exporter::{ZipAssetInput, ZipExportProgress, ZipExportStats};
 use serde::{Deserialize, Serialize};
 
@@ -113,19 +113,19 @@ pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeCreateDistr
     new_java_string(&mut env, response)
 }
 
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeAndroidExportCapabilities(
-    mut env: JNIEnv,
-    _class: JClass,
-    template_path: JString,
-    descriptor_path: JString,
+/// Reports whether a template at these paths can be exported from.
+fn android_capabilities(
+    env: &mut JNIEnv,
+    template_path: &JString,
+    descriptor_path: &JString,
+    check: fn(&std::path::Path, &std::path::Path) -> routevn_android_export::HostCapabilities,
 ) -> jstring {
-    let paths = java_string_to_string(&mut env, &template_path).and_then(|template| {
-        java_string_to_string(&mut env, &descriptor_path).map(|descriptor| (template, descriptor))
+    let paths = java_string_to_string(env, template_path).and_then(|template| {
+        java_string_to_string(env, descriptor_path).map(|descriptor| (template, descriptor))
     });
     let json = match paths {
         Ok((template, descriptor)) => std::panic::catch_unwind(|| {
-            routevn_android_export::host_capabilities(
+            check(
                 std::path::Path::new(&template),
                 std::path::Path::new(&descriptor),
             )
@@ -139,36 +139,37 @@ pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeAndroidExpo
     } else {
         json
     };
-    new_java_string(&mut env, json)
+    new_java_string(env, json)
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AndroidApkExportResponse {
-    ok: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    result: Option<AndroidExportResult>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<ExportError>,
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeAndroidExportCapabilities(
+    mut env: JNIEnv,
+    _class: JClass,
+    template_path: JString,
+    descriptor_path: JString,
+) -> jstring {
+    android_capabilities(
+        &mut env,
+        &template_path,
+        &descriptor_path,
+        routevn_android_export::host_capabilities,
+    )
 }
 
-fn android_apk_response(result: Result<AndroidExportResult, ExportError>) -> String {
-    let response = match result {
-        Ok(result) => AndroidApkExportResponse {
-            ok: true,
-            result: Some(result),
-            error: None,
-        },
-        Err(error) => AndroidApkExportResponse {
-            ok: false,
-            result: None,
-            error: Some(error),
-        },
-    };
-    serde_json::to_string(&response).unwrap_or_else(|_| {
-        r#"{"ok":false,"error":{"code":"write-failed","message":"Failed to serialize the APK export result."}}"#
-            .to_string()
-    })
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeAndroidBundleExportCapabilities(
+    mut env: JNIEnv,
+    _class: JClass,
+    template_path: JString,
+    descriptor_path: JString,
+) -> jstring {
+    android_capabilities(
+        &mut env,
+        &template_path,
+        &descriptor_path,
+        routevn_android_export::bundle::host_capabilities,
+    )
 }
 
 /// Forwards exporter progress to a Java `NativeExporter.ProgressListener`.
@@ -208,19 +209,45 @@ impl JavaProgressListener {
     }
 }
 
-fn run_android_apk_export(
-    payload_json: &str,
-    listener: Option<&JavaProgressListener>,
-) -> Result<AndroidExportResult, ExportError> {
-    let request: AndroidExportRequest = serde_json::from_str(payload_json).map_err(|error| {
-        ExportError::invalid_request(format!("Invalid Android export request: {error}"))
-    })?;
-    let on_progress = |progress: ZipExportProgress| {
-        if let Some(listener) = listener {
-            listener.emit(progress);
+/// Which archive an Android export call writes.
+#[derive(Clone, Copy)]
+enum AndroidExportFormat {
+    Apk,
+    Bundle,
+}
+
+/// Runs an Android export for `NativeExporter` and returns the exporter's
+/// JSON response.
+fn run_android_export(
+    env: &mut JNIEnv,
+    payload_json: &JString,
+    listener: &JObject,
+    format: AndroidExportFormat,
+) -> String {
+    let payload = match java_string_to_string(env, payload_json) {
+        Ok(payload) => payload,
+        Err(error) => return host::error_response(ErrorCode::InvalidRequest, &error),
+    };
+    let progress = if listener.is_null() {
+        None
+    } else {
+        match (env.get_java_vm(), env.new_global_ref(listener)) {
+            (Ok(vm), Ok(listener)) => Some(JavaProgressListener { vm, listener }),
+            _ => {
+                let _ = env.exception_clear();
+                None
+            }
         }
     };
-    routevn_android_export::export_android_apk(&request, Some(&on_progress))
+    let on_progress = |update: ZipExportProgress| {
+        if let Some(progress) = progress.as_ref() {
+            progress.emit(update);
+        }
+    };
+    match format {
+        AndroidExportFormat::Apk => host::export_apk(&payload, Some(&on_progress)),
+        AndroidExportFormat::Bundle => host::export_app_bundle(&payload, Some(&on_progress)),
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -230,36 +257,64 @@ pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeExportAndro
     payload_json: JString,
     listener: JObject,
 ) -> jstring {
-    let payload = match java_string_to_string(&mut env, &payload_json) {
-        Ok(payload) => payload,
-        Err(error) => {
-            let json = android_apk_response(Err(ExportError::invalid_request(error)));
-            return new_java_string(&mut env, json);
-        }
-    };
-    let progress = if listener.is_null() {
-        None
-    } else {
-        match (env.get_java_vm(), env.new_global_ref(&listener)) {
-            (Ok(vm), Ok(listener)) => Some(JavaProgressListener { vm, listener }),
-            _ => {
-                let _ = env.exception_clear();
-                None
-            }
-        }
-    };
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        run_android_apk_export(&payload, progress.as_ref())
-    }))
-    .unwrap_or_else(|_| {
-        Err(ExportError::new(
-            ErrorCode::WriteFailed,
-            "The Android exporter failed unexpectedly.",
-        ))
-    });
-    drop(progress);
-    let json = android_apk_response(result);
+    let json = run_android_export(&mut env, &payload_json, &listener, AndroidExportFormat::Apk);
     new_java_string(&mut env, json)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeExportAndroidBundle(
+    mut env: JNIEnv,
+    _class: JClass,
+    payload_json: JString,
+    listener: JObject,
+) -> jstring {
+    let json = run_android_export(
+        &mut env,
+        &payload_json,
+        &listener,
+        AndroidExportFormat::Bundle,
+    );
+    new_java_string(&mut env, json)
+}
+
+/// Runs one of the signing-key calls, which take and return JSON.
+fn run_signing_key_call(
+    env: &mut JNIEnv,
+    payload_json: &JString,
+    call: fn(&str) -> String,
+) -> jstring {
+    let json = match java_string_to_string(env, payload_json) {
+        Ok(payload) => call(&payload),
+        Err(error) => host::error_response(ErrorCode::InvalidRequest, &error),
+    };
+    new_java_string(env, json)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeCreateAndroidSigningKey(
+    mut env: JNIEnv,
+    _class: JClass,
+    payload_json: JString,
+) -> jstring {
+    run_signing_key_call(&mut env, &payload_json, host::create_signing_key)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeReadAndroidKeystore(
+    mut env: JNIEnv,
+    _class: JClass,
+    payload_json: JString,
+) -> jstring {
+    run_signing_key_call(&mut env, &payload_json, host::read_keystore)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_com_routevn_creator_NativeExporter_nativeEncodeAndroidKeystore(
+    mut env: JNIEnv,
+    _class: JClass,
+    payload_json: JString,
+) -> jstring {
+    run_signing_key_call(&mut env, &payload_json, host::encode_keystore)
 }
 
 /// Crashes the app on purpose so native crash reporting, and this library's

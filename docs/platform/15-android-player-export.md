@@ -26,13 +26,11 @@ for Google Play:
 <game-name>-<version>.aab           (App Bundle, always signed)
 ```
 
-APK export runs on the desktop (Windows, macOS, Linux), Android, and iOS
-Creator hosts. Web does not export. No host runs Gradle, the Android SDK,
-`apksigner`, bundletool, a JDK, or a network service: export rewrites a
-prebuilt player template, and the exporter signs the file itself. Desktop
-hosts sign; the Android and iOS Creator apps export unsigned APKs only. App
-Bundles are signed, so only desktop hosts export them (see
-[App Bundle](#app-bundle)).
+Export runs on the desktop (Windows, macOS, Linux), Android, and iOS Creator
+hosts, and every host signs APKs and exports App Bundles (see
+[App Bundle](#app-bundle)). Web does not export. No host runs Gradle, the
+Android SDK, `apksigner`, bundletool, a JDK, or a network service: export
+rewrites a prebuilt player template, and the exporter signs the file itself.
 
 A signed APK installs directly. An unsigned APK is for creators who sign with
 their own tools:
@@ -55,8 +53,8 @@ Creator ships these committed resources:
 ```text
 player-templates/android/RouteVNPlayerTemplate.apk
 player-templates/android/RouteVNPlayerTemplate.json
-player-templates/android/RouteVNPlayerTemplate.aab       (desktop only)
-player-templates/android/RouteVNPlayerTemplate.aab.json  (desktop only)
+player-templates/android/RouteVNPlayerTemplate.aab
+player-templates/android/RouteVNPlayerTemplate.aab.json
 ```
 
 `bun run player-template:build:android` stages the standalone player
@@ -138,7 +136,7 @@ Memory stays bounded by the largest asset and the icon images, so mobile hosts
 use the same code. Progress phases are `prepareApk`, the package phases shared
 with other exports, `encryptPayload`, `rewriteManifest`, `renderIcons`,
 `writeApk`, `verifyApk`, and `finalizeApk`. Mobile hosts add `saveApk` while
-they copy the APK to the chosen destination.
+they copy the APK or bundle to the chosen destination.
 
 The Versions export dialog groups the phases into steps: Create signing key
 (only when the export makes the key), Prepare project, Pack game files, Build
@@ -238,9 +236,12 @@ Keys:
   current (PBES2 AES-256 with an HMAC-SHA256 MAC) encryption are read; legacy
   JKS and JCEKS files, non-RSA keys, and keys under 2048 bits are refused with
   their own error codes
-- Save a Copy writes the current encryption, which `keytool` reads, through a
-  temporary file renamed into place; on Unix the file is readable only by the
-  user
+- Save a Copy writes the current encryption, which `keytool` reads. Desktop
+  hosts write it through a temporary file renamed into place, readable only
+  by the user on Unix; mobile hosts write it to the location chosen in the
+  system file picker
+- on the Android and iOS Creator apps, Upload Key offers every file, because
+  the system pickers have no common type for keystores
 
 The host makes, reads, and writes keys and signs; it keeps no keys. A stored
 key is checked against its fingerprint before it signs.
@@ -352,19 +353,30 @@ template.
   `read_android_keystore`, and `write_android_keystore` pass keys as
   `{ certificateSha256, certificate, privateKey }` and reject with
   `{ code, message }`.
-- Android: the Creator bundles the template in its assets, copies it to
+- Android: the Creator bundles both templates in its assets, copies each to
   no-backup storage once per template version, and runs the exporter through
-  `NativeExporter.exportAndroidApk` on a dedicated thread. The APK is written
-  to the cache folder and then copied to the Storage Access Framework
-  destination and size-checked.
+  `NativeExporter` on a dedicated thread. The file is written to the cache
+  folder and then copied to the Storage Access Framework destination and
+  size-checked.
 - iOS: the Creator links the `routevn-exporter-ffi` static library, bundles
-  the template as an app resource, and copies the finished APK to the chosen
+  both templates as app resources, and copies the finished file to the chosen
   save destination.
 
-Mobile hosts implement the bridge methods `getAndroidExportAvailability` and
-`exportAndroidApkToUri` and report progress through
-`window.__routeVNApkExportProgress({ exportId, phase, current, total,
-elapsedMs })`.
+Mobile hosts implement these bridge methods and report export progress
+through `window.__routeVNApkExportProgress({ exportId, phase, current, total,
+elapsedMs })`:
+
+- `getAndroidExportAvailability`, which also returns `bundleAvailable`
+- `exportAndroidApkToUri`, with an optional `signingKey`, and
+  `exportAndroidBundleToUri`, which requires it
+- `createAndroidSigningKey`, `readAndroidKeystore`, and
+  `encodeAndroidKeystore`. A keystore file crosses the bridge as base64:
+  JavaScript reads the picked file for Upload Key and writes the encoded
+  keystore for Save a Copy through the host's file picker methods.
+
+Both hosts reach the exporter through its JSON interface,
+`crates/routevn-android-export/src/host.rs`, and a failed call carries the
+exporter's error code to JavaScript.
 
 ## Canonical Implementation Areas
 
@@ -395,6 +407,6 @@ Before release, install a Creator-signed APK, and an unsigned one signed with
 `apksigner`, on a physical device and on API 24 and current-API emulators.
 Check launch, the splash screen and icon on each launcher shape, portrait and
 landscape games, audio, saving and reloading, Back, a reinstall of a higher
-Build Number signed with the same key, and an export from the Android and iOS
-Creator apps. Upload an exported App Bundle to a Play Console internal test
+Build Number signed with the same key, and a signed APK and an App Bundle
+exported from the Android and iOS Creator apps. Upload an exported App Bundle to a Play Console internal test
 track and install it from Google Play.

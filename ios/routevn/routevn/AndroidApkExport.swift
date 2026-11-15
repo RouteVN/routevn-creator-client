@@ -52,34 +52,101 @@ private let androidApkExportProgressCallback: routevn_progress_callback = { cont
 }
 
 enum AndroidApkExport {
-    private static func templates() -> (apk: URL, descriptor: URL)? {
-        guard let resources = Bundle.main.resourceURL else { return nil }
-        let directory = resources.appendingPathComponent("web/player-templates/android", isDirectory: true)
-        let apk = directory.appendingPathComponent("RouteVNPlayerTemplate.apk")
-        let descriptor = directory.appendingPathComponent("RouteVNPlayerTemplate.json")
-        guard FileManager.default.fileExists(atPath: apk.path),
-              FileManager.default.fileExists(atPath: descriptor.path) else { return nil }
-        return (apk, descriptor)
+    /// The archive an export writes: an APK, or an App Bundle for Google Play.
+    enum Format {
+        case apk
+        case bundle
+
+        var templateName: String { self == .apk ? "RouteVNPlayerTemplate.apk" : "RouteVNPlayerTemplate.aab" }
+        var descriptorName: String { self == .apk ? "RouteVNPlayerTemplate.json" : "RouteVNPlayerTemplate.aab.json" }
+        var outputName: String { self == .apk ? "output.apk" : "output.aab" }
+        var sizeKey: String { self == .apk ? "apkBytes" : "bundleBytes" }
     }
 
+    private static func templates(_ format: Format) -> (template: URL, descriptor: URL)? {
+        guard let resources = Bundle.main.resourceURL else { return nil }
+        let directory = resources.appendingPathComponent("web/player-templates/android", isDirectory: true)
+        let template = directory.appendingPathComponent(format.templateName)
+        let descriptor = directory.appendingPathComponent(format.descriptorName)
+        guard FileManager.default.fileExists(atPath: template.path),
+              FileManager.default.fileExists(atPath: descriptor.path) else { return nil }
+        return (template, descriptor)
+    }
+
+    /// `bundleAvailable` tells whether the App Bundle template is installed
+    /// too. A failed bundle check leaves APK export available.
     static func availability() throws -> [String: Any] {
-        guard let templates = templates() else { return ["available": false] }
-        let response = templates.apk.path.withCString { apk in
+        guard let templates = templates(.apk) else { return ["available": false] }
+        let response = templates.template.path.withCString { template in
             templates.descriptor.path.withCString { descriptor in
-                routevn_android_export_capabilities(apk, descriptor)
+                routevn_android_export_capabilities(template, descriptor)
             }
         }
-        return try decodeResponse(response)
+        var capabilities = try decodeResponse(response)
+        if capabilities["available"] as? Bool == true {
+            capabilities["bundleAvailable"] = bundleAvailable()
+        }
+        return capabilities
+    }
+
+    private static func bundleAvailable() -> Bool {
+        guard let templates = templates(.bundle) else { return false }
+        let response = templates.template.path.withCString { template in
+            templates.descriptor.path.withCString { descriptor in
+                routevn_android_bundle_export_capabilities(template, descriptor)
+            }
+        }
+        return (try? decodeResponse(response))?["available"] as? Bool == true
+    }
+
+    /// The project's signing keys. The project stores them; these calls only
+    /// make a key, read the key in a keystore file, and encode a keystore file.
+    static func createSigningKey(_ request: [String: Any]) throws -> [String: Any] {
+        try signingKeyCall(request, routevn_android_create_signing_key)
+    }
+
+    static func readKeystore(_ request: [String: Any]) throws -> [String: Any] {
+        try signingKeyCall(request, routevn_android_read_keystore)
+    }
+
+    static func encodeKeystore(_ request: [String: Any]) throws -> [String: Any] {
+        try signingKeyCall(request, routevn_android_encode_keystore)
+    }
+
+    private static func signingKeyCall(
+        _ request: [String: Any],
+        _ call: (UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>?
+    ) throws -> [String: Any] {
+        let data = try JSONSerialization.data(withJSONObject: request)
+        let json = String(decoding: data, as: UTF8.self)
+        return try unwrap(decodeResponse(json.withCString { call($0) }), failure: "The signing key request failed.")
+    }
+
+    /// The `result` of an exporter response, or its error with the exporter's code.
+    private static func unwrap(_ decoded: [String: Any], failure: String) throws -> [String: Any] {
+        guard decoded["ok"] as? Bool == true else {
+            let error = decoded["error"] as? [String: Any] ?? [:]
+            throw AndroidApkExportError(
+                code: error["code"] as? String ?? "write-failed",
+                message: error["message"] as? String ?? failure
+            )
+        }
+        guard let result = decoded["result"] as? [String: Any] else {
+            throw AndroidApkExportError(code: "write-failed", message: "The Android exporter returned an invalid result.")
+        }
+        return result
     }
 
     /// Runs on the bridge's background queue. Rust reads the bundled template
     /// in place and writes only within this export's private cache directory.
+    /// The request's `signingKey` signs the file; a bundle needs one.
     static func export(
         request: [String: Any],
+        format: Format,
         to destination: URL,
         progress: AndroidApkExportProgress
     ) throws -> [String: Any] {
-        guard let templates = templates() else {
+        guard let templates = templates(format) else {
             throw AndroidApkExportError(code: "template-missing", message: "The Android player template is missing.")
         }
         let fileManager = FileManager.default
@@ -87,11 +154,11 @@ enum AndroidApkExport {
         let directory = caches.appendingPathComponent("routevn-apk-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: directory) }
-        let output = directory.appendingPathComponent("output.apk")
+        let output = directory.appendingPathComponent(format.outputName)
         let work = directory.appendingPathComponent("work", isDirectory: true)
         try fileManager.createDirectory(at: work, withIntermediateDirectories: true)
         var nativeRequest = request
-        nativeRequest["templatePath"] = templates.apk.path
+        nativeRequest["templatePath"] = templates.template.path
         nativeRequest["descriptorPath"] = templates.descriptor.path
         nativeRequest["outputPath"] = output.path
         nativeRequest["workDir"] = work.path
@@ -99,27 +166,21 @@ enum AndroidApkExport {
         let json = String(decoding: data, as: UTF8.self)
         let response = withExtendedLifetime(progress) {
             json.withCString { requestJSON in
-                routevn_android_export_apk(
-                    requestJSON,
-                    androidApkExportProgressCallback,
-                    Unmanaged.passUnretained(progress).toOpaque()
-                )
+                let context = Unmanaged.passUnretained(progress).toOpaque()
+                switch format {
+                case .apk:
+                    return routevn_android_export_apk(requestJSON, androidApkExportProgressCallback, context)
+                case .bundle:
+                    return routevn_android_export_bundle(requestJSON, androidApkExportProgressCallback, context)
+                }
             }
         }
-        let decoded = try decodeResponse(response)
-        guard decoded["ok"] as? Bool == true else {
-            let error = decoded["error"] as? [String: Any] ?? [:]
-            throw AndroidApkExportError(
-                code: error["code"] as? String ?? "write-failed",
-                message: error["message"] as? String ?? "The Android APK export failed."
-            )
-        }
-        guard var result = decoded["result"] as? [String: Any],
-              let apkBytes = result["apkBytes"] as? NSNumber, apkBytes.uint64Value > 0 else {
+        var result = try unwrap(decodeResponse(response), failure: "The Android export failed.")
+        guard let bytes = result[format.sizeKey] as? NSNumber, bytes.uint64Value > 0 else {
             throw AndroidApkExportError(code: "write-failed", message: "The Android exporter returned an invalid result.")
         }
-        try verifySize(output, expected: apkBytes.uint64Value)
-        try copyOutput(output, to: destination, expected: apkBytes.uint64Value)
+        try verifySize(output, expected: bytes.uint64Value)
+        try copyOutput(output, to: destination, expected: bytes.uint64Value)
         result.removeValue(forKey: "outputPath")
         result["uri"] = destination.absoluteString
         return result
@@ -140,7 +201,7 @@ enum AndroidApkExport {
     private static func verifySize(_ url: URL, expected: UInt64) throws {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard let size = attributes[.size] as? NSNumber, size.uint64Value == expected else {
-            throw AndroidApkExportError(code: "write-failed", message: "The exported Android APK size could not be verified.")
+            throw AndroidApkExportError(code: "write-failed", message: "The exported Android file size could not be verified.")
         }
     }
 

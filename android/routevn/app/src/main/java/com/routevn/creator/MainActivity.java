@@ -1311,12 +1311,16 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            if ("exportAndroidApkToUri".equals(method)) {
+            if (
+                "exportAndroidApkToUri".equals(method) ||
+                "exportAndroidBundleToUri".equals(method)
+            ) {
                 String exportRequestId = requestId;
                 JSONObject exportPayload = payload;
+                boolean bundle = "exportAndroidBundleToUri".equals(method);
                 apkExportExecutor.execute(() -> {
                     String result;
-                    try { result = bridgeSuccess(exportAndroidApkToUri(exportPayload)); }
+                    try { result = bridgeSuccess(exportAndroidToUri(exportPayload, bundle)); }
                     catch (Throwable error) { result = bridgeFailure(error); }
                     reply.accept(attachBridgeResponseMetadata(exportRequestId, result));
                 });
@@ -1447,6 +1451,18 @@ public class MainActivity extends Activity {
                 return bridge.createDistributionZipStreamedToUri(payloadJson);
             case "getAndroidExportAvailability":
                 return bridgeSuccess(getAndroidExportAvailability());
+            case "createAndroidSigningKey":
+                return bridgeSuccess(
+                    NativeExporter.createAndroidSigningKey(new JSONObject(payloadJson))
+                );
+            case "readAndroidKeystore":
+                return bridgeSuccess(
+                    NativeExporter.readAndroidKeystore(new JSONObject(payloadJson))
+                );
+            case "encodeAndroidKeystore":
+                return bridgeSuccess(
+                    NativeExporter.encodeAndroidKeystore(new JSONObject(payloadJson))
+                );
             case "openFilePicker":
                 return bridge.openFilePicker(payloadJson);
             case "openSaveFilePicker":
@@ -1990,12 +2006,30 @@ public class MainActivity extends Activity {
                 "message",
                 error.getMessage() == null ? "Android bridge call failed" : error.getMessage()
             );
-            errorBody.put("code", error instanceof ProjectBackup.Failure ? ProjectBackup.errorCode(error) : error.getClass().getSimpleName());
+            errorBody.put("code", bridgeErrorCode(error));
             result.put("error", errorBody);
             return result.toString();
         } catch (Exception jsonError) {
             return "{\"ok\":false,\"error\":{\"message\":\"Android bridge call failed\"}}";
         }
+    }
+
+    /**
+     * The code JavaScript reads from a failed bridge call. An Android export
+     * failure keeps the exporter's code even when the save step wrapped it.
+     */
+    private static String bridgeErrorCode(Throwable error) {
+        if (error instanceof ProjectBackup.Failure) {
+            return ProjectBackup.errorCode(error);
+        }
+        Throwable cause = error;
+        for (int depth = 0; cause != null && depth < 4; depth += 1) {
+            if (cause instanceof NativeExporter.ExportFailure) {
+                return ((NativeExporter.ExportFailure) cause).code;
+            }
+            cause = cause.getCause();
+        }
+        return error.getClass().getSimpleName();
     }
 
     private void initializeAppDatabase(boolean withEvents) throws Exception {
@@ -3190,23 +3224,30 @@ public class MainActivity extends Activity {
 
     private static final String ANDROID_PLAYER_TEMPLATE_ASSET_DIR =
         "player-templates/android";
-    private static final String ANDROID_PLAYER_TEMPLATE_APK =
-        "RouteVNPlayerTemplate.apk";
-    private static final String ANDROID_PLAYER_TEMPLATE_DESCRIPTOR =
-        "RouteVNPlayerTemplate.json";
+    // Each template with its descriptor: the APK and the App Bundle.
+    private static final String[] ANDROID_PLAYER_APK_TEMPLATE = {
+        "RouteVNPlayerTemplate.apk",
+        "RouteVNPlayerTemplate.json"
+    };
+    private static final String[] ANDROID_PLAYER_BUNDLE_TEMPLATE = {
+        "RouteVNPlayerTemplate.aab",
+        "RouteVNPlayerTemplate.aab.json"
+    };
 
     /**
      * The exporter reads the player template by path, so the template bundled
-     * in this app's assets is copied out once per template version. Returns
-     * null when this build has no template.
+     * in this app's assets is copied out once per template version. `names`
+     * is the template file and its descriptor. Returns null when this build
+     * has no such template.
      */
-    private File[] ensureAndroidPlayerTemplate() throws Exception {
+    private File[] ensureAndroidPlayerTemplate(String[] names) throws Exception {
+        String templateName = names[0];
+        String descriptorName = names[1];
         synchronized (androidPlayerTemplateLock) {
             byte[] descriptor;
             try (
                 InputStream input = getAssets().open(
-                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" +
-                    ANDROID_PLAYER_TEMPLATE_DESCRIPTOR
+                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" + descriptorName
                 );
                 ByteArrayOutputStream output = new ByteArrayOutputStream()
             ) {
@@ -3220,11 +3261,8 @@ public class MainActivity extends Activity {
                 getNoBackupFilesDir(),
                 ANDROID_PLAYER_TEMPLATE_ASSET_DIR
             );
-            File templateFile = new File(directory, ANDROID_PLAYER_TEMPLATE_APK);
-            File descriptorFile = new File(
-                directory,
-                ANDROID_PLAYER_TEMPLATE_DESCRIPTOR
-            );
+            File templateFile = new File(directory, templateName);
+            File descriptorFile = new File(directory, descriptorName);
             if (
                 templateFile.isFile() &&
                 descriptorFile.isFile() &&
@@ -3241,14 +3279,10 @@ public class MainActivity extends Activity {
             // The descriptor is written last, so an interrupted copy is
             // repeated on the next call.
             deleteTemporaryFile(descriptorFile);
-            File partFile = new File(
-                directory,
-                ANDROID_PLAYER_TEMPLATE_APK + ".part"
-            );
+            File partFile = new File(directory, templateName + ".part");
             try (
                 InputStream input = getAssets().open(
-                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" +
-                    ANDROID_PLAYER_TEMPLATE_APK
+                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" + templateName
                 );
                 FileOutputStream output = new FileOutputStream(partFile)
             ) {
@@ -3273,7 +3307,7 @@ public class MainActivity extends Activity {
     private JSONObject getAndroidExportAvailability() throws Exception {
         File[] template;
         try {
-            template = ensureAndroidPlayerTemplate();
+            template = ensureAndroidPlayerTemplate(ANDROID_PLAYER_APK_TEMPLATE);
         } catch (Exception error) {
             Log.w(TAG, "Android player template is unavailable", error);
             JSONObject result = new JSONObject();
@@ -3289,13 +3323,38 @@ public class MainActivity extends Activity {
             result.put("available", false);
             return result;
         }
-        return NativeExporter.androidExportCapabilities(
+        JSONObject capabilities = NativeExporter.androidExportCapabilities(
             template[0].getAbsolutePath(),
             template[1].getAbsolutePath()
         );
+        if (capabilities.optBoolean("available", false)) {
+            capabilities.put("bundleAvailable", isAndroidBundleExportAvailable());
+        }
+        return capabilities;
     }
 
-    private JSONObject exportAndroidApkToUri(JSONObject payload) throws Exception {
+    /** A failed App Bundle check leaves APK export available. */
+    private boolean isAndroidBundleExportAvailable() {
+        try {
+            File[] template = ensureAndroidPlayerTemplate(
+                ANDROID_PLAYER_BUNDLE_TEMPLATE
+            );
+            return template != null && NativeExporter.androidBundleExportCapabilities(
+                template[0].getAbsolutePath(),
+                template[1].getAbsolutePath()
+            ).optBoolean("available", false);
+        } catch (Exception error) {
+            Log.w(TAG, "Android App Bundle template is unavailable", error);
+            return false;
+        }
+    }
+
+    /**
+     * Exports an APK, or with `bundle` an App Bundle, to the chosen location.
+     * The payload's signingKey signs it; a bundle needs one.
+     */
+    private JSONObject exportAndroidToUri(JSONObject payload, boolean bundle)
+        throws Exception {
         String safeProjectId = safePathSegment(payload.getString("projectId"));
         String safeExportId = safePathSegment(payload.getString("exportId"));
         String destinationUriString = payload.getString("uri").trim();
@@ -3307,7 +3366,9 @@ public class MainActivity extends Activity {
         File workDir = null;
 
         try {
-            File[] template = ensureAndroidPlayerTemplate();
+            File[] template = ensureAndroidPlayerTemplate(
+                bundle ? ANDROID_PLAYER_BUNDLE_TEMPLATE : ANDROID_PLAYER_APK_TEMPLATE
+            );
             if (template == null) {
                 throw new IllegalStateException(
                     "This build does not include the Android player template."
@@ -3322,7 +3383,7 @@ public class MainActivity extends Activity {
                     "Failed to create export cache directory."
                 );
             }
-            File outputFile = new File(workDir, "export.apk");
+            File outputFile = new File(workDir, bundle ? "export.aab" : "export.apk");
 
             String safeIconFileId = safePathSegment(payload.getString("iconFileId"));
             File iconFile = resolveSafeRelativeFile(
@@ -3377,12 +3438,17 @@ public class MainActivity extends Activity {
                 payload.getString("splashBackgroundColor")
             );
             request.put("workDir", workDir.getAbsolutePath());
+            JSONObject signingKey = payload.optJSONObject("signingKey");
+            if (signingKey != null) {
+                request.put("signingKey", signingKey);
+            }
 
             long startedNanos = System.nanoTime();
-            JSONObject result = NativeExporter.exportAndroidApk(
-                request,
-                apkExportProgressListener(safeExportId, startedNanos)
-            );
+            NativeExporter.ProgressListener listener =
+                apkExportProgressListener(safeExportId, startedNanos);
+            JSONObject result = bundle
+                ? NativeExporter.exportAndroidBundle(request, listener)
+                : NativeExporter.exportAndroidApk(request, listener);
             sendApkExportProgress(
                 safeExportId,
                 "saveApk",
@@ -3394,7 +3460,17 @@ public class MainActivity extends Activity {
 
             JSONObject response = new JSONObject();
             response.put("uri", destinationUri.toString());
-            response.put("apkBytes", result.optLong("apkBytes"));
+            if (bundle) {
+                response.put("bundleBytes", result.optLong("bundleBytes"));
+            } else {
+                response.put("apkBytes", result.optLong("apkBytes"));
+            }
+            if (result.has("signingCertificateSha256")) {
+                response.put(
+                    "signingCertificateSha256",
+                    result.getString("signingCertificateSha256")
+                );
+            }
             response.put("packageBinBytes", result.optLong("packageBinBytes"));
             response.put(
                 "encryptedPayloadBytes",
@@ -3404,7 +3480,9 @@ public class MainActivity extends Activity {
             return response;
         } catch (Throwable error) {
             throw createPublicationFailure(
-                "Failed to save Android APK.",
+                bundle
+                    ? "Failed to save Android App Bundle."
+                    : "Failed to save Android APK.",
                 destinationUri,
                 cleanupOnFailure,
                 error

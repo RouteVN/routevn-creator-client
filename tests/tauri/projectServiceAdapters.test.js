@@ -1357,6 +1357,51 @@ describe("tauri project service adapters preflight reads", () => {
     });
   });
 
+  it("names a picked keystore file and reads its key by path", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const filePicker = {
+      openFilePicker: vi.fn(async () => "C:\\keys\\Project One.p12"),
+    };
+    const keystore = await fileAdapter.promptAndroidKeystore({
+      options: { title: "Pick One", fileTypeName: "Type One" },
+      filePicker,
+    });
+    expect(filePicker.openFilePicker).toHaveBeenCalledWith({
+      title: "Pick One",
+      multiple: false,
+      filters: [
+        { name: "Type One", extensions: ["p12", "pfx", "keystore", "jks"] },
+      ],
+    });
+    expect(keystore).toEqual({
+      name: "Project One.p12",
+      path: "C:\\keys\\Project One.p12",
+    });
+
+    const material = { certificateSha256: "a".repeat(64) };
+    mocked.invoke.mockResolvedValueOnce(material);
+    expect(
+      await fileAdapter.readAndroidKeystore({
+        keystore,
+        password: "pass one",
+        alias: "upload",
+      }),
+    ).toBe(material);
+    expect(mocked.invoke).toHaveBeenCalledWith("read_android_keystore", {
+      path: "C:\\keys\\Project One.p12",
+      password: "pass one",
+      alias: "upload",
+    });
+
+    filePicker.openFilePicker.mockResolvedValueOnce(null);
+    expect(
+      await fileAdapter.promptAndroidKeystore({ filePicker }),
+    ).toBeUndefined();
+  });
+
   it("prompts for an APK with localized dialog copy", async () => {
     const { fileAdapter } = createTauriProjectServiceAdapters({
       collabLog: () => {},

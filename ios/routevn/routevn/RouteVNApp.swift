@@ -595,7 +595,15 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         case "getAndroidExportAvailability":
             return try AndroidApkExport.availability()
         case "exportAndroidApkToUri":
-            return try exportAndroidApkToUri(payload)
+            return try exportAndroidToUri(payload, format: .apk)
+        case "exportAndroidBundleToUri":
+            return try exportAndroidToUri(payload, format: .bundle)
+        case "createAndroidSigningKey":
+            return try AndroidApkExport.createSigningKey(payload)
+        case "readAndroidKeystore":
+            return try AndroidApkExport.readKeystore(payload)
+        case "encodeAndroidKeystore":
+            return try AndroidApkExport.encodeKeystore(payload)
         case "openFilePicker":
             try launchFilePicker(payload)
             return true
@@ -641,7 +649,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func shouldHandleBridgeMethodInBackground(_ method: String) -> Bool {
         switch method {
         case "createDistributionZipStreamedToUri", "importProjectFolder", "exportProjectFolder",
-             "getAndroidExportAvailability", "exportAndroidApkToUri",
+             "getAndroidExportAvailability", "exportAndroidApkToUri", "exportAndroidBundleToUri",
+             "createAndroidSigningKey", "readAndroidKeystore", "encodeAndroidKeystore",
              "renameLegacyProjectFolder", "getProjectFolderSetup", "previewProjectFolderSetup",
              "confirmProjectFolderSetup", "createTempFolder", "removeTempFolder",
              "downloadFile", "copyImportFile", "listImportArchive", "extractImportArchive",
@@ -1244,20 +1253,25 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         }
     }
 
-    private func exportAndroidApkToUri(_ payload: [String: Any]) throws -> [String: Any] {
+    /// Exports an APK or an App Bundle to the chosen location. The payload's
+    /// `signingKey` signs it; a bundle needs one.
+    private func exportAndroidToUri(
+        _ payload: [String: Any],
+        format: AndroidApkExport.Format
+    ) throws -> [String: Any] {
         let uri = try requiredString(payload, "uri")
         if SaveFileDestinations.isSaveURI(uri) {
             let result = try saveFileDestinations.write(to: uri) { stagedURL in
                 var stagedPayload = payload
                 stagedPayload["uri"] = stagedURL.absoluteString
-                return try self.exportAndroidApkToUri(stagedPayload)
+                return try self.exportAndroidToUri(stagedPayload, format: format)
             }
             var exported = result.value
             exported["uri"] = result.url.absoluteString
             return exported
         }
         guard let targetURL = URL(string: uri), targetURL.isFileURL else {
-            throw RouteVNError.message("Only file URLs are supported by the iOS APK export path.")
+            throw RouteVNError.message("Only file URLs are supported by the iOS Android export path.")
         }
         let projectId = try storage.safePathSegment(requiredString(payload, "projectId"))
         var assets: [[String: Any]] = []
@@ -1310,13 +1324,16 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
                 request[pathKey] = fileURL.path
             }
         }
+        if let signingKey = payload["signingKey"] as? [String: Any] {
+            request["signingKey"] = signingKey
+        }
         let progress = AndroidApkExportProgress(exportId: try requiredString(payload, "exportId")) { [weak self] json in
             self?.webView.evaluateJavaScript(
                 "window.__routeVNApkExportProgress && window.__routeVNApkExportProgress(\(json));",
                 completionHandler: nil
             )
         }
-        return try AndroidApkExport.export(request: request, to: targetURL, progress: progress)
+        return try AndroidApkExport.export(request: request, format: format, to: targetURL, progress: progress)
     }
 
     private func createDistributionPackagePlan(

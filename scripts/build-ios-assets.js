@@ -24,6 +24,8 @@ await mkdir(androidTemplateDir, { recursive: true });
 for (const filename of [
   "RouteVNPlayerTemplate.apk",
   "RouteVNPlayerTemplate.json",
+  "RouteVNPlayerTemplate.aab",
+  "RouteVNPlayerTemplate.aab.json",
 ]) {
   await cp(
     join(
