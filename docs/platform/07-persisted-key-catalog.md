@@ -288,6 +288,11 @@ Current keys:
     WOFF, and WOFF2 font resources
   - full execution and collaboration-safety contract:
     `14-project-content-patches.md`
+- `contentPatch.sectionTransitionResetStory-1-22-0`
+  - boolean completion marker for the one-time rewrite of deprecated
+    `resetStoryAtSection` actions as section transitions that reset the story
+  - full execution and collaboration-safety contract:
+    `14-project-content-patches.md`
 
 Important ownership rule:
 

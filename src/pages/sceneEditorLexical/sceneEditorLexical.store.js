@@ -2365,6 +2365,7 @@ export const selectViewData = ({ state, i18n }) => {
         layouts,
         controls,
         menuSceneId,
+        scenes: repositoryState.scenes,
       }),
     ]),
   );
@@ -2446,6 +2447,7 @@ export const selectViewData = ({ state, i18n }) => {
     : [];
   const selectedDecorationsStartedAt = getSceneEditorTimingNow();
   const documentLineDecorations = buildSceneDocumentLineDecorations({
+    i18n,
     lines: documentEditorLines,
     repositoryState,
     sectionLineChanges: getSectionLineChangesForSection(
@@ -2491,6 +2493,7 @@ export const selectViewData = ({ state, i18n }) => {
       editorKey: `document-${section.id}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
       documentEditorLines: sectionLines,
       documentLineDecorations: buildSceneDocumentLineDecorations({
+        i18n,
         lines: sectionLines,
         repositoryState,
         sectionLineChanges,

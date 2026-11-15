@@ -88,6 +88,53 @@ New font uploads persist these fields whenever extraction succeeds, and the
 default template fonts already contain them, so neither path depends on the
 patch.
 
+### Section Transition Reset Story
+
+Route Engine 1.51.0 deprecated the `resetStoryAtSection` action in favour of
+`sectionTransition` with `resetStory: true`. Both run identically, and Route
+Engine keeps running the deprecated action. RouteVN Creator 1.22.0 stopped
+authoring the deprecated action and added one patch that rewrites the ones
+existing projects already hold.
+
+This is a deliberate exception to "not a project format migration": the
+project format and the creator-model commands do not change, only the spelling
+of one action inside action payloads that the model treats as opaque. The patch
+runner already provides the one-time marker, command-based writes, and remote
+synchronization gate this rewrite needs.
+
+Completion marker:
+
+```text
+contentPatch.sectionTransitionResetStory-1-22-0 = true
+```
+
+The patch follows these rules:
+
+1. It looks for `resetStoryAtSection` at any depth in scene line actions,
+   layout elements, control elements, and control `keyboard` and `keyup`
+   bindings. That covers conditional branches and confirm-dialog actions.
+2. Each one is replaced in place by
+   `sectionTransition: { sceneId, sectionId, resetStory: true }`, keeping its
+   `screen` transition. `sceneId` is the scene that owns the section.
+3. A reset whose section no longer exists is a successful no-op.
+4. A reset that sits next to a `sectionTransition` in the same action set is a
+   successful no-op. Route Engine already rejects two navigation actions in one
+   set, and which one the author meant is unknown.
+5. A line is updated with `line.update_actions` and `replace: true`, because a
+   merge would keep the deprecated action next to its replacement. Elements are
+   updated with only the fields that changed and `replace: false`. Control key
+   bindings are updated with `control.update`.
+6. A rejected or failed update aborts the patch without writing the marker. A
+   retry is safe because rewritten actions no longer match.
+
+The rewrite itself is `upgradeResetStoryActions` in
+`src/internal/navigationActions.js`. Actions left in place by rules 3 and 4,
+and deprecated actions that arrive later through imported content, still run
+and still open in the Section Transition editor.
+
+The default template uses the new form, so new projects do not depend on the
+patch.
+
 ## Default Menu Patch Execution Contract
 
 The grouped patch follows this order:
@@ -137,6 +184,11 @@ The patches must use existing repository commands:
 - `textStyle.update` with only `fontWeight`
 - `layout.element.update` with only `textStyleId` and `replace: false`
 - `font.update` with `minWeight`, `defaultWeight`, and `maxWeight` together
+- `line.update_actions` with the complete rewritten actions and
+  `replace: true`
+- `layout.element.update` and `control.element.update` with only the rewritten
+  fields and `replace: false`
+- `control.update` with only the rewritten `keyboard` or `keyup` bindings
 
 It must not mutate projected repository state directly and must not introduce a
 patch-specific creator-model command. Command submission preserves normal

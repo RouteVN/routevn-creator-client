@@ -5,6 +5,8 @@ import {
 } from "../i18nCopy.js";
 
 const COMMAND_LINE_COPY_KEYS = Object.freeze({
+  "Restart the story from this section. Story variables return to defaults and the player cannot roll back past it.":
+    "resetStoryDescription",
   "A resource is required.": "resourceRequiredMessage",
   "Add Value": "addValueButton",
   "Choose a control...": "chooseControlPlaceholder",
@@ -239,4 +241,18 @@ export const localizeCommandLineForm = (form = {}, copy = {}) => {
   }
 
   return localizedForm;
+};
+
+export const getSectionTransitionActionLabel = (
+  actionType,
+  action,
+  copy = {},
+) => {
+  if (actionType === "resetStoryAtSection" || action?.resetStory === true) {
+    return (
+      copy.actionSectionTransitionResetStory ??
+      "Section Transition (reset story)"
+    );
+  }
+  return copy.actionSectionTransition ?? "Section Transition";
 };

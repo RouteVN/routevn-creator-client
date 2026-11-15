@@ -21,6 +21,7 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import {
+  getSectionTransitionActionLabel,
   formatCommandLineActionCount,
   formatCommandLineCopy,
   formatCommandLinePluralCopy,
@@ -420,7 +421,7 @@ export const setMode = ({ state }, payload = {}) => {
   if (mode === undefined) {
     return;
   }
-  state.mode = mode;
+  state.mode = mode === "resetStoryAtSection" ? "sectionTransition" : mode;
 };
 
 export const setSuppressDialogClose = (
@@ -880,6 +881,25 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
           : formatSceneSectionLabel(sceneName, sectionName, copy),
       };
     }
+    if (actions.sectionTransition.resetStory === true) {
+      const targetLabel = preview.sectionTransition?.label ?? sectionId;
+      preview.sectionTransition = {
+        scene,
+        section,
+        label: formatCommandLineCopy(
+          copy?.labelValue ?? "{label}: {value}",
+          {
+            label: getSectionTransitionActionLabel(
+              "sectionTransition",
+              actions.sectionTransition,
+              copy,
+            ),
+            value: targetLabel,
+          },
+          copy,
+        ),
+      };
+    }
   }
 
   if (actions.resetStoryAtSection) {
@@ -899,13 +919,18 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       scene,
       section,
       sectionId,
-      label: targetLabel
-        ? formatCommandLineCopy(
-            "Reset story at {target}",
-            { target: targetLabel },
+      label: formatCommandLineCopy(
+        copy?.labelValue ?? "{label}: {value}",
+        {
+          label: getSectionTransitionActionLabel(
+            "resetStoryAtSection",
+            actions.resetStoryAtSection,
             copy,
-          )
-        : localizeCommandLineText("Reset story at section", copy),
+          ),
+          value: targetLabel,
+        },
+        copy,
+      ),
     };
   }
 

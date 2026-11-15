@@ -1,3 +1,4 @@
+import { getSectionTransitionActionLabel } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { formatList } from "../../internal/dates.js";
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
@@ -52,8 +53,6 @@ const createControlForm = ({ editMode = false, copy = {} } = {}) => ({
 const createSystemActionLabels = (copy = {}) => ({
   nextLine: copy.actionNextLine ?? "Next Line",
   sectionTransition: copy.actionSectionTransition ?? "Section Transition",
-  resetStoryAtSection:
-    copy.actionResetStoryAtSection ?? "Reset Story At Section",
   toggleAutoMode: copy.actionToggleAutoMode ?? "Toggle Auto Mode",
   toggleSkipMode: copy.actionToggleSkipMode ?? "Toggle Skip Mode",
   startSkipMode: copy.actionStartSkipMode ?? "Start Skip Mode",
@@ -132,7 +131,16 @@ const toKeyboardItems = (
       const actionIds = Object.keys(actions);
       const actionLabel =
         formatList(
-          actionIds.map((actionId) => systemActionLabels[actionId] ?? actionId),
+          actionIds.map((actionId) =>
+            actionId === "sectionTransition" ||
+            actionId === "resetStoryAtSection"
+              ? getSectionTransitionActionLabel(
+                  actionId,
+                  actions[actionId],
+                  copy,
+                )
+              : (systemActionLabels[actionId] ?? actionId),
+          ),
           dateTime,
         ) ||
         (copy.noActionLabel ?? "No action");

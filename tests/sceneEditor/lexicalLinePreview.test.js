@@ -487,3 +487,35 @@ describe("lexical scene document editor line previews", () => {
     }
   });
 });
+
+it("renders a localized resetting transition label and redraws when it changes", async () => {
+  const restore = installDomGlobals();
+  try {
+    const { LexicalSceneDocumentEditorElement } = await import(
+      "../../src/primitives/lexicalSceneDocumentEditor.js"
+    );
+    const prototype = LexicalSceneDocumentEditorElement.prototype;
+    const host = {
+      createSvgIcon: () => document.createElement("rtgl-svg"),
+      createIconPreview: prototype.createIconPreview,
+    };
+    const decoration = {
+      sectionTransition: true,
+      sectionTransitionLabel: "Section Transition (reset story)",
+    };
+    const items = prototype.createPreviewItems.call(host, decoration);
+    const preview = items.querySelector(".preview-item");
+    expect(preview.title).toBe(decoration.sectionTransitionLabel);
+    expect(preview.getAttribute("aria-label")).toBe(
+      decoration.sectionTransitionLabel,
+    );
+    expect(prototype.buildRightGutterSignature(decoration)).not.toBe(
+      prototype.buildRightGutterSignature({
+        ...decoration,
+        sectionTransitionLabel: "Section Transition",
+      }),
+    );
+  } finally {
+    restore();
+  }
+});

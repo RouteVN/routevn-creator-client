@@ -291,9 +291,7 @@ template:
                     $elif mode == "character":
                       - rvn-command-line-characters#commandLineCharacters :character=${actions.character} :presentationState=${presentationState}: null
                     $elif mode == "sectionTransition":
-                      - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :currentSceneId=${currentSceneId}: null
-                    $elif mode == "resetStoryAtSection":
-                      - rvn-command-line-reset-story-at-section#commandLineResetStoryAtSection :resetStoryAtSection=${actions.resetStoryAtSection} :currentSceneId=${currentSceneId}: null
+                      - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :resetStoryAtSection=${actions.resetStoryAtSection} :currentSceneId=${currentSceneId}: null
                     $elif mode == "control":
                       - rvn-command-line-control#commandLineControl :controls=${controlLayouts} :control=${actions.control}: null
                     $elif mode == "nextLine":

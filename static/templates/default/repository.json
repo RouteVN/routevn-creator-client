@@ -2338,8 +2338,10 @@
               "click": {
                 "payload": {
                   "actions": {
-                    "resetStoryAtSection": {
-                      "sectionId": "DbhYkg5Lng7f"
+                    "sectionTransition": {
+                      "sceneId": "LL8EUke6dL2V",
+                      "sectionId": "DbhYkg5Lng7f",
+                      "resetStory": true
                     }
                   }
                 }
@@ -2684,8 +2686,10 @@
                       "resourceId": "3SbNExCHBKaN",
                       "confirmActions": {
                         "popOverlay": {},
-                        "resetStoryAtSection": {
-                          "sectionId": "oivTjWAhhYG1"
+                        "sectionTransition": {
+                          "sceneId": "HydQaTUAxHyS",
+                          "sectionId": "oivTjWAhhYG1",
+                          "resetStory": true
                         }
                       }
                     }

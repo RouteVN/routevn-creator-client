@@ -48,6 +48,9 @@ const mocked = vi.hoisted(() => ({
       upgradeLayoutSchemaVersion: vi.fn(),
       updateTextStyle: vi.fn(),
       updateLayoutElement: vi.fn(),
+      updateLineActions: vi.fn(),
+      updateControlItem: vi.fn(),
+      updateControlElement: vi.fn(),
       updateFont: vi.fn(),
       updateSound: vi.fn(),
       deleteSceneItem: vi.fn(),
@@ -158,6 +161,9 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.collabService.commandApi.upgradeLayoutSchemaVersion.mockReset();
     mocked.collabService.commandApi.updateTextStyle.mockReset();
     mocked.collabService.commandApi.updateLayoutElement.mockReset();
+    mocked.collabService.commandApi.updateLineActions.mockReset();
+    mocked.collabService.commandApi.updateControlItem.mockReset();
+    mocked.collabService.commandApi.updateControlElement.mockReset();
     mocked.collabService.commandApi.updateFont.mockReset();
     mocked.collabService.commandApi.updateSound.mockReset();
     mocked.assetService.storeFile.mockReset();
@@ -971,13 +977,13 @@ describe("projectServiceCore releaseProjectRuntime", () => {
 
     // The route opens the project and evaluates its content patches.
     await projectService.ensureRepository();
-    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(2);
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(3);
 
     // A page ensures the open project again, and the user leaves the project
     // while that call would read the project store.
     leaveOnNextMarkerRead = true;
     await expect(projectService.ensureRepository()).resolves.toBe(repository);
-    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(2);
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(3);
   });
 
   it("evaluates the content patches again for a reopened project", async () => {
@@ -996,7 +1002,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     await projectService.ensureRepository();
     await projectService.ensureRepository();
 
-    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(4);
+    expect(mocked.projectStore.app.get).toHaveBeenCalledTimes(6);
   });
 
   it("defers automatic content patches until the platform marks the project ready", async () => {
@@ -1503,6 +1509,488 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       "contentPatch.fontWeightMetadata-1-10-0",
       true,
     );
+  });
+
+  describe("section transition reset story patch", () => {
+    const PATCH_KEY = "contentPatch.sectionTransitionResetStory-1-22-0";
+    const OTHER_PATCH_KEYS = [
+      "contentPatch.defaultMenuTextStyles-1-9-1",
+      "contentPatch.fontWeightMetadata-1-10-0",
+    ];
+
+    const createLegacyResetState = () => ({
+      scenes: {
+        items: {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            sections: {
+              items: {
+                "section-1": {
+                  id: "section-1",
+                  lines: {
+                    items: {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          dialogue: { content: [{ text: "Line One" }] },
+                        },
+                      },
+                      "line-2": {
+                        id: "line-2",
+                        actions: {
+                          conditional: {
+                            branches: [
+                              {
+                                when: { eq: [{ var: "variables.flag" }, 1] },
+                                actions: {
+                                  resetStoryAtSection: {
+                                    sectionId: "section-2",
+                                  },
+                                },
+                              },
+                              { actions: {} },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "scene-2": {
+            id: "scene-2",
+            type: "scene",
+            sections: {
+              items: {
+                "section-2": {
+                  id: "section-2",
+                  lines: {
+                    items: {
+                      "line-3": {
+                        id: "line-3",
+                        actions: {
+                          background: { resourceId: "image-1" },
+                          resetStoryAtSection: {
+                            sectionId: "section-1",
+                            screen: {
+                              animations: { resourceId: "animation-1" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "folder-1": { id: "folder-1", type: "folder" },
+        },
+      },
+      layouts: {
+        items: {
+          "layout-1": {
+            id: "layout-1",
+            type: "layout",
+            layoutSchemaVersion: 2,
+            elements: {
+              items: {
+                "element-1": {
+                  id: "element-1",
+                  type: "rect",
+                  width: 100,
+                  click: {
+                    payload: {
+                      actions: {
+                        showConfirmDialog: {
+                          resourceId: "layout-2",
+                          confirmActions: {
+                            popOverlay: {},
+                            resetStoryAtSection: { sectionId: "section-1" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                "element-2": {
+                  id: "element-2",
+                  type: "text",
+                  click: {
+                    payload: { actions: { nextLine: {} } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      controls: {
+        items: {
+          "control-1": {
+            id: "control-1",
+            type: "control",
+            keyboard: {
+              esc: {
+                payload: {
+                  actions: {
+                    resetStoryAtSection: { sectionId: "section-1" },
+                  },
+                },
+              },
+              enter: { payload: { actions: { nextLine: {} } } },
+            },
+            keyup: {
+              ctrl: { payload: { actions: { stopSkipMode: {} } } },
+            },
+            elements: {
+              items: {
+                "control-element-1": {
+                  id: "control-element-1",
+                  type: "rect",
+                  rightClick: {
+                    payload: {
+                      actions: {
+                        resetStoryAtSection: { sectionId: "section-2" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const openProjectWith = async (state, overrides) => {
+      const repository = { getState: vi.fn(() => state) };
+      mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+      mocked.projectStore.app.get.mockImplementation(async (key) =>
+        OTHER_PATCH_KEYS.includes(key) ? true : undefined,
+      );
+      const projectService = createTestProjectService(overrides);
+      return { projectService, repository };
+    };
+
+    beforeEach(() => {
+      const { commandApi } = mocked.collabService;
+      commandApi.updateLineActions.mockResolvedValue({ valid: true });
+      commandApi.updateLayoutElement.mockResolvedValue({ valid: true });
+      commandApi.updateControlItem.mockResolvedValue({ valid: true });
+      commandApi.updateControlElement.mockResolvedValue({ valid: true });
+    });
+
+    it("rewrites reset actions in lines, layouts, and controls before recording completion", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      const { projectService } = await openProjectWith(state);
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions.mock.calls).toEqual([
+        [
+          {
+            lineId: "line-2",
+            data: {
+              conditional: {
+                branches: [
+                  {
+                    when: { eq: [{ var: "variables.flag" }, 1] },
+                    actions: {
+                      sectionTransition: {
+                        sceneId: "scene-2",
+                        sectionId: "section-2",
+                        resetStory: true,
+                      },
+                    },
+                  },
+                  { actions: {} },
+                ],
+              },
+            },
+            replace: true,
+          },
+        ],
+        [
+          {
+            lineId: "line-3",
+            data: {
+              background: { resourceId: "image-1" },
+              sectionTransition: {
+                sceneId: "scene-1",
+                sectionId: "section-1",
+                screen: { animations: { resourceId: "animation-1" } },
+                resetStory: true,
+              },
+            },
+            replace: true,
+          },
+        ],
+      ]);
+      expect(commandApi.updateLayoutElement.mock.calls).toEqual([
+        [
+          {
+            layoutId: "layout-1",
+            elementId: "element-1",
+            data: {
+              click: {
+                payload: {
+                  actions: {
+                    showConfirmDialog: {
+                      resourceId: "layout-2",
+                      confirmActions: {
+                        popOverlay: {},
+                        sectionTransition: {
+                          sceneId: "scene-1",
+                          sectionId: "section-1",
+                          resetStory: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            replace: false,
+          },
+        ],
+      ]);
+      expect(commandApi.updateControlItem.mock.calls).toEqual([
+        [
+          {
+            controlId: "control-1",
+            data: {
+              keyboard: {
+                esc: {
+                  payload: {
+                    actions: {
+                      sectionTransition: {
+                        sceneId: "scene-1",
+                        sectionId: "section-1",
+                        resetStory: true,
+                      },
+                    },
+                  },
+                },
+                enter: { payload: { actions: { nextLine: {} } } },
+              },
+            },
+          },
+        ],
+      ]);
+      expect(commandApi.updateControlElement.mock.calls).toEqual([
+        [
+          {
+            controlId: "control-1",
+            elementId: "control-element-1",
+            data: {
+              rightClick: {
+                payload: {
+                  actions: {
+                    sectionTransition: {
+                      sceneId: "scene-2",
+                      sectionId: "section-2",
+                      resetStory: true,
+                    },
+                  },
+                },
+              },
+            },
+            replace: false,
+          },
+        ],
+      ]);
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+      const markerOrder = mocked.projectStore.app.set.mock.invocationCallOrder;
+      for (const update of [
+        commandApi.updateLineActions,
+        commandApi.updateLayoutElement,
+        commandApi.updateControlItem,
+        commandApi.updateControlElement,
+      ]) {
+        expect(update.mock.invocationCallOrder.at(-1)).toBeLessThan(
+          markerOrder.at(-1),
+        );
+      }
+      // The repository state is read-only projection data.
+      expect(state).toEqual(createLegacyResetState());
+    });
+
+    it("skips the patch when already completed", async () => {
+      const { commandApi } = mocked.collabService;
+      const { projectService } = await openProjectWith(
+        createLegacyResetState(),
+      );
+      mocked.projectStore.app.get.mockResolvedValue(true);
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions).not.toHaveBeenCalled();
+      expect(commandApi.updateLayoutElement).not.toHaveBeenCalled();
+      expect(commandApi.updateControlItem).not.toHaveBeenCalled();
+      expect(commandApi.updateControlElement).not.toHaveBeenCalled();
+      expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+    });
+
+    it("records completion without updates when the project has no reset actions", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      state.scenes.items["scene-1"].sections.items["section-1"].lines.items[
+        "line-2"
+      ].actions = {
+        sectionTransition: {
+          sceneId: "scene-2",
+          sectionId: "section-2",
+          resetStory: true,
+        },
+      };
+      delete state.scenes.items["scene-2"].sections.items["section-2"].lines
+        .items["line-3"].actions.resetStoryAtSection;
+      state.layouts.items = {};
+      state.controls.items = {};
+      const { projectService } = await openProjectWith(state);
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions).not.toHaveBeenCalled();
+      expect(commandApi.updateLayoutElement).not.toHaveBeenCalled();
+      expect(commandApi.updateControlItem).not.toHaveBeenCalled();
+      expect(commandApi.updateControlElement).not.toHaveBeenCalled();
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+    });
+
+    it("records completion for a project without scenes, layouts, or controls", async () => {
+      const { projectService } = await openProjectWith({});
+
+      await projectService.ensureRepository();
+
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+    });
+
+    it("leaves resets it cannot rewrite safely", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      const lines =
+        state.scenes.items["scene-1"].sections.items["section-1"].lines.items;
+      // The section was deleted.
+      lines["line-1"].actions = {
+        resetStoryAtSection: { sectionId: "section-9" },
+      };
+      // Two navigation actions: which one was meant is unknown.
+      lines["line-2"].actions = {
+        resetStoryAtSection: { sectionId: "section-2" },
+        sectionTransition: { sceneId: "scene-1", sectionId: "section-1" },
+      };
+      state.layouts.items = {};
+      state.controls.items = {};
+      const { projectService } = await openProjectWith(state);
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions.mock.calls).toEqual([
+        [expect.objectContaining({ lineId: "line-3" })],
+      ]);
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+    });
+
+    it.each([
+      ["updateLineActions"],
+      ["updateLayoutElement"],
+      ["updateControlItem"],
+      ["updateControlElement"],
+    ])(
+      "does not record completion when %s is rejected",
+      async (commandName) => {
+        mocked.collabService.commandApi[commandName].mockResolvedValue({
+          valid: false,
+          error: { message: "Update rejected." },
+        });
+        const { projectService } = await openProjectWith(
+          createLegacyResetState(),
+        );
+
+        await expect(projectService.ensureRepository()).rejects.toThrow(
+          "Update rejected.",
+        );
+
+        expect(mocked.projectStore.app.set).not.toHaveBeenCalledWith(
+          PATCH_KEY,
+          true,
+        );
+      },
+    );
+
+    it("does not record completion when an update throws", async () => {
+      mocked.collabService.commandApi.updateLineActions.mockRejectedValue(
+        new Error("Command failed."),
+      );
+      const { projectService } = await openProjectWith(
+        createLegacyResetState(),
+      );
+
+      await expect(projectService.ensureRepository()).rejects.toThrow(
+        "Command failed.",
+      );
+
+      expect(mocked.projectStore.app.set).not.toHaveBeenCalledWith(
+        PATCH_KEY,
+        true,
+      );
+    });
+
+    it("finishes on a retry after a partial run", async () => {
+      const { commandApi } = mocked.collabService;
+      const state = createLegacyResetState();
+      const { projectService, repository } = await openProjectWith(state);
+      commandApi.updateLayoutElement.mockResolvedValueOnce({
+        valid: false,
+        error: { message: "Update rejected." },
+      });
+
+      await expect(projectService.ensureRepository()).rejects.toThrow(
+        "Update rejected.",
+      );
+
+      // The lines were rewritten by the first run.
+      const retryState = createLegacyResetState();
+      for (const scene of Object.values(retryState.scenes.items)) {
+        for (const section of Object.values(scene.sections?.items ?? {})) {
+          for (const line of Object.values(section.lines.items)) {
+            line.actions = {};
+          }
+        }
+      }
+      repository.getState.mockReturnValue(retryState);
+      commandApi.updateLineActions.mockClear();
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions).not.toHaveBeenCalled();
+      expect(commandApi.updateLayoutElement).toHaveBeenCalledTimes(2);
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+    });
+
+    it("waits for the platform to mark a synchronized project ready", async () => {
+      const { commandApi } = mocked.collabService;
+      const { projectService } = await openProjectWith(
+        createLegacyResetState(),
+        { shouldApplyProjectContentPatchesOnEnsure: () => false },
+      );
+
+      await projectService.ensureRepository();
+
+      expect(commandApi.updateLineActions).not.toHaveBeenCalled();
+      expect(mocked.projectStore.app.set).not.toHaveBeenCalled();
+
+      await projectService.ensureProjectContentPatches();
+
+      expect(commandApi.updateLineActions).toHaveBeenCalledTimes(2);
+      expect(mocked.projectStore.app.set).toHaveBeenCalledWith(PATCH_KEY, true);
+    });
   });
 
   it("loads historical repository state through the ensured repository contract", async () => {

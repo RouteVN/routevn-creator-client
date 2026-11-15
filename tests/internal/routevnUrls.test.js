@@ -128,7 +128,7 @@ describe("routevnUrls", () => {
       "https://routevn.com/en/creator/docs/line-actions/pop-layered-view/",
     );
     expect(getRoutevnCreatorSystemActionDocsUrl("resetStoryAtSection")).toBe(
-      "https://routevn.com/en/creator/docs/line-actions/reset-story-at-section/",
+      "https://routevn.com/en/creator/docs/line-actions/section-transition/",
     );
     expect(getRoutevnCreatorSystemActionDocsUrl("setNextLineConfig")).toBe(
       "https://routevn.com/en/creator/docs/line-actions/next-line-config/",

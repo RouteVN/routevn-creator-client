@@ -12,6 +12,7 @@ import {
   checkSceneDeleteUsage,
 } from "./resourceUsage.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
+import { upgradeResetStoryActions } from "../../../internal/navigationActions.js";
 import {
   CURRENT_LAYOUT_SCHEMA_VERSION,
   normalizeLayoutSchemaVersion,
@@ -31,6 +32,8 @@ import {
 const DEFAULT_MENU_TEXT_STYLES_PATCH_KEY =
   "contentPatch.defaultMenuTextStyles-1-9-1";
 const FONT_WEIGHT_METADATA_PATCH_KEY = "contentPatch.fontWeightMetadata-1-10-0";
+const SECTION_TRANSITION_RESET_STORY_PATCH_KEY =
+  "contentPatch.sectionTransitionResetStory-1-22-0";
 const NON_RETRYABLE_FONT_INSPECTION_ERROR_CODES = new Set([
   "unsupported_font_format",
   "invalid_font_data",
@@ -418,9 +421,157 @@ export const createProjectServiceCore = ({
     await store.app.set(FONT_WEIGHT_METADATA_PATCH_KEY, true);
   };
 
+  const assertPatchUpdateAccepted = (result) => {
+    if (result?.valid === false) {
+      throw new Error(
+        result.error?.message ||
+          "Failed to migrate reset actions to section transitions.",
+      );
+    }
+  };
+
+  const selectSceneIdsBySectionId = (repositoryState) => {
+    const sceneIdsBySectionId = new Map();
+    for (const [sceneId, scene] of Object.entries(
+      repositoryState?.scenes?.items ?? {},
+    )) {
+      for (const sectionId of Object.keys(scene?.sections?.items ?? {})) {
+        sceneIdsBySectionId.set(sectionId, sceneId);
+      }
+    }
+    return sceneIdsBySectionId;
+  };
+
+  // The top-level fields of an item that the upgrade rewrote. Element updates
+  // merge by field, so only these are sent.
+  const selectUpgradedFields = (item, upgradedItem) => {
+    const data = {};
+    for (const [key, value] of Object.entries(upgradedItem)) {
+      if (value !== item[key]) {
+        data[key] = value;
+      }
+    }
+    return data;
+  };
+
+  const patchLineResetStoryActions = async (repositoryState, upgrade) => {
+    for (const scene of Object.values(repositoryState?.scenes?.items ?? {})) {
+      for (const section of Object.values(scene?.sections?.items ?? {})) {
+        for (const [lineId, line] of Object.entries(
+          section?.lines?.items ?? {},
+        )) {
+          const actions = upgrade(line?.actions);
+          if (actions === line?.actions) {
+            continue;
+          }
+
+          // A merge would keep the deprecated action next to its replacement.
+          assertPatchUpdateAccepted(
+            await collabService.commandApi.updateLineActions({
+              lineId,
+              data: actions,
+              replace: true,
+            }),
+          );
+        }
+      }
+    }
+  };
+
+  const patchLayoutResetStoryActions = async (repositoryState, upgrade) => {
+    for (const [layoutId, layout] of Object.entries(
+      repositoryState?.layouts?.items ?? {},
+    )) {
+      for (const [elementId, element] of Object.entries(
+        layout?.elements?.items ?? {},
+      )) {
+        const upgradedElement = upgrade(element);
+        if (upgradedElement === element) {
+          continue;
+        }
+
+        assertPatchUpdateAccepted(
+          await collabService.commandApi.updateLayoutElement({
+            layoutId,
+            elementId,
+            data: selectUpgradedFields(element, upgradedElement),
+            replace: false,
+          }),
+        );
+      }
+    }
+  };
+
+  const patchControlResetStoryActions = async (repositoryState, upgrade) => {
+    for (const [controlId, control] of Object.entries(
+      repositoryState?.controls?.items ?? {},
+    )) {
+      const keyData = {};
+      for (const key of ["keyboard", "keyup"]) {
+        const upgradedKeys = upgrade(control?.[key]);
+        if (upgradedKeys !== control?.[key]) {
+          keyData[key] = upgradedKeys;
+        }
+      }
+      if (Object.keys(keyData).length > 0) {
+        assertPatchUpdateAccepted(
+          await collabService.commandApi.updateControlItem({
+            controlId,
+            data: keyData,
+          }),
+        );
+      }
+
+      for (const [elementId, element] of Object.entries(
+        control?.elements?.items ?? {},
+      )) {
+        const upgradedElement = upgrade(element);
+        if (upgradedElement === element) {
+          continue;
+        }
+
+        assertPatchUpdateAccepted(
+          await collabService.commandApi.updateControlElement({
+            controlId,
+            elementId,
+            data: selectUpgradedFields(element, upgradedElement),
+            replace: false,
+          }),
+        );
+      }
+    }
+  };
+
+  const applySectionTransitionResetStoryPatch = async (repository) => {
+    if (typeof repository?.getState !== "function") {
+      return;
+    }
+
+    const store = repositoryService.getCachedStore();
+    const isApplied = await store.app.get(
+      SECTION_TRANSITION_RESET_STORY_PATCH_KEY,
+    );
+    if (isApplied === true) {
+      return;
+    }
+
+    const repositoryState = repository.getState();
+    const sceneIdsBySectionId = selectSceneIdsBySectionId(repositoryState);
+    const upgrade = (value) =>
+      upgradeResetStoryActions(value, {
+        resolveSceneId: (sectionId) => sceneIdsBySectionId.get(sectionId),
+      });
+
+    await patchLineResetStoryActions(repositoryState, upgrade);
+    await patchLayoutResetStoryActions(repositoryState, upgrade);
+    await patchControlResetStoryActions(repositoryState, upgrade);
+    await store.app.set(SECTION_TRANSITION_RESET_STORY_PATCH_KEY, true);
+  };
+
   const applyProjectContentPatches = async (repository) => {
     await applyDefaultMenuTextStylesPatch(repository);
     await applyFontWeightMetadataPatch(repository);
+    await applySectionTransitionResetStoryPatch(repository);
   };
 
   const repairingSoundIds = new Set();

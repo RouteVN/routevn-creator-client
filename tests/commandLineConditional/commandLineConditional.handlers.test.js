@@ -1026,7 +1026,7 @@ describe("commandLineConditional.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("keeps one navigation action in a branch", () => {
+  it("replaces a legacy reset in a branch on save", () => {
     const state = createInitialState();
     const store = createStore(state);
     const render = vi.fn();
@@ -1038,7 +1038,7 @@ describe("commandLineConditional.handlers", () => {
       { state },
       {
         actions: {
-          sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+          resetStoryAtSection: { sectionId: "section-2" },
           updateVariable,
         },
       },
@@ -1048,14 +1048,24 @@ describe("commandLineConditional.handlers", () => {
       { store, render },
       {
         _event: {
-          detail: { resetStoryAtSection: { sectionId: "section-3" } },
+          detail: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-3",
+              resetStory: true,
+            },
+          },
         },
       },
     );
 
     expect(state.tempBranch.actions).toEqual({
       updateVariable,
-      resetStoryAtSection: { sectionId: "section-3" },
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-3",
+        resetStory: true,
+      },
     });
     expect(render).toHaveBeenCalledOnce();
   });
