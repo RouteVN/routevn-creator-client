@@ -75,14 +75,16 @@ const syncRepositoryState = (deps) => {
   });
 };
 
+// `editVisualId` opens the visual panel in that visual's edit view.
 export const open = (deps, payload) => {
   const { store, render } = deps;
-  const { mode, actions } = payload;
+  const { mode, actions, editVisualId } = payload;
   const nextActions = actions !== undefined ? actions : deps.props?.actions;
 
   syncActions(store, nextActions);
   store.showActionsDialog();
   store.setMode({ mode });
+  store.setEditVisualId({ visualId: editVisualId });
   render();
 };
 
@@ -415,6 +417,29 @@ export const handleCommandLineSubmit = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("actions-change", {
       detail: normalizeActionsObject(submittedActions),
+    }),
+  );
+  store.hideActionsDialog();
+  render();
+};
+
+// Edit Layout on a visual, or a new visual, submits the visuals as Submit
+// does, and the host then opens the visual's layout.
+export const handleVisualLayoutEdit = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store, render, dispatchEvent } = deps;
+  const { actions, visualId, returnToEditView } = payload._event.detail;
+
+  store.updateActions(
+    normalizeActionsObject(mergeActions(store.selectAction(), actions)),
+  );
+  dispatchEvent(
+    new CustomEvent("visual-layout-edit", {
+      detail: {
+        actions: normalizeActionsObject(actions),
+        visualId,
+        returnToEditView,
+      },
     }),
   );
   store.hideActionsDialog();

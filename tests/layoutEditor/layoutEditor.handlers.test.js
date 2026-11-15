@@ -67,6 +67,12 @@ const createLayoutEditorDeps = ({
     selectLayoutId: vi.fn(() => "layout-1"),
     selectLayoutName: vi.fn(() => "Layout One"),
     selectLayoutResourceType: vi.fn(() => resourceType),
+    selectProjectResolution: vi.fn(() => ({ width: 1920, height: 1080 })),
+    selectImages: vi.fn(() => ({ items: {}, tree: [] })),
+    selectSpritesheetsData: vi.fn(() => ({ items: {}, tree: [] })),
+    selectVideosData: vi.fn(() => ({ items: {}, tree: [] })),
+    selectParticlesData: vi.fn(() => ({ items: {}, tree: [] })),
+    selectLayoutsData: vi.fn(() => ({ items: {}, tree: [] })),
     selectPreviewData: vi.fn(() => state.previewData),
     setPreviewData: vi.fn(({ previewData: nextPreviewData } = {}) => {
       state.previewData = nextPreviewData;

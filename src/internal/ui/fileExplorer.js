@@ -13,7 +13,7 @@ import {
   recursivelyCheckResource,
 } from "../project/projection.js";
 
-const isTextElementType = (type) =>
+export const isTextElementType = (type) =>
   [
     "text",
     "text-revealing",
@@ -29,9 +29,9 @@ const isTextElementType = (type) =>
 const getResultErrorMessage = (appService, errorOrResult, fallbackMessage) =>
   getResourcePageErrorMessage({ appService, errorOrResult, fallbackMessage });
 
-const resolveMenuItem = (detail = {}) => detail.item || detail;
+export const resolveMenuItem = (detail = {}) => detail.item || detail;
 
-const resolveExplorerMove = (detail = {}) => {
+export const resolveExplorerMove = (detail = {}) => {
   const { position, source, target } = detail;
   if (!source?.id) {
     return null;

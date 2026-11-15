@@ -10,8 +10,17 @@ import {
 import {
   resolveSpritesheetAnimationFps,
   resolveSpritesheetFrameName,
+  resolveSpritesheetSize,
 } from "../spritesheets.js";
-import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
+import {
+  deleteTreeItem,
+  filterTreeCollection,
+  insertTreeItem,
+  moveTreeItem,
+  ROOT_TREE_PARENT_ID,
+  toHierarchyStructure,
+  updateTreeItem,
+} from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
   getInteractionActions,
@@ -19,6 +28,7 @@ import {
   withInteractionPayload,
 } from "./interactionPayload.js";
 import { generateId } from "../id.js";
+import { DEFAULT_PROJECT_RESOLUTION } from "../projectResolution.js";
 import { areEditHistoryValuesEqual } from "../editHistory.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
 import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
@@ -230,6 +240,513 @@ export const isFragmentLayout = (layout) => layout?.isFragment === true;
 
 export const normalizeLayoutSchemaVersion = (value) =>
   Number.isInteger(value) && value >= 1 ? value : 1;
+
+// A visual shows a layout, a project layout or a custom one of its own: a
+// layer the size of the screen, whose elements are placed on the screen.
+// Visuals saved before that could show one image, spritesheet, video or
+// particle, set by resourceId, resourceType and, for a spritesheet,
+// animationName, placed by the visual's transform.
+const VISUAL_LAYOUT_CONTENT_ID = "content";
+
+const VISUAL_RESOURCE_COLLECTIONS = {
+  image: "images",
+  spritesheet: "spritesheets",
+  video: "videos",
+  particle: "particles",
+  layout: "layouts",
+};
+
+// The element that shows each kind of resource, and its resource id field.
+const VISUAL_MEDIA_ELEMENTS = {
+  sprite: { resourceType: "image", idField: "imageId" },
+  "spritesheet-animation": {
+    resourceType: "spritesheet",
+    idField: "resourceId",
+  },
+  video: { resourceType: "video", idField: "videoId" },
+  particle: { resourceType: "particle", idField: "particleId" },
+  "fragment-ref": { resourceType: "layout", idField: "fragmentLayoutId" },
+};
+
+const VISUAL_PLACEMENT_DEFAULTS = {
+  x: 0,
+  y: 0,
+  anchorX: 0,
+  anchorY: 0,
+  scaleX: 1,
+  scaleY: 1,
+  rotation: 0,
+};
+
+const toPositiveSize = (value) =>
+  Number.isFinite(value) && value > 0 ? value : undefined;
+
+const setVisualLayoutSize = (target, { width, height } = {}) => {
+  const positiveWidth = toPositiveSize(width);
+  const positiveHeight = toPositiveSize(height);
+  if (positiveWidth !== undefined && positiveHeight !== undefined) {
+    target.width = positiveWidth;
+    target.height = positiveHeight;
+  }
+};
+
+const hasOwnVisualLayoutSize = (layout) =>
+  toPositiveSize(layout?.width) !== undefined &&
+  toPositiveSize(layout?.height) !== undefined;
+
+// Where a visual's transform put it on the screen: the visual's own values
+// over its transform's, with a flip as a negative scale.
+const resolveVisualPlacement = (item = {}, resources = {}) => {
+  const transform =
+    item.transform ?? resources.transforms?.[item.transformId] ?? {};
+  const placement = {};
+  for (const [field, defaultValue] of Object.entries(
+    VISUAL_PLACEMENT_DEFAULTS,
+  )) {
+    placement[field] = item[field] ?? transform[field] ?? defaultValue;
+  }
+  if (item.flipX ?? transform.flipX) {
+    placement.scaleX *= -1;
+  }
+  if (item.flipY ?? transform.flipY) {
+    placement.scaleY *= -1;
+  }
+  return placement;
+};
+
+// The fields that place a visual on the screen. A visual whose layout
+// carries the placement has none of them: the engine centers its layout on the
+// screen, which a layout the size of the screen covers.
+const VISUAL_PLACEMENT_FIELDS = [
+  "transformId",
+  "transform",
+  "x",
+  "y",
+  "anchorX",
+  "anchorY",
+  "scaleX",
+  "scaleY",
+  "flipX",
+  "flipY",
+  "rotation",
+  "originX",
+  "originY",
+];
+
+const placeVisualAsScreenLayer = (item) => {
+  for (const field of VISUAL_PLACEMENT_FIELDS) {
+    delete item[field];
+  }
+};
+
+// How the engine places a layout visual without a transform: centered on the
+// screen at scale 1, like a background. A custom transform starts from it.
+export const getDefaultVisualLayoutTransform = (
+  resolution = DEFAULT_PROJECT_RESOLUTION,
+) => ({
+  x: resolution.width / 2,
+  y: resolution.height / 2,
+  anchorX: 0.5,
+  anchorY: 0.5,
+  scaleX: 1,
+  scaleY: 1,
+  rotation: 0,
+});
+
+// The layout of a new visual, with no elements yet.
+export const createEmptyVisualLayout = () => ({
+  layoutSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
+  elements: { items: {}, tree: [] },
+});
+
+const createVisualMediaElement = ({
+  resourceType,
+  resourceId,
+  animationName,
+  resource,
+  placement,
+}) => {
+  const element = {
+    name: resource?.name ?? resourceId,
+    ...placement,
+  };
+
+  if (resourceType === "image") {
+    element.type = "sprite";
+    element.imageId = resourceId;
+    setVisualLayoutSize(element, resource);
+  } else if (resourceType === "spritesheet") {
+    element.type = "spritesheet-animation";
+    element.resourceId = resourceId;
+    element.animationName =
+      animationName ?? Object.keys(resource?.animations ?? {})[0];
+    setVisualLayoutSize(element, resolveSpritesheetSize(resource));
+  } else if (resourceType === "video") {
+    // A video visual played once; a layout video loops unless told not to.
+    element.type = "video";
+    element.videoId = resourceId;
+    element.loop = resource?.loop ?? false;
+    element.volume = resource?.volume ?? 100;
+    setVisualLayoutSize(element, resource);
+  } else if (resourceType === "particle") {
+    element.type = "particle";
+    element.particleId = resourceId;
+    setVisualLayoutSize(element, resource);
+  } else {
+    return undefined;
+  }
+
+  return element;
+};
+
+// A layout drawn on a canvas of its own size becomes a screen layer: its
+// elements go into a container of that size, placed where the visual put it.
+const toScreenVisualLayout = (layout, { name, placement }) => {
+  const container = {
+    type: "container",
+    name,
+    ...placement,
+    direction: "absolute",
+    gapX: 0,
+    gapY: 0,
+  };
+  setVisualLayoutSize(container, layout);
+  const elements = structuredClone(layout?.elements ?? { items: {}, tree: [] });
+  return {
+    layoutSchemaVersion: normalizeLayoutSchemaVersion(
+      layout?.layoutSchemaVersion,
+    ),
+    elements: {
+      items: { ...elements.items, [VISUAL_LAYOUT_CONTENT_ID]: container },
+      tree: [{ id: VISUAL_LAYOUT_CONTENT_ID, children: elements.tree }],
+    },
+  };
+};
+
+const resolveVisualResourceType = (
+  { resourceId, resourceType } = {},
+  resources = {},
+) => {
+  if (resourceType) {
+    return resourceType;
+  }
+
+  return Object.keys(VISUAL_RESOURCE_COLLECTIONS).find(
+    (type) => resources[VISUAL_RESOURCE_COLLECTIONS[type]]?.[resourceId],
+  );
+};
+
+// The screen layer a visual of one resource becomes. A media resource becomes
+// one element placed where the visual's transform placed the resource. A
+// shared layout is copied: on the screen as it is, or, with a canvas of its
+// own size, in a container placed where the visual put that canvas.
+// `resources` holds the project's items by collection, such as `images`.
+export const createVisualLayoutFromResource = ({
+  resourceType,
+  resourceId,
+  animationName,
+  resources = {},
+  placement = VISUAL_PLACEMENT_DEFAULTS,
+}) => {
+  const type = resolveVisualResourceType(
+    { resourceId, resourceType },
+    resources,
+  );
+  const resource = resources[VISUAL_RESOURCE_COLLECTIONS[type]]?.[resourceId];
+
+  if (type === "layout") {
+    if (hasOwnVisualLayoutSize(resource)) {
+      return toScreenVisualLayout(resource, {
+        name: resource.name ?? resourceId,
+        placement,
+      });
+    }
+    return {
+      layoutSchemaVersion: normalizeLayoutSchemaVersion(
+        resource?.layoutSchemaVersion,
+      ),
+      elements: structuredClone(resource?.elements ?? { items: {}, tree: [] }),
+    };
+  }
+
+  const layout = createEmptyVisualLayout();
+  const element = createVisualMediaElement({
+    resourceType: type,
+    resourceId,
+    animationName,
+    resource,
+    placement,
+  });
+  if (element) {
+    layout.elements.items[VISUAL_LAYOUT_CONTENT_ID] = element;
+    layout.elements.tree.push({ id: VISUAL_LAYOUT_CONTENT_ID });
+  }
+  return layout;
+};
+
+// A visual item with a custom layout, its own, as a screen layer. One that
+// names a resource is given a layout that shows it, a copy for a project
+// layout, and one with a layout on a canvas of its own size gets that layout
+// as a screen layer. Either way the placement moves from the visual into the
+// layout. A project layout drawn on the screen is copied as it is and stays
+// placed by the visual. Every other field is kept.
+export const toCustomLayoutVisualItem = (item, resources = {}) => {
+  const hasResource = item?.resourceId !== undefined;
+  if (!hasResource && !hasOwnVisualLayoutSize(item?.layout)) {
+    return item;
+  }
+
+  const resourceType = hasResource
+    ? resolveVisualResourceType(item, resources)
+    : undefined;
+  const keepsPlacement =
+    resourceType === "layout" &&
+    !hasOwnVisualLayoutSize(resources.layouts?.[item.resourceId]);
+  const placement = resolveVisualPlacement(item, resources);
+  const layoutItem = structuredClone(item);
+  delete layoutItem.resourceId;
+  delete layoutItem.resourceType;
+  delete layoutItem.animationName;
+  layoutItem.layout = hasResource
+    ? createVisualLayoutFromResource({
+        resourceType,
+        resourceId: item.resourceId,
+        animationName: item.animationName,
+        resources,
+        placement,
+      })
+    : toScreenVisualLayout(item.layout, {
+        name: getVisualLayoutMedia(item.layout)?.resourceId ?? item.id,
+        placement,
+      });
+  if (!keepsPlacement) {
+    placeVisualAsScreenLayer(layoutItem);
+  }
+  return layoutItem;
+};
+
+// Whether a visual item shows a project layout, by reference.
+export const isLinkedLayoutVisualItem = (item, resources = {}) =>
+  item?.resourceId !== undefined &&
+  resolveVisualResourceType(item, resources) === "layout";
+
+// The tweened properties that look the same on the visual's screen layer as
+// on the resource it showed.
+const SCREEN_LAYER_TWEEN_PROPERTIES = ["alpha", "blurX", "blurY"];
+
+const tweensOnScreenLayer = (tween = {}) =>
+  Object.keys(tween).every((property) =>
+    SCREEN_LAYER_TWEEN_PROPERTIES.includes(property),
+  );
+
+// An animation that fades or blurs a visual looks the same on its screen
+// layer. One that moves, scales, turns or masks it, or that is gone, would
+// act on the whole screen layer instead of the resource.
+const animatesOnScreenLayer = (item, resources) => {
+  const animationId = item.animations?.resourceId;
+  if (animationId === undefined) {
+    return true;
+  }
+
+  const animation = resources.animations?.[animationId]?.animation;
+  return (
+    animation !== undefined &&
+    animation.mask === undefined &&
+    tweensOnScreenLayer(animation.tween) &&
+    tweensOnScreenLayer(animation.prev?.tween) &&
+    tweensOnScreenLayer(animation.next?.tween)
+  );
+};
+
+// A transform with an origin turns and flips the visual around that point,
+// which a layout element has not. Without a turn or a flip, the origin
+// changes nothing.
+const turnsAroundOwnOrigin = (item, resources) => {
+  const transform =
+    item.transform ?? resources.transforms?.[item.transformId] ?? {};
+  const hasOrigin = ["originX", "originY"].some(
+    (field) => (item[field] ?? transform[field]) !== undefined,
+  );
+  if (!hasOrigin) {
+    return false;
+  }
+
+  const { rotation, scaleX, scaleY } = resolveVisualPlacement(item, resources);
+  return rotation !== 0 || scaleX < 0 || scaleY < 0;
+};
+
+// Whether a visual saved before visuals were layouts looks the same as a
+// custom layout: its resource is there, and neither its transform nor its
+// animation acts differently on a screen layer.
+const looksSameAsCustomLayout = (item, resources) => {
+  if (item.resourceId !== undefined) {
+    const type = resolveVisualResourceType(item, resources);
+    if (!resources[VISUAL_RESOURCE_COLLECTIONS[type]]?.[item.resourceId]) {
+      return false;
+    }
+  }
+
+  return (
+    !turnsAroundOwnOrigin(item, resources) &&
+    animatesOnScreenLayer(item, resources)
+  );
+};
+
+// A visual item as it is saved now. A visual shows either a project layout,
+// kept by reference so that its later edits show, or a custom layout of its
+// own. A visual saved before that with one image, spritesheet, video or
+// particle gets a custom layout that shows it, when that looks the same.
+// Otherwise it is kept as it is, which the engine still draws, until its
+// layout is edited.
+export const toLayoutVisualItem = (item, resources = {}) => {
+  if (
+    isLinkedLayoutVisualItem(item, resources) ||
+    !looksSameAsCustomLayout(item, resources)
+  ) {
+    return item;
+  }
+
+  return toCustomLayoutVisualItem(item, resources);
+};
+
+const collectVisualLayoutElementIds = (nodes = [], ids = []) => {
+  for (const node of nodes) {
+    ids.push(node.id);
+    collectVisualLayoutElementIds(node.children, ids);
+  }
+  return ids;
+};
+
+// The elements of a visual's layout in order, as stored (items and a tree) or
+// as built for the engine (nested elements), such as in a presentation state.
+const listVisualLayoutElements = (elements) => {
+  if (Array.isArray(elements)) {
+    return elements.flatMap((element) => [
+      element,
+      ...listVisualLayoutElements(element.children),
+    ]);
+  }
+
+  const items = elements?.items ?? {};
+  return collectVisualLayoutElementIds(elements?.tree).map((id) => ({
+    ...items[id],
+    id,
+  }));
+};
+
+// The first resource a visual's layout shows, in element order, which stands
+// for the visual in lists and thumbnails.
+export const getVisualLayoutMedia = (layout) => {
+  for (const element of listVisualLayoutElements(layout?.elements)) {
+    const mediaElement = VISUAL_MEDIA_ELEMENTS[element.type];
+    const resourceId = element[mediaElement?.idField];
+    if (!resourceId) {
+      continue;
+    }
+
+    const media = {
+      elementId: element.id,
+      resourceType: mediaElement.resourceType,
+      resourceId,
+    };
+    if (element.type === "spritesheet-animation") {
+      media.animationName = element.animationName;
+    }
+    return media;
+  }
+
+  return undefined;
+};
+
+export const countVisualLayoutElements = (layout) =>
+  Object.keys(layout?.elements?.items ?? {}).length;
+
+const findElementTreeNode = (nodes = [], nodeId) => {
+  for (const node of nodes) {
+    if (node.id === nodeId) {
+      return node;
+    }
+    const child = findElementTreeNode(node.children, nodeId);
+    if (child) {
+      return child;
+    }
+  }
+  return undefined;
+};
+
+// A place in a layout's elements as the tree helpers take it. A command gives
+// the place as a position, or as an index among the parent's elements without
+// the one being moved.
+const toElementTreePlacement = (
+  elements,
+  { parentId, position = "last", positionTargetId, index, movingId },
+) => {
+  const isRoot = !parentId || parentId === ROOT_TREE_PARENT_ID;
+  const treeParentId = isRoot ? ROOT_TREE_PARENT_ID : parentId;
+  if (!Number.isInteger(index)) {
+    return { parentId: treeParentId, position, positionTargetId };
+  }
+
+  const siblings = (
+    isRoot
+      ? elements.tree
+      : (findElementTreeNode(elements.tree, parentId)?.children ?? [])
+  ).filter((node) => node.id !== movingId);
+  const target = siblings[index];
+  if (!target) {
+    return { parentId: treeParentId, position: "last" };
+  }
+  return {
+    parentId: treeParentId,
+    position: "before",
+    positionTargetId: target.id,
+  };
+};
+
+const LAYOUT_ELEMENTS_COMMANDS = {
+  create: (elements, { elementId, data, ...placement }) =>
+    insertTreeItem({
+      treeCollection: elements,
+      value: { ...data, id: elementId },
+      ...toElementTreePlacement(elements, placement),
+    }),
+  update: (elements, { elementId, data, replace }) =>
+    updateTreeItem({
+      treeCollection: elements,
+      id: elementId,
+      value: data,
+      replace,
+    }),
+  delete: (elements, { elementIds }) =>
+    elementIds.reduce(
+      (treeCollection, id) => deleteTreeItem({ treeCollection, id }),
+      elements,
+    ),
+  move: (elements, { elementId, ...placement }) =>
+    moveTreeItem({
+      treeCollection: elements,
+      id: elementId,
+      ...toElementTreePlacement(elements, {
+        ...placement,
+        movingId: elementId,
+      }),
+    }),
+};
+
+// A layout's elements after a change, as a layout's element commands change
+// a layout: `create`, `update`, `delete` or `move`. The elements given are not
+// changed. An update or a move of an element that is not there changes
+// nothing and gives undefined.
+export const applyLayoutElementsCommand = (elements, { type, ...command }) => {
+  if (
+    (type === "update" || type === "move") &&
+    !elements?.items?.[command.elementId]
+  ) {
+    return undefined;
+  }
+
+  return LAYOUT_ELEMENTS_COMMANDS[type](elements, command);
+};
 
 const usesStackingContextRenderOrder = (layoutSchemaVersion) =>
   normalizeLayoutSchemaVersion(layoutSchemaVersion) >=

@@ -455,6 +455,40 @@ export const createStoryCommandApi = (shared) => {
   };
 
   return {
+    // A visual's layout is saved in its line's visual action. Its elements
+    // are saved whole, keeping the rest of the line's visuals.
+    async updateVisualLayoutElements({ lineId, visualId, elements }) {
+      const context = await shared.ensureCommandContext({
+        lineIds: [lineId],
+      });
+      const visual = structuredClone(
+        findLineLocation(context.state, lineId)?.line?.actions?.visual,
+      );
+      const item = visual?.items?.find((entry) => entry.id === visualId);
+      if (!item?.layout) {
+        return {
+          valid: false,
+          error: {
+            code: "visual_layout_missing",
+            message: "The visual or its layout is missing.",
+          },
+        };
+      }
+
+      item.layout.elements = structuredClone(elements);
+      return shared.submitCommandWithContext({
+        context,
+        scope: "story",
+        partition: getStoryLinePartition(context, [lineId]),
+        type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+        payload: buildLineActionsPayload({
+          lineId,
+          data: { visual },
+          replace: false,
+        }),
+      });
+    },
+
     async updateLineActions({ lineId, data, replace = false, preserve }) {
       return submitLineActionsData({
         lineId,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFragmentLayoutOptions } from "../../src/pages/layoutEditor/support/layoutFragments.js";
+import { getFragmentLayoutOptions } from "../../src/internal/ui/layoutEditor/layoutFragments.js";
 
 describe("layoutFragments", () => {
   it("uses plain layout names for fragment selector options", () => {
