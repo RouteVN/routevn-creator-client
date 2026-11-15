@@ -899,14 +899,7 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       scene,
       section,
       sectionId,
-      label: formatCommandLineCopy(
-        copy?.labelValue ?? "{label}: {value}",
-        {
-          label: localizeCommandLineText("Section Transition", copy),
-          value: targetLabel,
-        },
-        copy,
-      ),
+      label: targetLabel,
     };
   }
 

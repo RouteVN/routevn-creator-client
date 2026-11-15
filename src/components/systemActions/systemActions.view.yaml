@@ -142,7 +142,7 @@ template:
                       - rtgl-text s=sm: ${preview.sectionTransition.label}
               - $if preview.resetStoryAtSection:
                   - 'rtgl-view#actionItemResetStoryAtSection data-mode=resetStoryAtSection g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.resetStoryAtSection};"':
-                      - rtgl-svg svg="settings" wh=24: null
+                      - rtgl-svg svg="transition" wh=24: null
                       - rtgl-text s=sm: ${preview.resetStoryAtSection.label}
               - $if preview.dialogue:
                   - 'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="order: ${presentationActionOrder.dialogue}; min-height: 36px;"':

@@ -357,7 +357,7 @@ describe("systemActions.store", () => {
     });
     expect(preview.resetStoryAtSection).toMatchObject({
       sectionId: "section-2",
-      label: "Section Transition: Opening - Arrival",
+      label: "Opening - Arrival",
     });
   });
 
@@ -453,11 +453,7 @@ describe("systemActions.store", () => {
     });
 
     expect(preview.sectionTransition.label).toBe("Opening\u00a0– Arrival");
-    expect(preview.resetStoryAtSection.label).toBe(
-      copy.labelValue
-        .replace("{label}", copy["Section Transition"])
-        .replace("{value}", "Opening\u00a0– Arrival"),
-    );
+    expect(preview.resetStoryAtSection.label).toBe("Opening\u00a0– Arrival");
   });
 
   it("preserves and previews screen transition actions", () => {
