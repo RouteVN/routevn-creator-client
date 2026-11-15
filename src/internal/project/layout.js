@@ -530,14 +530,84 @@ export const isLinkedLayoutVisualItem = (item, resources = {}) =>
   item?.resourceId !== undefined &&
   resolveVisualResourceType(item, resources) === "layout";
 
+// The tweened properties that look the same on the visual's screen layer as
+// on the resource it showed.
+const SCREEN_LAYER_TWEEN_PROPERTIES = ["alpha", "blurX", "blurY"];
+
+const tweensOnScreenLayer = (tween = {}) =>
+  Object.keys(tween).every((property) =>
+    SCREEN_LAYER_TWEEN_PROPERTIES.includes(property),
+  );
+
+// An animation that fades or blurs a visual looks the same on its screen
+// layer. One that moves, scales, turns or masks it, or that is gone, would
+// act on the whole screen layer instead of the resource.
+const animatesOnScreenLayer = (item, resources) => {
+  const animationId = item.animations?.resourceId;
+  if (animationId === undefined) {
+    return true;
+  }
+
+  const animation = resources.animations?.[animationId]?.animation;
+  return (
+    animation !== undefined &&
+    animation.mask === undefined &&
+    tweensOnScreenLayer(animation.tween) &&
+    tweensOnScreenLayer(animation.prev?.tween) &&
+    tweensOnScreenLayer(animation.next?.tween)
+  );
+};
+
+// A transform with an origin turns and flips the visual around that point,
+// which a layout element has not. Without a turn or a flip, the origin
+// changes nothing.
+const turnsAroundOwnOrigin = (item, resources) => {
+  const transform =
+    item.transform ?? resources.transforms?.[item.transformId] ?? {};
+  const hasOrigin = ["originX", "originY"].some(
+    (field) => (item[field] ?? transform[field]) !== undefined,
+  );
+  if (!hasOrigin) {
+    return false;
+  }
+
+  const { rotation, scaleX, scaleY } = resolveVisualPlacement(item, resources);
+  return rotation !== 0 || scaleX < 0 || scaleY < 0;
+};
+
+// Whether a visual saved before visuals were layouts looks the same as a
+// custom layout: its resource is there, and neither its transform nor its
+// animation acts differently on a screen layer.
+const looksSameAsCustomLayout = (item, resources) => {
+  if (item.resourceId !== undefined) {
+    const type = resolveVisualResourceType(item, resources);
+    if (!resources[VISUAL_RESOURCE_COLLECTIONS[type]]?.[item.resourceId]) {
+      return false;
+    }
+  }
+
+  return (
+    !turnsAroundOwnOrigin(item, resources) &&
+    animatesOnScreenLayer(item, resources)
+  );
+};
+
 // A visual item as it is saved now. A visual shows either a project layout,
 // kept by reference so that its later edits show, or a custom layout of its
 // own. A visual saved before that with one image, spritesheet, video or
-// particle gets a custom layout that shows it.
-export const toLayoutVisualItem = (item, resources = {}) =>
-  isLinkedLayoutVisualItem(item, resources)
-    ? item
-    : toCustomLayoutVisualItem(item, resources);
+// particle gets a custom layout that shows it, when that looks the same.
+// Otherwise it is kept as it is, which the engine still draws, until its
+// layout is edited.
+export const toLayoutVisualItem = (item, resources = {}) => {
+  if (
+    isLinkedLayoutVisualItem(item, resources) ||
+    !looksSameAsCustomLayout(item, resources)
+  ) {
+    return item;
+  }
+
+  return toCustomLayoutVisualItem(item, resources);
+};
 
 const collectVisualLayoutElementIds = (nodes = [], ids = []) => {
   for (const node of nodes) {

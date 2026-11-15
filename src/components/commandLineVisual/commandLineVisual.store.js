@@ -721,6 +721,9 @@ export const createInitialState = () => ({
   resolution: DEFAULT_PROJECT_RESOLUTION,
   // Whether a visual saved before visuals were layouts was opened as one.
   hasConvertedVisuals: false,
+  // The custom layout of each visual switched to a project layout, by visual
+  // id, so that choosing Custom Layout again brings it back.
+  customLayoutsByVisualId: {},
   /**
    * Array of raw visual objects with the following structure:
    * {
@@ -888,8 +891,38 @@ export const addVisual = ({ state }, { id } = {}) => {
   normalizeSelectedVisualOrder(state);
 };
 
+// Gives the visual at `index` a custom layout of its own: the one it had
+// before it was switched to a project layout, or else a copy of what it
+// shows. A visual saved with one resource gets a layout that shows it.
+const applyCustomVisualLayout = (state, index) => {
+  const visual = state.selectedVisuals[index];
+  if (visual.layout) {
+    return;
+  }
+
+  const customLayout = state.customLayoutsByVisualId[visual.id];
+  if (customLayout) {
+    visual.layout = toPlainData(customLayout);
+    delete visual.resourceId;
+    delete visual.resourceType;
+    delete visual.animationName;
+    delete state.customLayoutsByVisualId[visual.id];
+    return;
+  }
+
+  // The copy is made from plain data: the state here is a draft.
+  const resources = selectVisualLayoutResources(state);
+  resources.layouts = {
+    [visual.resourceId]: toPlainData(resources.layouts[visual.resourceId]),
+  };
+  state.selectedVisuals[index] = toCustomLayoutVisualItem(
+    toPlainData(visual),
+    resources,
+  );
+};
+
 // Shows a project layout, by reference, or a custom layout of the visual's
-// own, which starts from a copy of the project layout it showed.
+// own. The custom layout a visual leaves is kept until the panel closes.
 export const updateVisualLayout = ({ state }, { index, layoutId } = {}) => {
   const visual = state.selectedVisuals[index];
   if (!visual) {
@@ -897,24 +930,30 @@ export const updateVisualLayout = ({ state }, { index, layoutId } = {}) => {
   }
 
   if (layoutId === CUSTOM_LAYOUT_VALUE) {
-    if (!visual.layout) {
-      // The copy is made from plain data: the state here is a draft.
-      const resources = selectVisualLayoutResources(state);
-      resources.layouts = {
-        [visual.resourceId]: toPlainData(resources.layouts[visual.resourceId]),
-      };
-      state.selectedVisuals[index] = toCustomLayoutVisualItem(
-        toPlainData(visual),
-        resources,
-      );
-    }
+    applyCustomVisualLayout(state, index);
     return;
   }
 
+  if (visual.layout) {
+    state.customLayoutsByVisualId[visual.id] = toPlainData(visual.layout);
+  }
   delete visual.layout;
   delete visual.animationName;
   visual.resourceId = layoutId;
   visual.resourceType = "layout";
+};
+
+// Edit Layout edits a custom layout. A visual saved with one resource, which
+// the panel kept as it was saved, becomes one now.
+export const makeVisualLayoutCustom = ({ state }, { visualId } = {}) => {
+  const index = state.selectedVisuals.findIndex(
+    (visual) => visual.id === visualId,
+  );
+  if (index === -1) {
+    return;
+  }
+
+  applyCustomVisualLayout(state, index);
 };
 
 export const removeVisual = ({ state }, { index } = {}) => {
@@ -1349,6 +1388,7 @@ export const selectSelectedVisualIndex = ({ state }) => {
 };
 
 export const setExistingVisuals = ({ state }, { visuals } = {}) => {
+  state.customLayoutsByVisualId = {};
   state.selectedVisuals = (Array.isArray(visuals) ? visuals : []).map(
     (visual) => {
       const nextVisual = normalizeSelectedVisual(visual, state.animations);
@@ -1380,6 +1420,7 @@ const getVisualMedia = (visual = {}) => {
 
 const selectVisualLayoutResources = (state) => ({
   transforms: state.transforms.items,
+  animations: state.animations.items,
   images: state.images.items,
   spritesheets: state.spritesheets.items,
   videos: state.videos.items,
@@ -1391,8 +1432,8 @@ export const selectVisualMedia = ({ state }, { index } = {}) => {
   return getVisualMedia(state.selectedVisuals[index]);
 };
 
-// The visual item as it is saved: a layout, also for a visual picked from a
-// single resource.
+// The visual item as it is saved: a layout, also for a visual saved with a
+// single resource when it looks the same as one.
 export const selectLayoutVisualItem = ({ state }, { item } = {}) => {
   return toLayoutVisualItem(item, selectVisualLayoutResources(state));
 };
@@ -1528,7 +1569,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     return {
       ...visual,
       snapshotUrl,
-      awaitsSnapshot: props.visualSnapshots !== undefined && !snapshotUrl,
+      // A visual the canvas could not take a picture of shows its resource.
+      awaitsSnapshot:
+        props.visualSnapshots !== undefined &&
+        !Object.hasOwn(props.visualSnapshots, visual.id),
       layoutName,
       displayName: visual.isCustomLayout ? customLayoutName : layoutName,
       animationMode:

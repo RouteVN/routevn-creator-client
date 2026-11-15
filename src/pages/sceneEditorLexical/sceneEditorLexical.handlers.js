@@ -2518,16 +2518,25 @@ export const handleVisualLayoutEdit = async (deps, payload) => {
   const { render, store } = deps;
   const { actions, visualId, returnToEditView } = payload._event.detail;
   const lineId = resolveActionTargetLineId(store);
-  const didSave = await runRecordedLineCommand(
-    deps,
-    { lineId },
-    ({ lineId: targetLineId, line }) =>
-      submitSceneEditorCommandLine(
-        deps,
-        { _event: { detail: actions } },
-        { lineId: targetLineId, line },
-      ),
-  );
+  // Undo waits from the save until the editor is open, or the save failed.
+  store.startOpeningVisualLayoutEditor();
+  let didSave = false;
+  try {
+    didSave = await runRecordedLineCommand(
+      deps,
+      { lineId },
+      ({ lineId: targetLineId, line }) =>
+        submitSceneEditorCommandLine(
+          deps,
+          { _event: { detail: actions } },
+          { lineId: targetLineId, line },
+        ),
+    );
+  } finally {
+    if (didSave !== true) {
+      store.closeVisualLayoutEditor();
+    }
+  }
   if (didSave !== true) {
     return;
   }

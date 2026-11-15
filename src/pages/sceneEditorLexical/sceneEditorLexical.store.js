@@ -772,6 +772,8 @@ export const createInitialState = () => ({
   // `returnToEditView` is set.
   visualLayoutEditor: {
     isOpen: false,
+    // Edit Layout saved the line and takes the scene for the editor.
+    isOpening: false,
     sceneId: undefined,
     sectionId: undefined,
     lineId: undefined,
@@ -890,11 +892,12 @@ export const selectLineEditBaselines = ({ state }, { sectionIds } = {}) => {
 
 // Undo and redo wait while a line action command runs, the preview, the
 // layout editor of a visual, the actions dialog or a transform editor is
-// open, or text is being composed.
+// open or opening, or text is being composed.
 export const selectIsEditHistoryBlocked = ({ state }) =>
   state.runningLineCommandCount > 0 ||
   state.previewVisible ||
   state.visualLayoutEditor.isOpen ||
+  state.visualLayoutEditor.isOpening ||
   state.actionTargetLineId !== undefined ||
   state.backgroundTransformEditor.isOpen ||
   getDraftSections(state).some((draftSection) => draftSection.isComposing);
@@ -1152,6 +1155,12 @@ export const showPreviewSceneId = (
   state.previewLineId = lineId;
 };
 
+// Edit Layout has begun: the line is saved, then the scene taken, before the
+// editor opens.
+export const startOpeningVisualLayoutEditor = ({ state }) => {
+  state.visualLayoutEditor.isOpening = true;
+};
+
 // Opens the layout of a visual on a line in the full-screen layout editor,
 // drawn over `sceneBackdrop`, the line's rendered scene.
 export const openVisualLayoutEditor = (
@@ -1167,6 +1176,7 @@ export const openVisualLayoutEditor = (
 ) => {
   state.visualLayoutEditor = {
     isOpen: true,
+    isOpening: false,
     sceneId,
     sectionId,
     lineId,
@@ -1216,12 +1226,28 @@ export const selectTemporaryPresentationState = ({ state }) => {
   return toPlainObject(state.temporaryPresentationState);
 };
 
+// Layout builders by repository state, which the store replaces instead of
+// changing it, so that a slider dragged in the visual panel builds layouts
+// from the resources it already gathered.
+const visualLayoutBuilders = new WeakMap();
+
+const getVisualLayoutBuilder = (repositoryState) => {
+  let builder = visualLayoutBuilders.get(repositoryState);
+  if (!builder) {
+    builder = createVisualLayoutBuilder(repositoryState, {
+      keepStoredLayouts: true,
+    });
+    visualLayoutBuilders.set(repositoryState, builder);
+  }
+  return builder;
+};
+
 // The temporary presentation state as the engine takes it: visual layouts
 // built from their saved form, with the text styles those layouts add.
 export const selectTemporaryPresentationStateForEngine = ({ state }) => {
-  const built = createVisualLayoutBuilder(state.repositoryState, {
-    keepStoredLayouts: true,
-  }).buildActions(toPlainObject(state.temporaryPresentationState));
+  const built = getVisualLayoutBuilder(state.repositoryState).buildActions(
+    toPlainObject(state.temporaryPresentationState),
+  );
   return {
     presentationState: built.actions,
     textStyles: built.textStyles,

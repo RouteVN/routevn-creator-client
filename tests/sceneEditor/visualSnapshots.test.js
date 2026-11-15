@@ -110,7 +110,7 @@ describe("scene editor: pictures of the line's visuals", () => {
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("takes a visual's picture again only when it is drawn differently, and drops a visual that is gone", async () => {
+  it("takes a visual's picture again only when it is drawn differently, keeps none for one not drawn, and drops one that is gone", async () => {
     const { deps, store } = createPage();
     store.setActionTargetLineId({ lineId: "line-1" });
     await captureSceneEditorVisualSnapshots(
@@ -143,7 +143,30 @@ describe("scene editor: pictures of the line's visuals", () => {
       "data:image/png;base64,3",
     );
 
-    // Visual two is no longer drawn.
+    // Visual two is no longer drawn: it has no picture, which the panel
+    // shows by its resource instead of waiting for one.
+    await captureSceneEditorVisualSnapshots(
+      deps,
+      renderStateWith({ one: "A" }),
+    );
+    expect(store.selectVisualSnapshotUrls()).toEqual({
+      one: "data:image/png;base64,1",
+      two: undefined,
+    });
+    expect(Object.hasOwn(store.selectVisualSnapshotUrls(), "two")).toBe(true);
+
+    // Drawn the same again: nothing changes.
+    deps.render.mockClear();
+    await captureSceneEditorVisualSnapshots(
+      deps,
+      renderStateWith({ one: "A" }),
+    );
+    expect(deps.render).not.toHaveBeenCalled();
+
+    // Visual two is gone from the line.
+    store.setPresentationState({
+      presentationState: { visual: { items: [{ id: "one", layer: 50 }] } },
+    });
     await captureSceneEditorVisualSnapshots(
       deps,
       renderStateWith({ one: "A" }),
@@ -183,8 +206,8 @@ describe("scene editor: pictures of the line's visuals", () => {
     );
   });
 
-  it("leaves out a visual whose picture could not be taken", async () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("keeps no picture for a visual whose picture could not be taken, and tries again only when it changes", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { deps, store } = createPage({ visualIds: ["one"] });
     store.setActionTargetLineId({ lineId: "line-1" });
     deps.graphicsService.extractCanvas.mockRejectedValueOnce(
@@ -196,7 +219,24 @@ describe("scene editor: pictures of the line's visuals", () => {
       renderStateWith({ one: "A" }),
     );
 
-    expect(store.selectVisualSnapshots()).toEqual({});
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(store.selectVisualSnapshotUrls()).toEqual({ one: undefined });
+    expect(Object.hasOwn(store.selectVisualSnapshotUrls(), "one")).toBe(true);
+
+    await captureSceneEditorVisualSnapshots(
+      deps,
+      renderStateWith({ one: "A" }),
+    );
+    expect(deps.graphicsService.extractCanvas).toHaveBeenCalledTimes(1);
+
+    await captureSceneEditorVisualSnapshots(
+      deps,
+      renderStateWith({ one: "B" }),
+    );
+    expect(deps.graphicsService.extractCanvas).toHaveBeenCalledTimes(2);
+    expect(store.selectVisualSnapshotUrls()).toEqual({
+      one: "data:image/png;base64,1",
+    });
   });
 
   it("gives the panel the pictures by visual id, and none to wait for without a canvas", () => {

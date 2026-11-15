@@ -653,6 +653,44 @@ describe("scene editor: the layout editor of a visual", () => {
     expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
   });
 
+  it("keeps undo waiting from the save until the editor is open, and lets it go when the save fails", async () => {
+    const page = createPage();
+    // The canvas draws the scene for the editor when it is let to.
+    let drawScene;
+    page.deps.subject.dispatch = vi.fn((_action, payload) => {
+      drawScene = () => payload?.completion?.resolve();
+    });
+    page.deps.graphicsService.engineSelectRenderState = () => ({
+      elements: renderedScene,
+    });
+
+    const opening = openCardLayout(page);
+    await vi.waitFor(() => expect(drawScene).toBeDefined());
+    // The line is saved and the actions dialog is gone, but the editor is
+    // not open yet: undo still waits.
+    expect(page.store.selectActionTargetLineId()).toBeUndefined();
+    expect(page.store.selectVisualLayoutEditor().isOpen).toBe(false);
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
+
+    drawScene();
+    await opening;
+    expect(page.store.selectVisualLayoutEditor().isOpen).toBe(true);
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
+
+    // A save that fails opens nothing, and undo is back.
+    const failing = createPage();
+    failing.deps.projectService.updateLineActions = vi.fn(async () => {
+      throw new Error("database is locked");
+    });
+    await expect(openCardLayout(failing)).rejects.toThrow("database is locked");
+    failing.store.setActionTargetLineId({ lineId: undefined });
+    expect(failing.store.selectVisualLayoutEditor()).toMatchObject({
+      isOpen: false,
+      isOpening: false,
+    });
+    expect(failing.store.selectIsEditHistoryBlocked()).toBe(false);
+  });
+
   it("takes the layout as the editor saved it as one undo step when it closes", async () => {
     const page = createPage();
     const openActionsDialog = createActionsDialog(page);

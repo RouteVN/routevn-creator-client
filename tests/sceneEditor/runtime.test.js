@@ -1645,6 +1645,73 @@ describe("renderSceneEditorState", () => {
     expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
   });
 
+  it("takes the visuals' pictures after it sets up the line", async () => {
+    vi.stubGlobal("document", {
+      createElement: () => ({
+        getContext: () => ({ clearRect: vi.fn(), drawImage: vi.fn() }),
+        toDataURL: () => "data:image/png;base64,one",
+      }),
+    });
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const calls = [];
+    const selectRenderState = graphicsService.engineSelectRenderState;
+    graphicsService.engineSelectRenderState = () => {
+      const renderState = selectRenderState();
+      return {
+        ...renderState,
+        elements: [
+          ...renderState.elements,
+          { id: "visual-one", type: "container", children: [] },
+        ],
+      };
+    };
+    const handleActions = graphicsService.engineHandleActions;
+    graphicsService.engineHandleActions = (actions, ...rest) => {
+      if (actions.setNextLineConfig) {
+        calls.push("setNextLineConfig");
+      }
+      handleActions(actions, ...rest);
+    };
+    graphicsService.extractCanvas = vi.fn(async (label) => {
+      calls.push(`picture ${label}`);
+      return { width: 1920, height: 1080 };
+    });
+    const setVisualSnapshots = vi.fn();
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectIsMuted: () => false,
+      setPresentationState: () => {},
+      selectShouldCaptureVisualSnapshots: () => true,
+      selectEffectivePresentationState: () => ({
+        visual: { items: [{ id: "one" }] },
+      }),
+      selectVisualSnapshots: () => ({}),
+      setVisualSnapshots,
+    };
+
+    try {
+      await renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
+        store,
+        graphicsService,
+        render: vi.fn(),
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(calls).toEqual(["setNextLineConfig", "picture visual-one"]);
+    expect(setVisualSnapshots).toHaveBeenCalledWith({
+      snapshots: {
+        one: { key: expect.any(String), url: "data:image/png;base64,one" },
+      },
+    });
+  });
+
   it("warms render-state videos before painting the canvas", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();

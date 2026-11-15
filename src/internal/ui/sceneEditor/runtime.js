@@ -1651,6 +1651,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     : undefined;
 
   let canvasPaintDurationMs = 0;
+  // The render state the canvas drew, which the visuals' pictures are taken
+  // from once the line is set up.
+  let drawnRenderState;
   if (!skipCanvasPaint) {
     await graphicsService.warmRenderStateVideoAssets?.(currentRenderState);
     await attachGraphicsCanvasToMountedRoot(deps, 2);
@@ -1715,7 +1718,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       canvasPaintDurationMs = getDebugDurationMs(canvasPaintStartedAt);
     }
     if (!backgroundTransformEditorOpen) {
-      await captureSceneEditorVisualSnapshots(deps, currentRenderState);
+      drawnRenderState = currentRenderState;
     }
   }
 
@@ -1783,6 +1786,10 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       audioCount: renderStateSummary.audioCount,
     });
   }
+
+  if (drawnRenderState) {
+    await captureSceneEditorVisualSnapshots(deps, drawnRenderState);
+  }
 };
 
 const findRenderElementById = (elements = [], elementId) => {
@@ -1815,14 +1822,17 @@ export const captureSceneEditorVisualSnapshots = async (deps, renderState) => {
     store.selectEffectivePresentationState().visual?.items ?? [];
   const snapshots = store.selectVisualSnapshots();
   const nextSnapshots = {};
-  let changed = false;
   for (const { id } of visualItems) {
     const elementId = `visual-${id}`;
     const element = findRenderElementById(
       drawnRenderState?.elements,
       elementId,
     );
+    // A visual the canvas does not draw has no picture, which the panel
+    // shows by its resource.
     if (!element) {
+      nextSnapshots[id] =
+        snapshots[id] && snapshots[id].url === undefined ? snapshots[id] : {};
       continue;
     }
     const key = JSON.stringify(element);
@@ -1830,27 +1840,28 @@ export const captureSceneEditorVisualSnapshots = async (deps, renderState) => {
       nextSnapshots[id] = snapshots[id];
       continue;
     }
-    changed = true;
+    let url;
     try {
-      nextSnapshots[id] = {
-        key,
-        url: await captureGraphicsElementThumbnailImage(
-          graphicsService,
-          elementId,
-        ),
-      };
+      url = await captureGraphicsElementThumbnailImage(
+        graphicsService,
+        elementId,
+      );
     } catch (error) {
-      // The panel shows the visual without a picture.
+      // The panel shows the visual by its resource.
       console.warn("[sceneEditor] A visual's picture could not be taken", {
         visualId: id,
         error,
       });
     }
+    // Kept with its key, so that it is not taken again until it changes.
+    nextSnapshots[id] = { key, url };
   }
-  if (
-    !changed &&
-    Object.keys(nextSnapshots).length === Object.keys(snapshots).length
-  ) {
+  const changed =
+    Object.keys(nextSnapshots).length !== Object.keys(snapshots).length ||
+    Object.keys(nextSnapshots).some(
+      (id) => nextSnapshots[id] !== snapshots[id],
+    );
+  if (!changed) {
     return;
   }
 

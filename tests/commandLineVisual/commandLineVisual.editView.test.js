@@ -38,6 +38,8 @@ import {
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 import { EN_I18N, JA_I18N } from "../support/i18n.js";
 
+const toPlainObject = (value) => JSON.parse(JSON.stringify(value));
+
 const createStoreApi = (state) => ({
   cancelVisualEdit: () => cancelVisualEdit({ state }),
   saveVisualEdit: () => saveVisualEdit({ state }),
@@ -206,6 +208,16 @@ describe("commandLineVisual list and edit view", () => {
       snapshotUrl: undefined,
       awaits: true,
     });
+
+    // One the canvas could not take a picture of shows its first resource.
+    const [withoutPicture] = selectViewData({
+      state,
+      props: { visualSnapshots: { "visual-two": undefined } },
+      i18n: EN_I18N,
+    }).visualListItems;
+    expect(withoutPicture.id).toBe("visual-two");
+    expect(withoutPicture.awaitsSnapshot).toBe(false);
+    expect(withoutPicture.fileId).toBeDefined();
 
     // Without pictures, as without a canvas, it shows its first resource.
     const [withoutPictures] = selectViewData({
@@ -545,6 +557,109 @@ describe("commandLineVisual layout editing", () => {
       }),
     ]);
     expect(submit.detail.visual.items[0]).not.toHaveProperty("resourceId");
+  });
+
+  it("keeps a visual that would look different as a layout as it is saved, until its layout is edited", () => {
+    const state = createInitialState();
+    const collection = (items) => ({
+      items: Object.fromEntries(items.map((item) => [item.id, item])),
+      tree: items.map((item) => ({ id: item.id })),
+    });
+    const dispatchEvent = vi.fn();
+    const deps = {
+      store: createFullStoreApi(state),
+      render: vi.fn(),
+      dispatchEvent,
+      projectService: {
+        getState: () => ({
+          images: collection([
+            { id: "image-one", type: "image", name: "Image One" },
+          ]),
+          animations: collection([
+            {
+              id: "slide-in",
+              type: "animation",
+              name: "Slide In",
+              animation: {
+                type: "transition",
+                next: { tween: { x: { keyframes: [] } } },
+              },
+            },
+          ]),
+          transforms: collection([
+            {
+              id: "bottom-left",
+              type: "transform",
+              name: "Bottom Left",
+              x: 300,
+              y: 1080,
+              anchorX: 0.5,
+              anchorY: 1,
+            },
+          ]),
+        }),
+        getRepositoryState: () => ({}),
+      },
+      props: {
+        presentationState: {
+          visual: {
+            items: [
+              {
+                id: "visual-one",
+                resourceId: "image-one",
+                resourceType: "image",
+                transformId: "bottom-left",
+                layer: 50,
+                animations: {
+                  resourceId: "slide-in",
+                  playback: { continuity: "render", speed: 1 },
+                },
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    handleBeforeMount(deps);
+    handleAfterMount(deps);
+
+    // Its slide would move the whole screen layer: it stays an image, and
+    // the canvas is left as it is.
+    const [visual] = selectSelectedVisuals({ state });
+    expect(visual).toMatchObject({
+      resourceId: "image-one",
+      transformId: "bottom-left",
+    });
+    expect(visual).not.toHaveProperty("layout");
+    expect(dispatchEvent).not.toHaveBeenCalled();
+
+    // Submit saves it as it was saved.
+    handleSubmitClick(deps);
+    const [submit] = dispatchEvent.mock.calls[0];
+    expect(submit.detail.visual.items[0]).toMatchObject({
+      resourceId: "image-one",
+      transformId: "bottom-left",
+    });
+    expect(submit.detail.visual.items[0]).not.toHaveProperty("layout");
+
+    // Edit Layout makes it a custom layout, placed where it was.
+    handleEditLayoutClick(deps, {
+      _event: { currentTarget: { dataset: { visualId: "visual-one" } } },
+    });
+    const [edit] = dispatchEvent.mock.calls[1];
+    expect(edit.type).toBe("visual-layout-edit");
+    const [editedItem] = edit.detail.actions.visual.items;
+    expect(editedItem).not.toHaveProperty("resourceId");
+    expect(editedItem).not.toHaveProperty("transformId");
+    expect(editedItem.animations.resourceId).toBe("slide-in");
+    const [{ id: elementId }] = editedItem.layout.elements.tree;
+    expect(editedItem.layout.elements.items[elementId]).toMatchObject({
+      type: "sprite",
+      imageId: "image-one",
+      x: 300,
+      y: 1080,
+    });
   });
 
   it("leaves the canvas alone when every visual is already a layout", () => {
@@ -890,6 +1005,65 @@ describe("commandLineVisual layout choice", () => {
     const ownLayout = visual.layout;
     handleLayoutChange(deps, layoutEvent(index, "custom"));
     expect(selectSelectedVisuals({ state })[index].layout).toBe(ownLayout);
+  });
+
+  it("brings back the visual's own custom layout when Custom Layout is chosen again", () => {
+    const state = createLayoutState();
+    const deps = createDeps(state);
+    const index = findVisualIndex(state, "visual-one");
+
+    handleVisualListItemClick(deps, indexEvent(index));
+    handleLayoutChange(deps, layoutEvent(index, "custom"));
+    const ownLayout = toPlainObject(selectSelectedVisuals({ state })[index]);
+    expect(ownLayout.layout.elements.items.content).toMatchObject({
+      type: "sprite",
+      imageId: "image-one",
+    });
+
+    handleLayoutChange(deps, layoutEvent(index, "title-card"));
+    handleLayoutChange(deps, layoutEvent(index, "custom"));
+
+    const visual = selectSelectedVisuals({ state })[index];
+    expect(visual.layout).toEqual(ownLayout.layout);
+    expect(visual).not.toHaveProperty("resourceId");
+    expect(visual).not.toHaveProperty("resourceType");
+
+    // The same on a draft, as the component runs its store actions.
+    const draftState = produce(createLayoutState(), (draft) => {
+      visualStore.updateVisualLayout(
+        { state: draft },
+        { index, layoutId: "custom" },
+      );
+    });
+    const linkedState = produce(draftState, (draft) => {
+      visualStore.updateVisualLayout(
+        { state: draft },
+        { index, layoutId: "title-card" },
+      );
+    });
+    const restoredState = produce(linkedState, (draft) => {
+      visualStore.updateVisualLayout(
+        { state: draft },
+        { index, layoutId: "custom" },
+      );
+    });
+    expect(restoredState.selectedVisuals[index].layout).toEqual(
+      draftState.selectedVisuals[index].layout,
+    );
+
+    // A panel opened again does not keep it.
+    visualStore.updateVisualLayout(
+      { state },
+      { index, layoutId: "title-card" },
+    );
+    visualStore.setExistingVisuals(
+      { state },
+      { visuals: toPlainObject(state.selectedVisuals) },
+    );
+    visualStore.updateVisualLayout({ state }, { index, layoutId: "custom" });
+    expect(selectSelectedVisuals({ state })[index].layout.elements).toEqual(
+      titleCardLayout.elements,
+    );
   });
 
   it("puts the project layout back on Cancel", () => {

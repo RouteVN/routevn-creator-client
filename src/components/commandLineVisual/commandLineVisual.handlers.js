@@ -221,8 +221,8 @@ export const handleBeforeMount = (deps) => {
   }
 
   // A visual saved before visuals were layouts, with one image, spritesheet,
-  // video or particle, opens as the layout it is saved as, so the panel shows
-  // what Submit saves.
+  // video or particle, opens as the layout it is saved as, when it looks the
+  // same as one, so the panel shows what Submit saves.
   if (visualItems) {
     const visuals = visualItems.map((item) =>
       store.selectLayoutVisualItem({ item }),
@@ -294,12 +294,14 @@ const dispatchVisualLayoutEdit = (deps, { visualId, returnToEditView }) => {
   );
 };
 
-// Edit Layout keeps the visual's changes and opens its layout.
+// Edit Layout keeps the visual's changes and opens its layout, which a
+// visual still saved with one resource gets now.
 export const handleEditLayoutClick = (deps, payload) => {
   const { store } = deps;
   const { visualId } = payload._event.currentTarget.dataset;
 
   store.saveVisualEdit();
+  store.makeVisualLayoutCustom({ visualId });
   dispatchVisualLayoutEdit(deps, { visualId, returnToEditView: true });
 };
 

@@ -1251,15 +1251,15 @@ export const createVisualLayoutBuilder = (
       return sources;
     }
 
-    const repositoryFiles = repositoryState.files?.items || {};
+    const repositoryFiles = repositoryState.files?.items ?? {};
     sources = {
       imageItems: {
         ...constructImageResources(
-          repositoryState.images?.items || {},
+          repositoryState.images?.items ?? {},
           repositoryFiles,
         ),
         ...extractCharacterImages(
-          repositoryState.characters?.items || {},
+          repositoryState.characters?.items ?? {},
           repositoryFiles,
         ),
       },

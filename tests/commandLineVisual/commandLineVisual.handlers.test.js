@@ -34,6 +34,8 @@ import {
   selectVisualShaderAdjustmentOptionEnabled,
   setAnimations,
   setExistingVisuals,
+  setImages,
+  setVideos,
   showDropdownMenu,
   showVisualBlurOption,
   showVisualFlipOption,
@@ -116,9 +118,35 @@ const setAnimationCollection = (state) => {
   );
 };
 
-// Visuals are saved, and previewed, as layouts. These tests load no
-// resources, so a visual picked from one resource becomes one element with no
-// size, named by the resource id, and a picked shared layout is empty.
+// The image and video the visuals show, with no name or size. A visual
+// whose resource is gone is kept as it was saved.
+const createStateWithResources = () => {
+  const state = createInitialState();
+  setImages(
+    { state },
+    {
+      images: {
+        items: { "visual-image": { id: "visual-image", type: "image" } },
+        tree: [{ id: "visual-image" }],
+      },
+    },
+  );
+  setVideos(
+    { state },
+    {
+      videos: {
+        items: { "visual-video": { id: "visual-video", type: "video" } },
+        tree: [{ id: "visual-video" }],
+      },
+    },
+  );
+  return state;
+};
+
+// Visuals are saved, and previewed, as layouts. The resources these tests
+// load have no name or size, so a visual picked from one resource becomes one
+// element with no size, named by the resource id, and a picked shared layout
+// is empty.
 const MEDIA_ELEMENTS = {
   image: (resourceId) => ({ type: "sprite", imageId: resourceId }),
   video: (resourceId) => ({
@@ -214,7 +242,7 @@ const savedVisual = ({ resourceId, resourceType, animationName, ...item }) => {
 
 describe("commandLineVisual.handlers animation controls", () => {
   it("updates and clears per-visual animation selection", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
 
     setAnimationCollection(state);
@@ -284,7 +312,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("updates visual layer selection and emits temporary presentation state", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
 
@@ -343,7 +371,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("updates visual opacity and blur in temporary presentation state", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -509,7 +537,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("emits null when visual blur is disabled", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -574,7 +602,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("shows and removes the visual opacity option from the section action", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -652,7 +680,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("shows and removes the visual blur option from the section action", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -726,7 +754,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("moves visuals from the context menu and emits reordered preview data", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -822,7 +850,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("submits animations for selected visuals without changing other data keys", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
 
     setAnimationCollection(state);
@@ -895,7 +923,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("requests the shared transform editor from the custom transform summary", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const event = {
       preventDefault: vi.fn(),
@@ -966,7 +994,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("opens the custom transform summary with the keyboard", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const event = {
       key: "Enter",
@@ -1009,7 +1037,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("previews and submits per-visual shader adjustments", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const render = vi.fn();
     const store = createStoreApi(state);
@@ -1080,7 +1108,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("adds, previews, submits, and removes per-visual flip options", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const render = vi.fn();
     const store = createStoreApi(state);

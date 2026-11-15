@@ -335,6 +335,120 @@ describe("toLayoutVisualItem", () => {
   });
 });
 
+describe("toLayoutVisualItem with a visual that would look different as a layout", () => {
+  const animated = (animation) => ({
+    ...resourcesWithTransforms,
+    animations: { motion: { id: "motion", type: "animation", animation } },
+  });
+  const imageVisual = (fields = {}) => ({
+    id: "visual-1",
+    resourceId: "door",
+    resourceType: "image",
+    transformId: "center",
+    layer: 50,
+    ...fields,
+  });
+
+  it("keeps a visual whose resource is gone, or whose type is unknown", () => {
+    const gone = imageVisual({ resourceId: "deleted" });
+    const untyped = { id: "visual-2", resourceId: "deleted" };
+
+    expect(toLayoutVisualItem(gone, resourcesWithTransforms)).toBe(gone);
+    expect(toLayoutVisualItem(untyped, resourcesWithTransforms)).toBe(untyped);
+  });
+
+  it("keeps a visual turned or flipped around an origin of its own", () => {
+    const turned = imageVisual({ originX: 10, rotation: 30 });
+    const flipped = imageVisual({ originY: 0, flipY: true });
+    const fromTransform = imageVisual({ transformId: "turned" });
+    const turnedResources = {
+      ...resourcesWithTransforms,
+      transforms: {
+        ...resourcesWithTransforms.transforms,
+        turned: { x: 960, y: 540, rotation: 45, originX: 0, originY: 0 },
+      },
+    };
+
+    expect(toLayoutVisualItem(turned, resourcesWithTransforms)).toBe(turned);
+    expect(toLayoutVisualItem(flipped, resourcesWithTransforms)).toBe(flipped);
+    expect(toLayoutVisualItem(fromTransform, turnedResources)).toBe(
+      fromTransform,
+    );
+  });
+
+  it("converts a visual with an origin that it is neither turned nor flipped around", () => {
+    const item = imageVisual({ originX: 10, originY: 20 });
+
+    const layoutItem = toLayoutVisualItem(item, resourcesWithTransforms);
+
+    expect(layoutItem.layout.elements.items.content).toMatchObject({
+      type: "sprite",
+      imageId: "door",
+      x: 960,
+      y: 540,
+    });
+    expect(layoutItem).not.toHaveProperty("originX");
+    expect(layoutItem).not.toHaveProperty("resourceId");
+  });
+
+  it("keeps a visual whose animation moves, scales, turns or masks it, or is gone", () => {
+    const withAnimation = imageVisual({
+      animations: { resourceId: "motion", playback: { speed: 1 } },
+    });
+
+    for (const animation of [
+      { type: "update", tween: { x: { auto: { duration: 300 } } } },
+      {
+        type: "transition",
+        next: {
+          tween: { scaleX: { keyframes: [] }, alpha: { keyframes: [] } },
+        },
+      },
+      { type: "transition", prev: { tween: { rotation: { keyframes: [] } } } },
+      { type: "transition", mask: { kind: "single", imageId: "door" } },
+    ]) {
+      expect(toLayoutVisualItem(withAnimation, animated(animation))).toBe(
+        withAnimation,
+      );
+    }
+    expect(toLayoutVisualItem(withAnimation, resourcesWithTransforms)).toBe(
+      withAnimation,
+    );
+  });
+
+  it("converts a visual whose animation only fades or blurs it, and keeps the animation", () => {
+    const item = imageVisual({
+      animations: { resourceId: "motion", playback: { speed: 1 } },
+    });
+    const fade = animated({
+      type: "transition",
+      prev: { tween: { alpha: { keyframes: [] } } },
+      next: { tween: { alpha: { keyframes: [] }, blurX: { keyframes: [] } } },
+    });
+
+    const layoutItem = toLayoutVisualItem(item, fade);
+
+    expect(layoutItem).not.toBe(item);
+    expect(layoutItem.layout.elements.items.content.type).toBe("sprite");
+    expect(layoutItem.animations).toEqual(item.animations);
+  });
+
+  it("still makes a kept visual a custom layout when its layout is edited", () => {
+    const turned = imageVisual({ originX: 10, rotation: 30 });
+
+    const layoutItem = toCustomLayoutVisualItem(
+      turned,
+      resourcesWithTransforms,
+    );
+
+    expect(layoutItem.layout.elements.items.content).toMatchObject({
+      type: "sprite",
+      imageId: "door",
+      rotation: 30,
+    });
+  });
+});
+
 describe("toCustomLayoutVisualItem", () => {
   it("copies a project layout into a custom layout of the visual's own", () => {
     const item = {
