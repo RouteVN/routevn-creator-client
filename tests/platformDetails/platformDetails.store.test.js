@@ -6,12 +6,17 @@ import {
   openPlatformCreateDialog,
   openPlatformEditDialog,
   selectCanAddPlatform,
+  selectPlatformEditLoadingBackgroundFileId,
+  selectPlatformEditScreenBackgroundFileId,
+  selectPlatformEditStartBackgroundFileId,
   selectViewData,
   setAndroidSigning,
   setAndroidSigningBusy,
   setAppWindowMetrics,
   setPlatform,
   setPlatformApplicationInfo,
+  setPlatformEditScreenBackgroundFileId,
+  setProjectResolution,
   setSelectedPlatform,
   setUiConfig,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
@@ -338,6 +343,18 @@ describe("platformDetails.store", () => {
         slot: "platform-application-identifier",
         label: "Application Identifier",
       },
+      {
+        type: "slot",
+        slot: "web-loading-background",
+        label: "Loading Screen Background",
+      },
+      {
+        type: "slot",
+        slot: "web-start-background",
+        label: "Start Screen Background",
+      },
+      { type: "text", label: "Fade to Start Screen (ms)", value: "600" },
+      { type: "text", label: "Fade to First Scene (ms)", value: "600" },
     ]);
     expect(viewData).toMatchObject({
       platformApplicationName: "Web Project",
@@ -345,7 +362,7 @@ describe("platformDetails.store", () => {
       showPlatformApplicationIcon: false,
       showPlatformEditIcon: false,
     });
-    expect(viewData.platformEditForm.fields).toHaveLength(2);
+    expect(viewData.platformEditForm.fields).toHaveLength(6);
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
         id: "submit",
@@ -428,6 +445,66 @@ describe("platformDetails Android signing view", () => {
     view.platformDetailFields
       .filter((field) => field.type === "slot")
       .map((field) => field.slot);
+
+  it("prefills and edits the Web screen backgrounds", () => {
+    const state = createInitialState();
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Web Project",
+          applicationIdentifier: "com.example.web-project",
+          loadingBackgroundFileId: "loading-background-1",
+        },
+      },
+    );
+    openPlatformEditDialog({ state });
+
+    expect(selectPlatformEditLoadingBackgroundFileId({ state })).toBe(
+      "loading-background-1",
+    );
+    expect(selectPlatformEditStartBackgroundFileId({ state })).toBeUndefined();
+
+    setPlatformEditScreenBackgroundFileId(
+      { state },
+      { target: "start", fileId: "start-background-1" },
+    );
+    setPlatformEditScreenBackgroundFileId(
+      { state },
+      { target: "loading", fileId: undefined },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData).toMatchObject({
+      showWebScreenBackgrounds: true,
+      showWebScreenBackgroundsEdit: true,
+      webLoadingBackgroundFileId: "loading-background-1",
+      platformEditLoadingBackgroundFileId: undefined,
+      platformEditStartBackgroundFileId: "start-background-1",
+      screenBackgroundPreviewWidth: 240,
+      screenBackgroundPreviewHeight: 135,
+    });
+    expect(
+      selectPlatformEditScreenBackgroundFileId({ state }, { target: "start" }),
+    ).toBe("start-background-1");
+
+    // Previews follow the project's shape.
+    setProjectResolution(
+      { state },
+      { projectResolution: { width: 1080, height: 1920 } },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      screenBackgroundPreviewWidth: 135,
+      screenBackgroundPreviewHeight: 240,
+    });
+    expect(viewData.platformEditForm.fields.map((field) => field.slot)).toEqual(
+      expect.arrayContaining([
+        "platform-web-loading-background-edit",
+        "platform-web-start-background-edit",
+      ]),
+    );
+  });
 
   it("shows no signing fields on a host that cannot sign", () => {
     const view = selectViewData({ state: openAndroid(), i18n: EN_I18N });

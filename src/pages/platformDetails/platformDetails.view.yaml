@@ -49,6 +49,34 @@ refs:
         handler: handlePlatformEditIconCropDialogClose
       confirm:
         handler: handlePlatformEditIconCropDialogConfirm
+  webLoadingBackground:
+    eventListeners:
+      click:
+        handler: handlePlatformEditButtonClick
+  webStartBackground:
+    eventListeners:
+      click:
+        handler: handlePlatformEditButtonClick
+  loadingBackgroundButton:
+    eventListeners:
+      click:
+        handler: handlePlatformEditScreenBackgroundClick
+        payload:
+          target: loading
+      contextmenu:
+        handler: handlePlatformEditScreenBackgroundRightClick
+        payload:
+          target: loading
+  startBackgroundButton:
+    eventListeners:
+      click:
+        handler: handlePlatformEditScreenBackgroundClick
+        payload:
+          target: start
+      contextmenu:
+        handler: handlePlatformEditScreenBackgroundRightClick
+        payload:
+          target: start
   adaptiveIconButton:
     eventListeners:
       click:
@@ -154,6 +182,20 @@ template:
                                               - rvn-file-image fileId=${androidSplashPreviewFileId} w=${androidSplashPreviewSize} h=${androidSplashPreviewSize}: null
                               - rtgl-view#platformApplicationIdentifier slot=platform-application-identifier cur=pointer:
                                   - rtgl-text: ${platformApplicationIdentifier}
+                              - $if showWebScreenBackgrounds:
+                                  - rtgl-view#webLoadingBackground slot=web-loading-background cur=pointer:
+                                      - $if webLoadingBackgroundFileId:
+                                          - 'div style="${screenBackgroundPreviewStyle}"':
+                                              - rvn-file-image fileId=${webLoadingBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
+                                        $else:
+                                          - rtgl-text c=mu-fg: ${webDefaultScreenLabel}
+                              - $if showWebScreenBackgrounds:
+                                  - rtgl-view#webStartBackground slot=web-start-background cur=pointer:
+                                      - $if webStartBackgroundFileId:
+                                          - 'div style="${screenBackgroundPreviewStyle}"':
+                                              - rvn-file-image fileId=${webStartBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
+                                        $else:
+                                          - rtgl-text c=mu-fg: ${webDefaultScreenLabel}
                               - $if showAndroidSigning:
                                   - rtgl-view slot=android-signing-key d=v g=sm w=f:
                                       - $if androidSigningKey:
@@ -215,4 +257,22 @@ template:
                                       - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
                           - $if platformEditSplashIconFileId:
                               - rtgl-button#splashIconRemove v=ol: ${removeIconLabel}
+                  - $if showWebScreenBackgroundsEdit:
+                      - rtgl-view slot=platform-web-loading-background-edit d=v g=sm:
+                          - 'button#loadingBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="${screenBackgroundButtonStyle}"':
+                              - $if platformEditLoadingBackgroundFileId:
+                                  - 'div style="${screenBackgroundPreviewStyle}"':
+                                      - rvn-file-image fileId=${platformEditLoadingBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
+                                $else:
+                                  - rtgl-view w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight} ah=c av=c ph=sm bw=xs bc=bo br=md:
+                                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+                  - $if showWebScreenBackgroundsEdit:
+                      - rtgl-view slot=platform-web-start-background-edit d=v g=sm:
+                          - 'button#startBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="${screenBackgroundButtonStyle}"':
+                              - $if platformEditStartBackgroundFileId:
+                                  - 'div style="${screenBackgroundPreviewStyle}"':
+                                      - rvn-file-image fileId=${platformEditStartBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
+                                $else:
+                                  - rtgl-view w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight} ah=c av=c ph=sm bw=xs bc=bo br=md:
+                                      - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
   - rvn-square-image-crop-dialog#platformEditIconCropDialog :open=${isPlatformEditIconCropDialogOpen} :file=${platformEditIconCropFile} :outputSize=${platformEditIconOutputSize} :guideCircle=${guideCircle} :title=${cropTitle} :description=${cropDescription}: null

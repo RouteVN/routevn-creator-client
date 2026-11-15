@@ -164,6 +164,49 @@ describe("projectRepositoryService platform details", () => {
       splashIconFileId: undefined,
     });
   });
+  it("persists the Web screen backgrounds and clears them on a later save", async () => {
+    const { service, getPlatformDetails } = createHarness();
+    await service.createCurrentPlatformDetails("web", {
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+    });
+    expect(await service.getCurrentPlatformDetails("web")).toMatchObject({
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
+    });
+
+    await service.updateCurrentPlatformDetails("web", {
+      loadingFadeDuration: 1200,
+      startFadeDuration: 99999,
+    });
+    expect(getPlatformDetails("web")).toMatchObject({
+      loadingFadeDuration: 1200,
+      startFadeDuration: 5000,
+    });
+
+    // A save that does not mention the backgrounds keeps them.
+    await service.updateCurrentPlatformDetails("web", {
+      applicationName: "Web Project Two",
+    });
+    expect(getPlatformDetails("web")).toMatchObject({
+      applicationName: "Web Project Two",
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+      loadingFadeDuration: 1200,
+    });
+
+    await service.updateCurrentPlatformDetails("web", {
+      loadingBackgroundFileId: undefined,
+      startBackgroundFileId: undefined,
+    });
+    expect(getPlatformDetails("web").loadingBackgroundFileId).toBeUndefined();
+    expect(getPlatformDetails("web").startBackgroundFileId).toBeUndefined();
+  });
+
   it("starts empty and explicitly creates each platform once", async () => {
     const harness = createHarness();
 
@@ -186,6 +229,8 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Project One",
       applicationIdentifier: "",
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
     });
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
@@ -208,6 +253,8 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Web Release",
       applicationIdentifier: "",
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
     });
     await expect(
       harness.service.createCurrentPlatformDetails("windows"),

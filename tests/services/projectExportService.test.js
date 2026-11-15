@@ -431,6 +431,153 @@ describe("projectExportService", () => {
     expect(manifest).not.toHaveProperty("description");
   });
 
+  it("leaves the Web player page unchanged without screen backgrounds", () => {
+    const indexHtml = createBundlePlayerIndexHtml({ title: "Project One" });
+
+    expect(indexHtml).toContain('<div id="loading">');
+    expect(indexHtml).not.toContain("modulepreload");
+    expect(indexHtml).not.toContain("background-image");
+    expect(indexHtml).not.toContain("__ROUTEVN_");
+  });
+
+  it("inlines the Web screen backgrounds into the player page", () => {
+    const loadingBackgroundDataUrl = "data:image/jpeg;base64,TE9BRElORw==";
+    const startBackgroundDataUrl = "data:image/jpeg;base64,U1RBUlQ=";
+    const indexHtml = createBundlePlayerIndexHtml({
+      title: "Project One",
+      loadingBackgroundDataUrl,
+      startBackgroundDataUrl,
+    });
+    const dom = new JSDOM(indexHtml);
+    const { document } = dom.window;
+
+    expect(document.querySelector("#loading").className).toBe(
+      "has-loading-background has-start-background",
+    );
+    expect(indexHtml).toContain(
+      `#loading-background { background-image: url("${loadingBackgroundDataUrl}"); }`,
+    );
+    expect(indexHtml).toContain(
+      `#loading-start-background { background-image: url("${startBackgroundDataUrl}"); }`,
+    );
+    expect(
+      document.querySelector('link[rel="modulepreload"]').getAttribute("href"),
+    ).toBe("./main.js");
+    expect(indexHtml).not.toContain("__ROUTEVN_");
+    dom.window.close();
+  });
+
+  it("uses the default fade durations for missing or invalid values", () => {
+    const indexHtml = createBundlePlayerIndexHtml({
+      startBackgroundDataUrl: "data:image/png;base64,U1RBUlQ=",
+      loadingFadeDuration: "abc",
+    });
+
+    expect(indexHtml).toContain(
+      'style="--loading-fade-duration: 600ms; --start-fade-duration: 600ms"',
+    );
+  });
+
+  it("keeps the start prompt when only a loading background is set", () => {
+    const indexHtml = createBundlePlayerIndexHtml({
+      loadingBackgroundDataUrl: "data:image/png;base64,TE9BRElORw==",
+    });
+    const dom = new JSDOM(indexHtml);
+
+    expect(dom.window.document.querySelector("#loading").className).toBe(
+      "has-loading-background",
+    );
+    expect(indexHtml).not.toContain("#loading-start-background { background");
+    dom.window.close();
+  });
+
+  it("rejects screen backgrounds that are not plain image data", () => {
+    expect(() =>
+      createBundlePlayerIndexHtml({
+        loadingBackgroundDataUrl:
+          'data:image/png;base64,AAAA"); } </style><script>alert(1)</script>',
+      }),
+    ).toThrow("The Web screen background is not a supported image.");
+    expect(() =>
+      createBundlePlayerIndexHtml({
+        startBackgroundDataUrl: "data:image/svg+xml;base64,AAAA",
+      }),
+    ).toThrow("The Web screen background is not a supported image.");
+  });
+
+  it("reads and re-encodes the selected Web screen backgrounds for export", async () => {
+    const blob = { size: 4 };
+    globalThis.fetch = vi.fn(async (url) => {
+      if (url === "/bundle/main.js") {
+        return { ok: false };
+      }
+      return { ok: true, blob: async () => blob };
+    });
+    const revoke = vi.fn();
+    const getFileContent = vi.fn(async (fileId) => ({
+      url: `blob:${fileId}`,
+      revoke,
+    }));
+    const createImageDataUrl = vi.fn(async () => ({
+      dataUrl: "data:image/jpeg;base64,U0NSRUVO",
+      width: 1920,
+      height: 1080,
+    }));
+    const createDistributionZipStreamedToPath = vi.fn(
+      async ({ outputPath }) => outputPath,
+    );
+    const service = createProjectExportService({
+      fileAdapter: { createDistributionZipStreamedToPath },
+      getFileContent,
+      createImageDataUrl,
+    });
+
+    await service.createDistributionZipStreamedToPath(
+      {},
+      [],
+      "/tmp/export.zip",
+      {
+        webScreens: {
+          loadingBackgroundFileId: "background-1",
+          startBackgroundFileId: "background-1",
+          loadingFadeDuration: 1200,
+          startFadeDuration: 0,
+        },
+      },
+    );
+
+    // The same file used for both screens is read once.
+    expect(getFileContent).toHaveBeenCalledTimes(1);
+    expect(getFileContent).toHaveBeenCalledWith("background-1");
+    expect(createImageDataUrl).toHaveBeenCalledWith(blob);
+    expect(revoke).toHaveBeenCalledTimes(1);
+    const { staticFiles } =
+      createDistributionZipStreamedToPath.mock.calls[0][0];
+    expect(staticFiles.indexHtml).toContain(
+      '#loading-background { background-image: url("data:image/jpeg;base64,U0NSRUVO"); }',
+    );
+    expect(staticFiles.indexHtml).toContain(
+      'class="has-loading-background has-start-background" style="--loading-fade-duration: 1200ms; --start-fade-duration: 0ms; --loading-art-ratio: 1.7778"',
+    );
+  });
+
+  it("fails the export when a Web screen background cannot be read", async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: false }));
+    const createDistributionZipStreamedToPath = vi.fn();
+    const service = createProjectExportService({
+      fileAdapter: { createDistributionZipStreamedToPath },
+      getFileContent: vi.fn(async () => ({ url: "blob:background-1" })),
+      createImageDataUrl: vi.fn(),
+    });
+
+    await expect(
+      service.createDistributionZipStreamedToPath({}, [], "/tmp/export.zip", {
+        webScreens: { loadingBackgroundFileId: "background-1" },
+      }),
+    ).rejects.toThrow("The Web screen background could not be read.");
+    expect(createDistributionZipStreamedToPath).not.toHaveBeenCalled();
+  });
+
   it("stores repeated raw assets once in bundle format v4", async () => {
     const repeatedBytes = Uint8Array.from(
       Array.from({ length: 160 * 1024 }, (_, index) => index % 251),

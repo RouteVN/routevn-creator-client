@@ -10,6 +10,8 @@ import {
   handleBeforeMount,
   handlePlatformEditFormAction,
   handlePlatformEditIconCropDialogConfirm,
+  handlePlatformEditScreenBackgroundClick,
+  handlePlatformEditScreenBackgroundRightClick,
 } from "../../src/pages/platformDetails/platformDetails.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 import {
@@ -21,6 +23,8 @@ import {
 const createDeps = () => ({
   appService: {
     getPlatform: vi.fn(() => "android"),
+    pickFiles: vi.fn(),
+    showDropdownMenu: vi.fn(),
     showAlert: vi.fn(),
     showDialog: vi.fn(async () => true),
     showToast: vi.fn(),
@@ -30,6 +34,9 @@ const createDeps = () => ({
     createCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetailsDefaults: vi.fn(),
+    getRepositoryState: vi.fn(() => ({
+      project: { resolution: { width: 1920, height: 1080 } },
+    })),
     updateCurrentPlatformDetails: vi.fn(),
     uploadFiles: vi.fn(),
     supportsAndroidSigning: vi.fn(() => false),
@@ -61,6 +68,12 @@ const createDeps = () => ({
     selectPlatformEditIconFileId: vi.fn(() => "windows-icon-1"),
     selectPlatformEditAdaptiveIconFileId: vi.fn(() => undefined),
     selectPlatformEditSplashIconFileId: vi.fn(() => undefined),
+    selectPlatformEditLoadingBackgroundFileId: vi.fn(() => undefined),
+    selectPlatformEditStartBackgroundFileId: vi.fn(() => undefined),
+    setPlatformEditScreenBackgroundFileId: vi.fn(),
+    selectPlatformEditScreenBackgroundFileId: vi.fn(() => undefined),
+    selectProjectResolution: vi.fn(() => ({ width: 1920, height: 1080 })),
+    setProjectResolution: vi.fn(),
     selectPlatformEditIconCropTarget: vi.fn(() => "icon"),
     selectSelectedPlatform: vi.fn(() => "windows"),
     setPlatformApplicationInfo: vi.fn(),
@@ -393,7 +406,11 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.createCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
+    });
     expect(
       deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
@@ -475,7 +492,11 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
+    });
     expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
   });
 
@@ -512,7 +533,11 @@ describe("platformDetails handlers", () => {
     expect(deps.appService.showDialog).not.toHaveBeenCalled();
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 600,
+      startFadeDuration: 600,
+    });
   });
 
   it("does not create macOS platform details without a bundle identifier", async () => {
@@ -652,6 +677,164 @@ describe("platformDetails handlers", () => {
       iconFileId: "windows-icon-2",
     });
     expect(deps.store.closePlatformEditIconCropDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves the Web screen backgrounds with the platform details", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
+    });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
+    });
+    deps.store.selectPlatformEditLoadingBackgroundFileId.mockReturnValue(
+      "loading-background-1",
+    );
+    deps.store.selectPlatformEditStartBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue({});
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Web Project",
+            applicationIdentifier: "com.example.web-project",
+            loadingFadeDuration: "1200",
+            startFadeDuration: "",
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("web", {
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+      loadingFadeDuration: 1200,
+      startFadeDuration: 600,
+    });
+  });
+
+  it("uploads a picked Web screen background into platform edit state", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles.mockResolvedValue({
+      name: "loading.png",
+      uploadSucessful: true,
+      uploadResult: { fileId: "loading-background-1" },
+    });
+
+    await handlePlatformEditScreenBackgroundClick(deps, { target: "loading" });
+
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: "image/png,image/jpeg,image/webp",
+      multiple: false,
+      upload: true,
+      validations: [{ type: "image-aspect-ratio", width: 1920, height: 1080 }],
+    });
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).toHaveBeenCalledWith({
+      target: "loading",
+      fileId: "loading-background-1",
+    });
+  });
+
+  it("keeps the Web screen background when the picker is cancelled", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles.mockResolvedValue(undefined);
+
+    await handlePlatformEditScreenBackgroundClick(deps, { target: "start" });
+
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("alerts when a Web screen background cannot be uploaded", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles.mockResolvedValue({
+      name: "start.png",
+      uploadSucessful: false,
+      uploadResult: null,
+    });
+
+    await handlePlatformEditScreenBackgroundClick(deps, { target: "start" });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.failedUploadBackground,
+      title: EN_I18N.platformDetailsPage.errorTitle,
+    });
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("removes a Web screen background from its right-click menu", async () => {
+    const deps = createDeps();
+    const event = {
+      clientX: 10,
+      clientY: 20,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    deps.store.selectPlatformEditScreenBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.appService.showDropdownMenu.mockResolvedValue({
+      item: { key: "remove" },
+    });
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: event,
+      target: "start",
+    });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith({
+      items: [{ type: "item", label: "Remove", key: "remove" }],
+      x: 10,
+      y: 20,
+      place: "bs",
+    });
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).toHaveBeenCalledWith({ target: "start", fileId: undefined });
+  });
+
+  it("keeps the Web screen background when its menu is dismissed", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformEditScreenBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.appService.showDropdownMenu.mockResolvedValue(undefined);
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
+      target: "start",
+    });
+
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("shows no menu for an empty Web screen background", async () => {
+    const deps = createDeps();
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
+      target: "loading",
+    });
+
+    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
   });
 });
 
