@@ -40,8 +40,10 @@ const form = {
       name: "resetStory",
       type: "segmented-control",
       label: "Reset story",
-      description:
-        "Restart the story from this section. Story variables return to defaults and the player cannot roll back past it.",
+      tooltip: {
+        content:
+          "Restart the story from this section. Story variables return to defaults and the player cannot roll back past it.",
+      },
       clearable: false,
       options: [
         { value: false, label: "No" },

@@ -22,7 +22,7 @@ describe("commandLineSectionTransition.store", () => {
         view.form.fields.find((field) => field.name === "resetStory"),
       ).toMatchObject({
         label: i18n.commandLinePage["Reset story"],
-        description: i18n.commandLinePage.resetStoryDescription,
+        tooltip: { content: i18n.commandLinePage.resetStoryDescription },
         options: [
           { value: false, label: i18n.commandLinePage.No },
           { value: true, label: i18n.commandLinePage.Yes },
