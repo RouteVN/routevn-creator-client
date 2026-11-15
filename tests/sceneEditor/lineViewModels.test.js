@@ -705,12 +705,12 @@ describe("sceneEditor.lineDecorations", () => {
 });
 
 it.each([
-  [{ resetStoryAtSection: { sectionId: "section-1" } }, true],
-  [{ sectionTransition: { sectionId: "section-1", resetStory: true } }, true],
-  [{ sectionTransition: { sectionId: "section-1" } }, false],
+  [{ resetStoryAtSection: { sectionId: "section-1" } }],
+  [{ sectionTransition: { sectionId: "section-1", resetStory: true } }],
+  [{ sectionTransition: { sectionId: "section-1" } }],
 ])(
   "shows localized transition summaries in line decorations (%j)",
-  (actions, resets) => {
+  (actions) => {
     const [decoration] = buildSceneDocumentLineDecorations({
       lines: [{ id: "line-1", actions }],
       repositoryState: {},
@@ -719,9 +719,7 @@ it.each([
     });
     expect(decoration.sectionTransition).toBe(true);
     expect(decoration.sectionTransitionLabel).toBe(
-      resets
-        ? FR_I18N.resourcePages.actionSectionTransitionResetStory
-        : FR_I18N.resourcePages.actionSectionTransition,
+      FR_I18N.resourcePages.actionSectionTransition,
     );
   },
 );

@@ -357,7 +357,7 @@ describe("systemActions.store", () => {
     });
     expect(preview.resetStoryAtSection).toMatchObject({
       sectionId: "section-2",
-      label: "Section Transition (reset story): Opening - Arrival",
+      label: "Section Transition: Opening - Arrival",
     });
   });
 
@@ -455,7 +455,7 @@ describe("systemActions.store", () => {
     expect(preview.sectionTransition.label).toBe("Opening\u00a0– Arrival");
     expect(preview.resetStoryAtSection.label).toBe(
       copy.labelValue
-        .replace("{label}", copy.actionSectionTransitionResetStory)
+        .replace("{label}", copy["Section Transition"])
         .replace("{value}", "Opening\u00a0– Arrival"),
     );
   });
@@ -2214,7 +2214,7 @@ describe("section transition reset previews", () => {
   });
 
   it.each([false, true])(
-    "distinguishes resetting transitions (%s) with localized labels",
+    "keeps the same target summary regardless of reset (%s)",
     (resetStory) => {
       const state = createInitialState();
       setRepositoryState(
@@ -2246,12 +2246,9 @@ describe("section transition reset previews", () => {
           },
         },
       });
-      expect(preview.sectionTransition.label).toContain("Section One");
-      expect(
-        preview.sectionTransition.label.includes(
-          copy.actionSectionTransitionResetStory,
-        ),
-      ).toBe(resetStory);
+      expect(preview.sectionTransition.label).toBe(
+        "Scene One\u00a0– Section One",
+      );
     },
   );
 });

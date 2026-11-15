@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Impossible de charger ces ressources :\n{assets}\n\nVérifiez leurs fichiers et, si nécessaire, remplacez-les par des copies valides."
 resourcePages:
   actionSectionTransition: "Changement de section"
-  actionSectionTransitionResetStory: "Transition de section (recommencer l’histoire)"
   damagedFontImportMessage: "La police « {fontName} » est endommagée ou illisible. Choisissez un nouveau fichier TTF, OTF ou WOFF2."
   selectorEmptyMessage: "Aucun élément à sélectionner."
   selectorNoResultsMessage: "Aucun élément ne correspond à la recherche."

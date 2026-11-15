@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Impossibile caricare queste risorse:\n{assets}\n\nControlla i file e, se necessario, sostituiscili con copie valide."
 resourcePages:
   actionSectionTransition: "Cambio di sezione"
-  actionSectionTransitionResetStory: "Transizione di sezione (ricomincia la storia)"
   damagedFontImportMessage: "Il font “{fontName}” è danneggiato o illeggibile. Scegli un altro file TTF, OTF o WOFF2."
   selectorEmptyMessage: "Nessun elemento da selezionare."
   selectorNoResultsMessage: "Nessun elemento corrisponde alla ricerca."

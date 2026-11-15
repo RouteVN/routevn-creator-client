@@ -233,7 +233,7 @@ document.querySelector('#inspector').append(panel);
           };
         });
         await page
-          .getByText("Click: Section Transition (reset story)", { exact: true })
+          .getByText("Click: Section Transition", { exact: true })
           .click();
         const form = page.locator(
           "rvn-command-line-section-transition #transitionForm",
@@ -261,9 +261,13 @@ document.querySelector('#inspector').append(panel);
           },
         );
         await page
-          .getByText("Click: Section Transition (reset story)", { exact: true })
+          .getByText("Click: Section Transition", { exact: true })
           .click();
         await form.waitFor({ state: "visible" });
+        assert.equal(
+          await form.evaluate((el) => el.getValues().resetStory),
+          true,
+        );
         await form.getByText("No", { exact: true }).click();
         await page
           .locator("rvn-command-line-section-transition #submitButton")

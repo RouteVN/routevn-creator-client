@@ -1,4 +1,3 @@
-import { getSectionTransitionActionLabel } from "./commandLineCopy.js";
 import { toFlatItems } from "../../project/tree.js";
 import {
   buildCharacterSpritePreviewLayers,
@@ -360,13 +359,8 @@ const buildSceneDocumentLineViewModels = ({
       visual: buildVisualPreview(repositoryState, changes),
       screenTransition: buildScreenTransitionPreview(lineActions),
       sectionTransition: buildSectionTransitionPreview(line),
-      sectionTransitionLabel: getSectionTransitionActionLabel(
-        lineActions.resetStoryAtSection
-          ? "resetStoryAtSection"
-          : "sectionTransition",
-        lineActions.sectionTransition,
-        copy,
-      ),
+      sectionTransitionLabel:
+        copy?.actionSectionTransition ?? "Section Transition",
       hasChoices: choicesPreview.hasChoices,
       hasConditional: buildConditionalPreview(lineActions),
       hasUpdateVariable: buildUpdateVariablePreview(lineActions),

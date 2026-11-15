@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "다음 리소스를 불러오지 못했어요:\n{assets}\n\n파일을 확인하고, 필요하면 올바른 파일로 바꾸세요."
 resourcePages:
   actionSectionTransition: "섹션 전환"
-  actionSectionTransitionResetStory: "섹션 전환 (스토리 초기화)"
   damagedFontImportMessage: "‘{fontName}’ 글꼴이 손상됐거나 읽을 수 없어요. 새 TTF, OTF 또는 WOFF2 파일을 선택하세요."
   selectorEmptyMessage: "선택할 수 있는 항목이 없어요."
   selectorNoResultsMessage: "검색 결과가 없어요."

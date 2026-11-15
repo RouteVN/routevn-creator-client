@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Could not load these assets:\n{assets}\n\nCheck their files and replace them with valid copies if needed."
 resourcePages:
   actionSectionTransition: "Section Transition"
-  actionSectionTransitionResetStory: "Section Transition (reset story)"
   damagedFontImportMessage: "The font \"{fontName}\" is damaged or unreadable. Please choose a fresh TTF, OTF, or WOFF2 file."
   selectorEmptyMessage: "No items available to select."
   selectorNoResultsMessage: "No items match your search."

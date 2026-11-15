@@ -23,7 +23,7 @@ describe("layoutEditPanel action view data", () => {
     expect(values.actions).toContainEqual({
       id: "resetStoryAtSection",
       interactionType: "click",
-      label: "Click: Section Transition (reset story)",
+      label: "Click: Section Transition",
       svg: "action-sectionTransition",
     });
   });
@@ -100,7 +100,7 @@ describe("layoutEditPanel action view data", () => {
 });
 
 it.each([false, true])(
-  "labels the layout transition reset option (%s)",
+  "labels layout transitions as Section Transition regardless of reset (%s)",
   (resetStory) => {
     const values = toInspectorValues({
       values: {
@@ -116,10 +116,10 @@ it.each([false, true])(
       hiddenActionModes: new Set(),
       copy: FR_I18N.resourcePages,
     });
-    expect(values.actions[0].label).toContain(
-      resetStory
-        ? FR_I18N.resourcePages.actionSectionTransitionResetStory
-        : FR_I18N.resourcePages.actionSectionTransition,
+    expect(values.actions[0].label).toBe(
+      FR_I18N.resourcePages.labelValue
+        .replace("{label}", "Click")
+        .replace("{value}", FR_I18N.resourcePages.actionSectionTransition),
     );
   },
 );

@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Не вдалося завантажити ці ресурси:\n{assets}\n\nПеревірте їхні файли й за потреби замініть їх справними копіями."
 resourcePages:
   actionSectionTransition: "Перехід до розділу"
-  actionSectionTransitionResetStory: "Перехід до розділу (почати сюжет заново)"
   damagedFontImportMessage: "Файл шрифту «{fontName}» пошкоджено або неможливо прочитати. Виберіть інший файл TTF, OTF або WOFF2."
   selectorEmptyMessage: "Немає елементів для вибору."
   selectorNoResultsMessage: "За цим запитом нічого не знайдено."

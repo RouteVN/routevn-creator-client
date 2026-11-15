@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "无法加载以下素材：\n{assets}\n\n请检查对应文件，并在需要时替换为有效的文件。"
 resourcePages:
   actionSectionTransition: "段落跳转"
-  actionSectionTransitionResetStory: "段落跳转（重置剧情）"
   damagedFontImportMessage: "字体“{fontName}”已损坏或无法读取。请选择一份新的 TTF、OTF 或 WOFF2 文件。"
   selectorEmptyMessage: "没有可选择的内容。"
   selectorNoResultsMessage: "没有符合搜索条件的内容。"

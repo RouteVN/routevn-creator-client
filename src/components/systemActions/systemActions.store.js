@@ -21,7 +21,6 @@ import {
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
 import {
-  getSectionTransitionActionLabel,
   formatCommandLineActionCount,
   formatCommandLineCopy,
   formatCommandLinePluralCopy,
@@ -881,25 +880,6 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
           : formatSceneSectionLabel(sceneName, sectionName, copy),
       };
     }
-    if (actions.sectionTransition.resetStory === true) {
-      const targetLabel = preview.sectionTransition?.label ?? sectionId;
-      preview.sectionTransition = {
-        scene,
-        section,
-        label: formatCommandLineCopy(
-          copy?.labelValue ?? "{label}: {value}",
-          {
-            label: getSectionTransitionActionLabel(
-              "sectionTransition",
-              actions.sectionTransition,
-              copy,
-            ),
-            value: targetLabel,
-          },
-          copy,
-        ),
-      };
-    }
   }
 
   if (actions.resetStoryAtSection) {
@@ -922,11 +902,7 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       label: formatCommandLineCopy(
         copy?.labelValue ?? "{label}: {value}",
         {
-          label: getSectionTransitionActionLabel(
-            "resetStoryAtSection",
-            actions.resetStoryAtSection,
-            copy,
-          ),
+          label: localizeCommandLineText("Section Transition", copy),
           value: targetLabel,
         },
         copy,

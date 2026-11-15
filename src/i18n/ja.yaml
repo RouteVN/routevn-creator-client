@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "次の素材を読み込めませんでした:\n{assets}\n\nファイルを確認し、必要に応じて有効なファイルに差し替えてください。"
 resourcePages:
   actionSectionTransition: "セクション遷移"
-  actionSectionTransitionResetStory: "セクション移動（ストーリーをリセット）"
   damagedFontImportMessage: "フォント「{fontName}」が破損しているか、読み込めません。新しいTTF、OTF、またはWOFF2ファイルを選択してください。"
   selectorEmptyMessage: "選択できる項目がありません。"
   selectorNoResultsMessage: "検索条件に一致する項目がありません。"

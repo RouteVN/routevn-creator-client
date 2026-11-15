@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Không tải được các tài nguyên sau:\n{assets}\n\nHãy kiểm tra tệp của các tài nguyên này và thay bằng bản hợp lệ nếu cần."
 resourcePages:
   actionSectionTransition: "Chuyển phần"
-  actionSectionTransitionResetStory: "Chuyển phần (bắt đầu lại câu chuyện)"
   damagedFontImportMessage: "Phông chữ “{fontName}” bị hỏng hoặc không đọc được. Hãy chọn một tệp TTF, OTF hoặc WOFF2 khác."
   selectorEmptyMessage: "Không có mục nào để chọn."
   selectorNoResultsMessage: "Không có mục nào khớp với nội dung tìm kiếm."

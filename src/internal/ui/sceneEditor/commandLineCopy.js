@@ -242,17 +242,3 @@ export const localizeCommandLineForm = (form = {}, copy = {}) => {
 
   return localizedForm;
 };
-
-export const getSectionTransitionActionLabel = (
-  actionType,
-  action,
-  copy = {},
-) => {
-  if (actionType === "resetStoryAtSection" || action?.resetStory === true) {
-    return (
-      copy.actionSectionTransitionResetStory ??
-      "Section Transition (reset story)"
-    );
-  }
-  return copy.actionSectionTransition ?? "Section Transition";
-};

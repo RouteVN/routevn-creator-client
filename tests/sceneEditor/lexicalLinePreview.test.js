@@ -1,5 +1,6 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
+import { FR_I18N } from "../support/i18n.js";
 
 const installDomGlobals = () => {
   const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -488,7 +489,7 @@ describe("lexical scene document editor line previews", () => {
   });
 });
 
-it("renders a localized resetting transition label and redraws when it changes", async () => {
+it("renders a localized transition label and redraws when the locale changes", async () => {
   const restore = installDomGlobals();
   try {
     const { LexicalSceneDocumentEditorElement } = await import(
@@ -501,7 +502,7 @@ it("renders a localized resetting transition label and redraws when it changes",
     };
     const decoration = {
       sectionTransition: true,
-      sectionTransitionLabel: "Section Transition (reset story)",
+      sectionTransitionLabel: FR_I18N.resourcePages.actionSectionTransition,
     };
     const items = prototype.createPreviewItems.call(host, decoration);
     const preview = items.querySelector(".preview-item");

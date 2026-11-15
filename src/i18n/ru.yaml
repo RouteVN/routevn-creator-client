@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Не удалось загрузить эти ресурсы:\n{assets}\n\nПроверьте файлы этих ресурсов и при необходимости замените их исправными копиями."
 resourcePages:
   actionSectionTransition: "Переход к разделу"
-  actionSectionTransitionResetStory: "Переход к разделу (перезапуск сюжета)"
   damagedFontImportMessage: "Шрифт «{fontName}» повреждён или не читается. Выберите другой файл TTF, OTF или WOFF2."
   selectorEmptyMessage: "Нет элементов для выбора."
   selectorNoResultsMessage: "По вашему запросу ничего не найдено."

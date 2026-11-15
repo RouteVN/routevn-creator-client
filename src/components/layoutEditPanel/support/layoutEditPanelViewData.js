@@ -1,4 +1,3 @@
-import { getSectionTransitionActionLabel } from "../../../internal/ui/sceneEditor/commandLineCopy.js";
 import { toFlatGroups, toFlatItems } from "../../../internal/project/tree.js";
 import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 import { getInteractionActions } from "../../../internal/project/interactionPayload.js";
@@ -50,6 +49,7 @@ const SETTINGS_ACTION_MODES = new Set([
 const ACTION_LABELS = {
   nextLine: "Next Line",
   sectionTransition: "Section Transition",
+  resetStoryAtSection: "Section Transition",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
   startSkipMode: "Start Skip Mode",
@@ -75,6 +75,7 @@ const ACTION_INTERACTION_LABEL_KEYS = {
 const ACTION_LABEL_KEYS = {
   nextLine: "actionNextLine",
   sectionTransition: "actionSectionTransition",
+  resetStoryAtSection: "actionSectionTransition",
   toggleAutoMode: "actionToggleAutoMode",
   toggleSkipMode: "actionToggleSkipMode",
   startSkipMode: "actionStartSkipMode",
@@ -196,13 +197,7 @@ const getActionInteractionLabel = (interactionType, copy = {}) => {
   return key ? (copy[key] ?? ACTION_INTERACTION_LABELS[interactionType]) : "";
 };
 
-const getActionLabel = (actionKey, action, copy = {}) => {
-  if (
-    actionKey === "sectionTransition" ||
-    actionKey === "resetStoryAtSection"
-  ) {
-    return getSectionTransitionActionLabel(actionKey, action, copy);
-  }
+const getActionLabel = (actionKey, copy = {}) => {
   const copyKey = ACTION_LABEL_KEYS[actionKey];
   return copyKey
     ? (copy[copyKey] ?? ACTION_LABELS[actionKey] ?? actionKey)
@@ -213,12 +208,12 @@ const toLayoutActionItems = (values, hiddenActionModes, copy = {}) => {
   return ACTION_INTERACTION_TYPES.flatMap((interactionType) =>
     Object.entries(getLayoutInteractionActions(values, interactionType))
       .filter(([key]) => !hiddenActionModes.has(key))
-      .map(([key, action]) => ({
+      .map(([key]) => ({
         id: key,
         interactionType,
         label: formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
           label: getActionInteractionLabel(interactionType, copy),
-          value: getActionLabel(key, action, copy),
+          value: getActionLabel(key, copy),
         }),
         svg:
           key === "resetStoryAtSection"

@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Gagal memuat aset berikut:\n{assets}\n\nPeriksa file aset tersebut, lalu ganti dengan file yang valid jika perlu."
 resourcePages:
   actionSectionTransition: "Lompat ke bagian"
-  actionSectionTransitionResetStory: "Transisi bagian (mulai ulang cerita)"
   damagedFontImportMessage: "Font “{fontName}” rusak atau tidak dapat dibaca. Pilih file TTF, OTF, atau WOFF2 lain."
   selectorEmptyMessage: "Tidak ada item yang dapat dipilih."
   selectorNoResultsMessage: "Tidak ada item yang cocok dengan pencarian."

@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Não foi possível carregar estes recursos:\n{assets}\n\nVerifique os arquivos destes recursos e substitua os que estiverem danificados por cópias válidas."
 resourcePages:
   actionSectionTransition: "Mudar de parte"
-  actionSectionTransitionResetStory: "Transição de parte (reiniciar a história)"
   damagedFontImportMessage: "A fonte “{fontName}” está danificada ou não pode ser lida. Escolha outro arquivo TTF, OTF ou WOFF2."
   selectorEmptyMessage: "Não há itens disponíveis para selecionar."
   selectorNoResultsMessage: "Nenhum item corresponde à pesquisa."

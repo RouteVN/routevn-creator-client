@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "Nie udało się wczytać następujących zasobów:\n{assets}\n\nSprawdź ich pliki i w razie potrzeby zastąp je prawidłowymi kopiami."
 resourcePages:
   actionSectionTransition: "Przejście do sekcji"
-  actionSectionTransitionResetStory: "Przejście do sekcji (zacznij fabułę od nowa)"
   damagedFontImportMessage: "Plik czcionki „{fontName}” jest uszkodzony lub nieczytelny. Wybierz inny plik TTF, OTF lub WOFF2."
   selectorEmptyMessage: "Brak elementów do wybrania."
   selectorNoResultsMessage: "Nie znaleziono elementów pasujących do wyszukiwania."

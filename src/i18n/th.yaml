@@ -854,7 +854,6 @@ assetLoadFeedback:
   failed: "ไม่สามารถโหลดทรัพยากรต่อไปนี้ได้:\n{assets}\n\nตรวจสอบไฟล์และแทนที่ด้วยไฟล์ที่ถูกต้องหากจำเป็น"
 resourcePages:
   actionSectionTransition: "ไปยังส่วน"
-  actionSectionTransitionResetStory: "เปลี่ยนส่วน (เริ่มเนื้อเรื่องใหม่)"
   damagedFontImportMessage: "ฟอนต์ \"{fontName}\" เสียหายหรืออ่านไม่ได้ โปรดเลือกไฟล์ TTF OTF หรือ WOFF2 ใหม่"
   selectorEmptyMessage: "ไม่มีรายการให้เลือก"
   selectorNoResultsMessage: "ไม่มีรายการที่ตรงกับการค้นหา"
