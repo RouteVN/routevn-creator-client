@@ -14,6 +14,9 @@ const runtime = vi.hoisted(() => ({
   loadAssets: vi.fn(),
   resumeAudio: vi.fn(),
   tickerStart: vi.fn(),
+  engineEvent: vi.fn(),
+  graphicsEventHandler: undefined,
+  renderEngineState: undefined,
 }));
 
 vi.mock("file-type", () => ({
@@ -27,7 +30,9 @@ vi.mock("pixi.js", () => ({
 vi.mock("route-graphics", () => ({
   default: () => ({
     canvas: document.createElement("canvas"),
-    init: async () => {},
+    init: async ({ eventHandler }) => {
+      runtime.graphicsEventHandler = eventHandler;
+    },
     render: runtime.render,
     loadAssets: runtime.loadAssets,
     resumeAudio: runtime.resumeAudio,
@@ -50,6 +55,7 @@ vi.mock("route-engine-js", () => ({
   }),
   createIndexedDbPersistence: () => ({ load: async () => ({ saveSlots: {} }) }),
   createEffectsHandler: ({ routeGraphics }) => {
+    runtime.renderEngineState = routeGraphics.render;
     const handler = () =>
       routeGraphics.render({
         elements: [
@@ -61,7 +67,7 @@ vi.mock("route-engine-js", () => ({
     handler.reset = vi.fn();
     handler.dispose = vi.fn();
     handler.reconcilePlaybackScheduleV1 = vi.fn();
-    handler.createRouteGraphicsEventHandler = () => () => {};
+    handler.createRouteGraphicsEventHandler = () => runtime.engineEvent;
     return handler;
   },
 }));
@@ -75,7 +81,7 @@ vi.mock("../../src/internal/runtime/graphicsEngineRuntime.js", () => ({
   loadGraphicsEnginePlugins: async () => ({}),
   preloadRuntimeSaveSlotImages: async () => ({ failed: 0 }),
   createRuntimeEventContext: vi.fn(),
-  getRuntimeEventActions: vi.fn(),
+  getRuntimeEventActions: (payload) => payload.actions,
   prepareRuntimeInteractionExecution: vi.fn(),
 }));
 vi.mock(
@@ -83,14 +89,17 @@ vi.mock(
   async (importOriginal) => ({
     ...(await importOriginal()),
     createBundleRangeReader: async () => ({
-      manifest: { assets: { "image-one": {}, "image-two": {} } },
+      manifest: {
+        assets: { "image-one": {}, "image-two": {}, "image-three": {} },
+      },
       readInstructions: async () => ({
         projectData: { screen: { width: 1920, height: 1080 } },
         bundleMetadata: {
           project: { name: "Project One", namespace: "project-one" },
         },
       }),
-      hasAsset: (id) => id === "image-one" || id === "image-two",
+      hasAsset: (id) =>
+        id === "image-one" || id === "image-two" || id === "image-three",
       readAsset: async () => ({
         buffer: new Uint8Array([1]),
         mime: "image/png",
@@ -203,6 +212,55 @@ describe("exported player startup", () => {
       document.querySelector("#loading").classList.contains("hidden"),
     ).toBe(true);
   });
+
+  it("ignores taps on the old screen while the next one waits for its assets", async () => {
+    document.body.dataset.playerStart = "automatic";
+    await import("../../scripts/main.js");
+    expect(runtime.render).toHaveBeenCalledOnce();
+    const tap = { actions: { nextLine: {} } };
+    const nextScreen = { elements: [{ src: "image-three" }] };
+    const nextAssets = deferred();
+    runtime.loadAssets.mockReturnValue(nextAssets.promise);
+
+    runtime.renderEngineState(nextScreen);
+
+    expect(runtime.render).toHaveBeenCalledOnce();
+    expect(runtime.graphicsEventHandler("click", tap)).toBe(false);
+    expect(runtime.engineEvent).not.toHaveBeenCalled();
+    // Events without actions, such as a finished render, still reach the engine.
+    runtime.graphicsEventHandler("renderComplete", { id: "render-one" });
+    expect(runtime.engineEvent).toHaveBeenCalledExactlyOnceWith(
+      "renderComplete",
+      { id: "render-one" },
+    );
+
+    nextAssets.resolve([]);
+    await vi.waitFor(() => expect(runtime.render).toHaveBeenCalledTimes(2));
+    expect(runtime.render).toHaveBeenLastCalledWith(nextScreen);
+    runtime.graphicsEventHandler("click", tap);
+    expect(runtime.engineEvent).toHaveBeenLastCalledWith("click", tap);
+  });
+
+  it("draws the screens that waited for assets in the order the engine produced them", async () => {
+    document.body.dataset.playerStart = "automatic";
+    await import("../../scripts/main.js");
+    const waitingScreen = { elements: [{ src: "image-three" }] };
+    const laterScreen = { elements: [{ src: "image-one" }] };
+    const waitingAssets = deferred();
+    runtime.loadAssets.mockReturnValue(waitingAssets.promise);
+
+    runtime.renderEngineState(waitingScreen);
+    runtime.renderEngineState(laterScreen);
+    expect(runtime.render).toHaveBeenCalledOnce();
+
+    waitingAssets.resolve([]);
+    await vi.waitFor(() => expect(runtime.render).toHaveBeenCalledTimes(3));
+    expect(runtime.render.mock.calls.slice(1)).toEqual([
+      [waitingScreen],
+      [laterScreen],
+    ]);
+  });
+
   it("keeps Android progress visible until the first frame and notifies its host once without Tauri", async () => {
     dom.window.close();
     dom = new JSDOM(

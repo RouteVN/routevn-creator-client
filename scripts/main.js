@@ -23,6 +23,7 @@ import { installPlayerAudioUnlock } from "./playerAudioUnlock.js";
 import { waitForPlayerStart } from "./playerStartGate.js";
 import { updatePlayerLoadingProgress } from "./playerLoadingProgress.js";
 import { createPlayerStartupEffects } from "./playerStartupEffects.js";
+import { createPlayerRenderQueue } from "./playerRenderQueue.js";
 
 const hostAudioRuntime = globalThis.__ROUTEVN_PLAYER_HOST__?.audioRuntime;
 if (hostAudioRuntime) configureAudioRuntime(hostAudioRuntime);
@@ -649,8 +650,6 @@ const prepareEngine = async (
   let resolveFirstRender;
   let rejectFirstRender;
   let firstRenderSettled = false;
-  let latestPreparedRenderState;
-  let renderAssetLoadToken = 0;
   const firstRenderPromise = new Promise((resolve, reject) => {
     resolveFirstRender = resolve;
     rejectFirstRender = reject;
@@ -744,53 +743,36 @@ const prepareEngine = async (
     });
   };
 
-  const renderEngineState = (renderState) => {
-    latestPreparedRenderState = prepareRenderState(renderState);
-    const missingAssetIds = bundleAssetLoader.collectMissingAssetIds(
-      latestPreparedRenderState,
-    );
+  const renderQueue = createPlayerRenderQueue({
+    collectMissingAssetIds: (renderState) =>
+      bundleAssetLoader.collectMissingAssetIds(renderState),
+    ensureAssetsLoaded: (assetIds) =>
+      bundleAssetLoader.ensureAssetsLoaded(assetIds),
+    render: renderPreparedState,
+    onAssetLoadStart: ({ assetIds }) => {
+      recordDiagnosticStep("Loading render assets", { assetIds });
+    },
+    onAssetLoadError: (error, { assetIds }) => {
+      const runtimeError = createRuntimeError(
+        "Failed to load runtime assets.",
+        error,
+        { assetIds },
+      );
 
-    if (missingAssetIds.length === 0) {
-      renderAssetLoadToken += 1;
-      renderPreparedState(latestPreparedRenderState);
-      return;
-    }
+      console.error("Failed to load runtime assets:", runtimeError);
+      if (failFirstRender(runtimeError)) {
+        return;
+      }
 
-    const loadToken = renderAssetLoadToken + 1;
-    renderAssetLoadToken = loadToken;
-    recordDiagnosticStep("Loading render assets", {
-      assetIds: missingAssetIds,
-    });
-
-    void bundleAssetLoader
-      .ensureAssetsLoaded(missingAssetIds)
-      .then(() => {
-        if (loadToken !== renderAssetLoadToken || !latestPreparedRenderState) {
-          return;
-        }
-
-        renderPreparedState(latestPreparedRenderState);
-      })
-      .catch((error) => {
-        const runtimeError = createRuntimeError(
-          "Failed to load runtime assets.",
-          error,
-          {
-            assetIds: missingAssetIds,
-            renderAssetLoadToken: loadToken,
-          },
-        );
-
-        console.error("Failed to load runtime assets:", runtimeError);
-        if (failFirstRender(runtimeError)) {
-          return;
-        }
-
-        setLoadingError({
-          summary: "Runtime asset loading failed after the player started.",
-          error: runtimeError,
-        });
+      setLoadingError({
+        summary: "Runtime asset loading failed after the player started.",
+        error: runtimeError,
       });
+    },
+  });
+
+  const renderEngineState = (renderState) => {
+    renderQueue.enqueue(prepareRenderState(renderState));
   };
 
   const persistence = createRuntimePersistence({ namespace });
@@ -843,37 +825,47 @@ const prepareEngine = async (
     ticker,
   });
 
-  const routeGraphicsEventHandler =
-    effectsHandler.createRouteGraphicsEventHandler({
-      preprocessPayload: async (eventName, payload) => {
-        const actions = getRuntimeEventActions(payload);
-        if (!actions) {
-          return payload;
-        }
+  const engineEventHandler = effectsHandler.createRouteGraphicsEventHandler({
+    preprocessPayload: async (eventName, payload) => {
+      const actions = getRuntimeEventActions(payload);
+      if (!actions) {
+        return payload;
+      }
 
-        const eventContext = createRuntimeEventContext(payload);
-        const { preparedActions, thumbnailPreloadError } =
-          await prepareRuntimeInteractionExecution({
-            actions,
-            eventContext,
-            graphicsService: routeGraphics,
-            canvasRoot: routeGraphics.canvas,
-            swallowThumbnailPreloadError: true,
-          });
+      const eventContext = createRuntimeEventContext(payload);
+      const { preparedActions, thumbnailPreloadError } =
+        await prepareRuntimeInteractionExecution({
+          actions,
+          eventContext,
+          graphicsService: routeGraphics,
+          canvasRoot: routeGraphics.canvas,
+          swallowThumbnailPreloadError: true,
+        });
 
-        if (thumbnailPreloadError) {
-          console.warn(
-            "Failed to preload save thumbnail image.",
-            thumbnailPreloadError,
-          );
-        }
+      if (thumbnailPreloadError) {
+        console.warn(
+          "Failed to preload save thumbnail image.",
+          thumbnailPreloadError,
+        );
+      }
 
-        return {
-          ...payload,
-          actions: preparedActions,
-        };
-      },
-    });
+      return {
+        ...payload,
+        actions: preparedActions,
+      };
+    },
+  });
+
+  // While a state waits for its assets the screen still shows the one before
+  // it. A tap there would run that old screen's actions in the story position
+  // the engine has already moved to.
+  const routeGraphicsEventHandler = (eventName, payload) => {
+    if (renderQueue.hasWaitingStates() && getRuntimeEventActions(payload)) {
+      return false;
+    }
+
+    return engineEventHandler(eventName, payload);
+  };
 
   recordDiagnosticStep("Initializing graphics engine", {
     width: screenWidth,
