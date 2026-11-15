@@ -1,0 +1,119 @@
+refs:
+  addPicturesButton:
+    eventListeners:
+      click:
+        handler: handleAddPicturesClick
+  framesPanel:
+    eventListeners:
+      dragover:
+        handler: handleFramesDragOver
+        preventDefault: true
+      drop:
+        handler: handleFramesDrop
+        preventDefault: true
+  entryRow*:
+    eventListeners:
+      dragstart:
+        handler: handleEntryDragStart
+      dragend:
+        handler: handleEntryDragEnd
+      drop:
+        handler: handleEntryDrop
+        preventDefault: true
+        stopPropagation: true
+  entryHoldInput*:
+    eventListeners:
+      value-change:
+        handler: handleEntryHoldChange
+  entryMenuButton*:
+    eventListeners:
+      click:
+        handler: handleEntryMenuClick
+  playToggleButton:
+    eventListeners:
+      click:
+        handler: handlePlayToggleClick
+  clipSelect:
+    eventListeners:
+      value-change:
+        handler: handleClipSelectChange
+  fpsInput:
+    eventListeners:
+      value-change:
+        handler: handleFpsChange
+styles:
+  # The preview stays in view while a long frame list scrolls. On narrow
+  # screens the columns stack and the preview comes first.
+  "#previewPanel":
+    position: sticky
+    top: 0
+  "@media only screen and (max-width: 1024px)":
+    "#previewPanel":
+      position: static
+      order: -1
+template:
+  - 'rtgl-view d=h lg-d=v w=f g=lg style="align-items: flex-start;"':
+      - 'rtgl-view d=v w=1fg lg-w=f g=lg style="min-width: 0;"':
+          # The frame size follows the pictures: the largest one's width and
+          # height. FPS belongs to the clip shown.
+          - 'rtgl-view d=v w=f g=md p=md bw=xs bc=bo br=md style="box-sizing: border-box;"':
+              - rtgl-view d=h w=f g=md:
+                  - rtgl-view d=v w=1fg g=xs:
+                      - rtgl-text s=sm c=mu-fg: ${copy.frameSizeLabel}
+                      - rtgl-view h=32 av=c:
+                          - rtgl-text s=sm: ${frameSizeText}
+                  - rtgl-view d=v w=1fg g=xs:
+                      - rtgl-text s=sm c=mu-fg: ${copy.fpsLabel}
+                      - 'rvn-slider-value-field#fpsInput w=f label="${copy.fpsLabel}" :value=${fpsValue} :field=${fpsField}': null
+              - $if showClipSelect:
+                  - rtgl-view d=v w=f g=xs:
+                      - rtgl-text s=sm c=mu-fg: ${copy.clipLabel}
+                      - 'rtgl-select#clipSelect key=${selectedClipName} w=f no-clear :options=${clipOptions} :selectedValue=${selectedClipName}': null
+          # Pictures dropped anywhere on the frames panel are added as frames.
+          - 'rtgl-view#framesPanel d=v w=f g=md p=md bw=xs bc=bo br=md style="box-sizing: border-box;"':
+              - rtgl-view d=h w=f av=c g=md:
+                  - rtgl-text w=1fg s=md: ${framesTitle}
+                  - rtgl-button#addPicturesButton v=se s=sm pre=plus ?disabled=${addPicturesDisabled}: ${copy.addPicturesButton}
+              - $if isLoading:
+                  - 'rtgl-view w=f h=96 av=c ah=c':
+                      - rtgl-text s=sm c=mu-fg: ${copy.loadingFramesLabel}
+                $elif isError:
+                  - 'rtgl-view w=f p=md av=c ah=c bw=xs bc=er br=md':
+                      - rtgl-text s=sm c=er ta=c: ${copy.loadFramesFailedMessage}
+                $elif hasFrames:
+                  - rtgl-text s=xs c=mu-fg: ${copy.framesHint}
+                  - 'div role=list aria-label="${copy.framesLabel}" style="width: 100%; display: flex; flex-direction: column; gap: 8px;"':
+                      - $for entry, i in entries:
+                          - 'rtgl-view#entryRow${i} key=${entry.key} data-entry-key=${entry.key} data-entry-index=${entry.index} draggable=true role=listitem aria-label="${entry.ariaLabel}" d=h w=f av=c g=sm p=sm bw=xs bc=bo br=md cur=grab style="box-sizing: border-box;"':
+                              - rtgl-text w=24 s=sm c=mu-fg ta=c: ${entry.number}
+                              - 'rtgl-view w=48 h=48 br=sm bw=xs bc=bo style="flex-shrink: 0; overflow: hidden; box-sizing: border-box; ${checkerboardStyle}"':
+                                  - 'rtgl-image src=${entry.url} w=f h=f of=con draggable=false': null
+                              - 'rtgl-view d=v w=1fg g=xs style="min-width: 0;"':
+                                  - rtgl-text s=sm w=f ellipsis=true: ${entry.name}
+                                  - rtgl-text s=xs c=mu-fg: ${entry.sizeLabel}
+                              - rtgl-text s=sm c=mu-fg: ${copy.holdLabel}
+                              - rtgl-view w=64:
+                                  - 'rvn-slider-value-field#entryHoldInput${i} key=${entry.key} data-entry-key=${entry.key} w=f label="${entry.holdAriaLabel}" :value=${entry.hold} :field=${holdField}': null
+                              - 'rtgl-button#entryMenuButton${i} data-entry-key=${entry.key} data-entry-index=${entry.index} sq s=sm v=gh pre=ellipsis aria-haspopup=menu aria-label="${copy.frameActionsLabel}" title="${copy.frameActionsLabel}"': null
+                $else:
+                  - 'rtgl-view w=f p=md av=c ah=c':
+                      - rtgl-text s=sm c=mu-fg ta=c: ${copy.noFramesYetLabel}
+      - 'rtgl-view#previewPanel d=v w=2fg lg-w=f g=md p=md bw=xs bc=bo br=md style="min-width: 0; box-sizing: border-box;"':
+          - rtgl-view d=h w=f av=c g=md:
+              - rtgl-text w=1fg s=md: ${copy.previewTitle}
+              - 'rtgl-button#playToggleButton v=ol s=sm pre=${playToggleIcon} ?disabled=${playToggleDisabled}': ${playToggleLabel}
+          # The box has the frame's shape: as wide as the panel, unless that
+          # would make it taller than the screen allows.
+          - 'rtgl-view w=f ah=c style="container-type: inline-size;"':
+              - $if hasFrames:
+                  - 'rtgl-view style="${previewBoxStyle}"':
+                      - 'rvn-spritesheet-preview key=${previewKey} src=${previewUrl} :atlas=${previewAtlas} :animation=${previewAnimation} :paused=${previewPaused} w=f h=f padding=0 emptyLabel=""': null
+                $else:
+                  - 'rtgl-view av=c ah=c p=md bw=xs bc=bo br=md bgc=mu style="box-sizing: border-box; ${previewBoxStyle}"':
+                      - rtgl-text s=sm c=mu-fg ta=c: ${previewPlaceholderLabel}
+          - $if previewErrorMessage:
+              - 'rtgl-text s=sm c=er style="white-space: pre-line;"': ${previewErrorMessage}
+          - $if showConversionNote:
+              - rtgl-view d=h w=f g=sm p=sm bgc=mu br=md:
+                  - rtgl-svg svg=info wh=16 c=mu-fg: null
+                  - rtgl-text w=1fg s=xs c=mu-fg: ${copy.conversionNote}

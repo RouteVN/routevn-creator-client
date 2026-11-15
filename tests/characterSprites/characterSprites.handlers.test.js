@@ -587,6 +587,9 @@ describe("characterSprites edit dialogs", () => {
     const deps = createUploadDeps();
     deps.projectService.updateCharacterSpriteItem = vi.fn(async () => ({}));
     Object.assign(deps.store, {
+      selectIsSpritesheetDialogSubmitting: vi.fn(() => false),
+      setSpritesheetDialogSubmitting: vi.fn(),
+      selectSpritesheetDialogCreatesEmpty: vi.fn(() => false),
       selectSpritesheetDialogMode: vi.fn(() => "edit"),
       selectSpritesheetDialogItemId: vi.fn(() => "spritesheet-1"),
       selectSpritesheetDialogParentId: vi.fn(() => undefined),

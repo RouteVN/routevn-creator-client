@@ -20,6 +20,7 @@ const creatorDocsPathByRoutePattern = {
   "/projects": "/projects/",
   "/project/images": "/images/",
   "/project/spritesheets": "/spritesheets/",
+  "/project/spritesheet-editor": "/spritesheets/",
   "/project/characters": "/characters/",
   "/project/character-sprites": "/characters/#character-sprites",
   "/project/sounds": "/sounds/",

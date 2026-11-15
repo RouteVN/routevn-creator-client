@@ -74,6 +74,9 @@ jobs:
       - name: Window control regression tests
         run: bun run test:window-controls
 
+      - name: Spritesheet format tests
+        run: bun run test:spritesheet-formats
+
       - name: Build Web
         run: bun run build:web
 

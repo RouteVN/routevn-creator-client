@@ -110,6 +110,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project-folder-setup",
     "/project/images",
     "/project/spritesheets",
+    "/project/spritesheet-editor",
     "/project/characters",
     "/project/character-sprites",
     "/project/sounds",

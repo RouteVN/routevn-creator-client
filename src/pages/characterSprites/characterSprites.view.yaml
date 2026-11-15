@@ -171,6 +171,26 @@ refs:
     eventListeners:
       form-action:
         handler: handleCreateTagFormAction
+  spritesheetAddDialog:
+    eventListeners:
+      close:
+        handler: handleSpritesheetDialogClose
+  spritesheetAddForm:
+    eventListeners:
+      form-change:
+        handler: handleSpritesheetDialogFormChange
+      form-action:
+        handler: handleSpritesheetDialogFormAction
+      add-option-click:
+        handler: handleSpritesheetDialogFormAddOptionClick
+  spritesheetAddPngFileButton:
+    eventListeners:
+      click:
+        handler: handleSpritesheetDialogImageSourceClick
+  spritesheetAddJsonFileButton:
+    eventListeners:
+      click:
+        handler: handleSpritesheetDialogAtlasSourceClick
   spritesheetDialog:
     eventListeners:
       close:
@@ -345,7 +365,22 @@ template:
                           - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
-  - rtgl-dialog#spritesheetDialog ?open=${isSpritesheetDialogOpen} s=lg md-layout=fixed-top p=none:
+  - rtgl-dialog#spritesheetAddDialog ?open=${isSpritesheetAddDialogOpen} s=md md-layout=fixed-top:
+      - rtgl-view slot=content d=v w=f h=f overflow=hidden:
+          - rtgl-form#spritesheetAddForm key=${spritesheetDialogFormKey} :defaultValues=${spritesheetDialogValues} :form=${spritesheetAddForm} sticky sbv=touch bottom-spacer=96 w=f h=f:
+              - rtgl-view slot=spritesheet-files d=v w=f g=lg:
+                  - $if spritesheetCreateFileLabels.show:
+                      - rtgl-view d=v w=f g=md:
+                          - rtgl-text: ${spritesheetCreateFileLabels.pngFileLabel}
+                          - rtgl-view d=h w=f g=sm av=c:
+                              - rtgl-input w=f value=${spritesheetCreateFileLabels.pngFileName} disabled=true placeholder=${spritesheetCreateFileLabels.noFileSelected}: null
+                              - 'rtgl-button#spritesheetAddPngFileButton v=se pre=upload style="flex: 0 0 auto;"': ${spritesheetCreateFileLabels.chooseFileButton}
+                      - rtgl-view d=v w=f g=md:
+                          - rtgl-text: ${spritesheetCreateFileLabels.jsonFileLabel}
+                          - rtgl-view d=h w=f g=sm av=c:
+                              - rtgl-input w=f value=${spritesheetCreateFileLabels.jsonFileName} disabled=true placeholder=${spritesheetCreateFileLabels.noFileSelected}: null
+                              - 'rtgl-button#spritesheetAddJsonFileButton v=se pre=upload style="flex: 0 0 auto;"': ${spritesheetCreateFileLabels.chooseFileButton}
+  - rtgl-dialog#spritesheetDialog ?open=${isSpritesheetEditDialogOpen} s=lg md-layout=fixed-top p=none:
       - $if isSpritesheetDialogPreviewMode:
           - 'rtgl-view slot="content" d=v w=f g=lg p=md style="min-width: min(960px, 100vw - 64px);"':
               - 'rvn-spritesheet-preview key=${spritesheetDialogPreviewKey} src=${spritesheetDialogPreviewUrl} fileId=${spritesheetDialogPreviewFileId} :atlas=${spritesheetDialogPreviewAtlas} :animation=${spritesheetDialogPreviewAnimation} h=320 :emptyLabel=${emptyPreviewLabel}': null
@@ -399,7 +434,7 @@ template:
                                       - rtgl-text s=xs c=mu-fg: ${selectValidJsonToDetectClips}
                   - 'rtgl-view h=80 aria-hidden=true style="flex: 0 0 80px;"': null
               - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-                  - rtgl-button#spritesheetDialogSubmitButton v=pr: ${spritesheetDialogSubmitLabel}
+                  - rtgl-button#spritesheetDialogSubmitButton v=pr ?disabled=${isSpritesheetDialogSubmitting}: ${spritesheetDialogSubmitLabel}
   - rtgl-dialog#clipFpsDialog ?open=${isClipFpsDialogOpen} s=sm:
       - rtgl-form#clipFpsForm key=${clipFpsDialogKey} slot=content :defaultValues=${clipFpsDialogValues} :form=${clipFpsForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:

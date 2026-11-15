@@ -212,6 +212,7 @@ const resourceParentMapping = {
   releases: "versions",
   "transform-editor": "transforms",
   "particle-editor": "particles",
+  "spritesheet-editor": "spritesheets",
   "text-style-editor": "text-styles",
 };
 

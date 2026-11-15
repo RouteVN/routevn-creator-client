@@ -1,6 +1,7 @@
 import { createProjectAssetService } from "./projectAssetService.js";
 import { createAssetPackageExportService } from "./assetPackageExportService.js";
 import { createEditorThumbnailService } from "./editorThumbnailService.js";
+import { createSpritesheetFramesService } from "./spritesheetFramesService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createAndroidSigningService } from "./androidSigningService.js";
 import { createProjectExportService } from "./projectExportService.js";
@@ -212,6 +213,11 @@ export const createProjectServiceCore = ({
     updateTransform: collabService.commandApi.updateTransform,
     updateParticle: collabService.commandApi.updateParticle,
     updateLayout: collabService.commandApi.updateLayoutItem,
+  });
+
+  const spritesheetFramesService = createSpritesheetFramesService({
+    getFileContent: assetService.getFileContent,
+    uploadFiles: assetService.uploadFiles,
   });
 
   const resourcePackageImportService = createResourcePackageImportService({
@@ -1062,6 +1068,17 @@ export const createProjectServiceCore = ({
     },
     getFileContent: assetService.getFileContent,
     observeFileUrls: assetService.observeFileUrls,
+    readSpritesheetFrameFiles:
+      spritesheetFramesService.readSpritesheetFrameFiles,
+    loadSpritesheetFrameFileIds:
+      spritesheetFramesService.loadSpritesheetFrameFileIds,
+    extractSpritesheetFrames: spritesheetFramesService.extractSpritesheetFrames,
+    renderSpritesheetFramesPreview:
+      spritesheetFramesService.renderSpritesheetFramesPreview,
+    buildSpritesheetFromFrames:
+      spritesheetFramesService.buildSpritesheetFromFrames,
+    combineSpritesheetSourceFiles:
+      spritesheetFramesService.combineSpritesheetSourceFiles,
     checkFileIntegrity: assetService.checkFileIntegrity,
     createAssetPackageBundle:
       assetPackageExportService.createAssetPackageBundle,

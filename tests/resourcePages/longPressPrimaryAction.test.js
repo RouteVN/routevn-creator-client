@@ -35,20 +35,6 @@ describe.each([
     "selectFontItemById",
     "setModalOpen",
   ],
-  [
-    "spritesheets",
-    handleMediaLongPress,
-    handleSpritesheetItemDoubleClick,
-    "selectItemById",
-    "openPreviewDialog",
-  ],
-  [
-    "character spritesheets",
-    handleMediaLongPress,
-    handleSpriteItemDoubleClick,
-    "selectSpriteItemById",
-    "openSpritesheetPreviewDialog",
-  ],
 ])(
   "%s long press",
   (name, handleLongPress, handlePrimaryAction, itemSelector, openAction) => {
@@ -60,8 +46,6 @@ describe.each([
           colors: "color",
           videos: "video",
           fonts: "font",
-          spritesheets: "spritesheet",
-          "character spritesheets": "spritesheet",
         }[name],
         fileId: "file-1",
       };
@@ -115,3 +99,61 @@ describe.each([
     });
   },
 );
+
+describe.each([
+  [
+    "spritesheets",
+    handleSpritesheetItemDoubleClick,
+    "selectItemById",
+    { p: "project-1", ss: "item-1" },
+  ],
+  [
+    "character spritesheets",
+    handleSpriteItemDoubleClick,
+    "selectSpriteItemById",
+    { p: "project-1", characterId: "character-1", sprite: "item-1" },
+  ],
+])("%s long press", (_name, handlePrimaryAction, itemSelector, payload) => {
+  it("opens the spritesheet editor without showing the action sheet", () => {
+    const item = { id: "item-1", type: "spritesheet", fileId: "file-1" };
+    const state = createMobileResourcePageState();
+    state.isTouchMode = true;
+    const navigate = vi.fn();
+    const pageDeps = {
+      i18n: EN_I18N,
+      store: {
+        [itemSelector]: () => item,
+        selectCharacterId: () => "character-1",
+      },
+      appService: {
+        navigate,
+        getPayload: () => ({
+          p: "project-1",
+          characterId: payload.characterId,
+        }),
+      },
+    };
+    const dispatchEvent = vi.fn((event) => {
+      expect(event.type).toBe("item-dblclick");
+      handlePrimaryAction(pageDeps, { _event: event });
+    });
+
+    handleMediaLongPress(
+      { props: { mobileLayout: true }, dispatchEvent },
+      {
+        _event: {
+          preventDefault: vi.fn(),
+          currentTarget: { getAttribute: () => item.id },
+        },
+      },
+    );
+
+    expect(navigate).toHaveBeenCalledWith(
+      "/project/spritesheet-editor",
+      payload,
+    );
+    expect(
+      buildMobileResourcePageViewData({ state }).showMobileDetailSheet,
+    ).toBe(false);
+  });
+});
