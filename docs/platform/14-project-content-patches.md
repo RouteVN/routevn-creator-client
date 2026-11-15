@@ -124,16 +124,21 @@ The patch follows these rules:
    merge would keep the deprecated action next to its replacement. Elements are
    updated with only the fields that changed and `replace: false`. Control key
    bindings are updated with `control.update`, one update per binding group.
-6. The items to rewrite are selected from one snapshot, but each rewrite is
+6. The repository state holds the lines of the scene being edited only. The
+   patch therefore reads its snapshot with the lines of every scene loaded,
+   and reads a line's scene again before rewriting that line. Reading only the
+   repository state would miss every reset in a scene line and still record
+   completion.
+7. The items to rewrite are selected from one snapshot, but each rewrite is
    made from the item as it is in the current repository state, read right
    before its update is submitted. An item that was edited while earlier
    updates were awaited keeps that edit, and an item whose reset or section is
    gone by then is left alone.
-7. A rejected update is logged and skipped, and the remaining items are still
+8. A rejected update is logged and skipped, and the remaining items are still
    rewritten. The marker is not written, so the patch is evaluated again the
    next time the project is opened. A retry is safe because rewritten actions
    no longer match.
-8. A failure never keeps the project from opening. Unlike the other patches,
+9. A failure never keeps the project from opening. Unlike the other patches,
    this one touches content the user authored, so an update the model rejects
    for an unrelated reason must not block the project. A thrown error stops
    the patch, is logged, and leaves the marker unset.

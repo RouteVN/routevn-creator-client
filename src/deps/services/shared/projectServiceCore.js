@@ -468,6 +468,7 @@ export const createProjectServiceCore = ({
         for (const lineId of Object.keys(section?.lines?.items ?? {})) {
           targets.push({
             label: `line ${lineId}`,
+            sceneId,
             selectItem: (state) =>
               state?.scenes?.items?.[sceneId]?.sections?.items?.[sectionId]
                 ?.lines?.items?.[lineId]?.actions,
@@ -537,10 +538,22 @@ export const createProjectServiceCore = ({
     return targets;
   };
 
+  // The repository state holds the lines of the scene being edited only, so
+  // the lines of the given scenes are loaded with it.
+  const readStateWithSceneLines = async (repository, sceneIds) => {
+    if (sceneIds.length === 0) {
+      return repository.getState();
+    }
+    return repository.getContextState({ sceneIds });
+  };
+
   // Returns whether every rewrite was accepted. A rejected rewrite is skipped
   // so that one unusual item does not keep the others from being rewritten.
   const patchResetStoryActions = async (repository) => {
-    const snapshotState = repository.getState();
+    const snapshotState = await readStateWithSceneLines(
+      repository,
+      Object.keys(repository.getState()?.scenes?.items ?? {}),
+    );
     const snapshotUpgrade = createResetStoryUpgrade(snapshotState);
     const targets = selectResetStoryPatchTargets(snapshotState).filter(
       ({ selectItem }) => {
@@ -550,11 +563,13 @@ export const createProjectServiceCore = ({
     );
 
     let isComplete = true;
-    for (const { label, selectItem, submit } of targets) {
+    for (const { label, sceneId, selectItem, submit } of targets) {
       // Earlier updates were awaited, so the project may have changed since
-      // the snapshot. The rewrite is made from the item as it is now, and
-      // nothing is awaited between reading it and submitting it.
-      const currentState = repository.getState();
+      // the snapshot. The rewrite is made from the item as it is now.
+      const currentState = await readStateWithSceneLines(
+        repository,
+        sceneId === undefined ? [] : [sceneId],
+      );
       const item = selectItem(currentState);
       const upgradedItem = createResetStoryUpgrade(currentState)(item);
       if (upgradedItem === item) {

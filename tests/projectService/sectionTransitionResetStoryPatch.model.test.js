@@ -32,6 +32,7 @@ vi.mock("../../src/deps/services/shared/projectExportService.js", () => ({
 }));
 
 import { createProjectServiceCore } from "../../src/deps/services/shared/projectServiceCore.js";
+import { stripSceneLinesFromState } from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
 
 const PATCH_KEY = "contentPatch.sectionTransitionResetStory-1-22-0";
 const COMMAND_TYPES = {
@@ -282,12 +283,35 @@ describe("section transition reset story patch with creator-model", () => {
         return result;
       });
     }
-    const repository = { getState: vi.fn(() => state) };
+    const repository = {
+      getState: vi.fn(() => stripSceneLinesFromState(state)),
+      getContextState: vi.fn(async ({ sceneIds }) =>
+        stripSceneLinesFromState(state, new Set(sceneIds)),
+      ),
+    };
+    expect(findKeys(repository.getState(), "resetStoryAtSection")).toHaveLength(
+      8,
+    );
+    expect(findKeys(state.scenes, "resetStoryAtSection")).toHaveLength(5);
     mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
     const service = createTestProjectService();
 
     await expect(service.ensureRepository()).resolves.toBe(repository);
 
+    const sceneIds = Object.keys(initial.scenes.items);
+    expect(repository.getContextState).toHaveBeenNthCalledWith(1, { sceneIds });
+    expect(repository.getContextState.mock.calls.slice(1)).toEqual(
+      commands
+        .filter(({ command }) => command.type === "line.update_actions")
+        .map(({ command }) => {
+          const sceneId = Object.values(initial.scenes.items).find((scene) =>
+            Object.values(scene.sections?.items ?? {}).some(
+              (section) => section.lines.items[command.payload.lineId],
+            ),
+          ).id;
+          return [{ sceneIds: [sceneId] }];
+        }),
+    );
     expect(commands).toHaveLength(8);
     for (const { command, result } of commands) {
       expect(
