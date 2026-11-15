@@ -40,20 +40,12 @@ const getActionTargetSceneIds = (actions, repositoryState) => {
       return;
     }
 
-    if (key === "sectionTransition") {
-      const sectionTransitionSceneId = value.sceneId;
-      if (isNonEmptyString(sectionTransitionSceneId)) {
-        sceneIds.add(sectionTransitionSceneId);
-      }
-    }
-
-    if (key === "resetStoryAtSection") {
-      const resetStorySceneId = resolveSceneIdFromSectionId(
-        repositoryState,
-        value.sectionId,
-      );
-      if (isNonEmptyString(resetStorySceneId)) {
-        sceneIds.add(resetStorySceneId);
+    if (key === "sectionTransition" || key === "resetStoryAtSection") {
+      const sceneId =
+        value.sceneId ??
+        resolveSceneIdFromSectionId(repositoryState, value.sectionId);
+      if (isNonEmptyString(sceneId)) {
+        sceneIds.add(sceneId);
       }
     }
 

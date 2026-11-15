@@ -1,3 +1,5 @@
+import { upgradeResetStoryActions } from "../../src/internal/navigationActions.js";
+import { findSceneIdBySectionId } from "../../src/internal/project/projection.js";
 // Imports every committed reference package in tests/compat/asset-package/
 // through the app's import path (plan, review choices, commit) into a real
 // project, and exports the imported resources again. The packages are read
@@ -289,10 +291,14 @@ const translateIds = (value, idMap) => {
     return value.map((entry) => translateIds(entry, idMap));
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [
-        idMap.get(key) ?? key,
-        translateIds(entry, idMap),
-      ]),
+      Object.entries(value)
+        .filter(
+          ([key, entry]) => !(key === "sceneId" && entry === "resolved-scene"),
+        )
+        .map(([key, entry]) => [
+          idMap.get(key) ?? key,
+          translateIds(entry, idMap),
+        ]),
     );
   }
   if (typeof value !== "string") return value;
@@ -439,7 +445,13 @@ const normalizePackage = (manifest) => {
       };
     }
   }
-  return translateIds(normalized, labels);
+  const upgraded = upgradeResetStoryActions(normalized, {
+    resolveSceneId: (sectionId) =>
+      manifest.links?.items?.[sectionId]?.kind === "section"
+        ? "resolved-scene"
+        : undefined,
+  });
+  return translateIds(upgraded, labels);
 };
 
 describe.each(PACKAGE_DIRS)(
@@ -650,10 +662,14 @@ describe.each(PACKAGE_DIRS)(
         expect(importedItems.length).toBeGreaterThan(0);
         for (const { type, packageId, item, pick } of importedItems) {
           // A character's sprite tags go into the project's tags.
-          const expected = translateIds(
+          let expected = translateIds(
             withoutKeys(item, ["id", "spriteTags", ...PREVIEW_FIELDS]),
             idMap,
           );
+          expected = upgradeResetStoryActions(expected, {
+            resolveSceneId: (sectionId) =>
+              findSceneIdBySectionId(imported.state.scenes, sectionId),
+          });
           // The import dialog sends each pick's description, empty when it
           // had none.
           if (pick) expected.description = item.description ?? "";
@@ -662,6 +678,25 @@ describe.each(PACKAGE_DIRS)(
           expect(withoutKeys(actual, ["id"]), `${type} ${packageId}`).toEqual(
             expected,
           );
+        }
+      });
+
+      it("rewrites deprecated reset actions at every imported depth", () => {
+        const check = (value) => {
+          if (!value || typeof value !== "object") return;
+          if (value.sectionTransition?.resetStory === true) {
+            expect(value.sectionTransition.sceneId).toBe(
+              findSceneIdBySectionId(
+                imported.state.scenes,
+                value.sectionTransition.sectionId,
+              ),
+            );
+          }
+          expect(value).not.toHaveProperty("resetStoryAtSection");
+          Object.values(value).forEach(check);
+        };
+        for (const { type, packageId } of importedItems) {
+          check(imported.state[type].items[idMap.get(packageId)]);
         }
       });
 

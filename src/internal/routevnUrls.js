@@ -76,7 +76,7 @@ const creatorDocsPathBySystemActionMode = {
   character: "/line-actions/characters/",
   visual: "/line-actions/visuals/",
   sectionTransition: "/line-actions/section-transition/",
-  resetStoryAtSection: "/line-actions/reset-story-at-section/",
+  resetStoryAtSection: "/line-actions/section-transition/",
   control: "/line-actions/controls/",
   nextLine: "/line-actions/next-line/",
   toggleAutoMode: "/line-actions/toggle-auto-mode/",

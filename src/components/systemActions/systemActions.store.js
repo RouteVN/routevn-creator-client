@@ -420,7 +420,7 @@ export const setMode = ({ state }, payload = {}) => {
   if (mode === undefined) {
     return;
   }
-  state.mode = mode;
+  state.mode = mode === "resetStoryAtSection" ? "sectionTransition" : mode;
 };
 
 export const setSuppressDialogClose = (
@@ -899,13 +899,7 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       scene,
       section,
       sectionId,
-      label: targetLabel
-        ? formatCommandLineCopy(
-            "Reset story at {target}",
-            { target: targetLabel },
-            copy,
-          )
-        : localizeCommandLineText("Reset story at section", copy),
+      label: targetLabel,
     };
   }
 

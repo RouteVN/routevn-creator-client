@@ -1502,9 +1502,7 @@ const collectActionPresentationData = (actions = {}) => {
       typeof value.sectionId === "string" &&
       value.sectionId.length > 0
     ) {
-      transitions.push({
-        sectionId: value.sectionId,
-      });
+      transitions.push(value);
     }
 
     if (
@@ -1541,9 +1539,11 @@ const getTransitionsFromLayout = (layout) => {
 
   return Object.values(layout.elements.items)
     .flatMap((element) =>
-      LAYOUT_ACTION_INTERACTION_KEYS.map(
+      LAYOUT_ACTION_INTERACTION_KEYS.flatMap(
         (interactionKey) =>
-          getInteractionActions(element?.[interactionKey]).sectionTransition,
+          collectActionPresentationData(
+            getInteractionActions(element?.[interactionKey]),
+          ).transitions,
       ),
     )
     .filter(Boolean);
@@ -1583,6 +1583,7 @@ export const getSectionPresentation = ({
   layouts,
   controls,
   menuSceneId,
+  scenes,
 }) => {
   const lines = toSectionLines(section);
   const transitions = new Set();
@@ -1591,6 +1592,22 @@ export const getSectionPresentation = ({
   let hasMenuReturnAction = false;
   let returnsToMenuScene = false;
 
+  const addTransition = (transition) => {
+    const sceneId =
+      transition.sceneId ??
+      findSceneIdBySectionId(scenes, transition.sectionId);
+    if (menuSceneId && sceneId === menuSceneId) {
+      returnsToMenuScene = true;
+    }
+    const key = createTransitionKey({
+      sceneId,
+      sectionId: transition.sectionId,
+    });
+    if (key) {
+      transitions.add(key);
+    }
+  };
+
   lines.forEach((line) => {
     const lineActions = normalizeLineActions(line.actions || {});
     const actionPresentationData = collectActionPresentationData(lineActions);
@@ -1598,15 +1615,7 @@ export const getSectionPresentation = ({
       hasMenuReturnAction = true;
     }
 
-    actionPresentationData.transitions.forEach((actionTransition) => {
-      if (menuSceneId && actionTransition?.sceneId === menuSceneId) {
-        returnsToMenuScene = true;
-      }
-      const actionTransitionKey = createTransitionKey(actionTransition);
-      if (actionTransitionKey) {
-        transitions.add(actionTransitionKey);
-      }
-    });
+    actionPresentationData.transitions.forEach(addTransition);
 
     const choice = lineActions?.choice;
     const choiceItems = Array.isArray(choice?.items) ? choice.items : [];
@@ -1620,15 +1629,7 @@ export const getSectionPresentation = ({
       });
       const layoutTransitions = getTransitionsFromLayout(layout);
 
-      layoutTransitions.forEach((layoutTransition) => {
-        if (menuSceneId && layoutTransition?.sceneId === menuSceneId) {
-          returnsToMenuScene = true;
-        }
-        const layoutTransitionKey = createTransitionKey(layoutTransition);
-        if (layoutTransitionKey) {
-          transitions.add(layoutTransitionKey);
-        }
-      });
+      layoutTransitions.forEach(addTransition);
     });
   });
 

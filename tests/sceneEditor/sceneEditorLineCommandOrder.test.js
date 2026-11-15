@@ -486,6 +486,11 @@ describe("scene editor: one navigation action per line", () => {
   it.each([
     ["a section transition", { resetStoryAtSection }, { sectionTransition }],
     [
+      "a resetting section transition",
+      { resetStoryAtSection },
+      { sectionTransition: { ...sectionTransition, resetStory: true } },
+    ],
+    [
       "a reset story at section",
       { sectionTransition },
       { resetStoryAtSection },

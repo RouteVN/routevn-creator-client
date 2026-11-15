@@ -357,7 +357,7 @@ describe("systemActions.store", () => {
     });
     expect(preview.resetStoryAtSection).toMatchObject({
       sectionId: "section-2",
-      label: "Reset story at Opening - Arrival",
+      label: "Opening - Arrival",
     });
   });
 
@@ -453,12 +453,7 @@ describe("systemActions.store", () => {
     });
 
     expect(preview.sectionTransition.label).toBe("Opening\u00a0– Arrival");
-    expect(preview.resetStoryAtSection.label).toBe(
-      copy["Reset story at {target}"].replace(
-        "{target}",
-        "Opening\u00a0– Arrival",
-      ),
-    );
+    expect(preview.resetStoryAtSection.label).toBe("Opening\u00a0– Arrival");
   });
 
   it("preserves and previews screen transition actions", () => {
@@ -2205,4 +2200,51 @@ describe("systemActions.store", () => {
       "updateVariable",
     ]);
   });
+});
+
+describe("section transition reset previews", () => {
+  it("opens the section transition editor for legacy reset rows", () => {
+    const state = createInitialState();
+    setMode({ state }, { mode: "resetStoryAtSection" });
+    expect(state.mode).toBe("sectionTransition");
+  });
+
+  it.each([false, true])(
+    "keeps the same target summary regardless of reset (%s)",
+    (resetStory) => {
+      const state = createInitialState();
+      setRepositoryState(
+        { state },
+        {
+          repositoryState: {
+            scenes: {
+              items: {
+                "scene-1": {
+                  name: "Scene One",
+                  sections: { items: { "section-1": { name: "Section One" } } },
+                },
+              },
+            },
+          },
+        },
+      );
+      const copy = selectCommandLineCopy(FR_I18N);
+      const { preview } = selectActionsData({
+        state,
+        copy,
+        props: {
+          actions: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-1",
+              resetStory,
+            },
+          },
+        },
+      });
+      expect(preview.sectionTransition.label).toBe(
+        "Scene One\u00a0– Section One",
+      );
+    },
+  );
 });
