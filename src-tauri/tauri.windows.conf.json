@@ -10,7 +10,8 @@
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,AudioServiceOutOfProcess"
       }
     ]
   }

@@ -68,6 +68,7 @@ Bundle implementation points:
 12. `14-project-content-patches.md`
 13. `15-android-player-export.md`
 14. `16-ios-player-export.md`
+15. `17-windows-application-audio-capture.md`
 
 ## Implementation Mapping
 

@@ -182,6 +182,10 @@ The template is generated from [tauri-shell](./tauri-shell). Per-project
 metadata, icon resources, and the embedded RouteVN package are stamped by the
 Creator app during export.
 
+The shell passes a WebView2 browser argument so that application-window screen
+sharing captures the player's sound. See
+[Windows Application Audio Capture](../../docs/platform/17-windows-application-audio-capture.md).
+
 ## Linux Requirements
 
 The CLI now performs a Linux preflight check before invoking Tauri.
