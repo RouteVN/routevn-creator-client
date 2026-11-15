@@ -1113,7 +1113,7 @@ export const createProjectServiceCore = ({
     getAndroidSigningSummary: androidSigningService.getAndroidSigningSummary,
     ensureAndroidSigningKey: androidSigningService.ensureAndroidSigningKey,
     createAndroidSigningKey: androidSigningService.createAndroidSigningKey,
-    promptAndroidKeystorePath: androidSigningService.promptAndroidKeystorePath,
+    promptAndroidKeystore: androidSigningService.promptAndroidKeystore,
     importAndroidSigningKey: androidSigningService.importAndroidSigningKey,
     useAndroidSigningKeyAgain: androidSigningService.useAndroidSigningKeyAgain,
     promptAndroidKeyCopyPath: androidSigningService.promptAndroidKeyCopyPath,

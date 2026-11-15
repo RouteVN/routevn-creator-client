@@ -6,23 +6,13 @@ use std::ffi::{CStr, CString, c_char, c_void};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
 
-use routevn_android_export::{AndroidExportRequest, ErrorCode, ExportError};
-use routevn_exporter::ZipExportProgress;
+use routevn_android_export::{ExportError, HostCapabilities, host};
+use routevn_exporter::{ZipExportProgress, ZipExportProgressCallback};
 use serde::Serialize;
 
 pub type ProgressCallback = Option<
     unsafe extern "C" fn(context: *mut c_void, phase: *const c_char, current: u64, total: u64),
 >;
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Response<T: Serialize> {
-    ok: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    result: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<ExportError>,
-}
 
 fn into_c_string(json: String) -> *mut c_char {
     CString::new(json)
@@ -52,18 +42,15 @@ unsafe fn read_str<'a>(value: *const c_char, name: &str) -> Result<&'a str, Expo
 
 /// # Safety
 /// Both arguments must be NULL or NUL-terminated strings.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn routevn_android_export_capabilities(
+unsafe fn capabilities(
     template_path: *const c_char,
     descriptor_path: *const c_char,
+    check: fn(&Path, &Path) -> HostCapabilities,
 ) -> *mut c_char {
     let result = catch_unwind(AssertUnwindSafe(|| {
         let template = unsafe { read_str(template_path, "templatePath") }?;
         let descriptor = unsafe { read_str(descriptor_path, "descriptorPath") }?;
-        Ok::<_, ExportError>(routevn_android_export::host_capabilities(
-            Path::new(template),
-            Path::new(descriptor),
-        ))
+        Ok::<_, ExportError>(check(Path::new(template), Path::new(descriptor)))
     }));
     let json = match result {
         Ok(Ok(capabilities)) => to_json(&capabilities),
@@ -74,6 +61,38 @@ pub unsafe extern "C" fn routevn_android_export_capabilities(
             .to_string(),
     };
     into_c_string(json)
+}
+
+/// # Safety
+/// Both arguments must be NULL or NUL-terminated strings.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn routevn_android_export_capabilities(
+    template_path: *const c_char,
+    descriptor_path: *const c_char,
+) -> *mut c_char {
+    unsafe {
+        capabilities(
+            template_path,
+            descriptor_path,
+            routevn_android_export::host_capabilities,
+        )
+    }
+}
+
+/// # Safety
+/// Both arguments must be NULL or NUL-terminated strings.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn routevn_android_bundle_export_capabilities(
+    template_path: *const c_char,
+    descriptor_path: *const c_char,
+) -> *mut c_char {
+    unsafe {
+        capabilities(
+            template_path,
+            descriptor_path,
+            routevn_android_export::bundle::host_capabilities,
+        )
+    }
 }
 
 struct ProgressSink {
@@ -100,21 +119,26 @@ impl ProgressSink {
     }
 }
 
-fn run_export(request_json: &str, sink: Option<&ProgressSink>) -> Result<String, ExportError> {
-    let request: AndroidExportRequest = serde_json::from_str(request_json).map_err(|error| {
-        ExportError::invalid_request(format!("Invalid export request: {error}"))
-    })?;
+/// # Safety
+/// `request_json` must be NULL or a NUL-terminated string. `on_progress`, when
+/// set, must be safe to call from any thread with `context`.
+unsafe fn export(
+    request_json: *const c_char,
+    on_progress: ProgressCallback,
+    context: *mut c_void,
+    run: fn(&str, Option<&ZipExportProgressCallback<'_>>) -> String,
+) -> *mut c_char {
+    let sink = on_progress.map(|callback| ProgressSink { callback, context });
     let callback = |progress: ZipExportProgress| {
-        if let Some(sink) = sink {
+        if let Some(sink) = sink.as_ref() {
             sink.emit(progress);
         }
     };
-    let result = routevn_android_export::export_android_apk(&request, Some(&callback))?;
-    Ok(to_json(&Response {
-        ok: true,
-        result: Some(result),
-        error: None,
-    }))
+    let json = match unsafe { read_str(request_json, "request") } {
+        Ok(request) => run(request, Some(&callback)),
+        Err(error) => host::error_response(error.code, &error.message),
+    };
+    into_c_string(json)
 }
 
 /// # Safety
@@ -126,28 +150,54 @@ pub unsafe extern "C" fn routevn_android_export_apk(
     on_progress: ProgressCallback,
     context: *mut c_void,
 ) -> *mut c_char {
-    let sink = on_progress.map(|callback| ProgressSink { callback, context });
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        let request = unsafe { read_str(request_json, "request") }?;
-        run_export(request, sink.as_ref())
-    }));
-    let json = match result {
-        Ok(Ok(json)) => json,
-        Ok(Err(error)) => to_json(&Response::<()> {
-            ok: false,
-            result: None,
-            error: Some(error),
-        }),
-        Err(_) => to_json(&Response::<()> {
-            ok: false,
-            result: None,
-            error: Some(ExportError::new(
-                ErrorCode::WriteFailed,
-                "The Android exporter failed unexpectedly.",
-            )),
-        }),
+    unsafe { export(request_json, on_progress, context, host::export_apk) }
+}
+
+/// # Safety
+/// `request_json` must be NULL or a NUL-terminated string. `on_progress`, when
+/// set, must be safe to call from any thread with `context`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn routevn_android_export_bundle(
+    request_json: *const c_char,
+    on_progress: ProgressCallback,
+    context: *mut c_void,
+) -> *mut c_char {
+    unsafe { export(request_json, on_progress, context, host::export_app_bundle) }
+}
+
+/// # Safety
+/// `request_json` must be NULL or a NUL-terminated string.
+unsafe fn signing_key_call(request_json: *const c_char, call: fn(&str) -> String) -> *mut c_char {
+    let json = match unsafe { read_str(request_json, "request") } {
+        Ok(request) => call(request),
+        Err(error) => host::error_response(error.code, &error.message),
     };
     into_c_string(json)
+}
+
+/// # Safety
+/// `request_json` must be NULL or a NUL-terminated string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn routevn_android_create_signing_key(
+    request_json: *const c_char,
+) -> *mut c_char {
+    unsafe { signing_key_call(request_json, host::create_signing_key) }
+}
+
+/// # Safety
+/// `request_json` must be NULL or a NUL-terminated string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn routevn_android_read_keystore(request_json: *const c_char) -> *mut c_char {
+    unsafe { signing_key_call(request_json, host::read_keystore) }
+}
+
+/// # Safety
+/// `request_json` must be NULL or a NUL-terminated string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn routevn_android_encode_keystore(
+    request_json: *const c_char,
+) -> *mut c_char {
+    unsafe { signing_key_call(request_json, host::encode_keystore) }
 }
 
 /// # Safety
@@ -248,5 +298,60 @@ mod tests {
                 .unwrap()
                 .contains("com.example-game")
         );
+    }
+
+    #[test]
+    fn makes_and_encodes_a_signing_key() {
+        let request = CString::new(
+            r#"{"applicationName":"Game One","applicationId":"com.example.game_one"}"#,
+        )
+        .unwrap();
+        let created = unsafe { take(routevn_android_create_signing_key(request.as_ptr())) };
+        assert_eq!(created["ok"], true);
+
+        let request = CString::new(
+            serde_json::json!({ "key": created["result"], "password": "secret-1", "alias": "key0" })
+                .to_string(),
+        )
+        .unwrap();
+        let encoded = unsafe { take(routevn_android_encode_keystore(request.as_ptr())) };
+        assert_eq!(encoded["ok"], true);
+
+        let request = CString::new(
+            serde_json::json!({
+                "keystore": encoded["result"]["keystore"],
+                "password": "secret-1"
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let read = unsafe { take(routevn_android_read_keystore(request.as_ptr())) };
+        assert_eq!(read["result"], created["result"]);
+
+        let value = unsafe { take(routevn_android_read_keystore(std::ptr::null())) };
+        assert_eq!(value["error"]["code"], "invalid-request");
+    }
+
+    #[test]
+    fn a_bundle_export_reports_coded_errors() {
+        let value = unsafe {
+            take(routevn_android_export_bundle(
+                std::ptr::null(),
+                None,
+                std::ptr::null_mut(),
+            ))
+        };
+        assert_eq!(value["ok"], false);
+        assert_eq!(value["error"]["code"], "invalid-request");
+
+        let template = CString::new("/missing/template.aab").unwrap();
+        let descriptor = CString::new("/missing/template.aab.json").unwrap();
+        let value = unsafe {
+            take(routevn_android_bundle_export_capabilities(
+                template.as_ptr(),
+                descriptor.as_ptr(),
+            ))
+        };
+        assert_eq!(value["available"], false);
     }
 }

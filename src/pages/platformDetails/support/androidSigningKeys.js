@@ -6,8 +6,6 @@ import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 // Upload Key and Save a Copy: the dialogs around the project's signing-key
 // service calls.
 
-const fileNameOf = (path) => path.split(/[\\/]/).pop();
-
 // A stable message for a failed key change, with the host's technical message
 // as details where it names something useful, such as the aliases in a
 // keystore.
@@ -91,9 +89,9 @@ export const uploadAndroidSigningKey = async ({
   replacesKey,
   onImport,
 }) => {
-  let path;
+  let keystore;
   try {
-    path = await projectService.promptAndroidKeystorePath({
+    keystore = await projectService.promptAndroidKeystore({
       title: copy.androidKeystorePickerTitle,
       fileTypeName: copy.androidKeystoreFileTypeName,
     });
@@ -104,10 +102,10 @@ export const uploadAndroidSigningKey = async ({
     });
     return;
   }
-  if (!path) return;
+  if (!keystore) return;
 
   const form = createUploadKeyForm(copy, {
-    fileName: fileNameOf(path),
+    fileName: keystore.name,
     replacesKey,
   });
   let alias = "";
@@ -130,7 +128,7 @@ export const uploadAndroidSigningKey = async ({
     try {
       const { changed } = await onImport(() =>
         projectService.importAndroidSigningKey({
-          path,
+          keystore,
           password,
           alias: alias === "" ? undefined : alias,
         }),

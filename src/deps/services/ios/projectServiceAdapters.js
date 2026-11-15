@@ -685,6 +685,7 @@ export const createIOSProjectServiceAdapters = ({
           { label: "iOS project id" },
         ),
       assertSafeFileId: assertSafeProjectFileId,
+      encodeBase64: uint8ArrayToBase64,
     }),
     continueOnUploadError: false,
     prepareVideoThumbnail: prepareIOSVideoForThumbnail,

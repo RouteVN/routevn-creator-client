@@ -14,7 +14,10 @@ const createService = (initial) => {
   const fileAdapter = {
     createAndroidSigningKey: vi.fn(),
     readAndroidKeystore: vi.fn(),
-    promptAndroidKeystorePath: vi.fn(async () => "/keys/one.p12"),
+    promptAndroidKeystore: vi.fn(async () => ({
+      name: "one.p12",
+      path: "/keys/one.p12",
+    })),
     promptAndroidKeyCopyPath: vi.fn(async () => "/keys/copy.p12"),
     writeAndroidKeystore: vi.fn(async () => undefined),
   };
@@ -121,23 +124,27 @@ describe("androidSigningService", () => {
     fileAdapter.readAndroidKeystore.mockResolvedValue(material("2"));
     expect(
       await service.importAndroidSigningKey({
-        path: "/keys/two.p12",
+        keystore: { name: "two.p12", path: "/keys/two.p12" },
         password: "pass one",
         alias: undefined,
       }),
     ).toEqual({ certificateSha256: "2".repeat(64), changed: true });
     expect(fileAdapter.readAndroidKeystore).toHaveBeenCalledWith({
-      path: "/keys/two.p12",
+      keystore: { name: "two.p12", path: "/keys/two.p12" },
       password: "pass one",
       alias: undefined,
     });
     expect(
-      await service.importAndroidSigningKey({ path: "/keys/two.p12" }),
+      await service.importAndroidSigningKey({
+        keystore: { name: "two.p12", path: "/keys/two.p12" },
+      }),
     ).toEqual({ certificateSha256: "2".repeat(64), changed: false });
 
     // A previous key uploaded again becomes current with its old date.
     fileAdapter.readAndroidKeystore.mockResolvedValue(material("1"));
-    await service.importAndroidSigningKey({ path: "/keys/one.p12" });
+    await service.importAndroidSigningKey({
+      keystore: { name: "one.p12", path: "/keys/one.p12" },
+    });
     expect(records.get("project-1")).toEqual({
       currentKey: "1".repeat(64),
       keys: [

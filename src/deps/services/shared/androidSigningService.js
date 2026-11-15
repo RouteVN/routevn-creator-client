@@ -8,8 +8,8 @@ import {
 } from "../../../internal/androidExport.js";
 
 // The project's Android signing keys. The project database holds them; the
-// host only makes, reads, and writes keys and signs APKs. Hosts without the
-// signing commands export unsigned APKs only.
+// host only makes, reads, and writes keys and signs APKs and App Bundles.
+// Hosts without the signing commands export unsigned APKs only.
 export const createAndroidSigningService = ({
   fileAdapter,
   filePicker,
@@ -91,17 +91,19 @@ export const createAndroidSigningService = ({
     );
   };
 
-  const promptAndroidKeystorePath = async (options = {}) =>
-    fileAdapter.promptAndroidKeystorePath({ options, filePicker });
+  // The keystore file the creator picks: `{ name }` with what the host needs
+  // to read it, or no value when the picker is cancelled.
+  const promptAndroidKeystore = async (options = {}) =>
+    fileAdapter.promptAndroidKeystore({ options, filePicker });
 
-  // Upload Key: the key in a keystore file becomes current. `changed` is
-  // false when it already is.
-  const importAndroidSigningKey = ({ path, password, alias }) => {
+  // Upload Key: the key in a picked keystore file becomes current. `changed`
+  // is false when it already is.
+  const importAndroidSigningKey = ({ keystore, password, alias }) => {
     const projectId = requireProjectId();
     return runInOrder(async () =>
       addKey(
         projectId,
-        await fileAdapter.readAndroidKeystore({ path, password, alias }),
+        await fileAdapter.readAndroidKeystore({ keystore, password, alias }),
         "uploaded",
       ),
     );
@@ -160,7 +162,7 @@ export const createAndroidSigningService = ({
     getAndroidSigningSummary,
     ensureAndroidSigningKey,
     createAndroidSigningKey,
-    promptAndroidKeystorePath,
+    promptAndroidKeystore,
     importAndroidSigningKey,
     useAndroidSigningKeyAgain,
     promptAndroidKeyCopyPath,

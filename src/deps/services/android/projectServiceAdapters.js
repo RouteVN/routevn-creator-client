@@ -556,6 +556,9 @@ const androidApkExport = createMobileAndroidApkExport({
       { label: "Android project id" },
     ),
   assertSafeFileId: assertSafeProjectFileId,
+  encodeBase64: uint8ArrayToBase64,
+  discardSaveDocument: (uri) =>
+    callAndroidBridge("discardPendingSaveDocument", { uri }),
 });
 
 const createNativeDistributionZipStreamedToPath = async ({

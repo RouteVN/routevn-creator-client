@@ -858,7 +858,10 @@ const createSigningDeps = ({ currentKey } = {}) => {
       certificateSha256: KEY_TWO,
       changed: true,
     })),
-    promptAndroidKeystorePath: vi.fn(async () => "/keys/Project One.p12"),
+    promptAndroidKeystore: vi.fn(async () => ({
+      name: "Project One.p12",
+      path: "/keys/Project One.p12",
+    })),
     importAndroidSigningKey: vi.fn(async () => ({
       certificateSha256: KEY_TWO,
       changed: true,
@@ -937,9 +940,7 @@ describe("platformDetails Android signing keys", () => {
     await handleAndroidReplaceKeyClick(deps);
     await handleAndroidUploadKeyClick(deps);
     expect(deps.appService.showDialog).not.toHaveBeenCalled();
-    expect(
-      deps.projectService.promptAndroidKeystorePath,
-    ).not.toHaveBeenCalled();
+    expect(deps.projectService.promptAndroidKeystore).not.toHaveBeenCalled();
   });
 
   it("uploads a key and asks again after a wrong password", async () => {
@@ -959,7 +960,7 @@ describe("platformDetails Android signing keys", () => {
     });
     await handleAndroidUploadKeyClick(deps);
 
-    expect(deps.projectService.promptAndroidKeystorePath).toHaveBeenCalledWith({
+    expect(deps.projectService.promptAndroidKeystore).toHaveBeenCalledWith({
       title: COPY.androidKeystorePickerTitle,
       fileTypeName: COPY.androidKeystoreFileTypeName,
     });
@@ -984,7 +985,7 @@ describe("platformDetails Android signing keys", () => {
     expect(
       deps.projectService.importAndroidSigningKey,
     ).toHaveBeenLastCalledWith({
-      path: "/keys/Project One.p12",
+      keystore: { name: "Project One.p12", path: "/keys/Project One.p12" },
       password: "pass one",
       alias: "upload",
     });
@@ -1016,7 +1017,7 @@ describe("platformDetails Android signing keys", () => {
 
   it("does nothing when no keystore is chosen", async () => {
     const deps = createSigningDeps();
-    deps.projectService.promptAndroidKeystorePath.mockResolvedValue(undefined);
+    deps.projectService.promptAndroidKeystore.mockResolvedValue(undefined);
     await handleAndroidUploadKeyClick(deps);
     expect(deps.appService.showFormDialog).not.toHaveBeenCalled();
     expect(deps.projectService.importAndroidSigningKey).not.toHaveBeenCalled();

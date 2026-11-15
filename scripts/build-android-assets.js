@@ -61,6 +61,8 @@ await mkdir(join(assetsDir, "player-templates", "android"), {
 for (const fileName of [
   "RouteVNPlayerTemplate.apk",
   "RouteVNPlayerTemplate.json",
+  "RouteVNPlayerTemplate.aab",
+  "RouteVNPlayerTemplate.aab.json",
 ]) {
   await copyIfPresent(
     join(playerTemplateDir, fileName),

@@ -48,6 +48,7 @@ describe("iOS Android APK export adapter", () => {
     await expect(adapter.getAndroidExportAvailability()).resolves.toEqual({
       available: true,
       reason: undefined,
+      bundleAvailable: false,
     });
     expect(callIOSBridge).toHaveBeenCalledWith(
       "getAndroidExportAvailability",
@@ -58,6 +59,47 @@ describe("iOS Android APK export adapter", () => {
       available: false,
       reason: "Template unavailable",
     });
+  });
+
+  it("signs through the native host and reads a picked keystore as base64", async () => {
+    const adapter = createFileAdapter();
+    const key = {
+      certificateSha256: "1".repeat(64),
+      certificate: "Y2VydGlmaWNhdGU=",
+      privateKey: "cHJpdmF0ZSBrZXk=",
+    };
+    callIOSBridge.mockResolvedValue(key);
+
+    await expect(
+      adapter.createAndroidSigningKey({
+        applicationName: "Project One",
+        applicationId: "com.example.projectone",
+      }),
+    ).resolves.toEqual(key);
+    expect(callIOSBridge).toHaveBeenLastCalledWith("createAndroidSigningKey", {
+      applicationName: "Project One",
+      applicationId: "com.example.projectone",
+    });
+
+    await adapter.readAndroidKeystore({
+      keystore: {
+        name: "one.p12",
+        file: new File([new Uint8Array([104, 105])], "one.p12"),
+      },
+      password: "pass one",
+    });
+    expect(callIOSBridge).toHaveBeenLastCalledWith("readAndroidKeystore", {
+      keystore: "aGk=",
+      password: "pass one",
+    });
+
+    await adapter.createAndroidBundleToPath({
+      ...exportRequest(),
+      signingKey: key,
+    });
+    const [method, payload] = callIOSBridge.mock.calls.at(-1);
+    expect(method).toBe("exportAndroidBundleToUri");
+    expect(payload.signingKey).toEqual(key);
   });
 
   it("uses the iOS save picker for APK destinations, including cancellation", async () => {

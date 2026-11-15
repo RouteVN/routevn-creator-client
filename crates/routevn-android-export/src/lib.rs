@@ -12,6 +12,7 @@ pub mod arsc;
 pub mod axml;
 pub mod bundle;
 pub mod error;
+pub mod host;
 pub mod icons;
 pub mod jar;
 pub mod proto_resources;

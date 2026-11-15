@@ -22,7 +22,8 @@ const STEP_BY_PHASE = {
   verifyBundle: "save",
   finalizeApk: "save",
   finalizeBundle: "save",
-  // The Android Creator copies the APK to the chosen location last.
+  // The Android Creator copies the APK or bundle to the chosen location
+  // last.
   saveApk: "save",
 };
 

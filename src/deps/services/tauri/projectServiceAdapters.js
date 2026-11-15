@@ -1363,8 +1363,8 @@ export const createTauriProjectServiceAdapters = ({
   const createAndroidSigningKey = async ({ applicationName, applicationId }) =>
     invoke("create_android_signing_key", { applicationName, applicationId });
 
-  const promptAndroidKeystorePath = async ({ options = {}, filePicker }) =>
-    (await filePicker.openFilePicker({
+  const promptAndroidKeystore = async ({ options = {}, filePicker }) => {
+    const path = await filePicker.openFilePicker({
       title: options.title,
       multiple: false,
       filters: [
@@ -1373,10 +1373,13 @@ export const createTauriProjectServiceAdapters = ({
           extensions: ["p12", "pfx", "keystore", "jks"],
         },
       ],
-    })) ?? undefined;
+    });
+    if (!path) return undefined;
+    return { name: path.split(/[\\/]/).pop(), path };
+  };
 
-  const readAndroidKeystore = async ({ path, password, alias }) =>
-    invoke("read_android_keystore", { path, password, alias });
+  const readAndroidKeystore = async ({ keystore, password, alias }) =>
+    invoke("read_android_keystore", { path: keystore.path, password, alias });
 
   const promptAndroidKeyCopyPath = async ({
     defaultFileName,
@@ -1726,7 +1729,7 @@ export const createTauriProjectServiceAdapters = ({
     promptAndroidBundlePath,
     createAndroidBundleToPath,
     createAndroidSigningKey,
-    promptAndroidKeystorePath,
+    promptAndroidKeystore,
     readAndroidKeystore,
     promptAndroidKeyCopyPath,
     writeAndroidKeystore,
