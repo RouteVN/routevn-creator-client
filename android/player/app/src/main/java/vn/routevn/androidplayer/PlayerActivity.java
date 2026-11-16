@@ -186,7 +186,7 @@ public final class PlayerActivity extends Activity {
         if (rapidRendererLosses >= RAPID_LOSS_LIMIT) {
             showMessage("The game stopped and could not restart. "
                     + "Close other apps, then reopen the game.");
-            // Coming back to the game tries once more.
+            // Coming back to the game starts it again.
             rapidRendererLosses = 0;
             restartOnResume = true;
             return;

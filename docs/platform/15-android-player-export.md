@@ -206,7 +206,8 @@ again, so the game returns to its title screen with its saves instead of
 closing. A loss while the game is in the background restarts it when the player
 comes back. Two losses in a row within 30 seconds of a start, with the game in
 the foreground the whole time, mean the game cannot run: the activity shows a
-message instead of restarting, and tries once more when the player returns.
+message instead of restarting, and starts the game again when the player
+returns.
 
 ## Signing
 
