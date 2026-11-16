@@ -15,7 +15,6 @@ import {
   selectPreviousPresentationState,
   selectViewData,
   selectSectionTransitionsDAG,
-  selectTemporaryPresentationStateForEngine,
   setRepositoryState,
   setSceneId,
   setSceneLoadingProgress,
@@ -838,73 +837,6 @@ describe("sceneEditorLexical.store", () => {
     expect(selectEffectivePresentationState({ state }).dialogue).toEqual({
       mode: "adv",
     });
-  });
-
-  it("builds the temporary visual layouts for the engine from the project as it is now", () => {
-    const image = (fileId) => ({
-      items: {
-        door: {
-          id: "door",
-          type: "image",
-          name: "Door",
-          fileId,
-          width: 40,
-          height: 60,
-        },
-      },
-      tree: [{ id: "door" }],
-    });
-    const state = createInitialState();
-    setRepositoryState(
-      { state },
-      { repository: { images: image("door-file-one") } },
-    );
-    setTemporaryPresentationState(
-      { state },
-      {
-        presentationState: {
-          visual: {
-            items: [
-              {
-                id: "card",
-                layout: {
-                  layoutSchemaVersion: 2,
-                  elements: {
-                    items: {
-                      volume: {
-                        type: "slider",
-                        thumbImageId: "door",
-                        width: 200,
-                        height: 20,
-                      },
-                    },
-                    tree: [{ id: "volume" }],
-                  },
-                },
-              },
-            ],
-          },
-        },
-      },
-    );
-    const findSprite = () =>
-      JSON.stringify(
-        selectTemporaryPresentationStateForEngine({ state }).presentationState,
-      );
-
-    const first = findSprite();
-    expect(first).toContain("door-file-one");
-    // Asked again, as each slider tick asks, it builds the same.
-    expect(findSprite()).toBe(first);
-
-    // A project with another file for the image builds with that file.
-    setRepositoryState(
-      { state },
-      { repository: { images: image("door-file-two") } },
-    );
-    const second = findSprite();
-    expect(second).toContain("door-file-two");
-    expect(second).not.toContain("door-file-one");
   });
 
   it("exposes the presentation state immediately before the selected line", () => {

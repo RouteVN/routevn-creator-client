@@ -1,3 +1,4 @@
+import { toFlatItems } from "../../internal/project/tree.js";
 import { generateId } from "../../internal/id.js";
 import { getResourcePageErrorMessage } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -11,11 +12,10 @@ import {
   getLayoutEditorBackPath,
   resolveLayoutEditorPayload,
 } from "../../internal/layoutEditorRoute.js";
-import { buildLayoutEditPanelUpdatedItem } from "../../internal/ui/layoutEditor/layoutEditorMutations.js";
-import {
-  promptLayoutEditorNewElements,
-  resolvePromptedNewElementAction,
-} from "../../internal/ui/layoutEditor/layoutEditorNewElements.js";
+import { getFragmentLayoutOptions } from "./support/layoutFragments.js";
+import { applyLayoutItemFieldChange } from "./support/layoutEditorMutations.js";
+import { getLayoutEditorCreateDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import { createLayoutEditorElementTemplate } from "./support/layoutEditorViewData.js";
 import {
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
@@ -27,10 +27,11 @@ import {
 import {
   notifyLayoutEditorSaveFailure,
   toLayoutEditorSaveError,
-} from "../../internal/ui/layoutEditor/layoutEditorSaveFailure.js";
+} from "./support/layoutEditorSaveFailure.js";
 import {
   captureLayoutElementSnapshot,
   getChangedLayoutElementIds,
+  isFragmentLayout,
   restoreLayoutElementSnapshot,
 } from "../../internal/project/layout.js";
 import { getEditHistoryOwner } from "../../internal/editHistory.js";
@@ -39,10 +40,21 @@ import {
   selectEditHistoryCopy,
 } from "../../internal/ui/editHistory.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
+import {
+  getFirstSpritesheetAnimationSelectionValue,
+  getSpritesheetResourceDefaultSize,
+  parseSpritesheetAnimationSelectionValue,
+  toSpritesheetAnimationSelectionItems,
+} from "../../internal/spritesheets.js";
+import {
+  getFirstParticleSelectionValue,
+  getParticleResourceDefaultSize,
+  toParticleSelectionItems,
+} from "../../internal/particles.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-import { selectLayoutEditorPageCopy } from "../../internal/ui/layoutEditor/layoutEditorCopy.js";
+import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -67,6 +79,19 @@ const DEBOUNCE_DELAYS = {
   UPDATE: 500,
 };
 
+const INTERACTION_SOUND_VOLUME_CONFIG_BY_ID_FIELD = {
+  hoverSoundId: {
+    interactionName: "hover",
+    volumeName: "hover.soundVolume",
+  },
+  clickSoundId: {
+    interactionName: "click",
+    volumeName: "click.soundVolume",
+  },
+};
+
+const SLIDER_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-slider-create-dialog";
+const SPRITE_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-sprite-create-dialog";
 const LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS = 1500;
 
 const selectCopy = (deps = {}) => selectLayoutEditorPageCopy(deps.i18n);
@@ -216,6 +241,273 @@ const areSelectedElementMetricsEqual = (left, right) => {
 
 const areLayoutEditorItemsEquivalent = (left, right) => {
   return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+};
+
+const resolveSliderCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "slider"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveSpriteCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "sprite"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveSpritesheetCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "spritesheet-animation"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveParticleCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "particle"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveVideoCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "video"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveFragmentCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "fragment-ref"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveSaveLoadSlotCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "container-ref-save-load-slot"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const getSliderCreateOwnerConfig = (resourceType, projectService) => {
+  const isControls = resourceType === "controls";
+  return {
+    ownerPayloadKey: isControls ? "controlId" : "layoutId",
+    createElement: isControls
+      ? projectService.createControlElement.bind(projectService)
+      : projectService.createLayoutElement.bind(projectService),
+  };
+};
+
+const createFragmentCreateForm = (fragmentLayoutOptions = [], copy = {}) => {
+  return {
+    title: copy.insertFragmentTitle ?? "Insert Fragment",
+    description:
+      copy.insertFragmentDescription ??
+      "Choose which fragment layout to insert into this layout",
+    fields: [
+      {
+        name: "fragmentLayoutId",
+        type: "select",
+        label: copy.fragmentLabel ?? "Fragment",
+        required: true,
+        clearable: false,
+        options: fragmentLayoutOptions,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: copy.cancelButton ?? "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: copy.insertFragmentButton ?? "Insert Fragment",
+          validate: true,
+        },
+      ],
+    },
+  };
+};
+
+const createSpritesheetCreateForm = (selectionItems = [], copy = {}) => {
+  return {
+    title:
+      copy.createSpritesheetAnimationTitle ?? "Create Spritesheet Animation",
+    description:
+      copy.createSpritesheetAnimationDescription ??
+      "Choose which imported spritesheet animation to insert into the layout",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: copy.nameLabel ?? "Name",
+        required: true,
+      },
+      {
+        name: "spritesheetSelection",
+        type: "select",
+        label: copy.animationLabel ?? "Animation",
+        required: true,
+        clearable: false,
+        options: selectionItems,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: copy.cancelButton ?? "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: copy.createAnimationButton ?? "Create Animation",
+          validate: true,
+        },
+      ],
+    },
+  };
+};
+
+const createParticleCreateForm = (selectionItems = [], copy = {}) => {
+  return {
+    title: copy.createParticleTitle ?? "Create Particle",
+    description:
+      copy.createParticleDescription ??
+      "Choose which particle effect to insert into the layout",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: copy.nameLabel ?? "Name",
+        required: true,
+      },
+      {
+        name: "particleId",
+        type: "select",
+        label: copy.particleLabel ?? "Particle",
+        required: true,
+        clearable: false,
+        options: selectionItems,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: copy.cancelButton ?? "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: copy.createParticleButton ?? "Create Particle",
+          validate: true,
+        },
+      ],
+    },
+  };
+};
+
+const createVideoCreateForm = (selectionItems = [], copy = {}) => {
+  return {
+    title: copy.createVideoTitle ?? "Create Video",
+    description:
+      copy.createVideoDescription ??
+      "Choose which video to insert into the layout",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: copy.nameLabel ?? "Name",
+        required: true,
+      },
+      {
+        name: "videoId",
+        type: "select",
+        label: copy.videoLabel ?? "Video",
+        required: true,
+        clearable: false,
+        options: selectionItems,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: copy.cancelButton ?? "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: copy.createVideoButton ?? "Create Video",
+          validate: true,
+        },
+      ],
+    },
+  };
 };
 
 const getEditorPayload = (appService) =>
@@ -1058,72 +1350,894 @@ const {
   refresh: refreshLayoutEditorData,
 });
 
-// A new element is asked about first when it needs something chosen, such as
-// a sprite's image, and is then added with what it holds. Any other explorer
-// action goes to the shared element actions.
+const showSliderCreateDialog = async (
+  appService,
+  sliderAction = {},
+  copy = {},
+) => {
+  return appService.showComponentDialog({
+    component: SLIDER_CREATE_DIALOG_COMPONENT,
+    title: copy.createSliderTitle ?? "Create Slider",
+    description:
+      copy.createSliderDescription ??
+      "Choose the slider images before inserting it into the layout",
+    size: "md",
+    props: {
+      direction: sliderAction.direction,
+      defaultValues: {
+        name: sliderAction.name ?? copy.sliderDefaultName ?? "Slider",
+      },
+    },
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          label: copy.cancelButton ?? "Cancel",
+          variant: "se",
+          align: "left",
+          role: "cancel",
+        },
+        {
+          id: "create",
+          label: copy.createSliderButton ?? "Create Slider",
+          variant: "pr",
+          role: "confirm",
+          validate: true,
+        },
+      ],
+    },
+  });
+};
+
+const showSpriteCreateDialog = async (
+  appService,
+  spriteAction = {},
+  copy = {},
+) => {
+  return appService.showComponentDialog({
+    component: SPRITE_CREATE_DIALOG_COMPONENT,
+    title: copy.createImageTitle ?? "Create Image",
+    description:
+      copy.createImageDescription ??
+      "Choose the image before inserting it into the layout",
+    size: "md",
+    props: {
+      defaultValues: {
+        name: spriteAction.name ?? copy.imageDefaultName ?? "Image",
+      },
+    },
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          label: copy.cancelButton ?? "Cancel",
+          variant: "se",
+          align: "left",
+          role: "cancel",
+        },
+        {
+          id: "create",
+          label: copy.createImageButton ?? "Create Image",
+          variant: "pr",
+          role: "confirm",
+          validate: true,
+        },
+      ],
+    },
+  });
+};
+
 const handleFileExplorerActionUnsafe = async (deps, payload) => {
-  const { appService, projectService, store } = deps;
-  const detail = payload?._event?.detail ?? {};
-  const action = resolvePromptedNewElementAction(
-    resolveMenuItem(detail)?.value,
+  const copy = selectCopy(deps);
+  const saveLoadSlotAction = resolveSaveLoadSlotCreateAction(
+    payload?._event?.detail,
   );
-  if (!action) {
+  if (saveLoadSlotAction) {
+    const { appService, projectService, store } = deps;
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+
+    if (!layoutId || resourceType !== "layouts") {
+      appService.showAlert({
+        message: copy.layoutMissing ?? "Layout is missing.",
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await projectService.ensureRepository();
+
+    const slotContainerId = generateId();
+    const slotImageId = generateId();
+    const slotDateId = generateId();
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const projectResolution = store.selectProjectResolution();
+
+    const slotContainer = createLayoutEditorElementTemplate(
+      "container-save-load-slot",
+      {
+        projectResolution,
+        copy,
+      },
+    );
+    const slotImage = createLayoutEditorElementTemplate(
+      "sprite-save-load-slot-image",
+      {
+        projectResolution,
+        copy,
+      },
+    );
+    const slotDate = createLayoutEditorElementTemplate(
+      "text-save-load-slot-date",
+      {
+        projectResolution,
+        copy,
+      },
+    );
+
+    const createContainerResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: slotContainerId,
+      data: slotContainer,
+      parentId,
+      position: "first",
+    });
+
+    if (createContainerResult?.valid === false) {
+      appService.showAlert({
+        message: getResultErrorMessage(
+          appService,
+          createContainerResult,
+          copy.failedCreateSaveLoadSlot ?? "Failed to create save/load slot.",
+        ),
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const createImageResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: slotImageId,
+      data: slotImage,
+      parentId: slotContainerId,
+      position: "last",
+    });
+
+    if (createImageResult?.valid === false) {
+      appService.showAlert({
+        message: getResultErrorMessage(
+          appService,
+          createImageResult,
+          copy.failedCreateSaveLoadSlotImage ??
+            "Failed to create save/load slot image.",
+        ),
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const createDateResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: slotDateId,
+      data: slotDate,
+      parentId: slotContainerId,
+      position: "last",
+    });
+
+    if (createDateResult?.valid === false) {
+      appService.showAlert({
+        message: getResultErrorMessage(
+          appService,
+          createDateResult,
+          copy.failedCreateSaveLoadSlotDate ??
+            "Failed to create save/load slot date.",
+        ),
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: slotContainerId });
+    return;
+  }
+
+  const fragmentAction = resolveFragmentCreateAction(payload?._event?.detail);
+  if (fragmentAction) {
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const fragmentLayoutOptions = getFragmentLayoutOptions(
+      store.selectLayoutsData(),
+      {
+        excludeLayoutId: store.selectLayoutId(),
+      },
+    );
+
+    if (fragmentLayoutOptions.length === 0) {
+      appService.showAlert({
+        message:
+          copy.markLayoutAsFragmentFirst ??
+          "Mark a layout as a fragment first.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const dialogResult = await appService.showFormDialog({
+      form: createFragmentCreateForm(fragmentLayoutOptions, copy),
+      defaultValues: {
+        fragmentLayoutId: fragmentLayoutOptions[0].value,
+      },
+    });
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const fragmentLayoutId = dialogResult.values?.fragmentLayoutId;
+    if (!fragmentLayoutId) {
+      appService.showAlert({
+        message: copy.fragmentRequired ?? "Fragment is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const layoutsData = store.selectLayoutsData();
+    const fragmentLayout = layoutsData?.items?.[fragmentLayoutId];
+    if (
+      fragmentLayout?.type !== "layout" ||
+      !isFragmentLayout(fragmentLayout)
+    ) {
+      appService.showAlert({
+        message:
+          copy.selectedFragmentInvalid ?? "Selected fragment is invalid.",
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    if (!layoutId) {
+      appService.showAlert({
+        message: copy.layoutMissing ?? "Layout is missing.",
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await projectService.ensureRepository();
+    const nextElementId = generateId();
+    const createResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: nextElementId,
+      data: {
+        ...getLayoutEditorCreateDefinition("fragment-ref", {
+          projectResolution: store.selectProjectResolution(),
+        }).template,
+        name: fragmentLayout.name ?? copy.fragmentDefaultName ?? "Fragment",
+        fragmentLayoutId,
+      },
+      parentId,
+      position: "first",
+    });
+
+    if (createResult?.valid === false) {
+      appService.showAlert({
+        message: getResultErrorMessage(
+          appService,
+          createResult,
+          copy.failedCreateFragment ?? "Failed to create fragment.",
+        ),
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
+  const spritesheetAction = resolveSpritesheetCreateAction(
+    payload?._event?.detail,
+  );
+  if (spritesheetAction) {
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const spritesheetsData = store.selectSpritesheetsData();
+    const selectionItems =
+      toSpritesheetAnimationSelectionItems(spritesheetsData);
+
+    if (selectionItems.length === 0) {
+      appService.showAlert({
+        message: copy.importSpritesheetFirst ?? "Import a spritesheet first.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const dialogResult = await appService.showFormDialog({
+      form: createSpritesheetCreateForm(selectionItems, copy),
+      defaultValues: {
+        name:
+          spritesheetAction.name ??
+          copy.spritesheetAnimationDefaultName ??
+          "Spritesheet Animation",
+        spritesheetSelection:
+          getFirstSpritesheetAnimationSelectionValue(spritesheetsData),
+      },
+    });
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const name = dialogResult.values?.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: copy.animationNameRequired ?? "Animation name is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const { resourceId, animationName } =
+      parseSpritesheetAnimationSelectionValue(
+        dialogResult.values?.spritesheetSelection,
+      );
+    if (!resourceId || !animationName) {
+      appService.showAlert({
+        message:
+          copy.spritesheetAnimationRequired ??
+          "Spritesheet animation is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
+      appService.showAlert({
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const nextElementId = generateId();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("spritesheet-animation", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      resourceId,
+      animationName,
+    };
+    const resourceSize = getSpritesheetResourceDefaultSize(
+      spritesheetsData,
+      resourceId,
+    );
+    if (Number.isFinite(resourceSize.width) && resourceSize.width > 0) {
+      nextElementData.width = resourceSize.width;
+    }
+    if (Number.isFinite(resourceSize.height) && resourceSize.height > 0) {
+      nextElementData.height = resourceSize.height;
+    }
+    if (
+      Number.isFinite(nextElementData.width) &&
+      Number.isFinite(nextElementData.height) &&
+      nextElementData.width > 0 &&
+      nextElementData.height > 0
+    ) {
+      nextElementData.aspectRatioLock =
+        nextElementData.width / nextElementData.height;
+    }
+
+    await projectService.ensureRepository();
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    const createResult = await createElement({
+      [ownerPayloadKey]: layoutId,
+      elementId: nextElementId,
+      data: nextElementData,
+      parentId,
+      position: "first",
+    });
+
+    if (createResult?.valid === false) {
+      appService.showAlert({
+        message: getResultErrorMessage(
+          appService,
+          createResult,
+          copy.failedCreateSpritesheetAnimation ??
+            "Failed to create spritesheet animation.",
+        ),
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
+  const videoAction = resolveVideoCreateAction(payload?._event?.detail);
+  if (videoAction) {
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const videosData = store.selectVideosData();
+    const selectionItems = toFlatItems(videosData)
+      .filter((item) => item.type === "video")
+      .map((item) => ({ label: item.name, value: item.id }));
+
+    if (selectionItems.length === 0) {
+      appService.showAlert({
+        message: copy.createVideoFirst ?? "Create a video first.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    let dialogResult;
+    try {
+      dialogResult = await appService.showFormDialog({
+        form: createVideoCreateForm(selectionItems, copy),
+        defaultValues: {
+          name: videoAction.name ?? copy.videoDefaultName ?? "Video",
+          videoId: selectionItems[0]?.value,
+        },
+      });
+    } catch {
+      appService.showToast({
+        message: copy.failedCreateVideo ?? "Failed to create video.",
+      });
+      return;
+    }
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const name = dialogResult.values?.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: copy.videoNameRequired ?? "Video name is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const videoId = dialogResult.values?.videoId;
+    if (!videoId) {
+      appService.showAlert({
+        message: copy.videoRequired ?? "Video is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
+      appService.showAlert({
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const nextElementId = generateId();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("video", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      videoId,
+    };
+    const video = videosData.items[videoId];
+    const hasSize =
+      Number.isFinite(video.width) &&
+      video.width > 0 &&
+      Number.isFinite(video.height) &&
+      video.height > 0;
+    nextElementData.width = hasSize ? video.width : 640;
+    nextElementData.height = hasSize ? video.height : 360;
+    nextElementData.aspectRatioLock =
+      nextElementData.width / nextElementData.height;
+
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    let createResult;
+    try {
+      await projectService.ensureRepository();
+      createResult = await createElement({
+        [ownerPayloadKey]: layoutId,
+        elementId: nextElementId,
+        data: nextElementData,
+        parentId,
+        position: "first",
+      });
+    } catch {
+      appService.showToast({
+        message: copy.failedCreateVideo ?? "Failed to create video.",
+      });
+      return;
+    }
+
+    if (createResult?.valid === false) {
+      appService.showToast({
+        message: getResultErrorMessage(
+          appService,
+          createResult,
+          copy.failedCreateVideo ?? "Failed to create video.",
+        ),
+      });
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
+  const particleAction = resolveParticleCreateAction(payload?._event?.detail);
+  if (particleAction) {
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const particlesData = store.selectParticlesData();
+    const selectionItems = toParticleSelectionItems(particlesData);
+
+    if (selectionItems.length === 0) {
+      appService.showAlert({
+        message:
+          copy.createParticleEffectFirst ?? "Create a particle effect first.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const dialogResult = await appService.showFormDialog({
+      form: createParticleCreateForm(selectionItems, copy),
+      defaultValues: {
+        name: particleAction.name ?? copy.particleDefaultName ?? "Particle",
+        particleId: getFirstParticleSelectionValue(particlesData),
+      },
+    });
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const name = dialogResult.values?.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: copy.particleNameRequired ?? "Particle name is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const particleId = dialogResult.values?.particleId;
+    if (!particleId) {
+      appService.showAlert({
+        message: copy.particleRequired ?? "Particle is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
+      appService.showAlert({
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const nextElementId = generateId();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("particle", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      particleId,
+    };
+    const resourceSize = getParticleResourceDefaultSize(
+      particlesData,
+      particleId,
+    );
+    if (Number.isFinite(resourceSize.width) && resourceSize.width > 0) {
+      nextElementData.width = resourceSize.width;
+    }
+    if (Number.isFinite(resourceSize.height) && resourceSize.height > 0) {
+      nextElementData.height = resourceSize.height;
+    }
+    if (
+      Number.isFinite(nextElementData.width) &&
+      Number.isFinite(nextElementData.height) &&
+      nextElementData.width > 0 &&
+      nextElementData.height > 0
+    ) {
+      nextElementData.aspectRatioLock =
+        nextElementData.width / nextElementData.height;
+    }
+
+    await projectService.ensureRepository();
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    const createResult = await createElement({
+      [ownerPayloadKey]: layoutId,
+      elementId: nextElementId,
+      data: nextElementData,
+      parentId,
+      position: "first",
+    });
+
+    if (createResult?.valid === false) {
+      appService.showAlert({
+        message: getResultErrorMessage(
+          appService,
+          createResult,
+          copy.failedCreateParticle ?? "Failed to create particle.",
+        ),
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
+  const spriteAction = resolveSpriteCreateAction(payload?._event?.detail);
+  const sliderAction = resolveSliderCreateAction(payload?._event?.detail);
+  if (!spriteAction && !sliderAction) {
     await handleBaseFileExplorerAction(deps, payload);
     return;
   }
 
-  const copy = selectCopy(deps);
-  const layoutId = store.selectLayoutId();
-  const resourceType = store.selectLayoutResourceType();
-  const owner = getLayoutEditorOwnerConfig(resourceType, projectService, copy);
-  const isSaveLoadSlot = action.type === "container-ref-save-load-slot";
-  if (!layoutId || (isSaveLoadSlot && resourceType !== "layouts")) {
+  const { appService, projectService, store } = deps;
+  const parentId = payload?._event?.detail?.itemId ?? null;
+
+  if (spriteAction) {
+    let spriteDialogResult;
+
+    try {
+      spriteDialogResult = await showSpriteCreateDialog(
+        appService,
+        spriteAction,
+        copy,
+      );
+    } catch {
+      appService.showAlert({
+        message: copy.failedOpenImageDialog ?? "Failed to open image dialog.",
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    if (!spriteDialogResult || spriteDialogResult.actionId !== "create") {
+      return;
+    }
+
+    const values = spriteDialogResult.values ?? {};
+    const name = values.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: copy.imageNameRequired ?? "Image name is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const imageId = values.imageId;
+    if (!imageId) {
+      appService.showAlert({
+        message: copy.imageRequired ?? "Image is required.",
+        title: copy.warningTitle ?? "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+        resourceType,
+        projectService,
+        copy,
+      );
+      appService.showAlert({
+        message: ownerMissingMessage,
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    const nextElementId = generateId();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("sprite", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      imageId,
+    };
+    const image = store.selectImages()?.items?.[imageId];
+    if (Number.isFinite(image?.width) && image.width > 0) {
+      nextElementData.width = image.width;
+    }
+    if (Number.isFinite(image?.height) && image.height > 0) {
+      nextElementData.height = image.height;
+    }
+    if (
+      Number.isFinite(nextElementData.width) &&
+      Number.isFinite(nextElementData.height) &&
+      nextElementData.width > 0 &&
+      nextElementData.height > 0
+    ) {
+      nextElementData.aspectRatioLock =
+        nextElementData.width / nextElementData.height;
+    }
+
+    await projectService.ensureRepository();
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    const createResult = await createElement({
+      [ownerPayloadKey]: layoutId,
+      elementId: nextElementId,
+      data: nextElementData,
+      parentId,
+      position: "first",
+    });
+
+    if (createResult?.valid === false) {
+      appService.showAlert({
+        message: getResultErrorMessage(
+          appService,
+          createResult,
+          copy.failedCreateImage ?? "Failed to create image.",
+        ),
+        title: copy.errorTitle ?? "Error",
+      });
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
+  let dialogResult;
+
+  try {
+    dialogResult = await showSliderCreateDialog(appService, sliderAction, copy);
+  } catch {
     appService.showAlert({
-      message: isSaveLoadSlot
-        ? (copy.layoutMissing ?? "Layout is missing.")
-        : owner.ownerMissingMessage,
+      message: copy.failedOpenSliderDialog ?? "Failed to open slider dialog.",
       title: copy.errorTitle ?? "Error",
     });
     return;
   }
 
-  const elements = await promptLayoutEditorNewElements({
-    action,
-    appService,
-    copy,
-    parentId: detail.itemId ?? null,
-    projectResolution: store.selectProjectResolution(),
-    resources: {
-      images: store.selectImages(),
-      spritesheets: store.selectSpritesheetsData(),
-      videos: store.selectVideosData(),
-      particles: store.selectParticlesData(),
-      layouts: store.selectLayoutsData(),
-    },
-    layoutId,
-  });
-  if (!elements) {
+  if (!dialogResult || dialogResult.actionId !== "create") {
     return;
   }
 
-  await projectService.ensureRepository();
-  for (const { failedMessage, ...element } of elements) {
-    const createResult = await owner.createElement({
-      [owner.ownerPayloadKey]: layoutId,
-      ...element,
+  const values = dialogResult.values ?? {};
+  const name = values.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: copy.sliderNameRequired ?? "Slider name is required.",
+      title: copy.warningTitle ?? "Warning",
     });
-    if (createResult?.valid === false) {
-      appService.showAlert({
-        message: getResultErrorMessage(appService, createResult, failedMessage),
-        title: copy.errorTitle ?? "Error",
-      });
-      return;
-    }
+    return;
   }
 
-  await refreshLayoutEditorData(deps, {
-    selectedItemId: elements[0].elementId,
+  const barImageId = values.barImageId;
+  const thumbImageId = values.thumbImageId;
+  const hoverBarImageId = values.hoverBarImageId;
+  const hoverThumbImageId = values.hoverThumbImageId;
+
+  if (!barImageId) {
+    appService.showAlert({
+      message: copy.barImageRequired ?? "Bar image is required.",
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
+
+  if (!thumbImageId) {
+    appService.showAlert({
+      message: copy.thumbImageRequired ?? "Thumb image is required.",
+      title: copy.warningTitle ?? "Warning",
+    });
+    return;
+  }
+
+  const direction = values.direction === "vertical" ? "vertical" : "horizontal";
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  if (!layoutId) {
+    const { ownerMissingMessage } = getLayoutEditorOwnerConfig(
+      resourceType,
+      projectService,
+      copy,
+    );
+    appService.showAlert({
+      message: ownerMissingMessage,
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  const createType =
+    direction === "vertical" ? "slider-vertical" : "slider-horizontal";
+  const baseItem = getLayoutEditorCreateDefinition(createType, {
+    projectResolution: store.selectProjectResolution(),
+  }).template;
+  const nextElementId = generateId();
+  const nextElementData = {
+    ...baseItem,
+    name,
+    barImageId,
+    thumbImageId,
+  };
+  if (hoverBarImageId) {
+    nextElementData.hoverBarImageId = hoverBarImageId;
+  }
+  if (hoverThumbImageId) {
+    nextElementData.hoverThumbImageId = hoverThumbImageId;
+  }
+
+  await projectService.ensureRepository();
+  const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+    resourceType,
+    projectService,
+  );
+  const createResult = await createElement({
+    [ownerPayloadKey]: layoutId,
+    elementId: nextElementId,
+    data: nextElementData,
+    parentId,
+    position: "first",
   });
+
+  if (createResult?.valid === false) {
+    appService.showAlert({
+      message: getResultErrorMessage(
+        appService,
+        createResult,
+        copy.failedCreateSlider ?? "Failed to create slider.",
+      ),
+      title: copy.errorTitle ?? "Error",
+    });
+    return;
+  }
+
+  await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
 };
 
 export const handleFileExplorerAction = async (deps, payload) => {
@@ -1463,12 +2577,101 @@ export const handleLayoutEditorPreviewPlay = (deps) => {
 
 // The selected item with an edit panel value applied, for saving it or for
 // previewing it on the canvas.
-const buildPanelUpdatedItem = (store, detail, currentItem) =>
-  buildLayoutEditPanelUpdatedItem({
-    detail,
-    currentItem,
-    imagesData: store.selectImages(),
-  });
+const buildPanelUpdatedItem = (store, detail, currentItem) => {
+  const nextAspectRatioLock =
+    Number.isFinite(detail.formValues?.aspectRatioLock) &&
+    detail.formValues.aspectRatioLock > 0
+      ? detail.formValues.aspectRatioLock
+      : currentItem.aspectRatioLock;
+  const currentItemWithEditorFlags = {
+    ...currentItem,
+    aspectRatioLock: nextAspectRatioLock,
+  };
+  let updatedItem;
+
+  if (detail.name === "aspectRatioMode") {
+    updatedItem = structuredClone(currentItem);
+    if (detail.value === "fixed") {
+      const currentWidth = Number(
+        detail.formValues?.width ?? currentItem.width,
+      );
+      const currentHeight = Number(
+        detail.formValues?.height ?? currentItem.height,
+      );
+      updatedItem.aspectRatioLock =
+        Number.isFinite(currentWidth) &&
+        Number.isFinite(currentHeight) &&
+        currentWidth > 0 &&
+        currentHeight > 0
+          ? currentWidth / currentHeight
+          : undefined;
+    } else {
+      delete updatedItem.aspectRatioLock;
+    }
+    delete updatedItem.aspectRatioMode;
+  } else {
+    if (detail.name === "spritesheetSelection") {
+      const { resourceId, animationName } =
+        parseSpritesheetAnimationSelectionValue(detail.value);
+      updatedItem = {
+        ...structuredClone(currentItemWithEditorFlags),
+        resourceId,
+        animationName,
+      };
+    } else {
+      updatedItem = applyLayoutItemFieldChange({
+        item: currentItemWithEditorFlags,
+        name: detail.name,
+        value: detail.value,
+        imagesData: store.selectImages(),
+      });
+
+      const soundVolumeConfig =
+        INTERACTION_SOUND_VOLUME_CONFIG_BY_ID_FIELD[detail.name];
+      if (soundVolumeConfig) {
+        updatedItem = applyLayoutItemFieldChange({
+          item: updatedItem,
+          name: soundVolumeConfig.volumeName,
+          value:
+            detail.formValues?.[soundVolumeConfig.interactionName]?.soundVolume,
+          imagesData: store.selectImages(),
+        });
+      }
+    }
+  }
+
+  // Other fields the change moves with it, such as the other scale while
+  // the aspect ratio is kept.
+  for (const [linkedName, linkedValue] of Object.entries(
+    detail.linkedValues ?? {},
+  )) {
+    updatedItem = applyLayoutItemFieldChange({
+      item: updatedItem,
+      name: linkedName,
+      value: linkedValue,
+      imagesData: store.selectImages(),
+    });
+  }
+
+  if (
+    (detail.name === "width" || detail.name === "height") &&
+    Number.isFinite(detail.formValues?.aspectRatioLock) &&
+    detail.formValues.aspectRatioLock > 0
+  ) {
+    const nextWidth = Number(detail.formValues.width);
+    const nextHeight = Number(detail.formValues.height);
+
+    if (Number.isFinite(nextWidth) && nextWidth > 0) {
+      updatedItem.width = Math.round(nextWidth);
+    }
+
+    if (Number.isFinite(nextHeight) && nextHeight > 0) {
+      updatedItem.height = Math.round(nextHeight);
+    }
+  }
+
+  return updatedItem;
+};
 
 export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   const { store, render } = deps;

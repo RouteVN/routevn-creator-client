@@ -1,6 +1,5 @@
 import { extractFileIdsFromRenderState } from "../../../internal/project/layout.js";
 import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorElementRegistry.js";
-import { placeLayoutInSceneBackdrop } from "../../../internal/layoutEditorSceneBackdrop.js";
 import {
   createFontAssetMetadataByFileId,
   createLayoutPreviewElements,
@@ -760,15 +759,12 @@ export const createLayoutEditorRenderState = ({
     }),
   });
 
-// A layout edited over its scene, such as a visual's layout, is drawn in the
-// scene's backdrop. The backdrop is only shown: nothing in it is selected.
 const createLayoutEditorResolvedElements = ({
   layoutState,
   repositoryState,
   previewData,
   resolution,
   sampleText,
-  sceneBackdrop,
 } = {}) => {
   const { elements, backgroundElement, characterSprite } =
     createLayoutPreviewElements({
@@ -792,10 +788,7 @@ const createLayoutEditorResolvedElements = ({
     renderedElements.push(characterSprite);
   }
   return {
-    renderedElements: placeLayoutInSceneBackdrop(
-      sceneBackdrop,
-      renderedElements,
-    ),
+    renderedElements,
     occurrencesById: selectionOccurrences.occurrencesById,
     occurrenceIdsByOwner: selectionOccurrences.occurrenceIdsByOwner,
   };
@@ -807,7 +800,6 @@ export const createLayoutEditorAssetReferences = ({
   previewData,
   resolution,
   sampleText,
-  sceneBackdrop,
 } = {}) => {
   const { renderedElements } = createLayoutEditorResolvedElements({
     layoutState,
@@ -815,7 +807,6 @@ export const createLayoutEditorAssetReferences = ({
     previewData,
     resolution,
     sampleText,
-    sceneBackdrop,
   });
   const fileReferences = extractFileIdsFromRenderState(renderedElements);
 
@@ -836,7 +827,6 @@ export const createLayoutEditorRenderedElements = ({
   canvasUnitsPerCssPixel,
   graphicsService,
   sampleText,
-  sceneBackdrop,
 } = {}) => {
   const { renderedElements, occurrencesById, occurrenceIdsByOwner } =
     createLayoutEditorResolvedElements({
@@ -845,7 +835,6 @@ export const createLayoutEditorRenderedElements = ({
       previewData,
       resolution,
       sampleText,
-      sceneBackdrop,
     });
   const parsedState = graphicsService.parse({
     elements: renderedElements,

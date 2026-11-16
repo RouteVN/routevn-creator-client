@@ -1,13 +1,20 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   addVisual,
+  clearPendingVisualConfig,
+  clearPendingVisualLayer,
+  clearPendingVisualTransformId,
   createInitialState,
+  hideAddVisualPopover,
   moveVisual,
+  openAddVisualPopover,
   removeVisualBlurOption,
   removeVisualFlipOption,
   removeVisualOpacityOption,
   removeVisualShaderAdjustmentOption,
+  selectDefaultVisualLayer,
+  selectPendingVisualLayer,
+  selectPendingVisualTransformId,
   selectSelectedVisuals,
   selectVisualBlurOptionEnabled,
   selectVisualFlipOptionEnabled,
@@ -17,23 +24,26 @@ import {
   setImages,
   setLayouts,
   setParticles,
-  setResolution,
+  setPendingVisualLayer,
+  setPendingVisualTransformId,
+  setTab,
   setSpritesheets,
+  setTempSelectedResourceId,
   setTransforms,
+  setUiConfig,
   setVideos,
   showVisualBlurOption,
   showVisualFlipOption,
   showVisualOpacityOption,
   showDropdownMenu,
-  startVisualEdit,
   updateVisualAnimation,
   updateVisualBlurField,
   updateVisualCustomTransform,
   updateVisualCustomTransformEnabled,
   updateVisualLayer,
   updateVisualOpacity,
+  updateVisualResource,
   updateVisualShaderAdjustment,
-  updateVisualTransform,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 import { COMMAND_LINE_SHADER_ADJUSTMENTS } from "../../src/internal/commandLineShaderAdjustments.js";
 
@@ -200,6 +210,30 @@ const setRepositoryCollections = (state) => {
   );
 };
 
+describe("commandLineVisual mobile resource selector", () => {
+  it("fills rows with cards and hides the explorer in touch mode", () => {
+    const state = createInitialState();
+
+    expect(selectViewData({ state })).toMatchObject({
+      showResourceSelectorFileExplorer: true,
+      resourceSelectorMinCardWidth: 180,
+      // Cards fill each row, two a row or more where the picker has room.
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
+      resourceSelectorCardStyle:
+        "width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box;",
+    });
+
+    setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
+
+    expect(selectViewData({ state })).toMatchObject({
+      showResourceSelectorFileExplorer: false,
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
+    });
+  });
+});
+
 describe("commandLineVisual.store animation controls", () => {
   it("exposes animation controls for each selected visual", () => {
     const state = createInitialState();
@@ -326,23 +360,24 @@ describe("commandLineVisual.store animation controls", () => {
     expect(viewData.defaultValues.animationOptions).toEqual([]);
   });
 
-  it("adds a visual as an empty layout on the screen, in the default layer", () => {
+  it("adds visuals with a required default layer and updates selected layers", () => {
     const state = createInitialState();
     setRepositoryCollections(state);
 
-    addVisual({ state }, { id: "visual-new" });
-
-    expect(selectSelectedVisuals({ state })).toEqual([
+    addVisual(
+      { state },
       {
-        id: "visual-new",
-        layout: {
-          layoutSchemaVersion: 2,
-          elements: { items: {}, tree: [] },
-        },
-        layer: 50,
-        animationMode: "none",
+        resourceId: "visual-image",
+        resourceType: "image",
       },
-    ]);
+    );
+
+    expect(selectDefaultVisualLayer()).toBe(50);
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      layer: 50,
+    });
 
     updateVisualLayer(
       { state },
@@ -485,7 +520,6 @@ describe("commandLineVisual.store animation controls", () => {
       ),
     ).toBe(true);
 
-    startVisualEdit({ state }, { index: 0 });
     const viewData = selectViewData({ state });
     const flipSections = viewData.form.fields[0].fields.filter((field) =>
       ["visual-0-flip-x", "visual-0-flip-y"].includes(field.id),
@@ -547,7 +581,6 @@ describe("commandLineVisual.store animation controls", () => {
       );
     }
 
-    startVisualEdit({ state }, { index: 0 });
     const viewData = selectViewData({ state });
     expect(viewData.form.fields[0].action).toBeUndefined();
     expect(viewData.defaultValues.visuals[0].opacityEnabled).toBe(true);
@@ -605,7 +638,6 @@ describe("commandLineVisual.store animation controls", () => {
       "shaderUniforms.uBrightness",
     );
 
-    startVisualEdit({ state }, { index: 0 });
     let viewData = selectViewData({ state });
     expect(
       viewData.defaultValues.visuals[0].shaderAdjustments.every(
@@ -637,6 +669,177 @@ describe("commandLineVisual.store animation controls", () => {
     expect(visual.filters.map((filter) => filter.id)).not.toContain(
       "backgroundSaturation",
     );
+  });
+
+  it("builds add visual popover form options and tracks pending values", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+
+    openAddVisualPopover(
+      { state },
+      {
+        position: { x: 24, y: 48 },
+      },
+    );
+
+    let viewData = selectViewData({ state });
+
+    expect(viewData.addVisualPopover).toMatchObject({
+      isOpen: true,
+      position: { x: 24, y: 48 },
+    });
+    expect(viewData.addVisualDefaultValues).toEqual({
+      transformId: "visual-center",
+      layer: 50,
+    });
+    expect(viewData.addVisualForm.fields).toEqual([
+      {
+        name: "transformId",
+        type: "select",
+        label: "Transform",
+        options: [
+          {
+            label: "Center",
+            value: "visual-center",
+          },
+        ],
+        clearable: false,
+        placeholder: "Select transform",
+      },
+      {
+        name: "layer",
+        type: "select",
+        label: "Layer",
+        options: [
+          {
+            value: 90,
+            label: "Foreground",
+          },
+          {
+            value: 70,
+            label: "Behind Choice",
+          },
+          {
+            value: 50,
+            label: "Behind Dialogue",
+          },
+          {
+            value: 30,
+            label: "Behind Character",
+          },
+          {
+            value: 10,
+            label: "Behind Background",
+          },
+        ],
+        clearable: false,
+      },
+    ]);
+
+    setPendingVisualTransformId(
+      { state },
+      {
+        transformId: "visual-center",
+      },
+    );
+    setPendingVisualLayer(
+      { state },
+      {
+        layer: 70,
+      },
+    );
+    expect(selectPendingVisualTransformId({ state })).toBe("visual-center");
+    expect(selectPendingVisualLayer({ state })).toBe(70);
+
+    viewData = selectViewData({ state });
+    expect(viewData.addVisualDefaultValues).toEqual({
+      transformId: "visual-center",
+      layer: 70,
+    });
+
+    clearPendingVisualLayer({ state });
+    expect(selectPendingVisualLayer({ state })).toBe(50);
+
+    clearPendingVisualTransformId({ state });
+    expect(selectPendingVisualTransformId({ state })).toBe("visual-center");
+
+    setPendingVisualLayer(
+      { state },
+      {
+        layer: 90,
+      },
+    );
+    clearPendingVisualConfig({ state });
+    expect(state.pendingVisualLayer).toBeUndefined();
+    expect(state.pendingVisualTransformId).toBeUndefined();
+
+    hideAddVisualPopover({ state });
+    expect(selectViewData({ state }).addVisualPopover).toMatchObject({
+      isOpen: false,
+      position: { x: 0, y: 0 },
+    });
+  });
+
+  it("adds visuals with the provided layer", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+
+    addVisual(
+      { state },
+      {
+        resourceId: "visual-image",
+        resourceType: "image",
+        layer: 10,
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      layer: 10,
+    });
+  });
+
+  it("adds visuals with the provided transform", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "visual-center": {
+              id: "visual-center",
+              type: "transform",
+              name: "Center",
+            },
+            "visual-left": {
+              id: "visual-left",
+              type: "transform",
+              name: "Left",
+            },
+          },
+          tree: [{ id: "visual-center" }, { id: "visual-left" }],
+        },
+      },
+    );
+
+    addVisual(
+      { state },
+      {
+        resourceId: "visual-image",
+        resourceType: "image",
+        transformId: "visual-left",
+        layer: 10,
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      transformId: "visual-left",
+      layer: 10,
+    });
   });
 
   it("groups visible visuals by layer with higher layers first", () => {
@@ -899,6 +1102,70 @@ describe("commandLineVisual.store animation controls", () => {
     });
   });
 
+  it("exposes resource tabs and filters picker resources by active tab", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+
+    let viewData = selectViewData({ state });
+    expect(viewData.tab).toBe("image");
+    expect(viewData.tabs).toEqual([
+      { id: "image", label: "Images" },
+      { id: "spritesheet", label: "Spritesheets" },
+      { id: "video", label: "Videos" },
+      { id: "layout", label: "Layouts" },
+      { id: "particle", label: "Particles" },
+    ]);
+    expect(
+      viewData.resourceGroups.flatMap((group) =>
+        group.children.map((child) => child.id),
+      ),
+    ).toEqual(["visual-image"]);
+
+    setTab({ state }, { tab: "video" });
+    viewData = selectViewData({ state });
+    expect(viewData.tab).toBe("video");
+    expect(
+      viewData.resourceGroups.flatMap((group) =>
+        group.children.map((child) => child.id),
+      ),
+    ).toEqual(["visual-video"]);
+
+    setTab({ state }, { tab: "spritesheet" });
+    setTempSelectedResourceId(
+      { state },
+      {
+        resourceId: "visual-spritesheet",
+        resourceType: "spritesheet",
+        animationName: "idle",
+      },
+    );
+    viewData = selectViewData({ state });
+    expect(viewData.tab).toBe("spritesheet");
+    expect(viewData.tempSelectedSpritesheetValue).toBe(
+      "visual-spritesheet::idle",
+    );
+
+    setTab({ state }, { tab: "layout" });
+    viewData = selectViewData({ state });
+    expect(viewData.tab).toBe("layout");
+    expect(
+      viewData.resourceGroups.flatMap((group) =>
+        group.children.map((child) => child.id),
+      ),
+    ).toEqual(["visual-layout"]);
+
+    setTab({ state }, { tab: "particle" });
+    viewData = selectViewData({ state });
+    expect(viewData.tab).toBe("particle");
+    expect(viewData.resourceGroups.flatMap((group) => group.children)).toEqual([
+      expect.objectContaining({
+        id: "visual-particle",
+        resourceType: "particle",
+        previewFileId: "file-snowfall-thumbnail",
+      }),
+    ]);
+  });
+
   it("resolves selected particle visuals with or without a saved resource type", () => {
     const state = createInitialState();
     setRepositoryCollections(state);
@@ -924,7 +1191,7 @@ describe("commandLineVisual.store animation controls", () => {
     });
   });
 
-  it("hydrates spritesheet animation previews with their animation names", () => {
+  it("hydrates spritesheet animation previews and preserves animation names", () => {
     const state = createInitialState();
     setRepositoryCollections(state);
     setExistingVisuals(
@@ -953,6 +1220,16 @@ describe("commandLineVisual.store animation controls", () => {
         fps: 12,
       },
     });
+
+    updateVisualResource(
+      { state },
+      {
+        index: 0,
+        resourceId: "visual-image",
+        resourceType: "image",
+      },
+    );
+    expect(selectSelectedVisuals({ state })[0].animationName).toBeUndefined();
   });
 });
 
@@ -1041,138 +1318,5 @@ describe("commandLineVisual.store custom transforms", () => {
         { label: "Origin", value: "100, 80" },
       ]),
     });
-  });
-});
-
-describe("commandLineVisual transform of a visual without one", () => {
-  const createState = () => {
-    const state = createInitialState();
-    setRepositoryCollections(state);
-    setTransforms(
-      { state },
-      {
-        transforms: {
-          items: {
-            "bottom-left": {
-              id: "bottom-left",
-              type: "transform",
-              name: "Bottom Left",
-              x: 300,
-              y: 720,
-              anchorX: 0.5,
-              anchorY: 1,
-            },
-          },
-          tree: [{ id: "bottom-left" }],
-        },
-      },
-    );
-    setResolution({ state }, { resolution: { width: 1280, height: 720 } });
-    setExistingVisuals(
-      { state },
-      {
-        visuals: [
-          {
-            id: "visual-1",
-            layer: 50,
-            layout: {
-              layoutSchemaVersion: 2,
-              elements: { items: {}, tree: [] },
-            },
-          },
-        ],
-      },
-    );
-    return state;
-  };
-
-  const placementOf = (visual) => {
-    const placement = {};
-    for (const field of [
-      "transformId",
-      "x",
-      "y",
-      "anchorX",
-      "anchorY",
-      "scaleX",
-      "scaleY",
-      "rotation",
-    ]) {
-      if (visual[field] !== undefined) {
-        placement[field] = visual[field];
-      }
-    }
-    return placement;
-  };
-
-  it("is centered on the screen, not given the first transform", () => {
-    const state = createState();
-    const viewData = selectViewData({ state });
-
-    expect(viewData.defaultValues.visuals[0].transformId).toBeUndefined();
-    expect(viewData.defaultValues.visuals[0].customTransform).toBe(false);
-    expect(viewData.defaultTransformLabel).toBe("Screen Center");
-    expect(viewData.visualListItems[0].details).toContainEqual({
-      label: "Transform",
-      value: "Screen Center",
-    });
-  });
-
-  it("starts a custom transform at the center of the project's screen", () => {
-    const state = createState();
-
-    updateVisualCustomTransformEnabled({ state }, { index: 0, enabled: true });
-
-    expect(placementOf(selectSelectedVisuals({ state })[0])).toEqual({
-      x: 640,
-      y: 360,
-      anchorX: 0.5,
-      anchorY: 0.5,
-      scaleX: 1,
-      scaleY: 1,
-      rotation: 0,
-    });
-
-    // Back to Predefined: centered again, with no transform picked for it.
-    updateVisualCustomTransformEnabled({ state }, { index: 0, enabled: false });
-    expect(placementOf(selectSelectedVisuals({ state })[0])).toEqual({});
-  });
-
-  it("starts a custom transform from a picked transform, and is centered again when the pick is cleared", () => {
-    const state = createState();
-
-    updateVisualTransform({ state }, { index: 0, transform: "bottom-left" });
-    updateVisualCustomTransformEnabled({ state }, { index: 0, enabled: true });
-    expect(placementOf(selectSelectedVisuals({ state })[0])).toMatchObject({
-      transformId: "bottom-left",
-      x: 300,
-      y: 720,
-      anchorY: 1,
-    });
-
-    updateVisualCustomTransformEnabled({ state }, { index: 0, enabled: false });
-    updateVisualTransform({ state }, { index: 0, transform: undefined });
-    expect(placementOf(selectSelectedVisuals({ state })[0])).toEqual({});
-    expect(selectViewData({ state }).visualListItems[0].details).toContainEqual(
-      { label: "Transform", value: "Screen Center" },
-    );
-  });
-
-  it("lets the predefined transform be cleared, showing the screen center when none is picked", () => {
-    const view = readFileSync(
-      new URL(
-        "../../src/components/commandLineVisual/commandLineVisual.view.yaml",
-        import.meta.url,
-      ),
-      "utf8",
-    );
-    const select = view
-      .split("\n")
-      .find((line) =>
-        line.includes("rtgl-select#transform${visual.controlId}"),
-      );
-
-    expect(select).toContain("placeholder=${defaultTransformLabel}");
-    expect(select).not.toContain("no-clear");
   });
 });

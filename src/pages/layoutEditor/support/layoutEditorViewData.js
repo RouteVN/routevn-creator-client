@@ -1,10 +1,10 @@
-import { toFlatItems } from "../../project/tree.js";
+import { toFlatItems } from "../../../internal/project/tree.js";
 import {
   getLayoutEditorCreateDefinition,
   getLayoutEditorElementDefinition,
-} from "../../layoutEditorElementRegistry.js";
-import { DEFAULT_PROJECT_RESOLUTION } from "../../projectResolution.js";
-import { formatI18nCopy } from "../i18nCopy.js";
+} from "../../../internal/layoutEditorElementRegistry.js";
+import { DEFAULT_PROJECT_RESOLUTION } from "../../../internal/projectResolution.js";
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 
 const CHOICE_CONTENT_PARENT_TYPES = new Set([
   "container-ref-choice-item",

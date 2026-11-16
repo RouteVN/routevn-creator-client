@@ -14,10 +14,7 @@ import {
   NEUTRAL_PRESENTATION_ACTION_CSS_ORDER,
   PRESENTATION_ACTION_CSS_ORDER,
 } from "../../internal/presentationActionOrder.js";
-import {
-  getLayoutInputFieldItems,
-  getVisualLayoutMedia,
-} from "../../internal/project/layout.js";
+import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 import { findSceneIdBySectionId } from "../../internal/project/projection.js";
 import {
   getSpritesheetAnimationPreview,
@@ -40,9 +37,6 @@ export const createInitialState = () => ({
   showHelpButton: true,
   isActionsDialogOpen: false,
   suppressDialogClose: false,
-  // The visual the visual panel opens in its edit view, when the dialog is
-  // opened again on a visual after its layout was edited.
-  editVisualId: undefined,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -291,8 +285,6 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     currentSceneId: props.currentSceneId,
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
-    editVisualId: state.editVisualId,
-    visualSnapshots: props.visualSnapshots,
     showHelpButton: state.showHelpButton,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     displayActions,
@@ -421,21 +413,14 @@ export const hideActionsDialog = ({ state }, _payload = {}) => {
   state.isActionsDialogOpen = false;
   state.suppressDialogClose = false;
   state.mode = "hidden";
-  state.editVisualId = undefined;
 };
 
-// Any other panel, or the visual panel opened again, starts as usual.
 export const setMode = ({ state }, payload = {}) => {
   const mode = payload.mode;
   if (mode === undefined) {
     return;
   }
   state.mode = mode === "resetStoryAtSection" ? "sectionTransition" : mode;
-  state.editVisualId = undefined;
-};
-
-export const setEditVisualId = ({ state }, { visualId } = {}) => {
-  state.editVisualId = visualId;
 };
 
 export const setSuppressDialogClose = (
@@ -1317,16 +1302,11 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     preview.visual = {
       count: visualAction.items.length,
       items: visualAction.items.map((item) => {
-        // A visual saved as a layout shows the first media its layout shows.
-        const media = item.layout
-          ? (getVisualLayoutMedia(item.layout) ?? {})
-          : item;
-        const { resourceId, animationName } = media;
-        const imageData = images[resourceId];
-        const spritesheetData = spritesheets.items?.[resourceId];
-        const videoData = videos[resourceId];
-        const layoutData = layoutsItems[resourceId];
-        const particleData = particles[resourceId];
+        const imageData = images[item.resourceId];
+        const spritesheetData = spritesheets.items?.[item.resourceId];
+        const videoData = videos[item.resourceId];
+        const layoutData = layoutsItems[item.resourceId];
+        const particleData = particles[item.resourceId];
         // As in Route Engine, a particle is looked up before a layout.
         const resourcesByType = {
           image: imageData,
@@ -1335,15 +1315,19 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
           particle: particleData,
           layout: layoutData,
         };
-        const resourceType = resourcesByType[media.resourceType]
-          ? media.resourceType
+        const resourceType = resourcesByType[item.resourceType]
+          ? item.resourceType
           : (Object.keys(resourcesByType).find(
               (type) => resourcesByType[type],
             ) ?? "layout");
         const resource = resourcesByType[resourceType];
         const spritesheetPreview =
           resourceType === "spritesheet"
-            ? buildSpritesheetPreview(spritesheets, resourceId, animationName)
+            ? buildSpritesheetPreview(
+                spritesheets,
+                item.resourceId,
+                item.animationName,
+              )
             : undefined;
         return {
           ...item,
