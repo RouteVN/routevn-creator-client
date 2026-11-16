@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sanitizeProjectDataForRouteEngine } from "../../src/internal/project/routeEngineProjectData.js";
 import {
   normalizeUpdateVariableId,
-  normalizeUpdateVariableIds,
+  normalizeRouteEngineActions,
 } from "../../src/internal/routeEngineActions.js";
 
 describe("Route Engine action IDs", () => {
@@ -26,7 +26,7 @@ describe("Route Engine action IDs", () => {
       updateVariable: { id: "Valid123" },
     };
     const original = structuredClone(input);
-    const result = normalizeUpdateVariableIds(input);
+    const result = normalizeRouteEngineActions(input);
     expect(result.conditional.branches[0].actions.updateVariable.id).toBe(
       "uv0061002d0062",
     );
@@ -37,8 +37,57 @@ describe("Route Engine action IDs", () => {
       "uv006100200062",
     );
     expect(result.updateVariable.id).toBe("Valid123");
-    expect(normalizeUpdateVariableIds(result)).toBe(result);
+    expect(normalizeRouteEngineActions(result)).toBe(result);
     expect(input).toEqual(original);
+  });
+});
+
+describe("Route Engine Next Line Config delays", () => {
+  const config = (delay) => ({
+    setNextLineConfig: {
+      applyMode: "persistent",
+      manual: { enabled: true },
+      auto: { enabled: true, trigger: "fromComplete", delay },
+    },
+  });
+
+  it("maps negative delays to 0, also in nested actions, without changing the input", () => {
+    const input = {
+      ...config(-500),
+      conditional: { branches: [{ actions: config(-1) }] },
+      choice: {
+        items: [{ events: { click: { actions: config(-0.5) } } }],
+      },
+    };
+    const original = structuredClone(input);
+
+    const result = normalizeRouteEngineActions(input);
+
+    expect(result.setNextLineConfig).toEqual(config(0).setNextLineConfig);
+    expect(
+      result.conditional.branches[0].actions.setNextLineConfig.auto.delay,
+    ).toBe(0);
+    expect(
+      result.choice.items[0].events.click.actions.setNextLineConfig.auto.delay,
+    ).toBe(0);
+    expect(normalizeRouteEngineActions(result)).toBe(result);
+    expect(input).toEqual(original);
+  });
+
+  it.each([
+    ["0", 0],
+    ["a positive delay", 1000],
+    ["a settings binding", { $settings: "autoDelay" }],
+    ["a template", "${variables.delay}"],
+    ["no delay", undefined],
+  ])("keeps %s", (_label, delay) => {
+    const input = config(delay);
+    expect(normalizeRouteEngineActions(input)).toBe(input);
+  });
+
+  it("keeps a config without auto settings", () => {
+    const input = { setNextLineConfig: { manual: { enabled: false } } };
+    expect(normalizeRouteEngineActions(input)).toBe(input);
   });
 });
 

@@ -13,16 +13,35 @@ export const normalizeUpdateVariableId = (id) => {
   return result;
 };
 
-// Returns the value with every updateVariable action id mapped, copying only
-// the objects on the way to a changed id.
-export const normalizeUpdateVariableIds = (value) => {
+const normalizeUpdateVariableAction = (action) => {
+  const id = normalizeUpdateVariableId(action.id);
+  return id === action.id ? action : { ...action, id };
+};
+
+// Route Engine throws on every render that starts the auto-advance timer of a
+// Next Line Config with a negative delay. The Delay field used to accept one,
+// so a saved negative delay is read as 0.
+const normalizeSetNextLineConfigAction = (action) => {
+  const delay = action.auto?.delay;
+  if (!(typeof delay === "number" && delay < 0)) return action;
+  return { ...action, auto: { ...action.auto, delay: 0 } };
+};
+
+const ACTION_NORMALIZERS = new Map([
+  ["updateVariable", normalizeUpdateVariableAction],
+  ["setNextLineConfig", normalizeSetNextLineConfigAction],
+]);
+
+// Returns the value with every action Route Engine would reject fixed,
+// copying only the objects on the way to a changed action.
+export const normalizeRouteEngineActions = (value) => {
   if (!value || typeof value !== "object") return value;
   let result = value;
   for (const [key, child] of Object.entries(value)) {
-    let next = normalizeUpdateVariableIds(child);
-    if (key === "updateVariable" && next && typeof next === "object") {
-      const id = normalizeUpdateVariableId(next.id);
-      if (id !== next.id) next = { ...next, id };
+    let next = normalizeRouteEngineActions(child);
+    const normalizeAction = ACTION_NORMALIZERS.get(key);
+    if (normalizeAction && next && typeof next === "object") {
+      next = normalizeAction(next);
     }
     if (next !== child) {
       if (result === value)
