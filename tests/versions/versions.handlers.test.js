@@ -2044,6 +2044,13 @@ const createSigningDeps = ({ currentKey } = {}) => {
     created: !currentKey,
   }));
   deps.store.selectCanExportAndroidBundle = vi.fn(() => true);
+  // Cancels the Save a Copy password form unless a test fills it in.
+  deps.appService.showFormDialog = vi.fn(async () => undefined);
+  deps.appService.getFileDisplayPath = vi.fn((path) => path);
+  deps.projectService.promptAndroidKeyCopyPath = vi.fn(
+    async () => "/keys/copy.p12",
+  );
+  deps.projectService.saveAndroidSigningKeyCopy = vi.fn(async () => undefined);
   return deps;
 };
 
@@ -2076,6 +2083,76 @@ const exportedSigningFingerprint = (deps) =>
     .signingCertificateSha256;
 
 describe("signed Android export", () => {
+  it("asks before the first signed export makes the game's key", async () => {
+    const deps = createSigningDeps();
+    deps.appService.showDialog.mockResolvedValueOnce(false);
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: EN_I18N.versionsPage.androidNewKeyConfirmTitle,
+      message: EN_I18N.versionsPage.androidNewKeyConfirmMessage,
+      confirmText: EN_I18N.versionsPage.androidNewKeyConfirmButton,
+      cancelText: EN_I18N.versionsPage.cancelButton,
+    });
+    expect(deps.store.closeExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.projectService.ensureAndroidSigningKey).not.toHaveBeenCalled();
+  });
+
+  it("offers to save a copy of the key an export made, and saves one", async () => {
+    const deps = createSigningDeps();
+    deps.appService.showFormDialog.mockResolvedValueOnce({
+      actionId: "submit",
+      values: { password: "pass one", confirmPassword: "pass one" },
+    });
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    expect(deps.appService.showDialog).toHaveBeenLastCalledWith({
+      title: EN_I18N.versionsPage.androidKeyCopyOfferTitle,
+      message: EN_I18N.versionsPage.androidKeyCopyOfferMessage,
+      confirmText: EN_I18N.platformDetailsPage.androidSaveKeyCopyButton,
+      cancelText: EN_I18N.versionsPage.androidKeyCopyOfferLater,
+    });
+    expect(deps.projectService.saveAndroidSigningKeyCopy).toHaveBeenCalledWith({
+      certificateSha256: KEY_TWO,
+      path: "/keys/copy.p12",
+      password: "pass one",
+    });
+  });
+
+  it("saves no copy when the creator chooses Later", async () => {
+    const deps = createSigningDeps();
+    // Confirms making the key, then declines the copy.
+    deps.appService.showDialog
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    expect(deps.appService.showDialog).toHaveBeenCalledTimes(2);
+    expect(deps.appService.showFormDialog).not.toHaveBeenCalled();
+  });
+
+  it("offers the copy even when the export failed after the key was made", async () => {
+    const deps = createSigningDeps();
+    deps.projectService.createAndroidApkToPath.mockRejectedValue(
+      new Error("export failed"),
+    );
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    expect(deps.appService.showDialog).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        title: EN_I18N.versionsPage.androidKeyCopyOfferTitle,
+      }),
+    );
+  });
+
+  it("asks nothing about keys when the project already has one", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+    expect(deps.appService.showFormDialog).not.toHaveBeenCalled();
+  });
+
   it("makes the project's key during the first signed export and signs with it", async () => {
     const deps = createSigningDeps();
     await handleDownloadAndroidApkClick(deps, createVersionClickPayload());

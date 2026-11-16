@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "App Bundle 저장"
   androidNewKeyNotice: "Creator가 서명 키를 만들어 이 프로젝트에 저장해요. 프로젝트를 백업해 두고, 프로젝트 폴더를 공개적으로 공유하지 마세요."
   androidSigningKeyUnusable: "이 프로젝트의 서명 키는 이 기기에서 사용할 수 없어요. 서명된 빌드를 내보내기 전에 Android 정보에서 키를 선택하세요."
+  androidNewKeyConfirmTitle: "서명 키를 만들까요?"
+  androidNewKeyConfirmMessage: "이번 내보내기에서 이 게임의 서명 키를 만들어요. 이미 다른 기기에서 게임을 출시했다면 취소하고 Android 정보에서 그 키를 가져오세요."
+  androidNewKeyConfirmButton: "키 만들고 내보내기"
+  androidKeyCopyOfferTitle: "서명 키 사본 저장"
+  androidKeyCopyOfferMessage: "키는 이 프로젝트에만 저장돼요. 안전한 곳에 사본을 보관하세요. 키가 없으면 플레이어가 게임을 업데이트할 수 없어요."
+  androidKeyCopyOfferLater: "나중에"
   androidSigningKeyFailed: "서명 키를 만들지 못했어요."
 webServerPage:
   actionsLabel: "작업"

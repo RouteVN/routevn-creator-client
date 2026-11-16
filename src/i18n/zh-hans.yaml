@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "保存 App Bundle"
   androidNewKeyNotice: "Creator 会创建签名密钥并保存在此项目中。请备份项目，并且不要公开分享项目文件夹。"
   androidSigningKeyUnusable: "此项目的签名密钥无法在此设备上使用。请先在 Android 平台详情中选择密钥，再导出已签名的版本。"
+  androidNewKeyConfirmTitle: "要创建签名密钥吗？"
+  androidNewKeyConfirmMessage: "此次导出会为此游戏创建签名密钥。如果游戏已从其他设备发布，请取消，并在 Android 平台详情中导入该密钥。"
+  androidNewKeyConfirmButton: "创建密钥并导出"
+  androidKeyCopyOfferTitle: "保存签名密钥副本"
+  androidKeyCopyOfferMessage: "密钥仅保存在此项目中。请在安全的地方保存一份副本：没有密钥，玩家将无法更新游戏。"
+  androidKeyCopyOfferLater: "稍后"
   androidSigningKeyFailed: "无法创建签名密钥。"
 webServerPage:
   actionsLabel: "操作"

@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Lưu App Bundle"
   androidNewKeyNotice: "Creator sẽ tạo khóa ký và lưu trong dự án này. Hãy sao lưu dự án và đừng chia sẻ công khai thư mục dự án."
   androidSigningKeyUnusable: "Không thể dùng khóa ký của dự án này trên thiết bị này. Hãy chọn một khóa trong Chi tiết cho Android trước khi xuất bản dựng đã ký."
+  androidNewKeyConfirmTitle: "Tạo khóa ký?"
+  androidNewKeyConfirmMessage: "Lần xuất này sẽ tạo khóa ký cho trò chơi. Nếu trò chơi đã được phát hành từ thiết bị khác, hãy hủy rồi thêm khóa đó trong Chi tiết cho Android."
+  androidNewKeyConfirmButton: "Tạo khóa và xuất"
+  androidKeyCopyOfferTitle: "Lưu bản sao khóa ký"
+  androidKeyCopyOfferMessage: "Khóa chỉ được lưu trong dự án này. Hãy giữ một bản sao ở nơi an toàn: không có khóa, người chơi không thể cập nhật trò chơi."
+  androidKeyCopyOfferLater: "Để sau"
   androidSigningKeyFailed: "Không tạo được khóa ký."
 webServerPage:
   actionsLabel: "Thao tác"

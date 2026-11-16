@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Salva l’App Bundle"
   androidNewKeyNotice: "Creator creerà una chiave di firma e la salverà in questo progetto. Conserva un backup del progetto e non condividere pubblicamente la sua cartella."
   androidSigningKeyUnusable: "La chiave di firma di questo progetto non può essere usata su questo dispositivo. Scegli una chiave in Dettagli per Android prima di esportare una build firmata."
+  androidNewKeyConfirmTitle: "Creare una chiave di firma?"
+  androidNewKeyConfirmMessage: "Questa esportazione crea la chiave di firma di questo gioco. Se il gioco è già stato pubblicato da un altro dispositivo, annulla e importa quella chiave in Dettagli per Android."
+  androidNewKeyConfirmButton: "Crea chiave ed esporta"
+  androidKeyCopyOfferTitle: "Salva una copia della chiave di firma"
+  androidKeyCopyOfferMessage: "La chiave è salvata solo in questo progetto. Conservane una copia in un luogo sicuro: senza, i giocatori non potranno aggiornare il gioco."
+  androidKeyCopyOfferLater: "Più tardi"
   androidSigningKeyFailed: "Impossibile creare la chiave di firma."
 webServerPage:
   actionsLabel: "Azioni"
