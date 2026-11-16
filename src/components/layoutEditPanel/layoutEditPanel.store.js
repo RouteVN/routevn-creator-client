@@ -7,6 +7,7 @@ import {
   isSliderPopoverField,
 } from "./support/layoutEditPanelSliderPopovers.js";
 import { parseAndRender } from "jempl";
+import { selectCommandLineCopy } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import {
   getSpritesheetAnimationPreview,
@@ -27,6 +28,8 @@ import { createCommandLineResourceSelectorLayout } from "../../internal/ui/scene
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 import {
+  createConditionValueChoiceOptions,
+  getConditionPresetValueOptions,
   getVisibilityConditionCharacterValueOptions,
   toVisibilityConditionTargetTypeByTarget,
   toVisibilityConditionTargetValueKindByTarget,
@@ -826,6 +829,7 @@ export const createInitialState = () => {
     videosData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
+    speakerAvatarUrls: {},
     values: createDefaultValues(),
     isTouchMode: false,
   };
@@ -1404,6 +1408,10 @@ export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
   state.textStylesData = textStylesData;
 };
 
+export const setSpeakerAvatarUrls = ({ state }, { urls }) => {
+  state.speakerAvatarUrls = urls;
+};
+
 export const setImagesData = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData;
 };
@@ -1647,6 +1655,7 @@ const hydrateListBarItems = (
 
 export const selectViewData = ({ state, props, constants, i18n }) => {
   const copy = selectLayoutEditPanelCopy(i18n);
+  const commandLineCopy = selectCommandLineCopy(i18n);
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const soundItems = toSoundOptions(state.soundsData);
   const spritesheetSelectionItems = toSpritesheetAnimationSelectionItems(
@@ -1696,6 +1705,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     systemSectionLabel: copy.systemSection ?? "System",
     variablesSectionLabel: copy.variablesSection ?? "Variables",
     targetLabelCopy: copy,
+    presetValueCopy: commandLineCopy,
     targetTypeLabels: createConditionTargetTypeLabels(i18n, copy),
   };
   // Visibility and conditional overrides list the same targets, by section.
@@ -1951,17 +1961,29 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
   const selectedConditionalOverrideValueKind =
     state.conditionalOverrideConditionDialog.selectedValueKind ??
     conditionalOverrideConditionDefaults.selectedValueKind;
+  const conditionValueChoiceOptions =
+    createConditionValueChoiceOptions(commandLineCopy);
+  const visibilityConditionPresetValueOptions = getConditionPresetValueOptions(
+    selectedVisibilityConditionValueKind,
+    commandLineCopy,
+  );
+  const conditionalOverridePresetValueOptions = getConditionPresetValueOptions(
+    selectedConditionalOverrideValueKind,
+    commandLineCopy,
+  );
   const visibilityConditionCharacterValueOptions =
     getVisibilityConditionCharacterValueOptions({
       charactersData: props.charactersData,
       currentValue: visibilityConditionDialogDefaults.characterValue,
       noneLabel: copy.noCharacterOption,
+      imageSrcByFileId: state.speakerAvatarUrls,
     });
   const conditionalOverrideCharacterValueOptions =
     getVisibilityConditionCharacterValueOptions({
       charactersData: props.charactersData,
       currentValue: conditionalOverrideConditionDefaults.characterValue,
       noneLabel: copy.noCharacterOption,
+      imageSrcByFileId: state.speakerAvatarUrls,
     });
   const textRevealIndicatorDialogDefaults =
     createTextRevealIndicatorDialogDefaults({
@@ -2024,6 +2046,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       selectedVariableType: selectedVisibilityConditionVariableType,
       selectedValueKind: selectedVisibilityConditionValueKind,
       characterValueOptions: visibilityConditionCharacterValueOptions,
+      valueChoiceOptions: conditionValueChoiceOptions,
+      presetValueOptions: visibilityConditionPresetValueOptions,
+      hasPresetValues: visibilityConditionPresetValueOptions.length > 0,
     },
     saveLoadPaginationDialog: state.saveLoadPaginationDialog,
     saveLoadPaginationDialogDefaults:
@@ -2087,6 +2112,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       selectedVariableType: selectedConditionalOverrideVariableType,
       selectedValueKind: selectedConditionalOverrideValueKind,
       characterValueOptions: conditionalOverrideCharacterValueOptions,
+      valueChoiceOptions: conditionValueChoiceOptions,
+      presetValueOptions: conditionalOverridePresetValueOptions,
+      hasPresetValues: conditionalOverridePresetValueOptions.length > 0,
     },
     conditionalOverrideAttributeDialog:
       state.conditionalOverrideAttributeDialog,

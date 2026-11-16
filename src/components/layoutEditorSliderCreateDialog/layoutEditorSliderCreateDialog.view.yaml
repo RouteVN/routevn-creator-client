@@ -53,7 +53,7 @@ styles:
     background-size: 12px 12px
 template:
   - rtgl-view g=md w=f:
-      - rtgl-form#sliderCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f:
+      - rtgl-form#sliderCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f p=none:
           - rtgl-view slot=slider-bar-image g=xs:
               - rtgl-view#sliderCreateImageFieldBar data-field-name=barImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.barImageId:

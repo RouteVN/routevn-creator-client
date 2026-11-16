@@ -15,6 +15,7 @@ import {
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import { toLayoutEditorSaveError } from "../../src/internal/ui/layoutEditor/layoutEditorSaveFailure.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const rect = (name, x = 0) => ({
   type: "rect",
@@ -123,6 +124,7 @@ const createPage = async () => {
     store,
     subject,
     appService: {
+      ...createRetainedEditHistoryService(),
       registerBeforeNavigation: (callback) => {
         beforeNavigation = callback;
         return () => {};

@@ -1,6 +1,7 @@
 import { createAppShellService } from "./appShellService.js";
 import { createFileSelectionService } from "./fileSelectionService.js";
 import { createProjectEntriesService } from "./projectEntriesService.js";
+import { createRetainedEditHistoryService } from "./retainedEditHistoryService.js";
 import { createTouchLayoutService } from "./touchLayoutService.js";
 import { createUserConfigService } from "./userConfigService.js";
 import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
@@ -100,6 +101,11 @@ export const createAppServiceCore = ({
     uiConfig,
   });
 
+  const retainedEditHistoryService = createRetainedEditHistoryService({
+    getProjectKey: () => `${getCurrentProjectId()}:${getCurrentProjectPath()}`,
+    getProjectState: () => projectService.getRepositoryState(),
+  });
+
   const getTheme = () => {
     return normalizeTheme(userConfigService.getUserConfig("appearance.theme"));
   };
@@ -116,6 +122,7 @@ export const createAppServiceCore = ({
     ...appShellService,
     ...userConfigService,
     ...touchLayoutService,
+    ...retainedEditHistoryService,
 
     async initUserConfig() {
       const userConfig = await userConfigService.initUserConfig();

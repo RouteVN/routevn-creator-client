@@ -103,6 +103,9 @@ contextMenuItems:
   - label: Rename
     type: item
     value: rename-item
+  - label: Duplicate
+    type: item
+    value: duplicate-item
   - label: Delete
     type: item
     value: delete-item
@@ -209,6 +212,9 @@ controlContextMenuItems:
   - label: Rename
     type: item
     value: rename-item
+  - label: Duplicate
+    type: item
+    value: duplicate-item
   - label: Delete
     type: item
     value: delete-item

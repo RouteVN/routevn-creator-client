@@ -1,4 +1,8 @@
 import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
+import {
+  createConditionPresetDefaults,
+  createConditionPresetValueFields,
+} from "./layoutEditPanelVisibility.js";
 
 const createConditionOpOptions = (copy = {}) => [
   { label: copy.equalsOption ?? "Equals", value: "eq" },
@@ -323,6 +327,7 @@ export const createConditionalOverrideConditionDefaults = (
     numberValue: Number.isFinite(parsedNumberValue) ? parsedNumberValue : 0,
     stringValue: typeof rawValue === "string" ? rawValue : "",
     characterValue: typeof rawValue === "string" ? rawValue : "",
+    ...createConditionPresetDefaults(selectedValueKind, rawValue),
     selectedVariableType,
     selectedValueKind,
   };
@@ -381,6 +386,7 @@ export const createConditionalOverrideConditionForm = ({
         label: copy.valueLabel ?? "Value",
         required: true,
       },
+      ...createConditionPresetValueFields(copy),
       {
         $when: "target && selectedValueKind == 'character'",
         name: "characterValue",
@@ -389,6 +395,7 @@ export const createConditionalOverrideConditionForm = ({
         required: true,
         clearable: false,
         options: "${characterValueOptions}",
+        image: { size: 28, borderRadius: "full", fit: "cover" },
       },
       // The attributes the condition sets, which the dialog's Save saves
       // with it.

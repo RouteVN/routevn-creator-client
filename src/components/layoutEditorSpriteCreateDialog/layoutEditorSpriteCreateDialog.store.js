@@ -127,6 +127,7 @@ export const selectViewData = ({ state, constants, i18n = {} }) => {
     formKey: state.formKey,
     defaultValues: state.defaultValues,
     imageId: state.imageId,
+    imageName: state.images.items[state.imageId]?.name ?? "",
     imageSelectorDialog: state.imageSelectorDialog,
     fileExplorerItems,
     showImageSelectorFileExplorer: !state.isTouchMode,

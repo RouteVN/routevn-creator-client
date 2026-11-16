@@ -58,6 +58,7 @@ import {
   VI_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // The real store module's selectors and actions, bound to a plain state.
 const bindStore = (state) =>
@@ -264,6 +265,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
 describe("sceneEditorLexical.handlers back navigation", () => {
   it("preserves the selected local project path", () => {
     const appService = {
+      ...createRetainedEditHistoryService(),
       getPayload: vi.fn(() => ({
         p: "project-1",
         lp: "/projects/project-one",
@@ -356,6 +358,7 @@ describe("sceneEditorLexical.handlers preview", () => {
         sectionEditor0: linesEditor,
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         blurActiveElement: vi.fn(() => calls.push("app-blur")),
         showAlert: vi.fn(),
       },
@@ -399,6 +402,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
         }),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         saveFilePicker,
         showToast,
       },
@@ -454,6 +458,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
         extractBase64: vi.fn(async () => undefined),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         saveFilePicker: vi.fn(),
         showToast,
       },
@@ -630,6 +635,8 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       setSceneId: vi.fn(({ sceneId: nextSceneId }) => {
         sceneId = nextSceneId;
       }),
+      selectEditHistory: vi.fn(() => ({ undo: [], redo: [] })),
+      resumeEditHistory: vi.fn(),
       selectScene: vi.fn(() => scenes[sceneId]),
       selectCommittedScene: vi.fn(() => scenes[sceneId]),
       selectSelectedSectionId: vi.fn(() => selectedSectionId),
@@ -686,6 +693,7 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       getRepositoryRevision: vi.fn(() => 7),
     };
     const appService = {
+      ...createRetainedEditHistoryService(),
       getPayload: vi.fn(() => ({
         p: "project-1",
         s: "scene-2",
@@ -920,6 +928,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           }),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           blurActiveElement: vi.fn(() => calls.push("app-blur")),
         },
       },
@@ -962,6 +971,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         }),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         blurActiveElement: vi.fn(() => calls.push("app-blur")),
       },
       render: vi.fn(() => calls.push("render")),
@@ -2269,6 +2279,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         }),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         showAlert: vi.fn(),
       },
     };
@@ -2323,6 +2334,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         updateLineDialogueAction,
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         showAlert: vi.fn(),
       },
     };
@@ -2902,6 +2914,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         moveSectionItem,
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         showAlert: vi.fn(),
       },
     };
@@ -2956,6 +2969,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         dispatch: vi.fn(),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         getPayload: vi.fn(() => state.payload),
         setPayload: vi.fn((payload) => {
           state.payload = payload;
@@ -3055,6 +3069,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3171,6 +3186,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3289,6 +3305,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3395,6 +3412,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3492,6 +3510,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;

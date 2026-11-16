@@ -33,6 +33,7 @@ import {
   getChangedLayoutElementIds,
   restoreLayoutElementSnapshot,
 } from "../../internal/project/layout.js";
+import { getEditHistoryOwner } from "../../internal/editHistory.js";
 import {
   resolveEditHistoryShortcut,
   selectEditHistoryCopy,
@@ -287,6 +288,10 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
   const previewResult = await saveLayoutEditorPreview(deps);
   return { ok: allSaved && previewResult.ok };
 };
+
+// A layout and a control are edited here, each with its own undo history.
+const getLayoutEditorHistoryOwner = ({ layoutId, resourceType }) =>
+  getEditHistoryOwner(`layout:${resourceType}`, layoutId);
 
 // Records an edit the page makes to its elements, from what it shows before
 // and after, so the edit can be undone before it is saved.
@@ -627,6 +632,15 @@ export const handleBeforeMount = (deps) => {
     },
   );
   return async () => {
+    // Kept for coming back to this layout, before the save below can let the
+    // next page open.
+    appService.retainEditHistory({
+      owner: getLayoutEditorHistoryOwner({
+        layoutId: store.selectLayoutId(),
+        resourceType: store.selectLayoutResourceType(),
+      }),
+      history: store.selectEditHistory(),
+    });
     unsubscribeHistoryShortcuts();
     unregisterBeforeNavigation();
     await flushQueuedLayoutEditorUpdates(deps);
@@ -647,6 +661,14 @@ export const handleAfterMount = async (deps) => {
       resourceType,
     }),
   );
+  store.resumeEditHistory({
+    retainedEditHistory: appService.getRetainedEditHistory({
+      owner: getLayoutEditorHistoryOwner({
+        layoutId: store.selectLayoutId(),
+        resourceType: store.selectLayoutResourceType(),
+      }),
+    }),
+  });
   render();
 
   scheduleAfterNextPaint(() => {

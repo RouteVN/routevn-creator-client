@@ -2,9 +2,11 @@ import {
   areEditHistoryValuesEqual,
   createEditHistory,
   getEditHistoryChangeKey,
+  getEditHistoryOwner,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
+  resumeEditHistory,
 } from "../../internal/editHistory.js";
 import {
   getFontFaceWeightDescriptor,
@@ -121,7 +123,7 @@ export const createInitialState = () => ({
   // weight the new font cannot draw) or that it shows differently from how
   // they were typed.
   formRevision: 0,
-  // Undo and redo for edits made since the page opened.
+  // Undo and redo for the item's edits, kept when the page is left.
   editHistory: createEditHistory(),
   editHistoryBaseline: undefined,
   colorsData: createEmptyCollection(),
@@ -151,7 +153,7 @@ export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
 
 export const loadTextStyle = (
   { state },
-  { item, colorsData, fontsData } = {},
+  { item, colorsData, fontsData, retainedEditHistory } = {},
 ) => {
   state.textStyleId = item.id;
   state.textStyleName = item.name ?? "";
@@ -165,7 +167,7 @@ export const loadTextStyle = (
   state.savedPreviewText = state.previewText;
   state.previewAlign = item.previewAlign ?? "center";
   state.savedPreviewAlign = state.previewAlign;
-  state.editHistory = createEditHistory();
+  state.editHistory = resumeEditHistory(retainedEditHistory, state.values);
   state.editHistoryBaseline = state.values;
   state.colorsData = colorsData ?? createEmptyCollection();
   state.fontsData = fontsData ?? createEmptyCollection();
@@ -189,6 +191,14 @@ export const setResourceData = ({ state }, { colorsData, fontsData } = {}) => {
 };
 
 export const selectTextStyleId = ({ state }) => state.textStyleId;
+
+// What the page keeps when it is left, so coming back to it brings undo and
+// redo back.
+export const selectRetainedEditHistory = ({ state }) => ({
+  owner: getEditHistoryOwner("textStyle", state.textStyleId),
+  history: state.editHistory,
+  content: state.values,
+});
 
 export const selectValues = ({ state }) => state.values;
 

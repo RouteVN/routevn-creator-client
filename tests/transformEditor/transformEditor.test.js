@@ -25,6 +25,7 @@ import {
 } from "../../src/pages/transformEditor/transformEditor.handlers.js";
 import { createTransformThumbnailSource } from "../../src/internal/transformPreview.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // Edits save on their own 300ms after the last one.
 const AUTOSAVE_WAIT_MS = 400;
@@ -137,7 +138,11 @@ const sizeContainer = (element) => {
 
 // The page on its real store, opened on a saved transform. The canvas is
 // 960 CSS pixels wide, so a CSS pixel is two canvas units.
-const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
+const createPage = async ({
+  item = savedTransform,
+  uiConfig = {},
+  retainedEditHistoryService = createRetainedEditHistoryService(),
+} = {}) => {
   let state = transformEditorStore.createInitialState();
   const store = new Proxy(
     {},
@@ -207,6 +212,7 @@ const createPage = async ({ item = savedTransform, uiConfig = {} } = {}) => {
       },
     },
     appService: {
+      ...retainedEditHistoryService,
       getPayload: () => ({ p: "project-1", t: item.id }),
       navigate: vi.fn(),
       showAlert: vi.fn(),
@@ -449,6 +455,97 @@ describe("transform editor", () => {
     expect(page.transform()).toMatchObject({ x: 960, y: 540 });
     await page.press("z", { metaKey: true, shiftKey: true });
     expect(page.transform()).toMatchObject({ x: 971, y: 540 });
+  });
+
+  // The transform as the page saved it.
+  const getSavedItem = (page) => {
+    const savedItem = { ...savedTransform };
+    for (const { data } of page.savedData()) {
+      Object.assign(savedItem, data);
+    }
+    return savedItem;
+  };
+
+  const otherTransform = { ...savedTransform, id: "transform-2" };
+
+  it("keeps undo and redo when the page is left and opened again", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    await page.press("ArrowRight");
+    await page.press("ArrowDown");
+    await page.press("z", { metaKey: true });
+    await page.cleanup();
+
+    const reopened = await createPage({
+      item: getSavedItem(page),
+      retainedEditHistoryService,
+    });
+
+    expect(reopened.transform()).toMatchObject({ x: 961, y: 540 });
+    expect(reopened.view()).toMatchObject({
+      undoDisabled: false,
+      redoDisabled: false,
+    });
+    await reopened.press("z", { metaKey: true });
+    expect(reopened.transform()).toMatchObject({ x: 960, y: 540 });
+    await reopened.press("z", { metaKey: true, shiftKey: true });
+    await reopened.press("z", { metaKey: true, shiftKey: true });
+    expect(reopened.transform()).toMatchObject({ x: 961, y: 541 });
+  });
+
+  it("keeps the history while another transform is opened without an edit", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    await page.press("ArrowRight");
+    await page.cleanup();
+    const other = await createPage({
+      item: otherTransform,
+      retainedEditHistoryService,
+    });
+    expect(other.state().editHistory.undo).toHaveLength(0);
+    await other.cleanup();
+
+    const reopened = await createPage({
+      item: getSavedItem(page),
+      retainedEditHistoryService,
+    });
+
+    expect(reopened.state().editHistory.undo).toHaveLength(1);
+  });
+
+  it("drops the history once another transform is edited", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    await page.press("ArrowRight");
+    await page.cleanup();
+    const other = await createPage({
+      item: otherTransform,
+      retainedEditHistoryService,
+    });
+    await other.press("ArrowDown");
+    await other.cleanup();
+
+    const reopened = await createPage({
+      item: getSavedItem(page),
+      retainedEditHistoryService,
+    });
+
+    expect(reopened.state().editHistory.undo).toHaveLength(0);
+  });
+
+  it("drops the history when the transform changed while the page was closed", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    await page.press("ArrowRight");
+    await page.cleanup();
+
+    const reopened = await createPage({
+      item: { ...getSavedItem(page), x: 100 },
+      retainedEditHistoryService,
+    });
+
+    expect(reopened.transform()).toMatchObject({ x: 100 });
+    expect(reopened.state().editHistory.undo).toHaveLength(0);
   });
 
   it("leaves arrow keys to a focused field", async () => {

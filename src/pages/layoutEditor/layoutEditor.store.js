@@ -32,6 +32,7 @@ import {
   dropEditHistoryStep as dropHistoryStep,
   moveEditHistoryStep as moveHistoryStep,
   recordEditHistoryStep as recordHistoryStep,
+  resumeEditHistory as resumeHistory,
 } from "../../internal/editHistory.js";
 import {
   isFragmentLayout,
@@ -95,6 +96,7 @@ const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 const VALUE_LABEL_KEYS = Object.freeze({
   "rename-item": "renameMenuItem",
+  "duplicate-item": "duplicateMenuItem",
   "delete-item": "deleteMenuItem",
 });
 
@@ -207,7 +209,7 @@ export const createInitialState = () => {
     isPreviewPickedFromTab: false,
     canvasZoom: 1,
     canvasPreviewItem: undefined,
-    // Undo and redo for edits made since the page opened.
+    // Undo and redo for the item's edits, kept when the page is left.
     editHistory: createEditHistory(),
     // Undone or redone steps not saved yet, kept on top of repository data.
     pendingHistoryRestores: [],
@@ -437,6 +439,15 @@ export const recordEditHistoryStep = (
 
 export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
   getEditHistoryStep(state.editHistory, direction);
+
+export const selectEditHistory = ({ state }) => state.editHistory;
+
+// Takes back the history kept when the page was last left. A step restores
+// only the elements it touched and is dropped when it no longer applies, so
+// the history is kept whatever the layout holds now.
+export const resumeEditHistory = ({ state }, { retainedEditHistory } = {}) => {
+  state.editHistory = resumeHistory(retainedEditHistory);
+};
 
 export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
   moveHistoryStep(state.editHistory, direction);

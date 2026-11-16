@@ -4,8 +4,10 @@ import {
   createEditHistory,
   dropEditHistoryStep as dropHistoryStep,
   getEditHistoryStep,
+  isEditHistoryEmpty,
   moveEditHistoryStep as moveHistoryStep,
   recordEditHistoryStep,
+  resumeEditHistory as resumeHistory,
 } from "../../internal/editHistory.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
@@ -822,7 +824,7 @@ export const createInitialState = () => ({
   // panel: `{ key, url }`, where `key` is the visual's render element as it was
   // drawn when the picture was taken.
   visualSnapshots: {},
-  // Undo and redo for line edits made since the scene opened. A section's
+  // Undo and redo for line edits, kept when the scene is left. A section's
   // baseline is its lines as of its last recorded edit; until then they are
   // the committed lines. Undo waits while a line action command runs or waits
   // to run.
@@ -924,6 +926,17 @@ export const recordLineEdit = (
 export const resetEditHistory = ({ state }) => {
   state.editHistory = createEditHistory();
   state.editHistoryBaselines = {};
+};
+
+export const selectEditHistory = ({ state }) => state.editHistory;
+
+// Takes back the history kept when the scene was last left. A step restores
+// only the lines it touched, so the history is kept whatever the scene holds
+// now. An edit recorded while the scene was still opening stays instead.
+export const resumeEditHistory = ({ state }, { retainedEditHistory } = {}) => {
+  if (isEditHistoryEmpty(state.editHistory)) {
+    state.editHistory = resumeHistory(retainedEditHistory);
+  }
 };
 
 export const setEditHistoryBaselines = ({ state }, { baselines } = {}) => {
