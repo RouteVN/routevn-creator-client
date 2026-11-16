@@ -1492,7 +1492,11 @@ belongs to the last editor and item an edit was recorded in
 it is dropped when another editor, or the same editor on another item, is left
 with steps of its own. An editor left without an edit keeps the history that
 was there. The history belongs to one project and is dropped when an editor
-opens in another, since copies of a project share item ids. The scene editor does the same when it switches scenes without
+opens in another, since copies of a project share item ids. A step can refer to other items,
+such as a text style's font, and the project refuses a save that refers to an
+item that is gone, so the history is also dropped when any item the project
+held as the page was left has been deleted since (scene lines and layout
+elements apart, which only their own editor changes). The scene editor does the same when it switches scenes without
 leaving. Editors whose steps hold the whole item (animation, audio effect,
 transform, particle, text style) also keep the item as they left it, and
 `resumeEditHistory` uses the kept history only while the item still matches,

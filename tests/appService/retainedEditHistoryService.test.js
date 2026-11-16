@@ -23,11 +23,9 @@ describe("retained edit history", () => {
     const history = createHistoryWithStep();
     service.retainEditHistory({ owner: "transform:one", history });
 
-    expect(service.getRetainedEditHistory({ owner: "transform:one" })).toEqual({
-      owner: "transform:one",
-      history,
-      content: undefined,
-    });
+    expect(
+      service.getRetainedEditHistory({ owner: "transform:one" }),
+    ).toMatchObject({ owner: "transform:one", history });
     expect(
       service.getRetainedEditHistory({ owner: "transform:two" }),
     ).toBeUndefined();
@@ -125,6 +123,106 @@ describe("retained edit history", () => {
     projectKey = "project-1";
     expect(
       service.getRetainedEditHistory({ owner: "scene:one" }),
+    ).toBeUndefined();
+  });
+
+  const createCollection = (items) => ({
+    items: Object.fromEntries(items.map((item) => [item.id, item])),
+    tree: items.map(({ id }) => ({ id })),
+  });
+
+  const createProjectState = ({
+    fontIds = ["font-1"],
+    spriteIds = [],
+  } = {}) => ({
+    project: { resolution: { width: 1920, height: 1080 } },
+    fonts: createCollection(fontIds.map((id) => ({ id }))),
+    characters: createCollection([
+      {
+        id: "character-1",
+        sprites: createCollection(spriteIds.map((id) => ({ id }))),
+      },
+    ]),
+    scenes: createCollection([
+      {
+        id: "scene-1",
+        sections: createCollection([
+          { id: "section-1", lines: createCollection([{ id: "line-1" }]) },
+        ]),
+      },
+    ]),
+    layouts: createCollection([
+      { id: "layout-1", elements: createCollection([{ id: "element-1" }]) },
+    ]),
+  });
+
+  it("drops the history when something in the project was deleted since", () => {
+    let projectState = createProjectState({
+      fontIds: ["font-1", "font-2"],
+      spriteIds: ["sprite-1"],
+    });
+    const service = createRetainedEditHistoryService({
+      getProjectState: () => projectState,
+    });
+    const retain = () =>
+      service.retainEditHistory({
+        owner: "textStyle:one",
+        history: createHistoryWithStep(),
+      });
+    const getRetained = () =>
+      service.getRetainedEditHistory({ owner: "textStyle:one" });
+
+    // Items added since, and lines and elements that come and go as scenes
+    // load and layouts save, keep the history.
+    retain();
+    projectState = createProjectState({
+      fontIds: ["font-1", "font-2", "font-3"],
+      spriteIds: ["sprite-1", "sprite-2"],
+    });
+    projectState.scenes.items["scene-1"].sections.items["section-1"].lines =
+      createCollection([]);
+    projectState.layouts.items["layout-1"].elements = createCollection([]);
+    expect(getRetained()).toBeDefined();
+
+    // A deleted font could be one that undo puts back.
+    retain();
+    projectState = createProjectState({ spriteIds: ["sprite-1"] });
+    expect(getRetained()).toBeUndefined();
+
+    // So could an item inside another, such as a character's sprite.
+    projectState = createProjectState({ spriteIds: ["sprite-1"] });
+    retain();
+    projectState = createProjectState();
+    expect(getRetained()).toBeUndefined();
+  });
+
+  it("keeps nothing when the project can no longer be read", () => {
+    let closed = false;
+    const service = createRetainedEditHistoryService({
+      getProjectState: () => {
+        if (closed) {
+          throw new Error("No project is open.");
+        }
+        return createProjectState();
+      },
+    });
+    service.retainEditHistory({
+      owner: "scene:one",
+      history: createHistoryWithStep(),
+    });
+
+    closed = true;
+    service.retainEditHistory({
+      owner: "scene:two",
+      history: createHistoryWithStep(),
+    });
+
+    closed = false;
+    expect(
+      service.getRetainedEditHistory({ owner: "scene:one" }),
+    ).toBeUndefined();
+    expect(
+      service.getRetainedEditHistory({ owner: "scene:two" }),
     ).toBeUndefined();
   });
 

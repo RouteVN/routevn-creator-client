@@ -103,6 +103,7 @@ export const createAppServiceCore = ({
 
   const retainedEditHistoryService = createRetainedEditHistoryService({
     getProjectKey: () => `${getCurrentProjectId()}:${getCurrentProjectPath()}`,
+    getProjectState: () => projectService.getRepositoryState(),
   });
 
   const getTheme = () => {
