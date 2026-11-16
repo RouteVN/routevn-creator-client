@@ -329,12 +329,32 @@ const createLayoutEditorPreviewCharacterSprite = ({
   return resolveLayoutReferences(elements, { resources })[0];
 };
 
+const isHiddenLoopItem = (element) =>
+  !!element &&
+  typeof element === "object" &&
+  !Array.isArray(element) &&
+  Object.keys(element).length === 0;
+
+// jempl renders each item of a repeated element whose `$when` is false, such
+// as a hidden Save/Load Slot, as {}. Route Graphics cannot parse that, and the
+// parent container then fails with "Width or height is missing".
+const removeHiddenLoopItems = (elements) =>
+  elements
+    .filter((element) => !isHiddenLoopItem(element))
+    .map((element) =>
+      Array.isArray(element?.children)
+        ? { ...element, children: removeHiddenLoopItems(element.children) }
+        : element,
+    );
+
 const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   const normalizedPreviewData = normalizeLayoutEditorPreviewData(previewData);
-  const renderedElements = toElementList(
-    parseAndRender(toElementList(elements), normalizedPreviewData, {
-      functions: jemplFunctions,
-    }),
+  const renderedElements = removeHiddenLoopItems(
+    toElementList(
+      parseAndRender(toElementList(elements), normalizedPreviewData, {
+        functions: jemplFunctions,
+      }),
+    ),
   );
 
   return applyInputPreviewValues(
