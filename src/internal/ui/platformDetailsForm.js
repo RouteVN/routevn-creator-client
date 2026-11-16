@@ -297,3 +297,15 @@ export const getPlatformDetailsValidationMessage = (copy, code) => {
     return copy.macosApplicationIdentifierInvalid;
   return copy.failedSavePlatformMessage;
 };
+
+// Screen background previews use the project's shape, with the longer side
+// at this many pixels.
+const SCREEN_BACKGROUND_PREVIEW_SIZE = 240;
+
+export const getScreenBackgroundPreviewSize = ({ width, height }) => {
+  const scale = SCREEN_BACKGROUND_PREVIEW_SIZE / Math.max(width, height);
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
+};

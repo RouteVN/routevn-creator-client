@@ -39,6 +39,26 @@ refs:
         handler: handleRemoveOptionalIcon
         payload:
           target: splash
+  loadingBackgroundButton:
+    eventListeners:
+      click:
+        handler: handleScreenBackgroundClick
+        payload:
+          target: loading
+      contextmenu:
+        handler: handleScreenBackgroundRightClick
+        payload:
+          target: loading
+  startBackgroundButton:
+    eventListeners:
+      click:
+        handler: handleScreenBackgroundClick
+        payload:
+          target: start
+      contextmenu:
+        handler: handleScreenBackgroundRightClick
+        payload:
+          target: start
 template:
   - rtgl-form#platformForm key=${formKey} :defaultValues=${defaultValues} :form=${form} sticky sbv=touch w=f h=f:
       - $if showIcon:
@@ -68,4 +88,22 @@ template:
                           - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
               - $if splashIconFileId:
                   - rtgl-button#splashIconRemove v=ol: ${removeIconLabel}
+      - $if showWebScreenBackgrounds:
+          - rtgl-view slot=platform-web-loading-background-edit d=v g=sm:
+              - 'button#loadingBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="${screenBackgroundButtonStyle}"':
+                  - $if loadingBackgroundFileId:
+                      - 'div style="${screenBackgroundPreviewStyle}"':
+                          - rvn-file-image fileId=${loadingBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
+                    $else:
+                      - rtgl-view w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight} ah=c av=c ph=sm bw=xs bc=bo br=md:
+                          - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
+      - $if showWebScreenBackgrounds:
+          - rtgl-view slot=platform-web-start-background-edit d=v g=sm:
+              - 'button#startBackgroundButton type=button aria-label="${clickToUploadLabel}" title="${clickToUploadLabel}" style="${screenBackgroundButtonStyle}"':
+                  - $if startBackgroundFileId:
+                      - 'div style="${screenBackgroundPreviewStyle}"':
+                          - rvn-file-image fileId=${startBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
+                    $else:
+                      - rtgl-view w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight} ah=c av=c ph=sm bw=xs bc=bo br=md:
+                          - rtgl-text c=mu-fg s=sm ta=c: ${clickToUploadLabel}
   - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile} :outputSize=${iconOutputSize} :guideCircle=${guideCircle} :title=${cropTitle} :description=${cropDescription}: null
