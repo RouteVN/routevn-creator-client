@@ -14,7 +14,8 @@ import {
 } from "../../internal/iosExport.js";
 import { generateId } from "../../internal/id.js";
 import { formatElapsedSeconds, formatList } from "../../internal/dates.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { formatI18nCopy, selectI18nCopy } from "../../internal/ui/i18nCopy.js";
+import { saveAndroidSigningKeyCopy } from "../../internal/ui/androidSigningKeys.js";
 import { normalizeExportFileMimeType } from "../../internal/bundleRuntimeAssets.js";
 import {
   buildFilteredStateForExport,
@@ -2000,6 +2001,31 @@ const getAndroidExportFormat = (copy, projectService, { format, signed }) =>
         },
       };
 
+// After an export made the game's key: offers to save a copy of it outside
+// the project, since a lost key cannot be made again and players could no
+// longer update.
+const offerAndroidKeyCopy = async (deps, { createdKey, applicationInfo }) => {
+  if (!createdKey) return;
+  const { appService, i18n, projectService } = deps;
+  const copy = selectVersionsPageCopy(i18n);
+  const platformDetailsCopy = selectI18nCopy(i18n, ["platformDetailsPage"]);
+  const confirmed = await appService.showDialog({
+    title: copy.androidKeyCopyOfferTitle,
+    message: copy.androidKeyCopyOfferMessage,
+    confirmText: platformDetailsCopy.androidSaveKeyCopyButton,
+    cancelText: copy.androidKeyCopyOfferLater,
+  });
+  if (!confirmed) return;
+  await saveAndroidSigningKeyCopy({
+    appService,
+    projectService,
+    copy: platformDetailsCopy,
+    certificateSha256: createdKey,
+    applicationName: applicationInfo.applicationName,
+    onSave: (task) => task(),
+  });
+};
+
 // Exports an APK, or, with `format` `aab`, a signed App Bundle.
 const runAndroidExport = async (deps, confirmation) => {
   const { store, projectService, appService, i18n } = deps;
@@ -2069,6 +2095,8 @@ const runAndroidExport = async (deps, confirmation) => {
   let result;
   let exportError;
   let exportFailedMessage = exportFormat.exportFailed;
+  // The fingerprint of the key this export made, if it made one.
+  let createdKey;
   try {
     await progressDialog.waitForPaint();
     let signingCertificateSha256;
@@ -2079,6 +2107,7 @@ const runAndroidExport = async (deps, confirmation) => {
         applicationId: applicationInfo.applicationIdentifier,
       });
       signingCertificateSha256 = signingKey.certificateSha256;
+      if (signingKey.created) createdKey = signingCertificateSha256;
       exportFailedMessage = exportFormat.exportFailed;
     }
     showStep("prepare");
@@ -2132,7 +2161,7 @@ const runAndroidExport = async (deps, confirmation) => {
         );
       }
     }
-    appService.showAlert({
+    await appService.showAlert({
       message: withErrorDetails(
         failureMessage,
         exportError,
@@ -2140,6 +2169,8 @@ const runAndroidExport = async (deps, confirmation) => {
       ),
       title: copy.errorTitle,
     });
+    // The key was made and saved even though the export failed.
+    await offerAndroidKeyCopy(deps, { createdKey, applicationInfo });
     return;
   }
   // The record only helps the next export start above this one, so a
@@ -2152,12 +2183,13 @@ const runAndroidExport = async (deps, confirmation) => {
   } catch {
     // Nothing to do: the next export starts with an empty Build Number.
   }
-  appService.showAlert({
+  await appService.showAlert({
     message: formatI18nCopy(exportFormat.completedMessage, {
       path: appService.getFileDisplayPath(result?.outputPath ?? outputPath),
     }),
     title: copy.exportCompletedTitle,
   });
+  await offerAndroidKeyCopy(deps, { createdKey, applicationInfo });
 };
 
 // The form drops Signing while App Bundle is selected, so choosing APK again
@@ -2221,6 +2253,17 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
         lastBuildNumber,
       }),
       confirmText: copy.androidExportAnywayButton,
+      cancelText: copy.cancelButton,
+    });
+    if (!confirmed) return;
+  }
+  // The first signed export makes the game's key. A game already released
+  // from another device has one, which this copy of the project lacks.
+  if (signed && !store.selectAndroidSigningStatus().currentKey) {
+    const confirmed = await appService.showDialog({
+      title: copy.androidNewKeyConfirmTitle,
+      message: copy.androidNewKeyConfirmMessage,
+      confirmText: copy.androidNewKeyConfirmButton,
       cancelText: copy.cancelButton,
     });
     if (!confirmed) return;

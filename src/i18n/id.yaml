@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Simpan App Bundle"
   androidNewKeyNotice: "RouteVN Creator akan membuat kunci penandatanganan dan menyimpannya di proyek ini. Simpan cadangan proyek, dan jangan bagikan foldernya secara publik."
   androidSigningKeyUnusable: "Kunci penandatanganan proyek ini tidak dapat digunakan di perangkat ini. Pilih kunci di Detail untuk Android sebelum mengekspor build bertanda tangan."
+  androidNewKeyConfirmTitle: "Buat kunci penandatanganan?"
+  androidNewKeyConfirmMessage: "Ekspor ini membuat kunci penandatanganan game ini. Jika game sudah dirilis dari perangkat lain, batalkan lalu impor kunci tersebut di Detail untuk Android."
+  androidNewKeyConfirmButton: "Buat kunci dan ekspor"
+  androidKeyCopyOfferTitle: "Simpan salinan kunci penandatanganan"
+  androidKeyCopyOfferMessage: "Kunci ini hanya tersimpan di proyek ini. Simpan salinannya di tempat yang aman: tanpa kunci ini, pemain tidak dapat memperbarui game."
+  androidKeyCopyOfferLater: "Nanti"
   androidSigningKeyFailed: "Gagal membuat kunci penandatanganan."
 webServerPage:
   actionsLabel: "Tindakan"

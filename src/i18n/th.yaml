@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "บันทึก App Bundle"
   androidNewKeyNotice: "Creator จะสร้างคีย์ลงนามและบันทึกไว้ในโปรเจกต์นี้ เก็บข้อมูลสำรองของโปรเจกต์ไว้ และอย่าแชร์โฟลเดอร์โปรเจกต์แบบสาธารณะ"
   androidSigningKeyUnusable: "ไม่สามารถใช้คีย์ลงนามของโปรเจกต์นี้บนอุปกรณ์นี้ได้ เลือกคีย์ในรายละเอียดแพลตฟอร์ม Android ก่อนส่งออกบิลด์ที่ลงนาม"
+  androidNewKeyConfirmTitle: "สร้างคีย์ลงนามหรือไม่"
+  androidNewKeyConfirmMessage: "การส่งออกนี้จะสร้างคีย์ลงนามของเกมนี้ หากเกมเผยแพร่จากอุปกรณ์อื่นแล้ว ให้ยกเลิกแล้วอัปโหลดคีย์นั้นในรายละเอียดแพลตฟอร์ม Android แทน"
+  androidNewKeyConfirmButton: "สร้างคีย์และส่งออก"
+  androidKeyCopyOfferTitle: "บันทึกสำเนาคีย์ลงนาม"
+  androidKeyCopyOfferMessage: "คีย์ถูกบันทึกไว้ในโปรเจกต์นี้เท่านั้น เก็บสำเนาไว้ในที่ปลอดภัย หากไม่มีคีย์ ผู้เล่นจะอัปเดตเกมไม่ได้"
+  androidKeyCopyOfferLater: "ไว้ทีหลัง"
   androidSigningKeyFailed: "สร้างคีย์ลงนามไม่สำเร็จ"
 webServerPage:
   actionsLabel: "การดำเนินการ"

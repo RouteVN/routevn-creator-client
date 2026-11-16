@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Zapisz pakiet App Bundle"
   androidNewKeyNotice: "Aplikacja RouteVN Creator utworzy klucz podpisywania i zapisze go w tym projekcie. Zachowaj kopię zapasową projektu i nie udostępniaj publicznie jego folderu."
   androidSigningKeyUnusable: "Klucza podpisywania tego projektu nie można użyć na tym urządzeniu. Przed eksportem podpisanej kompilacji wybierz klucz w sekcji Szczegóły dla systemu Android."
+  androidNewKeyConfirmTitle: "Utworzyć klucz podpisywania?"
+  androidNewKeyConfirmMessage: "Ten eksport utworzy klucz podpisywania tej gry. Jeśli gra została już wydana z innego urządzenia, anuluj i zaimportuj tamten klucz w sekcji Szczegóły dla systemu Android."
+  androidNewKeyConfirmButton: "Utwórz klucz i eksportuj"
+  androidKeyCopyOfferTitle: "Zapisz kopię klucza podpisywania"
+  androidKeyCopyOfferMessage: "Klucz jest zapisany tylko w tym projekcie. Przechowuj kopię w bezpiecznym miejscu: bez niego gracze nie zaktualizują gry."
+  androidKeyCopyOfferLater: "Później"
   androidSigningKeyFailed: "Nie udało się utworzyć klucza podpisywania."
 webServerPage:
   actionsLabel: "Działania"

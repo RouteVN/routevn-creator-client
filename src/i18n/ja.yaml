@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "App Bundleを保存"
   androidNewKeyNotice: "Creatorが署名鍵を作成し、このプロジェクトに保存します。プロジェクトのバックアップを取り、プロジェクトフォルダーを一般に公開しないでください。"
   androidSigningKeyUnusable: "このプロジェクトの署名鍵はこのデバイスでは使用できません。署名付きビルドを出力する前に、Androidプラットフォーム詳細で鍵を選択してください。"
+  androidNewKeyConfirmTitle: "署名鍵を作成しますか？"
+  androidNewKeyConfirmMessage: "この出力でこのゲームの署名鍵を作成します。すでに別のデバイスからゲームを公開している場合は、キャンセルして、Androidプラットフォーム詳細でその鍵をアップロードしてください。"
+  androidNewKeyConfirmButton: "鍵を作成して出力"
+  androidKeyCopyOfferTitle: "署名鍵のコピーを保存"
+  androidKeyCopyOfferMessage: "鍵はこのプロジェクトにのみ保存されています。安全な場所にコピーを保管してください。鍵がないと、プレイヤーはゲームをアップデートできません。"
+  androidKeyCopyOfferLater: "あとで"
   androidSigningKeyFailed: "署名鍵を作成できませんでした。"
 webServerPage:
   actionsLabel: "操作"

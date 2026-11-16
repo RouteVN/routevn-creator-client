@@ -9,7 +9,7 @@ import {
   getAndroidSigningKeyErrorMessage,
   saveAndroidSigningKeyCopy,
   uploadAndroidSigningKey,
-} from "./support/androidSigningKeys.js";
+} from "../../internal/ui/androidSigningKeys.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 export const handleBeforeMount = (deps) => {

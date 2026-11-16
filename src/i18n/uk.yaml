@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Зберегти App Bundle"
   androidNewKeyNotice: "Creator створить ключ підпису й збереже його в цьому проєкті. Зберігайте резервну копію проєкту й не викладайте його теку у відкритий доступ."
   androidSigningKeyUnusable: "Ключ підпису цього проєкту не можна використати на цьому пристрої. Перед експортом підписаної збірки виберіть ключ у розділі «Параметри для Android»."
+  androidNewKeyConfirmTitle: "Створити ключ підпису?"
+  androidNewKeyConfirmMessage: "Під час цього експорту буде створено ключ підпису гри. Якщо гру вже випущено з іншого пристрою, скасуйте експорт та імпортуйте той ключ у розділі «Параметри для Android»."
+  androidNewKeyConfirmButton: "Створити ключ і експортувати"
+  androidKeyCopyOfferTitle: "Збережіть копію ключа підпису"
+  androidKeyCopyOfferMessage: "Ключ зберігається лише в цьому проєкті. Збережіть копію в надійному місці: без нього гравці не зможуть оновити гру."
+  androidKeyCopyOfferLater: "Пізніше"
   androidSigningKeyFailed: "Не вдалося створити ключ підпису."
 webServerPage:
   actionsLabel: "Дії"

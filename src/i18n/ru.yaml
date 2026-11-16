@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Сохранить App Bundle"
   androidNewKeyNotice: "Creator создаст ключ подписи и сохранит его в этом проекте. Храните резервную копию проекта и не выкладывайте его папку в открытый доступ."
   androidSigningKeyUnusable: "Ключ подписи этого проекта нельзя использовать на этом устройстве. Перед экспортом подписанной сборки выберите ключ в разделе «Настройки для Android»."
+  androidNewKeyConfirmTitle: "Создать ключ подписи?"
+  androidNewKeyConfirmMessage: "При этом экспорте будет создан ключ подписи игры. Если игра уже выпущена с другого устройства, отмените экспорт и импортируйте тот ключ в разделе «Настройки для Android»."
+  androidNewKeyConfirmButton: "Создать ключ и экспортировать"
+  androidKeyCopyOfferTitle: "Сохраните копию ключа подписи"
+  androidKeyCopyOfferMessage: "Ключ хранится только в этом проекте. Сохраните копию в надёжном месте: без него игроки не смогут обновить игру."
+  androidKeyCopyOfferLater: "Позже"
   androidSigningKeyFailed: "Не удалось создать ключ подписи."
 webServerPage:
   actionsLabel: "Действия"

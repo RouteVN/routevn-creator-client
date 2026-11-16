@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Save App Bundle"
   androidNewKeyNotice: "Creator will make a signing key and save it in this project. Keep a backup of the project, and don't share its folder publicly."
   androidSigningKeyUnusable: "This project's signing key can't be used on this device. Choose a key in Android Platform Details before exporting a signed build."
+  androidNewKeyConfirmTitle: "Create a Signing Key?"
+  androidNewKeyConfirmMessage: "This export creates this game's signing key. If the game was already released from another device, cancel and upload that key in Android Platform Details instead."
+  androidNewKeyConfirmButton: "Create Key and Export"
+  androidKeyCopyOfferTitle: "Save a Copy of the Signing Key"
+  androidKeyCopyOfferMessage: "The key is saved only in this project. Keep a copy somewhere safe: without it, players can't update the game."
+  androidKeyCopyOfferLater: "Later"
   androidSigningKeyFailed: "Failed to create the signing key."
 webServerPage:
   actionsLabel: "Actions"

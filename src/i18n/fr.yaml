@@ -804,6 +804,12 @@ versionsPage:
   androidSaveBundleStep: "Enregistrer l’App Bundle"
   androidNewKeyNotice: "Creator va créer une clé de signature et l’enregistrer dans ce projet. Conservez une copie de sauvegarde du projet et ne partagez pas son dossier publiquement."
   androidSigningKeyUnusable: "La clé de signature de ce projet ne peut pas être utilisée sur cet appareil. Choisissez une clé dans Détails pour Android avant d’exporter une version signée."
+  androidNewKeyConfirmTitle: "Créer une clé de signature ?"
+  androidNewKeyConfirmMessage: "Cette exportation crée la clé de signature de ce jeu. Si le jeu a déjà été publié depuis un autre appareil, annulez et importez plutôt cette clé dans Détails pour Android."
+  androidNewKeyConfirmButton: "Créer la clé et exporter"
+  androidKeyCopyOfferTitle: "Enregistrez une copie de la clé de signature"
+  androidKeyCopyOfferMessage: "La clé est enregistrée uniquement dans ce projet. Conservez-en une copie en lieu sûr : sans elle, les joueurs ne pourront pas mettre le jeu à jour."
+  androidKeyCopyOfferLater: "Plus tard"
   androidSigningKeyFailed: "Impossible de créer la clé de signature."
 webServerPage:
   actionsLabel: "Actions"
