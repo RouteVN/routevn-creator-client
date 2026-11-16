@@ -101,7 +101,9 @@ export const createAppServiceCore = ({
     uiConfig,
   });
 
-  const retainedEditHistoryService = createRetainedEditHistoryService();
+  const retainedEditHistoryService = createRetainedEditHistoryService({
+    getProjectKey: () => `${getCurrentProjectId()}:${getCurrentProjectPath()}`,
+  });
 
   const getTheme = () => {
     return normalizeTheme(userConfigService.getUserConfig("appearance.theme"));

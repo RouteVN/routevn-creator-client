@@ -1491,7 +1491,8 @@ belongs to the last editor and item an edit was recorded in
 (`getEditHistoryOwner`, such as one layout, one scene, or one transform), and
 it is dropped when another editor, or the same editor on another item, is left
 with steps of its own. An editor left without an edit keeps the history that
-was there. The scene editor does the same when it switches scenes without
+was there. The history belongs to one project and is dropped when an editor
+opens in another, since copies of a project share item ids. The scene editor does the same when it switches scenes without
 leaving. Editors whose steps hold the whole item (animation, audio effect,
 transform, particle, text style) also keep the item as they left it, and
 `resumeEditHistory` uses the kept history only while the item still matches,

@@ -98,6 +98,36 @@ describe("retained edit history", () => {
     ).toBe(history);
   });
 
+  it("drops the history when an editor opens in another project", () => {
+    let projectKey = "project-1";
+    const service = createRetainedEditHistoryService({
+      getProjectKey: () => projectKey,
+    });
+    service.retainEditHistory({
+      owner: "scene:one",
+      history: createHistoryWithStep(),
+    });
+    // Leaving the project for the project list changes nothing yet.
+    projectKey = "";
+    projectKey = "project-1";
+    expect(
+      service.getRetainedEditHistory({ owner: "layout:layouts:two" }),
+    ).toBeUndefined();
+    expect(
+      service.getRetainedEditHistory({ owner: "scene:one" }),
+    ).toBeDefined();
+
+    // A copy of the project has a scene with the same id.
+    projectKey = "project-2";
+    expect(
+      service.getRetainedEditHistory({ owner: "scene:one" }),
+    ).toBeUndefined();
+    projectKey = "project-1";
+    expect(
+      service.getRetainedEditHistory({ owner: "scene:one" }),
+    ).toBeUndefined();
+  });
+
   it("clears one owner's history, or any", () => {
     const service = createRetainedEditHistoryService();
     service.retainEditHistory({

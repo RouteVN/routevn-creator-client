@@ -8,11 +8,24 @@ import { isEditHistoryEmpty } from "../../../internal/editHistory.js";
 // `owner` names the editor and the item it edits (`getEditHistoryOwner`).
 // `content` is the item as the page left it, for pages whose steps hold the
 // whole item (`resumeEditHistory` in src/internal/editHistory.js).
-export const createRetainedEditHistoryService = () => {
+//
+// The history belongs to one project. Copies of a project share item ids, so
+// an editor opening in another project (`getProjectKey`) drops it.
+export const createRetainedEditHistoryService = ({
+  getProjectKey = () => "",
+} = {}) => {
   let retained;
+  // The project of the editor opened last.
+  let projectKey;
 
   return {
+    // Called by an editor as it opens its item.
     getRetainedEditHistory({ owner } = {}) {
+      const openProjectKey = getProjectKey();
+      if (projectKey !== undefined && openProjectKey !== projectKey) {
+        retained = undefined;
+      }
+      projectKey = openProjectKey;
       return retained?.owner === owner ? retained : undefined;
     },
 
