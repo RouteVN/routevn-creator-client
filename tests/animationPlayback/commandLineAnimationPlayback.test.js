@@ -12,7 +12,6 @@ import {
   updateVisualAnimationPlaybackContinuity,
   updateVisualAnimationPlaybackLoop,
   updateVisualAnimationPlaybackSpeed,
-  selectLayoutVisualItem,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 import { handleSubmitClick as handleVisualSubmit } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
 import {
@@ -200,8 +199,6 @@ describe("command line animation playback", () => {
       dispatchEvent,
       store: {
         selectSelectedVisuals: () => state.selectedVisuals,
-        selectLayoutVisualItem: (payload) =>
-          selectLayoutVisualItem({ state }, payload),
       },
     });
     expect(

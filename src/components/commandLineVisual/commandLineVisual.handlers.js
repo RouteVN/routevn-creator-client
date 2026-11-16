@@ -12,10 +12,27 @@ import {
   COMMAND_LINE_SHADER_ADJUSTMENTS,
   getCommandLineShaderAdjustment,
 } from "../../internal/commandLineShaderAdjustments.js";
-import { generatePrefixedId } from "../../internal/id.js";
 
+const TEMPORARY_VISUAL_PREVIEW_ID = "temporary-visual-preview";
 const DEFAULT_VISUAL_LAYER = 50;
 const VALID_VISUAL_LAYERS = [10, 30, 50, 70, 90];
+
+const getTemporaryVisualPreviewId = ({ visualId, resourceType } = {}) => {
+  if (visualId) {
+    return `${visualId}-${resourceType}-preview`;
+  }
+
+  return `${TEMPORARY_VISUAL_PREVIEW_ID}-${resourceType}`;
+};
+
+const getDropdownPositionFromEvent = (event) => {
+  const rect = event?.currentTarget?.getBoundingClientRect?.();
+  if (rect) {
+    return { x: rect.left, y: rect.bottom };
+  }
+
+  return { x: event?.clientX ?? 0, y: event?.clientY ?? 0 };
+};
 
 const getIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index ?? "", 10);
@@ -77,26 +94,20 @@ const TRANSFORM_FIELDS = [
   "originY",
 ];
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 const hasInlineTransform = (item = {}) =>
   TRANSFORM_FIELDS.some((field) => item?.[field] !== undefined);
 
-// A visual shows a layout. One picked from a single resource, and not yet
-// saved as a layout, keeps the resource until the store turns it into one.
 const buildVisualItem = (visual = {}) => {
   const item = {
     id: visual.id,
+    resourceId: visual.resourceId,
     layer: normalizeVisualLayer(visual.layer),
   };
-
-  if (visual.layout) {
-    item.layout = structuredClone(visual.layout);
-  } else {
-    item.resourceId = visual.resourceId;
-    item.resourceType = visual.resourceType;
-    if (visual.resourceType === "spritesheet" && visual.animationName) {
-      item.animationName = visual.animationName;
-    }
-  }
 
   if (visual.transformId) {
     item.transformId = visual.transformId;
@@ -108,6 +119,14 @@ const buildVisualItem = (visual = {}) => {
         item[field] = visual[field];
       }
     }
+  }
+
+  if (visual.resourceType) {
+    item.resourceType = visual.resourceType;
+  }
+
+  if (visual.resourceType === "spritesheet" && visual.animationName) {
+    item.animationName = visual.animationName;
   }
 
   if (visual.opacity !== undefined) {
@@ -146,18 +165,87 @@ const buildVisualItem = (visual = {}) => {
   return item;
 };
 
-// Every visual is saved, and previewed, as a layout.
-const toLayoutVisualItems = (store, visualItems) =>
-  orderVisualItemsForSave(
-    visualItems.map((item) => store.selectLayoutVisualItem({ item })),
-  );
+const buildVisualItemsFromState = (
+  store,
+  { includeTemporaryResource = false } = {},
+) => {
+  const visualItems = store.selectSelectedVisuals().map(buildVisualItem);
 
-const buildVisualDataFromState = (store) => ({
+  if (!includeTemporaryResource || store.selectMode?.() !== "resource-select") {
+    return orderVisualItemsForSave(visualItems);
+  }
+
+  const tempSelectedResourceId = store.selectTempSelectedResourceId?.();
+  const tempSelectedResourceType = store.selectTempSelectedResourceType?.();
+  const tempSelectedAnimationName = store.selectTempSelectedAnimationName();
+  if (!tempSelectedResourceId || !tempSelectedResourceType) {
+    return orderVisualItemsForSave(visualItems);
+  }
+
+  const selectedVisualIndex = store.selectSelectedVisualIndex?.();
+  if (selectedVisualIndex === -1) {
+    const temporaryVisual = {
+      id: getTemporaryVisualPreviewId({
+        resourceType: tempSelectedResourceType,
+      }),
+      resourceId: tempSelectedResourceId,
+      resourceType: tempSelectedResourceType,
+      transformId:
+        store.selectPendingVisualTransformId?.() ??
+        store.selectDefaultTransformId?.(),
+      layer: store.selectPendingVisualLayer?.(),
+    };
+    if (
+      tempSelectedResourceType === "spritesheet" &&
+      tempSelectedAnimationName
+    ) {
+      temporaryVisual.animationName = tempSelectedAnimationName;
+    }
+    visualItems.push(temporaryVisual);
+    return orderVisualItemsForSave(visualItems);
+  }
+
+  if (
+    Number.isInteger(selectedVisualIndex) &&
+    visualItems[selectedVisualIndex]
+  ) {
+    const currentVisualItem = visualItems[selectedVisualIndex];
+    const nextVisualItem = {
+      ...currentVisualItem,
+      resourceId: tempSelectedResourceId,
+      resourceType: tempSelectedResourceType,
+    };
+    if (currentVisualItem.resourceType !== tempSelectedResourceType) {
+      nextVisualItem.id = getTemporaryVisualPreviewId({
+        visualId: currentVisualItem.id,
+        resourceType: tempSelectedResourceType,
+      });
+    }
+    if (
+      tempSelectedResourceType === "spritesheet" &&
+      tempSelectedAnimationName
+    ) {
+      nextVisualItem.animationName = tempSelectedAnimationName;
+    } else {
+      delete nextVisualItem.animationName;
+    }
+
+    visualItems[selectedVisualIndex] = {
+      ...nextVisualItem,
+    };
+  }
+
+  return orderVisualItemsForSave(visualItems);
+};
+
+const buildVisualDataFromState = (
+  store,
+  { includeTemporaryResource = false } = {},
+) => ({
   visual: {
-    items: toLayoutVisualItems(
-      store,
-      store.selectSelectedVisuals().map(buildVisualItem),
-    ),
+    items: buildVisualItemsFromState(store, {
+      includeTemporaryResource,
+    }),
   },
 });
 
@@ -171,22 +259,26 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
   dispatchEvent(
     new CustomEvent("temporary-presentation-state-change", {
       detail: {
-        presentationState: buildVisualDataFromState(store),
+        presentationState: buildVisualDataFromState(store, {
+          includeTemporaryResource: true,
+        }),
       },
     }),
   );
 };
 
-// The panel opens on a page that has the project loaded. It takes what it
-// shows before its first render, so it opens with its visuals, and in the
-// view it is asked for.
-export const handleBeforeMount = (deps) => {
-  const { projectService, store, props } = deps;
-  const { animations, images, spritesheets, videos, particles, transforms } =
-    projectService.getState();
-  // Layouts as they are saved, with their elements as items and a tree, for
-  // a custom layout to be copied from one.
-  const { layouts, project } = projectService.getRepositoryState();
+export const handleAfterMount = async (deps) => {
+  const { projectService, store, props, render } = deps;
+  await projectService.ensureRepository();
+  const {
+    animations,
+    images,
+    spritesheets,
+    videos,
+    layouts,
+    particles,
+    transforms,
+  } = projectService.getState();
 
   store.setImages({
     images: images ?? { tree: [], items: {} },
@@ -209,7 +301,6 @@ export const handleBeforeMount = (deps) => {
   store.setAnimations({
     animations: animations ?? { tree: [], items: {} },
   });
-  store.setResolution({ resolution: project?.resolution });
 
   // Use presentationState if available, otherwise fall back to visual prop
   let visualItems = null;
@@ -220,105 +311,31 @@ export const handleBeforeMount = (deps) => {
     visualItems = props.visual.items;
   }
 
-  // A visual saved before visuals were layouts, with one image, spritesheet,
-  // video or particle, opens as the layout it is saved as, when it looks the
-  // same as one, so the panel shows what Submit saves.
   if (visualItems) {
-    const visuals = visualItems.map((item) =>
-      store.selectLayoutVisualItem({ item }),
-    );
-    store.setExistingVisuals({ visuals });
-    store.setHasConvertedVisuals({
-      converted: visuals.some((visual, index) => visual !== visualItems[index]),
+    store.setExistingVisuals({
+      visuals: visualItems,
     });
   }
 
-  // Coming back from a visual's layout opens the view it was edited from.
-  if (props.editVisualId) {
-    store.startVisualEdit({
-      index: store.selectVisualIndexById({ visualId: props.editVisualId }),
-    });
-  }
-};
-
-// The canvas draws a converted visual as it is saved until the line is saved
-// again, so it is shown converted, as it looks the same, for its picture and
-// its transform to be taken from the layout.
-export const handleAfterMount = (deps) => {
-  const { store } = deps;
-  if (store.selectHasConvertedVisuals()) {
-    dispatchTemporaryPresentationStateChange(deps);
-  }
-};
-
-export const handleVisualListItemClick = (deps, payload) => {
-  const { store, render } = deps;
-  const index = getIndexFromEvent(payload._event);
-  if (index === undefined) {
-    return;
-  }
-
-  store.startVisualEdit({ index });
   render();
 };
 
-export const handleCancelEditClick = (deps) => {
+export const handleVisualClick = (deps, payload) => {
   const { store, render } = deps;
-  store.cancelVisualEdit();
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
+  const index = parseInt(payload._event.currentTarget.dataset.index);
+  const visual = store.selectSelectedVisuals()?.[index];
 
-export const handleSaveVisualClick = (deps) => {
-  const { store, render } = deps;
-  store.saveVisualEdit();
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-// Asks the scene editor to save the visuals to the line and open the visual's
-// layout. When the layout editor closes, this panel opens again, in the edit
-// view of the visual when `returnToEditView` is set and in the list otherwise.
-const dispatchVisualLayoutEdit = (deps, { visualId, returnToEditView }) => {
-  const { dispatchEvent, store } = deps;
-  dispatchEvent(
-    new CustomEvent("visual-layout-edit", {
-      detail: {
-        actions: buildVisualDataFromState(store),
-        visualId,
-        returnToEditView,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-};
-
-// Edit Layout keeps the visual's changes and opens its layout, which a
-// visual still saved with one resource gets now.
-export const handleEditLayoutClick = (deps, payload) => {
-  const { store } = deps;
-  const { visualId } = payload._event.currentTarget.dataset;
-
-  store.saveVisualEdit();
-  store.makeVisualLayoutCustom({ visualId });
-  dispatchVisualLayoutEdit(deps, { visualId, returnToEditView: true });
-};
-
-// The visual's Layout: a project layout, or its custom layout.
-export const handleLayoutChange = (deps, payload) => {
-  const { store, render } = deps;
-  const index = getIndexFromEvent(payload._event);
-  if (index === undefined) {
-    return;
+  store.clearPendingVisualConfig?.();
+  store.hideAddVisualPopover?.();
+  store.setSelectedVisualIndex({ index });
+  if (visual?.resourceType) {
+    store.setTab({ tab: visual.resourceType });
   }
-
-  store.updateVisualLayout({
-    index,
-    layoutId: getEventValue(payload._event),
+  store.setMode({
+    mode: "resource-select",
   });
+
   render();
-  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleVisualContextMenu = (deps, payload) => {
@@ -374,7 +391,7 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
     return;
   }
 
-  const item = store.selectLayoutVisualItem({ item: buildVisualItem(visual) });
+  const item = buildVisualItem(visual);
   dispatchEvent(
     new CustomEvent("action-transform-customize", {
       detail: {
@@ -383,7 +400,9 @@ export const handleCustomTransformButtonClick = (deps, payload) => {
         itemIndex: index,
         item,
         targetName: payload._event.currentTarget?.dataset?.targetName,
-        action: buildVisualDataFromState(store).visual,
+        action: buildVisualDataFromState(store, {
+          includeTemporaryResource: true,
+        }).visual,
       },
       bubbles: true,
       composed: true,
@@ -640,6 +659,122 @@ export const handleFormSectionAction = async (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
+export const handleFileExplorerItemClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  const { itemId, isFolder } = payload._event.detail;
+  const { resourceId, resourceType } = store.selectResourceExplorerTarget({
+    itemId,
+  });
+
+  if (resourceType === "spritesheet") {
+    refs.spritesheetSelector?.transformedHandlers?.handleScrollToItem?.({
+      itemId: resourceId,
+    });
+    return;
+  }
+
+  if (isFolder) {
+    const groupElement = refs.galleryScroll?.querySelector(
+      `[data-group-id="${itemId}"]`,
+    );
+    groupElement?.scrollIntoView?.({ block: "start" });
+    return;
+  }
+
+  store.setTempSelectedResourceId({ resourceId, resourceType });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
+  render();
+};
+
+export const handleSearchButtonClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  const { searchButton } = refs;
+  payload._event.stopPropagation();
+  const rect = searchButton.getBoundingClientRect();
+  store.openSearchPopover({
+    position: { x: Math.round(rect.right), y: Math.round(rect.bottom) },
+  });
+  render();
+};
+
+export const handleSearchPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSearchPopover();
+  render();
+};
+
+export const handleTabClick = (deps, payload) => {
+  const { store, render } = deps;
+  store.setTab({
+    tab: payload._event.detail.id,
+  });
+  store.setTempSelectedResourceId({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleResourceItemClick = (deps, payload) => {
+  const { store, render } = deps;
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const resourceType = payload._event.currentTarget.dataset.resourceType;
+
+  store.setTempSelectedResourceId({ resourceId, resourceType });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleResourceItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const resourceType = payload._event.currentTarget.dataset.resourceType;
+  const item = store.selectResourceItemById({ resourceId, resourceType });
+
+  if (!item?.previewFileId) {
+    return;
+  }
+
+  store.setTempSelectedResourceId({ resourceId, resourceType });
+  store.showFullImagePreview({ fileId: item.previewFileId });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSpritesheetSelected = (deps, payload) => {
+  const { store, render } = deps;
+  const { resourceId, animationName } = payload._event.detail;
+
+  store.setTempSelectedResourceId({
+    resourceId,
+    resourceType: "spritesheet",
+    animationName,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleSpritesheetDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { resourceId, animationName } = payload._event.detail;
+
+  store.setTempSelectedResourceId({
+    resourceId,
+    resourceType: "spritesheet",
+    animationName,
+  });
+  store.showFullSpritesheetPreview({ resourceId, animationName });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const visualData = buildVisualDataFromState(store);
@@ -653,30 +788,66 @@ export const handleSubmitClick = (deps) => {
   );
 };
 
-// A new visual is an empty layout, opened at once in the layout editor for
-// its elements to be added.
-export const handleAddVisualClick = (deps) => {
-  const { store } = deps;
-  const visualId = generatePrefixedId("visual-");
+export const handleAddVisualClick = (deps, payload = {}) => {
+  const { store, render } = deps;
 
-  store.hideDropdownMenu();
-  store.addVisual({ id: visualId });
-  dispatchVisualLayoutEdit(deps, { visualId, returnToEditView: false });
+  store.clearPendingVisualConfig?.();
+  store.hideDropdownMenu?.();
+  store.openAddVisualPopover({
+    position: getDropdownPositionFromEvent(payload._event),
+  });
+
+  render();
+};
+
+export const handleAddVisualPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.hideAddVisualPopover();
+  store.clearPendingVisualConfig?.();
+  render();
+};
+
+export const handleAddVisualFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail;
+  if (detail.actionId !== "submit") {
+    return;
+  }
+
+  const values = detail.values ?? {};
+  store.setPendingVisualTransformId({
+    transformId: values.transformId,
+  });
+  store.setPendingVisualLayer({
+    layer: values.layer,
+  });
+  store.hideAddVisualPopover();
+  store.setSelectedVisualIndex({ index: -1 });
+  store.setTempSelectedResourceId({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  store.setMode({ mode: "resource-select" });
+  render();
 };
 
 export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
   if (payload._event.detail.id === "actions") {
+    store.hideAddVisualPopover?.();
+    store.clearPendingVisualConfig?.();
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
   } else if (payload._event.detail.id === "current") {
-    // Leaving the edit view through the breadcrumb discards its edits, as
-    // Cancel does.
-    store.cancelVisualEdit();
+    store.setMode({
+      mode: "current",
+    });
+    store.hideAddVisualPopover?.();
+    store.clearPendingVisualConfig?.();
     render();
     dispatchTemporaryPresentationStateChange(deps);
   }
@@ -689,6 +860,59 @@ export const handleRemoveVisualClick = (deps, payload) => {
   );
 
   store.removeVisual({ index: index });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleButtonSelectClick = (deps) => {
+  const { store, render, appService, i18n } = deps;
+  const copy = selectCommandLineCopy(i18n);
+  const mode = store.selectMode();
+  const selectedVisualIndex = store.selectSelectedVisualIndex();
+  const tempSelectedResourceId = store.selectTempSelectedResourceId();
+  const tempSelectedResourceType = store.selectTempSelectedResourceType();
+  const tempSelectedAnimationName = store.selectTempSelectedAnimationName();
+
+  if (mode === "resource-select") {
+    if (!tempSelectedResourceId || !tempSelectedResourceType) {
+      appService.showAlert({
+        message: localizeCommandLineText("A resource is required.", copy),
+        title: localizeCommandLineText("Warning", copy),
+      });
+      return;
+    }
+
+    if (selectedVisualIndex === -1) {
+      // Adding new visual
+      store.addVisual({
+        resourceId: tempSelectedResourceId,
+        resourceType: tempSelectedResourceType,
+        animationName: tempSelectedAnimationName,
+        transformId:
+          store.selectPendingVisualTransformId?.() ??
+          store.selectDefaultTransformId?.(),
+        layer: store.selectPendingVisualLayer?.(),
+      });
+      store.clearPendingVisualConfig?.();
+    } else {
+      // Updating existing visual
+      store.updateVisualResource({
+        index: selectedVisualIndex,
+        resourceId: tempSelectedResourceId,
+        resourceType: tempSelectedResourceType,
+        animationName: tempSelectedAnimationName,
+      });
+    }
+
+    store.setTempSelectedResourceId({
+      resourceId: undefined,
+      resourceType: undefined,
+    });
+    store.setMode({
+      mode: "current",
+    });
+  }
+
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

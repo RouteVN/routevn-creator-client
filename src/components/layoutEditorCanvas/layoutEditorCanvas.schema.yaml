@@ -15,9 +15,6 @@ propsSchema:
       type: string
     previewData:
       type: object
-    sceneBackdrop:
-      type: array
-      description: The rendered elements of the scene the layout is edited in, with a slot for the layout. Shown only.
     disableMoveDrag:
       type: boolean
     disableInteraction:

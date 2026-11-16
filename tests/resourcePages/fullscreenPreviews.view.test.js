@@ -13,6 +13,7 @@ const previewOwners = [
   "pages/transformEditor",
   "pages/animationEditor",
   "components/commandLineBackground",
+  "components/commandLineVisual",
   "components/commandLineCharacters",
   "components/commandLineDialogueBox",
   "components/layoutEditPanel",
@@ -73,7 +74,7 @@ describe.each(previewOwners)("%s fullscreen preview", (owner) => {
   });
 });
 
-it.each(["commandLineBackground"])(
+it.each(["commandLineBackground", "commandLineVisual"])(
   "%s also elevates spritesheet previews without an image preview",
   (owner) => {
     const document = renderPreview(readView(`components/${owner}`), {

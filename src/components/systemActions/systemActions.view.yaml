@@ -13,8 +13,6 @@ refs:
         handler: handleActionTransformCustomize
       submit:
         handler: handleCommandLineSubmit
-      visual-layout-edit:
-        handler: handleVisualLayoutEdit
       action-delete:
         handler: handleCommandLineActionDelete
   actionTransformEditor:
@@ -323,7 +321,7 @@ template:
                     $elif mode == "loadSlot":
                       - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot} :allowAutoSlot=${allowAutoSlot}: null
                     $elif mode == "visual":
-                      - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState} :editVisualId=${editVisualId} :visualSnapshots=${visualSnapshots}: null
+                      - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
                     $elif mode == "setNextLineConfig":
                       - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=${actions.setNextLineConfig}: null
                     $elif mode == "updateVariable":

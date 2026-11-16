@@ -255,7 +255,7 @@ describe("renderSceneEditorState", () => {
           selectSelectedSectionId: () => "section-1",
           selectSelectedLineId: () => "line-1",
           selectProjectData: () => projectData,
-          selectTemporaryPresentationStateForEngine: () => ({}),
+          selectTemporaryPresentationState: () => ({}),
           selectIsMuted: () => false,
           setPresentationState: vi.fn(),
         },
@@ -331,7 +331,7 @@ describe("renderSceneEditorState", () => {
         selectSelectedSectionId: () => "section-1",
         selectSelectedLineId: () => "line-2",
         selectProjectData: () => projectData,
-        selectTemporaryPresentationStateForEngine: () => ({}),
+        selectTemporaryPresentationState: () => ({}),
         selectIsBackgroundTransformEditorOpen: () => false,
         selectScene: () => ({ sections: [{ id: "section-1" }] }),
         selectIsMuted: () => true,
@@ -757,7 +757,7 @@ describe("renderSceneEditorState", () => {
         selectSelectedSectionId: () => "section-1",
         selectSelectedLineId: () => "line-2",
         selectProjectData: () => projectData,
-        selectTemporaryPresentationStateForEngine: () => ({}),
+        selectTemporaryPresentationState: () => ({}),
         selectIsBackgroundTransformEditorOpen: () => false,
         selectScene: () => ({ sections: [{ id: "section-1" }] }),
         selectIsMuted: () => false,
@@ -1444,9 +1444,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({
-        presentationState: temporaryPresentationState,
-      }),
+      selectTemporaryPresentationState: () => temporaryPresentationState,
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
         store.presentationState = presentationState;
@@ -1484,9 +1482,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({
-        presentationState: temporaryPresentationState,
-      }),
+      selectTemporaryPresentationState: () => temporaryPresentationState,
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
         store.presentationState = presentationState;
@@ -1541,9 +1537,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({
-        presentationState: temporaryPresentationState,
-      }),
+      selectTemporaryPresentationState: () => temporaryPresentationState,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
       }),
@@ -1643,73 +1637,6 @@ describe("renderSceneEditorState", () => {
     });
 
     expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
-  });
-
-  it("takes the visuals' pictures after it sets up the line", async () => {
-    vi.stubGlobal("document", {
-      createElement: () => ({
-        getContext: () => ({ clearRect: vi.fn(), drawImage: vi.fn() }),
-        toDataURL: () => "data:image/png;base64,one",
-      }),
-    });
-    const projectData = createProjectData();
-    const graphicsService = createGraphicsService();
-    const calls = [];
-    const selectRenderState = graphicsService.engineSelectRenderState;
-    graphicsService.engineSelectRenderState = () => {
-      const renderState = selectRenderState();
-      return {
-        ...renderState,
-        elements: [
-          ...renderState.elements,
-          { id: "visual-one", type: "container", children: [] },
-        ],
-      };
-    };
-    const handleActions = graphicsService.engineHandleActions;
-    graphicsService.engineHandleActions = (actions, ...rest) => {
-      if (actions.setNextLineConfig) {
-        calls.push("setNextLineConfig");
-      }
-      handleActions(actions, ...rest);
-    };
-    graphicsService.extractCanvas = vi.fn(async (label) => {
-      calls.push(`picture ${label}`);
-      return { width: 1920, height: 1080 };
-    });
-    const setVisualSnapshots = vi.fn();
-    const store = {
-      selectSceneId: () => "scene-1",
-      selectSelectedSectionId: () => "section-1",
-      selectSelectedLineId: () => "line-2",
-      selectProjectData: () => projectData,
-      selectIsMuted: () => false,
-      setPresentationState: () => {},
-      selectShouldCaptureVisualSnapshots: () => true,
-      selectEffectivePresentationState: () => ({
-        visual: { items: [{ id: "one" }] },
-      }),
-      selectVisualSnapshots: () => ({}),
-      setVisualSnapshots,
-    };
-
-    try {
-      await renderSceneEditorState({
-        projectService: { getEnsuredProjectId: () => "project-one" },
-        store,
-        graphicsService,
-        render: vi.fn(),
-      });
-    } finally {
-      vi.unstubAllGlobals();
-    }
-
-    expect(calls).toEqual(["setNextLineConfig", "picture visual-one"]);
-    expect(setVisualSnapshots).toHaveBeenCalledWith({
-      snapshots: {
-        one: { key: expect.any(String), url: "data:image/png;base64,one" },
-      },
-    });
   });
 
   it("warms render-state videos before painting the canvas", async () => {
@@ -1866,7 +1793,7 @@ describe("renderSceneEditorState", () => {
       selectPreviewRuntimeGlobal: () => ({
         dialogueTextSpeed: 100,
       }),
-      selectTemporaryPresentationStateForEngine: () => ({}),
+      selectTemporaryPresentationState: () => ({}),
       selectEffectivePresentationState: () => store.presentationState ?? {},
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
@@ -1954,7 +1881,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({}),
+      selectTemporaryPresentationState: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2070,7 +1997,7 @@ describe("renderSceneEditorState", () => {
         selectSelectedSectionId: () => "section-1",
         selectSelectedLineId: () => "line-2",
         selectProjectData: () => projectData,
-        selectTemporaryPresentationStateForEngine: () => ({}),
+        selectTemporaryPresentationState: () => ({}),
         selectIsBackgroundTransformEditorOpen: () =>
           selectIsBackgroundTransformEditorOpen({ state }),
         selectBackgroundTransformEditor: () =>
@@ -2282,7 +2209,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({}),
+      selectTemporaryPresentationState: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2382,7 +2309,7 @@ describe("renderSceneEditorState", () => {
         selectSelectedSectionId: () => "section-1",
         selectSelectedLineId: () => "line-2",
         selectProjectData: () => projectData,
-        selectTemporaryPresentationStateForEngine: () => ({}),
+        selectTemporaryPresentationState: () => ({}),
         selectIsBackgroundTransformEditorOpen: () => false,
         selectScene: () => ({
           sections: [{ id: "section-1" }],
@@ -2479,7 +2406,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({}),
+      selectTemporaryPresentationState: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2583,7 +2510,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({}),
+      selectTemporaryPresentationState: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2672,7 +2599,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationStateForEngine: () => ({}),
+      selectTemporaryPresentationState: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -3285,78 +3212,6 @@ describe("scene editor canvas transition loop", () => {
 });
 
 describe("scene editor return from the full-screen preview", () => {
-  it("shows the panels the line's presentation state the canvas comes back with", async () => {
-    // A visual's layout edited over the scene changes the line. Its panels
-    // must show what the restored canvas presents, not what it did before.
-    const calls = [];
-    const presentationState = { visual: { items: [{ id: "card" }] } };
-    const canvasRoot = { isConnected: true };
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    const reportError = vi.fn();
-
-    try {
-      await restoreSceneEditorFromPreview({
-        projectService: { getEnsuredProjectId: () => "project-one" },
-        subject: { dispatch: vi.fn() },
-        graphicsService: {
-          init: vi.fn(async () => {}),
-          initRouteEngine: vi.fn(),
-          engineSelectRenderState: () => ({ elements: [] }),
-          engineRenderCurrentState: vi.fn(),
-          engineSelectPresentationState: () => presentationState,
-          engineSelectSectionLineChanges: () => ({ lines: [] }),
-          engineHandleActions: vi.fn(),
-          render: vi.fn(),
-        },
-        appService: {
-          reportError,
-          showAlertWhenIdle: vi.fn(),
-        },
-        i18n: {
-          resourcePages: { errorTitle: "Error title" },
-          scenesPage: {},
-          sceneEditorPage: {
-            errorDetailsLabel: "Details label:",
-            failedRenderCanvas: "Canvas message",
-          },
-        },
-        refs: { previewCanvasHost: { getCanvasRoot: () => canvasRoot } },
-        render: () => calls.push("render"),
-        store: {
-          hidePreviewScene: vi.fn(),
-          selectSceneId: () => "scene-1",
-          selectSelectedSectionId: () => "section-1",
-          selectSelectedLineId: () => "line-1",
-          selectProjectData: () => createProjectData(),
-          selectIsMuted: () => false,
-          selectIsScenePageLoading: () => false,
-          selectIsSceneAssetLoading: () => false,
-          selectTemporaryPresentationState: () => ({}),
-          setCanvasAudioPreviewKey: vi.fn(),
-          setScenePageLoading: vi.fn(),
-          setSceneAssetLoading: vi.fn(),
-          setSceneLoadingProgress: vi.fn(),
-          setPresentationState: ({ presentationState: next }) =>
-            calls.push(["setPresentationState", next]),
-          setSectionLineChanges: vi.fn(),
-          setSectionLineChangesBySectionId: vi.fn(),
-        },
-      });
-    } finally {
-      consoleError.mockRestore();
-    }
-
-    expect(reportError).not.toHaveBeenCalled();
-    const setIndex = calls.findIndex(
-      (call) => Array.isArray(call) && call[0] === "setPresentationState",
-    );
-    expect(setIndex).toBeGreaterThanOrEqual(0);
-    expect(calls[setIndex][1]).toBe(presentationState);
-    expect(calls.slice(setIndex + 1)).toContain("render");
-  });
-
   it("leaves the engine to the editor's render", async () => {
     // A render queued while the assets load may already have painted the
     // selected line's audio. The first engine after the preview must be the

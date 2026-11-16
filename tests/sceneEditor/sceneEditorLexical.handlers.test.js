@@ -2179,49 +2179,6 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(open).not.toHaveBeenCalled();
   });
 
-  it("starts the transform editor of a visual without a transform at the screen center", () => {
-    const openBackgroundTransformEditor = vi.fn();
-    const item = { id: "visual-1", layer: 50, layout: { elements: {} } };
-    const action = { items: [item] };
-    const store = {
-      openBackgroundTransformEditor,
-      setTemporaryPresentationState: vi.fn(),
-      selectRepositoryState: vi.fn(() => ({
-        project: { resolution: { width: 1280, height: 720 } },
-        transforms: { items: {} },
-      })),
-      selectSelectedLine: vi.fn(() => ({ actions: { visual: action } })),
-    };
-
-    handleActionTransformCustomize(
-      { store, render: vi.fn(), subject: { dispatch: vi.fn() } },
-      {
-        _event: {
-          stopPropagation: vi.fn(),
-          detail: {
-            targetType: "visual",
-            actionKey: "visual",
-            itemIndex: 0,
-            item,
-            action,
-          },
-        },
-      },
-    );
-
-    expect(
-      openBackgroundTransformEditor.mock.calls[0][0].transform,
-    ).toMatchObject({
-      x: 640,
-      y: 360,
-      anchorX: 0.5,
-      anchorY: 0.5,
-      scaleX: 1,
-      scaleY: 1,
-      rotation: 0,
-    });
-  });
-
   it("clears temporary presentation state and refreshes the canvas when the actions dialog closes", () => {
     const store = {
       selectActionTargetLineId: vi.fn(() => "line-2"),
