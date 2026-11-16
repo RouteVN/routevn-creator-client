@@ -175,8 +175,8 @@ describe("projectRepositoryService platform details", () => {
     expect(await service.getCurrentPlatformDetails("web")).toMatchObject({
       loadingBackgroundFileId: "loading-background-1",
       startBackgroundFileId: "start-background-1",
-      loadingFadeDuration: 600,
-      startFadeDuration: 600,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
 
     await service.updateCurrentPlatformDetails("web", {
@@ -185,7 +185,7 @@ describe("projectRepositoryService platform details", () => {
     });
     expect(getPlatformDetails("web")).toMatchObject({
       loadingFadeDuration: 1200,
-      startFadeDuration: 5000,
+      startFadeDuration: 2000,
     });
 
     // A save that does not mention the backgrounds keeps them.
@@ -229,8 +229,8 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Project One",
       applicationIdentifier: "",
-      loadingFadeDuration: 600,
-      startFadeDuration: 600,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
@@ -253,8 +253,8 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Web Release",
       applicationIdentifier: "",
-      loadingFadeDuration: 600,
-      startFadeDuration: 600,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
     await expect(
       harness.service.createCurrentPlatformDetails("windows"),

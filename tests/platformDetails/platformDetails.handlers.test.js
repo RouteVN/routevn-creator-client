@@ -409,8 +409,8 @@ describe("platformDetails handlers", () => {
       deps.projectService.createCurrentPlatformDetails,
     ).toHaveBeenCalledWith("web", {
       ...applicationInfo,
-      loadingFadeDuration: 600,
-      startFadeDuration: 600,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
     expect(
       deps.projectService.updateCurrentPlatformDetails,
@@ -495,8 +495,8 @@ describe("platformDetails handlers", () => {
       deps.projectService.updateCurrentPlatformDetails,
     ).toHaveBeenCalledWith("web", {
       ...applicationInfo,
-      loadingFadeDuration: 600,
-      startFadeDuration: 600,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
     expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
   });
@@ -536,8 +536,8 @@ describe("platformDetails handlers", () => {
       deps.projectService.updateCurrentPlatformDetails,
     ).toHaveBeenCalledWith("web", {
       ...applicationInfo,
-      loadingFadeDuration: 600,
-      startFadeDuration: 600,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
   });
 
@@ -720,7 +720,7 @@ describe("platformDetails handlers", () => {
       loadingBackgroundFileId: "loading-background-1",
       startBackgroundFileId: "start-background-1",
       loadingFadeDuration: 1200,
-      startFadeDuration: 600,
+      startFadeDuration: 0,
     });
   });
 

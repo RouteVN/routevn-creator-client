@@ -74,7 +74,7 @@ describe("platformDetailsCreateDialog handlers", () => {
         loadingBackgroundFileId: "loading-1",
         startBackgroundFileId: undefined,
         loadingFadeDuration: 300,
-        startFadeDuration: 600,
+        startFadeDuration: 0,
       }),
     );
   });
