@@ -617,9 +617,9 @@ describe("versions store export options", () => {
 
     expect(selectViewData({ state, i18n: EN_I18N }).exportOptions).toEqual([
       { id: "web", icon: "website", label: "Web" },
-      { id: "windows", icon: "windows", label: "Windows" },
-      { id: "macos", icon: "apple", label: "macOS" },
-      { id: "android", icon: "android", label: "Android" },
+      { id: "windows", beta: true, icon: "windows", label: "Windows" },
+      { id: "macos", beta: true, icon: "apple", label: "macOS" },
+      { id: "android", beta: true, icon: "android", label: "Android" },
     ]);
   });
 

@@ -758,12 +758,14 @@ export const selectViewData = ({ state, i18n }) => {
     canExportWindowsInstaller;
 
   // The platforms this host can export for, in the order the dialog shows.
+  // Every export except Web is in beta, and its box says so.
   const exportOptions = [
     { id: "web", icon: "website", label: platformDetailsCopy.webTabLabel },
   ];
   if (canExportWindowsExecutable) {
     exportOptions.push({
       id: "windows",
+      beta: true,
       icon: "windows",
       label: platformDetailsCopy.windowsTabLabel,
     });
@@ -771,6 +773,7 @@ export const selectViewData = ({ state, i18n }) => {
   if (canExportMacosApplication) {
     exportOptions.push({
       id: "macos",
+      beta: true,
       icon: "apple",
       label: platformDetailsCopy.macosTabLabel,
     });
@@ -778,6 +781,7 @@ export const selectViewData = ({ state, i18n }) => {
   if (canExportAndroidApk) {
     exportOptions.push({
       id: "android",
+      beta: true,
       icon: "android",
       label: platformDetailsCopy.androidTabLabel,
     });
@@ -785,6 +789,7 @@ export const selectViewData = ({ state, i18n }) => {
   if (canExportIosApplication) {
     exportOptions.push({
       id: "ios",
+      beta: true,
       icon: "apple",
       label: copy.exportIosOptionLabel,
     });
@@ -817,6 +822,7 @@ export const selectViewData = ({ state, i18n }) => {
     exportOptionsVersionId: state.exportOptions.versionId,
     exportOptions,
     exportButton: copy.exportButton,
+    exportOptionBetaLabel: copy.exportOptionBetaLabel,
     exportOptionsTitle: copy.exportOptionsTitle,
     exportConfirmationTitle: getExportConfirmationTitle(
       state.exportConfirmation.exportType,
