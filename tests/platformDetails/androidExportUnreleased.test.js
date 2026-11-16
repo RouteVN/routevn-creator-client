@@ -56,14 +56,16 @@ describe("Android export switched off", () => {
         { availability: { available: true } },
       );
 
+      versionsStore.openExportOptions({ state }, { versionId: "version-1" });
+
       const html = renderViewYaml(
         "src/pages/versions/versions.view.yaml",
         versionsStore.selectViewData({ state, i18n: EN_I18N }),
       );
 
-      expect(html).toContain('id="detailDownloadBtn"');
-      expect(html).not.toContain('id="detailAndroidApkBtn"');
-      expect(html).not.toContain(EN_I18N.versionsPage.exportAndroidButton);
+      expect(html).toContain('id="detailExportBtn"');
+      expect(html).toContain('data-export-option="web"');
+      expect(html).not.toContain('data-export-option="android"');
     },
   );
 

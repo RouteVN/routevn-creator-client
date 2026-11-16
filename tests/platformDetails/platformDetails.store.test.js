@@ -197,15 +197,17 @@ describe("platformDetails.store", () => {
       expect.objectContaining({
         name: "applicationIdentifier",
         required: true,
-        description:
-          EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
+        tooltip: {
+          content:
+            EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
+        },
       }),
     );
     expect(
       viewData.platformEditForm.fields
         .map((field) => field.name)
         .filter(Boolean),
-    ).toEqual(["applicationName", "applicationIdentifier"]);
+    ).toEqual(["applicationName", "icon", "applicationIdentifier"]);
     for (const field of ["publisher", "description", "copyright"]) {
       expect(viewData.platformEditDefaultValues).not.toHaveProperty(field);
     }
@@ -292,7 +294,7 @@ describe("platformDetails.store", () => {
       editViewData.platformEditForm.fields
         .map((field) => field.name)
         .filter(Boolean),
-    ).toEqual(["applicationName", "applicationIdentifier"]);
+    ).toEqual(["applicationName", "icon", "applicationIdentifier"]);
   });
 
   it("prefills platform edit state independently", () => {
@@ -328,8 +330,10 @@ describe("platformDetails.store", () => {
       expect.objectContaining({
         name: "applicationIdentifier",
         required: true,
-        description:
-          EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
+        tooltip: {
+          content:
+            EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
+        },
       }),
     );
     expect(viewData.platformDetailFields).toEqual([

@@ -11,30 +11,18 @@ refs:
         handler: handleVersionItemDoubleClick
       contextmenu:
         handler: handleVersionContextMenu
-  detailDownloadBtn:
+  detailExportBtn:
     eventListeners:
       click:
-        handler: handleDownloadZipClick
-  detailWindowsExeBtn:
+        handler: handleExportClick
+  exportOptionsDialog:
+    eventListeners:
+      close:
+        handler: handleExportOptionsClose
+  exportOptionRef*:
     eventListeners:
       click:
-        handler: handleDownloadWindowsExecutableClick
-  detailWindowsInstallerBtn:
-    eventListeners:
-      click:
-        handler: handleDownloadWindowsInstallerClick
-  detailAndroidApkBtn:
-    eventListeners:
-      click:
-        handler: handleDownloadAndroidApkClick
-  detailMacosApplicationBtn:
-    eventListeners:
-      click:
-        handler: handleDownloadMacosApplicationClick
-  detailIosApplicationBtn:
-    eventListeners:
-      click:
-        handler: handleDownloadIosApplicationClick
+        handler: handleExportOptionClick
   detailHeader:
     eventListeners:
       click:
@@ -67,10 +55,16 @@ refs:
     eventListeners:
       click:
         handler: handleExportConfirmationConfirm
+  exportConfirmationInstallerButton:
+    eventListeners:
+      click:
+        handler: handleExportConfirmationInstallerClick
   androidExportForm:
     eventListeners:
       form-action:
         handler: handleAndroidExportFormAction
+      form-change:
+        handler: handleAndroidExportFormChange
   macosExportForm:
     eventListeners:
       form-action:
@@ -128,17 +122,7 @@ template:
                                   - rtgl-svg svg=edit wh=16: null
                               - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                                   - rtgl-view slot=actions d=v g=sm w=f:
-                                      - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
-                                      - $if canExportWindowsExecutable:
-                                          - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
-                                      - $if canExportWindowsInstaller:
-                                          - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
-                                      - $if canExportAndroidApk:
-                                          - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidButton}
-                                      - $if canExportMacosApplication:
-                                          - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
-                                      - $if canExportIosApplication:
-                                          - rtgl-button#detailIosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportIosApplicationButton}
+                                      - rtgl-button#detailExportBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportButton}
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -151,17 +135,7 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-view slot=actions d=v g=sm w=f:
-                          - rtgl-button#detailDownloadBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWebButton}
-                          - $if canExportWindowsExecutable:
-                              - rtgl-button#detailWindowsExeBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsExecutableButton}
-                          - $if canExportWindowsInstaller:
-                              - rtgl-button#detailWindowsInstallerBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportWindowsInstallerButton}
-                          - $if canExportAndroidApk:
-                              - rtgl-button#detailAndroidApkBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportAndroidButton}
-                          - $if canExportMacosApplication:
-                              - rtgl-button#detailMacosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportMacosApplicationButton}
-                          - $if canExportIosApplication:
-                              - rtgl-button#detailIosApplicationBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportIosApplicationButton}
+                          - rtgl-button#detailExportBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportButton}
   - $if isVersionDialogOpen:
       - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
@@ -170,6 +144,16 @@ template:
       - rtgl-dialog#platformDetailsDialog ?open=${isPlatformDetailsDialogOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
               - rvn-platform-details-create-dialog#platformDetailsCreateDialog :platform=${platformDetailsDialogPlatform} :applicationInfo=${platformDetailsDialogApplicationInfo} w=f h=f: null
+  - $if isExportOptionsOpen:
+      - rtgl-dialog#exportOptionsDialog ?open=${isExportOptionsOpen} s=md:
+          - rtgl-view slot=content w=f p=lg g=lg:
+              - rtgl-text s=lg: ${exportOptionsTitle}
+              - 'rtgl-grid w=f g=md cols=3 sm-cols=2 style="min-width: 0;"':
+                  - $for option, i in exportOptions:
+                      - rtgl-view#exportOptionRef${i} data-export-option="${option.id}" data-version-id="${exportOptionsVersionId}" w=f h=148 pos=rel bw=xs bc=bo h-bc=ac br=md av=c ah=c cur=pointer:
+                          - rtgl-svg svg=${option.icon} wh=56 c=fg: null
+                          - 'rtgl-view pos=abs ah=c ph=sm style="left: 0; right: 0; bottom: 12px;"':
+                              - rtgl-text s=sm c=mu-fg ta=c: ${option.label}
   - $if isExportConfirmationOpen:
       - rtgl-dialog#exportConfirmationDialog ?open=${isExportConfirmationOpen} s=md:
           - rtgl-view slot=content w=f p=lg g=lg:
@@ -177,7 +161,7 @@ template:
                   - rtgl-text s=lg: ${exportConfirmationTitle}
                   - rtgl-text c=mu-fg: ${exportConfirmationMessage}
               - 'rtgl-view w=f sv sbv=touch style="max-height: 50vh;"':
-                  - rvn-detail-view#exportConfirmationDetail key=${exportConfirmationKey} w=f :fields=${exportConfirmationFields} :fillHeight=${false}:
+                  - rvn-detail-view#exportConfirmationDetail key=${exportConfirmationKey} w=f :fields=${exportConfirmationFields} :fillHeight=${false} padding=none:
                       - $if exportConfirmationIconFileId:
                           - rvn-file-image slot=export-confirmation-icon fileId=${exportConfirmationIconFileId} w=96 h=96 bw=xs bc=bo br=md: null
                         $else:
@@ -191,6 +175,8 @@ template:
                 $elif showIosExportForm:
                   - rtgl-form#iosExportForm :form=${iosExportForm} w=f: null
                 $else:
-                  - rtgl-view w=f d=h ah=e av=c g=sm:
+                  - rtgl-view w=f d=h ah=e av=c g=sm wrap:
+                      - $if showWindowsInstallerButton:
+                          - rtgl-button#exportConfirmationInstallerButton v=se pre=download: ${exportWindowsInstallerButton}
                       - rtgl-button#exportConfirmationConfirmButton v=pr pre=download: ${exportConfirmationConfirmLabel}
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null
