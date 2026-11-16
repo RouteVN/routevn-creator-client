@@ -803,6 +803,10 @@ export const handleBeforeMount = (deps) => {
   store.setSelectedElementMetrics?.({
     metrics: props.selectedElementMetrics,
   });
+  // Only an element's conditions list characters; a transform has none.
+  if (props.mode === "transform") {
+    return undefined;
+  }
   return subscribeCharacterAvatarOptions(deps);
 };
 
