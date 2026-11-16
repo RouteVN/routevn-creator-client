@@ -549,7 +549,7 @@ describe("platformDetails Android signing view", () => {
     expect(view.androidPreviousKeys).toEqual([
       expect.objectContaining({
         certificateSha256: "cd".repeat(32),
-        detail: expect.stringMatching(/^Made by Creator · .*2026/),
+        detail: expect.stringMatching(/^Made by RouteVN Creator · .*2026/),
       }),
     ]);
     expect(view.androidSigningBusy).toBe(true);
