@@ -111,19 +111,20 @@ const buildPlatformDetailFields = (
     });
   }
 
-  if (platform === "android") {
-    fields.push(
-      {
-        type: "slot",
-        slot: "android-adaptive-icon",
-        label: copy.androidAdaptiveIconLabel,
-      },
-      {
-        type: "slot",
-        slot: "android-splash-icon",
-        label: copy.androidSplashIconLabel,
-      },
-    );
+  // An optional picture has a row only once it is set.
+  if (platform === "android" && _applicationInfo.adaptiveIconFileId) {
+    fields.push({
+      type: "slot",
+      slot: "android-adaptive-icon",
+      label: copy.androidAdaptiveIconLabel,
+    });
+  }
+  if (platform === "android" && _applicationInfo.splashIconFileId) {
+    fields.push({
+      type: "slot",
+      slot: "android-splash-icon",
+      label: copy.androidSplashIconLabel,
+    });
   }
 
   fields.push({
@@ -136,17 +137,21 @@ const buildPlatformDetailFields = (
   });
 
   if (platform === "web") {
-    fields.push(
-      {
+    if (_applicationInfo.loadingBackgroundFileId) {
+      fields.push({
         type: "slot",
         slot: "web-loading-background",
         label: copy.webLoadingBackgroundLabel,
-      },
-      {
+      });
+    }
+    if (_applicationInfo.startBackgroundFileId) {
+      fields.push({
         type: "slot",
         slot: "web-start-background",
         label: copy.webStartBackgroundLabel,
-      },
+      });
+    }
+    fields.push(
       {
         type: "text",
         label: copy.webLoadingFadeDurationLabel,
@@ -459,10 +464,8 @@ export const selectViewData = ({ state, i18n }) => {
     platformEditLoadingBackgroundFileId:
       state.platformEditLoadingBackgroundFileId,
     platformEditStartBackgroundFileId: state.platformEditStartBackgroundFileId,
-    webDefaultScreenLabel: copy.webDefaultScreenLabel,
 
     removeIconLabel: copy.removeIconButton,
-    usesAppIconLabel: copy.androidUsesAppIcon,
     editIconBackgroundStyle: `background-color: ${state.platformEditAdaptiveIconFileId ? state.iconPreviewColor : "transparent"};`,
     editSplashBackgroundStyle: `background-color: ${state.platformEditSplashIconFileId ? state.splashPreviewColor : "transparent"};`,
     cropTitle: copy[`${state.platformEditIconCropTarget}CropTitle`],

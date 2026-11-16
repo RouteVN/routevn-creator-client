@@ -154,20 +154,14 @@ template:
                                       - rvn-file-image#platformApplicationIcon slot=platform-application-icon fileId=${platformApplicationIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
                                     $else:
                                       - rtgl-image#platformApplicationIcon slot=platform-application-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
-                              - $if showAndroidPreviews:
+                              - $if showAndroidPreviews && adaptiveIconFileId:
                                   - rtgl-view slot=android-adaptive-icon:
-                                      - $if adaptiveIconFileId:
-                                          - 'div style="width:128px; height:128px; ${androidIconBackgroundStyle}"':
-                                              - rvn-file-image fileId=${adaptiveIconFileId} w=128 h=128: null
-                                        $else:
-                                          - rtgl-text c=mu-fg: ${usesAppIconLabel}
-                              - $if showAndroidPreviews:
+                                      - 'div style="width:128px; height:128px; ${androidIconBackgroundStyle}"':
+                                          - rvn-file-image fileId=${adaptiveIconFileId} w=128 h=128: null
+                              - $if showAndroidPreviews && splashIconFileId:
                                   - rtgl-view slot=android-splash-icon:
-                                      - $if splashIconFileId:
-                                          - 'div style="width:128px; height:128px; ${androidSplashBackgroundStyle}"':
-                                              - rvn-file-image fileId=${splashIconFileId} w=128 h=128: null
-                                        $else:
-                                          - rtgl-text c=mu-fg: ${usesAppIconLabel}
+                                      - 'div style="width:128px; height:128px; ${androidSplashBackgroundStyle}"':
+                                          - rvn-file-image fileId=${splashIconFileId} w=128 h=128: null
                               - $if showAndroidPreviews:
                                   - rtgl-view slot=android-previews d=v g=md w=f:
                                       - rtgl-text s=sm: ${androidLauncherPreviewLabel}
@@ -182,20 +176,14 @@ template:
                                               - rvn-file-image fileId=${androidSplashPreviewFileId} w=${androidSplashPreviewSize} h=${androidSplashPreviewSize}: null
                               - rtgl-view#platformApplicationIdentifier slot=platform-application-identifier cur=pointer:
                                   - rtgl-text: ${platformApplicationIdentifier}
-                              - $if showWebScreenBackgrounds:
+                              - $if showWebScreenBackgrounds && webLoadingBackgroundFileId:
                                   - rtgl-view#webLoadingBackground slot=web-loading-background cur=pointer:
-                                      - $if webLoadingBackgroundFileId:
-                                          - 'div style="${screenBackgroundPreviewStyle}"':
-                                              - rvn-file-image fileId=${webLoadingBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
-                                        $else:
-                                          - rtgl-text c=mu-fg: ${webDefaultScreenLabel}
-                              - $if showWebScreenBackgrounds:
+                                      - 'div style="${screenBackgroundPreviewStyle}"':
+                                          - rvn-file-image fileId=${webLoadingBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
+                              - $if showWebScreenBackgrounds && webStartBackgroundFileId:
                                   - rtgl-view#webStartBackground slot=web-start-background cur=pointer:
-                                      - $if webStartBackgroundFileId:
-                                          - 'div style="${screenBackgroundPreviewStyle}"':
-                                              - rvn-file-image fileId=${webStartBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
-                                        $else:
-                                          - rtgl-text c=mu-fg: ${webDefaultScreenLabel}
+                                      - 'div style="${screenBackgroundPreviewStyle}"':
+                                          - rvn-file-image fileId=${webStartBackgroundFileId} w=${screenBackgroundPreviewWidth} h=${screenBackgroundPreviewHeight}: null
                               - $if showAndroidSigning:
                                   - rtgl-view slot=android-signing-key d=v g=sm w=f:
                                       - $if androidSigningKey:

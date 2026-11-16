@@ -347,18 +347,9 @@ describe("platformDetails.store", () => {
         slot: "platform-application-identifier",
         label: "Application Identifier",
       },
-      {
-        type: "slot",
-        slot: "web-loading-background",
-        label: "Loading Screen Background",
-      },
-      {
-        type: "slot",
-        slot: "web-start-background",
-        label: "Start Screen Background",
-      },
-      { type: "text", label: "Fade to Start Screen (ms)", value: "600" },
-      { type: "text", label: "Fade to First Scene (ms)", value: "600" },
+      // No background is set, so neither background has a row.
+      { type: "text", label: "Fade After Loading (ms)", value: "600" },
+      { type: "text", label: "Fade After Clicking Start (ms)", value: "600" },
     ]);
     expect(viewData).toMatchObject({
       platformApplicationName: "Web Project",
@@ -428,6 +419,41 @@ it.each(["web", "tauri", "android", "ios"])(
     expect(view.platformEditIconOutputSize).toBe(512);
   },
 );
+
+describe("platformDetails optional pictures", () => {
+  const rowSlots = (platform, applicationInfo) => {
+    const state = createInitialState();
+    setPlatformApplicationInfo({ state }, { platform, applicationInfo });
+    return selectViewData({ state, i18n: EN_I18N }).platformDetailFields.map(
+      (field) => field.slot,
+    );
+  };
+
+  it("lists a web screen background only once it is set", () => {
+    const base = {
+      applicationName: "Project One",
+      applicationIdentifier: "project-one",
+    };
+    expect(rowSlots("web", base)).not.toContain("web-loading-background");
+    expect(rowSlots("web", base)).not.toContain("web-start-background");
+    const slots = rowSlots("web", { ...base, startBackgroundFileId: "s-1" });
+    expect(slots).toContain("web-start-background");
+    expect(slots).not.toContain("web-loading-background");
+  });
+
+  it("lists an Android adaptive or splash icon only once it is set", () => {
+    const base = {
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+      iconFileId: "icon-1",
+    };
+    expect(rowSlots("android", base)).not.toContain("android-adaptive-icon");
+    expect(rowSlots("android", base)).not.toContain("android-splash-icon");
+    const slots = rowSlots("android", { ...base, adaptiveIconFileId: "a-1" });
+    expect(slots).toContain("android-adaptive-icon");
+    expect(slots).not.toContain("android-splash-icon");
+  });
+});
 
 describe("platformDetails Android signing view", () => {
   const openAndroid = () => {
