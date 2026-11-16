@@ -152,6 +152,9 @@ template:
                   - $for option, i in exportOptions:
                       - rtgl-view#exportOptionRef${i} data-export-option="${option.id}" data-version-id="${exportOptionsVersionId}" w=f h=148 pos=rel bw=xs bc=bo h-bc=ac br=md av=c ah=c cur=pointer:
                           - rtgl-svg svg=${option.icon} wh=56 c=fg: null
+                          - $if option.beta:
+                              - 'rtgl-view pos=abs ph=sm pv=xs bw=xs bc=bo br=md style="top: 8px; right: 8px;"':
+                                  - rtgl-text s=xs c=mu-fg: ${exportOptionBetaLabel}
                           - 'rtgl-view pos=abs ah=c ph=sm style="left: 0; right: 0; bottom: 12px;"':
                               - rtgl-text s=sm c=mu-fg ta=c: ${option.label}
   - $if isExportConfirmationOpen:
