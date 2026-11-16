@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "L’icona selezionata nella schermata “Dettagli della piattaforma” non è più disponibile. Sostituiscila prima di esportare."
   platformDetailsLoadFailed: "Impossibile controllare i dettagli della piattaforma. Riprova a esportare."
   platformDetailsSetupTitle: "Aggiungi prima i dettagli della piattaforma"
-  platformDetailsSetupMessage: "Per esportare servono i dettagli della piattaforma, come il nome, l’icona e l’ID dell’applicazione. Seleziona “Continua” per aggiungerli ora. L’esportazione proseguirà subito dopo."
+  platformDetailsSetupMessage: "Aggiungi i dettagli della piattaforma per continuare l’esportazione."
   platformDetailsSetupContinue: "Continua"
   platformDetailsMacosIdentifierInvalid: "L’ID del bundle per macOS non è valido. Correggilo nella schermata “Dettagli della piattaforma” prima di esportare."
   platformDetailsMacosIdentifierRequired: "Aggiungi l’ID del bundle per macOS nella schermata “Dettagli della piattaforma” prima di esportare."

@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "L’icône sélectionnée dans « Détails de la plateforme » n’est plus disponible. Modifiez-la avant l’exportation."
   platformDetailsLoadFailed: "Impossible de vérifier les détails de la plateforme. Réessayez avant l’exportation."
   platformDetailsSetupTitle: "Ajoutez d’abord les détails de la plateforme"
-  platformDetailsSetupMessage: "L’exportation nécessite des détails de la plateforme, comme le nom, l’icône et l’identifiant de l’application. Continuez pour les ajouter maintenant ; l’exportation se poursuivra ensuite."
+  platformDetailsSetupMessage: "Ajoutez les détails de la plateforme pour poursuivre l’exportation."
   platformDetailsSetupContinue: "Continuer"
   platformDetailsMacosIdentifierInvalid: "L’identifiant du paquet macOS n’est pas valide. Modifiez-le dans « Détails de la plateforme » avant l’exportation."
   platformDetailsMacosIdentifierRequired: "Ajoutez un identifiant de paquet macOS dans « Détails de la plateforme » avant l’exportation."

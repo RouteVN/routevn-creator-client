@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "Ikon yang dipilih di halaman “Detail platform” sudah tidak tersedia. Ganti ikon tersebut sebelum mengekspor."
   platformDetailsLoadFailed: "Gagal memeriksa detail platform. Coba lagi sebelum mengekspor."
   platformDetailsSetupTitle: "Tambahkan detail platform dulu"
-  platformDetailsSetupMessage: "Untuk mengekspor, diperlukan detail platform seperti nama, ikon, dan ID aplikasi. Pilih “Lanjutkan” untuk menambahkannya sekarang. Setelah itu, ekspor akan dilanjutkan."
+  platformDetailsSetupMessage: "Tambahkan detail platform untuk melanjutkan ekspor."
   platformDetailsSetupContinue: "Lanjutkan"
   platformDetailsMacosIdentifierInvalid: "ID paket macOS tidak valid. Perbaiki ID tersebut di halaman “Detail platform” sebelum mengekspor."
   platformDetailsMacosIdentifierRequired: "Tambahkan ID paket macOS di halaman “Detail platform” sebelum mengekspor."

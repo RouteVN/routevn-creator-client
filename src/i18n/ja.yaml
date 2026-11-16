@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "「プラットフォーム詳細」で選択したアイコンが見つかりません。出力する前にアイコンを選び直してください。"
   platformDetailsLoadFailed: "プラットフォーム詳細を確認できませんでした。出力する前にもう一度お試しください。"
   platformDetailsSetupTitle: "先にプラットフォーム詳細を追加してください"
-  platformDetailsSetupMessage: "出力にはアプリケーション名、アイコン、識別子などのプラットフォーム詳細が必要です。「続行」を選んで今すぐ追加すると、そのまま出力に進みます。"
+  platformDetailsSetupMessage: "出力を続けるには、プラットフォーム詳細を追加してください。"
   platformDetailsSetupContinue: "続行"
   platformDetailsMacosIdentifierInvalid: "macOSバンドル識別子が無効です。出力する前に「プラットフォーム詳細」で更新してください。"
   platformDetailsMacosIdentifierRequired: "出力する前に「プラットフォーム詳細」でmacOSバンドル識別子を追加してください。"

@@ -82,7 +82,7 @@ describe("iOS export switched on", () => {
       ),
     ).toMatchObject({
       label: PLATFORM_COPY.macosApplicationIdentifierLabel,
-      description: PLATFORM_COPY.iosApplicationIdentifierDescription,
+      tooltip: { content: PLATFORM_COPY.iosApplicationIdentifierDescription },
     });
     expect(state.platformApplicationInfo.ios.teamId).toBe("ABCDE12345");
   });
@@ -166,7 +166,7 @@ describe("iOS export switched on", () => {
       name: "teamId",
       type: "input-text",
       label: VERSIONS_COPY.iosTeamIdLabel,
-      description: VERSIONS_COPY.iosTeamIdDescription,
+      tooltip: { content: VERSIONS_COPY.iosTeamIdDescription },
       required: true,
     });
   });

@@ -103,18 +103,22 @@ const createMacosExportForm = (copy = {}) => ({
           name: "version",
           type: "input-text",
           label: copy.macosExportVersionLabel ?? "Version",
-          description:
-            copy.macosExportVersionDescription ??
-            "Version shown in Finder and About. Use three numeric components, for example 1.2.0.",
+          tooltip: {
+            content:
+              copy.macosExportVersionDescription ??
+              "Version shown in Finder and About. Use three numeric components, for example 1.2.0.",
+          },
           required: true,
         },
         {
           name: "buildNumber",
           type: "input-text",
           label: copy.macosExportBuildNumberLabel ?? "Build Number",
-          description:
-            copy.macosExportBuildNumberDescription ??
-            "Positive integer identifying this build. Enter it manually for each export.",
+          tooltip: {
+            content:
+              copy.macosExportBuildNumberDescription ??
+              "Positive integer identifying this build. Enter it manually for each export.",
+          },
           required: true,
         },
       ],
@@ -195,14 +199,14 @@ const createAndroidExportForm = (copy, signing, canExportBundle) => {
           name: "version",
           type: "input-text",
           label: copy.androidExportVersionLabel,
-          description: copy.androidExportVersionDescription,
+          tooltip: { content: copy.androidExportVersionDescription },
           required: true,
         },
         {
           name: "buildNumber",
           type: "input-text",
           label: copy.androidExportBuildNumberLabel,
-          description: copy.androidExportBuildNumberDescription,
+          tooltip: { content: copy.androidExportBuildNumberDescription },
           required: true,
         },
       ],
@@ -239,7 +243,7 @@ const createIosTeamField = (copy, teams) => {
       name: "teamId",
       type: "input-text",
       label: copy.iosTeamIdLabel,
-      description: copy.iosTeamIdDescription,
+      tooltip: { content: copy.iosTeamIdDescription },
       required: true,
     };
   }
@@ -247,7 +251,7 @@ const createIosTeamField = (copy, teams) => {
     name: "teamId",
     type: "select",
     label: copy.iosTeamLabel,
-    description: copy.iosTeamDescription,
+    tooltip: { content: copy.iosTeamDescription },
     clearable: false,
     required: true,
     options: teams.map((team) => ({
@@ -271,14 +275,14 @@ const createIosExportForm = (copy, { teams, devices }) => ({
           name: "version",
           type: "input-text",
           label: copy.iosExportVersionLabel,
-          description: copy.iosExportVersionDescription,
+          tooltip: { content: copy.iosExportVersionDescription },
           required: true,
         },
         {
           name: "buildNumber",
           type: "input-text",
           label: copy.iosExportBuildNumberLabel,
-          description: copy.iosExportBuildNumberDescription,
+          tooltip: { content: copy.iosExportBuildNumberDescription },
           required: true,
         },
       ],
@@ -315,7 +319,7 @@ const createIosExportForm = (copy, { teams, devices }) => ({
       name: "deviceId",
       type: "select",
       label: copy.iosInstallOnLabel,
-      description: copy.iosInstallOnDescription,
+      tooltip: { content: copy.iosInstallOnDescription },
       // The form drops the value while App Store is chosen, so no choice
       // means not installing.
       placeholder: copy.iosDontInstallOption,

@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "Значок, выбранный на экране «Настройки платформ», больше недоступен. Выберите другой значок перед экспортом."
   platformDetailsLoadFailed: "Не удалось проверить настройки платформ. Повторите попытку перед экспортом."
   platformDetailsSetupTitle: "Сначала задайте настройки платформ"
-  platformDetailsSetupMessage: "Для экспорта нужны настройки платформы: название приложения, значок и идентификатор. Нажмите «Продолжить» и добавьте их, после этого экспорт продолжится."
+  platformDetailsSetupMessage: "Задайте настройки платформы, чтобы продолжить экспорт."
   platformDetailsSetupContinue: "Продолжить"
   platformDetailsMacosIdentifierInvalid: "Идентификатор пакета macOS указан неверно. Исправьте его на экране «Настройки платформ» перед экспортом."
   platformDetailsMacosIdentifierRequired: "Перед экспортом добавьте идентификатор пакета macOS на экране «Настройки платформ»."

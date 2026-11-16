@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "Ikona wybrana na stronie „Szczegóły platformy” jest już niedostępna. Zmień ją przed eksportem."
   platformDetailsLoadFailed: "Nie udało się sprawdzić szczegółów platformy przed eksportem. Spróbuj ponownie."
   platformDetailsSetupTitle: "Najpierw dodaj szczegóły platformy"
-  platformDetailsSetupMessage: "Do eksportu potrzebne są szczegóły platformy, takie jak nazwa, ikona i identyfikator aplikacji. Wybierz „Kontynuuj”, aby dodać je teraz. Po ich dodaniu eksport zostanie wznowiony."
+  platformDetailsSetupMessage: "Dodaj szczegóły platformy, aby kontynuować eksport."
   platformDetailsSetupContinue: "Kontynuuj"
   platformDetailsMacosIdentifierInvalid: "Identyfikator pakietu aplikacji macOS jest nieprawidłowy. Przed eksportem popraw go na stronie „Szczegóły platformy”."
   platformDetailsMacosIdentifierRequired: "Przed eksportem podaj identyfikator pakietu aplikacji macOS na stronie „Szczegóły platformy”."

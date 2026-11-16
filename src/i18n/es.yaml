@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "El icono seleccionado en Detalles de la plataforma ya no está disponible. Actualízalo antes de exportar."
   platformDetailsLoadFailed: "No se pudieron comprobar los detalles de la plataforma. Inténtalo de nuevo antes de exportar."
   platformDetailsSetupTitle: "Añade primero los detalles de la plataforma"
-  platformDetailsSetupMessage: "Para exportar se necesitan los detalles de la plataforma, como el nombre de la aplicación, el icono y el identificador. Continúa para añadirlos ahora y la exportación seguirá después."
+  platformDetailsSetupMessage: "Añade los detalles de la plataforma para continuar con la exportación."
   platformDetailsSetupContinue: "Continuar"
   platformDetailsMacosIdentifierInvalid: "El identificador de paquete de macOS no es válido. Actualízalo en Detalles de la plataforma antes de exportar."
   platformDetailsMacosIdentifierRequired: "Añade un identificador de paquete de macOS en Detalles de la plataforma antes de exportar."

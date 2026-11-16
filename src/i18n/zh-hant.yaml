@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "「平台資訊」中選擇的圖示已無法使用。請在匯出前更新。"
   platformDetailsLoadFailed: "無法檢查平台資訊。匯出前請再試一次。"
   platformDetailsSetupTitle: "請先新增平台資訊"
-  platformDetailsSetupMessage: "匯出需要應用程式名稱、圖示和識別碼等平台資訊。點選「繼續」立即新增，完成後就會繼續匯出。"
+  platformDetailsSetupMessage: "新增平台資訊後即可繼續匯出。"
   platformDetailsSetupContinue: "繼續"
   platformDetailsMacosIdentifierInvalid: "macOS 套件識別碼無效。匯出前，請先在「平台資訊」中更新。"
   platformDetailsMacosIdentifierRequired: "匯出前，請先在「平台資訊」中新增 macOS 套件識別碼。"

@@ -197,8 +197,10 @@ describe("platformDetails.store", () => {
       expect.objectContaining({
         name: "applicationIdentifier",
         required: true,
-        description:
-          EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
+        tooltip: {
+          content:
+            EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
+        },
       }),
     );
     expect(
@@ -328,8 +330,10 @@ describe("platformDetails.store", () => {
       expect.objectContaining({
         name: "applicationIdentifier",
         required: true,
-        description:
-          EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
+        tooltip: {
+          content:
+            EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
+        },
       }),
     );
     expect(viewData.platformDetailFields).toEqual([

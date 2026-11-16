@@ -1,6 +1,6 @@
 template:
   - $if fillHeight:
-      - rtgl-view d=v w=f h=f p=md g=md:
+      - rtgl-view d=v w=f h=f p=${padding} g=md:
           - rtgl-view d=v w=f g=md:
               - $for field, i in flatFields:
                   - $if field.type == 'section':
@@ -25,7 +25,7 @@ template:
                           - rtgl-view w=1fg: null
                           - rtgl-text ta=e: ${field.value}
     $else:
-      - rtgl-view d=v w=f p=md g=md:
+      - rtgl-view d=v w=f p=${padding} g=md:
           - rtgl-view d=v w=f g=md:
               - $for field, i in flatFields:
                   - $if field.type == 'section':

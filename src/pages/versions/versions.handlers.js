@@ -2118,6 +2118,16 @@ const runAndroidExport = async (deps, confirmation) => {
   });
 };
 
+// The form drops Signing while App Bundle is selected, so choosing APK again
+// would leave it empty and export unsigned. An APK starts as Signed.
+export const handleAndroidExportFormChange = (deps, payload) => {
+  const { refs } = deps;
+  const { androidExportForm } = refs;
+  const { name, value, values } = payload._event.detail;
+  if (name !== "format" || value !== "apk" || values.signing) return;
+  androidExportForm.setValues({ values: { signing: "signed" } });
+};
+
 export const handleAndroidExportFormAction = async (deps, payload) => {
   const { appService, i18n, render, store } = deps;
   const { actionId, values } = payload._event.detail;

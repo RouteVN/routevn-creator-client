@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "‘플랫폼 정보’에서 선택한 아이콘을 더 이상 사용할 수 없어요. 내보내기 전에 아이콘을 다시 선택하세요."
   platformDetailsLoadFailed: "플랫폼 정보를 확인하지 못했어요. 내보내기 전에 다시 시도해 주세요."
   platformDetailsSetupTitle: "플랫폼 정보 필요"
-  platformDetailsSetupMessage: "내보내려면 앱 이름, 아이콘, 식별자 같은 플랫폼 정보가 필요해요. ‘계속’을 선택해 지금 추가하면 이어서 내보내기가 진행돼요."
+  platformDetailsSetupMessage: "내보내기를 계속하려면 플랫폼 정보를 추가하세요."
   platformDetailsSetupContinue: "계속"
   platformDetailsMacosIdentifierInvalid: "macOS 번들 식별자가 올바르지 않아요. 내보내기 전에 ‘플랫폼 정보’에서 바꾸세요."
   platformDetailsMacosIdentifierRequired: "내보내기 전에 ‘플랫폼 정보’에서 macOS 번들 식별자를 입력하세요."

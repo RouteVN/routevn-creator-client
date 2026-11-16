@@ -755,7 +755,7 @@ versionsPage:
   platformDetailsIconNotFound: "ไอคอนที่เลือกในรายละเอียดแพลตฟอร์มใช้งานไม่ได้แล้ว อัปเดตไอคอนก่อนส่งออก"
   platformDetailsLoadFailed: "ไม่สามารถตรวจสอบรายละเอียดแพลตฟอร์มได้ โปรดลองอีกครั้งก่อนส่งออก"
   platformDetailsSetupTitle: "เพิ่มรายละเอียดแพลตฟอร์มก่อน"
-  platformDetailsSetupMessage: "การส่งออกต้องใช้รายละเอียดแพลตฟอร์ม เช่น ชื่อแอปพลิเคชัน ไอคอน และตัวระบุ เลือกดำเนินการต่อเพื่อเพิ่มตอนนี้ แล้วระบบจะส่งออกต่อให้"
+  platformDetailsSetupMessage: "เพิ่มรายละเอียดแพลตฟอร์มเพื่อส่งออกต่อ"
   platformDetailsSetupContinue: "ดำเนินการต่อ"
   platformDetailsMacosIdentifierInvalid: "ตัวระบุบันเดิล macOS ไม่ถูกต้อง อัปเดตในรายละเอียดแพลตฟอร์มก่อนส่งออก"
   platformDetailsMacosIdentifierRequired: "เพิ่มตัวระบุบันเดิล macOS ในรายละเอียดแพลตฟอร์มก่อนส่งออก"

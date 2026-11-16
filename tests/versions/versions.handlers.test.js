@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAndroidExportFormChange,
   handleBeforeMount,
   handleDataChanged,
   handleAndroidExportFormAction,
@@ -2318,6 +2319,39 @@ describe("versions export options", () => {
     expect(deps.store.closeExportConfirmation).not.toHaveBeenCalled();
     expect(
       deps.projectService.createWindowsInstallerToPath,
+    ).not.toHaveBeenCalled();
+  });
+});
+
+describe("versions.handleAndroidExportFormChange", () => {
+  const change = (detail) => {
+    const androidExportForm = { setValues: vi.fn() };
+    handleAndroidExportFormChange(
+      { refs: { androidExportForm } },
+      { _event: { detail } },
+    );
+    return androidExportForm.setValues;
+  };
+
+  it("selects Signed again when the format returns to APK", () => {
+    const setValues = change({
+      name: "format",
+      value: "apk",
+      values: { format: "apk" },
+    });
+    expect(setValues).toHaveBeenCalledWith({ values: { signing: "signed" } });
+  });
+
+  it("keeps the signing choice on other changes", () => {
+    expect(
+      change({ name: "format", value: "aab", values: { format: "aab" } }),
+    ).not.toHaveBeenCalled();
+    expect(
+      change({
+        name: "signing",
+        value: "unsigned",
+        values: { format: "apk", signing: "unsigned" },
+      }),
     ).not.toHaveBeenCalled();
   });
 });

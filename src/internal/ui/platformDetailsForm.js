@@ -56,7 +56,7 @@ export const createPlatformEditForm = (platform, mode, copy) => {
       name: "applicationName",
       type: "input-text",
       label: copy.applicationNameLabel,
-      description: copy[`${platform}ApplicationNameDescription`],
+      tooltip: { content: copy[`${platform}ApplicationNameDescription`] },
       required: true,
     },
   ];
@@ -66,7 +66,7 @@ export const createPlatformEditForm = (platform, mode, copy) => {
       type: "slot",
       slot: "platform-application-icon-edit",
       label: copy.iconLabel,
-      description: copy[`${platform}IconDescription`],
+      tooltip: { content: copy[`${platform}IconDescription`] },
     });
   }
 
@@ -76,13 +76,13 @@ export const createPlatformEditForm = (platform, mode, copy) => {
         type: "slot",
         slot: "platform-android-adaptive-icon-edit",
         label: copy.androidAdaptiveIconLabel,
-        description: copy.androidAdaptiveIconDescription,
+        tooltip: { content: copy.androidAdaptiveIconDescription },
       },
       {
         type: "slot",
         slot: "platform-android-splash-icon-edit",
         label: copy.androidSplashIconLabel,
-        description: copy.androidSplashIconDescription,
+        tooltip: { content: copy.androidSplashIconDescription },
       },
     );
   }
@@ -94,7 +94,7 @@ export const createPlatformEditForm = (platform, mode, copy) => {
       platform === "macos" || platform === "ios"
         ? copy.macosApplicationIdentifierLabel
         : copy.applicationIdentifierLabel,
-    description: copy[`${platform}ApplicationIdentifierDescription`],
+    tooltip: { content: copy[`${platform}ApplicationIdentifierDescription`] },
     required: true,
   });
 
@@ -104,19 +104,19 @@ export const createPlatformEditForm = (platform, mode, copy) => {
         type: "slot",
         slot: "platform-web-loading-background-edit",
         label: copy.webLoadingBackgroundLabel,
-        description: copy.webLoadingBackgroundDescription,
+        tooltip: { content: copy.webLoadingBackgroundDescription },
       },
       {
         type: "slot",
         slot: "platform-web-start-background-edit",
         label: copy.webStartBackgroundLabel,
-        description: copy.webStartBackgroundDescription,
+        tooltip: { content: copy.webStartBackgroundDescription },
       },
       {
         name: "loadingFadeDuration",
         type: "input-number",
         label: copy.webLoadingFadeDurationLabel,
-        description: copy.webLoadingFadeDurationDescription,
+        tooltip: { content: copy.webLoadingFadeDurationDescription },
         min: 0,
         max: WEB_SCREEN_FADE_DURATION_MAX,
         step: 100,
@@ -125,7 +125,7 @@ export const createPlatformEditForm = (platform, mode, copy) => {
         name: "startFadeDuration",
         type: "input-number",
         label: copy.webStartFadeDurationLabel,
-        description: copy.webStartFadeDurationDescription,
+        tooltip: { content: copy.webStartFadeDurationDescription },
         min: 0,
         max: WEB_SCREEN_FADE_DURATION_MAX,
         step: 100,
