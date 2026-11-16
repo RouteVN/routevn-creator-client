@@ -4,6 +4,7 @@ import {
   getAudioEffectsEditorBackPath,
   resolveAudioEffectsEditorPayload,
 } from "../../internal/audioEffectsEditorRoute.js";
+import { getEditHistoryOwner } from "../../internal/editHistory.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -119,6 +120,9 @@ export const handleBeforeMount = (deps) => {
   );
 
   return async () => {
+    // Kept for coming back to this page, before the save below can let the
+    // next page open.
+    appService.retainEditHistory(store.selectRetainedEditHistory());
     unregisterBeforeNavigation();
     cleanupWindowLayout?.();
     cleanupWindowResize();
@@ -152,7 +156,12 @@ export const handleAfterMount = async (deps) => {
   store.setSoundsData({
     soundsData: repositoryState.sounds ?? { items: {}, tree: [] },
   });
-  store.loadAudioEffect({ item });
+  store.loadAudioEffect({
+    item,
+    retainedEditHistory: appService.getRetainedEditHistory({
+      owner: getEditHistoryOwner("audioEffect", audioEffectId),
+    }),
+  });
   render();
   handleTimelineViewportResize(deps);
 };

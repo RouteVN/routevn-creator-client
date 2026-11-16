@@ -241,7 +241,11 @@ export const handleAfterMount = async (deps) => {
 
 // An edit, undo, or redo in the frames editor saves a moment later.
 export const handleFramesChange = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
+  // This page's steps hold pictures it has only while it is open, so its
+  // history is not kept once it is left. Its edits still end the history
+  // kept for another editor.
+  appService.clearRetainedEditHistory();
   store.keepChanges();
   store.setEditHistoryState(payload._event.detail);
   render();

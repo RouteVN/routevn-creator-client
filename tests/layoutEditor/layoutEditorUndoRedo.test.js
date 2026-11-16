@@ -6,6 +6,7 @@ import { createCommandApiShared } from "../../src/deps/services/shared/commandAp
 import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
 import * as layoutEditorStore from "../../src/pages/layoutEditor/layoutEditor.store.js";
 import {
+  handleAfterMount,
   handleBeforeMount,
   handleDataChanged,
   handleFileExplorerAction,
@@ -16,6 +17,7 @@ import {
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const rect = (name, x = 0) => ({
   type: "rect",
@@ -31,8 +33,9 @@ const rect = (name, x = 0) => ({
   rotation: 0,
 });
 
-// The page on a real repository, so every save is checked by the model.
-const createPage = async () => {
+// A project with one layout of two elements, on a real repository, so every
+// save is checked by the model.
+const createProject = async () => {
   const repository = await createProjectRepository({
     projectId: "project-1",
     store: {
@@ -75,6 +78,16 @@ const createPage = async () => {
       data: rect(id.toUpperCase()),
     });
   }
+  return { repository, api };
+};
+
+// The page on the layout. Pages given the same project and history service
+// are one app session, left and opened again.
+const createPage = async ({
+  project,
+  retainedEditHistoryService = createRetainedEditHistoryService(),
+} = {}) => {
+  const { repository, api } = project ?? (await createProject());
 
   const projectService = {
     ...api,
@@ -123,6 +136,7 @@ const createPage = async () => {
     store,
     subject,
     appService: {
+      ...retainedEditHistoryService,
       registerBeforeNavigation: () => () => {},
       getPayload: () => ({ l: "layout-1" }),
       showAlert: vi.fn(),
@@ -143,6 +157,7 @@ const createPage = async () => {
     render: vi.fn(),
   };
   const cleanup = handleBeforeMount(deps);
+  await handleAfterMount(deps);
 
   const shown = (id) => store.selectItemDataById({ itemId: id });
   const saved = (id) =>
@@ -450,6 +465,65 @@ describe("layout editor undo and redo", () => {
     expect(page.saved("b").x).toBe(50);
 
     await page.cleanup();
+  });
+
+  it("keeps undo and redo when the page is left and opened again", async () => {
+    const project = await createProject();
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ project, retainedEditHistoryService });
+    page.drag("a", { x: 300 });
+    await vi.advanceTimersByTimeAsync(1000);
+    page.drag("b", { x: 50 });
+    await vi.advanceTimersByTimeAsync(1000);
+    handleUndoButtonClick(page.deps);
+    await page.cleanup();
+    expect(page.saved("a").x).toBe(300);
+    expect(page.saved("b").x).toBe(0);
+
+    const reopened = await createPage({ project, retainedEditHistoryService });
+
+    expect(reopened.view()).toMatchObject({
+      undoDisabled: false,
+      redoDisabled: false,
+    });
+    handleUndoButtonClick(reopened.deps);
+    expect(reopened.shown("a").x).toBe(0);
+    handleRedoButtonClick(reopened.deps);
+    handleRedoButtonClick(reopened.deps);
+    expect(reopened.shown("a").x).toBe(300);
+    expect(reopened.shown("b").x).toBe(50);
+    await reopened.cleanup();
+    expect(reopened.saved("a").x).toBe(300);
+    expect(reopened.saved("b").x).toBe(50);
+  });
+
+  it("drops the history once another editor is left with an edit", async () => {
+    const project = await createProject();
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ project, retainedEditHistoryService });
+    page.drag("a", { x: 300 });
+    await page.cleanup();
+
+    // Another editor left without an edit keeps this layout's history.
+    retainedEditHistoryService.retainEditHistory({
+      owner: "transform:transform-1",
+      history: { undo: [], redo: [] },
+    });
+    const kept = await createPage({ project, retainedEditHistoryService });
+    expect(kept.view()).toMatchObject({ undoDisabled: false });
+    await kept.cleanup();
+
+    retainedEditHistoryService.retainEditHistory({
+      owner: "transform:transform-1",
+      history: { undo: [{ before: {}, after: {}, time: 0 }], redo: [] },
+    });
+    const reopened = await createPage({ project, retainedEditHistoryService });
+
+    expect(reopened.view()).toMatchObject({
+      undoDisabled: true,
+      redoDisabled: true,
+    });
+    await reopened.cleanup();
   });
 
   it("starts with no history", async () => {

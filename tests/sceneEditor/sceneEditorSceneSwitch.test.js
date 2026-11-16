@@ -10,6 +10,7 @@ import * as storeModule from "../../src/pages/sceneEditorLexical/sceneEditorLexi
 import { composeRepositoryState } from "../../src/deps/services/shared/projectRepositoryViews/sceneStateView.js";
 import { projectRepositoryStateToDomainState } from "../../src/internal/project/projection.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const SCENE_EDITOR_VIEW = yaml.load(
   readFileSync(
@@ -157,6 +158,7 @@ const mountSceneEditor = () => {
     store,
     projectService,
     appService: {
+      ...createRetainedEditHistoryService(),
       getUserConfig: () => undefined,
       registerBeforeNavigation: () => () => {},
       getPayload: () => routePayload,
@@ -262,6 +264,59 @@ describe("scene editor scene switch", () => {
         options.lines.map((line) => line.id),
       ]),
     ).toEqual([["section-3", ["line-3", "line-4"]]]);
+  });
+
+  // Types into a line, which records an undo step.
+  const typeInLine = (deps, { sectionId, lineId, text }) =>
+    handlers.handleEditorDataChanged(deps, {
+      _event: {
+        currentTarget: { dataset: { sectionId } },
+        detail: {
+          lines: [createLine(lineId, text)],
+          selectedLineId: lineId,
+          reason: "text",
+        },
+      },
+    });
+
+  it("keeps a scene's undo history while another scene is opened without an edit", async () => {
+    const { deps, store } = mountSceneEditor();
+    await handlers.syncSceneEditorRoutePayload(deps, { s: "scene-1" });
+    await typeInLine(deps, {
+      sectionId: "section-1",
+      lineId: "line-1",
+      text: "First, edited",
+    });
+    expect(store.selectEditHistory().undo).toHaveLength(1);
+
+    await handlers.syncSceneEditorRoutePayload(deps, { s: "scene-2" });
+    expect(store.selectEditHistory().undo).toHaveLength(0);
+    await handlers.syncSceneEditorRoutePayload(deps, { s: "scene-1" });
+
+    expect(store.selectEditHistory().undo).toHaveLength(1);
+  });
+
+  it("drops a scene's undo history once another scene is edited", async () => {
+    const { deps, store } = mountSceneEditor();
+    await handlers.syncSceneEditorRoutePayload(deps, { s: "scene-1" });
+    await typeInLine(deps, {
+      sectionId: "section-1",
+      lineId: "line-1",
+      text: "First, edited",
+    });
+
+    await handlers.syncSceneEditorRoutePayload(deps, { s: "scene-2" });
+    await typeInLine(deps, {
+      sectionId: "section-4",
+      lineId: "line-5",
+      text: "Other scene, edited",
+    });
+    await handlers.syncSceneEditorRoutePayload(deps, { s: "scene-1" });
+    expect(store.selectEditHistory().undo).toHaveLength(0);
+
+    // Scene 2 now has the history that is kept.
+    await handlers.syncSceneEditorRoutePayload(deps, { s: "scene-2" });
+    expect(store.selectEditHistory().undo).toHaveLength(1);
   });
 
   it("ignores the project state while a replaced switch ends and the next still loads", async () => {

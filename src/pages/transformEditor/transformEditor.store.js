@@ -2,9 +2,11 @@ import {
   areEditHistoryValuesEqual,
   createEditHistory,
   getEditHistoryChangeKey,
+  getEditHistoryOwner,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
+  resumeEditHistory,
 } from "../../internal/editHistory.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
@@ -137,7 +139,7 @@ export const createInitialState = () => ({
   previewSlots: createPreviewSlots(),
   savedPreview: undefined,
   rightPanelMode: "edit",
-  // Undo and redo for edits made since the page opened.
+  // Undo and redo for the item's edits, kept when the page is left.
   editHistory: createEditHistory(),
   editHistoryBaseline: undefined,
   // The inspector previews number fields while a popover is open; the
@@ -169,7 +171,13 @@ export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
 
 export const loadTransform = (
   { state },
-  { item, projectResolution, imagesData, charactersData } = {},
+  {
+    item,
+    projectResolution,
+    imagesData,
+    charactersData,
+    retainedEditHistory,
+  } = {},
 ) => {
   state.transformId = item.id;
   state.transformName = item.name ?? "";
@@ -177,7 +185,7 @@ export const loadTransform = (
   state.savedTransform = state.transform;
   state.previewSlots = createPreviewSlots(item.preview);
   state.savedPreview = createPreviewData(state.previewSlots);
-  state.editHistory = createEditHistory();
+  state.editHistory = resumeEditHistory(retainedEditHistory, state.transform);
   state.editHistoryBaseline = state.transform;
   state.inspectorPreviewTransform = undefined;
   state.dragStartPosition = undefined;
@@ -193,6 +201,14 @@ export const loadTransform = (
 };
 
 export const selectTransformId = ({ state }) => state.transformId;
+
+// What the page keeps when it is left, so coming back to it brings undo and
+// redo back.
+export const selectRetainedEditHistory = ({ state }) => ({
+  owner: getEditHistoryOwner("transform", state.transformId),
+  history: state.editHistory,
+  content: state.transform,
+});
 
 export const selectTransform = ({ state }) => state.transform;
 

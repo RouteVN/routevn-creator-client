@@ -56,6 +56,7 @@ import {
   getEditHistoryStep,
   moveEditHistoryStep as moveHistoryStep,
   recordEditHistoryStep as recordHistoryStep,
+  resumeEditHistory as resumeHistory,
 } from "../../internal/editHistory.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
@@ -1407,7 +1408,7 @@ export const createInitialState = () => ({
   animationCanvasCaptureInProgress: false,
   animationVideoShortcutStartedAt: undefined,
   animationVideoExportInProgress: false,
-  // Undo and redo for edits made since the page opened. The baseline is the
+  // Undo and redo, kept when the page is left. The baseline is the
   // animation as of the last recorded edit, the before of the next one, with
   // the fingerprint of what autosave would save for it.
   editHistory: createEditHistory(),
@@ -2292,6 +2293,17 @@ export const recordEditHistoryStep = (
   { before, after, mergeKey, time } = {},
 ) => {
   recordHistoryStep(state.editHistory, { before, after, mergeKey, time });
+};
+
+export const selectEditHistory = ({ state }) => state.editHistory;
+
+// Takes back the history kept when the page was last left, when the
+// animation is still as the page left it (`content`, its edit fingerprint).
+export const resumeEditHistory = (
+  { state },
+  { retainedEditHistory, content } = {},
+) => {
+  state.editHistory = resumeHistory(retainedEditHistory, content);
 };
 
 export const selectEditHistoryStep = ({ state }, { direction } = {}) =>

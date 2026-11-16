@@ -15,6 +15,7 @@ import {
 import { createStoryCommandApi } from "../../src/deps/services/shared/commandApi/story.js";
 import { scenePartitionFor } from "../../src/deps/services/shared/collab/partitions.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const dialogueLine = (id, text, actions = {}) => ({
   id,
@@ -135,6 +136,7 @@ const createPage = () => {
     subject: { dispatch: vi.fn() },
     graphicsService: { engineSelectSectionLineChanges: () => ({}) },
     appService: {
+      ...createRetainedEditHistoryService(),
       getPayload: () => ({}),
       setPayload: vi.fn(),
       showToast: vi.fn(),

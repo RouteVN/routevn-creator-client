@@ -10,6 +10,7 @@ import {
   handleRedoButtonClick,
   handleUndoButtonClick,
 } from "../../src/pages/spritesheetEditor/spritesheetEditor.handlers.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // Edits save on their own a second after the last one.
 const AUTOSAVE_DEBOUNCE_MS = 1000;
@@ -91,6 +92,7 @@ const createDeps = ({
       },
     },
     appService: {
+      ...createRetainedEditHistoryService(),
       getPayload: vi.fn(() => payload),
       navigate: vi.fn(),
       showAlert: vi.fn(),
@@ -151,6 +153,22 @@ describe("spritesheet editor page", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("ends the undo history kept for another editor when it is edited", () => {
+    const deps = createDeps();
+    deps.appService.retainEditHistory({
+      owner: "transform:transform-1",
+      history: { undo: [{ before: {}, after: {}, time: 0 }], redo: [] },
+    });
+
+    deps.editFrames();
+
+    expect(
+      deps.appService.getRetainedEditHistory({
+        owner: "transform:transform-1",
+      }),
+    ).toBeUndefined();
   });
 
   it("loads the spritesheet from the route into the frames editor", async () => {

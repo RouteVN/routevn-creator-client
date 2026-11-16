@@ -78,6 +78,7 @@ import {
   handleTogglePreviewLoop,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 describe("animationEditor.handlers", () => {
   const createIdleAutosaveMocks = () => ({
@@ -85,6 +86,8 @@ describe("animationEditor.handlers", () => {
     selectAutosavePersistedVersion: vi.fn(() => 1),
     selectAutosaveTimerId: vi.fn(() => undefined),
     selectAutosaveVersion: vi.fn(() => 1),
+    // No animation is open, so leaving keeps no undo history.
+    selectEditItemId: vi.fn(() => undefined),
   });
 
   it("registers the animation autosave navigation guard and cleanup", async () => {
@@ -108,6 +111,7 @@ describe("animationEditor.handlers", () => {
     try {
       const cleanup = handleBeforeMount({
         appService: {
+          ...createRetainedEditHistoryService(),
           registerBeforeNavigation: vi.fn((handler) => {
             beforeNavigation = handler;
             return unregisterBeforeNavigation;
@@ -473,6 +477,7 @@ describe("animationEditor.handlers", () => {
     try {
       const cleanup = handleBeforeMount({
         appService: {
+          ...createRetainedEditHistoryService(),
           registerBeforeNavigation: vi.fn(() => vi.fn()),
         },
         browserEventsClient: {
@@ -3293,6 +3298,7 @@ describe("animationEditor.handlers", () => {
       setAnimationTime: vi.fn(),
     };
     const appService = {
+      ...createRetainedEditHistoryService(),
       reportError: vi.fn(),
       showAlert: vi.fn(),
     };
@@ -3775,6 +3781,7 @@ describe("animationEditor.handlers", () => {
     let beforeNavigation;
     handleBeforeMount({
       appService: {
+        ...createRetainedEditHistoryService(),
         registerBeforeNavigation: vi.fn((handler) => {
           beforeNavigation = handler;
           return vi.fn();
