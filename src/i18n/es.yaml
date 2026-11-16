@@ -808,9 +808,6 @@ versionsPage:
   androidNewKeyConfirmTitle: "¿Crear una clave de firma?"
   androidNewKeyConfirmMessage: "Esta exportación crea la clave de firma de este juego. Si el juego ya se publicó desde otro dispositivo, cancela e importa esa clave en Detalles de la plataforma Android."
   androidNewKeyConfirmButton: "Crear clave y exportar"
-  androidKeyCopyOfferTitle: "Guarda una copia de la clave de firma"
-  androidKeyCopyOfferMessage: "La clave solo está guardada en este proyecto. Guarda una copia en un lugar seguro: sin ella, los jugadores no podrán actualizar el juego."
-  androidKeyCopyOfferLater: "Más tarde"
   androidSigningKeyFailed: "No se pudo crear la clave de firma."
 webServerPage:
   actionsLabel: "Acciones"

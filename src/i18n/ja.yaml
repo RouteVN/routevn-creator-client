@@ -808,9 +808,6 @@ versionsPage:
   androidNewKeyConfirmTitle: "署名鍵を作成しますか？"
   androidNewKeyConfirmMessage: "この出力でこのゲームの署名鍵を作成します。すでに別のデバイスからゲームを公開している場合は、キャンセルして、Androidプラットフォーム詳細でその鍵をアップロードしてください。"
   androidNewKeyConfirmButton: "鍵を作成して出力"
-  androidKeyCopyOfferTitle: "署名鍵のコピーを保存"
-  androidKeyCopyOfferMessage: "鍵はこのプロジェクトにのみ保存されています。安全な場所にコピーを保管してください。鍵がないと、プレイヤーはゲームをアップデートできません。"
-  androidKeyCopyOfferLater: "あとで"
   androidSigningKeyFailed: "署名鍵を作成できませんでした。"
 webServerPage:
   actionsLabel: "操作"

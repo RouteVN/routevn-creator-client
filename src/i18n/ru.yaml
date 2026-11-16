@@ -808,9 +808,6 @@ versionsPage:
   androidNewKeyConfirmTitle: "Создать ключ подписи?"
   androidNewKeyConfirmMessage: "При этом экспорте будет создан ключ подписи игры. Если игра уже выпущена с другого устройства, отмените экспорт и импортируйте тот ключ в разделе «Настройки для Android»."
   androidNewKeyConfirmButton: "Создать ключ и экспортировать"
-  androidKeyCopyOfferTitle: "Сохраните копию ключа подписи"
-  androidKeyCopyOfferMessage: "Ключ хранится только в этом проекте. Сохраните копию в надёжном месте: без него игроки не смогут обновить игру."
-  androidKeyCopyOfferLater: "Позже"
   androidSigningKeyFailed: "Не удалось создать ключ подписи."
 webServerPage:
   actionsLabel: "Действия"

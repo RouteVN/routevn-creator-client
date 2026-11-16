@@ -228,13 +228,11 @@ released game, so only Create Key, Replace Key, Upload Key, and Use Again
 change the current key. Platform Details says the key can't be used in that
 state, and Create Key and Upload Key warn as Replace Key does.
 
-The export that makes the first key asks two things, each once per project. Before
-it starts, a confirmation says the export creates the game's signing key and
-that a game already released from another device needs that device's key
-uploaded in Android Platform Details instead. After the export, whether it
-finished or failed, a dialog offers Save a Copy for the new key, with Later to
-skip it: the key is only in the project, and without it players cannot update
-the game. A new key is saved in the project before the APK is
+The export that makes the first key asks first, once per project: a
+confirmation says the export creates the game's signing key and that a game
+already released from another device needs that device's key uploaded in
+Android Platform Details instead. A copy of the key is saved from Platform
+Details with Save a Copy. A new key is saved in the project before the APK is
 signed; if saving fails, the export stops with an error. Android accepts an
 update only when it is signed with the same key, so the dialog and Platform
 Details say that the key is in the project, that the project needs a backup,

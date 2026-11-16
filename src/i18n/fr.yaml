@@ -808,9 +808,6 @@ versionsPage:
   androidNewKeyConfirmTitle: "Créer une clé de signature ?"
   androidNewKeyConfirmMessage: "Cette exportation crée la clé de signature de ce jeu. Si le jeu a déjà été publié depuis un autre appareil, annulez et importez plutôt cette clé dans Détails pour Android."
   androidNewKeyConfirmButton: "Créer la clé et exporter"
-  androidKeyCopyOfferTitle: "Enregistrez une copie de la clé de signature"
-  androidKeyCopyOfferMessage: "La clé est enregistrée uniquement dans ce projet. Conservez-en une copie en lieu sûr : sans elle, les joueurs ne pourront pas mettre le jeu à jour."
-  androidKeyCopyOfferLater: "Plus tard"
   androidSigningKeyFailed: "Impossible de créer la clé de signature."
 webServerPage:
   actionsLabel: "Actions"
