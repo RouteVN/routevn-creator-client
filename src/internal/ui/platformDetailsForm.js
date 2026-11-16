@@ -5,7 +5,7 @@ import {
 import { IOS_APPLICATION_ICON_OUTPUT_SIZE } from "../iosExport.js";
 import {
   normalizeWebScreenFadeDuration,
-  WEB_SCREEN_FADE_DURATION_MAX,
+  WEB_SCREEN_FADE_DURATIONS,
 } from "../webExport.js";
 
 const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
@@ -17,6 +17,10 @@ export const getPlatformIconOutputSize = (platform, target) => {
   if (platform === "ios") return IOS_APPLICATION_ICON_OUTPUT_SIZE;
   return PLATFORM_APPLICATION_ICON_OUTPUT_SIZE;
 };
+
+const WEB_SCREEN_FADE_DURATION_OPTIONS = WEB_SCREEN_FADE_DURATIONS.map(
+  (duration) => ({ value: duration, label: String(duration) }),
+);
 
 export const PLATFORM_APPLICATION_ICON_VALIDATIONS = [
   {
@@ -121,21 +125,19 @@ export const createPlatformEditForm = (platform, mode, copy) => {
       },
       {
         name: "loadingFadeDuration",
-        type: "input-number",
+        type: "select",
         label: copy.webLoadingFadeDurationLabel,
         tooltip: { content: copy.webLoadingFadeDurationDescription },
-        min: 0,
-        max: WEB_SCREEN_FADE_DURATION_MAX,
-        step: 100,
+        clearable: false,
+        options: WEB_SCREEN_FADE_DURATION_OPTIONS,
       },
       {
         name: "startFadeDuration",
-        type: "input-number",
+        type: "select",
         label: copy.webStartFadeDurationLabel,
         tooltip: { content: copy.webStartFadeDurationDescription },
-        min: 0,
-        max: WEB_SCREEN_FADE_DURATION_MAX,
-        step: 100,
+        clearable: false,
+        options: WEB_SCREEN_FADE_DURATION_OPTIONS,
       },
     );
   }

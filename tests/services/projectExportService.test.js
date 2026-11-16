@@ -474,7 +474,7 @@ describe("projectExportService", () => {
     });
 
     expect(indexHtml).toContain(
-      'style="--loading-fade-duration: 600ms; --start-fade-duration: 600ms"',
+      'style="--loading-fade-duration: 0ms; --start-fade-duration: 0ms"',
     );
   });
 

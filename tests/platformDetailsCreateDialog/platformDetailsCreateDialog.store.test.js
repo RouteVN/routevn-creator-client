@@ -102,8 +102,8 @@ describe("Web platform setup form", () => {
       { props: { platform: "web", applicationInfo: {} } },
     );
     let view = selectViewData({ state, i18n: EN_I18N });
-    expect(view.defaultValues.loadingFadeDuration).toBe(600);
-    expect(view.defaultValues.startFadeDuration).toBe(600);
+    expect(view.defaultValues.loadingFadeDuration).toBe(0);
+    expect(view.defaultValues.startFadeDuration).toBe(0);
     expect(view.showWebScreenBackgrounds).toBe(true);
     // The preview has the project's shape.
     expect(view.screenBackgroundPreviewWidth).toBe(240);

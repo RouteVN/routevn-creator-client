@@ -1155,7 +1155,8 @@ loading background replaces the loading text and progress bar, which stay in
 the page for assistive technology only. A start background fades in over the
 loading image and replaces the start prompt text; `loadingFadeDuration` and
 `startFadeDuration` set, in milliseconds, how long that fade and the fade into
-the first scene take (600 by default, at most 5000). Without a start
+the first scene take: 0 to 2000 in steps of 100, picked from a list, and 0
+(no fade) by default. Without a start
 background, the start screen
 keeps the loading background and the prompt. Creator versions that do not know
 these fields drop them when they save Web platform details.

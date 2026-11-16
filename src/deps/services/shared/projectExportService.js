@@ -93,8 +93,8 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
         background: #000;
         /* Artwork dissolves into the first scene instead of cutting to it. */
         transition:
-          opacity var(--start-fade-duration, 600ms) ease-in-out,
-          visibility 0s var(--start-fade-duration, 600ms);
+          opacity var(--start-fade-duration, 0ms) ease-in-out,
+          visibility 0s var(--start-fade-duration, 0ms);
       }
 
       .loading-background {
@@ -108,7 +108,7 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
          place underneath, so the screen never dips to black in between. */
       #loading-start-background {
         opacity: 0;
-        transition: opacity var(--loading-fade-duration, 600ms) ease-in-out;
+        transition: opacity var(--loading-fade-duration, 0ms) ease-in-out;
       }
 
       #loading.ready #loading-start-background {

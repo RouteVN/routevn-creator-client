@@ -348,8 +348,8 @@ describe("platformDetails.store", () => {
         label: "Application Identifier",
       },
       // No background is set, so neither background has a row.
-      { type: "text", label: "Fade After Loading (ms)", value: "600" },
-      { type: "text", label: "Fade After Clicking Start (ms)", value: "600" },
+      { type: "text", label: "Fade After Loading (ms)", value: "0" },
+      { type: "text", label: "Fade After Clicking Start (ms)", value: "0" },
     ]);
     expect(viewData).toMatchObject({
       platformApplicationName: "Web Project",
@@ -419,6 +419,35 @@ it.each(["web", "tauri", "android", "ios"])(
     expect(view.platformEditIconOutputSize).toBe(512);
   },
 );
+
+describe("platformDetails web fade lengths", () => {
+  it("offers each fade length from 0 to 2000 ms in steps of 100", () => {
+    const state = createInitialState();
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "project-one",
+        },
+      },
+    );
+    const { fields } = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).platformEditForm;
+    for (const name of ["loadingFadeDuration", "startFadeDuration"]) {
+      const field = fields.find((item) => item.name === name);
+      expect(field.type).toBe("select");
+      expect(field.clearable).toBe(false);
+      expect(field.options).toHaveLength(21);
+      expect(field.options[0]).toEqual({ value: 0, label: "0" });
+      expect(field.options[1]).toEqual({ value: 100, label: "100" });
+      expect(field.options.at(-1)).toEqual({ value: 2000, label: "2000" });
+    }
+  });
+});
 
 describe("platformDetails optional pictures", () => {
   const rowSlots = (platform, applicationInfo) => {
