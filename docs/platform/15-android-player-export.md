@@ -228,7 +228,7 @@ released game, so only Create Key, Replace Key, Upload Key, and Use Again
 change the current key. Platform Details says the key can't be used in that
 state, and Create Key and Upload Key warn as Replace Key does.
 
-The export that makes the first key asks twice, once each per project. Before
+The export that makes the first key asks two things, each once per project. Before
 it starts, a confirmation says the export creates the game's signing key and
 that a game already released from another device needs that device's key
 uploaded in Android Platform Details instead. After the export, whether it

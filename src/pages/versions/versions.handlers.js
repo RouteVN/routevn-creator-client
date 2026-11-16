@@ -2001,7 +2001,6 @@ const getAndroidExportFormat = (copy, projectService, { format, signed }) =>
         },
       };
 
-// Exports an APK, or, with `format` `aab`, a signed App Bundle.
 // After an export made the game's key: offers to save a copy of it outside
 // the project, since a lost key cannot be made again and players could no
 // longer update.
@@ -2027,6 +2026,7 @@ const offerAndroidKeyCopy = async (deps, { createdKey, applicationInfo }) => {
   });
 };
 
+// Exports an APK, or, with `format` `aab`, a signed App Bundle.
 const runAndroidExport = async (deps, confirmation) => {
   const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
@@ -2241,17 +2241,6 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
     });
     return;
   }
-  // The first signed export makes the game's key. A game already released
-  // from another device has one, which this copy of the project lacks.
-  if (signed && !store.selectAndroidSigningStatus().currentKey) {
-    const confirmed = await appService.showDialog({
-      title: copy.androidNewKeyConfirmTitle,
-      message: copy.androidNewKeyConfirmMessage,
-      confirmText: copy.androidNewKeyConfirmButton,
-      cancelText: copy.cancelButton,
-    });
-    if (!confirmed) return;
-  }
   const lastBuildNumber = store.selectAndroidLastBuildNumber();
   if (
     lastBuildNumber !== undefined &&
@@ -2264,6 +2253,17 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
         lastBuildNumber,
       }),
       confirmText: copy.androidExportAnywayButton,
+      cancelText: copy.cancelButton,
+    });
+    if (!confirmed) return;
+  }
+  // The first signed export makes the game's key. A game already released
+  // from another device has one, which this copy of the project lacks.
+  if (signed && !store.selectAndroidSigningStatus().currentKey) {
+    const confirmed = await appService.showDialog({
+      title: copy.androidNewKeyConfirmTitle,
+      message: copy.androidNewKeyConfirmMessage,
+      confirmText: copy.androidNewKeyConfirmButton,
       cancelText: copy.cancelButton,
     });
     if (!confirmed) return;

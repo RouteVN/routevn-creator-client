@@ -2119,6 +2119,45 @@ describe("signed Android export", () => {
     });
   });
 
+  it("asks before an App Bundle makes the game's key", async () => {
+    const deps = createSigningDeps();
+    deps.appService.showDialog.mockResolvedValueOnce(false);
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues({ format: "aab" }));
+    expect(deps.appService.showDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: EN_I18N.versionsPage.androidNewKeyConfirmTitle,
+      }),
+    );
+    expect(deps.projectService.promptAndroidBundlePath).not.toHaveBeenCalled();
+  });
+
+  it("offers no copy when the project got a key before the export made one", async () => {
+    const deps = createSigningDeps();
+    deps.projectService.ensureAndroidSigningKey.mockResolvedValue({
+      certificateSha256: KEY_ONE,
+      created: false,
+    });
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    // Only the confirmation before the export.
+    expect(deps.appService.showDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves nothing when the save location is cancelled", async () => {
+    const deps = createSigningDeps();
+    deps.appService.showFormDialog.mockResolvedValueOnce({
+      actionId: "submit",
+      values: { password: "pass one", confirmPassword: "pass one" },
+    });
+    deps.projectService.promptAndroidKeyCopyPath.mockResolvedValue(undefined);
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    expect(
+      deps.projectService.saveAndroidSigningKeyCopy,
+    ).not.toHaveBeenCalled();
+  });
+
   it("saves no copy when the creator chooses Later", async () => {
     const deps = createSigningDeps();
     // Confirms making the key, then declines the copy.
