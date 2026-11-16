@@ -1707,6 +1707,13 @@ const createAndroidDeps = () => {
   });
   deps.store.selectAndroidSigningStatus = vi.fn(() => signingStatus);
   deps.projectService.supportsAndroidSigning = vi.fn(() => false);
+  let lastBuildNumber;
+  deps.store.setAndroidLastBuildNumber = vi.fn(({ buildNumber }) => {
+    lastBuildNumber = buildNumber;
+  });
+  deps.store.selectAndroidLastBuildNumber = vi.fn(() => lastBuildNumber);
+  deps.projectService.getLastAndroidBuildNumber = vi.fn(async () => undefined);
+  deps.projectService.recordAndroidBuildNumber = vi.fn(async () => undefined);
   return deps;
 };
 
@@ -1718,6 +1725,82 @@ const submitAndroidExport = (
   handleAndroidExportFormAction(deps, {
     _event: { detail: { actionId: "submit", values } },
   });
+
+describe("Android Build Number memory", () => {
+  it("starts a first export with an empty Build Number and records the one exported", async () => {
+    const deps = createAndroidDeps();
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    expect(deps.projectService.getLastAndroidBuildNumber).toHaveBeenCalledWith(
+      "com.example.project_one",
+    );
+    expect(deps.refs.androidExportForm.setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({ buildNumber: "" }),
+    });
+    await submitAndroidExport(deps);
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+    expect(deps.projectService.recordAndroidBuildNumber).toHaveBeenCalledWith({
+      applicationId: "com.example.project_one",
+      buildNumber: 42,
+    });
+  });
+
+  it("starts the next export one above the last Build Number", async () => {
+    const deps = createAndroidDeps();
+    deps.projectService.getLastAndroidBuildNumber.mockResolvedValue(42);
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    expect(deps.refs.androidExportForm.setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({ buildNumber: "43" }),
+    });
+  });
+
+  it("asks before exporting a Build Number that is not higher than the last", async () => {
+    const deps = createAndroidDeps();
+    deps.projectService.getLastAndroidBuildNumber.mockResolvedValue(42);
+    deps.appService.showDialog.mockResolvedValue(false);
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps);
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: EN_I18N.versionsPage.warningTitle,
+      message:
+        "Build Number 42 is not higher than the last export (42). Devices with that build won't install this one as an update.",
+      confirmText: EN_I18N.versionsPage.androidExportAnywayButton,
+      cancelText: EN_I18N.versionsPage.cancelButton,
+    });
+    expect(deps.projectService.promptAndroidApkPath).not.toHaveBeenCalled();
+
+    deps.appService.showDialog.mockResolvedValue(true);
+    await submitAndroidExport(deps);
+    expect(deps.projectService.promptAndroidApkPath).toHaveBeenCalled();
+  });
+
+  it("opens and finishes the export when the last Build Number cannot be read or written", async () => {
+    const deps = createAndroidDeps();
+    deps.projectService.getLastAndroidBuildNumber.mockRejectedValue(
+      new Error("read failed"),
+    );
+    deps.projectService.recordAndroidBuildNumber.mockRejectedValue(
+      new Error("write failed"),
+    );
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps);
+    expect(deps.projectService.createAndroidApkToPath).toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        title: EN_I18N.versionsPage.exportCompletedTitle,
+      }),
+    );
+  });
+
+  it("does not record a Build Number when the export fails", async () => {
+    const deps = createAndroidDeps();
+    deps.projectService.createAndroidApkToPath.mockRejectedValue(
+      new Error("export failed"),
+    );
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps);
+    expect(deps.projectService.recordAndroidBuildNumber).not.toHaveBeenCalled();
+  });
+});
 
 it("exports Android without optional icon ids", async () => {
   const deps = createAndroidDeps();
@@ -2107,6 +2190,28 @@ describe("signed Android export", () => {
       { defaultFileName: "Project One-1.2.3-unsigned.apk" },
       expect.any(Object),
     );
+  });
+
+  it("refuses a signed export when the project's keys have no usable current key", async () => {
+    const deps = createSigningDeps();
+    deps.projectService.getAndroidSigningSummary.mockResolvedValue({
+      currentKey: undefined,
+      currentKeyUnusable: true,
+      previousKeys: [],
+    });
+    await handleDownloadAndroidApkClick(deps, createVersionClickPayload());
+    await submitAndroidExport(deps, signedValues());
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.versionsPage.androidSigningKeyUnusable,
+      title: EN_I18N.versionsPage.warningTitle,
+    });
+    expect(deps.store.closeExportConfirmation).not.toHaveBeenCalled();
+    expect(deps.projectService.ensureAndroidSigningKey).not.toHaveBeenCalled();
+    expect(deps.projectService.promptAndroidApkPath).not.toHaveBeenCalled();
+
+    // An unsigned APK needs no key.
+    await submitAndroidExport(deps, signedValues({ signing: "unsigned" }));
+    expect(deps.projectService.promptAndroidApkPath).toHaveBeenCalled();
   });
 
   it("does not open the dialog when the keys cannot be read", async () => {

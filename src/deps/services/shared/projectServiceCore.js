@@ -1,3 +1,4 @@
+import { readAndroidLastBuildNumber } from "../../../internal/androidExport.js";
 import { createProjectAssetService } from "./projectAssetService.js";
 import { createAssetPackageExportService } from "./assetPackageExportService.js";
 import { createEditorThumbnailService } from "./editorThumbnailService.js";
@@ -143,6 +144,26 @@ export const createProjectServiceCore = ({
     setAndroidSigningByProjectId:
       repositoryService.setAndroidSigningByProjectId,
   });
+
+  // The Build Number of this project's last Android export under
+  // `applicationId`, or no value when there was none.
+  const getLastAndroidBuildNumber = async (applicationId) =>
+    readAndroidLastBuildNumber(
+      await repositoryService.getAndroidLastExportByProjectId(
+        getCurrentProjectId(),
+      ),
+      applicationId,
+    );
+
+  // Called after an export: keeps the highest Build Number exported.
+  const recordAndroidBuildNumber = async ({ applicationId, buildNumber }) => {
+    const last = await getLastAndroidBuildNumber(applicationId);
+    if (last !== undefined && last >= buildNumber) return;
+    await repositoryService.setAndroidLastExportByProjectId(
+      getCurrentProjectId(),
+      { applicationId, buildNumber },
+    );
+  };
 
   // A signed export names its key by fingerprint; the key comes from the
   // project.
@@ -1109,6 +1130,8 @@ export const createProjectServiceCore = ({
     createAndroidApkToPath,
     promptAndroidBundlePath: exportService.promptAndroidBundlePath,
     createAndroidBundleToPath,
+    getLastAndroidBuildNumber,
+    recordAndroidBuildNumber,
     supportsAndroidSigning: androidSigningService.supportsAndroidSigning,
     getAndroidSigningSummary: androidSigningService.getAndroidSigningSummary,
     ensureAndroidSigningKey: androidSigningService.ensureAndroidSigningKey,

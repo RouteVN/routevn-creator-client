@@ -143,6 +143,9 @@ export const createProjectRepositoryService = ({
   // fields they do not know when they save. The project app store stays in
   // the project database; it is not part of the shared project state.
   const ANDROID_SIGNING_KEY = "androidSigning";
+  // The Build Number of the project's last Android export, so the next export
+  // can start above it. A separate key for the same reason.
+  const ANDROID_LAST_EXPORT_KEY = "androidLastExport";
   const PLATFORM_DETAILS_KEYS = {
     web: "platformDetails.web",
     windows: "platformDetails.windows",
@@ -1156,6 +1159,18 @@ export const createProjectRepositoryService = ({
     await store.app.set(ANDROID_SIGNING_KEY, signing);
   };
 
+  const getAndroidLastExportByProjectId = async (projectId) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    return await store.app.get(ANDROID_LAST_EXPORT_KEY);
+  };
+
+  const setAndroidLastExportByProjectId = async (projectId, lastExport) => {
+    const store = await getStoreByProject(projectId);
+    await ensureStoreOpenCompatible(store);
+    await store.app.set(ANDROID_LAST_EXPORT_KEY, lastExport);
+  };
+
   const getPlatformDetailsByProjectId = async (projectId, platform) => {
     const store = await getStoreByProject(projectId);
     await ensureCompatibleCreatorVersion(store);
@@ -1799,6 +1814,8 @@ export const createProjectRepositoryService = ({
     updateAssetPackageByProjectId,
     getAndroidSigningByProjectId,
     setAndroidSigningByProjectId,
+    getAndroidLastExportByProjectId,
+    setAndroidLastExportByProjectId,
     getCurrentPlatformDetails,
     getCurrentPlatformDetailsDefaults,
     createCurrentPlatformDetails,

@@ -241,17 +241,26 @@ describe("androidSigningService", () => {
     });
     records.get("project-1").keys.push(later);
 
-    // The current key is unreadable, so it is not offered, and a signed
-    // export makes a new key.
+    // The current key is unreadable, so it is not offered. A signed export
+    // refuses to make a new key for a project that already has keys; only
+    // Create Key or Replace Key does.
     expect(await service.getAndroidSigningSummary()).toEqual({
       currentKey: undefined,
+      currentKeyUnusable: true,
       previousKeys: [
         { certificateSha256: "1".repeat(64), origin: "created", addedAt: 5 },
         { certificateSha256: "3".repeat(64), origin: "created", addedAt: 4 },
       ],
     });
     fileAdapter.createAndroidSigningKey.mockResolvedValue(material("4"));
-    await service.ensureAndroidSigningKey({
+    await expect(
+      service.ensureAndroidSigningKey({
+        applicationName: "Project One",
+        applicationId: "com.example.project_one",
+      }),
+    ).rejects.toMatchObject({ code: "signing-key-unusable" });
+    expect(fileAdapter.createAndroidSigningKey).not.toHaveBeenCalled();
+    await service.createAndroidSigningKey({
       applicationName: "Project One",
       applicationId: "com.example.project_one",
     });
@@ -274,5 +283,29 @@ describe("androidSigningService", () => {
     expect(service.supportsAndroidSigning()).toBe(true);
     delete fileAdapter.createAndroidSigningKey;
     expect(service.supportsAndroidSigning()).toBe(false);
+  });
+
+  it("does not make a key for a project whose previous keys have no current one", async () => {
+    const { service, fileAdapter, records } = createService({
+      keys: [{ ...material("1"), origin: "created", addedAt: 5 }],
+    });
+    expect((await service.getAndroidSigningSummary()).currentKeyUnusable).toBe(
+      true,
+    );
+    await expect(
+      service.ensureAndroidSigningKey({
+        applicationName: "Project One",
+        applicationId: "com.example.project_one",
+      }),
+    ).rejects.toMatchObject({ code: "signing-key-unusable" });
+    expect(fileAdapter.createAndroidSigningKey).not.toHaveBeenCalled();
+    expect(records.get("project-1").keys).toHaveLength(1);
+  });
+
+  it("does not mark a project without keys as unusable", async () => {
+    const { service } = createService();
+    expect(
+      (await service.getAndroidSigningSummary()).currentKeyUnusable,
+    ).toBeUndefined();
   });
 });

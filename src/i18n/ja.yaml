@@ -655,6 +655,8 @@ versionsPage:
   androidUnsignedApkNotice: "インストールする前に、APK Signature Scheme v2以降を使ってこのAPKに自分で署名してください。署名後にzipalignを実行しないでください。"
   androidExportBuildNumberDescription: "プレイヤーがインストール済みのリリースのビルド番号より大きくする必要があります。1〜2100000000の整数を入力してください。"
   androidExportBuildNumberInvalid: "ビルド番号は先頭に0を付けず、1〜2100000000の整数にしてください。"
+  androidBuildNumberNotHigherMessage: "ビルド番号 {buildNumber} は前回の出力（{lastBuildNumber}）より大きくありません。そのビルドが入っているデバイスでは、このビルドをアップデートとしてインストールできません。"
+  androidExportAnywayButton: "このまま出力"
   androidExportVersionDescription: "Androidのバージョン名です。1.2.0のように3つの数値で指定してください。"
   androidApkExportCompletedMessage: "未署名のAndroid APKをエクスポートしました。\n保存先：{path}"
   androidSignedApkExportCompletedMessage: "署名済みのAndroid APKをエクスポートしました。\n保存先：{path}"
@@ -800,6 +802,7 @@ versionsPage:
   androidSignBundleStep: "App Bundleに署名"
   androidSaveBundleStep: "App Bundleを保存"
   androidNewKeyNotice: "Creatorが署名鍵を作成し、このプロジェクトに保存します。プロジェクトのバックアップを取り、プロジェクトフォルダーを一般に公開しないでください。"
+  androidSigningKeyUnusable: "このプロジェクトの署名鍵はこのデバイスでは使用できません。署名付きビルドを出力する前に、Androidプラットフォーム詳細で鍵を選択してください。"
   androidSigningKeyFailed: "署名鍵を作成できませんでした。"
 webServerPage:
   actionsLabel: "操作"

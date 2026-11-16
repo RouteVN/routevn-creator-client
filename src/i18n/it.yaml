@@ -655,6 +655,8 @@ versionsPage:
   androidUnsignedApkNotice: "Firma tu questo APK prima di installarlo, con APK Signature Scheme v2 o successivo. Non eseguire zipalign dopo la firma."
   androidExportBuildNumberDescription: "Deve essere superiore al numero di build del rilascio già installato dai giocatori. Inserisci un intero da 1 a 2100000000."
   androidExportBuildNumberInvalid: "Il numero di build deve essere un intero da 1 a 2100000000, senza zeri iniziali."
+  androidBuildNumberNotHigherMessage: "Il numero di build {buildNumber} non è superiore a quello dell’ultima esportazione ({lastBuildNumber}). I dispositivi con quella build non installeranno questa come aggiornamento."
+  androidExportAnywayButton: "Esporta comunque"
   androidExportVersionDescription: "Nome della versione Android. Usa tre componenti numerici, per esempio 1.2.0."
   androidApkExportCompletedMessage: "APK Android non firmato esportato.\nSalvato in: {path}"
   androidSignedApkExportCompletedMessage: "APK Android firmato esportato.\nSalvato in: {path}"
@@ -800,6 +802,7 @@ versionsPage:
   androidSignBundleStep: "Firma l’App Bundle"
   androidSaveBundleStep: "Salva l’App Bundle"
   androidNewKeyNotice: "Creator creerà una chiave di firma e la salverà in questo progetto. Conserva un backup del progetto e non condividere pubblicamente la sua cartella."
+  androidSigningKeyUnusable: "La chiave di firma di questo progetto non può essere usata su questo dispositivo. Scegli una chiave in Dettagli per Android prima di esportare una build firmata."
   androidSigningKeyFailed: "Impossibile creare la chiave di firma."
 webServerPage:
   actionsLabel: "Azioni"

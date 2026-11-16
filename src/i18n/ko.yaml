@@ -655,6 +655,8 @@ versionsPage:
   androidUnsignedApkNotice: "설치하기 전에 APK Signature Scheme v2 이상으로 이 APK에 직접 서명하세요. 서명한 후에는 zipalign을 실행하지 마세요."
   androidExportBuildNumberDescription: "플레이어가 이미 설치한 출시 버전의 빌드 번호보다 커야 해요. 1~2100000000 사이의 정수를 입력하세요."
   androidExportBuildNumberInvalid: "빌드 번호는 앞에 0을 붙이지 않은 1~2100000000 사이의 정수여야 해요."
+  androidBuildNumberNotHigherMessage: "빌드 번호 {buildNumber}은(는) 마지막으로 내보낸 번호({lastBuildNumber})보다 높지 않아요. 해당 빌드가 설치된 기기에서는 이 빌드를 업데이트로 설치할 수 없어요."
+  androidExportAnywayButton: "그래도 내보내기"
   androidExportVersionDescription: "Android 버전 이름이에요. 1.2.0처럼 숫자 세 개로 입력하세요."
   androidApkExportCompletedMessage: "서명되지 않은 Android APK를 내보냈어요.\n저장 위치: {path}"
   androidSignedApkExportCompletedMessage: "서명된 Android APK를 내보냈어요.\n저장 위치: {path}"
@@ -800,6 +802,7 @@ versionsPage:
   androidSignBundleStep: "App Bundle 서명"
   androidSaveBundleStep: "App Bundle 저장"
   androidNewKeyNotice: "Creator가 서명 키를 만들어 이 프로젝트에 저장해요. 프로젝트를 백업해 두고, 프로젝트 폴더를 공개적으로 공유하지 마세요."
+  androidSigningKeyUnusable: "이 프로젝트의 서명 키는 이 기기에서 사용할 수 없어요. 서명된 빌드를 내보내기 전에 Android 정보에서 키를 선택하세요."
   androidSigningKeyFailed: "서명 키를 만들지 못했어요."
 webServerPage:
   actionsLabel: "작업"

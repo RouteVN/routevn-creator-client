@@ -655,6 +655,8 @@ versionsPage:
   androidUnsignedApkNotice: "Перед установкой подпишите этот APK сами по схеме APK Signature Scheme v2 или новее. Не запускайте zipalign после подписания."
   androidExportBuildNumberDescription: "Должен быть выше номера сборки выпуска, уже установленного у игроков. Введите целое число от 1 до 2100000000."
   androidExportBuildNumberInvalid: "Номер сборки должен быть целым числом от 1 до 2100000000 без ведущих нулей."
+  androidBuildNumberNotHigherMessage: "Номер сборки {buildNumber} не больше, чем у последнего экспорта ({lastBuildNumber}). Устройства с той сборкой не установят эту как обновление."
+  androidExportAnywayButton: "Всё равно экспортировать"
   androidExportVersionDescription: "Название версии Android. Используйте три числовые части, например 1.2.0."
   androidApkExportCompletedMessage: "APK для Android без подписи экспортирован.\nСохранён в: {path}"
   androidSignedApkExportCompletedMessage: "Подписанный APK для Android экспортирован.\nСохранён в: {path}"
@@ -800,6 +802,7 @@ versionsPage:
   androidSignBundleStep: "Подписать App Bundle"
   androidSaveBundleStep: "Сохранить App Bundle"
   androidNewKeyNotice: "Creator создаст ключ подписи и сохранит его в этом проекте. Храните резервную копию проекта и не выкладывайте его папку в открытый доступ."
+  androidSigningKeyUnusable: "Ключ подписи этого проекта нельзя использовать на этом устройстве. Перед экспортом подписанной сборки выберите ключ в разделе «Настройки для Android»."
   androidSigningKeyFailed: "Не удалось создать ключ подписи."
 webServerPage:
   actionsLabel: "Действия"

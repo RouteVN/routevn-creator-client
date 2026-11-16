@@ -263,6 +263,13 @@ Current keys:
     stays in the list
   - the private keys are not encrypted: anyone with a copy of the project
     folder can sign builds of the game; see `15-android-player-export.md`
+- `androidLastExport`
+  - `{ applicationId, buildNumber }`: the highest Build Number the project
+    exported for Android under that application ID
+  - written after each Android export finishes; the export form starts one
+    above it and asks before exporting a Build Number that is not higher
+  - applies only to exports from this copy of the project, and starts over
+    when the application ID changes
 - `creatorVersion`
   - stored project format version gate for compatibility checks
 - `versions`

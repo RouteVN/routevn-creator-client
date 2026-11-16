@@ -655,6 +655,8 @@ versionsPage:
   androidUnsignedApkNotice: "Hãy tự ký APK này trước khi cài đặt, bằng APK Signature Scheme v2 trở lên. Không chạy zipalign sau khi ký."
   androidExportBuildNumberDescription: "Phải lớn hơn số bản dựng của bản phát hành người chơi đã cài đặt. Nhập số nguyên từ 1 đến 2100000000."
   androidExportBuildNumberInvalid: "Số bản dựng phải là số nguyên từ 1 đến 2100000000, không có số 0 ở đầu."
+  androidBuildNumberNotHigherMessage: "Số bản dựng {buildNumber} không cao hơn lần xuất gần nhất ({lastBuildNumber}). Thiết bị có bản dựng đó sẽ không cài bản này làm bản cập nhật."
+  androidExportAnywayButton: "Vẫn xuất"
   androidExportVersionDescription: "Tên phiên bản Android. Dùng ba thành phần số, ví dụ 1.2.0."
   androidApkExportCompletedMessage: "Đã xuất APK Android chưa ký.\nĐã lưu vào: {path}"
   androidSignedApkExportCompletedMessage: "Đã xuất APK Android có chữ ký.\nĐã lưu vào: {path}"
@@ -800,6 +802,7 @@ versionsPage:
   androidSignBundleStep: "Ký App Bundle"
   androidSaveBundleStep: "Lưu App Bundle"
   androidNewKeyNotice: "Creator sẽ tạo khóa ký và lưu trong dự án này. Hãy sao lưu dự án và đừng chia sẻ công khai thư mục dự án."
+  androidSigningKeyUnusable: "Không thể dùng khóa ký của dự án này trên thiết bị này. Hãy chọn một khóa trong Chi tiết cho Android trước khi xuất bản dựng đã ký."
   androidSigningKeyFailed: "Không tạo được khóa ký."
 webServerPage:
   actionsLabel: "Thao tác"

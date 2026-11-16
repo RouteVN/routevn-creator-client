@@ -895,6 +895,9 @@ const checkAndOpenExportConfirmation = async (
   if (exportType === "android-apk" && !(await loadAndroidSigningStatus(deps))) {
     return;
   }
+  if (exportType === "android-apk") {
+    await loadAndroidLastBuildNumber(deps, applicationInfo);
+  }
   if (exportType === "ios-application" && !(await loadIosExportOptions(deps))) {
     return;
   }
@@ -918,7 +921,9 @@ const checkAndOpenExportConfirmation = async (
         version: isValidNativeApplicationVersion(version.name)
           ? version.name
           : "",
-        buildNumber: "",
+        buildNumber: getNextAndroidBuildNumber(
+          store.selectAndroidLastBuildNumber(),
+        ),
         format: "apk",
         signing: "signed",
       },
@@ -1031,6 +1036,31 @@ const loadIosExportOptions = async (deps) => {
 
 // Whether this host signs and the project's current key, read before the
 // Android export dialog renders.
+// The largest Build Number Android accepts.
+const MAX_ANDROID_BUILD_NUMBER = 2_100_000_000;
+
+// The Build Number the export form starts with: one above the last export,
+// or empty for a first export.
+const getNextAndroidBuildNumber = (lastBuildNumber) =>
+  lastBuildNumber !== undefined && lastBuildNumber < MAX_ANDROID_BUILD_NUMBER
+    ? String(lastBuildNumber + 1)
+    : "";
+
+// The last export's Build Number only fills in the form and backs a
+// warning, so an export still opens when it cannot be read.
+const loadAndroidLastBuildNumber = async (deps, applicationInfo) => {
+  const { store, projectService } = deps;
+  let buildNumber;
+  try {
+    buildNumber = await projectService.getLastAndroidBuildNumber(
+      applicationInfo.applicationIdentifier,
+    );
+  } catch {
+    buildNumber = undefined;
+  }
+  store.setAndroidLastBuildNumber({ buildNumber });
+};
+
 const loadAndroidSigningStatus = async (deps) => {
   const { store, projectService, appService, i18n } = deps;
   const copy = selectVersionsPageCopy(i18n);
@@ -1039,10 +1069,12 @@ const loadAndroidSigningStatus = async (deps) => {
     return true;
   }
   try {
-    const { currentKey } = await projectService.getAndroidSigningSummary();
+    const { currentKey, currentKeyUnusable } =
+      await projectService.getAndroidSigningSummary();
     store.setAndroidSigningStatus({
       supported: true,
       currentKey: currentKey?.certificateSha256,
+      currentKeyUnusable,
     });
     return true;
   } catch (error) {
@@ -2110,6 +2142,16 @@ const runAndroidExport = async (deps, confirmation) => {
     });
     return;
   }
+  // The record only helps the next export start above this one, so a
+  // finished export stays a success when it cannot be written.
+  try {
+    await projectService.recordAndroidBuildNumber({
+      applicationId: applicationInfo.applicationIdentifier,
+      buildNumber: nativeVersion.versionCode,
+    });
+  } catch {
+    // Nothing to do: the next export starts with an empty Build Number.
+  }
   appService.showAlert({
     message: formatI18nCopy(exportFormat.completedMessage, {
       path: appService.getFileDisplayPath(result?.outputPath ?? outputPath),
@@ -2158,6 +2200,31 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
     format === "aab" ||
     (store.selectAndroidSigningStatus().supported &&
       values.signing === "signed");
+  const lastBuildNumber = store.selectAndroidLastBuildNumber();
+  if (
+    lastBuildNumber !== undefined &&
+    nativeVersion.versionCode <= lastBuildNumber
+  ) {
+    const confirmed = await appService.showDialog({
+      title: copy.warningTitle,
+      message: formatI18nCopy(copy.androidBuildNumberNotHigherMessage, {
+        buildNumber: nativeVersion.versionCode,
+        lastBuildNumber,
+      }),
+      confirmText: copy.androidExportAnywayButton,
+      cancelText: copy.cancelButton,
+    });
+    if (!confirmed) return;
+  }
+  // A project with keys but no usable current key is never given a new key
+  // by an export; the creator chooses one in Platform Details first.
+  if (signed && store.selectAndroidSigningStatus().currentKeyUnusable) {
+    appService.showAlert({
+      message: copy.androidSigningKeyUnusable,
+      title: copy.warningTitle,
+    });
+    return;
+  }
   store.closeExportConfirmation();
   render();
   await runAndroidExport(deps, {

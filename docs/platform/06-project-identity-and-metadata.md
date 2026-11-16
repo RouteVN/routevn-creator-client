@@ -190,7 +190,10 @@ with an ASCII letter and contains only ASCII letters, digits, or underscores.
 Changing the package name creates a separate app that cannot update the old one.
 Updates also require the same signing key and a higher Build Number.
 
-Android Version and Build Number are per-export inputs and are not persisted.
+Android Version and Build Number are per-export inputs. The project's
+`androidLastExport` key records the Build Number of the last export and its
+application ID: the next export's form starts one above it, and an export with
+a Build Number that is not higher asks for confirmation first.
 Version uses the shared three-component numeric native version rule. Build
 Number is an integer from 1 to 2100000000. Orientation comes from the selected
 release's screen resolution: portrait when height exceeds width, landscape
