@@ -274,6 +274,8 @@ export const createInitialState = () => ({
   androidSigning: {
     supported: false,
     currentKey: undefined,
+    // The project has keys but no current key this Creator can sign with.
+    currentKeyUnusable: false,
     previousKeys: [],
     busy: false,
   },
@@ -281,10 +283,11 @@ export const createInitialState = () => ({
 
 export const setAndroidSigning = (
   { state },
-  { supported, currentKey, previousKeys } = {},
+  { supported, currentKey, currentKeyUnusable, previousKeys } = {},
 ) => {
   state.androidSigning.supported = !!supported;
   state.androidSigning.currentKey = currentKey;
+  state.androidSigning.currentKeyUnusable = !!currentKeyUnusable;
   state.androidSigning.previousKeys = previousKeys ?? [];
 };
 
@@ -295,6 +298,7 @@ export const setAndroidSigningBusy = ({ state }, { busy } = {}) => {
 export const selectAndroidSigning = ({ state }) => ({
   supported: state.androidSigning.supported,
   currentKey: state.androidSigning.currentKey,
+  currentKeyUnusable: state.androidSigning.currentKeyUnusable,
   busy: state.androidSigning.busy,
 });
 
@@ -446,7 +450,9 @@ export const selectViewData = ({ state, i18n }) => {
     ),
     androidSigningBusy: state.androidSigning.busy,
     androidSigningKeyNotice: copy.androidSigningKeyNotice,
-    androidNoSigningKeyMessage: copy.androidNoSigningKeyMessage,
+    androidNoSigningKeyMessage: state.androidSigning.currentKeyUnusable
+      ? copy.androidSigningKeyUnusableMessage
+      : copy.androidNoSigningKeyMessage,
     androidSaveKeyCopyLabel: copy.androidSaveKeyCopyButton,
     androidUploadKeyLabel: copy.androidUploadKeyButton,
     androidReplaceKeyLabel: copy.androidReplaceKeyButton,

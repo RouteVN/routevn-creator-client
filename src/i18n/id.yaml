@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "Diimpor · {date}"
   androidSigningKeyNotice: "Disimpan di proyek ini. Simpan cadangan proyek, dan jangan bagikan foldernya secara publik."
   androidNoSigningKeyMessage: "Belum ada kunci. RouteVN Creator akan membuatnya saat Anda pertama kali mengekspor APK bertanda tangan atau App Bundle."
+  androidSigningKeyUnusableMessage: "Kunci penandatanganan proyek ini tidak dapat digunakan di perangkat ini. Gunakan kunci sebelumnya, unggah berkas kunci, atau buat kunci baru."
   androidCreateKeyButton: "Buat kunci"
   androidUploadKeyButton: "Impor kunci"
   androidReplaceKeyButton: "Ganti kunci"

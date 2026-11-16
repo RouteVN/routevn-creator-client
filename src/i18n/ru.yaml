@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "Импортирован · {date}"
   androidSigningKeyNotice: "Сохранён в этом проекте. Храните резервную копию проекта и не выкладывайте его папку в открытый доступ."
   androidNoSigningKeyMessage: "Ключа пока нет. Creator создаст его при первом экспорте подписанного APK или App Bundle."
+  androidSigningKeyUnusableMessage: "Ключ подписи этого проекта нельзя использовать на этом устройстве. Используйте предыдущий ключ, загрузите файл ключа или создайте новый ключ."
   androidCreateKeyButton: "Создать ключ"
   androidUploadKeyButton: "Импортировать ключ"
   androidReplaceKeyButton: "Заменить ключ"

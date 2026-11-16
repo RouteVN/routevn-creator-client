@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "Đã thêm · {date}"
   androidSigningKeyNotice: "Đã lưu trong dự án này. Hãy sao lưu dự án và đừng chia sẻ công khai thư mục dự án."
   androidNoSigningKeyMessage: "Chưa có khóa. Creator sẽ tạo khóa ở lần đầu tiên bạn xuất APK có chữ ký hoặc App Bundle."
+  androidSigningKeyUnusableMessage: "Không thể dùng khóa ký của dự án này trên thiết bị này. Hãy dùng một khóa trước đó, tải tệp khóa lên hoặc tạo khóa mới."
   androidCreateKeyButton: "Tạo khóa"
   androidUploadKeyButton: "Thêm khóa"
   androidReplaceKeyButton: "Thay khóa"

@@ -191,7 +191,7 @@ Changing the package name creates a separate app that cannot update the old one.
 Updates also require the same signing key and a higher Build Number.
 
 Android Version and Build Number are per-export inputs. The project's
-`androidLastExport` key records the Build Number of the last export and its
+`androidLastExport` key records the highest Build Number exported and its
 application ID: the next export's form starts one above it, and an export with
 a Build Number that is not higher asks for confirmation first.
 Version uses the shared three-component numeric native version rule. Build

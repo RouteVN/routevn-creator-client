@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "Uploaded · {date}"
   androidSigningKeyNotice: "Saved in this project. Keep a backup of the project, and don't share its folder publicly."
   androidNoSigningKeyMessage: "No key yet. Creator makes one the first time you export a signed APK or an App Bundle."
+  androidSigningKeyUnusableMessage: "This project's signing key can't be used on this device. Use a previous key, upload the key file, or create a new key."
   androidCreateKeyButton: "Create Key"
   androidUploadKeyButton: "Upload Key"
   androidReplaceKeyButton: "Replace Key"

@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "已匯入 · {date}"
   androidSigningKeyNotice: "已儲存在此專案中。請備份專案，且不要公開分享專案資料夾。"
   androidNoSigningKeyMessage: "尚無金鑰。第一次匯出已簽署的 APK 或 App Bundle 時，Creator 會建立一個。"
+  androidSigningKeyUnusableMessage: "此專案的簽署金鑰無法在此裝置上使用。請使用先前的金鑰、上傳金鑰檔案或建立新金鑰。"
   androidCreateKeyButton: "建立金鑰"
   androidUploadKeyButton: "匯入金鑰"
   androidReplaceKeyButton: "取代金鑰"

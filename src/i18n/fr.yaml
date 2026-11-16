@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "Importée · {date}"
   androidSigningKeyNotice: "Enregistrée dans ce projet. Conservez une copie de sauvegarde du projet et ne partagez pas son dossier publiquement."
   androidNoSigningKeyMessage: "Aucune clé pour l’instant. Creator en crée une la première fois que vous exportez un APK signé ou un App Bundle."
+  androidSigningKeyUnusableMessage: "La clé de signature de ce projet ne peut pas être utilisée sur cet appareil. Utilisez une clé précédente, importez le fichier de la clé ou créez une nouvelle clé."
   androidCreateKeyButton: "Créer une clé"
   androidUploadKeyButton: "Importer une clé"
   androidReplaceKeyButton: "Remplacer la clé"

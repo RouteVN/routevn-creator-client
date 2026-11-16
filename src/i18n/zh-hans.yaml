@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "已导入 · {date}"
   androidSigningKeyNotice: "已保存在此项目中。请备份项目，并且不要公开分享项目文件夹。"
   androidNoSigningKeyMessage: "还没有密钥。首次导出已签名的 APK 或 App Bundle 时，Creator 会创建一个。"
+  androidSigningKeyUnusableMessage: "此项目的签名密钥无法在此设备上使用。请使用以前的密钥、上传密钥文件或创建新密钥。"
   androidCreateKeyButton: "创建密钥"
   androidUploadKeyButton: "导入密钥"
   androidReplaceKeyButton: "替换密钥"

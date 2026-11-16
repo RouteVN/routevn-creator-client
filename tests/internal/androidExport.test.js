@@ -186,5 +186,9 @@ describe("Android export records", () => {
     expect(hasStoredAndroidSigningKeys({ currentKey: "a".repeat(64) })).toBe(
       true,
     );
+    // A record in an unknown shape may hold keys.
+    expect(hasStoredAndroidSigningKeys("later format")).toBe(true);
+    expect(hasStoredAndroidSigningKeys({ keys: { a: 1 } })).toBe(true);
+    expect(hasStoredAndroidSigningKeys({})).toBe(false);
   });
 });

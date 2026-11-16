@@ -86,9 +86,15 @@ export const normalizeAndroidSigning = (value) => {
 // Whether the stored record already holds keys or names a current key,
 // readable by this Creator or not. Such a project has released builds signed
 // with a key, so Creator never makes a new one for it on its own.
-export const hasStoredAndroidSigningKeys = (stored) =>
-  (Array.isArray(stored?.keys) && stored.keys.length > 0) ||
-  (stored?.currentKey !== undefined && stored?.currentKey !== null);
+export const hasStoredAndroidSigningKeys = (stored) => {
+  if (stored === undefined || stored === null) return false;
+  // A record in a shape this Creator does not know may still hold keys.
+  if (typeof stored !== "object" || Array.isArray(stored)) return true;
+  const { keys, currentKey } = stored;
+  if (currentKey !== undefined && currentKey !== null) return true;
+  if (keys === undefined || keys === null) return false;
+  return !Array.isArray(keys) || keys.length > 0;
+};
 
 export const findAndroidSigningKey = (signing, certificateSha256) =>
   signing.keys.find((key) => key.certificateSha256 === certificateSha256);

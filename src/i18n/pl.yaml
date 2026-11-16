@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "Zaimportowano · {date}"
   androidSigningKeyNotice: "Zapisany w tym projekcie. Zachowaj kopię zapasową projektu i nie udostępniaj publicznie jego folderu."
   androidNoSigningKeyMessage: "Nie ma jeszcze klucza. Aplikacja RouteVN Creator utworzy go przy pierwszym eksporcie podpisanego APK lub pakietu App Bundle."
+  androidSigningKeyUnusableMessage: "Klucza podpisywania tego projektu nie można użyć na tym urządzeniu. Użyj poprzedniego klucza, prześlij plik klucza lub utwórz nowy klucz."
   androidCreateKeyButton: "Utwórz klucz"
   androidUploadKeyButton: "Importuj klucz"
   androidReplaceKeyButton: "Zastąp klucz"

@@ -216,7 +216,8 @@ damaged record, a key written by a later Creator, or previous keys with no
 current one), the dialog says to choose a key in Android Platform Details and a
 signed export does not start. Builds signed with a new key could not update the
 released game, so only Create Key, Replace Key, Upload Key, and Use Again
-change the current key. A new key is saved in the project before the APK is
+change the current key. Platform Details says the key can't be used in that
+state, and Create Key and Upload Key warn as Replace Key does. A new key is saved in the project before the APK is
 signed; if saving fails, the export stops with an error. Android accepts an
 update only when it is signed with the same key, so the dialog and Platform
 Details say that the key is in the project, that the project needs a backup,

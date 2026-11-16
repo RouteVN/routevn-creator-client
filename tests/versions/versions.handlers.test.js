@@ -2209,6 +2209,10 @@ describe("signed Android export", () => {
     expect(deps.projectService.ensureAndroidSigningKey).not.toHaveBeenCalled();
     expect(deps.projectService.promptAndroidApkPath).not.toHaveBeenCalled();
 
+    // An App Bundle is always signed, so it is refused too.
+    await submitAndroidExport(deps, signedValues({ format: "aab" }));
+    expect(deps.projectService.promptAndroidBundlePath).not.toHaveBeenCalled();
+
     // An unsigned APK needs no key.
     await submitAndroidExport(deps, signedValues({ signing: "unsigned" }));
     expect(deps.projectService.promptAndroidApkPath).toHaveBeenCalled();

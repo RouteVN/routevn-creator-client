@@ -2200,6 +2200,15 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
     format === "aab" ||
     (store.selectAndroidSigningStatus().supported &&
       values.signing === "signed");
+  // A project with keys but no usable current key is never given a new key
+  // by an export; the creator chooses one in Platform Details first.
+  if (signed && store.selectAndroidSigningStatus().currentKeyUnusable) {
+    appService.showAlert({
+      message: copy.androidSigningKeyUnusable,
+      title: copy.warningTitle,
+    });
+    return;
+  }
   const lastBuildNumber = store.selectAndroidLastBuildNumber();
   if (
     lastBuildNumber !== undefined &&
@@ -2215,15 +2224,6 @@ export const handleAndroidExportFormAction = async (deps, payload) => {
       cancelText: copy.cancelButton,
     });
     if (!confirmed) return;
-  }
-  // A project with keys but no usable current key is never given a new key
-  // by an export; the creator chooses one in Platform Details first.
-  if (signed && store.selectAndroidSigningStatus().currentKeyUnusable) {
-    appService.showAlert({
-      message: copy.androidSigningKeyUnusable,
-      title: copy.warningTitle,
-    });
-    return;
   }
   store.closeExportConfirmation();
   render();

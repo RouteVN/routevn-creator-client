@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "อัปโหลด · {date}"
   androidSigningKeyNotice: "บันทึกไว้ในโปรเจกต์นี้ เก็บข้อมูลสำรองของโปรเจกต์ไว้ และอย่าแชร์โฟลเดอร์โปรเจกต์แบบสาธารณะ"
   androidNoSigningKeyMessage: "ยังไม่มีคีย์ Creator จะสร้างคีย์ให้เมื่อคุณส่งออก APK ที่ลงนามหรือ App Bundle เป็นครั้งแรก"
+  androidSigningKeyUnusableMessage: "ไม่สามารถใช้คีย์ลงนามของโปรเจกต์นี้บนอุปกรณ์นี้ได้ ใช้คีย์ก่อนหน้า อัปโหลดไฟล์คีย์ หรือสร้างคีย์ใหม่"
   androidCreateKeyButton: "สร้างคีย์"
   androidUploadKeyButton: "อัปโหลดคีย์"
   androidReplaceKeyButton: "แทนที่คีย์"

@@ -513,6 +513,7 @@ platformDetailsPage:
   androidSigningKeyUploadedDetail: "가져옴 · {date}"
   androidSigningKeyNotice: "이 프로젝트에 저장돼 있어요. 프로젝트를 백업해 두고, 프로젝트 폴더를 공개적으로 공유하지 마세요."
   androidNoSigningKeyMessage: "아직 키가 없어요. 서명된 APK나 App Bundle을 처음 내보낼 때 Creator가 키를 만들어요."
+  androidSigningKeyUnusableMessage: "이 프로젝트의 서명 키는 이 기기에서 사용할 수 없어요. 이전 키를 사용하거나, 키 파일을 업로드하거나, 새 키를 만드세요."
   androidCreateKeyButton: "키 만들기"
   androidUploadKeyButton: "키 가져오기"
   androidReplaceKeyButton: "키 바꾸기"
