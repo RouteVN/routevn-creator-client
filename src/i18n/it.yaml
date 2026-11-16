@@ -808,9 +808,6 @@ versionsPage:
   androidNewKeyConfirmTitle: "Creare una chiave di firma?"
   androidNewKeyConfirmMessage: "Questa esportazione crea la chiave di firma di questo gioco. Se il gioco è già stato pubblicato da un altro dispositivo, annulla e importa quella chiave in Dettagli per Android."
   androidNewKeyConfirmButton: "Crea chiave ed esporta"
-  androidKeyCopyOfferTitle: "Salva una copia della chiave di firma"
-  androidKeyCopyOfferMessage: "La chiave è salvata solo in questo progetto. Conservane una copia in un luogo sicuro: senza, i giocatori non potranno aggiornare il gioco."
-  androidKeyCopyOfferLater: "Più tardi"
   androidSigningKeyFailed: "Impossibile creare la chiave di firma."
 webServerPage:
   actionsLabel: "Azioni"

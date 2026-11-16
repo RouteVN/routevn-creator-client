@@ -808,9 +808,6 @@ versionsPage:
   androidNewKeyConfirmTitle: "Buat kunci penandatanganan?"
   androidNewKeyConfirmMessage: "Ekspor ini membuat kunci penandatanganan game ini. Jika game sudah dirilis dari perangkat lain, batalkan lalu impor kunci tersebut di Detail untuk Android."
   androidNewKeyConfirmButton: "Buat kunci dan ekspor"
-  androidKeyCopyOfferTitle: "Simpan salinan kunci penandatanganan"
-  androidKeyCopyOfferMessage: "Kunci ini hanya tersimpan di proyek ini. Simpan salinannya di tempat yang aman: tanpa kunci ini, pemain tidak dapat memperbarui game."
-  androidKeyCopyOfferLater: "Nanti"
   androidSigningKeyFailed: "Gagal membuat kunci penandatanganan."
 webServerPage:
   actionsLabel: "Tindakan"

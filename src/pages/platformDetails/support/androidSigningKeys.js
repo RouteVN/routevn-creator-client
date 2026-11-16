@@ -1,11 +1,10 @@
-import { sanitizeArtifactFileName } from "../artifactFileName.js";
-import { MIN_ANDROID_KEYSTORE_PASSWORD_LENGTH } from "../androidExport.js";
-import { withErrorDetails } from "../errorDetails.js";
-import { formatI18nCopy } from "./i18nCopy.js";
+import { sanitizeArtifactFileName } from "../../../internal/artifactFileName.js";
+import { MIN_ANDROID_KEYSTORE_PASSWORD_LENGTH } from "../../../internal/androidExport.js";
+import { withErrorDetails } from "../../../internal/errorDetails.js";
+import { formatI18nCopy } from "../../../internal/ui/i18nCopy.js";
 
 // Upload Key and Save a Copy: the dialogs around the project's signing-key
-// service calls. Platform Details and the Versions export both use them, and
-// `copy` is the Platform Details page copy.
+// service calls.
 
 // A stable message for a failed key change, with the host's technical message
 // as details where it names something useful, such as the aliases in a

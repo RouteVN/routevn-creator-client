@@ -808,9 +808,6 @@ versionsPage:
   androidNewKeyConfirmTitle: "要建立簽署金鑰嗎？"
   androidNewKeyConfirmMessage: "這次匯出會為此遊戲建立簽署金鑰。如果遊戲已從其他裝置發布，請取消，並在 Android 平台資訊中匯入該金鑰。"
   androidNewKeyConfirmButton: "建立金鑰並匯出"
-  androidKeyCopyOfferTitle: "儲存簽署金鑰副本"
-  androidKeyCopyOfferMessage: "金鑰僅儲存在此專案中。請在安全的地方保存一份副本：沒有金鑰，玩家將無法更新遊戲。"
-  androidKeyCopyOfferLater: "稍後"
   androidSigningKeyFailed: "無法建立簽署金鑰。"
 webServerPage:
   actionsLabel: "操作"
