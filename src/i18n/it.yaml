@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "Esporta"
   exportOptionsTitle: "Esporta per"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "Conferma esportazione del programma di installazione per Windows"
   createVersionButton: "Crea versione"
   createVersionTitle: "Nuova versione"
   createdLabel: "Data di creazione"

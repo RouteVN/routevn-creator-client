@@ -50,6 +50,8 @@ const getPlatformCreateTitle = (platform, copy) => {
   return copy.createWebPlatformDetailsTitle;
 };
 
+// A slot field has a name so that its hint shows: the form finds the hint
+// of a hovered label by field name.
 export const createPlatformEditForm = (platform, mode, copy) => {
   const fields = [
     {
@@ -65,6 +67,7 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     fields.push({
       type: "slot",
       slot: "platform-application-icon-edit",
+      name: "icon",
       label: copy.iconLabel,
       tooltip: { content: copy[`${platform}IconDescription`] },
     });
@@ -75,12 +78,14 @@ export const createPlatformEditForm = (platform, mode, copy) => {
       {
         type: "slot",
         slot: "platform-android-adaptive-icon-edit",
+        name: "adaptiveIcon",
         label: copy.androidAdaptiveIconLabel,
         tooltip: { content: copy.androidAdaptiveIconDescription },
       },
       {
         type: "slot",
         slot: "platform-android-splash-icon-edit",
+        name: "splashIcon",
         label: copy.androidSplashIconLabel,
         tooltip: { content: copy.androidSplashIconDescription },
       },
@@ -103,12 +108,14 @@ export const createPlatformEditForm = (platform, mode, copy) => {
       {
         type: "slot",
         slot: "platform-web-loading-background-edit",
+        name: "loadingBackground",
         label: copy.webLoadingBackgroundLabel,
         tooltip: { content: copy.webLoadingBackgroundDescription },
       },
       {
         type: "slot",
         slot: "platform-web-start-background-edit",
+        name: "startBackground",
         label: copy.webStartBackgroundLabel,
         tooltip: { content: copy.webStartBackgroundDescription },
       },

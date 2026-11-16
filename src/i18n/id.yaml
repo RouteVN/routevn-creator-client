@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "Ekspor"
   exportOptionsTitle: "Ekspor untuk"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "Konfirmasi ekspor penginstal Windows"
   createVersionButton: "Buat versi"
   createVersionTitle: "Versi baru"
   createdLabel: "Dibuat"

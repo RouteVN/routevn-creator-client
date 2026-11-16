@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "ส่งออก"
   exportOptionsTitle: "ส่งออกสำหรับ"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "ยืนยันการส่งออกตัวติดตั้ง Windows"
   createVersionButton: "สร้างเวอร์ชัน"
   createVersionTitle: "สร้างเวอร์ชัน"
   createdLabel: "สร้างเมื่อ"

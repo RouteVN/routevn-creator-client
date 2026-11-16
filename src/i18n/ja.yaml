@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "出力"
   exportOptionsTitle: "出力先を選択"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "Windowsインストーラー出力の確認"
   createVersionButton: "新しいバージョン"
   createVersionTitle: "新しいバージョン"
   createdLabel: "作成日時"

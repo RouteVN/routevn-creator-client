@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "Xuất"
   exportOptionsTitle: "Xuất cho"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "Xác nhận xuất trình cài đặt Windows"
   createVersionButton: "Phiên bản mới"
   createVersionTitle: "Phiên bản mới"
   createdLabel: "Ngày tạo"

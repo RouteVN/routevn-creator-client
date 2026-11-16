@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "내보내기"
   exportOptionsTitle: "내보낼 플랫폼 선택"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "Windows 설치 프로그램 내보내기 확인"
   createVersionButton: "버전 만들기"
   createVersionTitle: "새 버전"
   createdLabel: "만든 날짜"

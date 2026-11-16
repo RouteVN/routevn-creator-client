@@ -207,7 +207,7 @@ describe("platformDetails.store", () => {
       viewData.platformEditForm.fields
         .map((field) => field.name)
         .filter(Boolean),
-    ).toEqual(["applicationName", "applicationIdentifier"]);
+    ).toEqual(["applicationName", "icon", "applicationIdentifier"]);
     for (const field of ["publisher", "description", "copyright"]) {
       expect(viewData.platformEditDefaultValues).not.toHaveProperty(field);
     }
@@ -294,7 +294,7 @@ describe("platformDetails.store", () => {
       editViewData.platformEditForm.fields
         .map((field) => field.name)
         .filter(Boolean),
-    ).toEqual(["applicationName", "applicationIdentifier"]);
+    ).toEqual(["applicationName", "icon", "applicationIdentifier"]);
   });
 
   it("prefills platform edit state independently", () => {

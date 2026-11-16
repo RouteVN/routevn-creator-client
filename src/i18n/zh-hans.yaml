@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "导出"
   exportOptionsTitle: "选择导出平台"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "确认导出 Windows 安装包"
   createVersionButton: "新建版本"
   createVersionTitle: "新建版本"
   createdLabel: "创建时间"

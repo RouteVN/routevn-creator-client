@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "匯出"
   exportOptionsTitle: "選擇匯出平台"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "確認匯出 Windows 安裝程式"
   createVersionButton: "新增版本"
   createVersionTitle: "新增版本"
   createdLabel: "建立時間"

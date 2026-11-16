@@ -695,7 +695,6 @@ versionsPage:
   exportButton: "Експортувати"
   exportOptionsTitle: "Експортувати для"
   exportIosOptionLabel: "iOS / iPadOS"
-  confirmWindowsInstallerExportTitle: "Підтвердження експорту інсталятора Windows"
   createVersionButton: "Створити версію"
   createVersionTitle: "Нова версія"
   createdLabel: "Створено"
