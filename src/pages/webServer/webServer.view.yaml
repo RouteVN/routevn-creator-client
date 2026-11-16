@@ -83,7 +83,7 @@ template:
                       - rtgl-view d=v w=f h=f:
                           - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                          - rvn-detail-view#detailView key=${selectedItemId} :fields=${detailFields}:
                               - $if canCopySelectedServerUrl:
                                   - rtgl-button#openDetailUrlBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${openUrlButton}
                                   - rtgl-button#copyDetailUrlBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: ${copyUrlButton}

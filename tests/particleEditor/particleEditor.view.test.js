@@ -85,7 +85,7 @@ describe("particle editor view", () => {
       "rvn-base-file-explorer#imageSelectorFileExplorer",
     );
     expect(picker).toContain(
-      "rtgl-button#confirmImageSelection variant=pr: ${selectButton}",
+      "rtgl-button#confirmImageSelection v=pr: ${selectButton}",
     );
   });
 });

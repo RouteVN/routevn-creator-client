@@ -64,7 +64,7 @@ describe("audioEffectsEditor view", () => {
     expect(view).toContain(
       "rtgl-dialog#soundSelectorDialog ?open=${previewSoundSelectorOpen} s=lg",
     );
-    expect(view).toContain("rtgl-button#confirmSoundSelection variant=pr");
+    expect(view).toContain("rtgl-button#confirmSoundSelection v=pr");
     expect(view).toContain("handler: handleConfirmSoundSelection");
     expect(view.indexOf("#confirmSoundSelection")).toBeGreaterThan(
       view.indexOf("#soundSelector"),

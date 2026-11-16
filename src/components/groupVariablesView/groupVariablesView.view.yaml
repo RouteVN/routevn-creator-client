@@ -464,13 +464,13 @@ template:
               - 'rtgl-view class=computedDialogDivider w=1 h=f bgc=bo style="grid-column: 2; grid-row: 1 / span 2;"': null
               - 'rtgl-view class=computedExamplesPanel w=280 h=f d=v g=md ph=md style="grid-column: 3; grid-row: 1 / span 2; min-width: 0; min-height: 0;"':
                   - rtgl-view d=h w=f av=c g=sm:
-                      - rtgl-text w=1fg s=lg fw=b: ${computedExamplesLabel}
+                      - rtgl-text w=1fg s=lg: ${computedExamplesLabel}
                       - 'rtgl-button#addComputedExampleButton sq v=se pre=plus aria-label="${computedExampleAddLabel}" title="${computedExampleAddLabel}"': null
                   - $if computedExamples.length > 0:
                       - 'rtgl-view w=f h=1fg d=v g=sm sv sbv=touch style="min-height: 0;"':
                           - $for example, i in computedExamples:
                               - 'rtgl-view#computedExampleItem${i} data-example-id=${example.id} role=button tabindex=0 w=f d=v g=sm p=md bw=xs bc=bo h-bc=pr br=md cur=pointer style="box-sizing: border-box;"':
-                                  - rtgl-text fw=b: ${example.label}
+                                  - rtgl-text: ${example.label}
                                   - $for input, j in example.inputs:
                                       - rtgl-view d=h w=f av=c g=sm:
                                           - rtgl-text w=1fg s=xs c=mu-fg ellipsis=true: ${input.label}

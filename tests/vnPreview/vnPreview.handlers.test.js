@@ -833,6 +833,11 @@ describe("vnPreview.handlers", () => {
         selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
+        setViewportSize: vi.fn(),
+      },
+      browserEventsClient: {
+        getViewportWidth: () => 390,
+        getViewportHeight: () => 844,
       },
       uiConfig: {
         inputMode: "touch",
@@ -843,6 +848,10 @@ describe("vnPreview.handlers", () => {
 
     expect(deps.store.setUiConfig).toHaveBeenCalledWith({
       uiConfig: deps.uiConfig,
+    });
+    expect(deps.store.setViewportSize).toHaveBeenCalledWith({
+      width: 390,
+      height: 844,
     });
 
     const enterEvent = {
@@ -1018,6 +1027,11 @@ describe("vnPreview.handlers", () => {
         selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
+        setViewportSize: vi.fn(),
+      },
+      browserEventsClient: {
+        getViewportWidth: () => 390,
+        getViewportHeight: () => 844,
       },
       uiConfig: {
         inputMode: "touch",

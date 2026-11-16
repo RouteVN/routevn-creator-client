@@ -671,9 +671,20 @@ const createBeforeHandleActionsHook = (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { dispatchEvent, store, graphicsService, refs, subject, uiConfig } =
-    deps;
+  const {
+    browserEventsClient,
+    dispatchEvent,
+    store,
+    graphicsService,
+    refs,
+    subject,
+    uiConfig,
+  } = deps;
   store.setUiConfig({ uiConfig });
+  store.setViewportSize({
+    width: browserEventsClient.getViewportWidth(),
+    height: browserEventsClient.getViewportHeight(),
+  });
   function handleKeyDown(event) {
     if (event.key !== "Escape") {
       if (

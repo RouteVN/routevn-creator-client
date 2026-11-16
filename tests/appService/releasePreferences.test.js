@@ -48,8 +48,11 @@ describe("global Release preferences", () => {
               key === ASSET_PACKAGE_ENABLED_CONFIG_KEY ? enabled : undefined,
             ),
             getCurrentProjectId: () => projectId,
+            getPath: () => "/project/images",
+            getPayload: () => ({ p: projectId }),
           },
           store: {
+            setCurrentLocation: vi.fn(),
             setAssetPackageEnabled: vi.fn(),
             setRecentSceneIds: vi.fn(),
           },

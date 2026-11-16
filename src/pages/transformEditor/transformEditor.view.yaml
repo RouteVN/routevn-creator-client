@@ -218,14 +218,14 @@ template:
                   - 'rtgl-view#imageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmImageSelection variant=pr: ${confirmButton}
+                  - rtgl-button#confirmImageSelection v=pr: ${confirmButton}
   - rtgl-dialog#characterSpriteDialog ?open=${characterSpriteDialog.open} s=lg:
       - $if characterSpriteDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
               - 'rtgl-view w=f h=70vh style="min-width: 0; min-height: 0;"':
                   - rvn-character-sprite-selector#characterSpriteSelector characterId=${characterSpriteDialog.characterId} :sprites=${characterSpriteDialog.sprites}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmCharacterSprite variant=pr ?disabled=${characterSpriteConfirmDisabled}: ${confirmButton}
+                  - rtgl-button#confirmCharacterSprite v=pr ?disabled=${characterSpriteConfirmDisabled}: ${confirmButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - 'div#previewOverlay slot=content tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':
