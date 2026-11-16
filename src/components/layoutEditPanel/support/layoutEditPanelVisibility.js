@@ -10,6 +10,9 @@ import {
   toCharacterSelectOptions,
 } from "../../../internal/characterOptions.js";
 import { toFlatGroups } from "../../../internal/project/tree.js";
+import { getRuntimeFieldPresetValues } from "../../../internal/runtimeActions.js";
+import { parseRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
+import { localizeCommandLineText } from "../../../internal/ui/sceneEditor/commandLineCopy.js";
 import { getConditionTargetLabel } from "./layoutEditPanelRuntimeLabels.js";
 
 const createVisibilityConditionOpOptions = (copy = {}) => [
@@ -186,18 +189,127 @@ export const toVisibilityConditionTargetValueKindByTarget = (
 ) => {
   return Object.fromEntries(
     Object.entries(getScalarConditionTargetItems(variablesData, options)).map(
-      ([target, variable]) => [target, getConditionTargetValueKind(variable)],
+      ([target, variable]) => [
+        target,
+        getConditionTargetPresetKind(target) ??
+          getConditionTargetValueKind(variable),
+      ],
     ),
   );
 };
+
+// A target with predefined values, such as the menu page, has its runtime
+// field as its value kind. Its value is one of them, or Custom.
+const getConditionTargetPresetKind = (target) => {
+  const runtimeId = parseRuntimeConditionTarget(target);
+  return getRuntimeFieldPresetValues(runtimeId) ? runtimeId : undefined;
+};
+
+export const createConditionValueChoiceOptions = (copy = {}) => [
+  {
+    label: localizeCommandLineText("Predefined", copy),
+    value: "predefined",
+  },
+  { label: localizeCommandLineText("Custom", copy), value: "custom" },
+];
+
+// The predefined values of a value kind, named in the app's language. Empty
+// for a kind without any.
+export const getConditionPresetValueOptions = (valueKind, copy = {}) =>
+  (getRuntimeFieldPresetValues(valueKind) ?? []).map((preset) => ({
+    label: localizeCommandLineText(preset.label, copy),
+    value: preset.value,
+  }));
+
+// A saved value that is not one of the predefined ones is Custom; a new
+// condition starts at the first predefined value.
+export const createConditionPresetDefaults = (valueKind, rawValue) => {
+  const presets = getRuntimeFieldPresetValues(valueKind);
+  if (!presets) {
+    return {};
+  }
+
+  const preset = presets.find((item) => item.value === rawValue);
+  const isCustom = !preset && typeof rawValue === "string" && rawValue !== "";
+  return {
+    valueChoice: isCustom ? "custom" : "predefined",
+    presetValue: preset?.value ?? presets[0].value,
+  };
+};
+
+// The choice and predefined value a form with a predefined-value target
+// needs and does not have yet. The form leaves out a field it hides, and a
+// target can change to one with other predefined values.
+export const getConditionPresetFormDefaults = (valueKind, values = {}) => {
+  const presets = getRuntimeFieldPresetValues(valueKind);
+  if (!presets) {
+    return undefined;
+  }
+
+  if (values.valueChoice === undefined) {
+    return { valueChoice: "predefined", presetValue: presets[0].value };
+  }
+  if (
+    values.valueChoice !== "custom" &&
+    !presets.some((preset) => preset.value === values.presetValue)
+  ) {
+    return { presetValue: presets[0].value };
+  }
+  return undefined;
+};
+
+// The value a form with a predefined-value target submits. Undefined for
+// any other target.
+export const resolveConditionPresetValue = (valueKind, values = {}) => {
+  const presets = getRuntimeFieldPresetValues(valueKind);
+  if (!presets) {
+    return undefined;
+  }
+
+  if (values.valueChoice === "custom") {
+    return values.stringValue ?? "";
+  }
+  return values.presetValue ?? presets[0].value;
+};
+
+// Predefined or Custom, then the predefined value's select or the typed-in
+// value, as the Set Current Menu Page action asks for its value.
+export const createConditionPresetValueFields = (copy = {}) => [
+  {
+    $when: "target && hasPresetValues",
+    name: "valueChoice",
+    type: "segmented-control",
+    label: copy.valueLabel ?? "Value",
+    required: true,
+    clearable: false,
+    options: "${valueChoiceOptions}",
+  },
+  {
+    $when: "target && hasPresetValues && valueChoice == 'predefined'",
+    name: "presetValue",
+    type: "select",
+    required: true,
+    clearable: false,
+    options: "${presetValueOptions}",
+  },
+  {
+    $when: "target && hasPresetValues && valueChoice == 'custom'",
+    name: "stringValue",
+    type: "input-text",
+    required: true,
+  },
+];
 
 export const getVisibilityConditionCharacterValueOptions = ({
   charactersData,
   currentValue,
   noneLabel,
+  imageSrcByFileId,
 } = {}) => {
   return toCharacterSelectOptions(charactersData, {
     includeNone: true,
+    groupByFolder: true,
+    imageSrcByFileId,
     includeMissingValue: currentValue,
     noneLabel,
   });
@@ -241,6 +353,12 @@ const getVisibilityConditionValueLabel = (
         noneLabel: copy.noCharacterOption ?? "No Character",
       }) ?? String(value ?? "")
     );
+  }
+  const presetLabel = getRuntimeFieldPresetValues(
+    getConditionTargetPresetKind(target),
+  )?.find((preset) => preset.value === value)?.label;
+  if (presetLabel) {
+    return localizeCommandLineText(presetLabel, options.presetValueCopy);
   }
   if (typeof value === "boolean") {
     return createVisibilityBooleanOptions(copy).find(
@@ -322,6 +440,7 @@ export const createVisibilityConditionDialogDefaults = (
     numberValue: Number.isFinite(parsedNumberValue) ? parsedNumberValue : 0,
     stringValue: typeof rawValue === "string" ? rawValue : "",
     characterValue: typeof rawValue === "string" ? rawValue : "",
+    ...createConditionPresetDefaults(selectedValueKind, rawValue),
     selectedVariableType,
     selectedValueKind,
   };
@@ -378,6 +497,7 @@ export const createVisibilityConditionForm = ({
         label: copy.valueLabel ?? "Value",
         required: true,
       },
+      ...createConditionPresetValueFields(copy),
       {
         $when: "target && selectedValueKind == 'character'",
         name: "characterValue",
@@ -386,6 +506,7 @@ export const createVisibilityConditionForm = ({
         required: true,
         clearable: false,
         options: "${characterValueOptions}",
+        image: { size: 28, borderRadius: "full", fit: "cover" },
       },
     ],
     actions: {

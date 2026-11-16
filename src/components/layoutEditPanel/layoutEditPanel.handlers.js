@@ -1,3 +1,4 @@
+import { subscribeCharacterAvatarOptions } from "../../internal/ui/characterAvatarOptions.js";
 import {
   getInteractionActions,
   getInteractionPayload,
@@ -19,6 +20,8 @@ import {
   findConditionalOverrideRuleIndex,
   getAvailableChildInteractionItems,
   getConditionalOverrideAttributeOptions,
+  getConditionPresetFormDefaults,
+  resolveConditionPresetValue,
 } from "./support/layoutEditPanelFeatures.js";
 import { createSpriteBlurFromDialogValues } from "./support/layoutEditPanelBlur.js";
 import {
@@ -800,6 +803,7 @@ export const handleBeforeMount = (deps) => {
   store.setSelectedElementMetrics?.({
     metrics: props.selectedElementMetrics,
   });
+  return subscribeCharacterAvatarOptions(deps);
 };
 
 export const handleAfterMount = () => {};
@@ -1183,13 +1187,24 @@ const selectConditionTargetKinds = (store, target) => {
 
 // A picked target starts at Equals, and a Boolean target at True, whichever
 // target came before. Undefined when the form already has them.
-const getConditionTargetDefaults = (values, selectedVariableType) => {
+const getConditionTargetDefaults = (
+  values,
+  { selectedVariableType, selectedValueKind },
+) => {
   if (!values.target) {
     return undefined;
   }
 
   const nextValues = { ...values };
   let hasDefaults = false;
+  const presetDefaults = getConditionPresetFormDefaults(
+    selectedValueKind,
+    values,
+  );
+  if (presetDefaults) {
+    Object.assign(nextValues, presetDefaults);
+    hasDefaults = true;
+  }
   if (values.op === undefined) {
     nextValues.op = "eq";
     hasDefaults = true;
@@ -1211,10 +1226,7 @@ export const handleVisibilityConditionFormChange = (deps, payload) => {
   store.setVisibilityConditionDialogSelectedVariableType(kinds);
   render();
 
-  const defaults = getConditionTargetDefaults(
-    values,
-    kinds.selectedVariableType,
-  );
+  const defaults = getConditionTargetDefaults(values, kinds);
   if (defaults) {
     refs.visibilityConditionForm.setValues({ values: defaults });
   }
@@ -1278,10 +1290,7 @@ export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
   store.setConditionalOverrideConditionDialogSelectedVariableType(kinds);
   render();
 
-  const defaults = getConditionTargetDefaults(
-    values,
-    kinds.selectedVariableType,
-  );
+  const defaults = getConditionTargetDefaults(values, kinds);
   if (defaults) {
     refs.conditionalOverrideConditionForm.setValues({ values: defaults });
   }
@@ -1716,6 +1725,9 @@ export const handleVisibilityConditionFormAction = (deps, payload) => {
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
   } else if (targetValueKind === "character") {
     conditionValue = values.characterValue ?? "";
+  } else {
+    conditionValue =
+      resolveConditionPresetValue(targetValueKind, values) ?? conditionValue;
   }
 
   const nextVisibilityWhen = buildVisibilityConditionExpression({
@@ -2187,6 +2199,9 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
   } else if (targetValueKind === "character") {
     conditionValue = values.characterValue ?? "";
+  } else {
+    conditionValue =
+      resolveConditionPresetValue(targetValueKind, values) ?? conditionValue;
   }
 
   const nextRule = {
