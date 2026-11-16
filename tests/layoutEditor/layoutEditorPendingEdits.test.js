@@ -8,6 +8,7 @@ import {
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // A repository that applies element updates the way the model does, so the
 // page's later syncs read back what was saved.
@@ -90,6 +91,7 @@ const createDeps = () => {
     store: createStore(projectService),
     subject,
     appService: {
+      ...createRetainedEditHistoryService(),
       registerBeforeNavigation: () => () => {},
       getPayload: () => ({ l: "layout-one" }),
       showAlert: vi.fn(),

@@ -35,6 +35,7 @@ import {
   handleTogglePreviewLoop,
 } from "../../src/pages/audioEffectsEditor/audioEffectsEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 describe("audioEffectsEditor.handlers", () => {
   it("opens the transition-side menu from the shared add button", () => {
@@ -251,6 +252,7 @@ describe("audioEffectsEditor.handlers", () => {
     const createDeps = ({ dirty, unsavedPreview }) => ({
       i18n: EN_I18N,
       appService: {
+        ...createRetainedEditHistoryService(),
         getPayload: vi.fn(() => ({ p: "project-1" })),
         navigate: vi.fn(),
         showToast: vi.fn(),
@@ -699,6 +701,7 @@ describe("audioEffectsEditor.handlers", () => {
     const deps = {
       i18n: EN_I18N,
       appService: {
+        ...createRetainedEditHistoryService(),
         getPayload: vi.fn(() => ({ audioEffectId: "crossfade" })),
         navigate: vi.fn(),
         showAlert: vi.fn(),

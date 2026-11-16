@@ -28,6 +28,7 @@ import {
   handleRightPanelModeChange,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const createLayoutEditorDeps = ({
   pendingPersistPayload,
@@ -103,6 +104,8 @@ const createLayoutEditorDeps = ({
     updateSelectedItem: vi.fn(),
     selectLayoutElements: vi.fn(() => ({ items: {}, tree: [] })),
     recordEditHistoryStep: vi.fn(),
+    selectEditHistory: vi.fn(() => ({ undo: [], redo: [] })),
+    resumeEditHistory: vi.fn(),
     addSavingPersistPayload: vi.fn(),
     removeSavingPersistPayload: vi.fn(),
     setStructureEditRunning: vi.fn(),
@@ -110,6 +113,7 @@ const createLayoutEditorDeps = ({
   };
 
   const appService = {
+    ...createRetainedEditHistoryService(),
     getPayload: vi.fn(() => ({
       p: "project-1",
       layoutId: "layout-1",

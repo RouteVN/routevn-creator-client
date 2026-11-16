@@ -20,6 +20,7 @@ import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourc
 import {
   areEditHistoryValuesEqual,
   getEditHistoryChangeKey,
+  getEditHistoryOwner,
 } from "../../internal/editHistory.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import {
@@ -837,6 +838,21 @@ const recordAnimationEditorEdit = (deps) => {
   });
 };
 
+// Keeps the history for coming back to this animation. A new animation that
+// was never saved has no id to come back to.
+const retainAnimationEditorHistory = (deps) => {
+  const { appService, store } = deps;
+  const animationId = store.selectEditItemId();
+  if (!animationId) {
+    return;
+  }
+  appService.retainEditHistory({
+    owner: getEditHistoryOwner("animation", animationId),
+    history: store.selectEditHistory(),
+    content: getAnimationEditorEditFingerprint(deps),
+  });
+};
+
 // Every saved edit passes here, so this is where it enters the undo history.
 const queueEditorAutosave = ({ deps } = {}) => {
   recordAnimationEditorEdit(deps);
@@ -1004,6 +1020,14 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     });
   }
   setAnimationEditorHistoryBaseline(deps);
+  if (animationId) {
+    store.resumeEditHistory({
+      retainedEditHistory: appService.getRetainedEditHistory({
+        owner: getEditHistoryOwner("animation", animationId),
+      }),
+      content: store.selectEditHistoryBaselineFingerprint(),
+    });
+  }
 
   render();
   await initializePreview({ deps });
@@ -1260,6 +1284,8 @@ export const handleBeforeMount = (deps) => {
   );
 
   return async () => {
+    // Before the save below can let the next page open.
+    retainAnimationEditorHistory(deps);
     unregisterBeforeNavigation();
     cleanupTimelinePanSubscriptions();
     cleanupWindowLayout?.();

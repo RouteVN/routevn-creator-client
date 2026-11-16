@@ -28,6 +28,7 @@ import {
   getSceneEditorRestoreFocus,
   restoreSceneEditorSectionLines,
 } from "../../internal/ui/sceneEditorLexical/lineHistory.js";
+import { getEditHistoryOwner } from "../../internal/editHistory.js";
 import {
   resolveEditHistoryShortcut,
   selectEditHistoryCopy,
@@ -775,11 +776,35 @@ const reconcileCurrentEditorSession = (deps) => {
   );
 };
 
+// Keeps the open scene's undo history for coming back to it, as the page or
+// the scene is left.
+const retainSceneEditorHistory = (deps) => {
+  const { appService, store } = deps;
+  appService.retainEditHistory({
+    owner: getEditHistoryOwner("scene", store.selectSceneId()),
+    history: store.selectEditHistory(),
+  });
+};
+
+// Takes back the history kept for the scene now open.
+const resumeSceneEditorHistory = (deps) => {
+  const { appService, store } = deps;
+  store.resumeEditHistory({
+    retainedEditHistory: appService.getRetainedEditHistory({
+      owner: getEditHistoryOwner("scene", store.selectSceneId()),
+    }),
+  });
+};
+
 // Puts a section whose draft could not be saved back to its stored lines, in
 // the store and in the editor showing it.
 const revertFailedDraftSection = (deps, { draftSection }) => {
-  const { projectService, refs, store, subject } = deps;
+  const { appService, projectService, refs, store, subject } = deps;
   const { sceneId, sectionId } = draftSection;
+  // A history kept for this scene could bring the dropped lines back.
+  appService.clearRetainedEditHistory({
+    owner: getEditHistoryOwner("scene", sceneId),
+  });
 
   syncStoreProjectState(store, projectService);
 
@@ -1310,7 +1335,9 @@ export const syncSceneEditorRoutePayload = async (
       }
 
       syncStoreProjectState(store, projectService);
+      retainSceneEditorHistory(deps);
       store.setSceneId({ sceneId: nextSceneId });
+      resumeSceneEditorHistory(deps);
     } finally {
       store.finishNextSceneLoad();
     }
@@ -2102,6 +2129,8 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    // Before the save below can let the next page open.
+    retainSceneEditorHistory(deps);
     store.advanceMountVersion();
     cleanupWindowLayout?.();
     unregisterBeforeNavigation();
@@ -2140,6 +2169,7 @@ export const handleAfterMount = async (deps) => {
       store.markCanvasUnavailable();
       setSceneEditorPageLoading(deps, false);
     });
+    resumeSceneEditorHistory(deps);
     const projectInfo = await projectService.getCurrentProjectInfo();
     store.setProjectLanguage({ language: projectInfo.language });
     reconcileCurrentEditorSession(deps);

@@ -1481,12 +1481,40 @@ steps, range, bounds, default, presets, and unit, and the shared
 `src/internal/ui/sliderPopover.js` turns those into the slider's range, the
 step buttons, a stepped value, and the Presets menu's items for both popovers.
 
-The layout editor has undo and redo for element edits made since the page
-opened: canvas moves, resizes, rotations and nudges, edit panel fields, show and
+An editor page's undo history outlives the page. Each editor keeps its
+history in its page store while it is open and hands it to
+`appService.retainEditHistory` as it is left, and takes it back with
+`appService.getRetainedEditHistory` when the same item is opened again, so
+leaving an editor and coming back keeps undo and redo. Only one history is
+kept, in memory (`src/deps/services/shared/retainedEditHistoryService.js`): it
+belongs to the last editor and item an edit was recorded in
+(`getEditHistoryOwner`, such as one layout, one scene, or one transform), and
+it is dropped when another editor, or the same editor on another item, is left
+with steps of its own. An editor left without an edit keeps the history that
+was there. The history belongs to one project and is dropped when an editor
+opens in another, since copies of a project share item ids. A step can refer to other items,
+such as a text style's font, and the project refuses a save that refers to an
+item that is gone, so the history is also dropped when any item the project
+held as the page was left has been deleted since (scene lines and layout
+elements apart, which only their own editor changes). The scene editor does the same when it switches scenes without
+leaving. Editors whose steps hold the whole item (animation, audio effect,
+transform, particle, text style) also keep the item as they left it, and
+`resumeEditHistory` uses the kept history only while the item still matches,
+so undo never puts an old version over a change made somewhere else. Layout
+and scene steps restore only the elements or lines they touched and are
+dropped when they no longer apply, so their history is kept whatever the item
+holds. The spritesheet editor's steps hold pictures it has only while it is
+open, so its history is not kept; its edits still end the history kept for
+another editor (`appService.clearRetainedEditHistory`). An editor opened
+inside another page, such as a visual's layout editor in the scene editor,
+is not part of this: a history it has lasts only while it is open and never
+replaces the kept one.
+
+The layout editor has undo and redo for element edits: canvas moves, resizes,
+rotations and nudges, edit panel fields, show and
 hide, and the explorer's create, rename, delete and reorder. The history lives
 in the page store (`src/internal/editHistory.js` for the steps,
-`src/internal/project/layout.js` for element snapshots), so leaving the page
-drops it. Each step holds snapshots of the elements an edit touched, from the
+`src/internal/project/layout.js` for element snapshots). Each step holds snapshots of the elements an edit touched, from the
 page's own data before and after; edits to one element less than a second apart
 are one step. Undo and redo behave like an edit: the page applies the restored
 elements at once, then saves them. A step that only changes element data goes
@@ -1536,8 +1564,7 @@ font family names. Leaving the layout editor requests the layout's thumbnail
 below); the layouts page
 requests every layout's when it opens and a new layout's after Add.
 
-The animation editor has undo and redo the same way, for edits made since the
-page opened. Its autosave saves the whole animation, so a step holds the page's
+The animation editor has undo and redo the same way. Its autosave saves the whole animation, so a step holds the page's
 animation (tracks and keyframes per side, masks, and whether camera tracks are
 authored) before and after an edit, recorded where every saved edit queues the
 autosave (`queueEditorAutosave`). Edits that change the same values less than a
@@ -1578,7 +1605,7 @@ saves nothing. Picked preview sounds save with the audio effect on leaving,
 in the same `audioEffect.update`, when they differ from what is saved; they and
 view state such as the tab and zoom are not part of the history.
 
-The scene editor has undo and redo for line edits made since the scene opened:
+The scene editor has undo and redo for line edits:
 text, new, split, merged, moved, and deleted lines, and line action edits.
 Section operations are not part of the history; a step whose section is gone
 is dropped. A step holds, for each line it touched, its section, index, and
@@ -1992,7 +2019,8 @@ avoids inserting every intermediate text version into `local_drafts`.
 A section save that fails, refused with `{ valid: false }` or thrown, fails
 fast. It is not submitted again, because its commands may be partly stored
 already. Only that section's unsaved changes are dropped: its draft and the
-editor showing it go back to the stored lines, undo history is reset, and the
+editor showing it go back to the stored lines, undo history is reset (and the
+history kept for that scene dropped), and the
 user is told at once, by an alert naming the section and scene, that the
 changes were removed. Other sections still save and the flush completes, so
 navigation, backup and cleanup carry on and the user does not keep building on

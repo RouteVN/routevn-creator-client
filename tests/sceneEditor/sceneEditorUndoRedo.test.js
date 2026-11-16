@@ -12,6 +12,7 @@ import {
   handleUndoButtonClick,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const dialogueLine = (id, text, actions = {}) => ({
   id,
@@ -123,6 +124,7 @@ const createPage = ({ secondLine = dialogueLine("line-2", "Second") } = {}) => {
     subject: { dispatch: vi.fn() },
     graphicsService: { engineSelectSectionLineChanges: () => ({}) },
     appService: {
+      ...createRetainedEditHistoryService(),
       getPayload: () => ({}),
       setPayload: vi.fn(),
       showToast: vi.fn(),

@@ -10,6 +10,7 @@ import {
   replaceSceneEditorDraftSectionLines,
 } from "../../src/internal/ui/sceneEditorLexical/draftSection.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const line = (id, text) => ({
   id,
@@ -151,6 +152,7 @@ describe("scene editor: a draft that cannot be saved", () => {
       render: vi.fn(),
       subject: { dispatch: vi.fn() },
       appService: {
+        ...createRetainedEditHistoryService(),
         showAlert: vi.fn(),
         showAlertWhenIdle: vi.fn(),
         reportError: vi.fn(),
