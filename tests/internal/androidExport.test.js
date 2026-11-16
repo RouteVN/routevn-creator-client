@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   createAndroidApkFileName,
   createAndroidBundleFileName,
+  hasStoredAndroidSigningKeys,
   isAndroidExportSpaceError,
   isValidAndroidBackgroundColor,
   normalizeAndroidBackgroundColor,
+  readAndroidLastBuildNumber,
 } from "../../src/internal/androidExport.js";
 import { validatePlatformDetails } from "../../src/internal/platformDetailsValidation.js";
 import {
@@ -156,5 +158,37 @@ describe("Android export space failures", () => {
     ).toBe(false);
     expect(isAndroidExportSpaceError(new Error("Failure One"))).toBe(false);
     expect(isAndroidExportSpaceError(undefined)).toBe(false);
+  });
+});
+
+describe("Android export records", () => {
+  it("reads the last Build Number only for the same application ID", () => {
+    const lastExport = { applicationId: "com.example.one", buildNumber: 7 };
+    expect(readAndroidLastBuildNumber(lastExport, "com.example.one")).toBe(7);
+    expect(
+      readAndroidLastBuildNumber(lastExport, "com.example.two"),
+    ).toBeUndefined();
+    expect(
+      readAndroidLastBuildNumber(undefined, "com.example.one"),
+    ).toBeUndefined();
+    expect(
+      readAndroidLastBuildNumber(
+        { applicationId: "com.example.one", buildNumber: "7" },
+        "com.example.one",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("knows a record with keys or a current key, readable or not", () => {
+    expect(hasStoredAndroidSigningKeys(undefined)).toBe(false);
+    expect(hasStoredAndroidSigningKeys({ keys: [] })).toBe(false);
+    expect(hasStoredAndroidSigningKeys({ keys: [{ later: true }] })).toBe(true);
+    expect(hasStoredAndroidSigningKeys({ currentKey: "a".repeat(64) })).toBe(
+      true,
+    );
+    // A record in an unknown shape may hold keys.
+    expect(hasStoredAndroidSigningKeys("later format")).toBe(true);
+    expect(hasStoredAndroidSigningKeys({ keys: { a: 1 } })).toBe(true);
+    expect(hasStoredAndroidSigningKeys({})).toBe(false);
   });
 });

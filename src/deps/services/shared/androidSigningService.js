@@ -2,6 +2,7 @@ import {
   ANDROID_KEY_COPY_ALIAS,
   addAndroidSigningKey,
   findAndroidSigningKey,
+  hasStoredAndroidSigningKeys,
   normalizeAndroidSigning,
   summarizeAndroidSigning,
   useAndroidSigningKey,
@@ -56,16 +57,37 @@ export const createAndroidSigningService = ({
   const supportsAndroidSigning = () =>
     typeof fileAdapter.createAndroidSigningKey === "function";
 
-  const getAndroidSigningSummary = async () =>
-    summarizeAndroidSigning(await getUsableSigning(requireProjectId()));
+  // `currentKeyUnusable` is set when the project has keys but none is the
+  // current key this Creator can sign with: a damaged record, a key written
+  // by a later Creator, or previous keys with no current one.
+  const getAndroidSigningSummary = async () => {
+    const stored = await getAndroidSigningByProjectId(requireProjectId());
+    const signing = normalizeAndroidSigning(stored);
+    const summary = summarizeAndroidSigning(signing);
+    if (!signing.currentKey && hasStoredAndroidSigningKeys(stored)) {
+      summary.currentKeyUnusable = true;
+    }
+    return summary;
+  };
 
-  // The key signed exports use. The first signed export makes it.
+  // The key signed exports use. The first signed export of a project with
+  // no keys makes it. A project that already has keys never gets a new one
+  // here: builds signed with another key could not update the released
+  // game, so the creator chooses the key in Platform Details.
   const ensureAndroidSigningKey = ({ applicationName, applicationId }) => {
     const projectId = requireProjectId();
     return runInOrder(async () => {
-      const signing = await getUsableSigning(projectId);
+      const stored = await getAndroidSigningByProjectId(projectId);
+      const signing = normalizeAndroidSigning(stored);
       if (signing.currentKey) {
         return { certificateSha256: signing.currentKey, created: false };
+      }
+      if (hasStoredAndroidSigningKeys(stored)) {
+        const error = new Error(
+          "The project's current Android signing key cannot be used.",
+        );
+        error.code = "signing-key-unusable";
+        throw error;
       }
       const material = await fileAdapter.createAndroidSigningKey({
         applicationName,

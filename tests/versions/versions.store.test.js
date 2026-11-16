@@ -541,6 +541,20 @@ describe("Android signing fields", () => {
     ]);
   });
 
+  it("says to choose a key when the project's keys have no usable current key", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus(
+      { state },
+      { supported: true, currentKeyUnusable: true },
+    );
+    const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
+      "signing",
+      EN_I18N.versionsPage.androidSigningKeyUnusable,
+    ]);
+  });
+
   it("offers an App Bundle, always signed, when the host has the bundle template", () => {
     const state = createInitialState();
     openAndroidExport(state);

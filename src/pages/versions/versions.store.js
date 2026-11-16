@@ -158,6 +158,12 @@ const createAndroidFormatField = (copy) => ({
 
 // Signed or Unsigned for an APK, on a host that can sign. The key is the
 // project's; a game without one gets a new key at its first signed export.
+const getAndroidSigningNotice = (copy, signing) => {
+  if (signing.currentKey) return copy.androidSignedWithKeyNotice;
+  if (signing.currentKeyUnusable) return copy.androidSigningKeyUnusable;
+  return copy.androidNewKeyNotice;
+};
+
 const createAndroidSigningFields = (copy, signing) => [
   {
     $when: APK,
@@ -184,9 +190,7 @@ const createAndroidSigningFields = (copy, signing) => [
   {
     $when: `${BUNDLE} || formValues.signing == 'signed'`,
     type: "read-only-text",
-    content: signing.currentKey
-      ? copy.androidSignedWithKeyNotice
-      : copy.androidNewKeyNotice,
+    content: getAndroidSigningNotice(copy, signing),
   },
 ];
 
@@ -424,10 +428,16 @@ export const createInitialState = () => ({
   androidExportAvailability: { available: false, bundleAvailable: false },
   // The open Android export's signing state: whether this host signs, and
   // the fingerprint of the project's current key, if it has one.
+  // `currentKeyUnusable` is set when the project has keys but no current
+  // key this Creator can sign with.
   androidSigning: {
     supported: false,
     currentKey: undefined,
+    currentKeyUnusable: false,
   },
+  // The Build Number of the project's last Android export under the open
+  // export's application ID, when there was one.
+  androidLastBuildNumber: undefined,
   macosExportAvailability: {
     application: false,
     templateAvailable: false,
@@ -543,15 +553,24 @@ export const selectCanExportAndroidBundle = ({ state }) =>
 
 export const setAndroidSigningStatus = (
   { state },
-  { supported, currentKey } = {},
+  { supported, currentKey, currentKeyUnusable } = {},
 ) => {
   state.androidSigning.supported = !!supported;
   state.androidSigning.currentKey = currentKey;
+  state.androidSigning.currentKeyUnusable = !!currentKeyUnusable;
 };
+
+export const setAndroidLastBuildNumber = ({ state }, { buildNumber } = {}) => {
+  state.androidLastBuildNumber = buildNumber;
+};
+
+export const selectAndroidLastBuildNumber = ({ state }) =>
+  state.androidLastBuildNumber;
 
 export const selectAndroidSigningStatus = ({ state }) => ({
   supported: state.androidSigning.supported,
   currentKey: state.androidSigning.currentKey,
+  currentKeyUnusable: state.androidSigning.currentKeyUnusable,
 });
 
 export const setMacosExportAvailability = (

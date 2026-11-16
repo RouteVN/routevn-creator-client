@@ -68,9 +68,14 @@ const loadAndroidSigning = async (deps) => {
     return;
   }
   try {
-    const { currentKey, previousKeys } =
+    const { currentKey, currentKeyUnusable, previousKeys } =
       await projectService.getAndroidSigningSummary();
-    store.setAndroidSigning({ supported: true, currentKey, previousKeys });
+    store.setAndroidSigning({
+      supported: true,
+      currentKey,
+      currentKeyUnusable,
+      previousKeys,
+    });
   } catch {
     const copy = selectPlatformDetailsPageCopy(i18n);
     appService.showToast({ message: copy.androidSigningLoadFailed });
@@ -113,9 +118,13 @@ const createAndroidSigningKey = async (deps) => {
   }
 };
 
+// A project whose keys have no usable current key has released builds
+// signed with a key, so a new key gets the same warning as Replace Key.
 export const handleAndroidCreateKeyClick = (deps) => {
   const { store } = deps;
-  if (store.selectAndroidSigning().busy) return;
+  const signing = store.selectAndroidSigning();
+  if (signing.busy) return;
+  if (signing.currentKeyUnusable) return handleAndroidReplaceKeyClick(deps);
   return createAndroidSigningKey(deps);
 };
 
@@ -141,7 +150,7 @@ export const handleAndroidUploadKeyClick = async (deps) => {
     appService,
     projectService,
     copy: selectPlatformDetailsPageCopy(i18n),
-    replacesKey: signing.currentKey !== undefined,
+    replacesKey: signing.currentKey !== undefined || signing.currentKeyUnusable,
     onImport: (task) => runAndroidSigningChange(deps, task),
   });
 };

@@ -83,6 +83,19 @@ export const normalizeAndroidSigning = (value) => {
   return signing;
 };
 
+// Whether the stored record already holds keys or names a current key,
+// readable by this Creator or not. Such a project has released builds signed
+// with a key, so Creator never makes a new one for it on its own.
+export const hasStoredAndroidSigningKeys = (stored) => {
+  if (stored === undefined || stored === null) return false;
+  // A record in a shape this Creator does not know may still hold keys.
+  if (typeof stored !== "object" || Array.isArray(stored)) return true;
+  const { keys, currentKey } = stored;
+  if (currentKey !== undefined && currentKey !== null) return true;
+  if (keys === undefined || keys === null) return false;
+  return !Array.isArray(keys) || keys.length > 0;
+};
+
 export const findAndroidSigningKey = (signing, certificateSha256) =>
   signing.keys.find((key) => key.certificateSha256 === certificateSha256);
 
@@ -168,3 +181,12 @@ export const ANDROID_KEY_COPY_ALIAS = "key0";
 // or a write failed because the storage filled up during the export.
 export const isAndroidExportSpaceError = (error) =>
   error?.code === "not-enough-space" || isStorageFullError(error);
+
+// The Build Number in the project's `androidLastExport` record for
+// `applicationId`, or no value. A new application ID is a new app to
+// Android, so its numbering starts over.
+export const readAndroidLastBuildNumber = (lastExport, applicationId) =>
+  lastExport?.applicationId === applicationId &&
+  Number.isSafeInteger(lastExport.buildNumber)
+    ? lastExport.buildNumber
+    : undefined;

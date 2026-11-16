@@ -3,6 +3,7 @@ import {
   handleAddPlatformButtonClick,
   handleAddPlatformMenuItemClick,
   handleAfterMount,
+  handleAndroidCreateKeyClick,
   handleAndroidReplaceKeyClick,
   handleAndroidSaveKeyCopyClick,
   handleAndroidUploadKeyClick,
@@ -901,6 +902,38 @@ describe("platformDetails Android signing keys", () => {
     expect(deps.store.setAndroidSigning).toHaveBeenCalledWith({
       supported: false,
     });
+  });
+
+  it("warns before making a key for a project whose keys have no usable current key", async () => {
+    const deps = createSigningDeps();
+    deps.store.selectAndroidSigning.mockReturnValue({
+      supported: true,
+      currentKey: undefined,
+      currentKeyUnusable: true,
+      busy: false,
+    });
+    deps.appService.showDialog.mockResolvedValueOnce(false);
+    await handleAndroidCreateKeyClick(deps);
+    expect(deps.appService.showDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ title: COPY.androidReplaceKeyTitle }),
+    );
+    expect(deps.projectService.createAndroidSigningKey).not.toHaveBeenCalled();
+
+    // Uploading a key says what replacing means too.
+    deps.appService.showFormDialog.mockResolvedValueOnce(undefined);
+    await handleAndroidUploadKeyClick(deps);
+    const [{ form }] = deps.appService.showFormDialog.mock.calls[0];
+    expect(form.fields[0]).toEqual({
+      type: "read-only-text",
+      content: COPY.androidUploadKeyReplaceWarning,
+    });
+  });
+
+  it("makes the first key of a project without asking", async () => {
+    const deps = createSigningDeps();
+    await handleAndroidCreateKeyClick(deps);
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+    expect(deps.projectService.createAndroidSigningKey).toHaveBeenCalled();
   });
 
   it("replaces the key only after the creator confirms", async () => {
