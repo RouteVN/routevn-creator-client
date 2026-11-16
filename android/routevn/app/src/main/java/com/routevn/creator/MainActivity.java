@@ -4748,6 +4748,12 @@ public class MainActivity extends Activity {
         } catch (ActivityNotFoundException error) {
             clearPendingAndroidFilePicker();
             sendAndroidFilePickerError(requestId, "No file picker is available.");
+        } catch (SecurityException error) {
+            // Android can refuse to start a picker for this app, for example
+            // a gallery activity that other apps may not open. Uncaught, this
+            // ends the app.
+            clearPendingAndroidFilePicker();
+            sendAndroidFilePickerError(requestId, "The file picker could not be opened.");
         }
     }
 
