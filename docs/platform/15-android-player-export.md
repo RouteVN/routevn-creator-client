@@ -200,6 +200,15 @@ The activity hides the system bars, keeps the WebView across configuration
 changes, opens external `http` and `https` links in the browser, and moves the
 task to the back on Back instead of finishing.
 
+When Android takes the WebView's renderer process or the renderer crashes
+(reported from Android 8), the activity replaces the WebView and loads the game
+again, so the game returns to its title screen with its saves instead of
+closing. A loss while the game is in the background restarts it when the player
+comes back. Two losses in a row within 30 seconds of a start, with the game in
+the foreground the whole time, mean the game cannot run: the activity shows a
+message instead of restarting, and starts the game again when the player
+returns.
+
 ## Signing
 
 Each project has one current signing key, saved in the project's
