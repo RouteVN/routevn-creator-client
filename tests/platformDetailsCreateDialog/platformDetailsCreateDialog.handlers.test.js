@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleFormAction } from "../../src/components/platformDetailsCreateDialog/platformDetailsCreateDialog.handlers.js";
+import {
+  handleFormAction,
+  handleScreenBackgroundClick,
+} from "../../src/components/platformDetailsCreateDialog/platformDetailsCreateDialog.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const createDeps = ({ platform = "web", iconFileId } = {}) => ({
@@ -14,7 +17,12 @@ const createDeps = ({ platform = "web", iconFileId } = {}) => ({
     selectIconFileId: vi.fn(() => iconFileId),
     selectAdaptiveIconFileId: vi.fn(() => "adaptive-1"),
     selectSplashIconFileId: vi.fn(() => "splash-1"),
+    selectLoadingBackgroundFileId: vi.fn(() => "loading-1"),
+    selectStartBackgroundFileId: vi.fn(() => undefined),
+    selectProjectResolution: vi.fn(() => ({ width: 1920, height: 1080 })),
+    setScreenBackgroundFileId: vi.fn(),
   },
+  render: vi.fn(),
 });
 
 const createSubmitPayload = (values) => ({
@@ -43,6 +51,68 @@ describe("platformDetailsCreateDialog handlers", () => {
     const event = deps.dispatchEvent.mock.calls[0][0];
     expect(event.type).toBe("created");
     expect(event.detail.platform).toBe("windows");
+  });
+
+  it("saves a web platform with its screen backgrounds and fades", async () => {
+    const deps = createDeps({ platform: "web" });
+
+    await handleFormAction(
+      deps,
+      createSubmitPayload({
+        applicationName: "Project One",
+        applicationIdentifier: "project-one",
+        loadingFadeDuration: 300,
+        startFadeDuration: "",
+      }),
+    );
+
+    expect(
+      deps.projectService.createCurrentPlatformDetails,
+    ).toHaveBeenCalledWith(
+      "web",
+      expect.objectContaining({
+        loadingBackgroundFileId: "loading-1",
+        startBackgroundFileId: undefined,
+        loadingFadeDuration: 300,
+        startFadeDuration: 600,
+      }),
+    );
+  });
+
+  it("picks a screen background in the project's shape and keeps the upload", async () => {
+    const deps = createDeps({ platform: "web" });
+    deps.appService.pickFiles = vi.fn(async () => ({
+      uploadSucessful: true,
+      uploadResult: { fileId: "start-1" },
+    }));
+
+    await handleScreenBackgroundClick(deps, { target: "start" });
+
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        upload: true,
+        validations: [
+          { type: "image-aspect-ratio", width: 1920, height: 1080 },
+        ],
+      }),
+    );
+    expect(deps.store.setScreenBackgroundFileId).toHaveBeenCalledWith({
+      target: "start",
+      fileId: "start-1",
+    });
+  });
+
+  it("alerts and keeps nothing when the background upload fails", async () => {
+    const deps = createDeps({ platform: "web" });
+    deps.appService.pickFiles = vi.fn(async () => ({ uploadSucessful: false }));
+
+    await handleScreenBackgroundClick(deps, { target: "loading" });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.failedUploadBackground,
+      title: EN_I18N.platformDetailsPage.errorTitle,
+    });
+    expect(deps.store.setScreenBackgroundFileId).not.toHaveBeenCalled();
   });
 
   it("alerts and does not create when the form is invalid", async () => {

@@ -10,6 +10,7 @@ import { normalizeWebScreenFadeDuration } from "../../internal/webExport.js";
 import {
   createPlatformEditForm,
   getPlatformIconOutputSize,
+  getScreenBackgroundPreviewSize,
 } from "../../internal/ui/platformDetailsForm.js";
 import {
   buildTabletLandscapeContentColumnStyle,
@@ -53,18 +54,6 @@ const createPlatformApplicationInfo = (platform) => {
   // }
 
   return applicationInfo;
-};
-
-// Screen background previews use the project's shape, with the longer side
-// at this many pixels.
-const SCREEN_BACKGROUND_PREVIEW_SIZE = 240;
-
-const getScreenBackgroundPreviewSize = ({ width, height }) => {
-  const scale = SCREEN_BACKGROUND_PREVIEW_SIZE / Math.max(width, height);
-  return {
-    width: Math.round(width * scale),
-    height: Math.round(height * scale),
-  };
 };
 
 const createPlatformEditDefaultValues = () => ({

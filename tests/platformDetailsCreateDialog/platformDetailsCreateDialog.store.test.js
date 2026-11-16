@@ -4,6 +4,7 @@ import {
   selectViewData,
   setIconFileId,
   setOptionalIconFileId,
+  setScreenBackgroundFileId,
   openIconCropDialog,
   syncFromProps,
 } from "../../src/components/platformDetailsCreateDialog/platformDetailsCreateDialog.store.js";
@@ -90,5 +91,38 @@ describe("Android platform setup form", () => {
     expect(
       view.form.fields.filter((field) => field.type === "color-picker"),
     ).toHaveLength(2);
+  });
+});
+
+describe("Web platform setup form", () => {
+  it("starts both fades at the default and shows the screen background pickers", () => {
+    const state = createInitialState();
+    syncFromProps(
+      { state },
+      { props: { platform: "web", applicationInfo: {} } },
+    );
+    let view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.defaultValues.loadingFadeDuration).toBe(600);
+    expect(view.defaultValues.startFadeDuration).toBe(600);
+    expect(view.showWebScreenBackgrounds).toBe(true);
+    // The preview has the project's shape.
+    expect(view.screenBackgroundPreviewWidth).toBe(240);
+    expect(view.screenBackgroundPreviewHeight).toBe(135);
+
+    setScreenBackgroundFileId({ state }, { target: "loading", fileId: "l-1" });
+    view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.loadingBackgroundFileId).toBe("l-1");
+    expect(view.startBackgroundFileId).toBeUndefined();
+  });
+
+  it("shows no screen background pickers for other platforms", () => {
+    const state = createInitialState();
+    syncFromProps(
+      { state },
+      { props: { platform: "android", applicationInfo: {} } },
+    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).showWebScreenBackgrounds,
+    ).toBe(false);
   });
 });
