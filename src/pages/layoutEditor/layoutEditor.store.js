@@ -95,6 +95,7 @@ const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 const VALUE_LABEL_KEYS = Object.freeze({
   "rename-item": "renameMenuItem",
+  "duplicate-item": "duplicateMenuItem",
   "delete-item": "deleteMenuItem",
 });
 

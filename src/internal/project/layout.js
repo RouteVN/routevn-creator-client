@@ -13,6 +13,7 @@ import {
   resolveSpritesheetSize,
 } from "../spritesheets.js";
 import {
+  createDuplicateItemName,
   deleteTreeItem,
   filterTreeCollection,
   insertTreeItem,
@@ -985,6 +986,62 @@ export const cloneLayoutElementsWithFreshIds = (
     items: nextItems,
     tree: nextTree,
   };
+};
+
+const findLayoutTreeNode = (nodes, elementId, parentId) => {
+  for (const node of nodes ?? []) {
+    if (node.id === elementId) {
+      return { node, parentId };
+    }
+
+    const found = findLayoutTreeNode(node.children, elementId, node.id);
+    if (found) {
+      return found;
+    }
+  }
+
+  return undefined;
+};
+
+// The elements to create for a copy of one element and everything inside
+// it, parents before their children. The copy takes the next free numbered
+// name and goes right above the element it was made from in the element
+// list, which is one layer above it.
+export const createLayoutElementDuplicatePlan = (
+  elements,
+  elementId,
+  createId = createLayoutDuplicateId,
+) => {
+  const source = findLayoutTreeNode(elements?.tree, elementId, null);
+  if (!source || !elements.items?.[elementId]) {
+    return [];
+  }
+
+  const plan = [];
+  const addNode = (node, placement) => {
+    const item = elements.items[node.id];
+    if (!item) {
+      return;
+    }
+
+    const data = structuredClone(item);
+    delete data.id;
+    delete data.parentId;
+    const nextElementId = createId();
+    plan.push({ elementId: nextElementId, data, ...placement });
+    for (const child of node.children ?? []) {
+      addNode(child, { parentId: nextElementId, position: "last" });
+    }
+  };
+
+  addNode(source.node, {
+    parentId: source.parentId,
+    position: "before",
+    positionTargetId: elementId,
+  });
+  plan[0].data.name = createDuplicateItemName(elements, elementId);
+
+  return plan;
 };
 
 const toWordWrapWidth = (value) => {

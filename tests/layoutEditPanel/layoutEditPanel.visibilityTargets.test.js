@@ -9,6 +9,7 @@ import {
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
 import {
+  getVisibilityConditionCharacterValueOptions,
   getVisibilityConditionSummary,
   getVisibilityConditionSummaryParts,
   toSectionedVisibilityConditionTargetOptions,
@@ -367,5 +368,38 @@ describe("layoutEditPanel visibility summary", () => {
       "rtgl-text key=${part.kind} s=sm: ${part.text}",
     );
     expect(view).not.toContain("layoutEditorConditionChip");
+  });
+});
+
+describe("layoutEditPanel visibility character options", () => {
+  it("groups characters by folder and shows their avatars", () => {
+    const options = getVisibilityConditionCharacterValueOptions({
+      charactersData: {
+        items: {
+          narrator: { id: "narrator", type: "character", name: "Narrator" },
+          heroes: { id: "heroes", type: "folder", name: "Heroes" },
+          hero: {
+            id: "hero",
+            type: "character",
+            name: "Hero",
+            fileId: "hero-file",
+          },
+        },
+        tree: [
+          { id: "narrator" },
+          { id: "heroes", children: [{ id: "hero" }] },
+        ],
+      },
+      currentValue: "",
+      noneLabel: "No Character",
+      imageSrcByFileId: { "hero-file": "blob:hero" },
+    });
+
+    expect(options).toEqual([
+      { value: "", label: "No Character" },
+      { value: "narrator", label: "Narrator" },
+      { type: "section", label: "Heroes" },
+      { value: "hero", label: "Hero", imageSrc: "blob:hero" },
+    ]);
   });
 });

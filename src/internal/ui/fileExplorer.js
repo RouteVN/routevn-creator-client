@@ -1039,6 +1039,32 @@ export const createLayoutElementsFileExplorerHandlers = ({
           [ownerPayloadKey]: layoutId,
           elementIds: [itemId],
         });
+      } else if (action === "duplicate-item") {
+        if (!itemId) {
+          return;
+        }
+
+        const duplicateElement = isControls
+          ? projectService.duplicateControlElement.bind(projectService)
+          : projectService.duplicateLayoutElement.bind(projectService);
+        const duplicateResult = await duplicateElement({
+          [ownerPayloadKey]: layoutId,
+          elementId: itemId,
+        });
+        if (duplicateResult?.valid === false) {
+          appService.showAlert({
+            message: getResultErrorMessage(
+              appService,
+              duplicateResult,
+              resolvedCopy.failedDuplicateResource ??
+                "Failed to duplicate resource.",
+            ),
+            title: resolvedCopy.errorTitle ?? "Error",
+          });
+          return;
+        }
+
+        createdItemId = duplicateResult;
       } else if (action === "new-item") {
         createdItemId = generateId();
         await createElement({

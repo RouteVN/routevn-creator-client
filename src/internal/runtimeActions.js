@@ -219,6 +219,14 @@ export const getRuntimeActionModes = () => {
   return Object.keys(RUNTIME_ACTION_DEFINITIONS);
 };
 
+// The predefined values of a runtime field, such as the menu pages. Undefined
+// for a field without any.
+export const getRuntimeFieldPresetValues = (runtimeId) =>
+  Object.values(RUNTIME_ACTION_DEFINITIONS).find(
+    (definition) =>
+      definition.runtimeId === runtimeId && definition.presetValues,
+  )?.presetValues;
+
 const findPresetValue = (definition, value) =>
   definition.presetValues?.find((preset) => preset.value === value);
 
