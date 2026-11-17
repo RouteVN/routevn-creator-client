@@ -3111,6 +3111,7 @@ configPage:
   changeProjectFolderLabel: "Ganti folder"
   projectFolderNotSet: "Belum ada folder yang dipilih"
   assetPackageTitle: "Paket aset"
+  importAssetPackageTitle: "Impor paket aset"
   assetPackageDescription: "Aktifkan opsi ini jika Anda berencana merilis paket aset di toko aset RouteVN."
   helpButtonTitle: "Tombol bantuan"
   helpButtonDescription: "Tampilkan tombol tanda tanya mengambang di pojok kanan bawah."

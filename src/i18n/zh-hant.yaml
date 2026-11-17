@@ -3111,6 +3111,7 @@ configPage:
   changeProjectFolderLabel: "變更資料夾"
   projectFolderNotSet: "未選擇資料夾"
   assetPackageTitle: "素材包"
+  importAssetPackageTitle: "匯入素材包"
   assetPackageDescription: "如果你打算在 RouteVN 素材商店發布素材包，請啟用此選項。"
   helpButtonTitle: "說明按鈕"
   helpButtonDescription: "在右下角顯示浮動的問號按鈕。"

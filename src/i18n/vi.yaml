@@ -3111,6 +3111,7 @@ configPage:
   changeProjectFolderLabel: "Đổi thư mục"
   projectFolderNotSet: "Chưa chọn thư mục"
   assetPackageTitle: "Gói tài nguyên"
+  importAssetPackageTitle: "Nhập gói tài nguyên"
   assetPackageDescription: "Bật tùy chọn này nếu bạn định phát hành gói tài nguyên trên cửa hàng tài nguyên RouteVN."
   helpButtonTitle: "Nút trợ giúp"
   helpButtonDescription: "Hiện nút dấu chấm hỏi nổi ở góc dưới bên phải."

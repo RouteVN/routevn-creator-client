@@ -3111,6 +3111,7 @@ configPage:
   changeProjectFolderLabel: "Changer de dossier"
   projectFolderNotSet: "Aucun dossier sélectionné"
   assetPackageTitle: "Paquet de ressources"
+  importAssetPackageTitle: "Importer un paquet de ressources"
   assetPackageDescription: "Activez cette option si vous prévoyez de publier un paquet de ressources dans la boutique de ressources RouteVN."
   helpButtonTitle: "Bouton d’aide"
   helpButtonDescription: "Affiche le bouton flottant en forme de point d’interrogation en bas à droite."

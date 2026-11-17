@@ -3137,6 +3137,7 @@ configPage:
   changeProjectFolderLabel: "Сменить папку"
   projectFolderNotSet: "Папка не выбрана"
   assetPackageTitle: "Пакет ресурсов"
+  importAssetPackageTitle: "Импорт пакета ресурсов"
   assetPackageDescription: "Включите, если планируете выпустить пакет ресурсов в магазине ресурсов RouteVN."
   helpButtonTitle: "Кнопка справки"
   helpButtonDescription: "Показывать плавающую кнопку со знаком вопроса в правом нижнем углу."

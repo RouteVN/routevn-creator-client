@@ -377,12 +377,12 @@ Resources page and the same import (see Import flow).
 
 - **Import**, in a resource page's three-dot menu, opens the RouteVN asset
   store (see Asset store).
-- **Import from Zip File**, under Import Package on the Config page, opens the device's file picker for a package ZIP,
+- **Import from Zip File**, under Import Asset Package on the Config page, opens the device's file picker for a package ZIP,
   such as one exported from Releases → Asset Packs. Cancelling the picker does
   nothing. The dialog opens saying that it is reading the package, then shows
   Choose Resources. A file that is not a package closes the dialog, and a
   toast says why. Nothing is requested from the network.
-- **Import from URL**, under Import Package on the Config page, opens a form with one field, Package URL, and Import and
+- **Import from URL**, under Import Asset Package on the Config page, opens a form with one field, Package URL, and Import and
   Cancel. The link may lead to a package ZIP or to a package manifest (see
   Reading a package from a link). Import reads the package and shows Choose
   Resources. A link that is empty, malformed or not HTTPS is refused before

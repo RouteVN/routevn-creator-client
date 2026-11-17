@@ -3111,6 +3111,7 @@ configPage:
   projectFolderNotSet: "未选择文件夹"
   title: "偏好设置"
   assetPackageTitle: "素材包"
+  importAssetPackageTitle: "导入素材包"
   assetPackageDescription: "如果你计划在 RouteVN 素材商店发布素材包，请启用此选项。"
   helpButtonTitle: "帮助按钮"
   helpButtonDescription: "显示右下角的问号悬浮按钮。"

@@ -3111,6 +3111,7 @@ configPage:
   changeProjectFolderLabel: "Alterar pasta"
   projectFolderNotSet: "Nenhuma pasta selecionada"
   assetPackageTitle: "Pacote de recursos"
+  importAssetPackageTitle: "Importar pacote de recursos"
   assetPackageDescription: "Ative esta opção se pretende lançar um pacote de recursos na loja de recursos do RouteVN."
   helpButtonTitle: "Botão de ajuda"
   helpButtonDescription: "Mostra o botão flutuante com o ponto de interrogação no canto inferior direito."

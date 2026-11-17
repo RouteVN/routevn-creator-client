@@ -152,7 +152,7 @@ export const selectViewData = ({ state, i18n }) => {
     projectFolderPath: state.projectFolderPath ?? copy.projectFolderNotSet,
     assetPackageTitle: copy.assetPackageTitle,
     assetPackageDescription: copy.assetPackageDescription,
-    importPackageTitle: importCopy.title,
+    importPackageTitle: copy.importAssetPackageTitle,
     importPackageZipLabel: importCopy.importFromZipMenuItem,
     importPackageUrlLabel: importCopy.importFromUrlMenuItem,
     helpButtonTitle: copy.helpButtonTitle,

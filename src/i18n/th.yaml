@@ -3111,6 +3111,7 @@ configPage:
   changeProjectFolderLabel: "เปลี่ยนโฟลเดอร์"
   projectFolderNotSet: "ยังไม่ได้เลือกโฟลเดอร์"
   assetPackageTitle: "แพ็กเกจทรัพยากร"
+  importAssetPackageTitle: "นำเข้าแพ็กเกจทรัพยากร"
   assetPackageDescription: "เปิดใช้งานหากวางแผนจะเผยแพร่แพ็กเกจทรัพยากรในร้านค้าทรัพยากรของ RouteVN"
   helpButtonTitle: "ปุ่มช่วยเหลือ"
   helpButtonDescription: "แสดงปุ่มเครื่องหมายคำถามแบบลอยที่มุมล่างขวา"

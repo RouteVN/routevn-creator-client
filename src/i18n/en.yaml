@@ -3111,6 +3111,7 @@ configPage:
   changeProjectFolderLabel: "Change folder"
   projectFolderNotSet: "No folder selected"
   assetPackageTitle: "Asset Package"
+  importAssetPackageTitle: "Import Asset Package"
   assetPackageDescription: "Enable this if you plan to release an asset pack in the RouteVN asset store."
   helpButtonTitle: "Help Button"
   helpButtonDescription: "Show the floating question-mark button at the bottom right."
