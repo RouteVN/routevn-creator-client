@@ -669,9 +669,8 @@ export const handleSubmitClick = (deps) => {
   );
 };
 
-// A new visual is an empty layout, opened at once in the layout editor for
-// its elements to be added.
-// Add Visual asks for the layer first, in a popover under the button.
+// Add Visual asks for the kind of layout and the layer first, in a popover
+// under the button.
 export const handleAddVisualClick = (deps, payload) => {
   const { store, render } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
