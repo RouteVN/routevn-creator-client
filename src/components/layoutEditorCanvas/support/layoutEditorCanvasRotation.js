@@ -108,3 +108,26 @@ export const resolveLayoutEditorRotationPivotFromBounds = ({ bounds } = {}) => {
     { x: 0, y: 0 },
   );
 };
+
+// The corners run top left, top right, bottom right, bottom left in the
+// element's own frame, so the top side points along its horizontal axis.
+export const resolveLayoutEditorAxisRotationFromBounds = ({ bounds } = {}) => {
+  const corners = bounds?.corners ?? [];
+  if (
+    corners.length !== 4 ||
+    corners.some(({ x, y }) => !Number.isFinite(x) || !Number.isFinite(y))
+  ) {
+    return undefined;
+  }
+
+  const [topLeft, topRight] = corners;
+  if (topLeft.x === topRight.x && topLeft.y === topRight.y) {
+    return undefined;
+  }
+
+  return (
+    (Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) *
+      HALF_ROTATION) /
+    Math.PI
+  );
+};
