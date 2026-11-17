@@ -120,7 +120,7 @@ template:
                               - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                                   - rtgl-svg svg=edit wh=16: null
-                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                              - rvn-detail-view#detailView key=${selectedItemId} :fields=${detailFields}:
                                   - rtgl-view slot=actions d=v g=sm w=f:
                                       - rtgl-button#detailExportBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportButton}
                         $else:
@@ -133,7 +133,7 @@ template:
                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                   - rtgl-svg svg=edit wh=16: null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
-                  - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
+                  - rvn-detail-view#mobileDetailView key=${selectedItemId} :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-view slot=actions d=v g=sm w=f:
                           - rtgl-button#detailExportBtn data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: ${exportButton}
   - $if isVersionDialogOpen:
@@ -143,7 +143,7 @@ template:
   - $if isPlatformDetailsDialogOpen:
       - rtgl-dialog#platformDetailsDialog ?open=${isPlatformDetailsDialogOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rvn-platform-details-create-dialog#platformDetailsCreateDialog :platform=${platformDetailsDialogPlatform} :applicationInfo=${platformDetailsDialogApplicationInfo} w=f h=f: null
+              - rvn-platform-details-create-dialog#platformDetailsCreateDialog :platform=${platformDetailsDialogPlatform} :applicationInfo=${platformDetailsDialogApplicationInfo}: null
   - $if isExportOptionsOpen:
       - rtgl-dialog#exportOptionsDialog ?open=${isExportOptionsOpen} s=md:
           - rtgl-view slot=content w=f p=lg g=lg:
@@ -164,7 +164,7 @@ template:
                   - rtgl-text s=lg: ${exportConfirmationTitle}
                   - rtgl-text c=mu-fg: ${exportConfirmationMessage}
               - 'rtgl-view w=f sv sbv=touch style="max-height: 50vh;"':
-                  - rvn-detail-view#exportConfirmationDetail key=${exportConfirmationKey} w=f :fields=${exportConfirmationFields} :fillHeight=${false} padding=none:
+                  - rvn-detail-view#exportConfirmationDetail key=${exportConfirmationKey} :fields=${exportConfirmationFields} :fillHeight=${false} padding=none:
                       - $if exportConfirmationIconFileId:
                           - rvn-file-image slot=export-confirmation-icon fileId=${exportConfirmationIconFileId} w=96 h=96 bw=xs bc=bo br=md: null
                         $else:

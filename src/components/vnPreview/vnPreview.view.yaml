@@ -33,7 +33,7 @@ template:
           - $if isPreviewLoading:
               - rtgl-view#previewLoading pos=abs edge=f w=f h=f av=c ah=c z=2 role=status:
                   - 'rtgl-view bgc=bg ph=lg pv=md br=sm g=sm ah=c style="max-width: 80vw;"':
-                      - rtgl-text s=md fw=400 c=fg: ${loadingPreviewLabel}
+                      - rtgl-text s=md c=fg: ${loadingPreviewLabel}
                       - $if loadingPreviewAssetLabel:
                           - 'rtgl-text s=sm c=fg style="overflow-wrap: anywhere;"': ${loadingPreviewAssetLabel}
       - 'rtgl-view pos=abs z=3 d=h g=sm style="top: calc(max(env(safe-area-inset-top, 0px), var(--rvn-window-content-offset, 0px)) + 12px); right: calc(env(safe-area-inset-right, 0px) + 12px);"':

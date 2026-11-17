@@ -2,12 +2,10 @@ refs:
   createButton:
     eventListeners:
       click:
-        required: true
         handler: handleCreateButtonClick
   openButton:
     eventListeners:
       click:
-        required: true
         handler: handleOpenButtonClick
   importSourceMenu:
     eventListeners:
@@ -90,7 +88,6 @@ refs:
   loginButton:
     eventListeners:
       click:
-        required: true
         handler: handleLoginButtonClick
   avatarButton:
     eventListeners:
@@ -121,7 +118,6 @@ refs:
   projectItem*:
     eventListeners:
       click:
-        required: true
         handler: handleProjectsClick
       contextmenu:
         handler: handleProjectContextMenu
@@ -130,7 +126,6 @@ refs:
   cloudProjectItem*:
     eventListeners:
       click:
-        required: true
         handler: handleProjectsClick
       contextmenu:
         handler: handleCloudProjectContextMenu
@@ -203,14 +198,14 @@ template:
                       - rtgl-view d=h g=sm:
                           - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
                           - $if platform == 'tauri' || platform == 'android' || platform == 'ios':
-                              - rtgl-button#openButton variant=se: ${openButtonText}
+                              - rtgl-button#openButton v=se: ${openButtonText}
                   - $if showProjectAccountActions:
                       - $if isLoggedIn:
                           - rtgl-view#avatarButton d=h av=c g=sm p=xs br=md cur=pointer h-bgc=mu:
                               - rtgl-text s=sm: ${profileDisplayName}
                               - rtgl-image wh=36 br=f bw=xs bc=bo of=cov src=${avatarImageSrc}: null
                         $else:
-                          - rtgl-button#loginButton variant=se: ${loginButtonText}
+                          - rtgl-button#loginButton v=se: ${loginButtonText}
           - 'rtgl-view#projectsScroll data-platform=${platform} w=f h=1fg ah=c ?sv=${useDefaultProjectsScroll} style="min-height: 0;"':
               - 'rtgl-view w=f d=v ph=md style="max-width: 1280px; box-sizing: border-box;"':
                   - 'rtgl-view w=f ah=c':
@@ -253,7 +248,7 @@ template:
                                       - rtgl-text s=h3: ${cloudTitle}
                                       - rtgl-view w=1fg: null
                                       - $if isLoggedIn:
-                                          - rtgl-button#cloudCreateButton variant=pr: ${createCloudButtonText}
+                                          - rtgl-button#cloudCreateButton v=pr: ${createCloudButtonText}
                                   - rtgl-text s=sm c=mu-fg mb=xl: ${i18n.projectsPage.cloudDescription}
                                   - rtgl-view w=f g=md:
                                       - $if cloudEmptyMessage:
@@ -309,7 +304,7 @@ template:
   - $if createDialog.isOpen:
       - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues} w=f h=f: null
+              - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues}: null
   - rtgl-dialog#cloudCreateProjectDialog ?open=${cloudCreateDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg:
           - rtgl-form#cloudCreateForm key=${cloudCreateDialog.formKey} :form=${cloudCreateForm} :defaultValues=${cloudCreateDialog.defaultValues} w=f: null
@@ -326,7 +321,7 @@ template:
                   - rtgl-view slot=url-import-destination w=f g=xs:
                       - rtgl-view d=h w=f g=sm av=c:
                           - rtgl-input w=f :value=${urlImportDestinationDisplay} disabled=true placeholder=${noFolderSelectedLabel}: null
-                          - rtgl-button#urlImportBrowseButton variant=se: ${browseButtonLabel}
+                          - rtgl-button#urlImportBrowseButton v=se: ${browseButtonLabel}
                       - $if urlImportDialog.destinationError:
                           - rtgl-text s=sm c=de: ${urlImportDialog.destinationError}
   - rtgl-dialog#zipImportDialog ?open=${zipImportDialog.isOpen} s=md md-layout=fixed-top:
@@ -335,13 +330,13 @@ template:
               - rtgl-view slot=zip-import-archive w=f g=xs:
                   - rtgl-view d=h w=f g=sm av=c:
                       - rtgl-input w=f :value=${zipImportArchiveDisplay} disabled=true placeholder=${noFileSelectedLabel}: null
-                      - rtgl-button#zipImportArchiveBrowseButton variant=se: ${browseButtonLabel}
+                      - rtgl-button#zipImportArchiveBrowseButton v=se: ${browseButtonLabel}
                   - $if zipImportDialog.archiveError:
                       - rtgl-text s=sm c=de: ${zipImportDialog.archiveError}
               - rtgl-view slot=zip-import-destination w=f g=xs:
                   - rtgl-view d=h w=f g=sm av=c:
                       - rtgl-input w=f :value=${zipImportDestinationDisplay} disabled=true placeholder=${noFolderSelectedLabel}: null
-                      - rtgl-button#zipImportDestinationBrowseButton variant=se: ${browseButtonLabel}
+                      - rtgl-button#zipImportDestinationBrowseButton v=se: ${browseButtonLabel}
                   - $if zipImportDialog.destinationError:
                       - rtgl-text s=sm c=de: ${zipImportDialog.destinationError}
   - rtgl-dropdown-menu#appVersionDropdownMenu ?open=${appVersionMenu.isOpen} x=${appVersionMenu.x} y=${appVersionMenu.y} place=t :items=${appVersionMenu.items}: null

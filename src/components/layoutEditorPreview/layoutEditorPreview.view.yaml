@@ -115,7 +115,7 @@ template:
                   - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showDialogueForm:
-          - rtgl-form#dialogueForm key=${dialogueFormKey} w=f g=0 :form=${dialogueForm} :defaultValues=${dialogueDefaultValues} :context=${dialogueContext}:
+          - rtgl-form#dialogueForm key=${dialogueFormKey} w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues} :context=${dialogueContext}:
               - rtgl-view slot=dialogueCharacterAvatar w=f g=xs:
                   - 'rtgl-view#characterAvatarField role=button tabindex=0 aria-haspopup=dialog aria-label="${i18n.layoutEditorPage.previewCharacterAvatarPlaceholder}" w=f cur=pointer':
                       - $if characterAvatarPreview.kind == 'spritesheet':
@@ -141,7 +141,7 @@ template:
                   - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
                       - 'rvn-image-card imageId=${previewBackgroundImageId} name="${previewBackgroundImageName}" emptyLabel="${i18n.layoutEditorPage.previewBackgroundPlaceholder}"': null
       - $if showChoiceForm:
-          - rtgl-form#choiceForm key=${choiceFormKey} w=f g=0 :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}:
+          - rtgl-form#choiceForm key=${choiceFormKey} w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}:
               - rtgl-view slot=${previewBackgroundSlot} w=f g=xs:
                   # As wide as one column of a two-column form row.
                   - 'rtgl-view#previewBackgroundField cur=pointer style="width: calc((100% - var(--spacing-lg)) / 2);"':
@@ -188,7 +188,7 @@ template:
                   - rvn-image-selector#imageSelector selectedImageId=${imageSelectorSelectedId} resourceTarget=${imageSelectorDialog.resourceTarget} characterId=${imageSelectorDialog.characterId}: null
           - $if !isCharacterSelection:
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmImageSelection variant=pr ?disabled=${imageSelectorConfirmDisabled}: ${imageSelectorConfirmLabel}
+                  - rtgl-button#confirmImageSelection v=pr ?disabled=${imageSelectorConfirmDisabled}: ${imageSelectorConfirmLabel}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

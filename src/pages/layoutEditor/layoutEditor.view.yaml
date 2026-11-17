@@ -4,7 +4,6 @@ refs:
       file-action:
         handler: handleFileExplorerAction
       target-changed:
-        required: true
         handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerItemClick

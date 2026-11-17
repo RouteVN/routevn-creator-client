@@ -71,8 +71,8 @@ template:
               - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                   - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancelImageSelection variant=se: ${cancelButton}
-              - rtgl-button#confirmImageSelection variant=pr: ${okButton}
+              - rtgl-button#cancelImageSelection v=se: ${cancelButton}
+              - rtgl-button#confirmImageSelection v=pr: ${okButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

@@ -288,9 +288,9 @@ template:
               - 'rtgl-view pos=abs h=1 bgc=bo style="left: 0; right: 0; top: 47px; z-index: 1001; pointer-events: none;"': null
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
-                      - 'rvn-media-resources-view#groupview w=f h=f show-back-button :showMenuButton=${showMobileMenuButton} menu-button-placement=trailing show-zoom-controls zoom-in-popover zoom-control-mode=columns items-per-row-config-key="groupCharacterSpritesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :navTitle=${title} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-media-resources-view#groupview show-back-button :showMenuButton=${showMobileMenuButton} menu-button-placement=trailing show-zoom-controls zoom-in-popover zoom-control-mode=columns items-per-row-config-key="groupCharacterSpritesView.itemsPerRow" show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :mobileLayout=${mobileLayout} :navTitle=${title} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - 'rvn-media-resources-view#groupview w=f h=f show-back-button show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupCharacterSpritesView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :navTitle=${title} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-media-resources-view#groupview show-back-button show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupCharacterSpritesView.itemsPerRow" search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 lazy-image-cards image-card-aspect-ratio="16 / 9" :navTitle=${title} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -300,7 +300,7 @@ template:
                                   - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                                       - rtgl-text w=1fg ellipsis=true: ${selectedDetailName}
                                       - rtgl-svg svg=edit wh=16: null
-                                  - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
+                                  - rvn-detail-view#detailView key=${selectedDetailId} :fields=${detailFields}:
                                       - $if selectedItemId:
                                           - $if selectedItemType == 'image':
                                               - $if selectedPreviewFileId:
@@ -351,7 +351,7 @@ template:
                   - rtgl-button#mobileDetailPreviewButton w=1fg v=se pre=zoomIn: ${previewButton}
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
-                  - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
+                  - rvn-detail-view#mobileDetailView key=${selectedItemId} :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="sprite-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
       - rtgl-view slot=content d=v w=f h=f overflow=hidden:
@@ -417,7 +417,7 @@ template:
                               - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
                                   - rtgl-view d=h g=sm av=c:
                                       - rtgl-input w=f :value=${spritesheetDialogAtlasFieldValue} disabled=true placeholder=${spritesheetDialogAtlasFieldPlaceholder}: null
-                                      - rtgl-button#spritesheetDialogAtlasSourceButton variant=se size=sm pre=upload: ${spritesheetDialogAtlasSourceLabel}
+                                      - rtgl-button#spritesheetDialogAtlasSourceButton v=se s=sm pre=upload: ${spritesheetDialogAtlasSourceLabel}
                       - rtgl-view w=6fg lg-w=f d=v g=md:
                           - 'rvn-spritesheet-preview key=${spritesheetDialogPreviewKey} src=${spritesheetDialogPreviewUrl} fileId=${spritesheetDialogPreviewFileId} :atlas=${spritesheetDialogPreviewAtlas} :animation=${spritesheetDialogPreviewAnimation} h=260 emptyLabel=""': null
                           - rtgl-view d=v w=f g=sm:
