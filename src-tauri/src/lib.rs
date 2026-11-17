@@ -132,6 +132,7 @@ pub fn run() {
             export_android::create_android_signing_key,
             export_android::read_android_keystore,
             export_android::write_android_keystore,
+            export_ios::cancel_ios_export,
             export_ios::export_ios_application,
             export_ios::get_ios_export_requirements,
             export_ios::list_ios_devices,

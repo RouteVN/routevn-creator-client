@@ -1,6 +1,7 @@
 import { validatePlatformDetails } from "../../../internal/platformDetailsValidation.js";
 import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
 import {
+  createIosExportCancelledError,
   isValidIosBuildNumber,
   isValidIosTeamId,
   isValidIosVersion,
@@ -1294,6 +1295,15 @@ export const createTauriProjectServiceAdapters = ({
       ],
     });
 
+  // The exporter clears its cancel request when it starts, so a request made
+  // while this adapter still collects the export's files is kept here.
+  let iosExportCancelRequested = false;
+
+  const cancelIosExport = async () => {
+    iosExportCancelRequested = true;
+    await invoke("cancel_ios_export");
+  };
+
   // Saves the IPA to `outputPath`, or, for a development build with
   // `installDeviceId`, installs it on that device without saving it.
   const exportIosApplication = async ({
@@ -1330,6 +1340,7 @@ export const createTauriProjectServiceAdapters = ({
     if (!isValidIosTeamId(teamId)) {
       throw new Error("Invalid Apple team ID.");
     }
+    iosExportCancelRequested = false;
     const { filePath: iconPath } = await resolveReferenceFilePath(
       getCurrentReference(),
       iconFileId,
@@ -1357,6 +1368,7 @@ export const createTauriProjectServiceAdapters = ({
       distribution,
       upload: !!upload,
     };
+    if (iosExportCancelRequested) throw createIosExportCancelledError();
     return invoke("export_ios_application", { request, onProgress });
   };
 
@@ -1744,6 +1756,7 @@ export const createTauriProjectServiceAdapters = ({
     listIosDevices,
     promptIosApplicationPath,
     exportIosApplication,
+    cancelIosExport,
   };
 
   const collabAdapter = {

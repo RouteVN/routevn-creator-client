@@ -1151,5 +1151,6 @@ export const createProjectServiceCore = ({
     listIosDevices: exportService.listIosDevices,
     promptIosApplicationPath: exportService.promptIosApplicationPath,
     exportIosApplication: exportService.exportIosApplication,
+    cancelIosExport: exportService.cancelIosExport,
   };
 };

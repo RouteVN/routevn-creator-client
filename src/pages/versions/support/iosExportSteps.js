@@ -1,4 +1,5 @@
 import { withErrorDetails } from "../../../internal/errorDetails.js";
+import { isStorageFullError } from "../../../internal/storageFullError.js";
 
 // The iOS export shows the same kind of step list as the Android export. The
 // exporter reports its phases. A build installed on a device is not saved.
@@ -56,10 +57,19 @@ const ERROR_MESSAGE_KEYS = {
   "device-not-registered": "iosDeviceNotRegistered",
   "device-unavailable": "iosDeviceUnavailable",
   "install-failed": "iosInstallFailed",
+  "timed-out": "iosExportTimedOut",
 };
 
-export const getIosExportErrorMessage = (error, copy) =>
-  copy[ERROR_MESSAGE_KEYS[error?.code]] ?? copy.iosExportFailed;
+// The export stopped for lack of space: either the exporter measured too
+// little free space before it started, or a write failed because the disk
+// filled up during the export.
+const isIosExportSpaceError = (error) =>
+  error?.code === "not-enough-space" || isStorageFullError(error);
+
+export const getIosExportErrorMessage = (error, copy) => {
+  if (isIosExportSpaceError(error)) return copy.iosExportNotEnoughSpace;
+  return copy[ERROR_MESSAGE_KEYS[error?.code]] ?? copy.iosExportFailed;
+};
 
 // The alert text for a failed export. The exporter's errors carry Xcode's
 // own lines, which stay as lines: the general error description would join
