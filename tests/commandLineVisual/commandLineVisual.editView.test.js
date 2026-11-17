@@ -3,13 +3,17 @@ import { produce } from "immer";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAddVisualClick,
+  handleAddVisualFormAction,
+  handleAddVisualPopoverClose,
   handleAfterMount,
   handleBeforeMount,
   handleBreadcumbClick,
   handleCancelEditClick,
-  handleEditLayoutClick,
-  handleLayerChange,
-  handleLayoutChange,
+  handleDropdownMenuClickItem,
+  handleLayoutImageClick,
+  handleLayoutSelectConfirmClick,
+  handleLayoutSelectItemClick,
+  handleLayoutTypeChange,
   handleOpacityInput,
   handleSaveVisualClick,
   handleSubmitClick,
@@ -147,6 +151,24 @@ const findVisualIndex = (state, visualId) =>
     (visual) => visual.id === visualId,
   );
 
+// Changes a visual's layout the way the panel does: Layout Type for a custom
+// layout, the layout gallery for a project layout.
+const handleLayoutChange = (deps, payload) => {
+  const { index } = payload._event.currentTarget.dataset;
+  const { value } = payload._event.detail;
+  if (value === "custom") {
+    handleLayoutTypeChange(deps, payload);
+    return;
+  }
+
+  const visual = deps.store.selectSelectedVisuals()[Number(index)];
+  deps.store.openLayoutSelect({ visualId: visual.id });
+  handleLayoutSelectItemClick(deps, {
+    _event: { currentTarget: { dataset: { resourceId: value } } },
+  });
+  handleLayoutSelectConfirmClick(deps);
+};
+
 describe("commandLineVisual list and edit view", () => {
   it("lists visuals as read-only rows and builds no edit form", () => {
     const state = createState();
@@ -166,7 +188,6 @@ describe("commandLineVisual list and edit view", () => {
         displayName: "Image Two",
         details: [
           { label: "Layout", value: "Custom Layout" },
-          { label: "Layer", value: "Foreground" },
           { label: "Transform", value: "Custom" },
         ],
         effects: [],
@@ -175,12 +196,25 @@ describe("commandLineVisual list and edit view", () => {
         displayName: "Image One",
         details: [
           { label: "Layout", value: "Custom Layout" },
-          { label: "Layer", value: "Behind Dialogue" },
           { label: "Transform", value: "Center" },
           { label: "Animation", value: "Fade" },
         ],
         effects: ["Opacity", "Flip X"],
       },
+    ]);
+    // Each row sits under its layer, front layer first; a layer without a
+    // visual has no heading.
+    expect(
+      viewData.visualListGroups.map((group) => ({
+        label: group.label,
+        visuals: group.visuals.map((visual) => [
+          visual.listIndex,
+          visual.displayName,
+        ]),
+      })),
+    ).toEqual([
+      { label: "Foreground", visuals: [[0, "Image Two"]] },
+      { label: "Behind Dialogue", visuals: [[1, "Image One"]] },
     ]);
   });
 
@@ -241,7 +275,7 @@ describe("commandLineVisual list and edit view", () => {
     const lines = view.split("\n");
     const pictureLines = lines
       .map((line, index) => ({ line, index }))
-      .filter(({ line }) => line.includes("$if visual.snapshotUrl:"));
+      .filter(({ line }) => /\$(el)?if visual\.snapshotUrl:/.test(line));
     expect(pictureLines).toHaveLength(2);
     for (const { index } of pictureLines) {
       expect(lines.slice(index, index + 6).join("\n")).toMatch(
@@ -252,12 +286,13 @@ describe("commandLineVisual list and edit view", () => {
 
   it("localizes the read-only row labels", () => {
     const state = createState();
-    const [row] = selectViewData({ state, i18n: JA_I18N }).visualListItems;
+    const viewData = selectViewData({ state, i18n: JA_I18N });
+    const [row] = viewData.visualListItems;
 
+    expect(viewData.visualListGroups[0].label).toBe("最前面");
     expect(row.displayName).toBe("Image Two");
     expect(row.details).toEqual([
       { label: "レイアウト", value: "カスタムレイアウト" },
-      { label: "レイヤー", value: "最前面" },
       { label: "トランスフォーム", value: "カスタム" },
     ]);
   });
@@ -279,10 +314,9 @@ describe("commandLineVisual list and edit view", () => {
       "visual-one",
     ]);
     expect(viewData.form.fields).toHaveLength(1);
-    expect(viewData.form.fields[0]).toMatchObject({
-      id: `visual-${index}`,
-      label: "Image One",
-    });
+    // The Edit Visual page has no title.
+    expect(viewData.form.fields[0].id).toBe(`visual-${index}`);
+    expect(viewData.form.fields[0].label).toBeUndefined();
     expect(viewData.breadcrumb.map((item) => item.label)).toEqual([
       "Actions",
       "Visuals",
@@ -304,12 +338,7 @@ describe("commandLineVisual list and edit view", () => {
         detail: { value: 0.25 },
       },
     });
-    handleLayerChange(deps, {
-      _event: {
-        currentTarget: { dataset: { index: "1" } },
-        detail: { value: 10 },
-      },
-    });
+    visualStore.updateVisualLayer({ state }, { index: 1, layer: 10 });
     expect(selectSelectedVisuals({ state })[1]).toMatchObject({
       id: "visual-one",
       layer: 10,
@@ -388,11 +417,79 @@ describe("commandLineVisual layout editing", () => {
       },
     );
 
+  const addButtonClick = {
+    _event: {
+      currentTarget: {
+        getBoundingClientRect: () => ({ left: 12, bottom: 340 }),
+      },
+    },
+  };
+  const addVisualSubmit = (layer) => ({
+    _event: { detail: { actionId: "submit", values: { layer } } },
+  });
+
+  it("asks for the layer in a popover under Add Visual before adding anything", () => {
+    const state = createState();
+    const deps = {
+      store: createFullStoreApi(state),
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    const visualCount = selectSelectedVisuals({ state }).length;
+
+    handleAddVisualClick(deps, addButtonClick);
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.addVisualPopover).toEqual({
+      isOpen: true,
+      position: { x: 12, y: 340 },
+    });
+    expect(viewData.addVisualForm.title).toBe("Add Visual");
+    expect(viewData.addVisualForm.fields.map((field) => field.name)).toEqual([
+      "layoutType",
+      "layoutId",
+      "layer",
+    ]);
+    expect(selectSelectedVisuals({ state })).toHaveLength(visualCount);
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+    // Closing the popover adds nothing.
+    handleAddVisualPopoverClose(deps);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).addVisualPopover.isOpen,
+    ).toBe(false);
+    expect(selectSelectedVisuals({ state })).toHaveLength(visualCount);
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("adds the visual on the chosen layer", () => {
+    const state = createState();
+    const deps = {
+      store: createFullStoreApi(state),
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+
+    handleAddVisualClick(deps, addButtonClick);
+    handleAddVisualFormAction(deps, addVisualSubmit(70));
+
+    const { actions, visualId } = deps.dispatchEvent.mock.calls[0][0].detail;
+    expect(
+      actions.visual.items.find((item) => item.id === visualId),
+    ).toMatchObject({ layer: 70 });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).addVisualPopover.isOpen,
+    ).toBe(false);
+  });
+
   it("adds a visual as an empty layout and asks for its layout editor at once", () => {
     const state = createState();
     const dispatchEvent = vi.fn();
 
-    handleAddVisualClick({ store: createFullStoreApi(state), dispatchEvent });
+    handleAddVisualFormAction(
+      { store: createFullStoreApi(state), dispatchEvent },
+      addVisualSubmit(50),
+    );
 
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
     const event = dispatchEvent.mock.calls[0][0];
@@ -438,7 +535,7 @@ describe("commandLineVisual layout editing", () => {
       },
     });
     dispatchEvent.mockClear();
-    handleEditLayoutClick(deps, {
+    handleLayoutImageClick(deps, {
       _event: { currentTarget: { dataset: { visualId: "visual-one" } } },
     });
 
@@ -644,7 +741,7 @@ describe("commandLineVisual layout editing", () => {
     expect(submit.detail.visual.items[0]).not.toHaveProperty("layout");
 
     // Edit Layout makes it a custom layout, placed where it was.
-    handleEditLayoutClick(deps, {
+    handleLayoutImageClick(deps, {
       _event: { currentTarget: { dataset: { visualId: "visual-one" } } },
     });
     const [edit] = dispatchEvent.mock.calls[1];
@@ -834,8 +931,12 @@ describe("commandLineVisual list view", () => {
       view.indexOf("$if mode == 'edit':"),
     );
 
-    expect(listBlock).toContain("$for visual, i in visualListItems:");
-    expect(listBlock).toContain("rtgl-view#visualItem${i} data-index=");
+    expect(listBlock).toContain("$for group, g in visualListGroups:");
+    expect(listBlock).toContain("rtgl-text s=sm c=mu-fg: ${group.label}");
+    expect(listBlock).toContain("$for visual, i in group.visuals:");
+    expect(listBlock).toContain(
+      "rtgl-view#visualItem${visual.listIndex} data-index=",
+    );
     expect(listBlock).not.toContain("rtgl-form#form");
     expect(listBlock).not.toContain("rtgl-select#layer");
     expect(view).toContain("handler: handleVisualListItemClick");
@@ -909,22 +1010,113 @@ describe("commandLineVisual layout choice", () => {
   const findEditingVisual = (state) =>
     selectViewData({ state, i18n: EN_I18N }).editingVisuals[0];
 
-  it("offers a custom layout and the project's general layouts", () => {
+  it("offers the project's general layouts to a visual that shows one", () => {
     const state = createLayoutState();
 
     expect(
       selectViewData({ state, i18n: EN_I18N }).defaultValues.layoutOptions,
-    ).toEqual([
-      { value: "custom", label: "Custom Layout" },
-      { value: "title-card", label: "Menus > Title Card" },
-    ]);
-    expect(
-      selectViewData({ state, i18n: JA_I18N }).defaultValues.layoutOptions[0]
-        .label,
-    ).toBe("カスタムレイアウト");
+    ).toEqual([{ value: "title-card", label: "Menus > Title Card" }]);
   });
 
-  it("shows a project layout by reference and offers Edit Layout only for a custom one", () => {
+  it("moves a visual to the layer chosen under Move Layer", () => {
+    const state = createLayoutState();
+    const deps = createDeps(state);
+    const index = findVisualIndex(state, "visual-one");
+
+    deps.store.showDropdownMenu({
+      position: { x: 0, y: 0 },
+      visualIndex: index,
+    });
+    handleDropdownMenuClickItem(deps, {
+      _event: { detail: { item: { value: "move-to-layer", layer: 10 } } },
+    });
+
+    expect(
+      selectSelectedVisuals({ state }).find(
+        (visual) => visual.id === "visual-one",
+      ).layer,
+    ).toBe(10);
+    expect(selectViewData({ state, i18n: EN_I18N }).dropdownMenu.isOpen).toBe(
+      false,
+    );
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).visualListGroups.at(-1),
+    ).toMatchObject({
+      label: "Behind Background",
+      visuals: [{ id: "visual-one" }],
+    });
+  });
+
+  it("asks in Add Visual for a custom layout or an existing one", () => {
+    const state = createLayoutState();
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    const [layoutType, layoutId, layer] = viewData.addVisualForm.fields;
+
+    expect(layoutType).toMatchObject({
+      name: "layoutType",
+      type: "segmented-control",
+      label: "Layout",
+      options: [
+        { value: "custom", label: "Custom Layout" },
+        { value: "existing", label: "Existing Layout" },
+      ],
+    });
+    expect(layoutId).toMatchObject({
+      $when: 'layoutType == "existing"',
+      name: "layoutId",
+      label: "Existing Layout",
+      placeholder: "Select layout",
+      required: true,
+      options: [{ value: "title-card", label: "Menus > Title Card" }],
+    });
+    expect(layer.name).toBe("layer");
+    expect(viewData.addVisualDefaultValues).toEqual({
+      layoutType: "custom",
+      layer: 50,
+    });
+    expect(
+      selectViewData({
+        state,
+        i18n: JA_I18N,
+      }).addVisualForm.fields[0].options.map((option) => option.label),
+    ).toEqual(["カスタムレイアウト", "既存のレイアウト"]);
+  });
+
+  it("adds an existing layout visual to the list without opening the layout editor", () => {
+    const state = createLayoutState();
+    const deps = createDeps(state);
+    const submit = (values) => ({
+      _event: { detail: { actionId: "submit", values } },
+    });
+
+    // Without a layout chosen nothing is added.
+    handleAddVisualFormAction(
+      deps,
+      submit({ layoutType: "existing", layer: 70 }),
+    );
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+    handleAddVisualFormAction(
+      deps,
+      submit({ layoutType: "existing", layoutId: "title-card", layer: 70 }),
+    );
+
+    const added = selectSelectedVisuals({ state }).find(
+      (visual) => visual.resourceId === "title-card",
+    );
+    expect(added).toMatchObject({ resourceType: "layout", layer: 70 });
+    expect(added).not.toHaveProperty("layout");
+    expect(deps.dispatchEvent.mock.calls.map(([event]) => event.type)).toEqual([
+      "temporary-presentation-state-change",
+    ]);
+    expect(deps.render).toHaveBeenCalled();
+    const row = selectViewData({ state, i18n: EN_I18N }).visualListItems.find(
+      (item) => item.id === added.id,
+    );
+    expect(row).toMatchObject({ isCustomLayout: false });
+  });
+
+  it("shows a project layout by reference and keeps a custom one as its own", () => {
     const state = createLayoutState();
     const deps = createDeps(state);
     const index = findVisualIndex(state, "visual-one");
@@ -962,6 +1154,66 @@ describe("commandLineVisual layout choice", () => {
       resourceType: "layout",
     });
     expect(previewItem).not.toHaveProperty("layout");
+  });
+
+  it("opens the layout editor from a custom layout picture and the layout list from an existing one", () => {
+    const state = createLayoutState();
+    const deps = createDeps(state);
+    const index = findVisualIndex(state, "visual-one");
+    const pictureClick = {
+      _event: {
+        currentTarget: {
+          dataset: { visualId: "visual-one" },
+          getBoundingClientRect: () => ({ left: 20, bottom: 300 }),
+        },
+      },
+    };
+    const layoutEdits = () =>
+      deps.dispatchEvent.mock.calls.filter(
+        ([event]) => event.type === "visual-layout-edit",
+      );
+
+    handleVisualListItemClick(deps, indexEvent(index));
+
+    // The picture of a project layout opens the layout gallery, with the
+    // layout it shows picked, and no layout editor.
+    handleLayoutChange(deps, layoutEvent(index, "title-card"));
+    handleLayoutImageClick(deps, pictureClick);
+    expect(layoutEdits()).toHaveLength(0);
+    const gallery = selectViewData({ state, i18n: EN_I18N });
+    expect(gallery.mode).toBe("layout-select");
+    expect(gallery.breadcrumb.map((item) => item.label)).toEqual([
+      "Actions",
+      "Visuals",
+      "Edit Visual",
+      "Select layout",
+    ]);
+    expect(gallery.layoutSelectGroups).toMatchObject([
+      {
+        fullLabel: "Menus",
+        children: [
+          { id: "title-card", name: "Title Card", itemBorderColor: "pr" },
+        ],
+      },
+    ]);
+    expect(selectSelectedVisuals({ state })[index]).not.toHaveProperty(
+      "layout",
+    );
+
+    // Edit Visual in the breadcrumb goes back without choosing.
+    handleBreadcumbClick(deps, { _event: { detail: { id: "edit" } } });
+    expect(selectViewData({ state, i18n: EN_I18N }).mode).toBe("edit");
+    expect(selectSelectedVisuals({ state })[index].resourceId).toBe(
+      "title-card",
+    );
+
+    handleLayoutChange(deps, layoutEvent(index, "custom"));
+    handleLayoutImageClick(deps, pictureClick);
+    expect(layoutEdits()).toHaveLength(1);
+    expect(layoutEdits()[0][0].detail).toMatchObject({
+      visualId: "visual-one",
+      returnToEditView: true,
+    });
   });
 
   it("starts a custom layout from a copy of the project layout it showed", () => {
@@ -1131,7 +1383,9 @@ describe("commandLineVisual layout choice", () => {
     const state = createLayoutState();
     const deps = createDeps(state);
 
-    handleAddVisualClick(deps);
+    handleAddVisualFormAction(deps, {
+      _event: { detail: { actionId: "submit", values: { layer: 50 } } },
+    });
 
     const rowNames = (i18n) =>
       selectViewData({ state, i18n }).visualListItems.map(
@@ -1141,7 +1395,7 @@ describe("commandLineVisual layout choice", () => {
     expect(rowNames(JA_I18N)).toContain("カスタムレイアウト");
   });
 
-  it("shows Edit Layout in the view only for a custom layout", () => {
+  it("has no Edit Layout button and offers Layout Type in the edit view", () => {
     const view = readFileSync(
       new URL(
         "../../src/components/commandLineVisual/commandLineVisual.view.yaml",
@@ -1150,11 +1404,206 @@ describe("commandLineVisual layout choice", () => {
       "utf8",
     );
 
+    expect(view).not.toContain("editLayoutButton");
     expect(view).toContain(
-      "rtgl-select#layoutSelect${visual.controlId} data-index=${visual.visualIndex}",
+      "rtgl-segmented-control#layoutType${visual.controlId} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.layoutType} :options=${defaultValues.layoutTypeOptions}",
     );
+    // No layout dropdown and no menu: the picture opens the layout gallery.
+    expect(view).not.toContain("rtgl-select#layoutSelect");
+    expect(view).not.toContain("layoutMenu");
+    expect(view).toContain("$if mode == 'layout-select':");
+    expect(view).toContain(
+      "rtgl-view#layoutSelectItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md",
+    );
+    expect(view).toContain(
+      "rtgl-button#layoutSelectButton: ${selectButtonLabel}",
+    );
+    // A custom layout says Custom under its picture, an existing one its name.
     expect(view).toMatch(
-      /\$if visual\.isCustomLayout:\n\s+- rtgl-button#editLayoutButton/,
+      /\$elif visual\.isCustomLayout:\n\s+- rtgl-view w=f p=md:\n\s+- rtgl-text s=xs c=mu-fg ellipsis w=f: \$\{customLayoutLabel\}\n\s+\$else:\n\s+- rtgl-view w=f p=md:\n\s+- rtgl-text s=xs c=mu-fg ellipsis w=f: \$\{visual\.displayName\}/,
     );
+    expect(
+      selectViewData({ state: createState(), i18n: EN_I18N }).customLayoutLabel,
+    ).toBe("Custom");
+  });
+
+  it("switches a visual between a custom layout and an existing one with Layout Type", () => {
+    const state = createLayoutState();
+    const deps = createDeps(state);
+    const index = findVisualIndex(state, "visual-one");
+    const typeEvent = (value) => ({
+      _event: {
+        currentTarget: { dataset: { index: String(index) } },
+        detail: { value },
+      },
+    });
+    const layoutRow = () =>
+      selectViewData({ state, i18n: EN_I18N }).form.fields[0].fields[0].fields;
+
+    handleVisualListItemClick(deps, indexEvent(index));
+    expect(findEditingVisual(state).layoutType).toBe("custom");
+    expect(layoutRow()).toEqual([
+      {
+        type: "slot",
+        slot: `visual-${index}-layout-type`,
+        label: "Layout Type",
+      },
+      { type: "slot", slot: `visual-${index}-layout-spacer` },
+    ]);
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).defaultValues.layoutTypeOptions,
+    ).toEqual([
+      { value: "custom", label: "Custom Layout" },
+      { value: "existing", label: "Existing Layout" },
+    ]);
+
+    // Existing Layout starts with no layout chosen: the visual keeps its
+    // custom layout, and its picture asks for a layout.
+    handleLayoutTypeChange(deps, typeEvent("existing"));
+    expect(selectSelectedVisuals({ state })[index]).toMatchObject({
+      resourceId: "image-one",
+      resourceType: "image",
+    });
+    expect(findEditingVisual(state)).toMatchObject({
+      layoutType: "existing",
+      awaitsExistingLayout: true,
+    });
+    expect(selectViewData({ state, i18n: EN_I18N }).selectLayoutLabel).toBe(
+      "Select layout",
+    );
+
+    // The picture opens the layout gallery with nothing picked, not the
+    // layout editor.
+    handleLayoutImageClick(deps, {
+      _event: { currentTarget: { dataset: { visualId: "visual-one" } } },
+    });
+    expect(
+      deps.dispatchEvent.mock.calls.filter(
+        ([event]) => event.type === "visual-layout-edit",
+      ),
+    ).toHaveLength(0);
+    const gallery = selectViewData({ state, i18n: EN_I18N });
+    expect(gallery.mode).toBe("layout-select");
+    expect(gallery.layoutSelectGroups[0].children[0].itemBorderColor).toBe(
+      "bo",
+    );
+
+    // Select with nothing picked keeps the visual as it is.
+    handleLayoutSelectConfirmClick(deps);
+    expect(selectViewData({ state, i18n: EN_I18N }).mode).toBe("edit");
+    expect(findEditingVisual(state).awaitsExistingLayout).toBe(true);
+
+    handleLayoutImageClick(deps, {
+      _event: { currentTarget: { dataset: { visualId: "visual-one" } } },
+    });
+    handleLayoutSelectItemClick(deps, {
+      _event: { currentTarget: { dataset: { resourceId: "title-card" } } },
+    });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).layoutSelectGroups[0].children[0]
+        .itemBorderColor,
+    ).toBe("pr");
+    handleLayoutSelectConfirmClick(deps);
+    expect(selectViewData({ state, i18n: EN_I18N }).mode).toBe("edit");
+    expect(selectSelectedVisuals({ state })[index]).toMatchObject({
+      resourceId: "title-card",
+      resourceType: "layout",
+    });
+    expect(selectSelectedVisuals({ state })[index]).not.toHaveProperty(
+      "layout",
+    );
+    expect(findEditingVisual(state)).toMatchObject({
+      layoutType: "existing",
+      awaitsExistingLayout: false,
+    });
+    expect(deps.dispatchEvent.mock.calls.at(-1)[0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+
+    // Custom Layout brings back the layout the visual had.
+    handleLayoutTypeChange(deps, typeEvent("custom"));
+    const visual = selectSelectedVisuals({ state })[index];
+    expect(visual).not.toHaveProperty("resourceId");
+    expect(visual.layout).toBeDefined();
+    expect(findEditingVisual(state).layoutType).toBe("custom");
+  });
+
+  it("keeps the custom layout of a visual left on Existing Layout with none chosen", () => {
+    const state = createLayoutState();
+    const deps = createDeps(state);
+    const index = findVisualIndex(state, "visual-one");
+    const typeEvent = (value) => ({
+      _event: {
+        currentTarget: { dataset: { index: String(index) } },
+        detail: { value },
+      },
+    });
+
+    handleVisualListItemClick(deps, indexEvent(index));
+    handleLayoutTypeChange(deps, typeEvent("existing"));
+    handleSaveVisualClick(deps);
+
+    expect(selectSelectedVisuals({ state })[index]).toMatchObject({
+      resourceId: "image-one",
+      resourceType: "image",
+    });
+    handleVisualListItemClick(deps, indexEvent(index));
+    expect(findEditingVisual(state)).toMatchObject({
+      layoutType: "custom",
+      awaitsExistingLayout: false,
+    });
+
+    // Custom Layout again drops the pending choice.
+    handleLayoutTypeChange(deps, typeEvent("existing"));
+    handleLayoutTypeChange(deps, typeEvent("custom"));
+    expect(findEditingVisual(state).layoutType).toBe("custom");
+  });
+
+  it("lists project layouts under their folders by their own names", () => {
+    const state = createState();
+    const layout = (id, name) => ({
+      id,
+      type: "layout",
+      layoutType: "general",
+      name,
+    });
+    setLayouts(
+      { state },
+      {
+        layouts: {
+          items: {
+            loose: layout("loose", "Loose"),
+            menus: { id: "menus", type: "folder", name: "Menus" },
+            title: layout("title", "Title"),
+            deep: { id: "deep", type: "folder", name: "Deep" },
+            credits: layout("credits", "Credits"),
+            hud: { id: "hud", type: "folder", name: "HUD" },
+            clock: layout("clock", "Clock"),
+          },
+          tree: [
+            { id: "loose" },
+            {
+              id: "menus",
+              children: [
+                { id: "title" },
+                { id: "deep", children: [{ id: "credits" }] },
+              ],
+            },
+            { id: "hud", children: [{ id: "clock" }] },
+          ],
+        },
+      },
+    );
+
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).layoutSelectGroups.map(
+        (group) => [group.fullLabel, group.children.map((item) => item.name)],
+      ),
+    ).toEqual([
+      ["", ["Loose"]],
+      ["Menus", ["Title"]],
+      ["Menus > Deep", ["Credits"]],
+      ["HUD", ["Clock"]],
+    ]);
   });
 });

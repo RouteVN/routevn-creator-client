@@ -200,6 +200,11 @@ const setRepositoryCollections = (state) => {
   );
 };
 
+const menuItemsWithoutMoveLayer = (state) =>
+  selectViewData({ state }).dropdownMenu.items.filter(
+    (item) => item.value !== "move-layer",
+  );
+
 describe("commandLineVisual.store animation controls", () => {
   it("exposes animation controls for each selected visual", () => {
     const state = createInitialState();
@@ -750,7 +755,7 @@ describe("commandLineVisual.store animation controls", () => {
         visualIndex: 0,
       },
     );
-    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+    expect(menuItemsWithoutMoveLayer(state)).toEqual([
       { label: "Move Up", type: "item", value: "move-up" },
       { label: "Delete", type: "item", value: "delete" },
     ]);
@@ -762,7 +767,7 @@ describe("commandLineVisual.store animation controls", () => {
         visualIndex: 1,
       },
     );
-    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+    expect(menuItemsWithoutMoveLayer(state)).toEqual([
       { label: "Move Up", type: "item", value: "move-up" },
       { label: "Move Down", type: "item", value: "move-down" },
       { label: "Delete", type: "item", value: "delete" },
@@ -775,7 +780,7 @@ describe("commandLineVisual.store animation controls", () => {
         visualIndex: 2,
       },
     );
-    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+    expect(menuItemsWithoutMoveLayer(state)).toEqual([
       { label: "Move Down", type: "item", value: "move-down" },
       { label: "Delete", type: "item", value: "delete" },
     ]);
@@ -805,7 +810,7 @@ describe("commandLineVisual.store animation controls", () => {
         visualIndex: 0,
       },
     );
-    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+    expect(menuItemsWithoutMoveLayer(state)).toEqual([
       { label: "Delete", type: "item", value: "delete" },
     ]);
 
@@ -816,7 +821,7 @@ describe("commandLineVisual.store animation controls", () => {
         visualIndex: 1,
       },
     );
-    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+    expect(menuItemsWithoutMoveLayer(state)).toEqual([
       { label: "Move Up", type: "item", value: "move-up" },
       { label: "Delete", type: "item", value: "delete" },
     ]);
@@ -828,10 +833,50 @@ describe("commandLineVisual.store animation controls", () => {
         visualIndex: 2,
       },
     );
-    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+    expect(menuItemsWithoutMoveLayer(state)).toEqual([
       { label: "Move Down", type: "item", value: "move-down" },
       { label: "Delete", type: "item", value: "delete" },
     ]);
+  });
+
+  it("offers Move Layer with every layer, the visual's own one disabled", () => {
+    const state = createInitialState();
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          { id: "visual-1", resourceId: "visual-image", layer: 50 },
+          { id: "visual-2", resourceId: "visual-video", layer: 90 },
+        ],
+      },
+    );
+    const index = selectSelectedVisuals({ state }).findIndex(
+      (visual) => visual.id === "visual-1",
+    );
+
+    showDropdownMenu(
+      { state },
+      { position: { x: 10, y: 20 }, visualIndex: index },
+    );
+
+    const { items } = selectViewData({ state }).dropdownMenu;
+    expect(items.map((item) => item.value)).toEqual(["move-layer", "delete"]);
+    const layers = items[0].items;
+    expect(items[0].label).toBe("Move Layer");
+    expect(layers.map((item) => item.layer)).toEqual(
+      layers.map((item) => item.layer).sort((a, b) => b - a),
+    );
+    expect(layers.every((item) => item.value === "move-to-layer")).toBe(true);
+    expect(layers.filter((item) => item.disabled)).toEqual([
+      {
+        label: "Behind Dialogue",
+        type: "item",
+        value: "move-to-layer",
+        layer: 50,
+        disabled: true,
+      },
+    ]);
+    expect(layers.length).toBeGreaterThan(3);
   });
 
   it("moves selected visuals up and down", () => {
@@ -1111,7 +1156,7 @@ describe("commandLineVisual transform of a visual without one", () => {
 
     expect(viewData.defaultValues.visuals[0].transformId).toBeUndefined();
     expect(viewData.defaultValues.visuals[0].customTransform).toBe(false);
-    expect(viewData.defaultTransformLabel).toBe("Screen Center");
+    expect(viewData.selectTransformPlaceholder).toBe("Select transform");
     expect(viewData.visualListItems[0].details).toContainEqual({
       label: "Transform",
       value: "Screen Center",
@@ -1172,7 +1217,7 @@ describe("commandLineVisual transform of a visual without one", () => {
         line.includes("rtgl-select#transform${visual.controlId}"),
       );
 
-    expect(select).toContain("placeholder=${defaultTransformLabel}");
+    expect(select).toContain("placeholder=${selectTransformPlaceholder}");
     expect(select).not.toContain("no-clear");
   });
 });

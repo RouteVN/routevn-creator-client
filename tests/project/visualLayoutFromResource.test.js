@@ -104,8 +104,33 @@ describe("createVisualLayoutFromResource", () => {
         imageId: "door",
         width: 400,
         height: 600,
+        aspectRatioLock: 400 / 600,
       }),
     );
+  });
+
+  it.each([
+    ["image", "door", 400 / 600],
+    ["spritesheet", "fire", 64 / 96],
+    ["particle", "snow", 1920 / 1080],
+  ])(
+    "keeps the aspect ratio of a %s element fixed by default",
+    (resourceType, resourceId, aspectRatioLock) => {
+      expect(
+        createVisualLayoutFromResource({ resourceType, resourceId, resources })
+          .elements.items.content.aspectRatioLock,
+      ).toBe(aspectRatioLock);
+    },
+  );
+
+  it("leaves the aspect ratio free when the resource has no size", () => {
+    expect(
+      createVisualLayoutFromResource({
+        resourceType: "image",
+        resourceId: "unsized",
+        resources: { images: { unsized: { id: "unsized", name: "Unsized" } } },
+      }).elements.items.content,
+    ).not.toHaveProperty("aspectRatioLock");
   });
 
   it("puts a resource at the screen's top left without a placement", () => {

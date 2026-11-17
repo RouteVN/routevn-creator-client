@@ -294,29 +294,54 @@ const dispatchVisualLayoutEdit = (deps, { visualId, returnToEditView }) => {
   );
 };
 
-// Edit Layout keeps the visual's changes and opens its layout, which a
-// visual still saved with one resource gets now.
-export const handleEditLayoutClick = (deps, payload) => {
-  const { store } = deps;
-  const { visualId } = payload._event.currentTarget.dataset;
+// The picture of a custom layout keeps the visual's changes and opens its
+// layout, which a visual still saved with one resource gets now. The picture
+// of an existing layout opens the layout gallery.
+export const handleLayoutImageClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { currentTarget } = payload._event;
+  const { visualId } = currentTarget.dataset;
+  if (!store.selectIsCustomLayoutVisual({ visualId })) {
+    store.openLayoutSelect({ visualId });
+    render();
+    return;
+  }
 
   store.saveVisualEdit();
   store.makeVisualLayoutCustom({ visualId });
   dispatchVisualLayoutEdit(deps, { visualId, returnToEditView: true });
 };
 
-// The visual's Layout: a project layout, or its custom layout.
-export const handleLayoutChange = (deps, payload) => {
+// Layout Type: a layout of the visual's own, or one of the project's.
+export const handleLayoutTypeChange = (deps, payload) => {
   const { store, render } = deps;
   const index = getIndexFromEvent(payload._event);
   if (index === undefined) {
     return;
   }
 
-  store.updateVisualLayout({
+  store.updateVisualLayoutType({
     index,
-    layoutId: getEventValue(payload._event),
+    layoutType: getEventValue(payload._event),
   });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+// A layout card in the gallery picks that layout.
+export const handleLayoutSelectItemClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { resourceId } = payload._event.currentTarget.dataset;
+
+  store.setLayoutSelectLayoutId({ layoutId: resourceId });
+  render();
+};
+
+// Select: the visual shows the picked layout, back in its edit view.
+export const handleLayoutSelectConfirmClick = (deps) => {
+  const { store, render } = deps;
+
+  store.confirmLayoutSelect();
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -450,15 +475,6 @@ export const handleAnimationPlaybackContinuityChange = (deps, payload) => {
     index,
     continuity: getEventValue(payload._event),
   });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
-export const handleLayerChange = (deps, payload) => {
-  const { store, render } = deps;
-  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
-  const value = payload._event.detail.value;
-  store.updateVisualLayer({ index, layer: value });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -655,13 +671,53 @@ export const handleSubmitClick = (deps) => {
 
 // A new visual is an empty layout, opened at once in the layout editor for
 // its elements to be added.
-export const handleAddVisualClick = (deps) => {
-  const { store } = deps;
-  const visualId = generatePrefixedId("visual-");
+// Add Visual asks for the layer first, in a popover under the button.
+export const handleAddVisualClick = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
 
   store.hideDropdownMenu();
-  store.addVisual({ id: visualId });
-  dispatchVisualLayoutEdit(deps, { visualId, returnToEditView: false });
+  store.openAddVisualPopover({ position: { x: rect.left, y: rect.bottom } });
+  render();
+};
+
+export const handleAddVisualPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.hideAddVisualPopover();
+  render();
+};
+
+// A custom layout visual is added as an empty layout and its layout editor
+// opens at once. An existing layout visual is added to the list showing the
+// chosen project layout.
+export const handleAddVisualFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const visualId = generatePrefixedId("visual-");
+  if (values.layoutType !== "existing") {
+    store.hideAddVisualPopover();
+    store.addVisual({ id: visualId, layer: values.layer });
+    dispatchVisualLayoutEdit(deps, { visualId, returnToEditView: false });
+    return;
+  }
+
+  // The form asks for the layout; without one there is nothing to add.
+  if (!values.layoutId) {
+    return;
+  }
+
+  store.hideAddVisualPopover();
+  store.addVisual({
+    id: visualId,
+    layer: values.layer,
+    layoutId: values.layoutId,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleBreadcumbClick = (deps, payload) => {
@@ -673,6 +729,10 @@ export const handleBreadcumbClick = (deps, payload) => {
         detail: {},
       }),
     );
+  } else if (payload._event.detail.id === "edit") {
+    // Back from the layout gallery without choosing.
+    store.closeLayoutSelect();
+    render();
   } else if (payload._event.detail.id === "current") {
     // Leaving the edit view through the breadcrumb discards its edits, as
     // Cancel does.
@@ -710,6 +770,8 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
     store.moveVisual({ index: visualIndex, offset: 1 });
   } else if (item.value === "move-down" && visualIndex !== null) {
     store.moveVisual({ index: visualIndex, offset: -1 });
+  } else if (item.value === "move-to-layer" && visualIndex !== null) {
+    store.updateVisualLayer({ index: visualIndex, layer: item.layer });
   }
 
   store.hideDropdownMenu();

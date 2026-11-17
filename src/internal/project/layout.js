@@ -291,6 +291,15 @@ const setVisualLayoutSize = (target, { width, height } = {}) => {
   }
 };
 
+// A media element keeps its resource's aspect ratio when it is resized, as an
+// element added in the layout editor does.
+const setVisualMediaSize = (element, size) => {
+  setVisualLayoutSize(element, size);
+  if (element.width !== undefined && element.height !== undefined) {
+    element.aspectRatioLock = element.width / element.height;
+  }
+};
+
 const hasOwnVisualLayoutSize = (layout) =>
   toPositiveSize(layout?.width) !== undefined &&
   toPositiveSize(layout?.height) !== undefined;
@@ -375,24 +384,24 @@ const createVisualMediaElement = ({
   if (resourceType === "image") {
     element.type = "sprite";
     element.imageId = resourceId;
-    setVisualLayoutSize(element, resource);
+    setVisualMediaSize(element, resource);
   } else if (resourceType === "spritesheet") {
     element.type = "spritesheet-animation";
     element.resourceId = resourceId;
     element.animationName =
       animationName ?? Object.keys(resource?.animations ?? {})[0];
-    setVisualLayoutSize(element, resolveSpritesheetSize(resource));
+    setVisualMediaSize(element, resolveSpritesheetSize(resource));
   } else if (resourceType === "video") {
     // A video visual played once; a layout video loops unless told not to.
     element.type = "video";
     element.videoId = resourceId;
     element.loop = resource?.loop ?? false;
     element.volume = resource?.volume ?? 100;
-    setVisualLayoutSize(element, resource);
+    setVisualMediaSize(element, resource);
   } else if (resourceType === "particle") {
     element.type = "particle";
     element.particleId = resourceId;
-    setVisualLayoutSize(element, resource);
+    setVisualMediaSize(element, resource);
   } else {
     return undefined;
   }

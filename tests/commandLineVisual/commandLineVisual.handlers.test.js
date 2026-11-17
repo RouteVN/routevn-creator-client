@@ -7,7 +7,6 @@ import {
   handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
   handleFormSectionAction,
-  handleLayerChange,
   handleOpacityInput,
   handleShaderAdjustmentInput,
   handleSubmitClick,
@@ -309,65 +308,6 @@ describe("commandLineVisual.handlers animation controls", () => {
     });
     expect(selectSelectedVisuals({ state })[0].animations).toBeUndefined();
     expect(render).toHaveBeenCalledTimes(2);
-  });
-
-  it("updates visual layer selection and emits temporary presentation state", () => {
-    const state = createStateWithResources();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-
-    setExistingVisuals(
-      { state },
-      {
-        visuals: [
-          {
-            id: "visual-1",
-            resourceId: "visual-image",
-            resourceType: "image",
-            transformId: "visual-center",
-          },
-        ],
-      },
-    );
-
-    handleLayerChange(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          currentTarget: {
-            dataset: {
-              index: "0",
-            },
-          },
-          detail: {
-            value: 30,
-          },
-        },
-      },
-    );
-
-    expect(selectSelectedVisuals({ state })[0].layer).toBe(30);
-    expect(render).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
-      presentationState: {
-        visual: {
-          items: [
-            savedVisual({
-              id: "visual-1",
-              resourceId: "visual-image",
-              resourceType: "image",
-              transformId: "visual-center",
-              layer: 30,
-            }),
-          ],
-        },
-      },
-    });
   });
 
   it("updates visual opacity and blur in temporary presentation state", async () => {

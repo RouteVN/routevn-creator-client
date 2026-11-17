@@ -27,8 +27,12 @@ describe("commandLineVisual view", () => {
   it("shows the visual in the edit view without a resource picker behind it", () => {
     const view = readView();
 
+    // The picture opens the layout editor or the list of project layouts.
     expect(view).toContain(
-      "'rtgl-view bw=xs bc=bo br=md overflow=hidden style=\"width: 200px;",
+      "'rtgl-view#layoutImage${visual.controlId} data-visual-id=${visual.id} bw=xs bc=bo h-bc=ac cur=pointer br=md overflow=hidden style=\"width: 200px;",
+    );
+    expect(view).toMatch(
+      /layoutImage\*:\n\s+eventListeners:\n\s+click:\n\s+handler: handleLayoutImageClick/,
     );
     expect(view).not.toContain("visualImage");
     expect(view).not.toContain("resource-select");

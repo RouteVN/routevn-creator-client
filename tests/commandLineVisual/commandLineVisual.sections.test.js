@@ -78,10 +78,10 @@ describe("commandLineVisual sections", () => {
     expect(section).toMatchObject({
       type: "section",
       id: "visual-0",
-      label: "Visual One",
     });
+    expect(section.label).toBeUndefined();
     expect(rows).toEqual([
-      ["visual-0-preview", "visual-0-layer"],
+      ["visual-0-layout-type", "visual-0-layout-spacer"],
       ["visual-0-transform-mode", "visual-0-predefined-transform"],
       ["visual-0-animation", "visual-0-animation-spacer"],
       ["visual-0-playback-speed", "visual-0-playback-continuity"],
@@ -157,7 +157,6 @@ describe("commandLineVisual sections", () => {
     expect(viewData.defaultValues.visuals[0]).toMatchObject({
       controlId: "0x0",
       previewFormSlot: "visual-0-preview",
-      layerFormSlot: "visual-0-layer",
     });
     expect(viewData.formKey).toBe(
       "0:visual-item-one:Visual One:custom:50:preset-transform:fade:update:opacity-option:blur",
@@ -175,7 +174,7 @@ describe("commandLineVisual sections", () => {
 
     expect(view).toContain('rtgl-form#form key="${formKey}"');
     expect(view).toContain("slot=${visual.previewFormSlot}");
-    expect(view).toContain("slot=${visual.layerFormSlot}");
+    expect(view).not.toContain("rtgl-select#layer");
     expect(view).toContain("slot=${visual.transformModeFormSlot}");
     expect(view).toContain("slot=${visual.predefinedTransformFormSlot}");
     expect(view).toContain("slot=${visual.customTransformFormSlot}");
@@ -234,7 +233,7 @@ describe("commandLineVisual sections", () => {
     startVisualEdit({ state }, { index: 0 });
     const [section] = selectViewData({ state, i18n: JA_I18N }).form.fields;
 
-    expect(section.label).toBe("Visuals");
-    expect(section.fields[0].fields[0].label).toBe("レイアウト");
+    expect(section.label).toBeUndefined();
+    expect(section.fields[1].label).toBe("レイアウト");
   });
 });

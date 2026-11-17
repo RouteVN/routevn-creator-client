@@ -1,9 +1,6 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { isStoredVisualLayout } from "../../internal/project/projection.js";
-import {
-  CURRENT_LAYOUT_SCHEMA_VERSION,
-  getVisualLayoutMedia,
-} from "../../internal/project/layout.js";
+import { CURRENT_LAYOUT_SCHEMA_VERSION } from "../../internal/project/layout.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
 import {
   buildEditorCanvasLayoutForPanel,
@@ -42,14 +39,6 @@ const CREATE_TYPE_FALLBACK_LABELS = {
   text: "Text",
   slider: "Slider",
   "fragment-ref": "Fragment",
-};
-
-const VISUAL_MEDIA_COLLECTIONS = {
-  image: "images",
-  spritesheet: "spritesheets",
-  video: "videos",
-  particle: "particles",
-  layout: "layouts",
 };
 
 const EMPTY_COLLECTION = Object.freeze({ items: {}, tree: [] });
@@ -94,7 +83,6 @@ export const createInitialState = () => ({
   isTouchMode: false,
   isLoaded: false,
   isMissing: false,
-  visualName: undefined,
   layoutSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
   layoutData: { items: {}, tree: [] },
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
@@ -124,7 +112,6 @@ export const loadVisualLayout = (
     lineId,
   })?.actions?.visual?.items?.find((item) => item.id === visualId);
   const layout = visual?.layout;
-  const media = getVisualLayoutMedia(layout);
   // Only a layout in its saved form, elements by id and their tree, can be
   // edited. One already built for the engine is not.
   const elements = isStoredVisualLayout(layout) ? layout.elements : undefined;
@@ -136,10 +123,6 @@ export const loadVisualLayout = (
     : structuredClone(elements);
   state.layoutSchemaVersion =
     layout?.layoutSchemaVersion ?? CURRENT_LAYOUT_SCHEMA_VERSION;
-  state.visualName =
-    repositoryState?.[VISUAL_MEDIA_COLLECTIONS[media?.resourceType]]?.items?.[
-      media?.resourceId
-    ]?.name;
   state.projectResolution =
     repositoryState?.project?.resolution ?? DEFAULT_PROJECT_RESOLUTION;
   state.resources = {
@@ -300,7 +283,6 @@ export const selectViewData = ({ state, props, i18n }) => {
       copy.cannotEditLayout ??
       "This visual's layout can't be edited. Add the visual again to edit its layout.",
     title: copy.title ?? "Edit Layout",
-    visualName: state.visualName,
     doneButton: copy.doneButton ?? "Done",
     elementsTitle: layoutCopy.nodeExplorerTitle ?? "Elements",
     noSelectionLabel: layoutCopy.noSelectionLabel ?? "No selection",
