@@ -10,6 +10,7 @@ export const createInitialState = () => ({
   isDragging: false,
   dragMode: "move",
   dragStartPosition: undefined,
+  dragAxisRotation: undefined,
   dragRenderState: undefined,
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
@@ -64,9 +65,13 @@ export const setGraphicsReady = ({ state }, { value = false } = {}) => {
   state.isGraphicsReady = value === true;
 };
 
-export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
+export const startDragging = (
+  { state },
+  { dragMode = "move", axisRotation } = {},
+) => {
   state.isDragging = true;
   state.dragMode = dragMode;
+  state.dragAxisRotation = axisRotation;
   state.activeRenderRequestId = undefined;
   state.videoLoadingRequestId = undefined;
   // Pointer deltas stay relative to this snapshot for the entire gesture.
@@ -80,7 +85,15 @@ export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
 
 export const setDragStartPosition = (
   { state },
-  { x, y, itemStartX, itemStartY, itemStartWidth, itemStartHeight } = {},
+  {
+    x,
+    y,
+    itemStartX,
+    itemStartY,
+    itemStartWidth,
+    itemStartHeight,
+    axisRotation,
+  } = {},
 ) => {
   if (
     typeof x !== "number" ||
@@ -104,6 +117,10 @@ export const setDragStartPosition = (
 
   if (typeof itemStartHeight === "number") {
     state.dragStartPosition.itemStartHeight = itemStartHeight;
+  }
+
+  if (typeof axisRotation === "number") {
+    state.dragStartPosition.axisRotation = axisRotation;
   }
 };
 
@@ -135,6 +152,7 @@ export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
   state.dragMode = "move";
   state.dragStartPosition = undefined;
+  state.dragAxisRotation = undefined;
   state.dragRenderState = undefined;
 };
 
@@ -277,6 +295,7 @@ export const selectDragging = ({ state }) => {
     isDragging: state.isDragging,
     dragMode: state.dragMode,
     dragStartPosition: state.dragStartPosition,
+    axisRotation: state.dragAxisRotation,
   };
 };
 

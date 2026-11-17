@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateLayoutEditorRotationDragUpdate,
   createLayoutEditorRotationDragStart,
+  resolveLayoutEditorAxisRotationFromBounds,
   resolveLayoutEditorRotationPivotFromBounds,
 } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRotation.js";
 
@@ -96,5 +97,35 @@ describe("layout editor canvas rotation", () => {
     });
 
     expect(pivot).toEqual({ x: 100, y: 200 });
+  });
+
+  it("reads the direction of an element's width from its drawn corners", () => {
+    expect(
+      resolveLayoutEditorAxisRotationFromBounds({
+        bounds: {
+          corners: [
+            { x: 108, y: 192 },
+            { x: 108, y: 208 },
+            { x: 92, y: 208 },
+            { x: 92, y: 192 },
+          ],
+        },
+      }),
+    ).toBe(90);
+    expect(
+      resolveLayoutEditorAxisRotationFromBounds({
+        bounds: {
+          corners: [
+            { x: 0, y: 0 },
+            { x: 10, y: 0 },
+            { x: 10, y: 4 },
+            { x: 0, y: 4 },
+          ],
+        },
+      }),
+    ).toBe(0);
+    expect(
+      resolveLayoutEditorAxisRotationFromBounds({ bounds: undefined }),
+    ).toBeUndefined();
   });
 });

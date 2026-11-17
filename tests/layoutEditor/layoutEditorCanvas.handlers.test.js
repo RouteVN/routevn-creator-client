@@ -1312,6 +1312,127 @@ describe("layoutEditorCanvas pointer selection", () => {
   });
 });
 
+describe("layoutEditorCanvas resize handles", () => {
+  // A 40 by 20 rect turned a quarter turn around its centre at (50, 50), so
+  // its right side faces down the canvas.
+  const createResizeHarness = () => {
+    const deps = createDeps({ selectedItemId: "child" });
+    const item = deps.props.layoutState.elements.items.child;
+    Object.assign(item, {
+      x: 50,
+      y: 50,
+      width: 40,
+      height: 20,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      rotation: 90,
+    });
+    const element = {
+      id: "child",
+      type: "rect",
+      x: 30,
+      y: 40,
+      width: 40,
+      height: 20,
+      originX: 20,
+      originY: 10,
+      rotation: 90,
+    };
+    deps.store.setCanvasRenderState({
+      elements: [element],
+      baseElements: [{ ...item, id: "child" }],
+      parsedElements: [element],
+      canvasUnitsPerCssPixel: 1,
+    });
+    deps.graphicsService.hitTestElementBounds = vi.fn(() => [
+      {
+        path: [
+          {
+            id: "selected-border-resize-right",
+            type: "rect",
+            bounds: {
+              corners: [
+                { x: 60, y: 64 },
+                { x: 60, y: 76 },
+                { x: 40, y: 76 },
+                { x: 40, y: 64 },
+              ],
+            },
+          },
+        ],
+      },
+    ]);
+    deps.subject = new Subject();
+    deps.appService = { isInputFocused: vi.fn(() => false) };
+    deps.graphicsService.destroy = vi.fn();
+    vi.stubGlobal("ResizeObserver", undefined);
+    vi.stubGlobal("window", new EventTarget());
+    const cleanup = handleBeforeMount(deps);
+    const dispatch = (action, payload) =>
+      deps.subject.next({ action, payload });
+    const lastUpdatedItem = () =>
+      deps.dispatchEvent.mock.calls
+        .map(([event]) => event)
+        .filter(({ type }) => type === "drag-update")
+        .at(-1).detail.updatedItem;
+
+    return { deps, cleanup, dispatch, lastUpdatedItem };
+  };
+
+  it("widens a quarter-turned item when its right handle is dragged down", () => {
+    const { deps, cleanup, dispatch, lastUpdatedItem } = createResizeHarness();
+
+    dispatch("border-drag-start", {
+      targetId: "selected-border-resize-right",
+    });
+    dispatch("border-drag-move", { x: 50, y: 70 });
+    dispatch("border-drag-move", { x: 50, y: 90 });
+
+    // The far side stays at y 30, so the centre moves down by half the growth.
+    expect(lastUpdatedItem()).toMatchObject({
+      x: 50,
+      y: 60,
+      width: 60,
+      height: 20,
+    });
+    // The selection chrome is drawn from the parsed element, and stays
+    // centred on the moved anchor point.
+    expect(
+      deps.graphicsService.render.mock.calls.at(-1)[0].elements,
+    ).toContainEqual(
+      expect.objectContaining({
+        id: "selected-border-group",
+        x: 50,
+        y: 60,
+        width: 60,
+        height: 20,
+        anchorX: 0.5,
+        anchorY: 0.5,
+        rotation: 90,
+      }),
+    );
+
+    cleanup();
+  });
+
+  it("leaves the size alone when the handle is dragged along its side", () => {
+    const { deps, cleanup, dispatch } = createResizeHarness();
+
+    dispatch("border-drag-start", {
+      targetId: "selected-border-resize-right",
+    });
+    dispatch("border-drag-move", { x: 50, y: 70 });
+    dispatch("border-drag-move", { x: 80, y: 70 });
+
+    expect(deps.store.selectPendingUpdatedItem()).toMatchObject({
+      width: 40,
+      height: 20,
+    });
+
+    cleanup();
+  });
+});
+
 describe("layoutEditorCanvas with selection off", () => {
   const selectionEvents = (deps) =>
     deps.dispatchEvent.mock.calls

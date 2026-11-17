@@ -327,6 +327,145 @@ describe("layoutEditorMutations", () => {
     });
   });
 
+  describe("resizing a rotated item", () => {
+    const item = {
+      id: "sprite-1",
+      type: "sprite",
+      x: 100,
+      y: 50,
+      width: 100,
+      height: 40,
+    };
+    const dragStartPosition = {
+      x: 300,
+      y: 300,
+      itemStartX: 100,
+      itemStartY: 50,
+      itemStartWidth: 100,
+      itemStartHeight: 40,
+    };
+    const resize = ({ changes = {}, start = {}, resizeEdge, x, y }) =>
+      applyCanvasItemResizeChange({
+        item: { ...item, ...changes },
+        dragStartPosition: { ...dragStartPosition, ...start },
+        resizeEdge,
+        x,
+        y,
+      });
+
+    it("follows the pointer along the turned width at a quarter turn", () => {
+      // The right side faces down, so dragging down widens the item.
+      expect(
+        resize({
+          changes: { rotation: 90 },
+          resizeEdge: "right",
+          x: 300,
+          y: 330,
+        }),
+      ).toMatchObject({ x: 100, y: 50, width: 130, height: 40 });
+      // Dragging sideways runs along that side and changes nothing.
+      expect(
+        resize({
+          changes: { rotation: 90 },
+          resizeEdge: "right",
+          x: 330,
+          y: 300,
+        }),
+      ).toMatchObject({ x: 100, y: 50, width: 100, height: 40 });
+    });
+
+    it("grows when the right side is dragged outward at a half turn", () => {
+      expect(
+        resize({
+          changes: { rotation: 180 },
+          resizeEdge: "right",
+          x: 270,
+          y: 300,
+        }),
+      ).toMatchObject({ x: 100, y: 50, width: 130 });
+    });
+
+    it("counts only the movement along the item at 45 degrees", () => {
+      const distance = 40 * Math.SQRT1_2;
+
+      expect(
+        resize({
+          changes: { rotation: 45 },
+          resizeEdge: "bottom",
+          x: 300 - distance,
+          y: 300 + distance,
+        }),
+      ).toMatchObject({ x: 100, y: 50, width: 100, height: 80 });
+    });
+
+    it("keeps the opposite side in place for the left and top handles", () => {
+      // At a quarter turn the width runs down the canvas from y 50 to 150.
+      // Dragging the left handle up by 20 leaves the far end at 150.
+      expect(
+        resize({
+          changes: { rotation: 90 },
+          resizeEdge: "left",
+          x: 300,
+          y: 280,
+        }),
+      ).toMatchObject({ x: 100, y: 30, width: 120, height: 40 });
+      // The height runs to the left, from x 100 to 60. Dragging the top
+      // handle right by 10 leaves the far end at 60.
+      expect(
+        resize({
+          changes: { rotation: 90 },
+          resizeEdge: "top",
+          x: 310,
+          y: 300,
+        }),
+      ).toMatchObject({ x: 110, y: 50, width: 100, height: 50 });
+    });
+
+    it("keeps the opposite side in place around a centered anchor", () => {
+      const centered = { anchorX: 0.5, anchorY: 0.5 };
+
+      // Unrotated, the item spans x 50 to 150.
+      expect(
+        resize({ changes: centered, resizeEdge: "right", x: 340, y: 300 }),
+      ).toMatchObject({ x: 120, y: 50, width: 140 });
+      expect(
+        resize({ changes: centered, resizeEdge: "left", x: 260, y: 300 }),
+      ).toMatchObject({ x: 80, y: 50, width: 140 });
+      // At a quarter turn the same sides run down the canvas.
+      expect(
+        resize({
+          changes: { ...centered, rotation: 90 },
+          resizeEdge: "right",
+          x: 300,
+          y: 340,
+        }),
+      ).toMatchObject({ x: 100, y: 70, width: 140 });
+    });
+
+    it("leaves a fractional position alone when the anchor side stays", () => {
+      expect(
+        resize({
+          changes: { x: 100.5, y: 50.25 },
+          start: { itemStartX: 100.5, itemStartY: 50.25 },
+          resizeEdge: "right",
+          x: 330,
+          y: 300,
+        }),
+      ).toMatchObject({ x: 100.5, y: 50.25, width: 130 });
+    });
+
+    it("measures along the drawn axes when a parent is rotated", () => {
+      expect(
+        resize({
+          start: { axisRotation: 90 },
+          resizeEdge: "right",
+          x: 300,
+          y: 330,
+        }),
+      ).toMatchObject({ x: 100, y: 50, width: 130 });
+    });
+  });
+
   it("does not resize container items when size controls are unavailable", () => {
     const item = {
       id: "choice-container-1",

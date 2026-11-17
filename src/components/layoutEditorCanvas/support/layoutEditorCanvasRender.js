@@ -316,6 +316,7 @@ const buildOverlayResizeHandle = ({
   element,
   overlayId,
   edge,
+  rotation,
   canvasUnitsPerCssPixel,
 }) => {
   if (!hasRenderableBounds(element)) {
@@ -330,6 +331,7 @@ const buildOverlayResizeHandle = ({
     edge,
     size: resizeHandleSize,
     fill: OVERLAY_FILL,
+    rotation,
   });
 };
 
@@ -337,6 +339,7 @@ const buildOverlayResizeHandles = ({
   element,
   overlayId,
   selectedItem,
+  rotation,
   canvasUnitsPerCssPixel,
 }) => {
   const edges = getLayoutEditorItemResizeEdges(selectedItem ?? element);
@@ -347,6 +350,7 @@ const buildOverlayResizeHandles = ({
         element,
         overlayId,
         edge,
+        rotation,
         canvasUnitsPerCssPixel,
       }),
     )
@@ -428,6 +432,11 @@ const buildOverlayTree = ({
       element: selectedElement,
       overlayId,
       selectedItem,
+      // The handles sit inside every rotated ancestor of the element.
+      rotation: path.reduce(
+        (total, element) => total + (element.rotation ?? 0),
+        0,
+      ),
       canvasUnitsPerCssPixel,
     }),
     anchorMarker,

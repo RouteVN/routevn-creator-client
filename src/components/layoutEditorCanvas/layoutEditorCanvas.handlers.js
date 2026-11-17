@@ -35,6 +35,7 @@ import {
   calculateLayoutEditorRotationDragUpdate,
   createLayoutEditorRotationDragStart,
   LAYOUT_EDITOR_ROTATION_TARGET_ID,
+  resolveLayoutEditorAxisRotationFromBounds,
   resolveLayoutEditorRotationPivotFromBounds,
 } from "./support/layoutEditorCanvasRotation.js";
 
@@ -191,6 +192,8 @@ const canResizeCanvasItemForEdge = (item = {}, resizeEdge) => {
   return false;
 };
 
+const toRadians = (degrees) => (degrees * Math.PI) / 180;
+
 const clampResizeDimension = (value, min = MIN_LAYOUT_EDITOR_ITEM_SIZE) => {
   if (!Number.isFinite(value)) {
     return min;
@@ -218,8 +221,19 @@ export const applyCanvasItemResizeChange = ({
     return item;
   }
 
-  const deltaX = x - dragStartPosition.x;
-  const deltaY = y - dragStartPosition.y;
+  const pointerDeltaX = x - dragStartPosition.x;
+  const pointerDeltaY = y - dragStartPosition.y;
+  // The handles turn with the element, so the pointer movement is measured
+  // along the element's own axes as they appear on the canvas.
+  const axisRadians = toRadians(
+    dragStartPosition.axisRotation ?? item.rotation ?? 0,
+  );
+  const deltaX =
+    pointerDeltaX * Math.cos(axisRadians) +
+    pointerDeltaY * Math.sin(axisRadians);
+  const deltaY =
+    pointerDeltaY * Math.cos(axisRadians) -
+    pointerDeltaX * Math.sin(axisRadians);
   const nextItem = {
     ...item,
   };
@@ -244,9 +258,6 @@ export const applyCanvasItemResizeChange = ({
       dragStartPosition.itemStartWidth - deltaX,
       minWidth,
     );
-    nextItem.x =
-      dragStartPosition.itemStartX +
-      (dragStartPosition.itemStartWidth - nextItem.width);
     if (aspectRatioLock) {
       nextItem.height = clampResizeDimension(nextItem.width / aspectRatioLock);
     }
@@ -263,9 +274,6 @@ export const applyCanvasItemResizeChange = ({
       dragStartPosition.itemStartHeight - deltaY,
       minHeight,
     );
-    nextItem.y =
-      dragStartPosition.itemStartY +
-      (dragStartPosition.itemStartHeight - nextItem.height);
     if (aspectRatioLock) {
       nextItem.width = clampResizeDimension(nextItem.height * aspectRatioLock);
     }
@@ -278,6 +286,24 @@ export const applyCanvasItemResizeChange = ({
       nextItem.width = clampResizeDimension(nextItem.height * aspectRatioLock);
     }
   }
+
+  // The position is the anchor point, and the element turns around it. Move
+  // it so the side opposite the dragged one stays where it was: the right and
+  // bottom sides for the left and top handles, the left and top sides
+  // otherwise.
+  const widthChange = nextItem.width - dragStartPosition.itemStartWidth;
+  const heightChange = nextItem.height - dragStartPosition.itemStartHeight;
+  const shiftX =
+    ((item.anchorX ?? 0) - (resizeEdge === "left" ? 1 : 0)) * widthChange;
+  const shiftY =
+    ((item.anchorY ?? 0) - (resizeEdge === "top" ? 1 : 0)) * heightChange;
+  const itemRadians = toRadians(item.rotation ?? 0);
+  nextItem.x =
+    dragStartPosition.itemStartX +
+    Math.round(shiftX * Math.cos(itemRadians) - shiftY * Math.sin(itemRadians));
+  nextItem.y =
+    dragStartPosition.itemStartY +
+    Math.round(shiftX * Math.sin(itemRadians) + shiftY * Math.cos(itemRadians));
 
   return nextItem;
 };
@@ -359,6 +385,21 @@ const resolveRotationDragPivot = (
     x: payload.rotationPivotX,
     y: payload.rotationPivotY,
   };
+};
+
+// The handle is drawn inside every rotated ancestor of the element, so its
+// drawn bounds give the direction of the element's axes on the canvas.
+const resolveResizeAxisRotation = (deps, payload, dragMode) => {
+  if (dragMode === "move" || dragMode === "rotate") {
+    return undefined;
+  }
+
+  return resolveLayoutEditorAxisRotationFromBounds({
+    bounds: findCanvasTargetBounds(deps, {
+      targetId: payload.targetId,
+      position: deps.store.selectLastPointerPosition(),
+    }),
+  });
 };
 
 const startCanvasRotationDrag = (
@@ -699,6 +740,31 @@ const createTransientCanvasItemUpdater = ({ updatedItem, dragging } = {}) => {
     }
     if (deltaHeight !== 0 && Number.isFinite(element.height)) {
       nextElement.height = element.height + deltaHeight;
+    }
+    // A parsed element is placed by its top left corner, with the anchor
+    // point kept as an origin inside it. The origin grows with the size, so
+    // the corner moves back by as much.
+    if (
+      deltaWidth !== 0 &&
+      Number.isFinite(element.originX) &&
+      element.width > 0
+    ) {
+      nextElement.originX = Math.round(
+        (element.originX / element.width) * nextElement.width,
+      );
+      nextElement.x =
+        (nextElement.x ?? 0) - (nextElement.originX - element.originX);
+    }
+    if (
+      deltaHeight !== 0 &&
+      Number.isFinite(element.originY) &&
+      element.height > 0
+    ) {
+      nextElement.originY = Math.round(
+        (element.originY / element.height) * nextElement.height,
+      );
+      nextElement.y =
+        (nextElement.y ?? 0) - (nextElement.originY - element.originY);
     }
     if (rotationDelta !== 0) {
       nextElement.rotation =
@@ -1492,7 +1558,10 @@ const handleBorderDragStart = (deps, payload = {}) => {
     return;
   }
 
-  deps.store.startDragging({ dragMode });
+  deps.store.startDragging({
+    dragMode,
+    axisRotation: resolveResizeAxisRotation(deps, payload, dragMode),
+  });
   if (dragMode === "rotate") {
     startCanvasRotationDrag(deps, {
       currentItem,
@@ -1538,6 +1607,7 @@ const handleBorderDragMove = async (deps, payload = {}) => {
       itemStartY: currentItem.y,
       itemStartWidth: currentItem.width,
       itemStartHeight: currentItem.height,
+      axisRotation: dragging.axisRotation,
     });
     return;
   }
