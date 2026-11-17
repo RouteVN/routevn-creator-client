@@ -17,21 +17,26 @@ export const createExportStepsView = ({ labels, steps, current, detail }) => {
 };
 
 // Opens the progress dialog on the first step. `showStep` moves to a later
-// step or updates the running step's detail; it never moves back.
+// step or updates the running step's detail; it never moves back. An export
+// that can be stopped passes `cancel` (`{ label, onCancel }`) for the dialog's
+// Cancel button.
 export const openExportStepsProgress = ({
   appService,
   title,
   message,
   labels,
   steps,
+  cancel,
 }) => {
   let currentStep = steps[0];
   let currentDetail;
-  const progressDialog = appService.showProgressDialog({
+  const options = {
     message,
     title,
     steps: createExportStepsView({ labels, steps, current: currentStep }),
-  });
+  };
+  if (cancel !== undefined) options.cancel = cancel;
+  const progressDialog = appService.showProgressDialog(options);
   const showStep = (step, detail) => {
     const index = steps.indexOf(step);
     const currentIndex = steps.indexOf(currentStep);

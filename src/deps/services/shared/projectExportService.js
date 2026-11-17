@@ -1803,6 +1803,9 @@ export const createProjectExportService = ({
 
   service.listIosDevices = async () => fileAdapter.listIosDevices();
 
+  // Stops the running iOS export, which then rejects with `cancelled`.
+  service.cancelIosExport = async () => fileAdapter.cancelIosExport();
+
   service.promptIosApplicationPath = async (
     { defaultFileName },
     options = {},

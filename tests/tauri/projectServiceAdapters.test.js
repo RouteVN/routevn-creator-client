@@ -1688,4 +1688,57 @@ describe("tauri project service adapters preflight reads", () => {
     ).rejects.toThrow("Invalid iOS platform details: ios-identifier-invalid");
     expect(mocked.invoke).not.toHaveBeenCalled();
   });
+
+  it("cancels the iOS export, also before the exporter has started", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    mocked.invoke.mockResolvedValue(undefined);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    let cancelling;
+    const request = {
+      projectData: { projectData: { screen: { width: 1920, height: 1080 } } },
+      fileEntries: [],
+      outputPath: "/exports/project.ipa",
+      applicationName: "Project One",
+      bundleIdentifier: "com.example.project-one",
+      version: "1.2.3",
+      buildNumber: "7",
+      orientation: "landscape",
+      iconFileId: "icon-1",
+      teamId: "ABCDE12345",
+      distribution: "development",
+      // The creator cancels while the adapter still resolves files.
+      getCurrentReference: () => {
+        cancelling ??= fileAdapter.cancelIosExport();
+        return { projectPath: "/projects/project-one" };
+      },
+    };
+    await expect(fileAdapter.exportIosApplication(request)).rejects.toEqual({
+      code: "cancelled",
+      message: "The iOS export was cancelled.",
+      ipaSaved: false,
+    });
+    await cancelling;
+    expect(mocked.invoke).toHaveBeenCalledWith("cancel_ios_export");
+    expect(mocked.invoke).not.toHaveBeenCalledWith(
+      "export_ios_application",
+      expect.anything(),
+    );
+
+    // The next export starts: the old request is forgotten.
+    mocked.invoke.mockClear();
+    await fileAdapter.exportIosApplication({
+      ...request,
+      getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+    });
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "export_ios_application",
+      expect.anything(),
+    );
+  });
 });
