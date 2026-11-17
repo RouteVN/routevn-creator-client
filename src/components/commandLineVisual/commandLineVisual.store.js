@@ -1,6 +1,15 @@
-import { selectResourceSelectorEmptyMessage } from "../../internal/ui/resourcePages/selectorEmptyState.js";
-import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
-import { generatePrefixedId } from "../../internal/id.js";
+import { toFlatItems } from "../../internal/project/tree.js";
+import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
+import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
+import {
+  countVisualLayoutElements,
+  createEmptyVisualLayout,
+  getDefaultVisualLayoutTransform,
+  getVisualLayoutMedia,
+  isLinkedLayoutVisualItem,
+  toCustomLayoutVisualItem,
+  toLayoutVisualItem,
+} from "../../internal/project/layout.js";
 import {
   canLoopAnimationById,
   createAnimationReference,
@@ -41,7 +50,6 @@ import {
   formatBackgroundTransformEditorRotation,
   hasInlineTransform,
   normalizeBackgroundTransformEditorTransform,
-  removeInlineTransformFields,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import {
   localizeCommandLineBreadcrumb,
@@ -51,21 +59,19 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
-import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
-import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
-const RESOURCE_TYPES = [
-  { type: "image", label: "Images" },
-  { type: "spritesheet", label: "Spritesheets" },
-  { type: "video", label: "Videos" },
-  { type: "layout", label: "Layouts" },
-  { type: "particle", label: "Particles" },
+// The resources a visual can show.
+const VISUAL_RESOURCE_TYPES = [
+  "image",
+  "spritesheet",
+  "video",
+  "layout",
+  "particle",
 ];
 
-const tabs = RESOURCE_TYPES.map(({ type, label }) => ({
-  id: type,
-  label,
-}));
+// The Layout choice of a visual whose layout is its own. Every other choice
+// is the id of a project layout, which ids of this form never are.
+const CUSTOM_LAYOUT_VALUE = "custom";
 
 const DEFAULT_VISUAL_LAYER = 50;
 const VISUAL_LAYER_OPTIONS = [
@@ -111,6 +117,12 @@ const createEmptyCollection = () => ({
   items: {},
   tree: [],
 });
+
+// Store actions receive Immer drafts, which structuredClone cannot copy.
+// Visual items are plain JSON, so a JSON round trip copies them.
+const toPlainData = (value) =>
+  value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+const cloneVisuals = toPlainData;
 
 const getVisualLayer = (visual = {}) => normalizeVisualLayer(visual.layer);
 
@@ -165,25 +177,67 @@ const createVisualDropdownItems = (visualIndex, visuals = []) => {
     items.push({ label: "Move Down", type: "item", value: "move-down" });
   }
 
+  // Move Layer opens the list of layers, front layer first. The layer the
+  // visual is on cannot be chosen.
+  if (visual) {
+    items.push({
+      label: "Move Layer",
+      type: "item",
+      value: "move-layer",
+      items: VISUAL_LAYER_DISPLAY_OPTIONS.map((option) => ({
+        label: option.label,
+        type: "item",
+        value: "move-to-layer",
+        layer: option.value,
+        disabled: option.value === getVisualLayer(visual),
+      })),
+    });
+  }
+
   items.push({ label: "Delete", type: "item", value: "delete" });
   return items;
 };
+
+// The layout gallery, opened from the picture of a visual that shows a
+// project layout: the visual it chooses for and the layout picked in it.
+const createLayoutSelect = () => ({
+  visualId: undefined,
+  layoutId: undefined,
+});
 
 const createAddVisualPopover = () => ({
   isOpen: false,
   position: { x: 0, y: 0 },
 });
 
-const createAddVisualForm = ({ transformOptions, layerOptions } = {}) => ({
+// The two kinds of visual: one with a layout of its own, and one that shows
+// one of the project's layouts.
+const EXISTING_LAYOUT_VALUE = "existing";
+const VISUAL_LAYOUT_TYPE_OPTIONS = [
+  { value: CUSTOM_LAYOUT_VALUE, label: "Custom Layout" },
+  { value: EXISTING_LAYOUT_VALUE, label: "Existing Layout" },
+];
+
+// Asked before a visual is added: which kind it is and the layer it goes on.
+const createAddVisualForm = ({ layoutOptions, layerOptions }) => ({
   title: "Add Visual",
   fields: [
     {
-      name: "transformId",
-      type: "select",
-      label: "Transform",
-      options: transformOptions,
+      name: "layoutType",
+      type: "segmented-control",
+      label: "Layout",
       clearable: false,
-      placeholder: "Select transform",
+      options: VISUAL_LAYOUT_TYPE_OPTIONS,
+    },
+    {
+      $when: 'layoutType == "existing"',
+      name: "layoutId",
+      type: "select",
+      label: "Existing Layout",
+      options: layoutOptions,
+      clearable: false,
+      required: true,
+      placeholder: "Select layout",
     },
     {
       name: "layer",
@@ -199,7 +253,7 @@ const createAddVisualForm = ({ transformOptions, layerOptions } = {}) => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Select Resource",
+        label: "Continue",
       },
     ],
   },
@@ -210,9 +264,10 @@ const createVisualFormSlots = (visualIndex) => {
   return {
     formSectionId: prefix,
     previewFormSlot: `${prefix}-preview`,
-    layerFormSlot: `${prefix}-layer`,
     transformModeFormSlot: `${prefix}-transform-mode`,
     predefinedTransformFormSlot: `${prefix}-predefined-transform`,
+    layoutTypeFormSlot: `${prefix}-layout-type`,
+    layoutSpacerFormSlot: `${prefix}-layout-spacer`,
     transformSpacerFormSlot: `${prefix}-transform-spacer`,
     customTransformFormSlot: `${prefix}-custom-transform`,
     animationFormSlot: `${prefix}-animation`,
@@ -232,21 +287,27 @@ const createVisualFormSlots = (visualIndex) => {
 
 const createVisualsForm = (visuals = []) => ({
   fields: visuals.map((visual) => {
+    // The layer is not edited here: the list shows a visual under its layer,
+    // and Move Layer in its menu changes it.
     const fields = [
       {
         type: "row",
         fields: [
           {
             type: "slot",
-            slot: visual.previewFormSlot,
-            label: "Visuals",
+            slot: visual.layoutTypeFormSlot,
+            label: "Layout Type",
           },
           {
             type: "slot",
-            slot: visual.layerFormSlot,
-            label: "Layer",
+            slot: visual.layoutSpacerFormSlot,
           },
         ],
+      },
+      {
+        type: "slot",
+        slot: visual.previewFormSlot,
+        label: "Layout",
       },
       {
         type: "row",
@@ -457,15 +518,78 @@ const createVisualsForm = (visuals = []) => ({
   }),
 });
 
-const createLocalizedVisualsForm = (visuals = [], copy = {}) => {
-  const form = localizeCommandLineForm(createVisualsForm(visuals), copy);
+// The Edit Visual page has no title: its section is not named.
+const createLocalizedVisualsForm = (visuals = [], copy = {}) =>
+  localizeCommandLineForm(createVisualsForm(visuals), copy);
 
-  for (const [index, visual] of visuals.entries()) {
-    form.fields[index].label = visual.displayName;
-  }
+// Read-only rows for the visual list. Editing happens in the edit view. The
+// list shows a row under its layer's heading, so a row does not name its layer.
+const createVisualListItems = (
+  { visuals, transformOptions, animationOptions, transformModeOptions },
+  copy = {},
+) => {
+  const findLabel = (options, value) =>
+    options.find((option) => option.value === value)?.label;
+  const customTransformLabel = findLabel(transformModeOptions, true);
 
-  return form;
+  return visuals.map((visual, listIndex) => {
+    const details = [
+      {
+        label: localizeCommandLineText("Layout", copy),
+        value: visual.isCustomLayout
+          ? localizeCommandLineText("Custom Layout", copy)
+          : visual.layoutName,
+      },
+      {
+        label: localizeCommandLineText("Transform", copy),
+        value: visual.customTransform
+          ? customTransformLabel
+          : (findLabel(transformOptions, visual.transformId) ??
+            localizeCommandLineText("Screen Center", copy)),
+      },
+    ];
+    if (visual.animationId) {
+      details.push({
+        label: localizeCommandLineText("Animation", copy),
+        value: findLabel(animationOptions, visual.animationId),
+      });
+    }
+
+    const effects = [];
+    if (visual.opacityEnabled) {
+      effects.push(localizeCommandLineText("Opacity", copy));
+    }
+    if (visual.blurEnabled) {
+      effects.push(localizeCommandLineText("Blur", copy));
+    }
+    for (const option of visual.flipOptions) {
+      if (option.enabled) {
+        effects.push(localizeCommandLineText(option.label, copy));
+      }
+    }
+    for (const adjustment of visual.shaderAdjustments) {
+      if (adjustment.enabled) {
+        effects.push(localizeCommandLineText(adjustment.label, copy));
+      }
+    }
+
+    return {
+      ...visual,
+      listIndex,
+      details: details.filter((detail) => detail.value),
+      effects,
+    };
+  });
 };
+
+// The list's rows under their layers, front layer first. A layer without a
+// visual is left out.
+const createVisualListGroups = (visualGroups, visualListItems) =>
+  visualGroups.map((group) => ({
+    id: group.id,
+    label: group.label,
+    visuals: visualListItems.filter((visual) => visual.layer === group.layer),
+  }));
 
 const isHierarchyCollection = (value) =>
   !!value &&
@@ -601,17 +725,6 @@ const normalizeSelectedVisual = (visual = {}, animations = {}) => {
   return nextVisual;
 };
 
-const getCollectionTree = (collection) => {
-  if (Array.isArray(collection?.tree) && collection.tree.length > 0) {
-    return collection.tree;
-  }
-  if (Array.isArray(collection?.order) && collection.order.length > 0) {
-    return collection.order;
-  }
-
-  return Object.keys(collection?.items || {}).map((id) => ({ id }));
-};
-
 const isSelectableVisualResource = (resourceType, item) => {
   return resourceType !== "layout" || item?.layoutType === "general";
 };
@@ -626,19 +739,6 @@ const selectResourceCollection = (state, resourceType) => {
   };
 
   return collections[resourceType];
-};
-
-const getResourceTypeLabel = (resourceType) => {
-  const resourceTypeItem = RESOURCE_TYPES.find(
-    (item) => item.type === resourceType,
-  );
-  return resourceTypeItem?.label ?? resourceType;
-};
-
-const getActiveResourceType = (state) => {
-  return RESOURCE_TYPES.some((item) => item.type === state.tab)
-    ? state.tab
-    : "image";
 };
 
 const resolveResourceItemByType = (
@@ -675,10 +775,10 @@ const resolveResourceItem = (state, { resourceId, resourceType } = {}) => {
     return resolveResourceItemByType(state, { resourceId, resourceType });
   }
 
-  for (const resourceTypeEntry of RESOURCE_TYPES) {
+  for (const visualResourceType of VISUAL_RESOURCE_TYPES) {
     const resourceItem = resolveResourceItemByType(state, {
       resourceId,
-      resourceType: resourceTypeEntry.type,
+      resourceType: visualResourceType,
     });
     if (resourceItem) {
       return resourceItem;
@@ -688,67 +788,8 @@ const resolveResourceItem = (state, { resourceId, resourceType } = {}) => {
   return undefined;
 };
 
-const prefixTreeNode = (node, resourceType, items) => {
-  const item = items[node.id];
-  if (
-    item?.type !== "folder" &&
-    !isSelectableVisualResource(resourceType, item)
-  ) {
-    return undefined;
-  }
-
-  const prefixedNode = { id: `${resourceType}:${node.id}` };
-  if (Array.isArray(node.children) && node.children.length > 0) {
-    const children = node.children
-      .map((child) => prefixTreeNode(child, resourceType, items))
-      .filter(Boolean);
-    if (children.length > 0) {
-      prefixedNode.children = children;
-    }
-  }
-  return prefixedNode;
-};
-
-const buildResourceExplorerItems = ({ collection, resourceType } = {}) => {
-  const items = {};
-  const tree = getCollectionTree(collection)
-    .map((node) => prefixTreeNode(node, resourceType, collection.items || {}))
-    .filter(Boolean);
-
-  Object.entries(collection.items || {}).forEach(([id, item]) => {
-    if (
-      item.type !== "folder" &&
-      !isSelectableVisualResource(resourceType, item)
-    ) {
-      return;
-    }
-
-    items[`${resourceType}:${id}`] = {
-      ...item,
-      resourceId: id,
-      resourceType,
-    };
-  });
-
-  return { items, tree };
-};
-
-const parseResourceExplorerId = (itemId = "") => {
-  const separatorIndex = itemId.indexOf(":");
-  if (separatorIndex === -1) {
-    return { resourceType: undefined, resourceId: itemId };
-  }
-
-  return {
-    resourceType: itemId.slice(0, separatorIndex),
-    resourceId: itemId.slice(separatorIndex + 1),
-  };
-};
-
 export const createInitialState = () => ({
   mode: "current",
-  isTouchMode: false,
-  tab: "image",
   images: createEmptyCollection(),
   spritesheets: createEmptyCollection(),
   videos: createEmptyCollection(),
@@ -756,6 +797,19 @@ export const createInitialState = () => ({
   particles: createEmptyCollection(),
   transforms: createEmptyCollection(),
   animations: createEmptyCollection(),
+  // The project's screen size, which a visual without a transform is
+  // centered on.
+  resolution: DEFAULT_PROJECT_RESOLUTION,
+  // Whether a visual saved before visuals were layouts was opened as one.
+  hasConvertedVisuals: false,
+  // The custom layout of each visual switched to a project layout, by visual
+  // id, so that choosing Custom Layout again brings it back.
+  customLayoutsByVisualId: {},
+  addVisualPopover: createAddVisualPopover(),
+  layoutSelect: createLayoutSelect(),
+  // The visual switched to Existing Layout in the edit view that has no
+  // project layout chosen yet. Until one is chosen it keeps its custom layout.
+  existingLayoutPendingVisualId: undefined,
   /**
    * Array of raw visual objects with the following structure:
    * {
@@ -769,24 +823,11 @@ export const createInitialState = () => ({
    * }
    */
   selectedVisuals: [],
-  tempSelectedResourceId: undefined,
-  tempSelectedResourceType: undefined,
-  tempSelectedAnimationName: undefined,
-  pendingVisualTransformId: undefined,
-  pendingVisualLayer: undefined,
   selectedVisualIndex: undefined,
-  searchQuery: "",
-  searchPopover: {
-    isOpen: false,
-    position: { x: 0, y: 0 },
-  },
-  fullImagePreviewVisible: false,
-  fullImagePreviewFileId: undefined,
-  fullSpritesheetPreviewVisible: false,
-  fullSpritesheetPreviewFileId: undefined,
-  fullSpritesheetPreviewAtlas: undefined,
-  fullSpritesheetPreviewAnimation: undefined,
-  fullSpritesheetPreviewKey: undefined,
+  // The visual open in the edit view, and the visuals as they were before
+  // it opened, so that Cancel can put them back.
+  editingVisualId: undefined,
+  editingVisualsSnapshot: undefined,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -794,26 +835,7 @@ export const createInitialState = () => ({
     visualIndex: null,
     items: [{ label: "Delete", type: "item", value: "delete" }],
   },
-  addVisualPopover: createAddVisualPopover(),
 });
-
-export const setUiConfig = ({ state }, { uiConfig } = {}) => {
-  state.isTouchMode = isTouchUiConfig(uiConfig);
-  if (!state.isTouchMode) {
-    state.searchPopover.isOpen = false;
-  }
-};
-
-export const setMode = ({ state }, { mode } = {}) => {
-  state.mode = mode;
-  if (mode !== "resource-select") {
-    state.searchPopover.isOpen = false;
-  }
-};
-
-export const setTab = ({ state }, { tab } = {}) => {
-  state.tab = RESOURCE_TYPES.some((item) => item.type === tab) ? tab : "image";
-};
 
 export const setImages = ({ state }, { images } = {}) => {
   state.images = normalizeResourceCollection(images, { defaultType: "image" });
@@ -845,6 +867,17 @@ export const setTransforms = ({ state }, { transforms } = {}) => {
   state.transforms = transforms;
 };
 
+export const setResolution = ({ state }, { resolution } = {}) => {
+  state.resolution = resolution ?? DEFAULT_PROJECT_RESOLUTION;
+};
+
+export const setHasConvertedVisuals = ({ state }, { converted } = {}) => {
+  state.hasConvertedVisuals = converted;
+};
+
+export const selectHasConvertedVisuals = ({ state }) =>
+  state.hasConvertedVisuals;
+
 export const setAnimations = ({ state }, { animations } = {}) => {
   state.animations = animations;
   state.selectedVisuals = state.selectedVisuals.map((visual) =>
@@ -852,18 +885,8 @@ export const setAnimations = ({ state }, { animations } = {}) => {
   );
 };
 
-const generateVisualId = () => {
-  return generatePrefixedId("visual-");
-};
-
 const getTransformItems = (state) =>
   toFlatItems(state.transforms).filter((item) => item.type === "transform");
-
-const getDefaultTransformId = (state) => {
-  const transformItems = getTransformItems(state);
-
-  return transformItems.length > 0 ? transformItems[0].id : undefined;
-};
 
 const getTransformResourceById = (state, transformId) => {
   if (!transformId) {
@@ -873,12 +896,11 @@ const getTransformResourceById = (state, transformId) => {
   return getTransformItems(state).find((item) => item.id === transformId);
 };
 
-const getSelectedTransformResource = (state, visual = {}) => {
-  return getTransformResourceById(
-    state,
-    visual.transformId ?? getDefaultTransformId(state),
-  );
-};
+// The transform a visual is drawn with: its predefined transform, or without
+// one, centered on the screen.
+const getVisualBaseTransform = (state, visual = {}) =>
+  getTransformResourceById(state, visual.transformId) ??
+  getDefaultVisualLayoutTransform(state.resolution);
 
 const createCustomTransformDetails = (visual = {}, { copy, dateTime } = {}) => {
   const transform = normalizeBackgroundTransformEditorTransform(visual);
@@ -938,37 +960,212 @@ const applyVisualInlineTransform = (visual, transform) => {
 };
 
 const clearVisualInlineTransform = (visual) => {
-  const nextVisual = removeInlineTransformFields(visual);
   for (const field of BACKGROUND_TRANSFORM_FIELDS) {
     delete visual[field];
   }
-  if (!visual.transformId) {
-    visual.transformId = nextVisual.transformId;
+};
+
+// A new visual is an empty layout on the screen, with no transform: its
+// elements are placed in the layout.
+// Opens the layout gallery for a visual, with the layout it shows picked.
+export const openLayoutSelect = ({ state }, { visualId } = {}) => {
+  const visual = state.selectedVisuals.find((item) => item.id === visualId);
+  if (!visual) {
+    return;
+  }
+
+  state.layoutSelect.visualId = visualId;
+  state.layoutSelect.layoutId = isLinkedLayoutVisualItem(
+    visual,
+    selectVisualLayoutResources(state),
+  )
+    ? visual.resourceId
+    : undefined;
+  state.mode = "layout-select";
+};
+
+export const setLayoutSelectLayoutId = ({ state }, { layoutId } = {}) => {
+  state.layoutSelect.layoutId = layoutId;
+};
+
+// Back to the visual's edit view, with its layout as it was.
+export const closeLayoutSelect = ({ state }, _payload = {}) => {
+  state.layoutSelect = createLayoutSelect();
+  state.mode = "edit";
+};
+
+// Select: the visual shows the picked layout. With none picked it stays as it
+// was.
+export const confirmLayoutSelect = ({ state }, _payload = {}) => {
+  const { visualId, layoutId } = state.layoutSelect;
+  const index = state.selectedVisuals.findIndex(
+    (visual) => visual.id === visualId,
+  );
+  if (index !== -1 && layoutId) {
+    updateVisualLayout({ state }, { index, layoutId });
+  }
+  closeLayoutSelect({ state });
+};
+
+export const openAddVisualPopover = ({ state }, { position } = {}) => {
+  state.addVisualPopover.isOpen = true;
+  state.addVisualPopover.position = position;
+};
+
+export const hideAddVisualPopover = ({ state }, _payload = {}) => {
+  state.addVisualPopover = createAddVisualPopover();
+};
+
+// Adds a visual that shows the project layout `layoutId`, or without one, a
+// visual with an empty layout of its own.
+export const addVisual = ({ state }, { id, layer, layoutId } = {}) => {
+  const visual = { id };
+  if (layoutId) {
+    visual.resourceId = layoutId;
+    visual.resourceType = "layout";
+  } else {
+    visual.layout = createEmptyVisualLayout();
+  }
+  state.selectedVisuals.push({
+    ...visual,
+    layer: normalizeVisualLayer(layer),
+    animationMode: "none",
+  });
+  normalizeSelectedVisualOrder(state);
+};
+
+// Gives the visual at `index` a custom layout of its own: the one it had
+// before it was switched to a project layout, or else a copy of what it
+// shows. A visual saved with one resource gets a layout that shows it.
+const applyCustomVisualLayout = (state, index) => {
+  const visual = state.selectedVisuals[index];
+  if (visual.layout) {
+    return;
+  }
+
+  const customLayout = state.customLayoutsByVisualId[visual.id];
+  if (customLayout) {
+    visual.layout = toPlainData(customLayout);
+    delete visual.resourceId;
+    delete visual.resourceType;
+    delete visual.animationName;
+    delete state.customLayoutsByVisualId[visual.id];
+    return;
+  }
+
+  // The copy is made from plain data: the state here is a draft.
+  const resources = selectVisualLayoutResources(state);
+  resources.layouts = {
+    [visual.resourceId]: toPlainData(resources.layouts[visual.resourceId]),
+  };
+  state.selectedVisuals[index] = toCustomLayoutVisualItem(
+    toPlainData(visual),
+    resources,
+  );
+};
+
+// Shows a project layout, by reference, or a custom layout of the visual's
+// own. The custom layout a visual leaves is kept until the panel closes.
+export const updateVisualLayout = ({ state }, { index, layoutId } = {}) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  state.existingLayoutPendingVisualId = undefined;
+  if (layoutId === CUSTOM_LAYOUT_VALUE) {
+    applyCustomVisualLayout(state, index);
+    return;
+  }
+
+  if (visual.layout) {
+    state.customLayoutsByVisualId[visual.id] = toPlainData(visual.layout);
+  }
+  delete visual.layout;
+  delete visual.animationName;
+  visual.resourceId = layoutId;
+  visual.resourceType = "layout";
+};
+
+// The project layouts a visual can show, in the order the panel lists them.
+const getSelectableLayoutItems = (state) =>
+  toFlatItems(state.layouts)
+    .filter((item) => isSelectableVisualResource("layout", item))
+    .filter((item) => item.type === "layout");
+
+// The layout gallery's cards: each folder is a group named by the folder, with
+// its layouts under it by their own names. Layouts outside a folder come
+// first, in a group without a name. The picked layout is outlined.
+const createLayoutSelectGroups = (layoutItems, selectedLayoutId, cardStyle) => {
+  const groups = [];
+  for (const layout of layoutItems) {
+    const groupId = layout.parentId ?? "root";
+    let group = groups.at(-1);
+    if (group?.groupId !== groupId) {
+      group = {
+        groupId,
+        fullLabel: layout.fullLabel.slice(
+          0,
+          Math.max(
+            layout.fullLabel.length - layout.name.length - " > ".length,
+            0,
+          ),
+        ),
+        children: [],
+      };
+      groups.push(group);
+    }
+
+    const isSelected = layout.id === selectedLayoutId;
+    group.children.push({
+      id: layout.id,
+      name: layout.name,
+      previewFileId: layout.thumbnailFileId ?? layout.fileId,
+      itemBorderColor: isSelected ? "pr" : "bo",
+      itemHoverBorderColor: isSelected ? "pr" : "ac",
+      resourceCardStyle: isSelected
+        ? `${cardStyle} box-shadow: inset 0 0 0 1px var(--color-pr);`
+        : cardStyle,
+    });
+  }
+  return groups;
+};
+
+// Layout Type in the edit view. Custom Layout gives the visual a layout of
+// its own, as choosing it did before. Existing Layout starts with no layout
+// chosen: the visual keeps its custom layout until one is picked from the
+// list under the picture.
+export const updateVisualLayoutType = (
+  { state },
+  { index, layoutType } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  state.existingLayoutPendingVisualId = undefined;
+  if (layoutType !== EXISTING_LAYOUT_VALUE) {
+    updateVisualLayout({ state }, { index, layoutId: CUSTOM_LAYOUT_VALUE });
+    return;
+  }
+
+  if (!isLinkedLayoutVisualItem(visual, selectVisualLayoutResources(state))) {
+    state.existingLayoutPendingVisualId = visual.id;
   }
 };
 
-export const addVisual = (
-  { state },
-  { resourceId, resourceType, animationName, transformId, layer } = {},
-) => {
-  const defaultTransform = getDefaultTransformId(state);
-  const visual = {
-    id: generateVisualId(),
-    resourceId: resourceId,
-    transformId: transformId ?? defaultTransform,
-    layer: normalizeVisualLayer(layer),
-    animationMode: "none",
-  };
-
-  if (resourceType) {
-    visual.resourceType = resourceType;
-  }
-  if (resourceType === "spritesheet" && animationName) {
-    visual.animationName = animationName;
+// The layout editor edits a custom layout. A visual saved with one resource, which
+// the panel kept as it was saved, becomes one now.
+export const makeVisualLayoutCustom = ({ state }, { visualId } = {}) => {
+  const index = state.selectedVisuals.findIndex(
+    (visual) => visual.id === visualId,
+  );
+  if (index === -1) {
+    return;
   }
 
-  state.selectedVisuals.push(visual);
-  normalizeSelectedVisualOrder(state);
+  applyCustomVisualLayout(state, index);
 };
 
 export const removeVisual = ({ state }, { index } = {}) => {
@@ -1025,13 +1222,18 @@ export const moveVisual = ({ state }, { index, offset } = {}) => {
   syncSelectedVisualIndex(state, selectedVisual);
 };
 
+// Without a predefined transform, a visual is centered on the screen.
 export const updateVisualTransform = ({ state }, { index, transform } = {}) => {
   const visual = state.selectedVisuals[index];
   if (!visual) {
     return;
   }
 
-  visual.transformId = transform;
+  if (transform) {
+    visual.transformId = transform;
+  } else {
+    delete visual.transformId;
+  }
   clearVisualInlineTransform(visual);
 };
 
@@ -1047,13 +1249,14 @@ export const updateVisualCustomTransformEnabled = (
   const customEnabled = enabled === true || enabled === "true";
   if (!customEnabled) {
     clearVisualInlineTransform(visual);
-    visual.transformId = visual.transformId ?? getDefaultTransformId(state);
     return;
   }
 
-  const selectedTransform = getSelectedTransformResource(state, visual);
+  // A custom transform starts where the visual is drawn.
   applyVisualInlineTransform(visual, {
-    ...normalizeBackgroundTransformEditorTransform(selectedTransform),
+    ...normalizeBackgroundTransformEditorTransform(
+      getVisualBaseTransform(state, visual),
+    ),
     ...visual,
   });
 };
@@ -1067,7 +1270,6 @@ export const updateVisualCustomTransform = (
     return;
   }
 
-  visual.transformId = visual.transformId ?? getDefaultTransformId(state);
   applyVisualInlineTransform(visual, transform);
 };
 
@@ -1319,141 +1521,44 @@ export const selectVisualShaderAdjustmentOptionEnabled = (
   );
 };
 
-export const updateVisualResource = (
-  { state },
-  { index, resourceId, resourceType, animationName } = {},
-) => {
-  const visual = state.selectedVisuals[index];
-  if (visual) {
-    visual.resourceId = resourceId;
-    visual.resourceType = resourceType;
-    if (resourceType === "spritesheet" && animationName) {
-      visual.animationName = animationName;
-    } else {
-      delete visual.animationName;
-    }
-  }
-};
-
 export const clearVisuals = ({ state }, _payload = {}) => {
   state.selectedVisuals = [];
 };
 
-export const setTempSelectedResourceId = (
-  { state },
-  { resourceId, resourceType, animationName } = {},
-) => {
-  state.tempSelectedResourceId = resourceId;
-  state.tempSelectedResourceType = resourceId ? resourceType : undefined;
-  state.tempSelectedAnimationName =
-    resourceId && resourceType === "spritesheet" ? animationName : undefined;
-};
-
-export const setPendingVisualLayer = ({ state }, { layer } = {}) => {
-  state.pendingVisualLayer = normalizeVisualLayer(layer);
-};
-
-export const clearPendingVisualLayer = ({ state }, _payload = {}) => {
-  state.pendingVisualLayer = undefined;
-};
-
-export const setPendingVisualTransformId = (
-  { state },
-  { transformId } = {},
-) => {
-  state.pendingVisualTransformId = transformId;
-};
-
-export const clearPendingVisualTransformId = ({ state }, _payload = {}) => {
-  state.pendingVisualTransformId = undefined;
-};
-
-export const clearPendingVisualConfig = ({ state }, _payload = {}) => {
-  state.pendingVisualLayer = undefined;
-  state.pendingVisualTransformId = undefined;
-};
-
-export const setSearchQuery = ({ state }, { value } = {}) => {
-  state.searchQuery = value ?? "";
-};
-
-export const openSearchPopover = ({ state }, { position }) => {
-  state.searchPopover.isOpen = true;
-  state.searchPopover.position.x = position.x;
-  state.searchPopover.position.y = position.y;
-};
-
-export const closeSearchPopover = ({ state }) => {
-  state.searchPopover.isOpen = false;
-};
-
-export const showFullImagePreview = ({ state }, { fileId } = {}) => {
-  if (!fileId) {
+export const startVisualEdit = ({ state }, { index } = {}) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
     return;
   }
 
-  state.fullImagePreviewVisible = true;
-  state.fullImagePreviewFileId = fileId;
-  state.fullSpritesheetPreviewVisible = false;
-};
-
-export const showFullSpritesheetPreview = (
-  { state },
-  { resourceId, animationName } = {},
-) => {
-  const preview = getSpritesheetAnimationPreview(
-    state.spritesheets,
-    resourceId,
-    animationName,
-  );
-  if (!preview.fileId || !preview.atlas || !preview.animation) {
-    return;
-  }
-
-  const selectionValue = toSpritesheetAnimationSelectionValue(
-    resourceId,
-    animationName,
-  );
-  state.fullImagePreviewVisible = false;
-  state.fullSpritesheetPreviewVisible = true;
-  state.fullSpritesheetPreviewFileId = preview.fileId;
-  state.fullSpritesheetPreviewAtlas = preview.atlas;
-  state.fullSpritesheetPreviewAnimation = preview.animation;
-  state.fullSpritesheetPreviewKey = `${selectionValue}:${preview.fileId}`;
-};
-
-export const hideFullImagePreview = ({ state }, _payload = {}) => {
-  state.fullImagePreviewVisible = false;
-  state.fullImagePreviewFileId = undefined;
-  state.fullSpritesheetPreviewVisible = false;
-  state.fullSpritesheetPreviewFileId = undefined;
-  state.fullSpritesheetPreviewAtlas = undefined;
-  state.fullSpritesheetPreviewAnimation = undefined;
-  state.fullSpritesheetPreviewKey = undefined;
-};
-
-export const setSelectedVisualIndex = ({ state }, { index } = {}) => {
+  state.editingVisualsSnapshot = cloneVisuals(state.selectedVisuals);
+  state.editingVisualId = visual.id;
   state.selectedVisualIndex = index;
+  state.mode = "edit";
 };
 
-export const selectTempSelectedResourceId = ({ state }) => {
-  return state.tempSelectedResourceId;
+const finishVisualEdit = (state) => {
+  state.layoutSelect = createLayoutSelect();
+  state.existingLayoutPendingVisualId = undefined;
+  state.editingVisualId = undefined;
+  state.editingVisualsSnapshot = undefined;
+  state.selectedVisualIndex = undefined;
+  state.mode = "current";
 };
 
-export const selectTempSelectedResourceType = ({ state }) => {
-  return state.tempSelectedResourceType;
+export const saveVisualEdit = ({ state }, _payload = {}) => {
+  finishVisualEdit(state);
 };
 
-export const selectTempSelectedAnimationName = ({ state }) => {
-  return state.tempSelectedAnimationName;
+export const cancelVisualEdit = ({ state }, _payload = {}) => {
+  if (state.editingVisualsSnapshot) {
+    state.selectedVisuals = state.editingVisualsSnapshot;
+  }
+  finishVisualEdit(state);
 };
 
-export const selectPendingVisualLayer = ({ state }) => {
-  return state.pendingVisualLayer ?? DEFAULT_VISUAL_LAYER;
-};
-
-export const selectPendingVisualTransformId = ({ state }) => {
-  return state.pendingVisualTransformId ?? getDefaultTransformId(state);
+export const selectEditingVisualId = ({ state }) => {
+  return state.editingVisualId;
 };
 
 export const showDropdownMenu = ({ state }, { position, visualIndex } = {}) => {
@@ -1465,18 +1570,6 @@ export const showDropdownMenu = ({ state }, { position, visualIndex } = {}) => {
     visualIndex,
     state.selectedVisuals,
   );
-};
-
-export const openAddVisualPopover = ({ state }, { position } = {}) => {
-  state.addVisualPopover.isOpen = true;
-  state.addVisualPopover.position = position ?? { x: 0, y: 0 };
-  state.pendingVisualTransformId =
-    state.pendingVisualTransformId ?? getDefaultTransformId(state);
-  state.pendingVisualLayer = state.pendingVisualLayer ?? DEFAULT_VISUAL_LAYER;
-};
-
-export const hideAddVisualPopover = ({ state }, _payload = {}) => {
-  state.addVisualPopover = createAddVisualPopover();
 };
 
 export const hideDropdownMenu = ({ state }, _payload = {}) => {
@@ -1496,31 +1589,20 @@ export const selectSelectedVisuals = ({ state }) => {
   return state.selectedVisuals;
 };
 
-export const selectMode = ({ state }) => {
-  return state.mode;
+export const selectVisualIndexById = ({ state }, { visualId } = {}) => {
+  return state.selectedVisuals.findIndex((visual) => visual.id === visualId);
 };
 
-export const selectTab = ({ state }) => {
-  return getActiveResourceType(state);
+export const selectMode = ({ state }) => {
+  return state.mode;
 };
 
 export const selectSelectedVisualIndex = ({ state }) => {
   return state.selectedVisualIndex;
 };
 
-export const selectDefaultTransformId = ({ state }) => {
-  return getDefaultTransformId(state);
-};
-
-export const selectDefaultVisualLayer = () => {
-  return DEFAULT_VISUAL_LAYER;
-};
-
-export const selectResourceExplorerTarget = (_deps, { itemId } = {}) => {
-  return parseResourceExplorerId(itemId);
-};
-
 export const setExistingVisuals = ({ state }, { visuals } = {}) => {
+  state.customLayoutsByVisualId = {};
   state.selectedVisuals = (Array.isArray(visuals) ? visuals : []).map(
     (visual) => {
       const nextVisual = normalizeSelectedVisual(visual, state.animations);
@@ -1536,11 +1618,49 @@ export const setExistingVisuals = ({ state }, { visuals } = {}) => {
   normalizeSelectedVisualOrder(state);
 };
 
-export const selectResourceItemById = (
-  { state },
-  { resourceId, resourceType } = {},
-) => {
-  return resolveResourceItem(state, { resourceId, resourceType });
+// The resource that stands for a visual: the one it was picked from, or the
+// first one its layout shows.
+const getVisualMedia = (visual = {}) => {
+  if (visual.layout) {
+    return getVisualLayoutMedia(visual.layout);
+  }
+
+  return {
+    resourceId: visual.resourceId,
+    resourceType: visual.resourceType,
+    animationName: visual.animationName,
+  };
+};
+
+const selectVisualLayoutResources = (state) => ({
+  transforms: state.transforms.items,
+  animations: state.animations.items,
+  images: state.images.items,
+  spritesheets: state.spritesheets.items,
+  videos: state.videos.items,
+  particles: state.particles.items,
+  layouts: state.layouts.items,
+});
+
+export const selectVisualMedia = ({ state }, { index } = {}) => {
+  return getVisualMedia(state.selectedVisuals[index]);
+};
+
+// The visual item as it is saved: a layout, also for a visual saved with a
+// single resource when it looks the same as one.
+export const selectLayoutVisualItem = ({ state }, { item } = {}) => {
+  return toLayoutVisualItem(item, selectVisualLayoutResources(state));
+};
+
+// True for a visual with its own layout, false for one that shows a project
+// layout.
+export const selectIsCustomLayoutVisual = ({ state }, { visualId } = {}) => {
+  const visual = state.selectedVisuals.find((item) => item.id === visualId);
+  return (
+    visual !== undefined &&
+    visual.id !== state.existingLayoutPendingVisualId &&
+    !isLinkedLayoutVisualItem(visual, selectVisualLayoutResources(state))
+  );
 };
 
 export const selectVisualsWithRepositoryData = ({ state }) => {
@@ -1548,34 +1668,80 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
     return [];
   }
 
+  const layoutResources = selectVisualLayoutResources(state);
   return state.selectedVisuals.map((visual) => {
+    const isCustomLayout = !isLinkedLayoutVisualItem(visual, layoutResources);
+    const awaitsExistingLayout =
+      isCustomLayout && visual.id === state.existingLayoutPendingVisualId;
+    const linkedLayout = isCustomLayout
+      ? undefined
+      : resolveResourceItem(state, {
+          resourceId: visual.resourceId,
+          resourceType: "layout",
+        });
+    const layout = visual.layout ?? linkedLayout;
+    // A project layout with a thumbnail shows it. Otherwise a layout, a
+    // project one or a custom one, shows the first resource it shows.
+    const media =
+      (linkedLayout && !linkedLayout.previewFileId
+        ? getVisualLayoutMedia(linkedLayout)
+        : getVisualMedia(visual)) ?? {};
     const resource = resolveResourceItem(state, {
-      resourceId: visual.resourceId,
-      resourceType: visual.resourceType,
+      resourceId: media.resourceId,
+      resourceType: media.resourceType,
     });
     const spritesheetPreview =
       resource?.resourceType === "spritesheet"
         ? getSpritesheetAnimationPreview(
             state.spritesheets,
-            visual.resourceId,
-            visual.animationName,
+            media.resourceId,
+            media.animationName,
           )
         : {};
     const spritesheetSelectionValue = toSpritesheetAnimationSelectionValue(
-      visual.resourceId,
-      visual.animationName,
+      media.resourceId,
+      media.animationName,
     );
-    const resourceName = resource?.name ?? "Unknown Resource";
-    const resourceType = resource?.resourceType ?? visual.resourceType;
+    // A custom layout that shows no resource, such as one of text only, is
+    // named Custom Layout.
+    const resourceName =
+      resource?.name ??
+      (layout && !media.resourceId ? "Custom Layout" : "Unknown Resource");
+    const resourceType = resource?.resourceType ?? media.resourceType;
+    const mediaName =
+      resource?.resourceType === "spritesheet" && media.animationName
+        ? `${resourceName} / ${media.animationName}`
+        : resourceName;
+    // A custom layout of several elements is named by its first resource and
+    // how many more elements it holds. A project layout is named by its name.
+    const elementCount = visual.layout
+      ? countVisualLayoutElements(visual.layout)
+      : 1;
+    const customLayoutName =
+      elementCount > 1 ? `${mediaName} +${elementCount - 1}` : mediaName;
 
     return {
       ...visual,
+      isCustomLayout,
+      // Switched to Existing Layout, with no project layout chosen yet.
+      awaitsExistingLayout,
+      layoutValue: awaitsExistingLayout
+        ? EXISTING_LAYOUT_VALUE
+        : isCustomLayout
+          ? CUSTOM_LAYOUT_VALUE
+          : visual.resourceId,
+      layoutType:
+        isCustomLayout && !awaitsExistingLayout
+          ? CUSTOM_LAYOUT_VALUE
+          : EXISTING_LAYOUT_VALUE,
+      linkedLayoutName: linkedLayout?.name,
       resource,
       resourceType,
-      displayName:
-        resource?.resourceType === "spritesheet" && visual.animationName
-          ? `${resourceName} / ${visual.animationName}`
-          : resourceName,
+      mediaName,
+      elementCount,
+      displayName: isCustomLayout
+        ? customLayoutName
+        : (linkedLayout?.name ?? "Unknown Resource"),
       fileId: resource?.previewFileId,
       spritesheetFileId: spritesheetPreview.fileId,
       spritesheetAtlas: spritesheetPreview.atlas,
@@ -1587,106 +1753,8 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
   });
 };
 
-export const selectViewData = ({ state, i18n }) => {
+export const selectViewData = ({ state, props = {}, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
-  const resourceSelectorLayout = createCommandLineResourceSelectorLayout({
-    isTouchMode: state.isTouchMode,
-  });
-  const activeResourceType = getActiveResourceType(state);
-  const activeResourceCollection =
-    selectResourceCollection(state, activeResourceType) ??
-    createEmptyCollection();
-  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
-  const matchesSearch = (item) => {
-    if (!searchQuery) {
-      return true;
-    }
-
-    const name = (item.name ?? "").toLowerCase();
-    const description = (item.description ?? "").toLowerCase();
-    return name.includes(searchQuery) || description.includes(searchQuery);
-  };
-  const decorateResourceChild = (child, resourceType) => {
-    const isSelected =
-      child.id === state.tempSelectedResourceId &&
-      resourceType === state.tempSelectedResourceType;
-    return {
-      ...child,
-      resourceType,
-      previewFileId: child.thumbnailFileId || child.fileId,
-      itemBorderColor: isSelected ? "pr" : "bo",
-      itemHoverBorderColor: isSelected ? "pr" : "ac",
-      itemBackgroundColor: isSelected ? "ac" : "bg",
-    };
-  };
-  const buildResourceGroups = ({ collection, resourceType, childFilter }) => {
-    const groups = toFlatGroups(collection);
-    const groupedChildIds = new Set(
-      groups.flatMap((group) => group.children.map((child) => child.id)),
-    );
-    const rootChildren = toFlatItems(collection)
-      .filter((item) => item.type !== "folder")
-      .filter((item) => !groupedChildIds.has(item.id))
-      .filter(childFilter)
-      .filter(matchesSearch)
-      .map((child) => decorateResourceChild(child, resourceType));
-
-    const rootGroup =
-      rootChildren.length > 0
-        ? [
-            {
-              id: `${resourceType}:root`,
-              resourceType,
-              groupId: `${resourceType}:root`,
-              fullLabel: localizeCommandLineText(
-                getResourceTypeLabel(resourceType),
-                copy,
-              ),
-              children: rootChildren,
-              hasChildren: true,
-              shouldDisplay: true,
-            },
-          ]
-        : [];
-
-    return [
-      ...rootGroup,
-      ...groups
-        .map((group) => {
-          const children = group.children
-            .filter(childFilter)
-            .filter(matchesSearch)
-            .map((child) => decorateResourceChild(child, resourceType));
-
-          return {
-            ...group,
-            resourceType,
-            groupId: `${resourceType}:${group.id}`,
-            children,
-            hasChildren: children.length > 0,
-            shouldDisplay: !searchQuery || children.length > 0,
-          };
-        })
-        .filter((group) => group.shouldDisplay),
-    ];
-  };
-
-  const activeChildFilter =
-    activeResourceType === "layout"
-      ? (child) => child.layoutType === "general"
-      : () => true;
-  const resourceGroups = buildResourceGroups({
-    collection: activeResourceCollection,
-    resourceType: activeResourceType,
-    childFilter: activeChildFilter,
-  });
-  const resourceItems = toFlatItems(
-    buildResourceExplorerItems({
-      collection: activeResourceCollection,
-      resourceType: activeResourceType,
-    }),
-  ).filter((item) => item.type === "folder");
-
   // Get transform options
   const transformItems = getTransformItems(state);
   const transformOptions = transformItems.map((transform) => ({
@@ -1705,21 +1773,48 @@ export const selectViewData = ({ state, i18n }) => {
         : localizeCommandLineText("Update", copy),
   }));
 
-  // Get enriched visual data
-  const enrichedVisuals = selectVisualsWithRepositoryData({ state });
-  const processedSelectedVisuals = enrichedVisuals.map((visual) => ({
-    ...visual,
-    displayName:
-      visual.displayName === "Unknown Resource"
-        ? localizeCommandLineText("Unknown Resource", copy)
-        : visual.displayName ||
-          localizeCommandLineText("Unknown Resource", copy),
-    animationMode:
-      visual.animationMode ??
-      getAnimationModeById(state.animations, visual.animations?.resourceId) ??
-      "none",
+  // The project's general layouts, which a visual of the Existing Layout
+  // kind shows one of. A visual with a custom layout is a kind of its own.
+  const layoutOptions = getSelectableLayoutItems(state).map((item) => ({
+    value: item.id,
+    label: item.fullLabel,
   }));
 
+  // Get enriched visual data
+  const enrichedVisuals = selectVisualsWithRepositoryData({ state });
+  const processedSelectedVisuals = enrichedVisuals.map((visual) => {
+    const mediaName = visual.resource
+      ? visual.mediaName
+      : localizeCommandLineText(visual.mediaName, copy);
+    const customLayoutName =
+      visual.elementCount > 1
+        ? `${mediaName} +${visual.elementCount - 1}`
+        : mediaName;
+    const layoutName =
+      visual.linkedLayoutName ??
+      localizeCommandLineText("Unknown Resource", copy);
+
+    // A picture of the visual alone, from the canvas, when the panel is given
+    // them. Until it has one, it shows none.
+    const snapshotUrl = props.visualSnapshots?.[visual.id];
+
+    return {
+      ...visual,
+      snapshotUrl,
+      // A visual the canvas could not take a picture of shows its resource.
+      awaitsSnapshot:
+        props.visualSnapshots !== undefined &&
+        !Object.hasOwn(props.visualSnapshots, visual.id),
+      layoutName,
+      displayName: visual.isCustomLayout ? customLayoutName : layoutName,
+      animationMode:
+        visual.animationMode ??
+        getAnimationModeById(state.animations, visual.animations?.resourceId) ??
+        "none",
+    };
+  });
+
+  const resourceSelectorLayout = createCommandLineResourceSelectorLayout();
   let breadcrumb = [
     {
       id: "actions",
@@ -1728,14 +1823,28 @@ export const selectViewData = ({ state, i18n }) => {
     },
   ];
 
-  if (state.mode === "resource-select") {
+  if (state.mode === "layout-select") {
     breadcrumb.push({
       id: "current",
       label: "Visuals",
       click: true,
     });
     breadcrumb.push({
-      label: "Select Resource",
+      id: "edit",
+      label: "Edit Visual",
+      click: true,
+    });
+    breadcrumb.push({
+      label: "Select layout",
+    });
+  } else if (state.mode === "edit") {
+    breadcrumb.push({
+      id: "current",
+      label: "Visuals",
+      click: true,
+    });
+    breadcrumb.push({
+      label: "Edit Visual",
     });
   } else {
     breadcrumb.push({
@@ -1755,9 +1864,6 @@ export const selectViewData = ({ state, i18n }) => {
     return {
       ...visual,
       visualIndex,
-      transformId:
-        visual.transformId ||
-        (transformOptions.length > 0 ? transformOptions[0].value : undefined),
       customTransform: hasInlineTransform(visual),
       customTransformDetails: createCustomTransformDetails(visual, {
         copy,
@@ -1831,6 +1937,11 @@ export const selectViewData = ({ state, i18n }) => {
   const defaultValues = {
     visualGroups,
     visuals: visualGroups.flatMap((group) => group.visuals),
+    layoutOptions,
+    layoutTypeOptions: localizeCommandLineOptions(
+      VISUAL_LAYOUT_TYPE_OPTIONS,
+      copy,
+    ),
     transformOptions,
     animationOptions,
     animationPlaybackLoopOptions: localizeCommandLineOptions(
@@ -1855,58 +1966,30 @@ export const selectViewData = ({ state, i18n }) => {
       copy,
     ),
   };
-  const addVisualDefaultValues = {
-    transformId: state.pendingVisualTransformId ?? getDefaultTransformId(state),
-    layer: state.pendingVisualLayer ?? DEFAULT_VISUAL_LAYER,
-  };
+  const visualListItems = createVisualListItems(defaultValues, copy);
+  const editingVisuals = defaultValues.visuals.filter(
+    (visual) => visual.id === state.editingVisualId,
+  );
 
   return {
     mode: state.mode,
-    tab: activeResourceType,
-    tabs: localizeCommandLineOptions(tabs, copy),
-    tabsLabel: localizeCommandLineText("Resource types", copy),
-    resourceItems,
-    resourceGroups,
-    selectorEmptyMessage: selectResourceSelectorEmptyMessage({
-      groups: resourceGroups,
-      searchQuery: searchQuery,
-      i18n,
-    }),
-    showResourceSelectorFileExplorer: resourceSelectorLayout.showFileExplorer,
-    resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
-    resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
-    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
-    resourceSelectorMinCardWidth: resourceSelectorLayout.minCardWidth,
-    tempSelectedSpritesheetValue: toSpritesheetAnimationSelectionValue(
-      state.tempSelectedResourceId,
-      state.tempSelectedAnimationName,
-    ),
     selectedVisuals: processedSelectedVisuals,
     transformOptions,
     animationOptions,
     layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
-    searchQuery: state.searchQuery,
-    searchPlaceholder: localizeCommandLineText("Search...", copy),
-    showInlineSearch: !state.isTouchMode,
-    showSearchButton: state.isTouchMode,
-    searchButtonLabel: localizeCommandLineText("Search", copy),
-    searchPopover: state.searchPopover,
-    fullImagePreviewVisible: state.fullImagePreviewVisible,
-    fullImagePreviewFileId: state.fullImagePreviewFileId,
-    fullSpritesheetPreviewVisible: state.fullSpritesheetPreviewVisible,
-    fullSpritesheetPreviewFileId: state.fullSpritesheetPreviewFileId,
-    fullSpritesheetPreviewAtlas: state.fullSpritesheetPreviewAtlas,
-    fullSpritesheetPreviewAnimation: state.fullSpritesheetPreviewAnimation,
-    fullSpritesheetPreviewKey: state.fullSpritesheetPreviewKey,
     breadcrumb: localizeCommandLineBreadcrumb(breadcrumb, copy),
-    form: createLocalizedVisualsForm(defaultValues.visuals, copy),
+    visualListItems,
+    visualListGroups: createVisualListGroups(visualGroups, visualListItems),
+    editingVisuals,
+    form: createLocalizedVisualsForm(editingVisuals, copy),
     formKey:
-      defaultValues.visuals
+      editingVisuals
         .map((visual) =>
           [
             visual.visualIndex,
             visual.id,
             visual.displayName,
+            visual.layoutValue,
             visual.layer,
             visual.customTransform ? "custom-transform" : "preset-transform",
             visual.animationId ?? "no-animation",
@@ -1924,24 +2007,39 @@ export const selectViewData = ({ state, i18n }) => {
         .join("|") || "no-visuals",
     defaultValues,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
-    addVisualPopover: {
-      ...state.addVisualPopover,
-      key: state.addVisualPopover.isOpen
-        ? `${addVisualDefaultValues.transformId ?? ""}-${addVisualDefaultValues.layer}`
-        : "closed",
-    },
+    addVisualPopover: state.addVisualPopover,
+    layoutSelectGroups: createLayoutSelectGroups(
+      getSelectableLayoutItems(state),
+      state.layoutSelect.layoutId,
+      resourceSelectorLayout.cardStyle,
+    ),
+    resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
+    resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
+    selectButtonLabel: localizeCommandLineText("Select", copy),
     addVisualForm: localizeCommandLineForm(
       createAddVisualForm({
-        transformOptions,
+        layoutOptions,
         layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
       }),
       copy,
     ),
-    addVisualDefaultValues,
+    addVisualDefaultValues: {
+      layoutType: CUSTOM_LAYOUT_VALUE,
+      layer: DEFAULT_VISUAL_LAYER,
+    },
     noThumbnailLabel: localizeCommandLineText("No thumbnail", copy),
     noResourceLabel: localizeCommandLineText("No Resource", copy),
+    selectLayoutLabel: localizeCommandLineText("Select layout", copy),
+    // Under the picture of a custom layout, which has no name of its own.
+    customLayoutLabel: localizeCommandLineText("Custom", copy),
     animationPlaybackLoopDisabledDescription: localizeCommandLineText(
       "loopingRequiresKeyframesDescription",
+      copy,
+    ),
+    // The same wording as the Background's dropdown. A visual without a
+    // transform is centered on the screen, as the visual list says.
+    selectTransformPlaceholder: localizeCommandLineText(
+      "Select transform",
       copy,
     ),
     selectAnimationPlaceholder: localizeCommandLineText(
@@ -1950,7 +2048,8 @@ export const selectViewData = ({ state, i18n }) => {
     ),
     addVisualButtonLabel: localizeCommandLineText("+ Add Visual", copy),
     submitButtonLabel: localizeCommandLineText("Submit", copy),
-    selectButtonLabel: localizeCommandLineText("Select", copy),
+    cancelButtonLabel: localizeCommandLineText("Cancel", copy),
+    saveVisualButtonLabel: localizeCommandLineText("Save Visual", copy),
     transformEditorTitle: localizeCommandLineText("Transform", copy),
   };
 };

@@ -38,7 +38,10 @@ import {
   sanitizeProjectDataForRouteEngine,
   summarizeProjectDataForRouteEngine,
 } from "../../project/routeEngineProjectData.js";
-import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
+import {
+  captureGraphicsElementThumbnailImage,
+  prepareRuntimeInteractionExecution,
+} from "../../runtime/graphicsEngineRuntime.js";
 import { getFontFaceWeightDescriptor } from "../../fontCapabilities.js";
 import {
   showAssetLoadFailures,
@@ -129,8 +132,14 @@ const createCanvasAudioPreviewKey = (
   });
 };
 
+// The full-screen preview, or the layout editor of a visual, has the graphics
+// while it is open, so the page's canvas does not draw.
 const isSceneEditorPreviewVisible = (store) => {
-  return store?.selectPreviewScene?.()?.previewVisible === true;
+  const previewScene = store?.selectPreviewScene?.();
+  return (
+    previewScene?.previewVisible === true ||
+    previewScene?.visualLayoutEditorOpen === true
+  );
 };
 
 // Graphics could not start on this device, so the editor has no canvas.
@@ -1338,23 +1347,31 @@ const toPlainObject = (value) => {
     : {};
 };
 
+// The unsaved presentation state of the open action, with its visual layouts
+// built for the engine and the text styles they add.
 const selectTemporaryPresentationState = (store) => {
-  return toPlainObject(store.selectTemporaryPresentationState?.());
+  const temporaryState = store.selectTemporaryPresentationStateForEngine?.();
+  return {
+    presentationState: toPlainObject(temporaryState?.presentationState),
+    textStyles: toPlainObject(temporaryState?.textStyles),
+  };
 };
 
-const hasTemporaryPresentationState = (presentationState) => {
-  return Object.keys(toPlainObject(presentationState)).length > 0;
+const hasTemporaryPresentationState = (temporaryState) => {
+  return Object.keys(temporaryState.presentationState).length > 0;
 };
 
 const createProjectDataWithTemporaryPresentationState = (
   projectData,
   { sceneId, sectionId, lineId },
-  temporaryPresentationState,
+  temporaryState,
 ) => {
-  if (!hasTemporaryPresentationState(temporaryPresentationState)) {
+  if (!hasTemporaryPresentationState(temporaryState)) {
     return projectData;
   }
 
+  const { presentationState: temporaryPresentationState, textStyles } =
+    temporaryState;
   const nextProjectData = structuredClone(projectData);
   const selectedSection =
     nextProjectData?.story?.scenes?.[sceneId]?.sections?.[sectionId];
@@ -1370,6 +1387,7 @@ const createProjectDataWithTemporaryPresentationState = (
     ...toPlainObject(selectedLine.actions),
     ...temporaryPresentationState,
   };
+  Object.assign(nextProjectData.resources.textStyles, textStyles);
 
   return nextProjectData;
 };
@@ -1378,15 +1396,15 @@ const prepareTemporaryPresentationProjectData = async (
   deps,
   projectData,
   selection,
-  temporaryPresentationState,
+  temporaryState,
 ) => {
-  if (!hasTemporaryPresentationState(temporaryPresentationState)) {
+  if (!hasTemporaryPresentationState(temporaryState)) {
     return projectData;
   }
 
   await preloadFileReferences(
     deps,
-    extractFileIdsForValue(projectData, temporaryPresentationState),
+    extractFileIdsForValue(projectData, temporaryState.presentationState),
     {
       resources: projectData?.resources,
       showLoading: false,
@@ -1397,7 +1415,7 @@ const prepareTemporaryPresentationProjectData = async (
     createProjectDataWithTemporaryPresentationState(
       projectData,
       selection,
-      temporaryPresentationState,
+      temporaryState,
     ),
     selection,
   );
@@ -1633,6 +1651,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     : undefined;
 
   let canvasPaintDurationMs = 0;
+  // The render state the canvas drew, which the visuals' pictures are taken
+  // from once the line is set up.
+  let drawnRenderState;
   if (!skipCanvasPaint) {
     await graphicsService.warmRenderStateVideoAssets?.(currentRenderState);
     await attachGraphicsCanvasToMountedRoot(deps, 2);
@@ -1695,6 +1716,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     }
     if (shouldMeasure) {
       canvasPaintDurationMs = getDebugDurationMs(canvasPaintStartedAt);
+    }
+    if (!backgroundTransformEditorOpen) {
+      drawnRenderState = currentRenderState;
     }
   }
 
@@ -1762,6 +1786,87 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       audioCount: renderStateSummary.audioCount,
     });
   }
+
+  if (drawnRenderState) {
+    await captureSceneEditorVisualSnapshots(deps, drawnRenderState);
+  }
+};
+
+const findRenderElementById = (elements = [], elementId) => {
+  for (const element of elements) {
+    if (element.id === elementId) {
+      return element;
+    }
+    const child = findRenderElementById(element.children, elementId);
+    if (child) {
+      return child;
+    }
+  }
+  return undefined;
+};
+
+// Pictures of the line's visuals, each alone, for the visual panel. They are
+// taken from the canvas as `renderState` was just drawn, by default as the
+// engine last drew it, while the actions dialog is open. A visual drawn as it
+// was when its picture was taken keeps that picture.
+export const captureSceneEditorVisualSnapshots = async (deps, renderState) => {
+  const { graphicsService, render, store } = deps;
+  if (!store.selectShouldCaptureVisualSnapshots?.()) {
+    return;
+  }
+
+  const drawnRenderState =
+    renderState ?? graphicsService.engineSelectRenderState();
+
+  const visualItems =
+    store.selectEffectivePresentationState().visual?.items ?? [];
+  const snapshots = store.selectVisualSnapshots();
+  const nextSnapshots = {};
+  for (const { id } of visualItems) {
+    const elementId = `visual-${id}`;
+    const element = findRenderElementById(
+      drawnRenderState?.elements,
+      elementId,
+    );
+    // A visual the canvas does not draw has no picture, which the panel
+    // shows by its resource.
+    if (!element) {
+      nextSnapshots[id] =
+        snapshots[id] && snapshots[id].url === undefined ? snapshots[id] : {};
+      continue;
+    }
+    const key = JSON.stringify(element);
+    if (snapshots[id]?.key === key) {
+      nextSnapshots[id] = snapshots[id];
+      continue;
+    }
+    let url;
+    try {
+      url = await captureGraphicsElementThumbnailImage(
+        graphicsService,
+        elementId,
+      );
+    } catch (error) {
+      // The panel shows the visual by its resource.
+      console.warn("[sceneEditor] A visual's picture could not be taken", {
+        visualId: id,
+        error,
+      });
+    }
+    // Kept with its key, so that it is not taken again until it changes.
+    nextSnapshots[id] = { key, url };
+  }
+  const changed =
+    Object.keys(nextSnapshots).length !== Object.keys(snapshots).length ||
+    Object.keys(nextSnapshots).some(
+      (id) => nextSnapshots[id] !== snapshots[id],
+    );
+  if (!changed) {
+    return;
+  }
+
+  store.setVisualSnapshots({ snapshots: nextSnapshots });
+  render();
 };
 
 const getSceneSectionIds = (scene) => {
@@ -2036,6 +2141,9 @@ const restoreSceneEditorCanvas = async (deps) => {
   // so the restore starts no engine of its own: a strict one would send the
   // audio's transition as an enter on a node that exists, and fail.
   await renderSceneEditorState(deps);
+  // The line's presentation state may have changed while the canvas was
+  // away, as when a visual's layout was edited. The panels show it.
+  render();
 };
 
 // Closing the full-screen preview gives the canvas back to the scene editor.

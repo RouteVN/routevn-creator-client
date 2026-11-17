@@ -26,6 +26,8 @@ import {
 import { cloneTextStyle } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   constructProjectData,
+  createVisualLayoutBuilder,
+  toStoredVisualPresentationState,
   getSectionPresentation,
 } from "../../internal/project/projection.js";
 import {
@@ -191,7 +193,9 @@ const getSectionLinePresentationState = (state, lineId) => {
     return undefined;
   }
 
-  return toPlainObject(selectedLineEntry.presentationState);
+  return toStoredVisualPresentationState(
+    toPlainObject(selectedLineEntry.presentationState),
+  );
 };
 
 const getPreviousSectionLinePresentationState = (state, lineId) => {
@@ -205,7 +209,9 @@ const getPreviousSectionLinePresentationState = (state, lineId) => {
     return {};
   }
 
-  return toPlainObject(lines[selectedLineIndex - 1].presentationState);
+  return toStoredVisualPresentationState(
+    toPlainObject(lines[selectedLineIndex - 1].presentationState),
+  );
 };
 
 const collectActionTargetSectionIds = (actions) => {
@@ -764,6 +770,20 @@ export const createInitialState = () => ({
   draftSavePendingSinceAt: 0,
   draftFlushInFlight: false,
   previewVisible: false,
+  // The full-screen editor of a visual's layout, over the page. When it
+  // closes, the visual panel opens again, in the visual's edit view when
+  // `returnToEditView` is set.
+  visualLayoutEditor: {
+    isOpen: false,
+    // Edit Layout saved the line and takes the scene for the editor.
+    isOpening: false,
+    sceneId: undefined,
+    sectionId: undefined,
+    lineId: undefined,
+    visualId: undefined,
+    returnToEditView: false,
+    sceneBackdrop: undefined,
+  },
   previewSceneId: undefined,
   previewSectionId: undefined,
   previewLineId: undefined,
@@ -801,6 +821,10 @@ export const createInitialState = () => ({
   warnedAssetFileIds: [],
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
   actionTargetLineId: undefined,
+  // Pictures of the line's visuals, each alone, by visual id, for the visual
+  // panel: `{ key, url }`, where `key` is the visual's render element as it was
+  // drawn when the picture was taken.
+  visualSnapshots: {},
   // Undo and redo for line edits, kept when the scene is left. A section's
   // baseline is its lines as of its last recorded edit; until then they are
   // the committed lines. Undo waits while a line action command runs or waits
@@ -870,10 +894,13 @@ export const selectLineEditBaselines = ({ state }, { sectionIds } = {}) => {
 };
 
 // Undo and redo wait while a line action command runs, the preview, the
-// actions dialog or a transform editor is open, or text is being composed.
+// layout editor of a visual, the actions dialog or a transform editor is
+// open or opening, or text is being composed.
 export const selectIsEditHistoryBlocked = ({ state }) =>
   state.runningLineCommandCount > 0 ||
   state.previewVisible ||
+  state.visualLayoutEditor.isOpen ||
+  state.visualLayoutEditor.isOpening ||
   state.actionTargetLineId !== undefined ||
   state.backgroundTransformEditor.isOpen ||
   getDraftSections(state).some((draftSection) => draftSection.isComposing);
@@ -1142,6 +1169,43 @@ export const showPreviewSceneId = (
   state.previewLineId = lineId;
 };
 
+// Edit Layout has begun: the line is saved, then the scene taken, before the
+// editor opens.
+export const startOpeningVisualLayoutEditor = ({ state }) => {
+  state.visualLayoutEditor.isOpening = true;
+};
+
+// Opens the layout of a visual on a line in the full-screen layout editor,
+// drawn over `sceneBackdrop`, the line's rendered scene.
+export const openVisualLayoutEditor = (
+  { state },
+  {
+    sceneId,
+    sectionId,
+    lineId,
+    visualId,
+    returnToEditView = false,
+    sceneBackdrop,
+  } = {},
+) => {
+  state.visualLayoutEditor = {
+    isOpen: true,
+    isOpening: false,
+    sceneId,
+    sectionId,
+    lineId,
+    visualId,
+    returnToEditView,
+    sceneBackdrop,
+  };
+};
+
+export const closeVisualLayoutEditor = ({ state }) => {
+  state.visualLayoutEditor = createInitialState().visualLayoutEditor;
+};
+
+export const selectVisualLayoutEditor = ({ state }) => state.visualLayoutEditor;
+
 export const hidePreviewScene = ({ state }, _payload = {}) => {
   state.previewVisible = false;
   state.previewSectionId = undefined;
@@ -1156,8 +1220,9 @@ export const selectSkipNextEditorBlurDraftFlush = ({ state }) => {
   return state.skipNextEditorBlurDraftFlush === true;
 };
 
+// The engine's presentation state, with visual layouts in their saved form.
 export const setPresentationState = ({ state }, { presentationState } = {}) => {
-  state.presentationState = presentationState;
+  state.presentationState = toStoredVisualPresentationState(presentationState);
 };
 
 export const setTemporaryPresentationState = (
@@ -1173,6 +1238,34 @@ export const clearTemporaryPresentationState = ({ state }, _payload = {}) => {
 
 export const selectTemporaryPresentationState = ({ state }) => {
   return toPlainObject(state.temporaryPresentationState);
+};
+
+// Layout builders by repository state, which the store replaces instead of
+// changing it, so that a slider dragged in the visual panel builds layouts
+// from the resources it already gathered.
+const visualLayoutBuilders = new WeakMap();
+
+const getVisualLayoutBuilder = (repositoryState) => {
+  let builder = visualLayoutBuilders.get(repositoryState);
+  if (!builder) {
+    builder = createVisualLayoutBuilder(repositoryState, {
+      keepStoredLayouts: true,
+    });
+    visualLayoutBuilders.set(repositoryState, builder);
+  }
+  return builder;
+};
+
+// The temporary presentation state as the engine takes it: visual layouts
+// built from their saved form, with the text styles those layouts add.
+export const selectTemporaryPresentationStateForEngine = ({ state }) => {
+  const built = getVisualLayoutBuilder(state.repositoryState).buildActions(
+    toPlainObject(state.temporaryPresentationState),
+  );
+  return {
+    presentationState: built.actions,
+    textStyles: built.textStyles,
+  };
 };
 
 export const selectEffectivePresentationState = ({ state }) => {
@@ -1399,6 +1492,37 @@ export const selectIsCanvasUnavailable = ({ state }) => {
   return state.isCanvasUnavailable;
 };
 
+// The visuals' pictures are taken while the actions dialog is open, from the
+// canvas.
+export const selectShouldCaptureVisualSnapshots = ({ state }) =>
+  !state.isCanvasUnavailable && state.actionTargetLineId !== undefined;
+
+export const selectVisualSnapshots = ({ state }) => state.visualSnapshots;
+
+export const setVisualSnapshots = ({ state }, { snapshots } = {}) => {
+  state.visualSnapshots = snapshots;
+};
+
+// A picture taken elsewhere, such as by the layout editor, kept until the
+// canvas draws the visual again.
+export const setVisualSnapshot = ({ state }, { visualId, url } = {}) => {
+  state.visualSnapshots[visualId] = { url };
+};
+
+// The visuals' pictures by visual id, for the visual panel. Without a canvas
+// there are none to wait for.
+export const selectVisualSnapshotUrls = ({ state }) => {
+  if (state.isCanvasUnavailable) {
+    return undefined;
+  }
+  return Object.fromEntries(
+    Object.entries(state.visualSnapshots).map(([visualId, { url }]) => [
+      visualId,
+      url,
+    ]),
+  );
+};
+
 export const setSceneAssetLoading = ({ state }, { isLoading } = {}) => {
   state.isSceneAssetLoading = isLoading;
 };
@@ -1426,6 +1550,7 @@ export const selectSectionLineChanges = ({ state }) => {
 export const selectPreviewScene = ({ state }) => {
   return {
     previewVisible: state.previewVisible,
+    visualLayoutEditorOpen: state.visualLayoutEditor.isOpen,
     previewSceneId: state.previewSceneId,
   };
 };
@@ -2036,7 +2161,9 @@ export const selectProjectData = ({ state }) => {
   const sanitizedState = prepareProjectDataSourceStateForPreview(sourceState);
   const sanitizeDurationMs = getSceneEditorTimingDurationMs(sanitizeStartedAt);
   const constructStartedAt = getSceneEditorTimingNow();
-  const projectData = constructProjectData(sanitizedState);
+  const projectData = constructProjectData(sanitizedState, {
+    keepStoredVisualLayouts: true,
+  });
   const constructDurationMs =
     getSceneEditorTimingDurationMs(constructStartedAt);
   const sceneItems = sourceState?.scenes?.items || {};
@@ -2705,6 +2832,7 @@ export const selectViewData = ({ state, i18n }) => {
     previewSceneId: state.previewSceneId,
     previewSectionId: state.previewSectionId,
     previewLineId: state.previewLineId,
+    visualLayoutEditor: state.visualLayoutEditor,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
     previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
     mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
@@ -2724,6 +2852,7 @@ export const selectViewData = ({ state, i18n }) => {
       state,
       state.selectedLineId,
     ),
+    visualSnapshots: selectVisualSnapshotUrls({ state }),
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
     sectionCreateForm: localizeSceneEditorForm(sectionCreateForm, copy),

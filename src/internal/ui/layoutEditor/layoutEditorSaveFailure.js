@@ -1,4 +1,4 @@
-import { withErrorDetails } from "../../../internal/errorDetails.js";
+import { withErrorDetails } from "../../errorDetails.js";
 
 // A save reports a refusal as a `{ valid: false, error }` result and an
 // unexpected failure as a thrown error. Both come out as an Error that says

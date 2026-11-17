@@ -62,6 +62,31 @@ describe("systemActions.store", () => {
     expect(viewData.actions.dialogue).toEqual(previewDialogue);
   });
 
+  it("hands the visuals' pictures to the visual panel", async () => {
+    const visualSnapshots = { "visual-one": "data:image/png;base64,b25l" };
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: { actionType: "presentation", visualSnapshots },
+    });
+    expect(viewData.visualSnapshots).toBe(visualSnapshots);
+
+    const { readFile } = await import("node:fs/promises");
+    const view = await readFile(
+      new URL(
+        "../../src/components/systemActions/systemActions.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(
+      view
+        .split("\n")
+        .find((line) =>
+          line.includes("rvn-command-line-visual#commandLineVisual"),
+        ),
+    ).toContain(":visualSnapshots=${visualSnapshots}");
+  });
+
   it("expands the dialog for the dedicated action transform editor", () => {
     const state = createInitialState();
     const viewData = selectViewData({
@@ -1309,6 +1334,60 @@ describe("systemActions.store", () => {
       resourceId: "snow-particle",
       resourceType: "particle",
       previewFileId: "file-snowfall-thumbnail",
+    });
+  });
+
+  it("shows a visual saved as a layout by the first media its layout shows", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          images: {
+            items: {
+              door: {
+                id: "door",
+                type: "image",
+                name: "Door",
+                fileId: "file-door",
+                thumbnailFileId: "file-door-thumbnail",
+              },
+            },
+            tree: [{ id: "door" }],
+          },
+        },
+      },
+    );
+
+    const { preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          visual: {
+            items: [
+              {
+                id: "card",
+                layout: {
+                  layoutSchemaVersion: 2,
+                  elements: {
+                    items: {
+                      title: { type: "text", text: "Hello" },
+                      content: { type: "sprite", imageId: "door" },
+                    },
+                    tree: [{ id: "title" }, { id: "content" }],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(preview.visual.items[0]).toMatchObject({
+      id: "card",
+      resourceType: "image",
+      previewFileId: "file-door-thumbnail",
     });
   });
 
