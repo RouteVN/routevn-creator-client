@@ -65,14 +65,56 @@ const listPluralCategories = (catalog, locale) => {
   const rules = new Intl.PluralRules(
     catalog.get("dateTime.pluralRulesLocale") ?? locale,
   );
-  const wholeNumberCategories = new Set(["other"]);
+  const countsByCategory = new Map([["other", []]]);
   for (let count = 0; count < 200; count += 1) {
-    wholeNumberCategories.add(rules.select(count));
+    const category = rules.select(count);
+    countsByCategory.set(category, [
+      ...(countsByCategory.get(category) ?? []),
+      count,
+    ]);
   }
+  // A category that only one count selects, such as Arabic `zero`, `one`, and
+  // `two`, may spell out its number instead of showing the placeholder, as in
+  // "سطران" (two lines). Fractions must not select it either.
+  const singleNumber = new Set(
+    [...countsByCategory]
+      .filter(
+        ([category, counts]) =>
+          counts.length === 1 &&
+          ![0.1, 0.5, 1.1, 1.5, 2.5].some(
+            (value) => rules.select(value) === category,
+          ),
+      )
+      .map(([category]) => category),
+  );
   return {
     allowed: new Set(rules.resolvedOptions().pluralCategories),
-    required: wholeNumberCategories,
+    required: new Set(countsByCategory.keys()),
+    singleNumber,
   };
+};
+
+// True when a plural form shows the same placeholders as the default locale,
+// or, in a category that only one count selects, leaves some of them out.
+const matchesPluralPlaceholders = (
+  value,
+  defaultValue,
+  category,
+  singleNumber,
+) => {
+  const placeholders = listPlaceholders(value);
+  const defaultPlaceholders = listPlaceholders(defaultValue);
+  if (placeholders === defaultPlaceholders) {
+    return true;
+  }
+  if (!singleNumber.has(category)) {
+    return false;
+  }
+  const allowed = new Set(defaultPlaceholders.split(" "));
+  return placeholders
+    .split(" ")
+    .filter(Boolean)
+    .every((placeholder) => allowed.has(placeholder));
 };
 
 const checkPluralFamilies = (catalog, locale, file) => {
@@ -170,6 +212,7 @@ for (const locale of locales) {
 
   const catalog = loadCatalog(locale);
   const file = `${dir}/${locale}.yaml`;
+  const { singleNumber } = listPluralCategories(catalog, locale);
 
   for (const [key, defaultValue] of defaultCatalog) {
     if (!catalog.has(key)) {
@@ -189,11 +232,18 @@ for (const locale of locales) {
       continue;
     }
 
-    const placeholders = listPlaceholders(value);
-    const defaultPlaceholders = listPlaceholders(defaultValue);
-    if (placeholders !== defaultPlaceholders) {
+    const pluralKey = parsePluralKey(key);
+    const matches = pluralFamilies.has(pluralKey?.family)
+      ? matchesPluralPlaceholders(
+          value,
+          defaultValue,
+          pluralKey.category,
+          singleNumber,
+        )
+      : listPlaceholders(value) === listPlaceholders(defaultValue);
+    if (!matches) {
       problems.push(
-        `${file}: "${key}" has placeholders [${placeholders}], but ${defaultLocale} has [${defaultPlaceholders}]`,
+        `${file}: "${key}" has placeholders [${listPlaceholders(value)}], but ${defaultLocale} has [${listPlaceholders(defaultValue)}]`,
       );
     }
   }
@@ -208,13 +258,17 @@ for (const locale of locales) {
         problems.push(`${file}: "${key}" is empty`);
         continue;
       }
-      const placeholders = listPlaceholders(value);
-      const defaultPlaceholders = listPlaceholders(
-        defaultCatalog.get(`${family}_other`),
-      );
-      if (placeholders !== defaultPlaceholders) {
+      const defaultValue = defaultCatalog.get(`${family}_other`);
+      if (
+        !matchesPluralPlaceholders(
+          value,
+          defaultValue,
+          parsePluralKey(key).category,
+          singleNumber,
+        )
+      ) {
         problems.push(
-          `${file}: "${key}" has placeholders [${placeholders}], but ${defaultLocale} "${family}_other" has [${defaultPlaceholders}]`,
+          `${file}: "${key}" has placeholders [${listPlaceholders(value)}], but ${defaultLocale} "${family}_other" has [${listPlaceholders(defaultValue)}]`,
         );
       }
       continue;
