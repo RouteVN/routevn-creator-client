@@ -10,6 +10,7 @@ import {
   normalizeTheme,
 } from "../../../internal/theme.js";
 import { getDeviceLanguages } from "../../clients/deviceLanguages.js";
+import { getTextDirection } from "../../../internal/textDirection.js";
 
 const createNoopUpdater = () => ({
   checkForUpdates: async () => null,
@@ -55,6 +56,9 @@ const applyLanguageToDocument = (
 ) => {
   if (root?.documentElement) {
     root.documentElement.lang = language;
+    // Rettangoli UI lays out right to left under dir="rtl". The Rettangoli
+    // runtime sets it too, but only from FE 2.2.
+    root.documentElement.dir = getTextDirection(language);
   }
 };
 
@@ -359,6 +363,11 @@ export const createAppShellService = ({
     // `language` is a BCP 47 tag, such as an app locale id.
     setDocumentLanguage(language) {
       applyLanguageToDocument(language);
+    },
+
+    // "rtl" when the app language is written right to left, otherwise "ltr".
+    getDocumentDirection() {
+      return document.documentElement.dir === "rtl" ? "rtl" : "ltr";
     },
 
     // Rettangoli UI forms use these as their default validation messages; a

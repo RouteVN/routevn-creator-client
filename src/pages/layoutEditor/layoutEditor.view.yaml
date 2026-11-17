@@ -97,6 +97,10 @@ refs:
         handler: handleLayoutEditorCanvasBackgroundClick
       zoom-change:
         handler: handleCanvasZoomGesture
+styles:
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl), #nodeDetailBackButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - $if showExplorerPanel:

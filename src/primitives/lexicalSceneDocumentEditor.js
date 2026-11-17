@@ -563,7 +563,9 @@ const STYLES = `
     font-size: var(--scene-document-editor-font-size);
     font-weight: 400;
     line-height: 1.5;
-    padding: 0 0 0 calc(var(--left-gutter-width) + var(--editor-inline-padding));
+    padding-block: 0;
+    padding-inline: calc(var(--left-gutter-width) + var(--editor-inline-padding))
+      0;
     white-space: pre-wrap;
     word-break: break-word;
     overflow-wrap: anywhere;
@@ -583,6 +585,14 @@ const STYLES = `
   .editor:focus {
     border: 0;
     box-shadow: none;
+  }
+
+  /* Lexical sets dir on each line from its first letter. The editor's dir
+     comes from the project language instead, so every line follows it, even
+     one that starts with a name in another script. */
+  .editor,
+  .editor-paragraph {
+    direction: inherit;
   }
 
   .editor-paragraph {
@@ -615,8 +625,10 @@ const STYLES = `
     pointer-events: none;
   }
 
+  /* The left gutter is at the inline start and the right gutter at the inline
+     end, so they swap sides under right-to-left layouts. */
   .gutter-left {
-    left: 0;
+    inset-inline-start: 0;
     width: var(--left-gutter-width);
     pointer-events: auto;
     /* The tap listener is on the whole gutter, so WebKit's tap highlight
@@ -625,7 +637,7 @@ const STYLES = `
   }
 
   .gutter-right {
-    right: 0;
+    inset-inline-end: 0;
     width: var(--right-gutter-width);
   }
 
@@ -649,12 +661,11 @@ const STYLES = `
   }
 
   .gutter-right .gutter-row {
-    right: 0;
+    inset-inline-end: 0;
     width: max-content;
     max-width: none;
     justify-content: flex-end;
-    padding-left: 0;
-    padding-right: 0;
+    padding-inline: 0;
   }
 
   .gutter-right .gutter-row[data-constrained="true"] {
@@ -678,8 +689,8 @@ const STYLES = `
     font-size: var(--scene-document-editor-font-size);
     font-weight: 400;
     line-height: 1.5;
-    text-align: right;
-    margin-right: 2px;
+    text-align: end;
+    margin-inline-end: 2px;
   }
 
   .speaker-slot {
@@ -688,7 +699,7 @@ const STYLES = `
     height: 24px;
     border-radius: 999px;
     overflow: hidden;
-    margin-right: 2px;
+    margin-inline-end: 2px;
     background: transparent;
     cursor: pointer;
     pointer-events: auto;
@@ -746,7 +757,7 @@ const STYLES = `
     font-size: 12px;
     line-height: 24px;
     white-space: nowrap;
-    text-align: right;
+    text-align: end;
   }
 
   .preview-item[hidden], .preview-overflow[hidden] {
@@ -961,7 +972,9 @@ const STYLES = `
 
   .placeholder {
     position: absolute;
-    left: calc(var(--left-gutter-width) + var(--editor-inline-padding));
+    inset-inline-start: calc(
+      var(--left-gutter-width) + var(--editor-inline-padding)
+    );
     top: 4px;
     color: var(--muted-foreground);
     pointer-events: none;
@@ -4542,9 +4555,23 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     selectReferenceNodeAsElement(node);
   }
 
+  // Lines follow the editor's direction, which comes from the project
+  // language.
+  isRightToLeft() {
+    const editorElement = this.refs?.editor;
+    return (
+      editorElement !== undefined &&
+      getComputedStyle(editorElement).direction === "rtl"
+    );
+  }
+
   handleReferenceArrowNavigation(event) {
+    // -1 moves toward the start of the line and 1 toward its end, so Left
+    // moves toward the end in right-to-left lines.
+    const startKey = this.isRightToLeft() ? "ArrowRight" : "ArrowLeft";
+    const endKey = startKey === "ArrowLeft" ? "ArrowRight" : "ArrowLeft";
     const direction =
-      event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+      event.key === startKey ? -1 : event.key === endKey ? 1 : 0;
     if (
       direction === 0 ||
       event.isComposing ||
@@ -8743,10 +8770,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
 
     if (isConstrained) {
-      const gap = Number.parseFloat(getComputedStyle(previewItems).columnGap);
-      const itemRightEdges = items.map(
-        (item) => item.getBoundingClientRect().right - previewRect.left,
-      );
+      const previewStyle = getComputedStyle(previewItems);
+      const gap = Number.parseFloat(previewStyle.columnGap);
+      // Items run from the gutter's inline start: the left edge, or the right
+      // edge under right-to-left layouts.
+      const isRtl = previewStyle.direction === "rtl";
+      const itemRightEdges = items.map((item) => {
+        const itemRect = item.getBoundingClientRect();
+        return isRtl
+          ? previewRect.right - itemRect.left
+          : itemRect.right - previewRect.left;
+      });
       overflow.textContent = `+${items.length}`;
       overflow.hidden = false;
       const overflowWidth = Math.ceil(overflow.getBoundingClientRect().width);
@@ -8779,12 +8813,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   setLineRightGutterWidth(lineElement, width) {
     const nextWidth = Math.max(0, Math.ceil(Number(width) || 0));
-    const nextPaddingRight = `${nextWidth}px`;
-    if (lineElement.style.paddingRight === nextPaddingRight) {
+    const nextPadding = `${nextWidth}px`;
+    // The previews sit at the inline end, on the left in right-to-left
+    // projects.
+    if (lineElement.style.paddingInlineEnd === nextPadding) {
       return false;
     }
 
-    lineElement.style.paddingRight = nextPaddingRight;
+    lineElement.style.paddingInlineEnd = nextPadding;
     return true;
   }
 
@@ -8985,11 +9021,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     const verticalTolerance = 2;
+    // A right-to-left line ends on the left.
+    const isRtlLine = getComputedStyle(lineElement).direction === "rtl";
+    const isPastLineEnd = isRtlLine
+      ? clientX <= trailingRect.left && clientX >= lineRect.left
+      : clientX >= trailingRect.right && clientX <= lineRect.right;
     return (
       clientY >= trailingRect.top - verticalTolerance &&
       clientY <= trailingRect.bottom + verticalTolerance &&
-      clientX >= trailingRect.right &&
-      clientX <= lineRect.right
+      isPastLineEnd
     );
   }
 

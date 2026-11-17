@@ -230,7 +230,15 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
-    if (navigationKey === "ArrowRight") {
+    // Folders open toward the inline end, so under right-to-left layouts Left
+    // opens a folder and Right closes it. h and l keep their meaning.
+    const swapsArrows =
+      event.key.startsWith("Arrow") &&
+      deps.appService?.getDocumentDirection?.() === "rtl";
+    const openFolderKey = swapsArrows ? "ArrowLeft" : "ArrowRight";
+    const closeFolderKey = swapsArrows ? "ArrowRight" : "ArrowLeft";
+
+    if (navigationKey === openFolderKey) {
       event.preventDefault();
       event.stopPropagation();
       fileExplorer.setSelectedFolderExpanded?.({ expanded: true });
@@ -238,7 +246,7 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
-    if (navigationKey === "ArrowLeft") {
+    if (navigationKey === closeFolderKey) {
       event.preventDefault();
       event.stopPropagation();
       fileExplorer.setSelectedFolderExpanded?.({ expanded: false });

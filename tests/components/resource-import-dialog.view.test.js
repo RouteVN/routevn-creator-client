@@ -280,10 +280,10 @@ describe("resource-import-dialog.view", () => {
     // preview. A selected one shows a check on the preview's top right; an
     // unselected one shows nothing.
     expect(viewSource).toContain(
-      'rtgl-grid cols=4 md-cols=3 sm-cols=2 g=md w=f style="padding-left: ${group.indent}px;',
+      'rtgl-grid cols=4 md-cols=3 sm-cols=2 g=md w=f style="padding-inline-start: ${group.indent}px;',
     );
     expect(viewSource).toMatch(
-      /- \$if resource\.selected:\n +- 'rtgl-view d=h av=c g=xs pos=abs aria-hidden=true style="top: 8px; right: 8px;"':\n +- \$if resource\.required:\n +- rtgl-tag s=sm v=mu: \$\{resource\.selectionStatus\}\n +- rtgl-view wh=24 av=c ah=c br=f bgc=pr:\n +- rtgl-svg svg=check wh=16 c=pr-fg: null\n/,
+      /- \$if resource\.selected:\n +- 'rtgl-view d=h av=c g=xs pos=abs aria-hidden=true style="top: 8px; inset-inline-end: 8px;"':\n +- \$if resource\.required:\n +- rtgl-tag s=sm v=mu: \$\{resource\.selectionStatus\}\n +- rtgl-view wh=24 av=c ah=c br=f bgc=pr:\n +- rtgl-svg svg=check wh=16 c=pr-fg: null\n/,
     );
     expect(viewSource).not.toContain("bgc=bg bw=sm bc=bo");
     expect(viewSource).toContain(
@@ -295,7 +295,7 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("bc=${resource.selectionBorderColor}");
     expect(viewSource).toContain("h-bc=${resource.selectionHoverBorderColor}");
     expect(viewSource).toContain(
-      'style="padding-left: ${group.indent}px; box-sizing: border-box;"',
+      'style="padding-inline-start: ${group.indent}px; box-sizing: border-box;"',
     );
     expect(viewSource).not.toContain("selectionBackgroundColor");
     expect(viewSource).not.toContain("rtgl-checkbox");

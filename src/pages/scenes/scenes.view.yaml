@@ -177,7 +177,7 @@ template:
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
       - $if showMobileScenesControls:
-          - 'rtgl-view pos=abs z=200 style="right: 8px; top: 8px;"':
+          - 'rtgl-view pos=abs z=200 style="inset-inline-end: 8px; top: 8px;"':
               - 'rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=ol title="${title}" aria-label="${title}"': null
       - $if showMobileFileExplorer:
           - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0; padding-top: var(--rvn-mobile-overlay-top-inset, 0px); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;"':

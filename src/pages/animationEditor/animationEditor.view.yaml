@@ -595,6 +595,9 @@ styles:
     background-position: "0 0, 0 6px, 6px -6px, -6px 0"
     background-repeat: repeat
     background-size: 12px 12px
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - 'rtgl-view#editorSurface d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - rvn-resizable-panel w=300 min-w=200 max-w=500 resize-side="right":
@@ -644,7 +647,7 @@ template:
                   - $if selectedEditorTab == 'tween':
                       - 'rtgl-view#animationTweenPanel role=tabpanel aria-label="${timelineTabLabel}" d=v w=f h=1fg g=md style="min-height: 0;"':
                           - $if dialogType == 'update':
-                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
+                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv dir=ltr cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - $if !activeTimelineEmpty:
                                           - 'rtgl-view data-timeline-property-column-fill=true pos=abs style="inset: 0; pointer-events: none; z-index: 5;"':
@@ -660,7 +663,7 @@ template:
                                       - $if timelinePlayheadVisible:
                                           - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                             $else:
-                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
+                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv dir=ltr cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v g=md pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - $if !activeTimelineEmpty:
                                           - 'rtgl-view data-timeline-property-column-fill=true pos=abs style="inset: 0; pointer-events: none; z-index: 5;"':

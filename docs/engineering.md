@@ -217,6 +217,51 @@ catalogs, and the enumeration comma `、` in `ja`, `zh-hans`, and `zh-hant`.
 App lists have no "and" before the last item, so a list can end with a count
 from the catalog, such as `usedByMore`.
 
+### Right-to-left languages
+
+Arabic (`ar`) and Urdu (`ur`) are right-to-left previews. Only their Projects
+page, form validation, and common Rettangoli UI text are translated, and every
+other key repeats the English text, so the app does not suggest them from the
+device language (`PREVIEW_APP_LOCALES` in `src/internal/ui/appLocale.js`). The
+`ar` catalog repeats the English `_other` text for the `_zero`, `_two`, `_few`,
+and `_many` plural keys, and sets `intlLocale` to `ar-u-nu-latn` so numbers
+keep the digits 0–9 used in inputs.
+
+`appService.setDocumentLanguage` sets `<html dir>` from the locale with
+`getTextDirection` in `src/internal/textDirection.js`, and Rettangoli UI lays
+out right to left under `dir="rtl"`: in attributes such as `ml`, `pr`, `ah=e`,
+and `edge=l`, `l` and `r` mean the inline start and end. App styles follow the
+same rule:
+
+- Use logical properties for one-sided spacing and positions, such as
+  `padding-inline-start` for an indent or `inset-inline-end` for a corner
+  badge. Physical `left` and `right` are fine in pairs (`left: 0; right: 0`),
+  for centering (`left: 50%` with `translateX(-50%)`), and for coordinates.
+- `resize-side="left"` and `"right"` on `rvn-resizable-panel` name the inline
+  start and end. Handlers that compare pointer positions read the direction
+  with `appService.getDocumentDirection()`.
+- Mirror icons that point along the line, such as a back chevron or a closed
+  folder's arrow, with a `:dir(rtl)` rule in the component's `styles`
+  (`transform: scaleX(-1)`). Rettangoli UI does not mirror `pre` and `suf`
+  icons on buttons.
+- Keep surfaces with their own coordinates left to right with `dir=ltr`:
+  keyframe timelines and the timeline editors. The scene map, layout editor
+  canvas, and previews position content with physical coordinates and are
+  unaffected.
+- The scene text editor takes its direction from the project language, not the
+  app language, because the script is written in the project language: an
+  Arabic, Persian, or Urdu project is right to left even in the English app,
+  and an English project is left to right in the Arabic app. Line numbers sit
+  at the inline start and previews at the inline end. Lexical sets `dir` on
+  each line from its first letter, and the editor overrides it so every line
+  follows the project, even one that starts with a name in Latin letters.
+  Left and Right move the caret toward the end and start of the line in a
+  right-to-left project, including across mentions, which the editor moves
+  over itself. The browser moves the caret in logical order, so inside Latin
+  text in a right-to-left line, Left moves to the right.
+- In the file explorer, Left opens a folder and Right closes it under
+  right-to-left layouts; `h` and `l` keep their meaning.
+
 ## Code Style
 
 - Prefer direct values and `??` defaults over verbose string guards like

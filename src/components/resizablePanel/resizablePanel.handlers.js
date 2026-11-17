@@ -149,7 +149,7 @@ export const handleResizeHandleMouseLeave = (deps) => {
 };
 
 const handleResizeMove = (deps, payload, { panelElement } = {}) => {
-  const { store, render, props: attrs, subject } = deps;
+  const { store, render, props: attrs, subject, appService } = deps;
 
   if (!store.selectIsResizing()) return;
   const deltaX = payload.clientX - store.selectStartX();
@@ -158,11 +158,15 @@ const handleResizeMove = (deps, payload, { panelElement } = {}) => {
     panelElement,
   });
 
-  // Determine resize direction based on resize-side attr
-  const isResizeFromLeft = attrs.resizeSide === "left";
-  const newWidth = isResizeFromLeft
-    ? store.selectStartWidth() - deltaX // For left resize, movement is inverted
-    : store.selectStartWidth() + deltaX; // For right resize, movement is normal
+  // resize-side names the handle's inline side: "left" is the start and
+  // "right" the end, so the sides swap under right-to-left layouts. Dragging
+  // a handle on the left edge to the left widens the panel.
+  const isHandleOnLeft =
+    (attrs.resizeSide === "left") !==
+    (appService.getDocumentDirection() === "rtl");
+  const newWidth = isHandleOnLeft
+    ? store.selectStartWidth() - deltaX
+    : store.selectStartWidth() + deltaX;
 
   store.setPanelWidth({
     width: newWidth,

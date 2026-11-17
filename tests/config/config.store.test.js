@@ -143,6 +143,8 @@ describe("config language store", () => {
         { value: "uk", label: "Українська (Beta)" },
         { value: "it", label: "Italiano (Beta)" },
         { value: "pl", label: "Polski (Beta)" },
+        { value: "ar", label: "العربية (Preview)" },
+        { value: "ur", label: "اردو (Preview)" },
       ],
     });
   });

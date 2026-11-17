@@ -60,7 +60,8 @@ styles:
     ".keyframeTimelineKeyframeValue":
       display: none
 template:
-  - rtgl-view g=md w=f pos=rel:
+  # Time runs left to right in every language.
+  - rtgl-view g=md w=f pos=rel dir=ltr:
       - $if showRuler || (showTracks && selectedProperties.length > 0):
           - rtgl-view d=v w=f g=xs:
               - $if showRuler:

@@ -184,6 +184,10 @@ refs:
         handler: handleMobileKeyboardToolbarActionClick
       keyboard-state-change:
         handler: handleMobileKeyboardStateChange
+styles:
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - 'rtgl-view pos=rel w=f h=f style="min-width: 0; min-height: 0;"':
       - $if isTouchMode:
@@ -225,10 +229,10 @@ template:
                               # such as the section at the same place in the next scene.
                               - $for section, sectionIndex in sectionEditorItems:
                                   - 'rtgl-view#${section.blockId} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
-                                      - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-left: calc(var(--spacing-sm) * -1); padding-left: var(--spacing-md); padding-right: var(--spacing-sm);"':
+                                      - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-inline-start: calc(var(--spacing-sm) * -1); padding-inline-start: var(--spacing-md); padding-inline-end: var(--spacing-sm);"':
                                           - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
                                           - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null
-                                      - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets} :compactPreviews=${isTouchMode}: null
+                                      - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets} :compactPreviews=${isTouchMode} textDirection=${scriptTextDirection}: null
                               - 'rtgl-view h=${mobileEditorBottomSpacerHeight} aria-hidden=true style="flex-shrink: 0;"': null
               - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar width=${mobileToolbarWidth} :undoDisabled=${undoDisabled} :redoDisabled=${redoDisabled} :previewHidden=${isPreviewHidden}: null
         $else:
@@ -261,10 +265,10 @@ template:
                               # such as the section at the same place in the next scene.
                               - $for section, sectionIndex in sectionEditorItems:
                                   - 'rtgl-view#${section.blockId} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
-                                      - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-left: calc(var(--spacing-sm) * -1); padding-left: var(--spacing-md); padding-right: var(--spacing-sm);"':
+                                      - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c h=40 bgc=bg bwb=xs style="position: sticky; top: 0px; z-index: 5; min-width: 0; box-sizing: border-box; width: calc(100% + var(--spacing-md)); margin-inline-start: calc(var(--spacing-sm) * -1); padding-inline-start: var(--spacing-md); padding-inline-end: var(--spacing-sm);"':
                                           - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
                                           - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm pre=ellipsisLarge: null
-                                      - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null
+                                      - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectionActive=${section.selectionActive} :selectedLineId=${section.selectedLineId} :hasPreviousSectionLine=${section.hasPreviousSectionLine} :hasNextSectionLine=${section.hasNextSectionLine} :showLineNumbers=${sceneSettings.showLineNumbers} :fontSize=${sceneSettings.fontSize} :textStyles=${textStyles} :mentionTargets=${mentionTargets} textDirection=${scriptTextDirection}: null
                               - rtgl-view h=30vh: null
               - rtgl-view w=1 h=f bgc=mu: null
               - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':

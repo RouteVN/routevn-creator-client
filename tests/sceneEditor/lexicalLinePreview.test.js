@@ -275,7 +275,7 @@ describe("lexical scene document editor line previews", () => {
       ]);
       expect(overflow.hidden).toBe(false);
       expect(overflow.textContent).toBe("+4");
-      expect(line.style.paddingRight).toBe("100px");
+      expect(line.style.paddingInlineEnd).toBe("100px");
 
       editor.syncLineRightGutterWidth(line, row, 24);
       expect(items.every((item) => item.hidden)).toBe(true);
@@ -284,7 +284,7 @@ describe("lexical scene document editor line previews", () => {
       editor.syncLineRightGutterWidth(line, row, 200);
       expect(items.every((item) => !item.hidden)).toBe(true);
       expect(overflow.hidden).toBe(true);
-      expect(line.style.paddingRight).toBe("184px");
+      expect(line.style.paddingInlineEnd).toBe("184px");
 
       editor.syncLineRightGutterWidth(line, row, 100);
       expect(items.filter((item) => !item.hidden)).toHaveLength(2);

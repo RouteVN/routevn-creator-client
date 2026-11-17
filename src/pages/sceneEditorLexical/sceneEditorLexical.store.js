@@ -58,6 +58,7 @@ import {
   normalizeProjectLanguage,
 } from "../../internal/projectLanguage.js";
 import { isTouchLandscape } from "../../internal/touchLayout.js";
+import { getTextDirection } from "../../internal/textDirection.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -2686,6 +2687,9 @@ export const selectViewData = ({ state, i18n }) => {
     addSectionLabel: copy.addSectionMenuItem,
     textStyles,
     mentionTargets,
+    // The script is written in the project language, so the text editor
+    // takes its direction, whatever the app language is.
+    scriptTextDirection: getTextDirection(state.projectLanguage),
     documentLineDecorations,
     dropdownMenu: localizeDropdownMenu(state.dropdownMenu, copy),
     popover: state.popover,

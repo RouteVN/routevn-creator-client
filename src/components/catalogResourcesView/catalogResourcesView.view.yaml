@@ -210,7 +210,8 @@ template:
                                                   - rtgl-text s=h4 mb=md: ${item.name}
                                                   - rtgl-text s=xs c=mu-fg mb=md: ${item.animationTypeSummary}
                                                   - $if item.animationType == 'transition':
-                                                      - rtgl-view d=v w=f g=md:
+                                                      # Labelled timelines, laid out left to right like the timeline.
+                                                      - rtgl-view d=v w=f g=md dir=ltr:
                                                           - rvn-keyframe-timeline ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: ${item.transitionOutgoingLabel}

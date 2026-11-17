@@ -218,6 +218,33 @@ describe("fileExplorerKeyboardScope", () => {
     expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(2);
   });
 
+  it("expands with left and collapses with right in right-to-left layouts", () => {
+    const fileExplorer = {
+      getSelectedItem: vi.fn(() => ({
+        itemId: "folder-1",
+        isFolder: true,
+      })),
+      setSelectedFolderExpanded: vi.fn(),
+    };
+    const deps = createDeps({
+      fileExplorer,
+    });
+    deps.appService = { getDocumentDirection: () => "rtl" };
+    const { handleKeyboardScopeKeyDown } =
+      createFileExplorerKeyboardScopeHandlers();
+
+    handleKeyboardScopeKeyDown(deps, { _event: createKeyEvent("ArrowLeft") });
+    handleKeyboardScopeKeyDown(deps, { _event: createKeyEvent("ArrowRight") });
+    handleKeyboardScopeKeyDown(deps, { _event: createKeyEvent("l") });
+    handleKeyboardScopeKeyDown(deps, { _event: createKeyEvent("h") });
+
+    expect(
+      fileExplorer.setSelectedFolderExpanded.mock.calls.map(
+        ([{ expanded }]) => expanded,
+      ),
+    ).toEqual([true, false, true, false]);
+  });
+
   it("expands and collapses the selected folder with l and h", () => {
     const fileExplorer = {
       getSelectedItem: vi.fn(() => ({
