@@ -144,7 +144,7 @@ describe("config language store", () => {
         { value: "it", label: "Italiano (Beta)" },
         { value: "pl", label: "Polski (Beta)" },
         { value: "ar", label: "العربية (Preview)" },
-        { value: "ur", label: "اردو (Preview)" },
+        { value: "ur", label: "اردو (Beta)" },
       ],
     });
   });

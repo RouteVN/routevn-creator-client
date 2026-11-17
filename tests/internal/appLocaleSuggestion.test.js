@@ -27,6 +27,8 @@ describe("resolveAppLocaleSuggestion", () => {
     [["fr-CA", "en-US"], "fr"],
     [["in-ID"], "id"],
     [["uk_UA"], "uk"],
+    [["ur-PK"], "ur"],
+    [["ur-IN"], "ur"],
   ])("suggests the app locale for %j", (deviceLanguages, locale) => {
     expect(suggest(deviceLanguages)).toBe(locale);
   });
@@ -36,7 +38,6 @@ describe("resolveAppLocaleSuggestion", () => {
     ["Chinese for a region with no clear script", ["zh-US"]],
     ["a language the app does not have", ["de-DE"]],
     ["Arabic, a right-to-left preview", ["ar-EG"]],
-    ["Urdu, a right-to-left preview", ["ur-PK"]],
     ["no device languages", []],
   ])("suggests nothing for %s", (_case, deviceLanguages) => {
     expect(suggest(deviceLanguages)).toBeUndefined();

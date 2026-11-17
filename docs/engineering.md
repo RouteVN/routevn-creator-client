@@ -219,13 +219,14 @@ from the catalog, such as `usedByMore`.
 
 ### Right-to-left languages
 
-Arabic (`ar`) and Urdu (`ur`) are right-to-left previews. Only their Projects
-page, form validation, and common Rettangoli UI text are translated, and every
-other key repeats the English text, so the app does not suggest them from the
-device language (`PREVIEW_APP_LOCALES` in `src/internal/ui/appLocale.js`). The
-`ar` catalog repeats the English `_other` text for the `_zero`, `_two`, `_few`,
-and `_many` plural keys, and sets `intlLocale` to `ar-u-nu-latn` so numbers
-keep the digits 0–9 used in inputs.
+Arabic (`ar`) and Urdu (`ur`) are right-to-left languages. `ur` is translated
+and shown as `اردو (Beta)`. `ar` is still a preview: only its Projects page,
+form validation, and common Rettangoli UI text are translated, and every other
+key repeats the English text, so the app does not suggest it from the device
+language (`PREVIEW_APP_LOCALES` in `src/internal/ui/appLocale.js`). The `ar`
+catalog repeats the English `_other` text for the `_zero`, `_two`, `_few`, and
+`_many` plural keys, and sets `intlLocale` to `ar-u-nu-latn` so numbers keep
+the digits 0–9 used in inputs.
 
 `appService.setDocumentLanguage` sets `<html dir>` from the locale with
 `getTextDirection` in `src/internal/textDirection.js`, and Rettangoli UI lays
