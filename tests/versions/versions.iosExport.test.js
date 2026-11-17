@@ -67,6 +67,7 @@ const createDeps = ({ teamId = "", requirements, devices } = {}) => {
       getIosExportAvailability: vi.fn(async () => ({ available: true })),
       promptIosApplicationPath: vi.fn(async () => "/exports/Project One.ipa"),
       updateCurrentPlatformDetails: vi.fn(async () => ({})),
+      cancelIosExport: vi.fn(async () => {}),
       exportIosApplication: vi.fn(
         async (_data, _files, outputPath, { installDeviceId }) => ({
           outputPath,
@@ -524,5 +525,163 @@ describe("iOS export", () => {
     expect(
       deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
+  });
+
+  const cancelOptions = (deps) =>
+    deps.appService.showProgressDialog.mock.calls[0][0].cancel;
+
+  // An export that stays running until the test ends it.
+  const holdExport = (deps) => {
+    let end;
+    deps.projectService.exportIosApplication.mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          end = { resolve, reject };
+        }),
+    );
+    return {
+      started: () =>
+        vi.waitFor(() =>
+          expect(deps.projectService.exportIosApplication).toHaveBeenCalled(),
+        ),
+      reject: (error) => end.reject(error),
+    };
+  };
+
+  it("cancels the running export from the progress dialog", async () => {
+    const deps = createDeps({ teamId: "COMPANY123" });
+    const running = holdExport(deps);
+    await openIosExport(deps);
+    const finished = submitIosExport(deps);
+    await running.started();
+    expect(cancelOptions(deps).label).toBe(COPY.cancelButton);
+
+    await cancelOptions(deps).onCancel();
+    expect(deps.projectService.cancelIosExport).toHaveBeenCalledTimes(1);
+    expect(deps.progressDialog.update).toHaveBeenCalledWith({
+      cancel: { label: COPY.iosExportCancellingButton, disabled: true },
+    });
+    // A second click while cancelling does nothing.
+    await cancelOptions(deps).onCancel();
+    expect(deps.projectService.cancelIosExport).toHaveBeenCalledTimes(1);
+
+    running.reject({
+      code: "cancelled",
+      message: "The iOS export was cancelled.",
+      ipaSaved: false,
+    });
+    await finished;
+    expect(deps.progressDialog.close).toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.iosExportCancelled,
+    });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("says where the IPA is when the upload was cancelled", async () => {
+    const deps = createDeps();
+    deps.projectService.exportIosApplication.mockRejectedValue({
+      code: "cancelled",
+      message: "The iOS export was cancelled.",
+      ipaSaved: true,
+    });
+    await openIosExport(deps);
+    await submitIosExport(deps, { upload: true });
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: `${COPY.iosExportCancelled} ${COPY.iosIpaSavedNotice.replace(
+        "{path}",
+        "/exports/Project One.ipa",
+      )}`,
+    });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    // The build was signed, so its team is remembered.
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("ios", { teamId: "COMPANY123" });
+  });
+
+  it("does not start the exporter when cancelled while preparing", async () => {
+    const deps = createDeps({ teamId: "COMPANY123" });
+    let finishLoading;
+    deps.projectService.loadRepositoryState.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishLoading = () => resolve(structuredClone(initialProjectData));
+        }),
+    );
+    await openIosExport(deps);
+    const finished = submitIosExport(deps);
+    await vi.waitFor(() => expect(finishLoading).toBeDefined());
+    await cancelOptions(deps).onCancel();
+    finishLoading();
+    await finished;
+    expect(deps.projectService.exportIosApplication).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.iosExportCancelled,
+    });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("lets the creator cancel again when the request failed", async () => {
+    const deps = createDeps({ teamId: "COMPANY123" });
+    const running = holdExport(deps);
+    deps.projectService.cancelIosExport.mockRejectedValueOnce(
+      new Error("unavailable"),
+    );
+    await openIosExport(deps);
+    const finished = submitIosExport(deps);
+    await running.started();
+    await cancelOptions(deps).onCancel();
+    expect(deps.progressDialog.update).toHaveBeenLastCalledWith({
+      cancel: { label: COPY.cancelButton, disabled: false },
+    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.iosExportCancelFailed,
+    });
+    await cancelOptions(deps).onCancel();
+    expect(deps.projectService.cancelIosExport).toHaveBeenCalledTimes(2);
+    running.reject({ code: "cancelled", message: "", ipaSaved: false });
+    await finished;
+  });
+
+  it("explains an export that timed out or has no space", async () => {
+    const cases = [
+      [
+        {
+          code: "timed-out",
+          message: "Stopped waiting to sign the app with Xcode after 30 min.",
+          ipaSaved: false,
+        },
+        COPY.iosExportTimedOut,
+      ],
+      [
+        {
+          code: "not-enough-space",
+          message: "Not enough free space to export: about 2.1 GB is needed.",
+          ipaSaved: false,
+        },
+        COPY.iosExportNotEnoughSpace,
+      ],
+      [
+        {
+          code: "export-failed",
+          message:
+            "Failed to save the IPA: No space left on device (os error 28)",
+          ipaSaved: false,
+        },
+        COPY.iosExportNotEnoughSpace,
+      ],
+    ];
+    for (const [error, expected] of cases) {
+      const deps = createDeps();
+      deps.projectService.exportIosApplication.mockRejectedValue(error);
+      await openIosExport(deps);
+      await submitIosExport(deps);
+      const { message, title } = deps.appService.showAlert.mock.calls[0][0];
+      expect(title).toBe(COPY.errorTitle);
+      expect(message).toContain(expected);
+      expect(message).toContain(error.message);
+      expect(deps.appService.showToast).not.toHaveBeenCalled();
+    }
   });
 });

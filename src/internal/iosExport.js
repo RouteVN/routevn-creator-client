@@ -33,6 +33,16 @@ export const isValidIosBuildNumber = (value) =>
 export const isValidIosTeamId = (value) =>
   typeof value === "string" && /^[A-Z0-9]{10}$/.test(value);
 
+// The exporter rejects a cancelled export with this code. An export that is
+// cancelled before the exporter starts ends with the same error.
+export const createIosExportCancelledError = () => ({
+  code: "cancelled",
+  message: "The iOS export was cancelled.",
+  ipaSaved: false,
+});
+
+export const isIosExportCancelledError = (error) => error?.code === "cancelled";
+
 export const createIosIpaFileName = (applicationName, version) =>
   `${sanitizeArtifactFileName(`${applicationName}-${version}`)}.ipa`;
 

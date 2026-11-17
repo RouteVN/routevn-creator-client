@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  createIosExportCancelledError,
   createIosIpaFileName,
+  isIosExportCancelledError,
   isValidIosBuildNumber,
   isValidIosBundleIdentifier,
   isValidIosTeamId,
@@ -9,6 +11,15 @@ import {
 } from "../../src/internal/iosExport.js";
 
 describe("iOS export helpers", () => {
+  it("recognizes a cancelled export", () => {
+    expect(isIosExportCancelledError(createIosExportCancelledError())).toBe(
+      true,
+    );
+    expect(isIosExportCancelledError({ code: "timed-out" })).toBe(false);
+    expect(isIosExportCancelledError(new Error("failed"))).toBe(false);
+    expect(isIosExportCancelledError(undefined)).toBe(false);
+  });
+
   it("accepts the versions and build numbers Xcode accepts", () => {
     expect(isValidIosVersion("1.2.3")).toBe(true);
     expect(isValidIosVersion("0.0.0")).toBe(true);
