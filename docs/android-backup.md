@@ -99,8 +99,9 @@ import/export workflow and older supported Android versions. No broad
 
 ### Setup Screen
 
-Reuse the layout and interaction patterns of the iOS project-folder setup
-(`src/pages/projectFolderSetup/`; see [iOS setup](ios.md#project-folder-setup-and-storage)).
+The setup screen is the `src/pages/projectFolderSetup/` page, which only
+Android uses; iOS chooses its projects folder from dialogs (see
+[iOS setup](ios.md#project-folder-setup-and-storage)).
 Android continues editing internal projects; the selected folder is only the
 backup destination. Do not change iOS storage behavior.
 

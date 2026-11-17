@@ -91,6 +91,23 @@ describe("iOS project file paths", () => {
     },
   );
 
+  it.each([undefined, "reconnect"])(
+    "lists no projects without asking native when no folder can be read (%s)",
+    async (reason) => {
+      const service = createService([{ id: "project-1", name: "Project One" }]);
+      callIOSBridge.mockResolvedValue({
+        configured: false,
+        reason,
+        deviceName: "iPad",
+      });
+      await service.initializeProjectFolderSetup();
+      callIOSBridge.mockClear();
+
+      expect(await service.loadAllProjects()).toEqual([]);
+      expect(callIOSBridge).not.toHaveBeenCalled();
+    },
+  );
+
   it("names the Files app locations in the app language", async () => {
     const service = createService();
     service.setAppCopyProvider(() => PT_I18N.appPage);

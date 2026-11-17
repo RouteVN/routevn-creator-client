@@ -2,9 +2,14 @@ import { callIOSBridge } from "./bridge.js";
 
 export const createIOSProjectFolderSetup = ({ filePicker }) => {
   let status = { configured: false };
+  let loaded = false;
 
   return {
     getStatus: () => status,
+
+    // True once native reports that there is no projects folder to read: none
+    // was ever chosen, or the saved one cannot be opened.
+    hasNoFolder: () => loaded && !status.configured,
 
     async load() {
       try {
@@ -12,6 +17,7 @@ export const createIOSProjectFolderSetup = ({ filePicker }) => {
       } catch {
         status = { configured: false, reason: "unavailable" };
       }
+      loaded = true;
       return status;
     },
 

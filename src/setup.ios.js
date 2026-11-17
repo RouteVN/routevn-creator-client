@@ -192,11 +192,11 @@ window.routeVNNativeBack = createNativeBackHandler({
 saveWhenAppGoesInactive({ runtime: iosAudioRuntime, appService });
 await appService.initUserConfig();
 await appService.initializeProjectFolderSetup();
-if (!appService.getProjectFolderSetup().configured) {
-  router.reset("/project-folder-setup");
-} else if (
-  initialPath === "/projects" &&
-  router.getPathName() === "/project-folder-setup"
+// Without a usable projects folder no project can be open, so start on
+// Projects, which asks for the folder in a dialog.
+if (
+  !appService.getProjectFolderSetup().configured &&
+  router.getPathName() !== "/projects"
 ) {
   router.reset("/projects");
 }

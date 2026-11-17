@@ -309,23 +309,34 @@ JavaScript alone cannot add them.
 
 ### Project Folder Setup And Storage
 
-Startup opens `/project-folder-setup` when no usable library is saved; otherwise
-the normal initial route is `/projects`. Config's Change Folder action reopens
-setup without loading a project repository. Continue returns to Config when
-opened from there, or to Projects on first setup. Bottom navigation must render
-without a loaded repository; recent scene details appear only when one exists.
-The app shell waits for startup routing before mounting a page, so missing folder
-setup never triggers project discovery or a project-loading error. After
-`build:ios`, run `node tests/ios/startup.browser.mjs` to check first setup,
+iOS has no folder setup page; every start opens `/projects`, and the projects
+folder is chosen from dialogs (`src/internal/ui/projectFolderSetupFlow.js`):
+
+- **New install.** Projects shows an empty list. The first time the user creates
+  or imports a project, a dialog explains that one folder holds all RouteVN
+  projects; **Choose Folder** opens the Files directory picker, and the create
+  dialog or the import continues once the folder is saved.
+- **Saved folder that can no longer be opened.** Projects shows the same dialog
+  as soon as it opens, asking the user to select the existing folder again. It
+  never recreates the folder or falls back to internal storage. If the user
+  dismisses it, the list stays empty and Create or Import asks again.
+- **Config's Change Folder.** The dialog opens on Config and the shown path
+  updates once the new folder is saved. The open project stays open.
+
+The dialog has one button and is dismissed by tapping outside it. Dismissing it,
+cancelling the picker, or choosing a folder that is rejected keeps the previous
+choice; a rejected folder shows a localized toast. Until a
+folder can be read, the Projects page does not ask native for a folder listing,
+so a missing folder never triggers project discovery or a project-loading
+error, and startup resets any restored project route to `/projects`. After
+`build:ios`, run `node tests/ios/startup.browser.mjs` to check a new install,
 reconnection, and configured-folder loading in Chromium and WebKit.
 
-Setup uses the native Files directory picker with the **Open** action. Choosing
-`On My iPhone` or `On My iPad` creates `RouteVN Projects` only if absent and
-reuses an existing directory without changing its contents. Choosing another
-folder uses that folder directly. Selection checks access and saves a bookmark
-immediately; there is no separate Confirm button. Cancellation and failed
-selection preserve the previous choice. Lost access requests reconnection
-without recreating the folder or falling back to internal storage.
+The picker is the native Files directory picker with the **Open** action.
+Choosing `On My iPhone` or `On My iPad` creates `RouteVN Projects` only if
+absent and reuses an existing directory without changing its contents. Choosing
+another folder uses that folder directly. Selection checks access and saves a
+bookmark immediately; there is no separate Confirm step.
 
 `ProjectFolderSetup.swift` accepts the system local Files provider and rejects
 app-owned containers and cloud/unknown providers. URLs must come from the picker;
@@ -651,7 +662,7 @@ With `watch:ios` running, run the relevant browser script with `node`:
 
 | Script                                                    | Regression coverage                                                                  |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `tests/ios/projectFolderSetup.browser.mjs`                | Setup, cancellation/errors, Config return, readable paths, Projects clicks/scrolling |
+| `tests/ios/projectFolderSetup.browser.mjs`                | Setup dialog, cancellation/errors, Config Change Folder, Projects clicks/scrolling   |
 | `tests/ios/projectCreation.browser.mjs`                   | Destination preview, sanitized names, stable typing                                  |
 | `tests/ios/mobileNavigation.browser.mjs`                  | Menus without a loaded repository, backdrop dismissal                                |
 | `tests/ios/appWidth.browser.mjs`                          | App and Projects width as containers resize                                          |

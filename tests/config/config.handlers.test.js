@@ -36,6 +36,14 @@ const createDeps = () => {
       configured: true,
       folder: { displayPath: "On My iPhone/My Projects" },
     })),
+    showFormDialog: vi.fn(async () => ({ actionId: "choose" })),
+    pickProjectFolderSetup: vi.fn(async () => ({
+      uri: "routevn-folder://selected/folder-2",
+    })),
+    confirmProjectFolderSetup: vi.fn(async () => ({
+      configured: true,
+      folder: { displayPath: "On My iPhone/Other Projects" },
+    })),
     navigate: vi.fn(),
     getTheme: vi.fn(() => "dark"),
     setTheme: vi.fn((theme) => theme),
@@ -76,7 +84,7 @@ const createDeps = () => {
 };
 
 describe("config handlers", () => {
-  it("loads the configured iOS folder and reopens setup without changing it", () => {
+  it("shows the configured iOS folder and changes it from a dialog", async () => {
     const deps = createDeps();
     deps.appService.getPlatform.mockReturnValue("ios");
     handleBeforeMount(deps);
@@ -84,21 +92,34 @@ describe("config handlers", () => {
       visible: true,
       path: "On My iPhone/My Projects",
     });
-    handleChangeProjectFolder(deps);
-    expect(deps.appService.navigate).toHaveBeenCalledExactlyOnceWith(
-      "/project-folder-setup",
-      { from: "config" },
-    );
-    // Remounting Config reads the latest confirmed folder.
-    deps.appService.getProjectFolderSetup.mockReturnValue({
-      configured: true,
-      folder: { displayPath: "On My iPhone/Other Projects" },
+
+    // Dismissing the dialog keeps the folder.
+    deps.appService.showFormDialog.mockResolvedValueOnce(null);
+    await handleChangeProjectFolder(deps);
+    expect(deps.appService.showFormDialog).toHaveBeenCalledWith({
+      size: "sm",
+      form: {
+        title: "Change Folder",
+        description:
+          "All your RouteVN projects are kept in one folder. Every project you create or import is saved there. Choose “On My iPhone” or an existing projects folder.",
+        fields: [],
+        actions: {
+          buttons: [{ id: "choose", label: "Choose Folder", variant: "pr" }],
+        },
+      },
     });
-    handleBeforeMount(deps);
+    expect(deps.appService.pickProjectFolderSetup).not.toHaveBeenCalled();
+    expect(deps.store.setProjectFolder).toHaveBeenCalledOnce();
+
+    await handleChangeProjectFolder(deps);
+    expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledWith({
+      uri: "routevn-folder://selected/folder-2",
+    });
     expect(deps.store.setProjectFolder).toHaveBeenLastCalledWith({
       visible: true,
       path: "On My iPhone/Other Projects",
     });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
   it.each(["web", "android", "tauri"])(
@@ -113,7 +134,7 @@ describe("config handlers", () => {
         path: undefined,
       });
       expect(deps.appService.getProjectFolderSetup).not.toHaveBeenCalled();
-      expect(deps.appService.navigate).not.toHaveBeenCalled();
+      expect(deps.appService.showFormDialog).not.toHaveBeenCalled();
     },
   );
 

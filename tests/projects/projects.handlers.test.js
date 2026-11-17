@@ -48,6 +48,7 @@ const createDeps = ({
   };
   const appService = {
     getPlatform: vi.fn(() => platform),
+    getProjectFolderSetup: vi.fn(() => ({ configured: true })),
     getAppVersion: vi.fn(() => "1.0.0"),
     openFolderPicker: vi.fn(),
     openArchivePicker: vi.fn(),
@@ -478,10 +479,10 @@ describe("projects.handleProjectsClick", () => {
 });
 
 describe("projects create dialog", () => {
-  it("opens the page-owned create dialog", () => {
+  it("opens the page-owned create dialog", async () => {
     const deps = createDeps();
 
-    handleCreateButtonClick(deps);
+    await handleCreateButtonClick(deps);
 
     expect(deps.store.openCreateDialog).toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalled();
