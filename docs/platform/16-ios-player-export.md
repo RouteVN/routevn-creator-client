@@ -53,8 +53,14 @@ or portrait from the release's screen size (portrait when the height exceeds
 the width; iPad also allows upside-down portrait). It requests no
 permissions.
 
-The template does not set `ITSAppUsesNonExemptEncryption`, so App Store
-Connect asks the export compliance question for each uploaded build.
+The template sets `ITSAppUsesNonExemptEncryption` to false, so App Store
+Connect does not ask the export compliance question for each uploaded build.
+The player's only encryption is decrypting the game package it ships with.
+
+`PrivacyInfo.xcprivacy` declares no tracking and no collected data, and one
+required-reason API: file timestamps for files in the app's own container
+(`C617.1`), which the player reads when it opens the game package and its
+save files.
 
 ## Platform Details
 
@@ -80,8 +86,9 @@ static library for `aarch64-apple-ios` (and `aarch64-apple-ios-sim`, so the
 Xcode project also runs in the simulator), builds the app with `xcodebuild`
 without code signing, and refuses the result unless:
 
-- `RouteVNPlayer`, `Info.plist`, and `Assets.car` are present and there is no
-  `_CodeSignature`
+- `RouteVNPlayer`, `Info.plist`, `Assets.car`, and `PrivacyInfo.xcprivacy`
+  are present and there is no `_CodeSignature`
+- `Info.plist` sets `ITSAppUsesNonExemptEncryption` to false
 - the executable is arm64 only
 - after `strip -S -x`, the executable contains neither the checkout path nor
   the home folder (Rust source paths are remapped while building)
