@@ -1020,6 +1020,8 @@ export const createProjectServiceCore = ({
     getDomainState,
     getRepositoryState,
     getRepositoryRevision,
+    validateResourceImportUrl:
+      resourcePackageImportService.validateResourceImportUrl,
     createResourceImportPlan:
       resourcePackageImportService.createResourceImportPlan,
     loadResourceImportPreview:
@@ -1149,5 +1151,6 @@ export const createProjectServiceCore = ({
     listIosDevices: exportService.listIosDevices,
     promptIosApplicationPath: exportService.promptIosApplicationPath,
     exportIosApplication: exportService.exportIosApplication,
+    cancelIosExport: exportService.cancelIosExport,
   };
 };

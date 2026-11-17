@@ -150,10 +150,32 @@ if (!args.includes("--prepare-only")) {
     const stagedApp = path.join(temporaryDir, templateAppName);
     await run("/usr/bin/ditto", [builtApp, stagedApp]);
     const entries = await readdir(stagedApp);
-    for (const required of ["RouteVNPlayer", "Info.plist", "Assets.car"]) {
+    for (const required of [
+      "RouteVNPlayer",
+      "Info.plist",
+      "Assets.car",
+      "PrivacyInfo.xcprivacy",
+    ]) {
       if (!entries.includes(required)) {
         throw new Error(`The built iOS player has no ${required}.`);
       }
+    }
+    // App Store Connect asks the export compliance question for every
+    // uploaded build unless the app answers it here.
+    const usesNonExemptEncryption = await run(
+      "/usr/bin/plutil",
+      [
+        "-extract",
+        "ITSAppUsesNonExemptEncryption",
+        "raw",
+        path.join(stagedApp, "Info.plist"),
+      ],
+      { capture: true },
+    );
+    if (usesNonExemptEncryption.trim() !== "false") {
+      throw new Error(
+        "The iOS player must set ITSAppUsesNonExemptEncryption to false.",
+      );
     }
     if (entries.includes("_CodeSignature")) {
       throw new Error("The iOS player template must not be signed.");

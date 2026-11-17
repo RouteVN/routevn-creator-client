@@ -146,7 +146,7 @@ template:
                           - rtgl-view w=f h=48 ph=md d=h av=c g=md:
                               - rtgl-text w=1fg s=h3: ${selectedPlatformTitle}
                               - 'rtgl-button#platformEditButton v=ol sq pre=edit title="${platformEditButtonLabel}" aria-label="${platformEditButtonLabel}"': null
-                          - rvn-detail-view#platformDetailView w=f :fields=${platformDetailFields} :fillHeight=${detailFillHeight}:
+                          - rvn-detail-view#platformDetailView :fields=${platformDetailFields} :fillHeight=${detailFillHeight}:
                               - rtgl-view#platformApplicationName slot=platform-application-name cur=pointer:
                                   - rtgl-text: ${platformApplicationName}
                               - $if showPlatformApplicationIcon:

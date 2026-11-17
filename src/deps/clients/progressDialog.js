@@ -107,6 +107,7 @@ export const createProgressDialog = (
     status,
     progress,
     steps,
+    cancel,
     announceTitle = false,
   } = {},
   root = typeof document === "undefined" ? undefined : document,
@@ -285,7 +286,7 @@ export const createProgressDialog = (
     statusText.replaceChildren(...nodes);
     progressTrack.setAttribute("aria-valuetext", value.replaceAll("\n", " "));
     if (statusText.parentNode !== content) {
-      content.append(statusText);
+      appendContent(statusText);
     }
   };
 
@@ -318,12 +319,51 @@ export const createProgressDialog = (
     }
 
     if (progressTrack.parentNode !== content) {
-      content.append(progressTrack);
+      appendContent(progressTrack);
+    }
+  };
+
+  // Work that can be stopped shows one button under everything else. The
+  // caller changes its label and disables it while the work is stopping.
+  let actions;
+  let cancelButton;
+  const appendContent = (element) => {
+    if (actions === undefined) {
+      content.append(element);
+      return;
+    }
+    actions.before(element);
+  };
+  const setCancel = ({ label, disabled }) => {
+    if (label !== undefined) cancelButton.textContent = label;
+    if (disabled === undefined) return;
+    if (disabled) {
+      cancelButton.setAttribute("disabled", "");
+    } else {
+      cancelButton.removeAttribute("disabled");
     }
   };
 
   header.append(titleText, messageText);
   content.append(header);
+  if (cancel !== undefined) {
+    actions = createRtglElement(root, "rtgl-view", {
+      d: "h",
+      ah: "e",
+      w: "f",
+    });
+    cancelButton = createRtglElement(root, "rtgl-button", {
+      "data-progress-cancel": "",
+      v: "se",
+    });
+    cancelButton.addEventListener("click", () => {
+      if (cancelButton.hasAttribute("disabled")) return;
+      cancel.onCancel();
+    });
+    setCancel(cancel);
+    actions.append(cancelButton);
+    content.append(actions);
+  }
   setSteps(steps);
   setStatus(status);
   setProgress(progress);
@@ -352,6 +392,9 @@ export const createProgressDialog = (
       }
       if (Object.hasOwn(options, "steps")) {
         setSteps(options.steps);
+      }
+      if (options.cancel !== undefined && cancelButton !== undefined) {
+        setCancel(options.cancel);
       }
     },
     async waitForPaint() {

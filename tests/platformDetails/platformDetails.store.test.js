@@ -74,6 +74,7 @@ describe("platformDetails.store", () => {
         { label: "Windows", type: "item", value: "windows" },
         { label: "macOS", type: "item", value: "macos" },
         { label: "Android", type: "item", value: "android" },
+        { label: "iOS", type: "item", value: "ios" },
       ],
     });
   });
@@ -324,6 +325,7 @@ describe("platformDetails.store", () => {
       { label: "Windows", type: "item", value: "windows" },
       { label: "macOS", type: "item", value: "macos" },
       { label: "Android", type: "item", value: "android" },
+      { label: "iOS", type: "item", value: "ios" },
     ]);
     expect(viewData.canAddPlatform).toBe(true);
     expect(viewData.platformEditForm.fields).toContainEqual(

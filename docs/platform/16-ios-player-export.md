@@ -2,10 +2,11 @@
 
 Date baseline: November 13, 2026.
 
-Status: implemented and switched off. `IOS_EXPORT_RELEASED` in
-`src/internal/iosExport.js` switches it on: when it is false, the Versions
-page hides the iOS export button and Platform Details hides the iOS platform.
-The remaining checks are listed under [Release Gate](#release-gate).
+Status: implemented and switched on, in beta: the Export dialog marks iOS with
+a Beta label. `IOS_EXPORT_RELEASED` in `src/internal/iosExport.js` switches it
+off again: when it is false, the Versions page hides the iOS export button and
+Platform Details hides the iOS platform. The checks to finish before the Beta
+label is removed are listed under [Release Gate](#release-gate).
 
 ## Product Contract
 
@@ -52,8 +53,14 @@ or portrait from the release's screen size (portrait when the height exceeds
 the width; iPad also allows upside-down portrait). It requests no
 permissions.
 
-The template does not set `ITSAppUsesNonExemptEncryption`, so App Store
-Connect asks the export compliance question for each uploaded build.
+The template sets `ITSAppUsesNonExemptEncryption` to false, so App Store
+Connect does not ask the export compliance question for each uploaded build.
+The player's only encryption is decrypting the game package it ships with.
+
+`PrivacyInfo.xcprivacy` declares no tracking and no collected data, and one
+required-reason API: file timestamps for files in the app's own container
+(`C617.1`), which the player reads when it opens the game package and its
+save files.
 
 ## Platform Details
 
@@ -79,8 +86,9 @@ static library for `aarch64-apple-ios` (and `aarch64-apple-ios-sim`, so the
 Xcode project also runs in the simulator), builds the app with `xcodebuild`
 without code signing, and refuses the result unless:
 
-- `RouteVNPlayer`, `Info.plist`, and `Assets.car` are present and there is no
-  `_CodeSignature`
+- `RouteVNPlayer`, `Info.plist`, `Assets.car`, and `PrivacyInfo.xcprivacy`
+  are present and there is no `_CodeSignature`
+- `Info.plist` sets `ITSAppUsesNonExemptEncryption` to false
 - the executable is arm64 only
 - after `strip -S -x`, the executable contains neither the checkout path nor
   the home folder (Rust source paths are remapped while building)
@@ -95,7 +103,8 @@ Xcode project directly.
 1. validate the request: application name, bundle identifier, version, build
    number, team ID (10 uppercase letters or digits), `.ipa` output path, and
    upload only with App Store builds
-2. find Xcode (below) and check that it is ready
+2. check the free space (below), then find Xcode (below) and check that it
+   is ready
 3. expand the template with `ditto` and check that it is an unsigned player
 4. write the game package to a file in the workspace and encrypt it from
    that file as a standalone chunked XChaCha20-Poly1305 payload at
@@ -128,14 +137,74 @@ Build app, Sign with Xcode, then Save IPA or Install on device, and Upload to
 App Store Connect (`src/pages/versions/support/iosExportSteps.js`).
 
 Failures reject with `{ code, message, ipaSaved }`, where `message` holds
-Xcode's error lines and `ipaSaved` is true when only the upload failed.
-Codes are `invalid-request`, `xcode-unavailable`, `template-invalid`,
-`team-not-signed-in`, `team-cannot-distribute`, `signing-failed`,
-`app-record-missing`, `agreement-required`, `build-number-used`,
-`version-closed`, `upload-failed`, `device-not-registered`,
-`device-unavailable`, `install-failed`, and `export-failed`.
+Xcode's error lines and `ipaSaved` is true when the export stopped during
+the upload, after the IPA was saved.
+Codes are `invalid-request`, `not-enough-space`, `xcode-unavailable`,
+`template-invalid`, `team-not-signed-in`, `team-cannot-distribute`,
+`signing-failed`, `app-record-missing`, `agreement-required`,
+`build-number-used`, `version-closed`, `upload-failed`,
+`device-not-registered`, `device-unavailable`, `install-failed`,
+`timed-out`, `cancelled`, and `export-failed`.
 Codes are matched from Xcode's output, so an unrecognized message falls back
 to `signing-failed` or `upload-failed`.
+
+### Free Space
+
+Before it writes anything, the export estimates the peak use of each volume
+and rejects with `not-enough-space` when one has less free space. The game
+package is estimated as the size of the assets plus the instructions.
+
+- the workspace, in the system's temporary folder, needs two packages (the
+  plain package and its encrypted copy, then the archive and Xcode's IPA),
+  four times the size of the template archive, and a 64 MB margin
+- the output folder needs one package, the template archive, and the margin
+  for the saved IPA; a device install saves nothing
+- when both are on one volume, the two needs add up on it
+
+Free space is measured as the Android export measures it
+(`crates/routevn-android-export/src/space.rs`), which on macOS counts space
+the system frees on demand. A volume that cannot be measured is not checked.
+The Versions page shows the same not-enough-space message when a write
+fails later because the disk filled up.
+
+### Time Limits
+
+Every external tool runs in its own process group with a time limit. When
+the limit passes, the tool and the helpers it started are asked to exit
+(`SIGTERM`), killed two seconds later, and the export rejects with
+`timed-out` and a message that names the step. The limits only catch a tool
+that hangs:
+
+| Tool                                                                                                                  | Limit      |
+| --------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Xcode checks (`xcode-select`, `mdfind`, `xcodebuild -version`, `-checkFirstLaunchStatus`, `xcrun`, `defaults export`) | 60 seconds |
+| `devicectl list devices`                                                                                              | 60 seconds |
+| `ditto`, `actool`                                                                                                     | 10 minutes |
+| `xcodebuild -exportArchive` to sign                                                                                   | 30 minutes |
+| `devicectl device install app`                                                                                        | 30 minutes |
+| `devicectl device process launch`                                                                                     | 60 seconds |
+| `xcodebuild -exportArchive` to upload                                                                                 | 3 hours    |
+
+An Xcode check that times out counts as a failed check, so it gives the
+status that check reports, such as `needsSetup`. A launch that times out
+leaves the app installed and reports `launched: false`.
+
+### Cancel
+
+`cancel_ios_export` asks the running export to stop; the export clears the
+request when it starts. While the export waits for a tool, the tool is
+stopped at once, as for a time limit. Packaging and encryption are not
+interrupted: the export stops when the running one ends. A cancelled export
+rejects with `cancelled` and deletes its workspace. The IPA is saved before
+an upload starts, so a cancelled upload rejects with `ipaSaved` true and the
+saved IPA stays. A request that arrives while the app is being opened on the
+device, or after the last step, does not undo the finished export.
+
+The progress dialog of the iOS export has a Cancel button, which shows
+"Cancelling…" until the export ends. A cancelled export closes the dialog
+and shows a notice, with the location of the IPA when it was saved. A
+request made before the exporter runs, while the Versions page still
+prepares the export data, ends the export without starting the exporter.
 
 ## Xcode, Teams, and Devices
 
@@ -186,16 +255,23 @@ version 1, and the same `json_valid` CHECK and null-delete triggers as the
 desktop players. The JavaScript side shares
 `src/deps/clients/shared/mobilePlayerRuntimeDb.js` with Android.
 
-Audio and media are suspended while the app is inactive. If iOS stops the
-web content process, the page reloads. External `http` and `https` links open
-in Safari.
+Audio and media are suspended while the app is inactive. External `http` and
+`https` links open in Safari.
+
+When iOS ends the web content process, for example to free memory, the player
+loads the game again, so the game returns to its title screen with its saves.
+A loss while the game is in the background restarts it when the player comes
+back. Two losses in a row within 30 seconds of a start, with the game in the
+foreground the whole time, mean the game cannot run: the player shows a
+message instead of restarting, and starts the game again when the player
+returns.
 
 ## Creator Hosts
 
 Only the macOS desktop app exports for iOS. The shared project export facade
 exposes `getIosExportAvailability` (a Mac with the bundled template),
 `getIosExportRequirements`, `listIosDevices`, `promptIosApplicationPath`,
-and `exportIosApplication`. The Tauri commands run on blocking tasks; the
+`exportIosApplication`, and `cancelIosExport`. The Tauri commands run on blocking tasks; the
 export forwards throttled progress through a Tauri channel. Windows and Linux builds include the commands, which
 report `unsupported-host`.
 
@@ -236,7 +312,7 @@ device's identifier from `xcrun devicectl list devices`.
 
 ## Release Gate
 
-Before switching the export on, check on a physical iPhone and iPad: a
+Before taking the export out of beta, check on a physical iPhone and iPad: a
 development build installed from Creator, an App Store build uploaded from
 Creator and installed through TestFlight, a portrait game, audio, saving and
 reloading, the app in the background and after the system ends it, and an

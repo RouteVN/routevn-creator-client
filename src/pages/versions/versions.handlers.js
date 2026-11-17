@@ -5,8 +5,10 @@ import {
   isAndroidExportSpaceError,
 } from "../../internal/androidExport.js";
 import {
+  createIosExportCancelledError,
   createIosIpaFileName,
   IOS_XCODE_DOWNLOAD_URL,
+  isIosExportCancelledError,
   isValidIosBuildNumber,
   isValidIosTeamId,
   isValidIosVersion,
@@ -2375,12 +2377,32 @@ const runIosApplicationExport = async (deps, confirmation) => {
   if (!install && !outputPath) return;
 
   const steps = getIosExportSteps({ upload: options.upload, install });
+  let cancelRequested = false;
   const { progressDialog, showStep } = openExportStepsProgress({
     appService,
     message: copy.iosApplicationInProgressMessage,
     title: copy.iosApplicationInProgressTitle,
     labels: getIosExportStepLabels(copy),
     steps,
+    cancel: {
+      label: copy.cancelButton,
+      onCancel: async () => {
+        if (cancelRequested) return;
+        cancelRequested = true;
+        progressDialog.update({
+          cancel: { label: copy.iosExportCancellingButton, disabled: true },
+        });
+        try {
+          await projectService.cancelIosExport();
+        } catch {
+          cancelRequested = false;
+          progressDialog.update({
+            cancel: { label: copy.cancelButton, disabled: false },
+          });
+          appService.showToast({ message: copy.iosExportCancelFailed });
+        }
+      },
+    },
   });
   const progressFormats = createExportProgressFormats(i18n);
   let result;
@@ -2394,6 +2416,8 @@ const runIosApplicationExport = async (deps, confirmation) => {
       projectService,
       version,
     });
+    // The exporter only hears a cancel request once it runs.
+    if (cancelRequested) throw createIosExportCancelledError();
     result = await projectService.exportIosApplication(
       transformedData,
       fileEntries,
@@ -2435,6 +2459,15 @@ const runIosApplicationExport = async (deps, confirmation) => {
     }
   }
   const path = outputPath && appService.getFileDisplayPath(outputPath);
+  if (isIosExportCancelledError(exportError)) {
+    // A cancelled upload leaves the saved IPA.
+    let message = copy.iosExportCancelled;
+    if (exportError.ipaSaved) {
+      message = `${message} ${formatI18nCopy(copy.iosIpaSavedNotice, { path })}`;
+    }
+    appService.showToast({ message });
+    return;
+  }
   if (exportError !== undefined) {
     let message = getIosExportErrorMessage(exportError, copy);
     // A failed upload leaves the saved IPA.

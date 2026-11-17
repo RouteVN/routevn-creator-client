@@ -65,7 +65,7 @@ describe("groupVariablesView view", () => {
     expect(view).not.toContain("rtgl-input-number#operationValue${i}");
     expect(view).not.toContain("rtgl-select#operationVariable${i}");
     expect(view).toContain(
-      "rtgl-text w=1fg s=lg fw=b: ${computedExamplesLabel}",
+      "rtgl-text w=1fg s=lg: ${computedExamplesLabel}",
     );
     expect(view).toContain("rtgl-button#addComputedExampleButton sq");
     expect(view).not.toContain("?disabled=${computedExampleAddDisabled}");

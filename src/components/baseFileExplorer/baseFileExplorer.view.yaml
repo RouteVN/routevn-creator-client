@@ -12,7 +12,6 @@ refs:
   item*:
     eventListeners:
       mousedown:
-        required: true
         handler: handleItemMouseDown
       pointerdown:
         handler: handleItemPointerDown
@@ -93,12 +92,12 @@ template:
                   - $for item, i in items:
                       - 'rtgl-view#itemRef${i} data-item-id=${item.id} data-file-explorer-item=true h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box; touch-action: ${item.touchAction}; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
-                              - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16:
+                              - rtgl-view d=h av=c ah=c w=16 h=16:
                                   - rtgl-svg#arrowRef${i} data-item-id=${item.id} data-file-explorer-arrow=true svg=${item.arrowIcon} wh=16 cur=pointer: null
                             $else:
-                              - rtgl-view d=h av=c ah=c w=16 h=16 min-w=16: null
+                              - rtgl-view d=h av=c ah=c w=16 h=16: null
                           - 'rtgl-view d=h g=md av=c w=1fg style="min-width: 0; overflow: hidden;"':
-                              - 'rtgl-view d=h av=c ah=c w=16 h=16 min-w=16 pos=rel style="color: ${item.iconCssColor};"':
+                              - 'rtgl-view d=h av=c ah=c w=16 h=16 pos=rel style="color: ${item.iconCssColor};"':
                                   - rtgl-svg svg=${item.svg} wh=16 c=${item.iconColor}: null
                                   - $if item.iconCornerBadge:
                                       - 'svg.iconCornerBadge aria-hidden=true viewBox="0 0 9 9" style="position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; overflow: visible; pointer-events: none;"':

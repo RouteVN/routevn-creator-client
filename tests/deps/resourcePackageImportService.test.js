@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createUrlPackageSource } from "../../src/deps/clients/importPackageClient.js";
+import {
+  createUrlPackageSource,
+  ImportPackageClientError,
+} from "../../src/deps/clients/importPackageClient.js";
 import { createResourcePackageImportService } from "../../src/deps/services/shared/resourcePackageImportService.js";
 import { ASSET_PACKAGE_KIND } from "../../src/internal/assetPackageResources.js";
 
@@ -233,7 +236,158 @@ const createService = ({
   };
 };
 
+// The author picked a text style and an image; the text style's font and
+// color come as dependencies.
+const v2Manifest = () => {
+  const manifest = assetManifest();
+  manifest.schema = "routevn.import-pack.v2";
+  manifest.repository.files.items["file.font"] = {
+    id: "file.font",
+    mimeType: "font/woff2",
+    size: 3,
+    source: { url: "../files/serif.woff2" },
+  };
+  manifest.repository.textStyles = {
+    items: {
+      "folder.styles": {
+        id: "folder.styles",
+        type: "folder",
+        name: "Styles",
+      },
+      "style.title": {
+        id: "style.title",
+        type: "textStyle",
+        name: "Title",
+        fontId: ["font.serif"],
+        colorId: "color.gold",
+        fontSize: 48,
+        lineHeight: 1.2,
+        fontWeight: "700",
+      },
+    },
+    tree: [{ id: "folder.styles", children: [{ id: "style.title" }] }],
+  };
+  manifest.dependencies = {
+    fonts: {
+      items: {
+        "font.serif": {
+          id: "font.serif",
+          type: "font",
+          name: "Serif",
+          fileId: "file.font",
+          fontFamily: "Serif",
+        },
+      },
+    },
+    colors: {
+      items: {
+        "color.gold": {
+          id: "color.gold",
+          type: "color",
+          name: "Gold",
+          hex: "#FFD84D",
+        },
+      },
+    },
+  };
+  return manifest;
+};
+
 describe("resourcePackageImportService", () => {
+  it("names dependency folders after a file's or link's package, or else after its fallback name", async () => {
+    const file = new Blob(["zip"]);
+    const importDependencies = async ({ packageName, source }) => {
+      const { service, importClient, commandApi } = createService();
+      const manifest = v2Manifest();
+      // An exported package carries only its kind.
+      manifest.package = { kind: manifest.package.kind };
+      if (packageName) manifest.package.name = packageName;
+      importClient.openPackage.mockReturnValue({
+        readManifest: async () => ({
+          manifest,
+          manifestUrl: "local-file:///Pack%20One.zip",
+        }),
+        readFile: async ({ descriptor }) => ({
+          bytes: new Uint8Array([1, 2, 3]),
+          byteLength: 3,
+          contentType: descriptor.mimeType,
+        }),
+      });
+      const planned = await service.createResourceImportPlan({
+        ...source,
+        fallbackDependencyFolderName: "Pack One",
+      });
+      expect(importClient.openPackage).toHaveBeenCalledWith(source);
+      expect(planned.plan.manifestUrl).toBe("local-file:///Pack%20One.zip");
+      const result = await service.executeResourceImportPlan({
+        planId: planned.plan.planId,
+        selectedResourceIds: [
+          planned.plan.resources.find((resource) => resource.name === "Title")
+            .sourceId,
+        ],
+        dependencyReplacements: Object.fromEntries(
+          planned.plan.dependencies.map((dependency) => [
+            dependency.sourceId,
+            "pack",
+          ]),
+        ),
+      });
+      expect(result).toMatchObject({ valid: true, importedCount: 3 });
+      return commandApi.commitAssetImportPackage.mock.calls[0][0].entries
+        .filter((entry) => entry.data.type === "folder")
+        .map((entry) => `${entry.resourceType}/${entry.data.name}`)
+        .sort();
+    };
+
+    // Without a name of its own, the package is named after its file.
+    expect(await importDependencies({ source: { zip: { file } } })).toEqual([
+      "colors/Pack One",
+      "fonts/Pack One",
+      "textStyles/Styles",
+    ]);
+    expect(
+      await importDependencies({
+        packageName: "Fantasy UI",
+        source: { link: "https://assets.example/download?id=1" },
+      }),
+    ).toEqual(["colors/Fantasy UI", "fonts/Fantasy UI", "textStyles/Styles"]);
+  });
+
+  it("checks a typed import link without requesting it", () => {
+    const { service, importClient } = createService();
+
+    expect(
+      service.validateResourceImportUrl({
+        url: "https://assets.example/pack.zip",
+      }),
+    ).toEqual({ valid: true });
+    expect(
+      service.validateResourceImportUrl({
+        url: "http://localhost:4179/asset-package.json",
+      }),
+    ).toEqual({ valid: true });
+    expect(
+      service.validateResourceImportUrl({ url: "assets.example/pack.zip" }),
+    ).toMatchObject({ valid: false, error: { code: "invalid_url" } });
+    expect(
+      service.validateResourceImportUrl({
+        url: "http://assets.example/pack.zip",
+      }),
+    ).toMatchObject({ valid: false, error: { code: "unsupported_protocol" } });
+    expect(importClient.openPackage).not.toHaveBeenCalled();
+  });
+
+  it("reports a link that cannot be opened as a failed plan", async () => {
+    const { service, importClient } = createService();
+    importClient.openPackage.mockImplementation(() => {
+      throw new ImportPackageClientError("invalid_url", "Enter a valid URL.");
+    });
+
+    expect(
+      await service.createResourceImportPlan({ link: "not a link" }),
+    ).toMatchObject({ valid: false, error: { code: "invalid_url" } });
+  });
+
   it("rejects manifests without the asset-package kind", async () => {
     const { service, importClient } = createService();
     const legacyManifest = assetManifest();
@@ -358,62 +512,6 @@ describe("resourcePackageImportService", () => {
   });
 
   it("imports a v2 pick with the dependencies it uses, in folders named after the pack", async () => {
-    // The author picked a text style and an image; the text style's font and
-    // color come as dependencies.
-    const v2Manifest = () => {
-      const manifest = assetManifest();
-      manifest.schema = "routevn.import-pack.v2";
-      manifest.repository.files.items["file.font"] = {
-        id: "file.font",
-        mimeType: "font/woff2",
-        size: 3,
-        source: { url: "../files/serif.woff2" },
-      };
-      manifest.repository.textStyles = {
-        items: {
-          "folder.styles": {
-            id: "folder.styles",
-            type: "folder",
-            name: "Styles",
-          },
-          "style.title": {
-            id: "style.title",
-            type: "textStyle",
-            name: "Title",
-            fontId: ["font.serif"],
-            colorId: "color.gold",
-            fontSize: 48,
-            lineHeight: 1.2,
-            fontWeight: "700",
-          },
-        },
-        tree: [{ id: "folder.styles", children: [{ id: "style.title" }] }],
-      };
-      manifest.dependencies = {
-        fonts: {
-          items: {
-            "font.serif": {
-              id: "font.serif",
-              type: "font",
-              name: "Serif",
-              fileId: "file.font",
-              fontFamily: "Serif",
-            },
-          },
-        },
-        colors: {
-          items: {
-            "color.gold": {
-              id: "color.gold",
-              type: "color",
-              name: "Gold",
-              hex: "#FFD84D",
-            },
-          },
-        },
-      };
-      return manifest;
-    };
     const importWith = async (pickName) => {
       const { service, importClient, commandApi } = createService();
       importClient.fetchManifest.mockResolvedValue({

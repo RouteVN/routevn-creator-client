@@ -140,6 +140,62 @@ const leavePack = (deps) => {
   if (planId) projectService.discardResourceImportPlan({ planId });
 };
 
+// What a package is called when its manifest does not name it: its file's
+// name, or the last part of its link, without the extension.
+const trimExtension = (name) => {
+  const baseName = name.replace(/\.[a-z\d]+$/i, "").trim();
+  return baseName === "" ? undefined : baseName;
+};
+
+const getFilePackageName = (file) => trimExtension(file.name ?? "");
+
+const getUrlPackageName = (url) => {
+  try {
+    const { hostname, pathname } = new URL(url);
+    const lastPart = pathname.split("/").filter(Boolean).pop();
+    return lastPart === undefined
+      ? hostname
+      : trimExtension(decodeURIComponent(lastPart));
+  } catch {
+    return undefined;
+  }
+};
+
+// Reads a package from a ZIP file (`zip`) or from a link to a ZIP or a
+// manifest (`link`), then opens its selection: there is no store or pack page
+// for it. Returns the error when the package cannot be read. A result that
+// arrives after the dialog closed, or after reading was cancelled, is
+// dropped, and a plan made for it is freed.
+const openSourcePackage = async (deps, { zip, link, sourceName }) => {
+  const { projectService, store, render } = deps;
+  leavePack(deps);
+  const operationId = generateId();
+  store.startLoadingPackage({ operationId, sourceName, url: link });
+  render();
+  const result = await projectService.createResourceImportPlan({
+    zip,
+    link,
+    operationId,
+    fallbackDependencyFolderName: sourceName,
+  });
+  if (store.selectOperationId() !== operationId) {
+    if (result.valid) {
+      projectService.discardResourceImportPlan({ planId: result.plan.planId });
+    }
+    return undefined;
+  }
+  if (result.valid === false) return result.error;
+  store.setPlan({
+    plan: result.plan,
+    projectTargets: createProjectTargets({
+      repositoryState: projectService.getRepositoryState?.(),
+      i18n: deps.i18n,
+    }),
+  });
+  render();
+  return undefined;
+};
+
 const closeStore = (deps) => {
   const { store, subject } = deps;
   leavePack(deps);
@@ -148,9 +204,47 @@ const closeStore = (deps) => {
   });
 };
 
+const emitCancelled = ({ dispatchEvent }) => {
+  dispatchEvent(new CustomEvent("import-cancelled"));
+};
+
+// A ZIP file that cannot be read as a package has nothing to show in the
+// dialog, so the dialog closes and a toast says why.
+const openZipFile = async (deps, file) => {
+  const { appService, i18n } = deps;
+  if (!file) {
+    emitCancelled(deps);
+    return;
+  }
+  const error = await openSourcePackage(deps, {
+    zip: { file },
+    sourceName: getFilePackageName(file),
+  });
+  if (!error) return;
+  appService.showToast({
+    message: mapErrorMessage(error, i18n).message,
+    status: "error",
+  });
+  closeStore(deps);
+  emitCancelled(deps);
+};
+
+// The dialog opens on its source: the asset store's packs, the package in
+// the ZIP file it was given, or the form that asks for a package's URL.
+const openSource = (deps, props) => {
+  const { render, store } = deps;
+  const source = store.selectSource();
+  if (source === "zip") return openZipFile(deps, props.file);
+  if (source === "url") {
+    render();
+    return undefined;
+  }
+  return openStore(deps);
+};
+
 export const handleBeforeMount = (deps) => {
   syncFromProps(deps, deps.props);
-  if (deps.props.open === true) openStore(deps);
+  if (deps.props.open === true) openSource(deps, deps.props);
   const searchSubscription = mountSearchSubscription(deps);
   return () => {
     searchSubscription.unsubscribe();
@@ -164,15 +258,9 @@ export const handleOnUpdate = (deps, payload = {}) => {
   if (oldProps.open === newProps.open) return;
   if (newProps.open !== true) closeStore(deps);
   syncFromProps(deps, newProps);
-  if (newProps.open === true) {
-    openStore(deps);
-    return;
-  }
+  if (newProps.open === true) return openSource(deps, newProps);
   deps.render();
-};
-
-const emitCancelled = ({ dispatchEvent }) => {
-  dispatchEvent(new CustomEvent("import-cancelled"));
+  return undefined;
 };
 
 export const handleStoreSearchInput = (deps, payload) => {
@@ -503,9 +591,60 @@ const handleReviewSubmit = async (deps, values) => {
 };
 
 // The store keeps the choices made here, so the pack's Import reopens them.
+// A package from a file or a URL has no pack page to return to, so Back
+// closes the dialog, which frees its plan.
 export const handleSelectionBack = (deps) => {
   const { store, render } = deps;
+  if (store.selectSource() !== "store") {
+    handleDialogClose(deps);
+    return;
+  }
   store.openPackStep();
+  render();
+};
+
+// The URL step's Import reads the package the URL links to. A URL that
+// cannot be used, or a package that cannot be read, shows why above the
+// form, which keeps what was typed.
+export const handleUrlFormAction = async (deps, payload) => {
+  const { i18n, projectService, store, render } = deps;
+  const { actionId, values, valid } = payload._event.detail;
+  if (actionId === "cancel") {
+    handleDialogClose(deps);
+    return;
+  }
+  if (actionId !== "import-url" || valid === false) return;
+
+  const url = (values.url ?? "").trim();
+  const validation = projectService.validateResourceImportUrl({ url });
+  if (validation.valid === false) {
+    store.openUrlStep({
+      error: mapErrorMessage(validation.error, i18n),
+      url,
+    });
+    render();
+    return;
+  }
+
+  const error = await openSourcePackage(deps, {
+    link: url,
+    sourceName: getUrlPackageName(url),
+  });
+  if (!error) return;
+  store.openUrlStep({ error: mapErrorMessage(error, i18n) });
+  render();
+};
+
+// Cancel while a package is read stops the read. A URL's form shows again;
+// a file has nothing to return to, so the dialog closes.
+export const handleLoadingCancel = (deps) => {
+  const { store, render } = deps;
+  if (store.selectSource() !== "url") {
+    handleDialogClose(deps);
+    return;
+  }
+  leavePack(deps);
+  store.openUrlStep();
   render();
 };
 

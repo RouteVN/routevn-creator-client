@@ -640,18 +640,6 @@ export const setInitialZoomAndPan = (
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-const normalizeCursorValue = (cursor) => {
-  if (!cursor) {
-    return undefined;
-  }
-
-  if (typeof CSS === "undefined" || typeof CSS.supports !== "function") {
-    return cursor;
-  }
-
-  return CSS.supports("cursor", cursor) ? cursor : undefined;
-};
-
 const getVisibleViewportAxis = (start, end, limit) => {
   const clippedStart = clamp(start, 0, limit);
   const clippedEnd = clamp(end, 0, limit);
@@ -825,8 +813,9 @@ export const selectViewData = ({ state, props, i18n = {} }) => {
     borderWidth: "sm",
   }));
 
-  const containerCursor = normalizeCursorValue(props.cursor);
-  const itemCursor = normalizeCursorValue(props.cursor) || "move";
+  // Callers pass a CSS cursor keyword, such as "crosshair".
+  const containerCursor = props.cursor || undefined;
+  const itemCursor = props.cursor || "move";
   const minimapViewportCursor = state.isDraggingMinimapViewport
     ? "grabbing"
     : "grab";

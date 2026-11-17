@@ -1,5 +1,5 @@
 import { JSDOM } from "jsdom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createProgressDialog } from "../../src/deps/clients/progressDialog.js";
 
 const createDocument = () =>
@@ -156,5 +156,68 @@ describe("progress dialog steps", () => {
 
     dialog.update({ steps: steps(undefined) });
     expect(detail()).toEqual(["", ""]);
+  });
+});
+
+describe("progress dialog cancel button", () => {
+  const cancelButton = (document) =>
+    document.querySelector("[data-progress-cancel]");
+
+  it("shows no button for work that cannot be stopped", () => {
+    const document = createDocument();
+    const dialog = createProgressDialog(
+      { title: "Exporting", progress: {} },
+      document,
+    );
+    dialog.update({ cancel: { label: "Cancel", disabled: false } });
+    expect(cancelButton(document)).toBeNull();
+  });
+
+  it("keeps the button under the steps, status and progress bar", () => {
+    const document = createDocument();
+    const onCancel = vi.fn();
+    const dialog = createProgressDialog(
+      {
+        title: "Exporting",
+        steps: [{ label: "Step one", state: "active" }],
+        cancel: { label: "Cancel", onCancel },
+      },
+      document,
+    );
+    dialog.update({ status: "Almost done", progress: {} });
+
+    const button = cancelButton(document);
+    expect(button.textContent).toBe("Cancel");
+    const content = button.parentNode.parentNode;
+    expect(content.lastElementChild).toBe(button.parentNode);
+    expect(
+      button.parentNode.previousElementSibling.hasAttribute(
+        "data-progress-track",
+      ),
+    ).toBe(true);
+
+    button.click();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores clicks while the work is stopping", () => {
+    const document = createDocument();
+    const onCancel = vi.fn();
+    const dialog = createProgressDialog(
+      { title: "Exporting", cancel: { label: "Cancel", onCancel } },
+      document,
+    );
+    const button = cancelButton(document);
+
+    dialog.update({ cancel: { label: "Cancelling…", disabled: true } });
+    expect(button.textContent).toBe("Cancelling…");
+    expect(button.hasAttribute("disabled")).toBe(true);
+    button.click();
+    expect(onCancel).not.toHaveBeenCalled();
+
+    dialog.update({ cancel: { label: "Cancel", disabled: false } });
+    expect(button.hasAttribute("disabled")).toBe(false);
+    button.click();
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

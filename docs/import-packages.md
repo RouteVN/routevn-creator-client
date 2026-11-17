@@ -370,6 +370,34 @@ A color has no preview file; it previews as a swatch of its `#RRGGBB` value,
 which the plan already requires of a color, with the value, such as
 `#FFD84D`, under its name, on its card and full screen.
 
+## Import sources
+
+A package can come from three places. All three end at the same Choose
+Resources page and the same import (see Import flow).
+
+- **Import**, in a resource page's three-dot menu, opens the RouteVN asset
+  store (see Asset store).
+- **Import from Zip File**, under Import Asset Pack on the Config page, opens the device's file picker for a package ZIP,
+  such as one exported from Releases → Asset Packs. Cancelling the picker does
+  nothing. The dialog opens saying that it is reading the package, then shows
+  Choose Resources. A file that is not a package closes the dialog, and a
+  toast says why. Nothing is requested from the network.
+- **Import from URL**, under Import Asset Pack on the Config page, opens a form with one field, Pack URL, and Import and
+  Cancel. The link may lead to a package ZIP or to a package manifest (see
+  Reading a package from a link). Import reads the package and shows Choose
+  Resources. A link that is empty, malformed or not HTTPS is refused before
+  anything is requested, and a package that cannot be read returns to the
+  form; both say why above the field, which keeps what was typed.
+
+The dialog's header names the source: Asset Store, Import from Zip File or
+Import from URL. While a package from a file or a link is read, Cancel stops
+it: a link returns to its form, and a file closes the dialog. For these two
+sources Choose Resources shows the package's name from its manifest, or else
+the file's name or the last part of the link, without the extension, and Back
+closes the dialog, as there is no pack page to return to. The folders its
+dependencies go into are named the same way, where the asset store uses the
+pack's title. Closing the dialog, by Back or otherwise, frees what was read.
+
 ## Asset store
 
 Import opens the RouteVN asset store in a large dialog, 32 px from each window
@@ -379,7 +407,7 @@ field, and free packs, newest first, 20 at a time, each card with its
 cover, title, summary (at most two lines, ending in an ellipsis when cut, and
 left out when the pack has none) and creator. Search matches pack titles and creator names once
 typing pauses for 300 ms; closing the store drops a search still waiting. The store has no asset type filter for now: it
-lists every pack, whichever page Import was opened from. Choosing a pack opens its
+lists every pack, whichever page it was opened from. Choosing a pack opens its
 page: its description, the current
 version's release notes under "What's new", with their line breaks, when it has
 any, and every asset in the pack, read from its manifest. Only the author's picks show; dependencies do not. Assets are grouped as on the resource pages: a group for each
@@ -450,10 +478,52 @@ response's `Content-Range`. A server that answers with the whole file instead
 of a 206 range is refused. Size limits and `sha256` checks apply as they do to
 files fetched by URL.
 
+## Reading a package ZIP file
+
+A package ZIP picked from the device is read in place too, a slice of the file
+at a time, so a large package is never held in memory whole. The app has no
+directory location for it, so it first reads the ZIP's end record, which is in
+the file's last 65,557 bytes (the 22-byte record and the longest comment a ZIP
+can carry), and takes the central directory's offset and size from it. Those
+last bytes are kept, as they usually hold the directory too. The manifest and
+each file are then entries, read as from a published package, with the same
+size limits and `sha256` checks.
+
+The ZIP must be laid out as the app exports it: `asset-package.json` and
+`files/<id>` at its top level, every entry stored (uncompressed). A ZIP that
+was unpacked and compressed again, a ZIP64 archive, a ZIP split over several
+disks and a ZIP with other data before its first entry are refused as not
+readable.
+
+## Reading a package from a link
+
+A link typed in Import from URL may lead to a package ZIP or to a manifest.
+The app does not go by how the link is written, as a download link often has
+no file extension. It sends one request for the link from its first byte
+(`Range: bytes=0-`, which needs no CORS preflight) and looks at how the body
+starts:
+
+- A body that starts as a ZIP is a package ZIP.
+  - When the server answers with a 206 and the ZIP's size is known, from
+    `Content-Range` when the server shows it, and otherwise from
+    `Content-Length`, the rest of the body is dropped and the ZIP is read in
+    place with byte ranges: its last bytes for the end record and directory,
+    as for a ZIP file, then a range for each entry, as for a published
+    package.
+  - Otherwise the server does not serve ranges, and the body is the whole
+    ZIP: the same response is read to its end, within the total download
+    limit and five minutes, and its entries are read from memory.
+- Anything else is read as a manifest: the link is requested again as JSON,
+  and each file's `source.url` resolves against it. A link that returns
+  neither, such as a sign-in or sharing page, is refused as not being a
+  package.
+
+A ZIP at a link has the same layout requirements as a ZIP file.
+
 ## Import flow
 
-1. Choose a pack in the asset store, then read and strictly validate the
-   manifest inside its package.
+1. Choose a pack in the asset store, pick a package ZIP file, or enter a
+   package's URL, then read and strictly validate the package's manifest.
 2. Show a selection page when the package contains multiple picks.
 3. Keep the picks that selected picks use, directly or through dependencies,
    selected and locked; add the dependencies they use without listing them.
@@ -469,13 +539,15 @@ A package with one pick skips the selection page.
 
 ## Publisher requirements
 
-Production package URLs from the asset store, and any manifest or file URL,
-must use HTTPS. HTTP is accepted only for `localhost`, `127.0.0.1`, and `::1`
-testing.
+Production package URLs from the asset store, a link entered in Import from
+URL, and any manifest or file URL, must use HTTPS. HTTP is accepted only for
+`localhost`, `127.0.0.1`, and `::1` testing.
 
 Publishers should:
 
 - return the manifest as `application/json` or a JSON `+json` type
+- serve a package ZIP with byte ranges and a `Content-Length`, so the app
+  reads only what it needs instead of downloading the ZIP whole
 - enable CORS for supported RouteVN Creator origins
 - avoid third-party-cookie requirements
 - use public or package-scoped signed URLs for protected packages
@@ -499,6 +571,8 @@ Current limits are:
 - 2,000 package files
 - 50 MiB per file
 - 200 MiB total per import, counting the files it brings in
+- 200 MiB for a package ZIP downloaded whole from a link whose server does not
+  serve byte ranges, within five minutes
 - 200 MiB of previews per open pack
 - 500 resources per type, picks and dependencies together
 - 32 folder-tree levels
