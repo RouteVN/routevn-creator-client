@@ -13,6 +13,24 @@ final class PlayerViewController: UIViewController, WKNavigationDelegate, WKUIDe
     private var bridge: PlayerBridge!
     private var appActive = false
     private var reloadWhenActive = false
+    private var messageLabel: UILabel?
+    // Web content process loss (see webViewWebContentProcessDidTerminate):
+    // when the game's page last started, whether the game has left the
+    // foreground since, and how many losses in a row came soon after a start.
+    private var gameStartedAt = DispatchTime.now()
+    private var leftForegroundSinceGameStart = false
+    private var rapidProcessLosses = 0
+
+    // Two losses in a row within this long after a start, with the game in
+    // the foreground the whole time, mean the game cannot run on this device,
+    // so it stops restarting. Once the game leaves the foreground iOS may end
+    // the process to free memory, which says nothing about the game.
+    static let rapidLossInterval: TimeInterval = 30
+    static let rapidLossLimit = 2
+
+    static func isRapidProcessLoss(inForegroundSinceStart: Bool, sinceStart: TimeInterval) -> Bool {
+        inForegroundSinceStart && sinceStart < rapidLossInterval
+    }
 
     static func isPlayerURL(_ url: URL) -> Bool {
         url.scheme == scheme && url.host == host
@@ -71,7 +89,39 @@ final class PlayerViewController: UIViewController, WKNavigationDelegate, WKUIDe
         }
         #endif
         view.addSubview(webView)
+        startGame()
+    }
+
+    // Loads the game from its first page. Also restarts it after iOS ended
+    // the web content process.
+    private func startGame() {
+        messageLabel?.removeFromSuperview()
+        messageLabel = nil
+        gameStartedAt = DispatchTime.now()
+        leftForegroundSinceGameStart = false
         webView.load(URLRequest(url: Self.startURL))
+    }
+
+    private func showMessage(_ text: String) {
+        messageLabel?.removeFromSuperview()
+        let label = UILabel()
+        label.text = text
+        label.textColor = .white
+        label.backgroundColor = .black
+        label.font = .systemFont(ofSize: 18)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(label)
+        // Fills the screen, so the stopped game is covered, and keeps the
+        // text clear of the screen edges.
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: view.topAnchor),
+            label.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            label.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 24),
+            label.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -24),
+        ])
+        messageLabel = label
     }
 
     deinit {
@@ -90,9 +140,12 @@ final class PlayerViewController: UIViewController, WKNavigationDelegate, WKUIDe
     func setAppActive(_ active: Bool) {
         appActive = active
         guard let webView else { return }
+        if !active {
+            leftForegroundSinceGameStart = true
+        }
         if active, reloadWhenActive {
             reloadWhenActive = false
-            webView.load(URLRequest(url: Self.startURL))
+            startGame()
             return
         }
         if active {
@@ -151,11 +204,26 @@ final class PlayerViewController: UIViewController, WKNavigationDelegate, WKUIDe
     }
 
     // iOS can end the web content process, for example under memory pressure.
-    // Saves are in the database, so start the game again.
+    // Saves are in the database, so start the game again: it returns to its
+    // title screen. A game that keeps losing the process right after it
+    // starts shows a message instead of restarting in a loop.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        let rapid = Self.isRapidProcessLoss(
+            inForegroundSinceStart: !leftForegroundSinceGameStart,
+            sinceStart: TimeInterval(DispatchTime.now().uptimeNanoseconds - gameStartedAt.uptimeNanoseconds) / 1_000_000_000
+        )
+        rapidProcessLosses = rapid ? rapidProcessLosses + 1 : 0
+        if rapidProcessLosses >= Self.rapidLossLimit {
+            showMessage("The game stopped and could not restart. Close other apps, then reopen the game.")
+            // Coming back to the game starts it again.
+            rapidProcessLosses = 0
+            reloadWhenActive = true
+            return
+        }
         if appActive {
-            webView.load(URLRequest(url: Self.startURL))
+            startGame()
         } else {
+            // A game restarted in the background would lose its process again.
             reloadWhenActive = true
         }
     }

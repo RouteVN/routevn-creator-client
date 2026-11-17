@@ -194,9 +194,16 @@ version 1, and the same `json_valid` CHECK and null-delete triggers as the
 desktop players. The JavaScript side shares
 `src/deps/clients/shared/mobilePlayerRuntimeDb.js` with Android.
 
-Audio and media are suspended while the app is inactive. If iOS stops the
-web content process, the page reloads. External `http` and `https` links open
-in Safari.
+Audio and media are suspended while the app is inactive. External `http` and
+`https` links open in Safari.
+
+When iOS ends the web content process, for example to free memory, the player
+loads the game again, so the game returns to its title screen with its saves.
+A loss while the game is in the background restarts it when the player comes
+back. Two losses in a row within 30 seconds of a start, with the game in the
+foreground the whole time, mean the game cannot run: the player shows a
+message instead of restarting, and starts the game again when the player
+returns.
 
 ## Creator Hosts
 
