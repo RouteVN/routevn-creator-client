@@ -62,3 +62,21 @@ describe("config language view", () => {
     expect(languageView).not.toContain("languageDescription");
   });
 });
+
+describe("config asset package import view", () => {
+  it("offers a zip file and a URL under Import Package", () => {
+    const view = readFileSync(
+      new URL("../../src/pages/config/config.view.yaml", import.meta.url),
+      "utf8",
+    );
+
+    expect(view.indexOf("#assetPackageSection")).toBeLessThan(
+      view.indexOf("#importPackageSection"),
+    );
+    expect(view).toContain("rtgl-button#importPackageZipButton");
+    expect(view).toContain("rtgl-button#importPackageUrlButton");
+    expect(view).toContain(
+      "rvn-resource-import-dialog#importDialog :open=${importDialog.isOpen} :source=${importDialog.source} :file=${importDialog.file}",
+    );
+  });
+});

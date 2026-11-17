@@ -9,6 +9,7 @@ import { isAssetPackageFileMimeTypeAllowed } from "../../../internal/assetPackag
 import {
   createImportPackageClient,
   ImportPackageClientError,
+  resolveImportUrl,
 } from "../../clients/importPackageClient.js";
 
 const PREVIEW_IMAGE_MIME_TYPES = new Set([
@@ -410,20 +411,39 @@ export const createResourcePackageImportService = ({
   };
 
   return {
-    // `url` is a manifest whose files resolve against it; `zip` is a
-    // published package read in place (see importPackageClient.openPackage).
-    // A v2 package's dependencies go into folders named `dependencyFolderName`.
+    // Whether a link typed by the user can be imported from: a well-formed
+    // HTTPS URL, or an HTTP one on this device. Nothing is requested.
+    validateResourceImportUrl({ url } = {}) {
+      try {
+        resolveImportUrl(url);
+        return { valid: true };
+      } catch (error) {
+        return toErrorResult(error);
+      }
+    },
+
+    // The package's source, as importPackageClient.openPackage takes it:
+    // `url` is a manifest whose files resolve against it; `zip` is a package
+    // ZIP, published (`{url, size, directoryOffset, directorySize}`), on any
+    // server (`{url}`) or a file on this device (`{file}`); `link` is a URL
+    // to either a ZIP or a manifest.
+    // A v2 package's dependencies go into folders named
+    // `dependencyFolderName`, which the asset store sets to the pack's title.
+    // Without it they are named after the package, by its manifest, or else
+    // `fallbackDependencyFolderName`, such as a package file's name.
     async createResourceImportPlan({
       url,
       zip,
+      link,
       operationId,
       dependencyFolderName,
+      fallbackDependencyFolderName,
     } = {}) {
       let operation;
       try {
         recordEvent("plan.started");
         operation = beginOperation(operationId);
-        const source = importClient.openPackage({ url, zip });
+        const source = importClient.openPackage({ url, zip, link });
         const { manifest, manifestUrl } = await source.readManifest({
           signal: operation.controller.signal,
         });
@@ -435,6 +455,7 @@ export const createResourcePackageImportService = ({
           repositoryRevision: getRepositoryRevision(),
           createId: idGenerator,
           dependencyFolderName,
+          fallbackDependencyFolderName,
         });
         if (plan.knownDownloadBytes > importClient.limits.totalBytes) {
           throw new ImportPackageClientError(

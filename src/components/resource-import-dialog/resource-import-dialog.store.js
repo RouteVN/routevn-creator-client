@@ -10,8 +10,21 @@ import { generateId } from "../../internal/id.js";
 const STORE_STEP = "store";
 const PACK_STEP = "pack";
 const CREATOR_STEP = "creator";
+// Asks for a package's URL, for a dialog opened on the "url" source.
+const URL_STEP = "url";
+// A package from a file or a URL is being read, before its selection opens.
+const LOADING_STEP = "loading";
 const SELECTION_STEP = "selection";
 const PROGRESS_STEP = "progress";
+
+// What a dialog imports from: the asset store, a package ZIP file picked from
+// this device, or a URL typed in the dialog. Each opens on its own step.
+const STORE_SOURCE = "store";
+const FIRST_STEP_BY_SOURCE = Object.freeze({
+  [STORE_SOURCE]: STORE_STEP,
+  zip: LOADING_STEP,
+  url: URL_STEP,
+});
 
 const createCatalogState = () => ({
   status: "idle",
@@ -275,6 +288,54 @@ const createLinkFields = ({ plan, values, copy, dateTime, projectTargets }) => {
   });
 };
 
+// The URL step's form: the package's URL, with what it may link to in the
+// label's hint.
+const urlForm = ({ copy }) => ({
+  fields: [
+    {
+      name: "url",
+      type: "input-text",
+      label: copy.urlFieldLabel ?? "Package URL",
+      tooltip: {
+        content:
+          copy.urlFieldHint ??
+          "A link to an asset package zip file, or to its asset-package.json manifest. The link must use HTTPS.",
+      },
+      placeholder: "https://",
+      required: {
+        message: copy.urlRequired ?? "Enter the package URL.",
+      },
+    },
+  ],
+  actions: {
+    buttons: [
+      {
+        id: "cancel",
+        variant: "se",
+        label: copy.urlCancelButton ?? "Cancel",
+      },
+      {
+        id: "import-url",
+        variant: "pr",
+        label: copy.importButton ?? "Import",
+        type: "submit",
+        validate: true,
+      },
+    ],
+  },
+});
+
+// The header names what the dialog imports from.
+const getDialogTitle = ({ state, copy }) => {
+  if (state.source === "zip") {
+    return copy.importFromZipMenuItem ?? "Import from Zip File";
+  }
+  if (state.source === "url") {
+    return copy.importFromUrlMenuItem ?? "Import from URL";
+  }
+  return copy.storeTitle ?? "Asset Store";
+};
+
 // The title and Back are in the selection-header slot, so they scroll with
 // the resources and only Import stays in place. Story links follow the
 // resources.
@@ -336,7 +397,13 @@ export const createInitialState = () => ({
   // Tells this dialog's search events apart from another mounted dialog's.
   instanceId: generateId(),
   open: false,
+  source: STORE_SOURCE,
   step: STORE_STEP,
+  // What a package from a file or a URL is called when its manifest has no
+  // name: the file's name, or the last part of the URL.
+  sourceName: undefined,
+  // The URL typed on the URL step, kept when the step shows again.
+  urlValue: "",
   searchText: "",
   catalog: createCatalogState(),
   planPackId: undefined,
@@ -366,7 +433,13 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
   state.open = props.open === true;
 
   if (reset || (!wasOpen && state.open)) {
-    state.step = STORE_STEP;
+    state.source =
+      FIRST_STEP_BY_SOURCE[props.source] === undefined
+        ? STORE_SOURCE
+        : props.source;
+    state.step = FIRST_STEP_BY_SOURCE[state.source];
+    state.sourceName = undefined;
+    state.urlValue = "";
     state.searchText = "";
     state.catalog = createCatalogState();
     state.planPackId = undefined;
@@ -486,6 +559,29 @@ export const setPackLoadError = ({ state }, { error } = {}) => {
   state.packStatus = "failed";
 };
 
+// A package from a file or a URL is read before anything of it shows.
+export const startLoadingPackage = (
+  { state },
+  { operationId, sourceName, url } = {},
+) => {
+  state.step = LOADING_STEP;
+  state.operationId = operationId;
+  state.sourceName = sourceName;
+  state.urlValue = url ?? state.urlValue;
+  state.error = undefined;
+};
+
+// The URL step shows again with what was typed: under `error` when its
+// package could not be read, or without one when reading it was cancelled.
+export const openUrlStep = ({ state }, { error, url } = {}) => {
+  state.step = URL_STEP;
+  state.operationId = undefined;
+  state.urlValue = url ?? state.urlValue;
+  state.error = error;
+  state.formKey += 1;
+};
+
+// A package from a file or a URL opens on its selection once it is read.
 export const setPlan = ({ state }, { plan, projectTargets } = {}) => {
   state.plan = plan;
   state.projectTargets = projectTargets ?? createProjectTargets();
@@ -692,6 +788,8 @@ export const setError = ({ state }, { error, step } = {}) => {
 };
 
 export const selectPlan = ({ state }) => state.plan;
+export const selectSource = ({ state }) => state.source;
+export const selectUrlValue = ({ state }) => state.urlValue;
 export const selectPlanPackId = ({ state }) => state.planPackId;
 export const selectStep = ({ state }) => state.step;
 export const selectOperationId = ({ state }) => state.operationId;
@@ -877,6 +975,13 @@ export const selectViewData = ({ state, i18n = {} }) => {
     complete: copy.completeLabel ?? "Import complete",
   };
   const isSelectionStep = state.step === SELECTION_STEP;
+  const isUrlStep = state.step === URL_STEP;
+  // A package from a file or a URL is named by its manifest, or else by its
+  // file or link; a store pack's name shows on its pack page.
+  const manifestName = plan?.package?.name?.trim();
+  const fallbackName =
+    plan && state.source !== STORE_SOURCE ? state.sourceName : undefined;
+  const packageName = manifestName ? manifestName : fallbackName;
   const allResourcesSelected =
     (plan?.resources.length ?? 0) > 0 &&
     plan.resources.every(
@@ -951,7 +1056,14 @@ export const selectViewData = ({ state, i18n = {} }) => {
   return {
     open: state.open,
     step: state.step,
+    dialogTitle: getDialogTitle({ state, copy }),
     isStoreStep: state.step === STORE_STEP,
+    isUrlStep,
+    urlForm: isUrlStep ? urlForm({ copy }) : undefined,
+    urlDefaultValues: { url: state.urlValue },
+    isLoadingStep: state.step === LOADING_STEP,
+    loadingLabel: copy.packageLoading ?? "Reading the asset package",
+    loadingCancelLabel: copy.urlCancelButton ?? "Cancel",
     isPackStep: state.step === PACK_STEP,
     isCreatorStep: state.step === CREATOR_STEP,
     creator: getCreatorViewData({ state, copy }),
@@ -1005,8 +1117,8 @@ export const selectViewData = ({ state, i18n = {} }) => {
     },
     selectionTitle: copy.selectResourcesTitle ?? "Choose Resources",
     selectionBackLabel: copy.backButton ?? "Back",
-    packageName: plan?.package?.name,
-    hasPackageMetadata: hasPackageMetadata(plan),
+    packageName,
+    hasPackageMetadata: hasPackageMetadata(plan) || packageName !== undefined,
     planId: plan?.planId,
     packagePublisher: plan?.package?.publisher,
     packagePublisherText: formatI18nCopy(

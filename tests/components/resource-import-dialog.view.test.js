@@ -314,4 +314,18 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).not.toContain("animation-timeline-preview");
     expect(viewSource).not.toContain("rvn-keyframe-timeline");
   });
+
+  it("has a URL step and a loading step for packages from a URL or a zip file", () => {
+    expect(viewSource).toContain("rtgl-text s=lg w=1fg: ${dialogTitle}");
+    expect(viewSource).toContain("$if isUrlStep:");
+    expect(viewSource).toContain(
+      "rtgl-form#urlForm key=url-${formKey} :defaultValues=${urlDefaultValues} :form=${urlForm} w=f",
+    );
+    expect(viewSource).toContain("handler: handleUrlFormAction");
+    expect(viewSource).toContain("$if isLoadingStep:");
+    expect(viewSource).toContain(
+      "rtgl-button#cancelLoadingButton v=se: ${loadingCancelLabel}",
+    );
+    expect(viewSource).toContain("handler: handleLoadingCancel");
+  });
 });

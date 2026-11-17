@@ -7,6 +7,14 @@ refs:
     eventListeners:
       form-action:
         handler: handleFormAction
+  urlForm:
+    eventListeners:
+      form-action:
+        handler: handleUrlFormAction
+  cancelLoadingButton:
+    eventListeners:
+      click:
+        handler: handleLoadingCancel
   storeSearchInput:
     eventListeners:
       value-input:
@@ -131,12 +139,22 @@ template:
           # The header stays in place while the page under it scrolls, with
           # the dialog's own close button at its right.
           - 'rtgl-view d=h w=f av=c g=md ph=lg pv=md bwb=xs bc=bo style="box-sizing: border-box; flex: 0 0 auto;"':
-              - rtgl-text s=lg w=1fg: ${catalog.storeTitle}
+              - rtgl-text s=lg w=1fg: ${dialogTitle}
               - 'rtgl-button#dialogCloseButton sq v=gh pre=x aria-label="${closeLabel}" title="${closeLabel}"': null
           - $if errorMessage:
               - 'rtgl-view w=f ph=lg pt=md style="box-sizing: border-box;"':
                   - rtgl-view w=f p=md bgc=de br=md role=alert aria-live=assertive:
                       - rtgl-text c=de-fg: ${errorMessage}
+          # A dialog opened on a URL asks for it first, in a narrow column.
+          - $if isUrlStep:
+              - 'rtgl-view d=v w=f h=1fg ah=c sv sbv=touch style="min-height: 0;"':
+                  - 'rtgl-view#urlColumn d=v p=lg style="box-sizing: border-box; width: 100%; max-width: 560px;"':
+                      - rtgl-form#urlForm key=url-${formKey} :defaultValues=${urlDefaultValues} :form=${urlForm} w=f: null
+          # A package from a file or a URL is read before its selection opens.
+          - $if isLoadingStep:
+              - rtgl-view w=f h=1fg av=c ah=c d=v g=md role=status aria-live=polite:
+                  - rtgl-text s=lg: ${loadingLabel}
+                  - rtgl-button#cancelLoadingButton v=se: ${loadingCancelLabel}
           - $if isStoreStep && !isBusy:
               - 'rtgl-view d=h md-d=v w=f h=1fg style="min-height: 0;"':
                   - 'rtgl-view d=v w=280 md-w=f g=lg p=lg sv style="flex: 0 0 auto; box-sizing: border-box;"':

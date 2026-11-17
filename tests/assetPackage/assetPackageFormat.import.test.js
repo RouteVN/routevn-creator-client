@@ -64,12 +64,31 @@ const readPackage = (dir) => {
   return { manifest, files };
 };
 
-// The package as the asset store publishes it: a stored ZIP read in place
-// with byte ranges, which is how the import dialog opens a pack.
-const publishPackage = async (files) => {
+// The package as a stored ZIP, the way the app exports one, and each way the
+// import dialog opens it:
+// - "store": as the asset store publishes it, read in place with byte
+//   ranges at the size and directory place the store names;
+// - "file": a ZIP file picked from this device, read without any request;
+// - "link": a link to the ZIP on a server that ignores byte ranges, so the
+//   ZIP is downloaded whole.
+const publishPackage = async (files, from = "store") => {
   const zip = new JSZip();
   for (const [path, bytes] of files) zip.file(path, bytes);
   const bytes = await zip.generateAsync({ type: "uint8array" });
+  if (from === "file") {
+    return {
+      fetchImpl: async () => {
+        throw new Error("A package file is read without requests.");
+      },
+      source: { zip: { file: new Blob([bytes]) } },
+    };
+  }
+  if (from === "link") {
+    return {
+      fetchImpl: async () => new Response(bytes, { status: 200 }),
+      source: { link: "https://packages.test/download?id=package-one" },
+    };
+  }
   const end = new DataView(bytes.buffer, bytes.byteOffset + bytes.length - 22);
   return {
     fetchImpl: async (_url, { headers }) => {
@@ -78,11 +97,13 @@ const publishPackage = async (files) => {
         status: 206,
       });
     },
-    zip: {
-      url: "https://packages.test/package-one.zip",
-      size: bytes.length,
-      directorySize: end.getUint32(12, true),
-      directoryOffset: end.getUint32(16, true),
+    source: {
+      zip: {
+        url: "https://packages.test/package-one.zip",
+        size: bytes.length,
+        directorySize: end.getUint32(12, true),
+        directoryOffset: end.getUint32(16, true),
+      },
     },
   };
 };
@@ -210,7 +231,7 @@ const importPackage = async ({
   });
 
   const planResult = await service.createResourceImportPlan({
-    zip: published.zip,
+    ...published.source,
     dependencyFolderName: DEPENDENCY_FOLDER_NAME,
   });
   expect(planResult.error).toBeUndefined();
@@ -490,7 +511,19 @@ describe.each(PACKAGE_DIRS)(
         scenario: "into a project that has same-named resources",
         replaceDependencies: true,
       },
-    ])("$scenario", ({ replaceDependencies }) => {
+      // The same package from the other two places an import can read it,
+      // with the same result.
+      {
+        scenario: "into a new project, from a zip file",
+        replaceDependencies: false,
+        from: "file",
+      },
+      {
+        scenario: "into a new project, from a link to a zip",
+        replaceDependencies: false,
+        from: "link",
+      },
+    ])("$scenario", ({ replaceDependencies, from }) => {
       let target;
       let imported;
       let linkTargets;
@@ -502,7 +535,7 @@ describe.each(PACKAGE_DIRS)(
       const importedItems = [];
 
       beforeAll(async () => {
-        const published = await publishPackage(files);
+        const published = await publishPackage(files, from);
         target = await createTarget(
           replaceDependencies ? "existing-project" : "new-project",
         );
