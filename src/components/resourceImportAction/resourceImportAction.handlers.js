@@ -22,14 +22,26 @@ export const handleMenuClose = (deps) => {
   render();
 };
 
-export const handleMenuItemClick = (deps, payload) => {
-  const { dispatchEvent, render, store } = deps;
+// What each Import menu item opens the import dialog on.
+const IMPORT_SOURCE_BY_ITEM_VALUE = Object.freeze({
+  "import-store": "store",
+  "import-zip": "zip",
+  "import-url": "url",
+});
+
+// A package ZIP file. Both forms are named, as a platform's picker may know
+// a file by its extension or by its type.
+const ZIP_FILE_ACCEPT = ".zip,application/zip";
+
+// The asset store and the URL form open in the import dialog at once. A ZIP
+// file is picked first, and the dialog opens on it once one is chosen.
+export const handleMenuItemClick = async (deps, payload) => {
+  const { appService, dispatchEvent, i18n, render, store } = deps;
   const { item } = payload._event.detail;
   const position = store.selectMenuPosition();
   store.closeMenu();
-  if (item.value === "import") {
-    store.openImportDialog();
-  } else {
+  const source = IMPORT_SOURCE_BY_ITEM_VALUE[item.value];
+  if (source === undefined) {
     dispatchEvent(
       new CustomEvent("menu-action", {
         detail: { item, position },
@@ -37,7 +49,32 @@ export const handleMenuItemClick = (deps, payload) => {
         composed: true,
       }),
     );
+    render();
+    return;
   }
+  if (source !== "zip") {
+    store.openImportDialog({ source });
+    render();
+    return;
+  }
+
+  render();
+  let file;
+  try {
+    file = await appService.pickFiles({
+      accept: ZIP_FILE_ACCEPT,
+      multiple: false,
+    });
+  } catch {
+    appService.showToast({
+      message:
+        i18n.resourceImport?.zipPickFailed ?? "The file could not be selected.",
+      status: "error",
+    });
+    return;
+  }
+  if (!file) return;
+  store.openImportDialog({ source, file });
   render();
 };
 

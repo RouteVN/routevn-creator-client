@@ -1,5 +1,9 @@
 import { ImportPackageClientError } from "./importPackageErrors.js";
-import { openRemoteZip } from "./remoteZip.js";
+import {
+  findZipDirectory,
+  openRemoteZip,
+  ZIP_END_SEARCH_BYTES,
+} from "./remoteZip.js";
 
 export { ImportPackageClientError };
 
@@ -10,6 +14,8 @@ const DEFAULT_LIMITS = Object.freeze({
   totalBytes: 200 * 1024 * 1024,
   manifestTimeoutMs: 15_000,
   fileTimeoutMs: 30_000,
+  // A package ZIP downloaded whole, from a server without byte ranges.
+  packageTimeoutMs: 5 * 60_000,
   downloadConcurrency: 3,
 });
 
@@ -64,14 +70,21 @@ const createTimedSignal = ({ signal, timeoutMs }) => {
     signal?.addEventListener("abort", abortFromSource, { once: true });
   }
 
-  const timeoutId = setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, timeoutMs);
+  const startTimer = (ms) =>
+    setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, ms);
+  let timeoutId = startTimer(timeoutMs);
 
   return {
     signal: controller.signal,
     didTimeOut: () => timedOut,
+    // Starts the time limit again, at `ms` from now.
+    restart(ms) {
+      clearTimeout(timeoutId);
+      timeoutId = startTimer(ms);
+    },
     dispose() {
       clearTimeout(timeoutId);
       signal?.removeEventListener("abort", abortFromSource);
@@ -195,6 +208,7 @@ const request = async ({
       response,
       signal: timed.signal,
       didTimeOut: timed.didTimeOut,
+      restartTimeout: timed.restart,
       dispose: timed.dispose,
     };
   } catch (error) {
@@ -276,6 +290,121 @@ const getJsonContentType = (response) =>
 const isJsonContentType = (contentType) =>
   JSON_CONTENT_TYPES.includes(contentType) || contentType.endsWith("+json");
 
+const invalidPackage = () =>
+  createClientError("package_invalid", "The asset package could not be read.");
+
+const cancelled = () => createClientError("cancelled", "Import cancelled.");
+
+// A ZIP's first bytes: the signature of its first entry's local header.
+const ZIP_START = Object.freeze([0x50, 0x4b, 0x03, 0x04]);
+
+const startsLikeZip = (bytes) =>
+  bytes.byteLength >= ZIP_START.length &&
+  ZIP_START.every((byte, index) => bytes[index] === byte);
+
+// The whole size of what a response is a part of or all of: the total its
+// `Content-Range` names, or the length of a body that starts at byte 0. A
+// cross-origin response shows `Content-Range` only when its server exposes
+// it, so the length is what usually answers.
+const parseTotalSize = (response) => {
+  const match = /^bytes\s+0-\d+\/(\d+)$/i.exec(
+    (response.headers?.get?.("content-range") ?? "").trim(),
+  );
+  const total = match ? Number(match[1]) : parseContentLength(response);
+  return Number.isSafeInteger(total) ? total : undefined;
+};
+
+// A response body read a part at a time: its first bytes to tell what it is,
+// then all of it or none.
+const createBodyReader = ({ response, signal }) => {
+  const reader = response.body?.getReader?.();
+  const chunks = [];
+  let byteLength = 0;
+  let done = false;
+  const pull = async () => {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    if (!reader) {
+      chunks.push(new Uint8Array(await response.arrayBuffer()));
+      byteLength = chunks[0].byteLength;
+      done = true;
+      return;
+    }
+    const result = await reader.read();
+    if (result.done) {
+      done = true;
+      return;
+    }
+    chunks.push(result.value);
+    byteLength += result.value.byteLength;
+  };
+  const join = () => {
+    const bytes = new Uint8Array(byteLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return bytes;
+  };
+  const cancel = async () => {
+    try {
+      await reader?.cancel();
+    } catch {
+      // The body is being dropped; how it ends does not matter.
+    }
+  };
+
+  return {
+    cancel,
+    async readStart(length) {
+      while (!done && byteLength < length) await pull();
+      return join().subarray(0, length);
+    },
+    async readAll({ maxBytes, limitCode }) {
+      while (!done && byteLength <= maxBytes) await pull();
+      if (byteLength > maxBytes) {
+        await cancel();
+        throw createClientError(
+          limitCode,
+          "Import data exceeds the allowed size.",
+        );
+      }
+      return join();
+    },
+  };
+};
+
+// A package ZIP's bytes wherever they are: `size`, and `read(start, end)` for
+// the bytes `start` through `end`, inclusive. This one is held in memory.
+const createMemoryReader = (bytes) => ({
+  size: bytes.byteLength,
+  async read(start, end, { signal } = {}) {
+    if (signal?.aborted) throw cancelled();
+    return bytes.subarray(start, end + 1);
+  },
+});
+
+// A ZIP file on this device, read a slice at a time without any request.
+const createBlobReader = (blob) => ({
+  size: blob.size,
+  async read(start, end, { signal } = {}) {
+    if (signal?.aborted) throw cancelled();
+    let bytes;
+    try {
+      bytes = new Uint8Array(await blob.slice(start, end + 1).arrayBuffer());
+    } catch {
+      throw invalidPackage();
+    }
+    if (signal?.aborted) throw cancelled();
+    return bytes;
+  },
+});
+
+// A local package has no address. Its plan still names where it came from,
+// with a URL that nothing can fetch.
+const localPackageUrl = (file) =>
+  `local-file:///${encodeURIComponent(file.name ?? "asset-package.zip")}`;
+
 export const createImportPackageClient = ({
   fetchImpl = globalThis.fetch,
   cryptoImpl = globalThis.crypto,
@@ -325,6 +454,165 @@ export const createImportPackageClient = ({
     } finally {
       requestResult.dispose();
     }
+  };
+
+  // A ZIP on a server that serves byte ranges, `size` bytes long.
+  const createRangeReader = ({ url, size }) => ({
+    size,
+    read: (start, end, { signal, kind } = {}) =>
+      readRange({ url, start, end, kind, signal }),
+  });
+
+  // Finds out what a link leads to, and how to read it if it is a ZIP, with
+  // one request for everything from byte 0 (`Range: bytes=0-`, which needs
+  // no CORS preflight). The body's first bytes tell a ZIP from anything else,
+  // whatever the link's path or content type say. For a ZIP:
+  //
+  // - a 206 answer whose size is known means the server serves ranges: the
+  //   rest of the body is dropped and the ZIP is read in place, a range at a
+  //   time, as a published package is;
+  // - any other answer (a 200 from a server that ignores ranges, or a 206 of
+  //   unknown size) is the whole ZIP, so the same body is read to its end,
+  //   within the total download limit, and its entries are read from memory.
+  //
+  // Anything else is left to its caller, with the body dropped.
+  const probePackage = async ({ url, signal }) => {
+    const requestResult = await request({
+      fetchImpl,
+      url,
+      kind: "manifest",
+      signal,
+      timeoutMs: resolvedLimits.manifestTimeoutMs,
+      headers: { Range: "bytes=0-" },
+    });
+    try {
+      const { response } = requestResult;
+      resolveImportUrl(response.url || url.href);
+      const body = createBodyReader({
+        response,
+        signal: requestResult.signal,
+      });
+      if (!startsLikeZip(await body.readStart(ZIP_START.length))) {
+        await body.cancel();
+        return { isZip: false };
+      }
+      const size = parseTotalSize(response);
+      if (response.status === 206 && size !== undefined) {
+        await body.cancel();
+        return { isZip: true, reader: createRangeReader({ url, size }) };
+      }
+      if (size !== undefined && size > resolvedLimits.totalBytes) {
+        await body.cancel();
+        throw createClientError(
+          "download_too_large",
+          "The package exceeds the total download limit.",
+        );
+      }
+      requestResult.restartTimeout(resolvedLimits.packageTimeoutMs);
+      const bytes = await body.readAll({
+        maxBytes: resolvedLimits.totalBytes,
+        limitCode: "download_too_large",
+      });
+      return { isZip: true, reader: createMemoryReader(bytes) };
+    } catch (error) {
+      throw mapBodyReadError(error, requestResult, "manifest");
+    } finally {
+      requestResult.dispose();
+    }
+  };
+
+  // Where a ZIP's central directory is, from the end record in its last
+  // bytes. Those bytes are kept: they usually hold the directory too, and
+  // all of a small package, which are then read without another request.
+  const locateZipDirectory = async ({ reader, signal }) => {
+    const length = Math.min(reader.size, ZIP_END_SEARCH_BYTES);
+    if (length === 0) throw invalidPackage();
+    const tailStart = reader.size - length;
+    const tail = await reader.read(tailStart, reader.size - 1, {
+      signal,
+      kind: "manifest",
+    });
+    if (tail.byteLength !== length) throw invalidPackage();
+    return {
+      ...findZipDirectory(tail, { size: reader.size }),
+      reader: {
+        size: reader.size,
+        async read(start, end, options) {
+          if (start < tailStart) return reader.read(start, end, options);
+          if (options?.signal?.aborted) throw cancelled();
+          return tail.subarray(start - tailStart, end - tailStart + 1);
+        },
+      },
+    };
+  };
+
+  // A package at a link that is opened to find out what it is: a ZIP, or,
+  // with `allowManifest`, a manifest whose files resolve against it.
+  const createLinkedPackageSource = ({ url, allowManifest }) => {
+    let source;
+    return {
+      async readManifest({ signal } = {}) {
+        const probed = await probePackage({ url, signal });
+        if (probed.isZip) {
+          source = createZipPackageSource({
+            client,
+            cryptoImpl,
+            manifestUrl: url.href,
+            locate: (options) =>
+              locateZipDirectory({ reader: probed.reader, ...options }),
+          });
+          return source.readManifest({ signal });
+        }
+        if (!allowManifest) throw invalidPackage();
+        const manifestSource = createUrlPackageSource({
+          client,
+          url: url.href,
+        });
+        let result;
+        try {
+          result = await manifestSource.readManifest({ signal });
+        } catch (error) {
+          if (
+            error?.code === "manifest_content_type" ||
+            error?.code === "manifest_invalid_json"
+          ) {
+            throw createClientError(
+              "package_link_unsupported",
+              "This link is not an asset package ZIP file or manifest.",
+            );
+          }
+          throw error;
+        }
+        source = manifestSource;
+        return result;
+      },
+      readFile(options) {
+        if (!source) throw invalidPackage();
+        return source.readFile(options);
+      },
+    };
+  };
+
+  // A published package: the caller knows its size and its directory's place.
+  const createPublishedPackageSource = ({ zip }) => {
+    const url = resolveImportUrl(zip.url);
+    const { size, directoryOffset, directorySize } = zip;
+    if (
+      !isByteCount(size) ||
+      !isByteCount(directoryOffset) ||
+      !isByteCount(directorySize) ||
+      directorySize === 0 ||
+      directoryOffset + directorySize > size
+    ) {
+      throw invalidPackage();
+    }
+    const reader = createRangeReader({ url, size });
+    return createZipPackageSource({
+      client,
+      cryptoImpl,
+      manifestUrl: url.href,
+      locate: async () => ({ reader, directoryOffset, directorySize }),
+    });
   };
 
   const client = {
@@ -446,14 +734,49 @@ export const createImportPackageClient = ({
 
     /**
      * One asset package's source: `readManifest()` first, then `readFile()`
-     * for each file it lists. `url` is a manifest whose files resolve against
-     * it; `zip` is a published package read in place with byte ranges,
-     * `{url, size, directoryOffset, directorySize}`.
+     * for each file it lists.
+     *
+     * - `url` is a manifest whose files resolve against it.
+     * - `zip` is a package ZIP, whose manifest and files are its entries:
+     *   - `{url, size, directoryOffset, directorySize}` is a published
+     *     package, read in place with byte ranges;
+     *   - `{url}` is a ZIP on any server: its size and central directory are
+     *     found by reading it (see `probePackage`);
+     *   - `{file}` is a ZIP file on this device, a `File` or `Blob`, read
+     *     without any request.
+     * - `link` is a URL to either a package ZIP or a manifest. Which one is
+     *   decided by what the link returns, not by how it is written, as a
+     *   download link often has no file extension: a body that starts as a
+     *   ZIP is read as `zip: {url}`, and anything else as `url`.
      */
-    openPackage({ url, zip } = {}) {
-      return zip
-        ? createZipPackageSource({ client, zip, readRange, cryptoImpl })
-        : createUrlPackageSource({ client, url });
+    openPackage({ url, zip, link } = {}) {
+      if (link !== undefined) {
+        return createLinkedPackageSource({
+          url: resolveImportUrl(link),
+          allowManifest: true,
+        });
+      }
+      if (!zip) return createUrlPackageSource({ client, url });
+      if (zip.file) {
+        const reader = createBlobReader(zip.file);
+        return createZipPackageSource({
+          client,
+          cryptoImpl,
+          manifestUrl: localPackageUrl(zip.file),
+          locate: (options) => locateZipDirectory({ reader, ...options }),
+        });
+      }
+      if (
+        zip.size === undefined &&
+        zip.directoryOffset === undefined &&
+        zip.directorySize === undefined
+      ) {
+        return createLinkedPackageSource({
+          url: resolveImportUrl(zip.url),
+          allowManifest: false,
+        });
+      }
+      return createPublishedPackageSource({ zip });
     },
   };
   return client;
@@ -493,38 +816,39 @@ const packageEntryName = (descriptor) => {
   return name;
 };
 
-/** A published package read in place: its manifest and files are entries. */
-const createZipPackageSource = ({ client, zip, readRange, cryptoImpl }) => {
-  const url = resolveImportUrl(zip?.url);
-  const { size, directoryOffset, directorySize } = zip;
-  if (
-    !isByteCount(size) ||
-    !isByteCount(directoryOffset) ||
-    !isByteCount(directorySize) ||
-    directorySize === 0 ||
-    directoryOffset + directorySize > size
-  ) {
-    throw createClientError(
-      "package_invalid",
-      "The asset package could not be read.",
-    );
-  }
-  if (directorySize > client.limits.directoryBytes) {
-    throw createClientError(
-      "manifest_too_large",
-      "Import data exceeds the allowed size.",
-    );
-  }
-  const read = (start, end, { signal, kind }) =>
-    readRange({ url, start, end, kind, signal });
+/**
+ * A package ZIP, whose manifest and files are its entries. `locate()` gives
+ * the `reader` for its bytes and where its central directory is;
+ * `manifestUrl` names where the package came from.
+ */
+const createZipPackageSource = ({
+  client,
+  cryptoImpl,
+  manifestUrl,
+  locate,
+}) => {
   let opened;
 
   return {
     async readManifest({ signal } = {}) {
+      const { reader, directoryOffset, directorySize } = await locate({
+        signal,
+      });
+      if (directorySize > client.limits.directoryBytes) {
+        throw createClientError(
+          "manifest_too_large",
+          "Import data exceeds the allowed size.",
+        );
+      }
       opened = await openRemoteZip({
         directoryOffset,
         directorySize,
-        readRange: read,
+        // Exactly the bytes asked for, wherever they come from.
+        async readRange(start, end, options) {
+          const bytes = await reader.read(start, end, options);
+          if (bytes.byteLength !== end - start + 1) throw invalidPackage();
+          return bytes;
+        },
         signal,
       });
       const bytes = await opened.readEntry(MANIFEST_ENTRY, {
@@ -543,7 +867,7 @@ const createZipPackageSource = ({ client, zip, readRange, cryptoImpl }) => {
       }
       return {
         manifest,
-        manifestUrl: url.href,
+        manifestUrl,
         byteLength: bytes.byteLength,
       };
     },
@@ -589,7 +913,7 @@ const createZipPackageSource = ({ client, zip, readRange, cryptoImpl }) => {
         bytes,
         byteLength: bytes.byteLength,
         contentType: descriptor?.mimeType || "application/octet-stream",
-        resolvedUrl: `${url.href}#${name}`,
+        resolvedUrl: `${manifestUrl}#${name}`,
       };
     },
   };

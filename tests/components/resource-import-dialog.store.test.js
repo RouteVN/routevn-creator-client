@@ -22,9 +22,12 @@ import {
   togglePackGroup,
   setPlan,
   startCatalogLoad,
+  startLoadingPackage,
   startOpeningPack,
+  openUrlStep,
   syncFromProps,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
+import { JA_I18N } from "../support/i18n.js";
 
 const createMultiResourcePlan = () => ({
   planId: "plan-1",
@@ -958,5 +961,108 @@ describe("resource-import-dialog.store", () => {
       slot: "resource-selection-grid",
     });
     expect(view.form.actions.buttons.at(-1).id).toBe("import");
+  });
+});
+
+describe("resource-import-dialog.store sources", () => {
+  it.each([
+    [undefined, "store", "store", "Asset Store"],
+    ["store", "store", "store", "Asset Store"],
+    ["zip", "zip", "loading", "Import from Zip File"],
+    ["url", "url", "url", "Import from URL"],
+    ["elsewhere", "store", "store", "Asset Store"],
+  ])(
+    "opens a dialog given source %s on its first step",
+    (given, source, step, title) => {
+      const state = createInitialState();
+      syncFromProps({ state }, { props: { open: true, source: given } });
+
+      expect(state).toMatchObject({ source, step });
+      expect(selectViewData({ state, i18n: {} })).toMatchObject({
+        dialogTitle: title,
+        isStoreStep: step === "store",
+        isUrlStep: step === "url",
+        isLoadingStep: step === "loading",
+        isSelectionStep: false,
+      });
+    },
+  );
+
+  it("starts each opening from its own source, without the last one's URL or name", () => {
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true, source: "url" } });
+    startLoadingPackage(
+      { state },
+      {
+        operationId: "operation-1",
+        sourceName: "Pack One",
+        url: "https://assets.example/pack.zip",
+      },
+    );
+    openUrlStep({ state }, { error: { message: "Not a package." } });
+    expect(state).toMatchObject({
+      step: "url",
+      urlValue: "https://assets.example/pack.zip",
+      operationId: undefined,
+      error: { message: "Not a package." },
+    });
+
+    syncFromProps({ state }, { props: { open: false } });
+    syncFromProps({ state }, { props: { open: true } });
+
+    expect(state).toMatchObject({
+      source: "store",
+      step: "store",
+      urlValue: "",
+      sourceName: undefined,
+      error: undefined,
+    });
+  });
+
+  it("localizes the URL form, the loading status and the titles", () => {
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true, source: "url" } });
+
+    const view = selectViewData({ state, i18n: JA_I18N });
+
+    expect(view.dialogTitle).toBe("URLから取り込む");
+    expect(view.urlForm.fields[0]).toMatchObject({
+      label: "パッケージのURL",
+      required: { message: "パッケージのURLを入力してください。" },
+    });
+    expect(view.urlForm.actions.buttons.map((button) => button.label)).toEqual([
+      "キャンセル",
+      "取り込む",
+    ]);
+    expect(view.loadingLabel).toBe("素材パッケージを読み込んでいます");
+  });
+
+  it("names a file's package by its manifest, or else by its file, and never a store pack by a file", () => {
+    const plan = { ...createMultiResourcePlan(), package: {} };
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true, source: "zip" } });
+    startLoadingPackage(
+      { state },
+      { operationId: "operation-1", sourceName: "Pack One" },
+    );
+    setPlan({ state }, { plan });
+    expect(selectViewData({ state, i18n: {} })).toMatchObject({
+      isSelectionStep: true,
+      packageName: "Pack One",
+      hasPackageMetadata: true,
+      pack: undefined,
+    });
+
+    setPlan({ state }, { plan: { ...plan, package: { name: "Fantasy UI" } } });
+    expect(selectViewData({ state, i18n: {} }).packageName).toBe("Fantasy UI");
+
+    const storeState = createInitialState();
+    syncFromProps({ state: storeState }, { props: { open: true } });
+    storeState.sourceName = "Pack One";
+    setPlan({ state: storeState }, { plan });
+    expect(selectViewData({ state: storeState, i18n: {} })).toMatchObject({
+      packageName: undefined,
+      hasPackageMetadata: false,
+    });
   });
 });

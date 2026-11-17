@@ -1,7 +1,9 @@
 export const createInitialState = () => ({
   isMenuOpen: false,
   menuPosition: { x: 0, y: 0 },
-  isImportDialogOpen: false,
+  // The import dialog, and what it imports from: the asset store, a package
+  // ZIP `file` picked from this device, or a URL typed in the dialog.
+  importDialog: { isOpen: false, source: "store", file: undefined },
 });
 
 export const openMenu = ({ state }, { x, y } = {}) => {
@@ -21,12 +23,16 @@ export const selectMenuPosition = ({ state }) => ({
   y: state.menuPosition.y,
 });
 
-export const openImportDialog = ({ state }) => {
-  state.isImportDialogOpen = true;
+export const openImportDialog = ({ state }, { source, file } = {}) => {
+  state.importDialog.isOpen = true;
+  state.importDialog.source = source ?? "store";
+  state.importDialog.file = file;
 };
 
+// The dialog keeps its source while it closes; the picked file is let go.
 export const closeImportDialog = ({ state }) => {
-  state.isImportDialogOpen = false;
+  state.importDialog.isOpen = false;
+  state.importDialog.file = undefined;
 };
 
 export const selectViewData = ({ state, props = {}, i18n = {} }) => {
@@ -35,7 +41,23 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   const showImport = props.showImport ?? true;
   const menuItems = [...(props.additionalMenuItems ?? [])];
   if (showImport) {
-    menuItems.push({ label: importLabel, type: "item", value: "import" });
+    menuItems.push(
+      {
+        label: copy.importFromStoreMenuItem ?? "Import from Asset Store",
+        type: "item",
+        value: "import-store",
+      },
+      {
+        label: copy.importFromZipMenuItem ?? "Import from Zip File",
+        type: "item",
+        value: "import-zip",
+      },
+      {
+        label: copy.importFromUrlMenuItem ?? "Import from URL",
+        type: "item",
+        value: "import-url",
+      },
+    );
   }
 
   return {
@@ -44,7 +66,9 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
       showImport && !props.additionalMenuItems?.length
         ? importLabel
         : (i18n.resourcePages?.actionsLabel ?? "Actions"),
-    isImportDialogOpen: state.isImportDialogOpen,
+    isImportDialogOpen: state.importDialog.isOpen,
+    importSource: state.importDialog.source,
+    importFile: state.importDialog.file,
     menu: {
       isOpen: state.isMenuOpen,
       x: state.menuPosition.x,

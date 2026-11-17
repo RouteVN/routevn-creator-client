@@ -1083,6 +1083,7 @@ export const createAssetImportPlan = ({
   repositoryRevision,
   createId,
   dependencyFolderName,
+  fallbackDependencyFolderName,
 } = {}) => {
   validateManifest(manifest);
   const planId = createId();
@@ -1121,6 +1122,7 @@ export const createAssetImportPlan = ({
       dependencyFolderName,
       manifest.package.defaultFolderName,
       manifest.package.name,
+      fallbackDependencyFolderName,
     ]
       .find((name) => typeof name === "string" && name.trim())
       ?.trim() ?? "Asset pack";

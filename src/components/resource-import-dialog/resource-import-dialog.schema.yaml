@@ -4,6 +4,12 @@ propsSchema:
   properties:
     open:
       type: boolean
+    source:
+      type: string
+      description: What the dialog imports from when it opens. "store" (the default) opens the asset store, "zip" reads the package in `file`, and "url" asks for a package URL
+    file:
+      type: object
+      description: The package ZIP file to import when `source` is "zip"
 events:
   import-cancelled: {}
   import-complete:

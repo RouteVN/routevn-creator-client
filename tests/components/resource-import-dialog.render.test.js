@@ -465,4 +465,117 @@ describe("resource-import-dialog rendering", () => {
 
     dialog.remove();
   });
+
+  it("asks for a package URL in a dialog opened on a URL, and reads it on Import", async () => {
+    projectService.validateResourceImportUrl = vi.fn(() => ({ valid: true }));
+    projectService.createResourceImportPlan = vi.fn(
+      () => new Promise(() => {}),
+    );
+    const dialog = document.createElement(
+      "rvn-resource-import-dialog-render-test",
+    );
+    document.body.append(dialog);
+    dialog.store.syncFromProps({ props: { open: true, source: "url" } });
+    dialog.render();
+
+    const form = dialog.shadowRoot.querySelector("rtgl-form#urlForm");
+    expect(form).not.toBeNull();
+    expect(form.form.fields[0]).toMatchObject({
+      name: "url",
+      label: "Package URL",
+    });
+    expect(form.defaultValues).toEqual({ url: "" });
+    expect(dialog.shadowRoot.querySelector("#packGrid")).toBeNull();
+    expect(dialog.shadowRoot.querySelector("#storeSearchInput")).toBeNull();
+    expect(dialog.shadowRoot.textContent).toContain("Import from URL");
+
+    form.dispatchEvent(
+      new CustomEvent("form-action", {
+        bubbles: true,
+        detail: {
+          actionId: "import-url",
+          values: { url: "https://assets.example/pack.zip" },
+          valid: true,
+        },
+      }),
+    );
+    await settle();
+
+    expect(projectService.createResourceImportPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ link: "https://assets.example/pack.zip" }),
+    );
+    // The package is being read: the form gives way to a status with Cancel.
+    expect(dialog.shadowRoot.querySelector("rtgl-form#urlForm")).toBeNull();
+    const status = dialog.shadowRoot.querySelector('[role="status"]');
+    expect(status.textContent).toContain("Reading the asset package");
+
+    dialog.shadowRoot
+      .querySelector("#cancelLoadingButton")
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    const formAgain = dialog.shadowRoot.querySelector("rtgl-form#urlForm");
+    expect(formAgain.defaultValues).toEqual({
+      url: "https://assets.example/pack.zip",
+    });
+    expect(dialog.shadowRoot.querySelector("#cancelLoadingButton")).toBeNull();
+
+    delete projectService.validateResourceImportUrl;
+    dialog.remove();
+  });
+
+  it("shows why a package URL failed above the form", () => {
+    const dialog = document.createElement(
+      "rvn-resource-import-dialog-render-test",
+    );
+    document.body.append(dialog);
+    dialog.store.syncFromProps({ props: { open: true, source: "url" } });
+    dialog.store.openUrlStep({
+      error: { message: "This link is not an asset package." },
+      url: "https://assets.example/page",
+    });
+    dialog.render();
+
+    expect(
+      dialog.shadowRoot.querySelector('[role="alert"]').textContent,
+    ).toContain("This link is not an asset package.");
+    expect(
+      dialog.shadowRoot.querySelector("rtgl-form#urlForm").defaultValues,
+    ).toEqual({ url: "https://assets.example/page" });
+
+    dialog.remove();
+  });
+
+  it("opens a zip file's package on its selection, under the file's name", () => {
+    const dialog = document.createElement(
+      "rvn-resource-import-dialog-render-test",
+    );
+    document.body.append(dialog);
+    dialog.store.syncFromProps({ props: { open: true, source: "zip" } });
+    dialog.store.startLoadingPackage({
+      operationId: "operation-1",
+      sourceName: "Pack One",
+    });
+    dialog.render();
+    expect(dialog.shadowRoot.querySelector("#cancelLoadingButton")).not.toBe(
+      null,
+    );
+    expect(
+      dialog.shadowRoot.querySelector("rtgl-form#workflowForm"),
+    ).toBeNull();
+
+    dialog.store.setPlan({ plan: createPlan() });
+    dialog.render();
+
+    expect(dialog.shadowRoot.textContent).toContain("Import from Zip File");
+    expect(dialog.shadowRoot.textContent).toContain("Pack One");
+    expect(dialog.shadowRoot.querySelector("#selectionBackButton")).not.toBe(
+      null,
+    );
+    expect(
+      dialog.shadowRoot.querySelectorAll("[data-resource-index]"),
+    ).toHaveLength(5);
+    expect(dialog.shadowRoot.querySelector("#cancelLoadingButton")).toBeNull();
+
+    dialog.remove();
+  });
 });

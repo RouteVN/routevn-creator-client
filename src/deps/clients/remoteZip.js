@@ -2,7 +2,8 @@ import { ImportPackageClientError } from "./importPackageErrors.js";
 
 // Reads entries straight out of a ZIP on a server, without downloading it:
 // one byte range for its central directory (the table of contents, at a
-// location the caller already knows), then one range per entry. Every range
+// location the caller already knows or reads from the ZIP's end record with
+// `findZipDirectory`), then one range per entry. Every range
 // names both ends, so a cross-origin read never needs a CORS preflight. Only
 // stored (uncompressed) entries are read; see docs/import-packages.md.
 
@@ -35,6 +36,66 @@ const decodeName = (bytes) => {
   } catch {
     throw invalid();
   }
+};
+
+const END_SIGNATURE = 0x06054b50;
+const ZIP64_LOCATOR_SIGNATURE = 0x07064b50;
+const END_RECORD_BYTES = 22;
+const ZIP64_LOCATOR_BYTES = 20;
+const ZIP64_COUNT_MARKER = 0xffff;
+
+// The most bytes at a ZIP's end that can hold its end record: the record
+// and the longest comment it can carry.
+export const ZIP_END_SEARCH_BYTES = END_RECORD_BYTES + 0xffff;
+
+/**
+ * Where a ZIP's central directory is, read from the end record in `tail`,
+ * the last bytes of a ZIP that is `size` bytes long: at least its last
+ * `ZIP_END_SEARCH_BYTES`, or all of a shorter one. The end record is the last
+ * one whose comment runs exactly to the end of the file. A ZIP64 archive, one
+ * split over several disks, and one with bytes before its first entry are
+ * refused, as is anything that is not a ZIP.
+ */
+export const findZipDirectory = (tail, { size }) => {
+  if (tail.length > size) throw invalid();
+  for (
+    let position = tail.length - END_RECORD_BYTES;
+    position >= 0;
+    position -= 1
+  ) {
+    if (
+      u32(tail, position) !== END_SIGNATURE ||
+      position + END_RECORD_BYTES + u16(tail, position + 20) !== tail.length
+    ) {
+      continue;
+    }
+    const endOffset = size - tail.length + position;
+    const diskEntries = u16(tail, position + 8);
+    const entries = u16(tail, position + 10);
+    const directorySize = u32(tail, position + 12);
+    const directoryOffset = u32(tail, position + 16);
+    if (
+      entries === ZIP64_COUNT_MARKER ||
+      directorySize === ZIP64_MARKER ||
+      directoryOffset === ZIP64_MARKER ||
+      (position >= ZIP64_LOCATOR_BYTES &&
+        u32(tail, position - ZIP64_LOCATOR_BYTES) === ZIP64_LOCATOR_SIGNATURE)
+    ) {
+      throw invalid("The asset package uses ZIP64, which is not supported.");
+    }
+    if (
+      u16(tail, position + 4) !== 0 ||
+      u16(tail, position + 6) !== 0 ||
+      diskEntries !== entries ||
+      entries === 0 ||
+      directorySize === 0 ||
+      directoryOffset + directorySize !== endOffset
+    ) {
+      throw invalid();
+    }
+    return { directoryOffset, directorySize };
+  }
+  throw invalid();
 };
 
 // The directory's entries by name: each one's data size and the offset of

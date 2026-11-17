@@ -1020,6 +1020,8 @@ export const createProjectServiceCore = ({
     getDomainState,
     getRepositoryState,
     getRepositoryRevision,
+    validateResourceImportUrl:
+      resourcePackageImportService.validateResourceImportUrl,
     createResourceImportPlan:
       resourcePackageImportService.createResourceImportPlan,
     loadResourceImportPreview:
