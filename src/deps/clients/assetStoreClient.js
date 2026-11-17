@@ -241,7 +241,7 @@ export const createAssetStoreClient = ({
     override: import.meta.env?.VITE_ROUTEVN_ASSET_STORE_RPC_URL,
   }),
   fetchImpl = globalThis.fetch,
-  // The device a view is made on: its ID and facts.
+  // The device a view or a download is made on: its ID and facts.
   getDevice = async () => undefined,
 } = {}) => {
   const call = async (method, params, { notFound = packNotFound } = {}) => {
@@ -325,15 +325,21 @@ export const createAssetStoreClient = ({
     },
 
     // `view` is set when a person opens the pack's page, and counts one view
-    // of it, made on this device. Every other read leaves it out. A device
-    // that can't be read leaves the read unflagged, so the pack still loads.
-    // The answer is the same either way.
-    async getAssetPackById({ assetPackId, view = false } = {}) {
+    // of it, made on this device; `download` is set when a person starts
+    // importing it, and counts one download. Every other read leaves both
+    // out. A device that can't be read leaves the read unflagged, so the pack
+    // still loads. The answer is the same either way.
+    async getAssetPackById({
+      assetPackId,
+      view = false,
+      download = false,
+    } = {}) {
       const params = { assetPackId };
-      if (view) {
+      if (view || download) {
         const device = await readDevice();
         if (device) {
-          params.view = true;
+          if (view) params.view = true;
+          if (download) params.download = true;
           params.device = device;
         }
       }

@@ -551,7 +551,7 @@ const mergeReviewValues = (store, values) => {
 };
 
 const handleReviewSubmit = async (deps, values) => {
-  const { dispatchEvent, projectService, store, render } = deps;
+  const { appService, dispatchEvent, projectService, store, render } = deps;
   store.saveReviewValues({ values });
   const plan = store.selectPlan();
   const choices = buildReviewPayload({ plan, values });
@@ -571,6 +571,11 @@ const handleReviewSubmit = async (deps, values) => {
   const operationId = generateId();
   store.startExecution({ values, operationId });
   render();
+  // Each import started is one download of the pack. The import doesn't wait
+  // for it.
+  appService.sendAssetStorePackDownload({
+    assetPackId: store.selectPlanPackId(),
+  });
   const result = await projectService.executeResourceImportPlan({
     planId: plan.planId,
     operationId,
