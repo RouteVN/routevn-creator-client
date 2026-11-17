@@ -970,7 +970,8 @@ from appearing late, the player loads ahead of the story:
 rules, including random stories. `bun run test:player-lookahead` plays a
 generated story in the built player in Chromium and WebKit: it stops answering
 package reads and checks that the next pictures still appear, then plays past
-the memory limit and checks that freed pictures are read again and shown.
+the memory limit and checks that freed pictures are read again and shown,
+and runs skip mode through the story and checks that it continues in order.
 
 Service boundary test:
 

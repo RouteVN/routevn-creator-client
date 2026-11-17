@@ -82,6 +82,8 @@ const projectData = {
       "control-1": {
         id: "control-1",
         name: "Control",
+        keyboard: { ctrl: { actions: { startSkipMode: {} } } },
+        keyup: { ctrl: { actions: { stopSkipMode: {} } } },
         elements: [
           {
             id: "tap-area",
@@ -196,6 +198,9 @@ const server = createServer((request, response) => {
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
 
+const totalReads = () =>
+  Array.from(readCounts.values()).reduce((sum, count) => sum + count, 0);
+
 const until = async (description, check, timeoutMs = 20_000) => {
   const deadline = Date.now() + timeoutMs;
   let last;
@@ -301,7 +306,52 @@ try {
           `${fileId} was read ${readCounts.get(fileId)} time(s), so it was never freed`,
         );
       }
-      console.log(`${name}: preload, fast taps, and freeing pictures passed`);
+
+      // Skip mode runs through the lines already read, faster than pictures
+      // load, and passes the memory limit several times.
+      const readsBeforeSkip = totalReads();
+      await page.keyboard.down("Control");
+      await page.waitForTimeout(8000);
+      await page.keyboard.up("Control");
+      // Screens that waited for their pictures are still drawn in order
+      // after skip mode stops, so wait for the picture to stop changing.
+      let lastColor = "";
+      let unchangedSince = Date.now();
+      await until(
+        "the screen to settle after skip mode",
+        async () => {
+          const color = (await readShownColor()).join();
+          if (color !== lastColor) {
+            lastColor = color;
+            unchangedSince = Date.now();
+          }
+          return Date.now() - unchangedSince > 2000 || color;
+        },
+        60_000,
+      );
+      await assertPlayerRunning();
+      assert.ok(
+        totalReads() > readsBeforeSkip,
+        "Skip mode did not move past the pictures that were loaded",
+      );
+
+      // The story continues in order from wherever skip mode stopped.
+      const shownAfterSkip = await readShownColor();
+      position = pictures.findIndex(({ color }) =>
+        color.every((value, i) => Math.abs(value - shownAfterSkip[i]) <= 6),
+      );
+      assert.notEqual(position, -1, `Unknown picture color ${shownAfterSkip}`);
+      for (let count = 0; count < 3; count++) {
+        position = (position + 1) % PICTURE_COUNT;
+        await tap();
+        await until(`picture ${position + 1} after skip mode`, () =>
+          showsPicture(position),
+        );
+      }
+      await assertPlayerRunning();
+      console.log(
+        `${name}: preload, fast taps, freeing pictures, and skip mode passed`,
+      );
     } finally {
       await browser.close();
     }

@@ -1003,8 +1003,13 @@ const prepareEngine = async (
   // While a state waits for its assets the screen still shows the one before
   // it. A tap there would run that old screen's actions in the story position
   // the engine has already moved to.
+  // Releasing the skip key is the exception: it does not depend on the screen
+  // shown, and dropping it would leave the story skipping.
   const routeGraphicsEventHandler = (eventName, payload) => {
-    if (renderQueue.hasWaitingStates() && getRuntimeEventActions(payload)) {
+    const actions = getRuntimeEventActions(payload);
+    const stopsSkipModeOnly =
+      actions && Object.keys(actions).every((name) => name === "stopSkipMode");
+    if (renderQueue.hasWaitingStates() && actions && !stopsSkipModeOnly) {
       return false;
     }
 
