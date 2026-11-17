@@ -12,6 +12,7 @@
 		53107D054152D83740FFCCE8 /* web in Resources */ = {isa = PBXBuildFile; fileRef = 28F3F603D2DE623BD6F00865 /* web */; };
 		72CA5759A51232AA798E1E71 /* PlayerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F93247A749520EEA639CD79 /* PlayerViewController.swift */; };
 		8C315EE09E009582ABDC7D3E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B89A3241C25CC86A18980133 /* Assets.xcassets */; };
+		9D41A7C25B3E4F60A1C8E2D7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5E7B90F3C1D24A8896F0B3A4 /* PrivacyInfo.xcprivacy */; };
 		CFF8EFE59793E60F3C23E72B /* PlayerPackage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A55BBFF1E75738426AF6CD96 /* PlayerPackage.swift */; };
 		E771F83878F6FDC35B569524 /* PlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C81C75275CA2262B6BE357 /* PlayerApp.swift */; };
 		FC41C07402DE12436427D101 /* PlayerBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4F29F22A723D61742D0778 /* PlayerBridge.swift */; };
@@ -23,6 +24,7 @@
 		28F3F603D2DE623BD6F00865 /* web */ = {isa = PBXFileReference; lastKnownFileType = folder; name = web; path = RouteVNPlayer/web; sourceTree = SOURCE_ROOT; };
 		3F4F29F22A723D61742D0778 /* PlayerBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerBridge.swift; sourceTree = "<group>"; };
 		407AA7B1615D064309E22E49 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		5E7B90F3C1D24A8896F0B3A4 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5F93247A749520EEA639CD79 /* PlayerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerViewController.swift; sourceTree = "<group>"; };
 		9F8B8ADDE8867119116DF6D6 /* PlayerSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSchemeHandler.swift; sourceTree = "<group>"; };
 		A55BBFF1E75738426AF6CD96 /* PlayerPackage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerPackage.swift; sourceTree = "<group>"; };
@@ -37,6 +39,7 @@
 			children = (
 				B89A3241C25CC86A18980133 /* Assets.xcassets */,
 				407AA7B1615D064309E22E49 /* Info.plist */,
+				5E7B90F3C1D24A8896F0B3A4 /* PrivacyInfo.xcprivacy */,
 				09C81C75275CA2262B6BE357 /* PlayerApp.swift */,
 				3F4F29F22A723D61742D0778 /* PlayerBridge.swift */,
 				A55BBFF1E75738426AF6CD96 /* PlayerPackage.swift */,
@@ -126,6 +129,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8C315EE09E009582ABDC7D3E /* Assets.xcassets in Resources */,
+				9D41A7C25B3E4F60A1C8E2D7 /* PrivacyInfo.xcprivacy in Resources */,
 				53107D054152D83740FFCCE8 /* web in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
