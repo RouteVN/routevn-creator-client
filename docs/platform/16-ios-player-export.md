@@ -2,10 +2,11 @@
 
 Date baseline: November 13, 2026.
 
-Status: implemented and switched off. `IOS_EXPORT_RELEASED` in
-`src/internal/iosExport.js` switches it on: when it is false, the Versions
-page hides the iOS export button and Platform Details hides the iOS platform.
-The remaining checks are listed under [Release Gate](#release-gate).
+Status: implemented and switched on, in beta: the Export dialog marks iOS with
+a Beta label. `IOS_EXPORT_RELEASED` in `src/internal/iosExport.js` switches it
+off again: when it is false, the Versions page hides the iOS export button and
+Platform Details hides the iOS platform. The checks to finish before the Beta
+label is removed are listed under [Release Gate](#release-gate).
 
 ## Product Contract
 
@@ -236,7 +237,7 @@ device's identifier from `xcrun devicectl list devices`.
 
 ## Release Gate
 
-Before switching the export on, check on a physical iPhone and iPad: a
+Before taking the export out of beta, check on a physical iPhone and iPad: a
 development build installed from Creator, an App Store build uploaded from
 Creator and installed through TestFlight, a portrait game, audio, saving and
 reloading, the app in the background and after the system ends it, and an

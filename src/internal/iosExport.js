@@ -2,9 +2,9 @@ import { sanitizeArtifactFileName } from "./artifactFileName.js";
 import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifier.js";
 import { isValidNativeApplicationVersion } from "./nativeApplicationVersion.js";
 
-// Switches iOS export off: when false, the Versions page hides its export
-// button and Platform Details hides the iOS platform.
-export const IOS_EXPORT_RELEASED = false;
+// Can switch iOS export off again: when false, the Versions page hides its
+// export button and Platform Details hides the iOS platform.
+export const IOS_EXPORT_RELEASED = true;
 
 // The App Store icon size. The exporter scales other sizes to it.
 export const IOS_APPLICATION_ICON_OUTPUT_SIZE = 1024;

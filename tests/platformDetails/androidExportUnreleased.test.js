@@ -69,7 +69,7 @@ describe("Android export switched off", () => {
     },
   );
 
-  it("offers Web, Windows and macOS in the desktop Platform Details", () => {
+  it("offers every platform but Android in the desktop Platform Details", () => {
     const state = platformStore.createInitialState();
     platformStore.setPlatform({ state }, { platform: "tauri" });
 
@@ -82,6 +82,7 @@ describe("Android export switched off", () => {
       { label: "Web", type: "item", value: "web" },
       { label: "Windows", type: "item", value: "windows" },
       { label: "macOS", type: "item", value: "macos" },
+      { label: "iOS", type: "item", value: "ios" },
     ]);
     expect(
       platformStore.selectCanAddPlatform({ state }, { platform: "android" }),
