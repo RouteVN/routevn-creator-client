@@ -397,7 +397,7 @@ describe("config asset package import", () => {
 
     expect(deps.store.selectViewData().importDialog.isOpen).toBe(false);
     expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Imported 3 resources from the asset package.",
+      message: "Imported 3 resources from the asset pack.",
       status: "success",
     });
   });
