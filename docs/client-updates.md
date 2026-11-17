@@ -26,7 +26,8 @@ is retained. It identifies an app installation, independently of accounts and
 hardware identifiers. Clearing its local data generates a new ID. Restoring a
 backup containing the database also restores the ID.
 IDs are 24 Base58 characters; the update API ignores any other value and still
-answers the check.
+answers the check. A view of an asset store pack sends the same ID (see
+[Asset store](import-packages.md#asset-store)).
 
 Model and OS version are nonblank strings of at most 256 characters, without
 ASCII control characters. These fields do not change the response shape.

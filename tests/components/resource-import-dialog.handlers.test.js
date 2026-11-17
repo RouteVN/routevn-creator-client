@@ -499,6 +499,7 @@ describe("resource-import-dialog asset store", () => {
     });
     expect(deps.appService.getAssetStorePack).toHaveBeenCalledWith({
       assetPackId: "pack-1",
+      view: true,
     });
 
     details.resolve(detail);
@@ -716,6 +717,52 @@ describe("resource-import-dialog asset store", () => {
     );
   });
 
+  it("sends one view each time a pack's page opens, and none when it shows again without a read", async () => {
+    const { deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    deps.appService.getAssetStorePack.mockResolvedValue({
+      ...storePack("pack-1"),
+      package: packagePlace("https://files.example/pack.zip"),
+    });
+    deps.appService.getAssetStoreCreator.mockResolvedValue({
+      creator: {
+        id: "creator-1",
+        name: "Creator One",
+        description: [],
+        links: [],
+      },
+      packs: [storePack("pack-1")],
+    });
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: { planId: "plan-1", package: {}, resources: [] },
+    });
+    openDialog(deps);
+    await settle();
+
+    await clickPack(deps, "pack-1");
+    // Its creator's page, and the pack again from there, keep the pack
+    // loaded, so nothing is read.
+    await handlePackCreatorClick(deps);
+    await clickPack(deps, "pack-1");
+    handlePackImport(deps);
+    handleSelectionBack(deps);
+    expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
+      [{ assetPackId: "pack-1", view: true }],
+    ]);
+
+    // Back to the list, then the pack again: a second opening.
+    handlePackBack(deps);
+    handleCreatorBack(deps);
+    await clickPack(deps, "pack-1");
+    expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
+      [{ assetPackId: "pack-1", view: true }],
+      [{ assetPackId: "pack-1", view: true }],
+    ]);
+  });
+
   it("shows a localized message when a pack is no longer available", async () => {
     const { state, deps } = createStoreDeps();
     deps.i18n = {
@@ -792,6 +839,7 @@ describe("resource-import-dialog asset store", () => {
     expect(enter.preventDefault).toHaveBeenCalledTimes(1);
     expect(deps.appService.getAssetStorePack).toHaveBeenCalledWith({
       assetPackId: "pack-1",
+      view: true,
     });
   });
 
