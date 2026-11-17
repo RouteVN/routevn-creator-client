@@ -442,6 +442,18 @@ describe("layoutEditorMutations", () => {
       ).toMatchObject({ x: 100, y: 70, width: 140 });
     });
 
+    it("leaves a fractional position alone when the anchor side stays", () => {
+      expect(
+        resize({
+          changes: { x: 100.5, y: 50.25 },
+          start: { itemStartX: 100.5, itemStartY: 50.25 },
+          resizeEdge: "right",
+          x: 330,
+          y: 300,
+        }),
+      ).toMatchObject({ x: 100.5, y: 50.25, width: 130 });
+    });
+
     it("measures along the drawn axes when a parent is rotated", () => {
       expect(
         resize({

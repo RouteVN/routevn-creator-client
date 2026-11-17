@@ -298,16 +298,12 @@ export const applyCanvasItemResizeChange = ({
   const shiftY =
     ((item.anchorY ?? 0) - (resizeEdge === "top" ? 1 : 0)) * heightChange;
   const itemRadians = toRadians(item.rotation ?? 0);
-  nextItem.x = Math.round(
+  nextItem.x =
     dragStartPosition.itemStartX +
-      shiftX * Math.cos(itemRadians) -
-      shiftY * Math.sin(itemRadians),
-  );
-  nextItem.y = Math.round(
+    Math.round(shiftX * Math.cos(itemRadians) - shiftY * Math.sin(itemRadians));
+  nextItem.y =
     dragStartPosition.itemStartY +
-      shiftX * Math.sin(itemRadians) +
-      shiftY * Math.cos(itemRadians),
-  );
+    Math.round(shiftX * Math.sin(itemRadians) + shiftY * Math.cos(itemRadians));
 
   return nextItem;
 };
