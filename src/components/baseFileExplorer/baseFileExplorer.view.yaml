@@ -78,6 +78,9 @@ styles:
     padding: "0"
     transition: opacity 120ms ease
     width: 20px
+  # A closed folder's arrow points toward the inline end.
+  "[data-file-explorer-arrow='true']:dir(rtl)":
+    transform: scaleX(-1)
   "[data-file-explorer-item='true']:hover .visibilityAction, .visibilityAction:focus-visible, .visibilityAction[data-always-visible='true']":
     opacity: "1"
 template:
@@ -90,7 +93,7 @@ template:
             $else:
               - rtgl-view w=f:
                   - $for item, i in items:
-                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} data-file-explorer-item=true h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box; touch-action: ${item.touchAction}; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
+                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} data-file-explorer-item=true h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-inline-start: ${item.ml}px; min-width: 0; box-sizing: border-box; touch-action: ${item.touchAction}; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
                               - rtgl-view d=h av=c ah=c w=16 h=16:
                                   - rtgl-svg#arrowRef${i} data-item-id=${item.id} data-file-explorer-arrow=true svg=${item.arrowIcon} wh=16 cur=pointer: null
@@ -113,11 +116,11 @@ template:
                           - $if item.showMenuAction:
                               # The 24px button is too small to tap. This area spans the
                               # row's height and right padding so nearby taps open the menu.
-                              - 'rtgl-view#itemMenuRef${i} data-item-id=${item.id} data-file-explorer-action=true d=h av=c ah=c cur=pointer style="flex: 0 0 auto; align-self: stretch; padding: 0 8px 0 12px; margin: -8px -8px -8px 0;"':
+                              - 'rtgl-view#itemMenuRef${i} data-item-id=${item.id} data-file-explorer-action=true d=h av=c ah=c cur=pointer style="flex: 0 0 auto; align-self: stretch; padding-block: 0; padding-inline: 12px 8px; margin-block: -8px; margin-inline: 0 -8px;"':
                                   - 'rtgl-button sq s=sm v=gh pre=ellipsis aria-label="${itemActionsLabel}" title="${itemActionsLabel}" aria-haspopup=menu': null
                   - 'div#container style="width: 100%; height: ${bottomEmptySpaceHeight}; min-height: ${bottomEmptySpaceHeight}; flex: 0 0 ${bottomEmptySpaceHeight}; pointer-events: none;"': null
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':
-              - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; left: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null
+              - 'rtgl-view pos=abs bgc=fg h=2 style="top: ${targetDragPosition}px; inset-inline-start: ${targetDragLeftOffset}px; width: calc(100% - ${targetDragLeftOffset}px); z-index: 1000;"': null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
       - $if hasRenameTarget:

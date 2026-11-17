@@ -77,6 +77,10 @@ refs:
     eventListeners:
       click:
         handler: handleSceneTextAnalyticsRetry
+styles:
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
       - rtgl-view w=f d=h av=c g=sm:

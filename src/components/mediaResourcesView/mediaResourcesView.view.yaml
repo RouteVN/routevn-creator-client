@@ -128,6 +128,9 @@ styles:
     background-position: "0 0, 0 6px, 6px -6px, -6px 0"
     background-repeat: repeat
     background-size: 12px 12px
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
@@ -206,7 +209,7 @@ template:
                                                                     $else:
                                                                       - rvn-file-image w=f h=f fileId=${item.previewFileId} originalFileId=${item.fileId} show-error-message: null
                                                       - $if item.showPreviewIcon:
-                                                          - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
+                                                          - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; inset-inline-end: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=zoomIn wh=22 c=white: null
                                                       - rtgl-view w=f p=md:
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
@@ -231,7 +234,7 @@ template:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: ${viewCopy.noThumbnailLabel}
                                                       - $if item.showPreviewIcon:
-                                                          - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
+                                                          - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; inset-inline-end: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=play wh=24 c=white: null
                                                       - rtgl-view w=f p=md:
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
@@ -260,7 +263,7 @@ template:
                                                           - rtgl-view w=f h=${mediaHeight} bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: ${viewCopy.noWaveformLabel}
                                                       - $if item.showPreviewIcon:
-                                                          - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
+                                                          - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; inset-inline-end: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=play wh=24 c=white: null
                                                       - rtgl-view w=f p=md:
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}

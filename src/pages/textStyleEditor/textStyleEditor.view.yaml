@@ -95,6 +95,10 @@ refs:
     eventListeners:
       click:
         handler: handleAddFontSubmitClick
+styles:
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - $if showExplorerPanel:

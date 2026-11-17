@@ -202,7 +202,7 @@ styles:
     height: 24px
     justify-content: space-between
     padding: "0 8px"
-    text-align: left
+    text-align: start
     width: 100%
   ".commandLineSelectorRow":
     container-type: inline-size

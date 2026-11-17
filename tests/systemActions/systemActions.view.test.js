@@ -174,7 +174,7 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain("overscroll-behavior: contain");
     expect(systemActionsView).toContain("top: calc(var(--spacing-md) - 2px)");
     expect(systemActionsView).toContain("top: var(--spacing-md)");
-    expect(systemActionsView).toContain("right: var(--spacing-md);");
+    expect(systemActionsView).toContain("inset-inline-end: var(--spacing-md);");
     expect(systemActionsView).toContain("w=28 h=28 sm-w=24 sm-h=24");
     expect(sceneEditorLexicalView).toContain(
       "dialog-variant=scene-editor-left",

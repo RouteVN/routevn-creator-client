@@ -7184,117 +7184,125 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
-  it("moves right across a final reference chip in one keypress", async () => {
-    const restoreDomGlobals = installDomGlobals();
+  // Left moves toward the end of the line in right-to-left projects.
+  it.each([
+    ["ltr", "ArrowRight"],
+    ["rtl", "ArrowLeft"],
+  ])(
+    "moves toward the line end across a final reference chip in one keypress (%s, %s)",
+    async (direction, key) => {
+      const restoreDomGlobals = installDomGlobals();
 
-    try {
-      const { LexicalSceneDocumentEditorElement } = await import(
-        "../../src/primitives/lexicalSceneDocumentEditor.js"
-      );
-      const { $createMentionNode, MentionNode } = await import(
-        "../../src/primitives/lexicalRichTextShared.js"
-      );
-      const editor = createEditor({
-        namespace: "lexical-reference-final-arrow-right-test",
-        nodes: [MentionNode],
-        theme: {
-          paragraph: "editor-paragraph",
-        },
-        onError: (error) => {
-          throw error;
-        },
-      });
-      const rootElement = document.createElement("div");
-      const editorElement = Object.create(
-        LexicalSceneDocumentEditorElement.prototype,
-      );
-      let lineKey;
+      try {
+        const { LexicalSceneDocumentEditorElement } = await import(
+          "../../src/primitives/lexicalSceneDocumentEditor.js"
+        );
+        const { $createMentionNode, MentionNode } = await import(
+          "../../src/primitives/lexicalRichTextShared.js"
+        );
+        const editor = createEditor({
+          namespace: "lexical-reference-final-arrow-right-test",
+          nodes: [MentionNode],
+          theme: {
+            paragraph: "editor-paragraph",
+          },
+          onError: (error) => {
+            throw error;
+          },
+        });
+        const rootElement = document.createElement("div");
+        const editorElement = Object.create(
+          LexicalSceneDocumentEditorElement.prototype,
+        );
+        let lineKey;
 
-      document.body.append(rootElement);
-      editor.setRootElement(rootElement);
-      editorElement.editor = editor;
-      editorElement.refs = {
-        editor: rootElement,
-      };
-      editorElement.state = {
-        selectedLineId: "line-1",
-        lines: [],
-        mentionTargets: [],
-        mentionMenu: { isOpen: false },
-        mode: "text-editor",
-      };
-      editorElement.lineMetaByKey = new Map();
-      editorElement.lineKeyById = new Map();
-      editorElement.selectedReferenceNodeKey = undefined;
-      editorElement.updateReferenceSelectionMarkers = vi.fn();
-      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
-        lineId: "line-1",
-        start: 3,
-        end: 3,
-      }));
-
-      editor.update(
-        () => {
-          const root = $getRoot();
-          const line = $createParagraphNode();
-          const mentionNode = $createMentionNode({
-            resourceId: "ageVariable",
-            label: "age2",
-          });
-
-          line.append(
-            $createTextNode("2  "),
-            mentionNode,
-            $createTextNode(EDITOR_CARET_TEXT),
-          );
-          root.append(line);
-          lineKey = line.getKey();
-          editorElement.lineMetaByKey.set(lineKey, {
-            id: "line-1",
-            actions: {
-              dialogue: {
-                content: [
-                  { text: "2  " },
-                  { reference: { resourceId: "ageVariable" } },
-                ],
-              },
-            },
-          });
-          editorElement.lineKeyById.set("line-1", lineKey);
-          line.select(1, 1);
-        },
-        { discrete: true },
-      );
-
-      const event = {
-        key: "ArrowRight",
-        code: "ArrowRight",
-        preventDefault: vi.fn(),
-        stopPropagation: vi.fn(),
-      };
-      const didHandle = editorElement.handleReferenceArrowNavigation(event);
-      const selection = editor.getEditorState().read(() => {
-        const currentSelection = $getSelection();
-        return {
-          anchorKey: currentSelection?.anchor?.key,
-          anchorOffset: currentSelection?.anchor?.offset,
-          anchorType: currentSelection?.anchor?.type,
+        rootElement.style.direction = direction;
+        document.body.append(rootElement);
+        editor.setRootElement(rootElement);
+        editorElement.editor = editor;
+        editorElement.refs = {
+          editor: rootElement,
         };
-      });
+        editorElement.state = {
+          selectedLineId: "line-1",
+          lines: [],
+          mentionTargets: [],
+          mentionMenu: { isOpen: false },
+          mode: "text-editor",
+        };
+        editorElement.lineMetaByKey = new Map();
+        editorElement.lineKeyById = new Map();
+        editorElement.selectedReferenceNodeKey = undefined;
+        editorElement.updateReferenceSelectionMarkers = vi.fn();
+        editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+          lineId: "line-1",
+          start: 3,
+          end: 3,
+        }));
 
-      expect(didHandle).toBe(true);
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
-      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
-      expect(editorElement.selectedReferenceNodeKey).toBeUndefined();
-      expect(selection).toEqual({
-        anchorKey: lineKey,
-        anchorOffset: 3,
-        anchorType: "element",
-      });
-    } finally {
-      restoreDomGlobals();
-    }
-  });
+        editor.update(
+          () => {
+            const root = $getRoot();
+            const line = $createParagraphNode();
+            const mentionNode = $createMentionNode({
+              resourceId: "ageVariable",
+              label: "age2",
+            });
+
+            line.append(
+              $createTextNode("2  "),
+              mentionNode,
+              $createTextNode(EDITOR_CARET_TEXT),
+            );
+            root.append(line);
+            lineKey = line.getKey();
+            editorElement.lineMetaByKey.set(lineKey, {
+              id: "line-1",
+              actions: {
+                dialogue: {
+                  content: [
+                    { text: "2  " },
+                    { reference: { resourceId: "ageVariable" } },
+                  ],
+                },
+              },
+            });
+            editorElement.lineKeyById.set("line-1", lineKey);
+            line.select(1, 1);
+          },
+          { discrete: true },
+        );
+
+        const event = {
+          key,
+          code: key,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+        };
+        const didHandle = editorElement.handleReferenceArrowNavigation(event);
+        const selection = editor.getEditorState().read(() => {
+          const currentSelection = $getSelection();
+          return {
+            anchorKey: currentSelection?.anchor?.key,
+            anchorOffset: currentSelection?.anchor?.offset,
+            anchorType: currentSelection?.anchor?.type,
+          };
+        });
+
+        expect(didHandle).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+        expect(editorElement.selectedReferenceNodeKey).toBeUndefined();
+        expect(selection).toEqual({
+          anchorKey: lineKey,
+          anchorOffset: 3,
+          anchorType: "element",
+        });
+      } finally {
+        restoreDomGlobals();
+      }
+    },
+  );
 
   it("moves right out of a final reference when native selection is inside the chip", async () => {
     const restoreDomGlobals = installDomGlobals();
