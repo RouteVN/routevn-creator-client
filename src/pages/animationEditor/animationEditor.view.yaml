@@ -617,7 +617,7 @@ template:
           - 'rtgl-view h=1fg sv w=f p=md g=lg style="container-type: size;"':
               - 'rtgl-view#animationEditorCanvasBackground d=v w=f g=md p=${previewCanvasPadding} bgc=bg style="box-sizing: border-box; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'rtgl-view pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
-                      - rtgl-view pos=abs cor=full:
+                      - rtgl-view pos=abs edge=f:
                           - 'div#canvas style="width: 100%; height: 100%; display: flex;"': null
               - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
                   - rtgl-view#animationEditorToolbar d=h w=f av=c:
@@ -748,7 +748,7 @@ template:
                               - 'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
-                          - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
+                          - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
                               - $if selectedKeyframeEditor.camera && selectedKeyframeEditor.hasInitialValue && selectedKeyframe.index == 0:
                                   - rtgl-view slot=camera-initial-value d=v w=f g=xs:
                                       - rtgl-view d=h w=f av=c:
@@ -784,7 +784,7 @@ template:
                                   - rtgl-input-number#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.value}: null
                               - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null
                         $elif selectedPropertyDetailId:
-                          - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
+                          - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
                               - $if selectedPropertyEditor.camera && selectedPropertyEditor.hasInitialValue:
                                   - rtgl-view slot=camera-initial-value d=v w=f g=xs:
                                       - rtgl-view d=h w=f av=c:
@@ -983,8 +983,8 @@ template:
                   - 'rtgl-view#imageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelMaskImageSelection variant=se: ${cancelButton}
-                  - rtgl-button#confirmMaskImageSelection variant=pr: ${okButton}
+                  - rtgl-button#cancelMaskImageSelection v=se: ${cancelButton}
+                  - rtgl-button#confirmMaskImageSelection v=pr: ${okButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
@@ -994,4 +994,4 @@ template:
                   - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null
   - $if cameraEditor:
       - rtgl-dialog#cameraDialog open layout=fixed p=none close-button:
-          - rvn-animation-camera-editor#cameraEditor slot=content w=f h=f :initial=${cameraEditorInitial} :pose=${cameraEditor.pose} :projectResolution=${projectResolution} imageId=${cameraImageId} :imageSize=${cameraImageSize}: null
+          - rvn-animation-camera-editor#cameraEditor slot=content :initial=${cameraEditorInitial} :pose=${cameraEditor.pose} :projectResolution=${projectResolution} imageId=${cameraImageId} :imageSize=${cameraImageSize}: null

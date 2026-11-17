@@ -62,6 +62,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Rettangoli contract check
+        run: bun run check:contracts
+
       - name: Unit tests
         run: bun run test:unit
 

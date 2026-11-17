@@ -101,9 +101,9 @@ template:
               - 'rtgl-view pos=abs h=1 bgc=bo style="left: 0; right: 0; top: 47px; z-index: 1001; pointer-events: none;"': null
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
-                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} :showMenuButton=${showMobileMenuButton} menu-button-placement=trailing show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
+                      - rvn-group-variables-view#groupview navTitle=${title} :showMenuButton=${showMobileMenuButton} menu-button-placement=trailing show-search=false search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 :mobileLayout=${mobileLayout} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
                     $else:
-                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 scroll-bottom-padding=33vh :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
+                      - rvn-group-variables-view#groupview navTitle=${title} search-in-filter-popover show-tag-filter progressive-render progressive-hydration-delay-frame-count=4 scroll-bottom-padding=33vh :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
@@ -113,7 +113,7 @@ template:
                                   - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                                       - rtgl-text w=1fg ellipsis=true: ${selectedDetailName}
                                       - rtgl-svg svg=edit wh=16: null
-                                  - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
+                                  - rvn-detail-view#detailView key=${selectedDetailId} :fields=${detailFields}:
                                       - $if selectedItemId:
                                           - rtgl-tag-select#detailTagSelect slot="variable-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
                             $else:
@@ -135,7 +135,7 @@ template:
               - rtgl-view d=h w=f g=sm p=md bwb=xs:
                   - rtgl-button#mobileDetailDeleteButton w=1fg v=se pre=trash: ${deleteButton}
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
-                  - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
+                  - rvn-detail-view#mobileDetailView key=${selectedItemId} :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="variable-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="${addTagPlaceholder}": null
   - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
       - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null

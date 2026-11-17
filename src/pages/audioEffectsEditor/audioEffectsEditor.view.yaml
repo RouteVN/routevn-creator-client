@@ -390,7 +390,7 @@ template:
               - 'rtgl-view w=f h=70vh style="min-width: 0; min-height: 0;"':
                   - rvn-sound-selector#soundSelector selectedSoundId=${selectedPreviewSoundId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - 'rtgl-button#confirmSoundSelection variant=pr ?disabled=${soundSelectionConfirmDisabled}': ${confirmSoundSelectionButton}
+                  - 'rtgl-button#confirmSoundSelection v=pr ?disabled=${soundSelectionConfirmDisabled}': ${confirmSoundSelectionButton}
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeMenuItems} ?open=${keyframeMenu.open} x=${keyframeMenu.x} y=${keyframeMenu.y}: null
   - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${addPropertySideMenu.open} x=${addPropertySideMenu.x} y=${addPropertySideMenu.y}: null
   - rtgl-popover#timelineZoomPopover ?open=${timelineZoomPopover.open} x=${timelineZoomPopover.x} y=${timelineZoomPopover.y} place=be content-w=260 content-g=sm content-ph=md content-pv=md:

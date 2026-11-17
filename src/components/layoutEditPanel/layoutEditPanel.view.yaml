@@ -638,7 +638,7 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId} :columns=${imageSelectorColumns} :minColumnWidth=${imageSelectorMinColumnWidth}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmImageSelection variant=pr: ${selectButton}
+                  - rtgl-button#confirmImageSelection v=pr: ${selectButton}
   - rtgl-dialog#soundFormDialog ?open=${soundFormDialog.open} s=md:
       - $if soundFormDialog.open:
           - rtgl-view slot=content g=md w=f:
@@ -669,7 +669,7 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-sound-selector#soundSelector selectedSoundId=${tempSelectedSoundId} :columns=${soundSelectorColumns} :minColumnWidth=${soundSelectorMinColumnWidth}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#confirmSoundSelection variant=pr: ${selectButton}
+                  - rtgl-button#confirmSoundSelection v=pr: ${selectButton}
   - rtgl-dialog#spritesheetSelectorDialog ?open=${spritesheetSelectorDialog.open} s=lg:
       - $if spritesheetSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:
@@ -680,8 +680,8 @@ template:
                   - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                       - rvn-spritesheet-selector#spritesheetSelector selectedSpritesheetValue=${tempSelectedSpritesheetValue} :columns=${selectorColumns}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelSpritesheetSelection variant=se: ${cancelButton}
-                  - rtgl-button#confirmSpritesheetSelection variant=pr: ${selectButton}
+                  - rtgl-button#cancelSpritesheetSelection v=se: ${cancelButton}
+                  - rtgl-button#confirmSpritesheetSelection v=pr: ${selectButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

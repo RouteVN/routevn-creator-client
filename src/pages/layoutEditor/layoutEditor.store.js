@@ -177,7 +177,6 @@ const localizeMenuItems = (items = [], copy = {}) => {
 
 export const createInitialState = () => {
   return {
-    lastUpdateDate: undefined,
     layoutData: { tree: [], items: {} },
     selectedItemId: undefined,
     detailPanelSelectedItemId: undefined,
@@ -422,7 +421,6 @@ export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
   if (targetItemId && state.layoutData && state.layoutData.items) {
     state.layoutData.items[targetItemId] = updatedItem;
   }
-  state.lastUpdateDate = Date.now();
   state.selectedElementMetrics = undefined;
 };
 
