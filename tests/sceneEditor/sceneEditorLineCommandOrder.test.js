@@ -8,6 +8,8 @@ import {
   handleEditorDataChanged,
   handleNewLine,
   handleSystemActionsActionDelete,
+  handleVisualLayoutEdit,
+  handleVisualLayoutEditorClose,
   prepareSceneEditorNavigation,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import { createStoryCommandApi } from "../../src/deps/services/shared/commandApi/story.js";
@@ -204,6 +206,7 @@ const createPage = () => {
     deps,
     store,
     shared,
+    storyCommandApi,
     writes,
     savedSection,
     updateRepository,
@@ -561,5 +564,237 @@ describe("scene editor: one navigation action per line", () => {
       resetStoryAtSection,
       bgm: {},
     });
+  });
+});
+
+describe("scene editor: the layout editor of a visual", () => {
+  const layoutWith = (text) => ({
+    layoutSchemaVersion: 2,
+    elements: {
+      items: { title: { type: "text", name: "Title", text } },
+      tree: [{ id: "title" }],
+    },
+  });
+  // The scene the canvas draws for line 2, the card among it.
+  const renderedScene = [
+    { id: "bg", type: "sprite", src: "bg.png" },
+    { id: "visual-card", type: "container", x: 0, y: 0, children: [] },
+    { id: "dialogue", type: "container", children: [] },
+  ];
+
+  // The editor's close event, with its picture of the layout when it took one.
+  const closeEvent = (detail = {}) => ({ _event: { detail } });
+
+  // The actions dialog, which the page opens again when the editor closes.
+  const createActionsDialog = (page) => {
+    const open = vi.fn();
+    page.deps.refs.systemActions = { transformedHandlers: { open } };
+    return open;
+  };
+
+  const openCardLayout = (page, { returnToEditView = false } = {}) => {
+    page.store.setSelectedLineId({ selectedLineId: "line-2" });
+    page.store.setActionTargetLineId({ lineId: "line-2" });
+    return handleVisualLayoutEdit(page.deps, {
+      _event: {
+        detail: {
+          visualId: "card",
+          returnToEditView,
+          actions: {
+            visual: { items: [{ id: "card", layout: layoutWith("Hello") }] },
+          },
+        },
+      },
+    });
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestAnimationFrame", (callback) =>
+      setTimeout(callback, 16),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("saves the line's visuals, then opens over the line's scene", async () => {
+    const page = createPage();
+    // The canvas draws when asked to, and gives what it drew.
+    page.deps.subject.dispatch = vi.fn((_action, payload) => {
+      payload?.completion?.resolve();
+    });
+    page.deps.graphicsService.engineSelectRenderState = () => ({
+      elements: renderedScene,
+    });
+
+    await openCardLayout(page);
+
+    expect(page.savedSection().lines.items["line-2"].actions.visual).toEqual({
+      items: [{ id: "card", layout: layoutWith("Hello") }],
+    });
+    const editor = page.store.selectVisualLayoutEditor();
+    expect(editor).toMatchObject({
+      isOpen: true,
+      sceneId: "scene-1",
+      sectionId: "section-1",
+      lineId: "line-2",
+      visualId: "card",
+    });
+    expect(editor.sceneBackdrop.map((element) => element.id)).toEqual([
+      "bg",
+      "layout-editor-scene-slot",
+      "dialogue",
+    ]);
+    // The page's canvas and undo wait until the editor closes.
+    expect(page.store.selectPreviewScene().visualLayoutEditorOpen).toBe(true);
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
+  });
+
+  it("keeps undo waiting from the save until the editor is open, and lets it go when the save fails", async () => {
+    const page = createPage();
+    // The canvas draws the scene for the editor when it is let to.
+    let drawScene;
+    page.deps.subject.dispatch = vi.fn((_action, payload) => {
+      drawScene = () => payload?.completion?.resolve();
+    });
+    page.deps.graphicsService.engineSelectRenderState = () => ({
+      elements: renderedScene,
+    });
+
+    const opening = openCardLayout(page);
+    await vi.waitFor(() => expect(drawScene).toBeDefined());
+    // The line is saved and the actions dialog is gone, but the editor is
+    // not open yet: undo still waits.
+    expect(page.store.selectActionTargetLineId()).toBeUndefined();
+    expect(page.store.selectVisualLayoutEditor().isOpen).toBe(false);
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
+
+    drawScene();
+    await opening;
+    expect(page.store.selectVisualLayoutEditor().isOpen).toBe(true);
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
+
+    // A save that fails opens nothing, and undo is back.
+    const failing = createPage();
+    failing.deps.projectService.updateLineActions = vi.fn(async () => {
+      throw new Error("database is locked");
+    });
+    await expect(openCardLayout(failing)).rejects.toThrow("database is locked");
+    failing.store.setActionTargetLineId({ lineId: undefined });
+    expect(failing.store.selectVisualLayoutEditor()).toMatchObject({
+      isOpen: false,
+      isOpening: false,
+    });
+    expect(failing.store.selectIsEditHistoryBlocked()).toBe(false);
+  });
+
+  it("takes the layout as the editor saved it as one undo step when it closes", async () => {
+    const page = createPage();
+    const openActionsDialog = createActionsDialog(page);
+    // A device without graphics: the layout opens without its scene.
+    page.store.markCanvasUnavailable();
+    await openCardLayout(page);
+    expect(page.store.selectVisualLayoutEditor().sceneBackdrop).toBeUndefined();
+    const undoBefore = page.store.selectEditHistoryStep({ direction: "undo" });
+
+    // The editor saves the whole layout, twice.
+    for (const text of ["Hi", "Bye"]) {
+      await page.storyCommandApi.updateVisualLayoutElements({
+        lineId: "line-2",
+        visualId: "card",
+        elements: layoutWith(text).elements,
+      });
+    }
+
+    // The panel takes the editor's place in the same step: no render leaves
+    // the page with neither until the next one.
+    let rendersWithNeither = 0;
+    page.deps.render.mockImplementation(() => {
+      if (!page.store.selectVisualLayoutEditor().isOpen) {
+        Promise.resolve().then(() => {
+          if (openActionsDialog.mock.calls.length === 0) {
+            rendersWithNeither += 1;
+          }
+        });
+      }
+    });
+    let atOpen;
+    openActionsDialog.mockImplementation(() => {
+      atOpen = {
+        editorOpen: page.store.selectVisualLayoutEditor().isOpen,
+        visual: page.store.selectEffectivePresentationState().visual,
+        snapshotUrl: page.store.selectVisualSnapshots().card?.url,
+      };
+    });
+
+    const closing = handleVisualLayoutEditorClose(
+      page.deps,
+      closeEvent({ snapshotUrl: "data:image/png;base64,bGF5b3V0" }),
+    );
+    // The panel is open before anything is waited for, the canvas included.
+    expect(openActionsDialog).toHaveBeenCalledTimes(1);
+    await closing;
+
+    expect(page.store.selectVisualLayoutEditor().isOpen).toBe(false);
+    expect(rendersWithNeither).toBe(0);
+    // Before the canvas is back, the panel is given the line's visuals as the
+    // editor saved them, and the editor's picture of the layout.
+    expect(atOpen).toEqual({
+      editorOpen: false,
+      visual: { items: [{ id: "card", layout: layoutWith("Bye") }] },
+      snapshotUrl: "data:image/png;base64,bGF5b3V0",
+    });
+    const shownLine = page.store
+      .selectScene()
+      .sections[0].lines.find((line) => line.id === "line-2");
+    expect(shownLine.actions.visual.items[0].layout).toEqual(layoutWith("Bye"));
+    const undo = page.store.selectEditHistoryStep({ direction: "undo" });
+    expect(undo).not.toBe(undoBefore);
+    // The step changes only line 2: from the layout opened to the one saved.
+    expect(Object.keys(undo.after)).toEqual(["line-2"]);
+    expect(undo.before["line-2"].line.actions.visual).toEqual({
+      items: [{ id: "card", layout: layoutWith("Hello") }],
+    });
+    expect(undo.after["line-2"].line.actions.visual).toEqual({
+      items: [{ id: "card", layout: layoutWith("Bye") }],
+    });
+
+    // The visual panel opens again on the list it was opened from, with the
+    // line's visuals as the editor saved them, for the same line.
+    expect(openActionsDialog).toHaveBeenCalledTimes(1);
+    expect(openActionsDialog).toHaveBeenCalledWith({
+      mode: "visual",
+      actions: shownLine.actions,
+      editVisualId: undefined,
+    });
+    expect(page.store.selectActionTargetLineId()).toBe("line-2");
+    // Undo waits for the actions dialog, as it does whenever it is open.
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(true);
+    page.store.clearActionTargetLineId();
+    expect(page.store.selectIsEditHistoryBlocked()).toBe(false);
+
+    // A second close, as from a second event, changes nothing.
+    await handleVisualLayoutEditorClose(page.deps, closeEvent());
+    expect(page.store.selectEditHistoryStep({ direction: "undo" })).toBe(undo);
+    expect(openActionsDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the visual panel again in the visual's edit view when Edit Layout opened the layout", async () => {
+    const page = createPage();
+    const openActionsDialog = createActionsDialog(page);
+    page.store.markCanvasUnavailable();
+    await openCardLayout(page, { returnToEditView: true });
+    expect(page.store.selectVisualLayoutEditor().returnToEditView).toBe(true);
+
+    await handleVisualLayoutEditorClose(page.deps, closeEvent());
+
+    expect(openActionsDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: "visual", editVisualId: "card" }),
+    );
   });
 });

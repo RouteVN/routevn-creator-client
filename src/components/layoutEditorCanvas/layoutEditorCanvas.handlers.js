@@ -1014,6 +1014,7 @@ const prefetchLayoutEditorAssets = async (
       previewData: props.previewData,
       resolution: props.resolution,
       sampleText: selectLayoutPreviewSampleText(deps.i18n),
+      sceneBackdrop: props.sceneBackdrop,
     });
 
     if (fileReferences.length === 0) {
@@ -1086,6 +1087,7 @@ const renderLayoutEditorCanvas = async (
       canvasUnitsPerCssPixel,
       graphicsService: deps.graphicsService,
       sampleText: selectLayoutPreviewSampleText(deps.i18n),
+      sceneBackdrop: props.sceneBackdrop,
     });
     if (finishStaleCanvasRender(deps, renderRequestId)) {
       return;
@@ -1802,6 +1804,7 @@ export const handleOnUpdate = async (deps, changes) => {
     didResolutionChange ||
     oldProps.selectedItemId !== newProps.selectedItemId ||
     oldProps.previewData !== newProps.previewData ||
+    oldProps.sceneBackdrop !== newProps.sceneBackdrop ||
     oldProps.disableMoveDrag !== newProps.disableMoveDrag ||
     oldProps.disableInteraction !== newProps.disableInteraction ||
     !areCanvasLayoutStatesEquivalent(

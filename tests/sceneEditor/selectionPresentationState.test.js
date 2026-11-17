@@ -40,11 +40,11 @@ describe("scene editor selected line presentation state", () => {
   it("syncs the lexical editor presentation state from section changes when selecting a line", () => {
     const state = createInitialState();
 
-    setPresentationState({ state }, { presentationState: stalePresentationState });
-    setSectionLineChanges(
+    setPresentationState(
       { state },
-      { changes: selectedLineChanges },
+      { presentationState: stalePresentationState },
     );
+    setSectionLineChanges({ state }, { changes: selectedLineChanges });
     setSelectedLineId({ state }, { selectedLineId: "line-next" });
 
     expect(selectEffectivePresentationState({ state })).toEqual({
@@ -59,7 +59,10 @@ describe("scene editor selected line presentation state", () => {
   it("does not clear lexical editor presentation state when section changes are stale", () => {
     const state = createInitialState();
 
-    setPresentationState({ state }, { presentationState: stalePresentationState });
+    setPresentationState(
+      { state },
+      { presentationState: stalePresentationState },
+    );
     setSectionLineChanges(
       { state },
       {
@@ -90,7 +93,10 @@ describe("scene editor selected line presentation state", () => {
   it("syncs lexical editor presentation state when fresh section changes arrive", () => {
     const state = createInitialState();
 
-    setPresentationState({ state }, { presentationState: stalePresentationState });
+    setPresentationState(
+      { state },
+      { presentationState: stalePresentationState },
+    );
     setSelectedLineId({ state }, { selectedLineId: "line-next" });
     setSectionLineChanges({ state }, { changes: selectedLineChanges });
 
@@ -166,5 +172,51 @@ describe("scene editor selected line presentation state", () => {
         x: 1400,
       },
     });
+  });
+
+  it("keeps visual layouts in their saved form, as the panels edit and save them", () => {
+    const state = createInitialState();
+    const source = {
+      layoutSchemaVersion: 2,
+      elements: {
+        items: { content: { type: "rect", name: "Card", x: 10 } },
+        tree: [{ id: "content" }],
+      },
+    };
+    // As the engine presents it: the layout built for it, with the saved one.
+    const presented = {
+      visual: {
+        items: [
+          {
+            id: "card",
+            layer: 50,
+            layout: {
+              elements: [{ id: "content", type: "rect", x: 10 }],
+              source,
+            },
+          },
+        ],
+      },
+    };
+    const saved = {
+      visual: { items: [{ id: "card", layer: 50, layout: source }] },
+    };
+
+    setPresentationState({ state }, { presentationState: presented });
+    expect(selectEffectivePresentationState({ state })).toEqual(saved);
+
+    setSectionLineChanges(
+      { state },
+      {
+        changes: {
+          lines: [
+            { id: "line-1", changes: {}, presentationState: {} },
+            { id: "line-2", changes: {}, presentationState: presented },
+          ],
+        },
+      },
+    );
+    setSelectedLineId({ state }, { selectedLineId: "line-2" });
+    expect(selectEffectivePresentationState({ state })).toEqual(saved);
   });
 });

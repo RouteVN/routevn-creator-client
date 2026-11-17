@@ -23,8 +23,8 @@ import {
   selectLayoutEditorSelectedItem,
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
-} from "./support/layoutEditorViewData.js";
-import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
+} from "../../internal/ui/layoutEditor/layoutEditorViewData.js";
+import { selectLayoutEditorPageCopy } from "../../internal/ui/layoutEditor/layoutEditorCopy.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
   createEditHistory,

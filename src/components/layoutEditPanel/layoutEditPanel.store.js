@@ -19,7 +19,7 @@ import { getVariableOptions } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
 import { getRuntimeFieldLabel } from "./support/layoutEditPanelRuntimeLabels.js";
-import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
+import { getFragmentLayoutOptions } from "../../internal/ui/layoutEditor/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
 import { formatPercent } from "../../internal/dates.js";

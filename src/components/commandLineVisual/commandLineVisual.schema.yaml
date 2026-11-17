@@ -18,6 +18,17 @@ propsSchema:
                 type: string
               animationName:
                 type: string
+              layout:
+                type: object
+                properties:
+                  layoutSchemaVersion:
+                    type: number
+                  width:
+                    type: number
+                  height:
+                    type: number
+                  elements:
+                    type: object
               transformId:
                 type: string
               x:
@@ -108,4 +119,12 @@ propsSchema:
                       loop:
                         type: boolean
     presentationState:
+      type: object
+    # A visual to open in the edit view when the panel opens.
+    editVisualId:
+      type: string
+    # Pictures of the visuals, each alone and framed as the whole screen, by
+    # visual id. A visual without one waits for it. Left out, the panel shows
+    # the first resource each visual shows.
+    visualSnapshots:
       type: object

@@ -13,7 +13,7 @@ import {
   handleUndoButtonClick,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { createLayoutEditorRepositoryStoreData } from "../../src/pages/layoutEditor/support/layoutEditorRepositoryState.js";
-import { toLayoutEditorSaveError } from "../../src/pages/layoutEditor/support/layoutEditorSaveFailure.js";
+import { toLayoutEditorSaveError } from "../../src/internal/ui/layoutEditor/layoutEditorSaveFailure.js";
 import { EN_I18N } from "../support/i18n.js";
 import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
