@@ -1,44 +1,15 @@
-import { selectOnMyDeviceLocation } from "../../internal/iosFilesLocation.js";
-import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-
+// The Android backup folder setup page.
 export const createInitialState = () => ({
-  deviceName: "iPhone",
-  isBackup: false,
   skipDialogOpen: false,
   stopDialogOpen: false,
   savedFolder: undefined,
-  isReconnecting: false,
   isBusy: false,
   errorKey: undefined,
 });
 
-export const setBackupMode = ({ state }, { isBackup }) => {
-  state.isBackup = isBackup;
-};
-
 export const selectIsBusy = ({ state }) => state.isBusy;
-export const setReconnecting = ({ state }, { isReconnecting }) => {
-  state.isReconnecting = isReconnecting;
-};
 
-export const setDeviceName = ({ state }, { deviceName }) => {
-  state.deviceName = deviceName ?? "iPhone";
-};
-
-export const selectCopy = ({ state, i18n }) => {
-  const copy = {
-    ...(state.isBackup ? i18n.androidBackupSetup : i18n.projectFolderSetupPage),
-  };
-  if (state.isBackup) return copy;
-  if (state.isReconnecting) {
-    copy.description = copy.openDescription;
-  }
-  const location = selectOnMyDeviceLocation(i18n.appPage, state.deviceName);
-  for (const key of ["description", "appFolderError", "localFolderError"]) {
-    copy[key] = formatI18nCopy(copy[key], { location });
-  }
-  return copy;
-};
+export const selectCopy = ({ i18n }) => i18n.androidBackupSetup;
 
 export const setBusy = ({ state }, { isBusy }) => {
   state.isBusy = isBusy;
@@ -47,7 +18,6 @@ export const setBusy = ({ state }, { isBusy }) => {
 
 export const setSavedFolder = ({ state }, { folder }) => {
   state.savedFolder = folder;
-  state.isReconnecting = false;
   state.isBusy = false;
   state.errorKey = undefined;
 };

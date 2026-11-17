@@ -304,9 +304,6 @@ export const createRouteTransitionRunner = (
     const currentTransitionToken = ++transitionToken;
     const nextPayload = normalizePayload(payload);
     let canonicalPath = getCanonicalRoutePath(path);
-    if (appService.resolveProjectFolderSetupRoute) {
-      canonicalPath = appService.resolveProjectFolderSetupRoute(canonicalPath);
-    }
     if (
       (canonicalPath === "/project/asset-packs" ||
         canonicalPath === "/project/asset-pack-editor") &&

@@ -1,3 +1,4 @@
+import { chooseProjectFolder } from "../../internal/ui/projectFolderSetupFlow.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   activateAppLocale,
@@ -54,9 +55,13 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleChangeProjectFolder = ({ appService }) => {
+export const handleChangeProjectFolder = async (deps) => {
+  const { appService, store, render } = deps;
   if (appService.getPlatform() !== "ios") return;
-  appService.navigate("/project-folder-setup", { from: "config" });
+  const status = await chooseProjectFolder(deps);
+  if (!status) return;
+  store.setProjectFolder({ visible: true, path: status.folder.displayPath });
+  render();
 };
 
 export const handleLanguageChange = async (deps, payload) => {

@@ -1,6 +1,7 @@
 // Run against watch:ios: node tests/ios/projectFolderSetup.browser.mjs
 // The native Files dialog needs a physical phone; this fixture exercises the
-// real page, iOS picker client and bridge callbacks in an isolated browser DB.
+// real setup dialogs, iOS picker client and bridge callbacks in an isolated
+// browser DB.
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
@@ -94,7 +95,10 @@ try {
       appService.getProjectFolderSetup = () => trialSetup.getStatus();
       appService.pickProjectFolderSetup = (options) => trialSetup.pick(options);
       appService.confirmProjectFolderSetup = (options) => trialSetup.confirm(options);
-      appService.resolveProjectFolderSetupRoute = (path) => trialSetup.getStatus().configured ? path : '/project-folder-setup';
+      // The Projects layout check switches to the Android layout, which mounts
+      // the backup status component.
+      appService.subscribeBackup = () => ({ unsubscribe() {} });
+      appService.refreshBackupStatus = async () => {};
       window.folderTrial.appService = appService;
       window.folderTrial.projectService = projectService;
       export { deps };
@@ -102,136 +106,138 @@ try {
     );
     await route.fulfill({ response, body });
   });
-  await page.route("**/project-folder-setup*", async (route) => {
+  await page.route("**/projects*", async (route) => {
     if (route.request().resourceType() !== "document") return route.continue();
     const response = await route.fetch({ url: origin + "/ios/index.html" });
     await route.fulfill({ response });
   });
-  await page.goto(origin + "/project-folder-setup?vt-input-mode=touch");
-  const setup = page.locator("#setupFolderButton");
-  await setup.waitFor();
-  assert.equal(await setup.textContent(), "Setup");
-  await page
+  const dialog = page.locator("rtgl-global-ui");
+  const chooseFolder = dialog.getByText("Choose Folder", { exact: true });
+  const createButton = page.locator(
+    "rvn-projects #mobileCreateMenuButton, rvn-projects #createButton",
+  );
+  const createDialog = page.locator("rvn-project-create-dialog");
+  const useIOSPlatform = async () => {
+    await page.waitForFunction(() => window.folderTrial?.appService);
+    await page.evaluate(() => {
+      window.folderTrial.appService.getPlatform = () => "ios";
+    });
+  };
+  const tapCreateProject = async () => {
+    await page.locator("#mobileCreateMenuButton").click();
+    await page
+      .locator("#mobileActionMenu")
+      .getByText("Create Project", { exact: true })
+      .click();
+  };
+  const confirmCount = () => page.evaluate(() => window.folderTrial.confirms);
+
+  // A new install opens Projects; the first Create asks for the folder.
+  await page.goto(origin + "/projects?vt-input-mode=touch");
+  await createButton.waitFor();
+  assert.equal(await page.locator("rvn-project-folder-setup").count(), 0);
+  await useIOSPlatform();
+  await tapCreateProject();
+  await dialog
     .getByText("Set up your projects folder", { exact: true })
     .waitFor();
-  const checkCenteredContent = async () => {
-    for (const viewport of [
-      { width: 390, height: 844 },
-      { width: 1133, height: 744 },
-      { width: 744, height: 1133 },
-      { width: 844, height: 390 },
-      { width: 390, height: 240 },
-    ]) {
-      await page.setViewportSize(viewport);
-      const geometry = await page
-        .locator("#projectFolderSetupContent")
-        .evaluate((element) => {
-          const scroller = element.parentElement;
-          scroller.scrollTop = 0;
-          const rect = element.getBoundingClientRect();
-          const parent = scroller.getBoundingClientRect();
-          return {
-            width: rect.width,
-            top: rect.top - parent.top,
-            horizontalOffset:
-              rect.x + rect.width / 2 - (parent.x + parent.width / 2),
-            verticalOffset:
-              rect.y + rect.height / 2 - (parent.y + parent.height / 2),
-            fits: rect.height <= parent.height,
-            scrollable: scroller.scrollHeight > scroller.clientHeight,
-          };
-        });
-      assert.ok(geometry.width <= 640, JSON.stringify({ viewport, geometry }));
-      assert.ok(Math.abs(geometry.horizontalOffset) < 1);
-      if (geometry.fits) assert.ok(Math.abs(geometry.verticalOffset) < 1);
-      else {
-        assert.ok(geometry.top >= 0);
-        assert.ok(geometry.scrollable);
-      }
-    }
-    await page.setViewportSize({ width: 390, height: 844 });
-  };
-  await checkCenteredContent();
-  await page
-    .getByText(`Choose “${localFilesRoot}” or an existing projects folder.`, {
-      exact: true,
-    })
+  await dialog
+    .getByText(
+      `All your RouteVN projects are kept in one folder. Every project you create or import is saved there. Choose “${localFilesRoot}” or an existing projects folder.`,
+    )
     .waitFor();
-  await page
-    .getByText("New projects will be created in this folder.", {
-      exact: true,
-    })
-    .waitFor();
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1133, height: 744 },
+    { width: 844, height: 390 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    const box = await chooseFolder.boundingBox();
+    assert.ok(
+      box.x >= 0 &&
+        box.y >= 0 &&
+        box.x + box.width <= viewport.width &&
+        box.y + box.height <= viewport.height,
+      JSON.stringify({ viewport, box }),
+    );
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "/tmp/routevn-folder-initial-browser.png" });
-  assert.equal(await setup.getAttribute("v"), "pr");
+
+  // The dialog has one button. Tapping outside it leaves Projects as it was
+  // and never opens the picker.
+  assert.equal(await dialog.locator("#cancelButton").count(), 0);
+  await page.mouse.click(5, 5);
+  await chooseFolder.waitFor({ state: "hidden" });
+  assert.equal(
+    await page.evaluate(() => window.folderTrial.pickerMethod),
+    undefined,
+  );
+  assert.equal(await createDialog.count(), 0);
+
   await page.evaluate(() => {
     window.folderTrial.selection = "app";
   });
-  await setup.click();
-  await page
-    .locator("#projectFolderError", { hasText: "belongs to an app" })
-    .waitFor();
-  await page.evaluate(() => {
-    window.folderTrial.selection = "valid";
-    window.folderTrial.confirmFails = true;
-  });
-  await setup.click();
-  await page
-    .locator("#projectFolderError", { hasText: "Could not save" })
-    .waitFor();
-  assert.equal(await page.locator("#continueFolderButton").count(), 0);
-  assert.equal(await page.locator("#confirmFolderButton").count(), 0);
-  await page.evaluate(() => {
-    window.folderTrial.confirmFails = false;
-  });
-  await setup.click();
-  await page
-    .locator("#projectFolderPath", {
-      hasText: `${localFilesRoot}/My Projects`,
-    })
-    .waitFor();
-  await page.locator("#continueFolderButton:not([disabled])").waitFor();
-  assert.equal(await setup.textContent(), "Change Folder");
-  assert.equal(await setup.getAttribute("v"), "ol");
-  assert.equal(await page.evaluate(() => window.folderTrial.confirms), 2);
-  assert.equal(
-    await page.evaluate(() => window.folderTrial.pickerMethod),
-    "openFolderPicker",
-  );
-  await page.evaluate(() => {
-    window.folderTrial.selection = "cancel";
-  });
-  await setup.click();
-  await page.locator("#continueFolderButton:not([disabled])").waitFor();
-  assert.equal(await page.evaluate(() => window.folderTrial.confirms), 2);
-  assert.equal(
-    await page.evaluate(() => window.folderTrial.pickerMethod),
-    "openFolderPicker",
-  );
-  assert.equal(
-    await page.locator("#projectFolderPath").textContent(),
-    `${localFilesRoot}/My Projects`,
-  );
+  await tapCreateProject();
+  await chooseFolder.click();
   await page
     .getByText(
       `This folder belongs to an app. Choose a separate folder under ${localFilesRoot}.`,
       { exact: true },
     )
-    .waitFor({ state: "hidden" });
+    .waitFor();
+  await page.evaluate(() => {
+    window.folderTrial.selection = "valid";
+    window.folderTrial.confirmFails = true;
+  });
+  await tapCreateProject();
+  await chooseFolder.click();
   await page
     .getByText(
       "Could not save the folder setup. Check access and available space, then try again.",
       { exact: true },
     )
-    .waitFor({ state: "hidden" });
-  await checkCenteredContent();
-  await page.screenshot({ path: "/tmp/routevn-folder-saved-browser.png" });
-  await page.reload();
-  await page.locator("#continueFolderButton").waitFor();
-  await page.locator("#continueFolderButton").click();
-  await page
-    .locator("rvn-projects #mobileCreateMenuButton, rvn-projects #createButton")
     .waitFor();
+  assert.equal(await createDialog.count(), 0);
+  await page.evaluate(() => {
+    window.folderTrial.selection = "cancel";
+    window.folderTrial.confirmFails = false;
+  });
+  await tapCreateProject();
+  await chooseFolder.click();
+  await chooseFolder.waitFor({ state: "hidden" });
+  assert.equal(await confirmCount(), 1);
+  assert.equal(await createDialog.count(), 0);
+
+  // A saved folder continues straight into the create dialog.
+  await page.evaluate(() => {
+    window.folderTrial.selection = "valid";
+  });
+  await tapCreateProject();
+  await chooseFolder.click();
+  await createDialog.waitFor({ state: "attached" });
+  assert.equal(await confirmCount(), 2);
+  assert.equal(
+    await page.evaluate(() => window.folderTrial.pickerMethod),
+    "openFolderPicker",
+  );
+  await page.screenshot({ path: "/tmp/routevn-folder-saved-browser.png" });
+
+  // After a restart the saved folder is used without asking again.
+  await page.reload();
+  await createButton.waitFor();
+  await useIOSPlatform();
+  await tapCreateProject();
+  await createDialog.waitFor({ state: "attached" });
+  assert.equal(await confirmCount(), 0);
+  await page.reload();
+  await createButton.waitFor();
 
   // Config uses the real page and navigation, with an isolated browser project.
   await page.evaluate(async () => {
@@ -251,9 +257,7 @@ try {
   await page.evaluate(async () => {
     window.folderTrial.appService.navigate("/projects");
   });
-  await page
-    .locator("rvn-projects #mobileCreateMenuButton, rvn-projects #createButton")
-    .waitFor();
+  await createButton.waitFor();
   await page.evaluate(async () => {
     window.folderTrial.appService.getPlatform = () => "ios";
     window.folderTrial.appService.navigate("/project/config", {
@@ -269,40 +273,24 @@ try {
   await page.screenshot({
     path: "/tmp/routevn-config-project-folder-browser.png",
   });
-  const previousConfirmCount = await page.evaluate(
-    () => window.folderTrial.confirms,
-  );
-  await page.locator("#changeProjectFolderButton").click();
-  await page.locator("#setupFolderButton").waitFor();
-  assert.equal(
-    await page.evaluate(() => window.folderTrial.confirms),
-    previousConfirmCount,
-  );
-  await page.locator("#continueFolderButton").click();
-  await configuredPath.waitFor();
-  assert.equal(
-    await page.evaluate(() => window.folderTrial.appService.getPath()),
-    "/project/config",
-  );
-  await page.locator("#changeProjectFolderButton").click();
-  await page.locator("#setupFolderButton").waitFor();
+
+  // Change Folder asks in a dialog on Config; cancelling keeps the folder.
+  const changeFolder = page.locator("#changeProjectFolderButton");
+  await changeFolder.click();
+  await dialog.getByText("Change Folder", { exact: true }).waitFor();
+  await page.mouse.click(5, 5);
+  await chooseFolder.waitFor({ state: "hidden" });
+  await changeFolder.click();
   await page.evaluate(() => {
     window.folderTrial.selection = "cancel";
   });
-  await page.locator("#setupFolderButton").click();
-  await page.locator("#continueFolderButton:not([disabled])").waitFor();
-  assert.equal(
-    await page.locator("#projectFolderPath").textContent(),
-    `${localFilesRoot}/My Projects`,
-  );
-  await page.locator("#continueFolderButton").click();
-  await configuredPath.waitFor();
+  await chooseFolder.click();
+  await chooseFolder.waitFor({ state: "hidden" });
+  assert.equal(await confirmCount(), 0);
   assert.equal(
     await configuredPath.textContent(),
     `${localFilesRoot}/My Projects`,
   );
-  await page.locator("#changeProjectFolderButton").click();
-  await page.locator("#setupFolderButton").waitFor();
   await page.evaluate(() => {
     window.folderTrial.selection = "valid";
     window.folderTrial.displayPath = `On My ${window.folderTrial.deviceName}/Other Projects`;
@@ -312,10 +300,14 @@ try {
       throw new Error("Previous project is outside the selected library");
     };
   });
-  await page.locator("#setupFolderButton").click();
-  await page.locator("#continueFolderButton:not([disabled])").waitFor();
-  await page.locator("#continueFolderButton").click();
-  await configuredPath.waitFor();
+  await changeFolder.click();
+  await chooseFolder.click();
+  await page
+    .locator("#configuredProjectFolderPath", {
+      hasText: `${localFilesRoot}/Other Projects`,
+    })
+    .waitFor();
+  assert.equal(await confirmCount(), 1);
   assert.equal(
     await page.evaluate(() => window.folderTrial.appService.getPath()),
     "/project/config",
@@ -325,10 +317,6 @@ try {
       window.folderTrial.appService.getCurrentProjectId(),
     ),
     await page.evaluate(() => window.folderTrial.projectId),
-  );
-  assert.equal(
-    await configuredPath.textContent(),
-    `${localFilesRoot}/Other Projects`,
   );
   await page.evaluate(() =>
     window.folderTrial.appService.navigate("/projects"),
@@ -447,7 +435,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    `PASS: ${deviceName} centered onboarding, immediate folder saving, errors, Config return/path, Projects card/background taps, and empty/short/long scroll layout in portrait, landscape and tablet sizes.`,
+    `PASS: ${deviceName} setup dialog on first Create, immediate folder saving, errors, Config Change Folder dialog/path, Projects card/background taps, and empty/short/long scroll layout in portrait, landscape and tablet sizes.`,
   );
 } finally {
   await browser.close();

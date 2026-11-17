@@ -469,12 +469,6 @@ export const createAppService = (params) => {
     confirmProjectFolderSetup: async (options) =>
       localizeFolderStatus(await projectFolderSetup.confirm(options)),
 
-    resolveProjectFolderSetupRoute(path) {
-      return projectFolderSetup.getStatus().configured
-        ? path
-        : "/project-folder-setup";
-    },
-
     async openArchivePicker(options = {}) {
       const archive = await params.filePicker.openArchivePicker(options);
       return archive ?? undefined;
@@ -506,6 +500,8 @@ export const createAppService = (params) => {
     },
 
     async loadAllProjects() {
+      // Without a projects folder there is nothing for native to list.
+      if (projectFolderSetup.hasNoFolder()) return [];
       await syncIOSProjectEntriesFromStorage();
       return appService.loadAllProjects();
     },
