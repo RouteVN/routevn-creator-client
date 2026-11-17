@@ -9,7 +9,10 @@ import { Ticker } from "pixi.js";
 import createRouteGraphics, { configureAudioRuntime } from "route-graphics";
 import { createRuntimeAssetFromDicedImage } from "../src/internal/bundleRuntimeDicedImages.js";
 import { prepareRenderStateAudioChannelsForGraphics } from "../src/internal/audioRenderState.js";
-import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
+import {
+  extractFileIdsForValue,
+  prepareRenderStateKeyboardForGraphics,
+} from "../src/internal/project/layout.js";
 import {
   createRuntimeEventContext,
   getRuntimeEventActions,
@@ -24,6 +27,11 @@ import { waitForPlayerStart } from "./playerStartGate.js";
 import { updatePlayerLoadingProgress } from "./playerLoadingProgress.js";
 import { createPlayerStartupEffects } from "./playerStartupEffects.js";
 import { createPlayerRenderQueue } from "./playerRenderQueue.js";
+import {
+  createPlayerAssetLookahead,
+  createSectionLineIndex,
+} from "./playerAssetLookahead.js";
+import { createPlayerAssetPreloader } from "./playerAssetPreloader.js";
 
 const hostAudioRuntime = globalThis.__ROUTEVN_PLAYER_HOST__?.audioRuntime;
 if (hostAudioRuntime) configureAudioRuntime(hostAudioRuntime);
@@ -332,6 +340,7 @@ const collectBundleAssetIds = ({ value, hasAsset, result = new Set() }) => {
 const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
   const loadedAssetIds = new Set();
   const assetLoadPromises = new Map();
+  const assetUnloadPromises = new Map();
   const dicedAtlasPixelCache = new Map();
 
   const createAssetBuffer = (content) => {
@@ -438,6 +447,8 @@ const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
     }
 
     const loadPromise = (async () => {
+      // The graphics engine may still be freeing this asset.
+      await assetUnloadPromises.get(assetId);
       const asset = await createRuntimeAsset(assetId);
       try {
         const loadedAssets = await routeGraphics.loadAssets({
@@ -474,7 +485,16 @@ const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
     return loadPromise;
   };
 
+  const getAssetMime = (assetId) =>
+    bundleReader.manifest.assets?.[assetId]?.mime ?? "";
+  const isImageAsset = (assetId) => getAssetMime(assetId).startsWith("image/");
+
   return {
+    loadAsset,
+    // Pictures and sounds both hold up the line that first uses them.
+    isPreloadableAsset: (assetId) =>
+      isImageAsset(assetId) || getAssetMime(assetId).startsWith("audio/"),
+
     collectMissingAssetIds(renderState) {
       const assetIds = collectBundleAssetIds({
         value: renderState,
@@ -484,6 +504,37 @@ const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
       return Array.from(assetIds).filter(
         (assetId) => !loadedAssetIds.has(assetId),
       );
+    },
+
+    collectImageAssetIds(renderState) {
+      return Array.from(
+        collectBundleAssetIds({ value: renderState, hasAsset: isImageAsset }),
+      );
+    },
+
+    getLoadedImageAssetIds() {
+      return Array.from(loadedAssetIds).filter(isImageAsset);
+    },
+
+    // Marks the assets as missing at once, so a screen that needs one again
+    // waits for it to reload instead of drawing without it.
+    unloadAssets(assetIds) {
+      assetIds.forEach((assetId) => loadedAssetIds.delete(assetId));
+      const unloadPromise = routeGraphics
+        .unloadAssets(assetIds)
+        .catch((error) => {
+          console.warn("Failed to unload runtime assets.", error);
+        })
+        .finally(() => {
+          assetIds.forEach((assetId) => {
+            if (assetUnloadPromises.get(assetId) === unloadPromise) {
+              assetUnloadPromises.delete(assetId);
+            }
+          });
+        });
+      assetIds.forEach((assetId) => {
+        assetUnloadPromises.set(assetId, unloadPromise);
+      });
     },
 
     async ensureAssetsLoaded(assetIds = [], onProgress) {
@@ -502,6 +553,73 @@ const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
       );
     },
   };
+};
+
+// Memory an asset takes once loaded. A picture takes four bytes per pixel.
+const createAssetSizes = ({ projectData, bundleReader }) => {
+  const sizes = new Map();
+  for (const image of Object.values(projectData?.resources?.images ?? {})) {
+    if (image?.fileId && image.width > 0 && image.height > 0) {
+      sizes.set(image.fileId, image.width * image.height * 4);
+    }
+  }
+
+  return (assetId) => {
+    if (!sizes.has(assetId)) {
+      const asset = bundleReader.manifest.assets[assetId];
+      // Other files are assumed to be compressed four to one.
+      sizes.set(
+        assetId,
+        asset.width > 0 && asset.height > 0
+          ? asset.width * asset.height * 4
+          : asset.size * 4,
+      );
+    }
+    return sizes.get(assetId);
+  };
+};
+
+const createBundleAssetLookahead = ({
+  projectData,
+  bundleReader,
+  bundleAssetLoader,
+  renderQueue,
+  getEngine,
+}) => {
+  const lineAssetIds = new WeakMap();
+  const preloader = createPlayerAssetPreloader({
+    loadAsset: (assetId) => bundleAssetLoader.loadAsset(assetId),
+    canLoad: () =>
+      !renderQueue.hasWaitingStates() &&
+      !getEngine().selectHasPendingRenderWork(),
+    onError: (error, { assetId }) => {
+      console.warn(`Failed to preload asset "${assetId}".`, error);
+    },
+  });
+
+  return createPlayerAssetLookahead({
+    sections: createSectionLineIndex(projectData),
+    getPointer: () =>
+      getEngine().selectSystemState().contexts.at(-1)?.pointers?.read,
+    getLineAssetIds: (line) => {
+      if (!lineAssetIds.has(line)) {
+        lineAssetIds.set(
+          line,
+          extractFileIdsForValue(projectData, line)
+            .map((file) => file.url)
+            .filter((assetId) => bundleAssetLoader.isPreloadableAsset(assetId)),
+        );
+      }
+      return lineAssetIds.get(line);
+    },
+    getStateAssetIds: (renderState) =>
+      bundleAssetLoader.collectImageAssetIds(renderState),
+    getWaitingStates: () => renderQueue.getWaitingStates(),
+    getAssetSize: createAssetSizes({ projectData, bundleReader }),
+    getLoadedAssetIds: () => bundleAssetLoader.getLoadedImageAssetIds(),
+    unloadAssets: (assetIds) => bundleAssetLoader.unloadAssets(assetIds),
+    preloader,
+  });
 };
 
 const hideLoadingOverlay = () => {
@@ -749,6 +867,7 @@ const prepareEngine = async (
     ensureAssetsLoaded: (assetIds) =>
       bundleAssetLoader.ensureAssetsLoaded(assetIds),
     render: renderPreparedState,
+    onRendered: (renderState) => scheduleAssetLookahead(renderState),
     onAssetLoadStart: ({ assetIds }) => {
       recordDiagnosticStep("Loading render assets", { assetIds });
     },
@@ -774,6 +893,31 @@ const prepareEngine = async (
   const renderEngineState = (renderState) => {
     renderQueue.enqueue(prepareRenderState(renderState));
   };
+
+  const assetLookahead = createBundleAssetLookahead({
+    projectData: jsonData,
+    bundleReader,
+    bundleAssetLoader,
+    renderQueue,
+    getEngine: () => engine,
+  });
+  let lookaheadRenderState;
+  // Runs after the screen is drawn, once for a burst of screens.
+  function scheduleAssetLookahead(renderState) {
+    if (!lookaheadRenderState) {
+      setTimeout(() => {
+        const latestRenderState = lookaheadRenderState;
+        lookaheadRenderState = undefined;
+        // Loading ahead only saves time, so a failure must not stop the story.
+        try {
+          assetLookahead.update(latestRenderState);
+        } catch (error) {
+          console.warn("Failed to plan asset preloading.", error);
+        }
+      }, 0);
+    }
+    lookaheadRenderState = renderState;
+  }
 
   const persistence = createRuntimePersistence({ namespace });
   const persistenceKind = persistence.kind ?? "indexed-db";

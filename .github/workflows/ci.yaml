@@ -80,6 +80,9 @@ jobs:
       - name: Spritesheet format tests
         run: bun run test:spritesheet-formats
 
+      - name: Player asset lookahead tests
+        run: bun run test:player-lookahead
+
       - name: Build Web
         run: bun run build:web
 

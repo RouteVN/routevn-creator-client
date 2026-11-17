@@ -76,6 +76,32 @@ const createQueue = () => {
 };
 
 describe("player render queue", () => {
+  it("reports each state after it is drawn and lists the waiting ones", async () => {
+    const assets = createAssetLoader();
+    const events = [];
+    const queue = createPlayerRenderQueue({
+      collectMissingAssetIds: assets.collectMissingAssetIds,
+      ensureAssetsLoaded: assets.ensureAssetsLoaded,
+      render: (state) => events.push(`render ${state.id}`),
+      onRendered: (state) => events.push(`rendered ${state.id}`),
+    });
+    const waitingState = { id: "two", assetIds: ["image-two"] };
+
+    queue.enqueue({ id: "one" });
+    queue.enqueue(waitingState);
+    expect(events).toEqual(["render one", "rendered one"]);
+    expect(queue.getWaitingStates()).toEqual([waitingState]);
+
+    await assets.finishLoad("image-two");
+    expect(events).toEqual([
+      "render one",
+      "rendered one",
+      "render two",
+      "rendered two",
+    ]);
+    expect(queue.getWaitingStates()).toEqual([]);
+  });
+
   it("renders a state at once when its assets are loaded", () => {
     const { queue, renderedIds, assets } = createQueue();
 

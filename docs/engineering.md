@@ -940,6 +940,38 @@ Normal `206` responses retain range loading. Regression coverage lives in
 If the bundle contract changes, update the smoke test in
 `scripts/test-smoke.js` in the same PR.
 
+### Player Asset Lookahead
+
+The exported player on every platform runs `scripts/main.js`. It loads a
+picture or sound from the package the first time a screen needs it, and holds
+that screen back until the load ends. To keep the line that shows a new picture
+from appearing late, the player loads ahead of the story:
+
+- After each screen is drawn, `createLookaheadPlan` in
+  `scripts/playerAssetLookahead.js` lists the pictures and sounds of the next
+  20 lines of the current section. For each of those lines that can move the
+  story to another section (a choice item, a jump, or a conditional branch), it
+  adds the first 3 lines of every target, because the player's pick is
+  unknown.
+- `scripts/playerAssetPreloader.js` loads that list in the background, one
+  asset at a time, and starts nothing while a screen waits for its own assets.
+  A screen that needs an asset right away loads it directly, as before. A
+  background load that fails is skipped; the failure is reported if the story
+  reaches that asset.
+- Loaded pictures may hold 160 MB of decoded pixels
+  (`MAX_LOADED_IMAGE_BYTES`), and the plan may claim half of that. Past the
+  limit, the pictures used longest ago are freed with
+  `routeGraphics.unloadAssets`. Pictures on the current screen, the screen
+  before it, screens waiting to be drawn, and the plan are never freed. A
+  freed picture loads again when the story returns to it. Sounds are loaded
+  ahead but not freed.
+
+`tests/services/playerAssetLookahead.test.js` covers the plan and the freeing
+rules, including random stories. `bun run test:player-lookahead` plays a
+generated story in the built player in Chromium and WebKit: it stops answering
+package reads and checks that the next pictures still appear, then plays past
+the memory limit and checks that freed pictures are read again and shown.
+
 Service boundary test:
 
 - if code needs store setters/selectors, refs, `render()`, or page event
