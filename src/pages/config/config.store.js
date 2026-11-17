@@ -77,7 +77,22 @@ export const createInitialState = () => ({
   showProjectFolder: false,
   projectFolderPath: undefined,
   showAndroidBackup: false,
+  // The asset package import dialog, and what it imports from: a package ZIP
+  // `file` picked from this device, or a URL typed in the dialog.
+  importDialog: { isOpen: false, source: "url", file: undefined },
 });
+
+export const openImportDialog = ({ state }, { source, file } = {}) => {
+  state.importDialog.isOpen = true;
+  state.importDialog.source = source;
+  state.importDialog.file = file;
+};
+
+// The dialog keeps its source while it closes; the picked file is let go.
+export const closeImportDialog = ({ state }) => {
+  state.importDialog.isOpen = false;
+  state.importDialog.file = undefined;
+};
 
 export const setProjectFolder = ({ state }, { visible, path }) => {
   state.showProjectFolder = visible;
@@ -99,6 +114,7 @@ export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectConfigPageCopy(i18n);
+  const importCopy = i18n?.resourceImport ?? {};
   const themeGridColumns = state.isTouchMode
     ? "4"
     : "repeat(auto-fill, minmax(min(320px, 100%), 320px))";
@@ -136,6 +152,9 @@ export const selectViewData = ({ state, i18n }) => {
     projectFolderPath: state.projectFolderPath ?? copy.projectFolderNotSet,
     assetPackageTitle: copy.assetPackageTitle,
     assetPackageDescription: copy.assetPackageDescription,
+    importPackageTitle: importCopy.title,
+    importPackageZipLabel: importCopy.importFromZipMenuItem,
+    importPackageUrlLabel: importCopy.importFromUrlMenuItem,
     helpButtonTitle: copy.helpButtonTitle,
     helpButtonDescription: copy.helpButtonDescription,
     helpButtonOptions: [

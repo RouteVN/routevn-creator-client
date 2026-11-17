@@ -13,8 +13,6 @@ describe("resourceImportAction.view", () => {
   it("renders a three-dot Import menu and the package import dialog", () => {
     expect(viewSource).toContain("rtgl-button#menuButton sq pre=ellipsis v=ol");
     expect(viewSource).toContain("rtgl-dropdown-menu#menu");
-    expect(viewSource).toContain(
-      "rvn-resource-import-dialog#importDialog :open=${isImportDialogOpen} :source=${importSource} :file=${importFile}",
-    );
+    expect(viewSource).toContain("rvn-resource-import-dialog#importDialog");
   });
 });

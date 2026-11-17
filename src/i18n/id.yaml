@@ -3203,7 +3203,6 @@ resourceImport:
   linkUnnamedLayout: "Tata letak tanpa nama"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "Toko aset"
-  importFromStoreMenuItem: "Impor dari toko aset"
   importFromZipMenuItem: "Impor dari file ZIP"
   importFromUrlMenuItem: "Impor dari URL"
   zipPickFailed: "Gagal memilih file."

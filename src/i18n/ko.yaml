@@ -3203,7 +3203,6 @@ resourceImport:
   linkUnnamedLayout: "이름 없는 레이아웃"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "리소스 스토어"
-  importFromStoreMenuItem: "리소스 스토어에서 가져오기"
   importFromZipMenuItem: "ZIP 파일에서 가져오기"
   importFromUrlMenuItem: "URL에서 가져오기"
   zipPickFailed: "파일을 선택하지 못했어요."

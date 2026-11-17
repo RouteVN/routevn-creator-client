@@ -3203,7 +3203,6 @@ resourceImport:
   linkUnnamedLayout: "Diseño sin nombre"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "Tienda de recursos"
-  importFromStoreMenuItem: "Importar desde la tienda de recursos"
   importFromZipMenuItem: "Importar desde un archivo ZIP"
   importFromUrlMenuItem: "Importar desde una URL"
   zipPickFailed: "No se pudo seleccionar el archivo."

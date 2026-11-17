@@ -7,7 +7,7 @@ import {
 import { RU_I18N } from "../support/i18n.js";
 
 const createDeps = () => ({
-  appService: { pickFiles: vi.fn(), showToast: vi.fn() },
+  appService: { showToast: vi.fn() },
   dispatchEvent: vi.fn(),
   i18n: { resourceImport: {} },
   render: vi.fn(),
@@ -40,72 +40,16 @@ describe("resourceImportAction.handlers", () => {
     expect(deps.render).toHaveBeenCalledOnce();
   });
 
-  it.each([
-    ["import-store", "store"],
-    ["import-url", "url"],
-  ])("opens the import dialog from %s on the %s source", (value, source) => {
+  it("opens the import dialog from the Import menu item", () => {
     const deps = createDeps();
     handleMenuItemClick(deps, {
-      _event: { detail: { item: { value } } },
+      _event: { detail: { item: { value: "import" } } },
     });
 
     expect(deps.store.closeMenu).toHaveBeenCalledOnce();
-    expect(deps.store.openImportDialog).toHaveBeenCalledWith({ source });
-    expect(deps.appService.pickFiles).not.toHaveBeenCalled();
+    expect(deps.store.openImportDialog).toHaveBeenCalledOnce();
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledOnce();
-  });
-
-  it("picks a zip file, then opens the import dialog on it", async () => {
-    const deps = createDeps();
-    const file = new Blob(["zip"]);
-    deps.appService.pickFiles.mockResolvedValue(file);
-
-    await handleMenuItemClick(deps, {
-      _event: { detail: { item: { value: "import-zip" } } },
-    });
-
-    expect(deps.store.closeMenu).toHaveBeenCalledOnce();
-    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
-      accept: ".zip,application/zip",
-      multiple: false,
-    });
-    expect(deps.store.openImportDialog).toHaveBeenCalledWith({
-      source: "zip",
-      file,
-    });
-    expect(deps.dispatchEvent).not.toHaveBeenCalled();
-  });
-
-  it("does nothing when the zip file pick is cancelled", async () => {
-    const deps = createDeps();
-    deps.appService.pickFiles.mockResolvedValue(null);
-
-    await handleMenuItemClick(deps, {
-      _event: { detail: { item: { value: "import-zip" } } },
-    });
-
-    // The menu closed; nothing else happened.
-    expect(deps.store.closeMenu).toHaveBeenCalledOnce();
-    expect(deps.render).toHaveBeenCalledOnce();
-    expect(deps.store.openImportDialog).not.toHaveBeenCalled();
-    expect(deps.appService.showToast).not.toHaveBeenCalled();
-  });
-
-  it("says so when the zip file cannot be picked", async () => {
-    const deps = createDeps();
-    deps.i18n = RU_I18N;
-    deps.appService.pickFiles.mockRejectedValue(new Error("picker failed"));
-
-    await handleMenuItemClick(deps, {
-      _event: { detail: { item: { value: "import-zip" } } },
-    });
-
-    expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Не удалось выбрать файл.",
-      status: "error",
-    });
-    expect(deps.store.openImportDialog).not.toHaveBeenCalled();
   });
 
   it("emits non-import menu actions with the menu position", () => {

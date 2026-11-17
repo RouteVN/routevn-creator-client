@@ -3233,7 +3233,6 @@ resourceImport:
   linkUnnamedLayout: "Układ bez nazwy"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "Sklep z zasobami"
-  importFromStoreMenuItem: "Importuj ze sklepu z zasobami"
   importFromZipMenuItem: "Importuj z pliku ZIP"
   importFromUrlMenuItem: "Importuj z adresu URL"
   zipPickFailed: "Nie udało się wybrać pliku."

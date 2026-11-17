@@ -3203,7 +3203,6 @@ resourceImport:
   linkUnnamedLayout: "Bố cục chưa đặt tên"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "Cửa hàng tài nguyên"
-  importFromStoreMenuItem: "Nhập từ cửa hàng tài nguyên"
   importFromZipMenuItem: "Nhập từ tệp ZIP"
   importFromUrlMenuItem: "Nhập từ URL"
   zipPickFailed: "Không chọn được tệp."

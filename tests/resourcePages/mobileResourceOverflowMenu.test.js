@@ -55,12 +55,9 @@ describe.each(families)(
       expect(view.showTagFilter).toBe(false);
       expect(view.showSearch).toBe(false);
       expect(view.showZoomPopoverButton).toBeFalsy();
-      expect(menu.menu.items.map(({ value }) => value)).toEqual([
-        ...(supportsZoom ? ["zoom", "filter"] : ["filter"]),
-        "import-store",
-        "import-zip",
-        "import-url",
-      ]);
+      expect(menu.menu.items.map(({ value }) => value)).toEqual(
+        supportsZoom ? ["zoom", "filter", "import"] : ["filter", "import"],
+      );
       expect(menu.menuLabel).toBe("Actions");
     });
 

@@ -6,6 +6,10 @@ import {
   handleChangeProjectFolder,
   handleLanguageChange,
   handleHelpButtonChange,
+  handleImportComplete,
+  handleImportDialogClose,
+  handleImportPackageUrlClick,
+  handleImportPackageZipClick,
   handleThemeCardClick,
 } from "../../src/pages/config/config.handlers.js";
 import * as storeModule from "../../src/pages/config/config.store.js";
@@ -306,5 +310,95 @@ describe("config handlers", () => {
       message: "Could not change the language. Please try again.",
     });
     expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("config asset package import", () => {
+  it("opens the import dialog on a picked zip file", async () => {
+    const deps = createDeps();
+    const file = new File(["zip"], "Project One.zip");
+    deps.appService.pickFiles = vi.fn(async () => file);
+
+    await handleImportPackageZipClick(deps);
+
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: ".zip,application/zip",
+      multiple: false,
+    });
+    expect(deps.store.openImportDialog).toHaveBeenCalledWith({
+      source: "zip",
+      file,
+    });
+    expect(deps.store.selectViewData().importDialog).toEqual({
+      isOpen: true,
+      source: "zip",
+      file,
+    });
+  });
+
+  it("does nothing when the file pick is cancelled", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles = vi.fn(async () => undefined);
+
+    await handleImportPackageZipClick(deps);
+
+    expect(deps.store.openImportDialog).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+  });
+
+  it("says so when the file cannot be picked", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles = vi.fn(async () => {
+      throw new Error("picker failed");
+    });
+
+    await handleImportPackageZipClick(deps);
+
+    expect(deps.store.openImportDialog).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: EN_I18N.resourceImport.zipPickFailed,
+      status: "error",
+    });
+  });
+
+  it("opens the import dialog on its URL form", () => {
+    const deps = createDeps();
+
+    handleImportPackageUrlClick(deps);
+
+    expect(deps.store.selectViewData().importDialog).toEqual({
+      isOpen: true,
+      source: "url",
+      file: undefined,
+    });
+  });
+
+  it("closes the dialog and lets the picked file go", () => {
+    const deps = createDeps();
+    deps.store.openImportDialog({
+      source: "zip",
+      file: new File(["zip"], "Project One.zip"),
+    });
+
+    handleImportDialogClose(deps);
+
+    expect(deps.store.selectViewData().importDialog).toEqual({
+      isOpen: false,
+      source: "zip",
+      file: undefined,
+    });
+  });
+
+  it("closes the dialog and reports the imported resources", () => {
+    const deps = createDeps();
+    deps.store.openImportDialog({ source: "url" });
+
+    handleImportComplete(deps, { _event: { detail: { importedCount: 3 } } });
+
+    expect(deps.store.selectViewData().importDialog.isOpen).toBe(false);
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Imported 3 resources from the asset package.",
+      status: "success",
+    });
   });
 });

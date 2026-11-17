@@ -3203,7 +3203,6 @@ resourceImport:
   linkUnnamedLayout: "Unnamed layout"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "Asset Store"
-  importFromStoreMenuItem: "Import from Asset Store"
   importFromZipMenuItem: "Import from Zip File"
   importFromUrlMenuItem: "Import from URL"
   zipPickFailed: "The file could not be selected."

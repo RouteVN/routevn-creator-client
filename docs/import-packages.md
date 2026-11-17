@@ -372,17 +372,17 @@ which the plan already requires of a color, with the value, such as
 
 ## Import sources
 
-A resource page's three-dot menu has three Import items, one for each place a
-package can come from. All three end at the same Choose Resources page and the
-same import (see Import flow).
+A package can come from three places. All three end at the same Choose
+Resources page and the same import (see Import flow).
 
-- **Import from Asset Store** opens the RouteVN asset store (see Asset store).
-- **Import from Zip File** opens the device's file picker for a package ZIP,
+- **Import**, in a resource page's three-dot menu, opens the RouteVN asset
+  store (see Asset store).
+- **Import from Zip File**, under Import Package on the Config page, opens the device's file picker for a package ZIP,
   such as one exported from Releases → Asset Packs. Cancelling the picker does
   nothing. The dialog opens saying that it is reading the package, then shows
   Choose Resources. A file that is not a package closes the dialog, and a
   toast says why. Nothing is requested from the network.
-- **Import from URL** opens a form with one field, Package URL, and Import and
+- **Import from URL**, under Import Package on the Config page, opens a form with one field, Package URL, and Import and
   Cancel. The link may lead to a package ZIP or to a package manifest (see
   Reading a package from a link). Import reads the package and shows Choose
   Resources. A link that is empty, malformed or not HTTPS is refused before
@@ -400,7 +400,7 @@ pack's title. Closing the dialog, by Back or otherwise, frees what was read.
 
 ## Asset store
 
-Import from Asset Store opens the RouteVN asset store in a large dialog, 32 px from each window
+Import opens the RouteVN asset store in a large dialog, 32 px from each window
 edge and at most 1600 px wide, or full screen in windows up to 768 px wide, under a header that stays in
 place with its title and a close button at its right: a sidebar with a Search
 field, and free packs, newest first, 20 at a time, each card with its

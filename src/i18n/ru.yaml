@@ -3233,7 +3233,6 @@ resourceImport:
   linkUnnamedLayout: "Макет без названия"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "Магазин ресурсов"
-  importFromStoreMenuItem: "Импорт из магазина ресурсов"
   importFromZipMenuItem: "Импорт из ZIP-файла"
   importFromUrlMenuItem: "Импорт по ссылке"
   zipPickFailed: "Не удалось выбрать файл."

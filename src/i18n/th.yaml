@@ -3203,7 +3203,6 @@ resourceImport:
   linkUnnamedLayout: "เลย์เอาต์ที่ไม่มีชื่อ"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "ร้านค้าทรัพยากร"
-  importFromStoreMenuItem: "นำเข้าจากร้านค้าทรัพยากร"
   importFromZipMenuItem: "นำเข้าจากไฟล์ ZIP"
   importFromUrlMenuItem: "นำเข้าจาก URL"
   zipPickFailed: "ไม่สามารถเลือกไฟล์ได้"

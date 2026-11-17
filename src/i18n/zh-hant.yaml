@@ -3203,7 +3203,6 @@ resourceImport:
   linkUnnamedLayout: "未命名的版面"
   linkSectionLabel: "{scene} / {section}"
   storeTitle: "素材商店"
-  importFromStoreMenuItem: "從素材商店匯入"
   importFromZipMenuItem: "從 ZIP 檔案匯入"
   importFromUrlMenuItem: "從網址匯入"
   zipPickFailed: "無法選取檔案。"
