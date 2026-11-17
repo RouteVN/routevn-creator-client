@@ -3,8 +3,8 @@
 // about to need so they can load before the player gets there, and picks which
 // loaded pictures to free once they use too much memory.
 
-export const LOOKAHEAD_LINE_COUNT = 20;
-export const LOOKAHEAD_BRANCH_LINE_COUNT = 3;
+export const LOOKAHEAD_LINE_COUNT = 30;
+export const LOOKAHEAD_BRANCH_LINE_COUNT = 5;
 
 export const createSectionLineIndex = (projectData) => {
   const sections = new Map();

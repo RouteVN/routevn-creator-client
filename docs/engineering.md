@@ -949,9 +949,9 @@ from appearing late, the player loads ahead of the story:
 
 - After each screen is drawn, `createLookaheadPlan` in
   `scripts/playerAssetLookahead.js` lists the pictures and sounds of the next
-  20 lines of the current section. For each of those lines that can move the
+  30 lines of the current section. For each of those lines that can move the
   story to another section (a choice item, a jump, or a conditional branch), it
-  adds the first 3 lines of every target, because the player's pick is
+  adds the first 5 lines of every target, because the player's pick is
   unknown.
 - `scripts/playerAssetPreloader.js` loads that list in the background, one
   asset at a time, and starts nothing while a screen waits for its own assets.
