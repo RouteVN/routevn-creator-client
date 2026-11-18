@@ -241,6 +241,8 @@ export const createAssetStoreClient = ({
     override: import.meta.env?.VITE_ROUTEVN_ASSET_STORE_RPC_URL,
   }),
   fetchImpl = globalThis.fetch,
+  // The device a view or a download is made on: its ID and facts.
+  getDevice = async () => undefined,
 } = {}) => {
   const call = async (method, params, { notFound = packNotFound } = {}) => {
     const controller = new AbortController();
@@ -289,6 +291,15 @@ export const createAssetStoreClient = ({
     return body.result;
   };
 
+  // This device's ID and facts, or undefined when they can't be read.
+  const readDevice = async () => {
+    try {
+      return await getDevice();
+    } catch {
+      return undefined;
+    }
+  };
+
   return {
     // `query` matches pack titles and creator names; empty lists every pack.
     // `assetTypes` lists packs with assets of any of the types.
@@ -313,8 +324,26 @@ export const createAssetStoreClient = ({
       };
     },
 
-    async getAssetPackById({ assetPackId } = {}) {
-      const result = await call("assetStore.getAssetPackById", { assetPackId });
+    // `view` is set when a person opens the pack's page, and counts one view
+    // of it, made on this device; `download` is set when a person starts
+    // importing it, and counts one download. Every other read leaves both
+    // out. A device that can't be read leaves the read unflagged, so the pack
+    // still loads. The answer is the same either way.
+    async getAssetPackById({
+      assetPackId,
+      view = false,
+      download = false,
+    } = {}) {
+      const params = { assetPackId };
+      if (view || download) {
+        const device = await readDevice();
+        if (device) {
+          if (view) params.view = true;
+          if (download) params.download = true;
+          params.device = device;
+        }
+      }
+      const result = await call("assetStore.getAssetPackById", params);
       if (!isObject(result.assetPack) || !Array.isArray(result.files)) {
         throw unavailable(new Error("Invalid asset pack."));
       }

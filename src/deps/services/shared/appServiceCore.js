@@ -8,6 +8,7 @@ import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRo
 import { normalizeTheme } from "../../../internal/theme.js";
 import { noopErrorTracker } from "../../clients/errorReporting.js";
 import { createAssetStoreClient } from "../../clients/assetStoreClient.js";
+import { createDeviceFactsClient } from "../../clients/deviceFacts.js";
 
 export const createAppServiceCore = ({
   db,
@@ -29,7 +30,7 @@ export const createAppServiceCore = ({
   triggerTestCrash,
   windowMetricsClient,
   uiConfig,
-  assetStoreClient = createAssetStoreClient(),
+  assetStoreClient,
 }) => {
   const getCurrentProjectId = () => {
     return router.getPayload()?.p ?? "";
@@ -96,6 +97,20 @@ export const createAppServiceCore = ({
     },
   });
 
+  // A view or a download of an asset store pack names this device and the
+  // app's active language.
+  const assetStore =
+    assetStoreClient ??
+    createAssetStoreClient({
+      getDevice: createDeviceFactsClient({
+        keyValueStore: db,
+        platform,
+        distribution,
+        appVersion,
+        getUiLanguage: () => appShellService.getAppLocaleUsage().uiLanguage,
+      }).get,
+    });
+
   const touchLayoutService = createTouchLayoutService({
     windowMetricsClient,
     uiConfig,
@@ -153,18 +168,30 @@ export const createAppServiceCore = ({
 
     // Free packs from the RouteVN asset store, newest first.
     listAssetStorePacks({ cursor, query, assetTypes } = {}) {
-      return assetStoreClient.listAssetPacks({ cursor, query, assetTypes });
+      return assetStore.listAssetPacks({ cursor, query, assetTypes });
     },
 
     // An asset store creator's profile (name, avatar, bio and links) and
     // their free packs.
     getAssetStoreCreator({ creatorId } = {}) {
-      return assetStoreClient.getCreatorById({ creatorId });
+      return assetStore.getCreatorById({ creatorId });
     },
 
     // One free pack, with the import link the resource importer reads.
-    getAssetStorePack({ assetPackId } = {}) {
-      return assetStoreClient.getAssetPackById({ assetPackId });
+    // `view` is set when a person opens the pack's page.
+    getAssetStorePack({ assetPackId, view } = {}) {
+      return assetStore.getAssetPackById({ assetPackId, view });
+    },
+
+    // Starting an import of a pack counts one download of it, however many
+    // of its files the import reads. The import doesn't wait for the answer,
+    // and a failed read never stops it, so this never rejects.
+    async sendAssetStorePackDownload({ assetPackId } = {}) {
+      try {
+        await assetStore.getAssetPackById({ assetPackId, download: true });
+      } catch {
+        // The import goes on without it.
+      }
     },
 
     getFileDisplayPath(path) {

@@ -449,6 +449,34 @@ with the `X-RouteVN-RPC: 1` header and no credentials:
 | `assetStore.getAssetPackById` | `{assetPackId}`                                                   | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update, and `data.package`: `{fileId, size, directoryOffset, directorySize}`, the published package's ZIP (its `files` URL), its byte size, and where its central directory starts and how long it is. The description shows as plain paragraphs and its images, each by its `files` URL; a malformed block is left out.                                       |
 | `assetStore.getCreatorById`   | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                           |
 
+Opening a pack's page adds `view: true` and `device` to its
+`assetStore.getAssetPackById` read, which counts one view of the pack. Starting
+an import, once the chosen resources pass their checks, reads the pack again
+with `download: true` and `device`, which counts one download, however many of
+the pack's files the import reads; each import started is one download. The
+import does not wait for that read, and a failed one does not stop it. The API
+answers the same with or without the flags. Every other read leaves them out,
+and so does showing a pack page again without reading the pack, such as
+reopening it from its creator's page. `device` says what the view or download
+was made on:
+
+| Field        | Value                                                                                                                                                                  |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`         | The app's device ID, the one update checks send, kept in the app database (see [Client updates](client-updates.md#device-metadata)); the web app keeps one in its own. |
+| `language`   | The device's first preferred language, by the update checks' rule; `unknown` when it can't be read.                                                                    |
+| `uiLanguage` | The app's active language.                                                                                                                                             |
+| `os`         | `android`, `ios`, `windows`, `macos` or `linux`, from the web view's user agent. An iPad that asks for desktop sites is `ios`.                                         |
+| `formFactor` | `phone`, `tablet` or `desktop`: the desktop app is always `desktop`; elsewhere it comes from the user agent.                                                           |
+| `client`     | `web` in a browser, `desktopApp` in the desktop app, `mobileApp` in the Android and iOS apps.                                                                          |
+| `channel`    | Where the installed app came from: `direct`, `steam`, `google-play`, `app-store` or `galaxy-store`. The web app sends none.                                            |
+| `app`        | `routevn-creator`.                                                                                                                                                     |
+| `appVersion` | The app's version, such as `1.22.1`.                                                                                                                                   |
+
+A fact that can't be read is left out. When the device ID can't be read, the
+read goes out without the flag and `device`, and the page or the import goes
+on as usual. Neither sends `source`: nothing outside the app leads to a pack's
+page.
+
 Development builds call `http://127.0.0.1:3100/asset-store/rpc` instead. Set
 `VITE_ROUTEVN_ASSET_STORE_RPC_URL` when starting the watch server to use another
 local API. A list that fails to load shows Try Again, and a pack or creator that

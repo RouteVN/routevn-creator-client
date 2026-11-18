@@ -50,10 +50,13 @@ const createDeps = () => {
       i18n: {},
       render: vi.fn(),
       dispatchEvent: vi.fn(),
-      appService: {},
+      appService: {
+        sendAssetStorePackDownload: vi.fn(async () => {}),
+      },
       store: {
         selectStep: vi.fn(() => "selection"),
         selectPlan: vi.fn(() => plan),
+        selectPlanPackId: vi.fn(() => "pack-1"),
         selectReviewValues: vi.fn(() => ({})),
         openPackStep: vi.fn(),
         saveReviewValues: vi.fn(),
@@ -301,6 +304,7 @@ describe("resource-import-dialog.handlers", () => {
     expect(
       deps.projectService.executeResourceImportPlan,
     ).not.toHaveBeenCalled();
+    expect(deps.appService.sendAssetStorePackDownload).not.toHaveBeenCalled();
     expect(deps.store.saveReviewValues).toHaveBeenCalledWith({
       values: {},
     });
@@ -309,7 +313,84 @@ describe("resource-import-dialog.handlers", () => {
       step: "selection",
     });
   });
+
+  it("sends one download of the pack when an import starts, however many files it reads", async () => {
+    const { deps } = createDeps();
+    deps.projectService.executeResourceImportPlan.mockImplementation(
+      async ({ onProgress }) => {
+        for (const completed of [1, 2, 3]) {
+          onProgress({ completed, total: 3 });
+        }
+        return { valid: true };
+      },
+    );
+
+    await importChecked(deps);
+
+    const { sendAssetStorePackDownload } = deps.appService;
+    expect(sendAssetStorePackDownload).toHaveBeenCalledExactlyOnceWith({
+      assetPackId: "pack-1",
+    });
+    // It goes out as the import starts, before the pack's files are read.
+    expect(sendAssetStorePackDownload.mock.invocationCallOrder[0]).toBeLessThan(
+      deps.projectService.executeResourceImportPlan.mock.invocationCallOrder[0],
+    );
+    expect(deps.store.setProgress).toHaveBeenCalledTimes(3);
+  });
+
+  it("sends a download for each import started", async () => {
+    const { deps } = createDeps();
+    deps.projectService.executeResourceImportPlan
+      .mockResolvedValueOnce({ valid: false, error: { code: "failed" } })
+      .mockResolvedValueOnce({ valid: true });
+
+    await importChecked(deps);
+    await importChecked(deps);
+
+    expect(deps.appService.sendAssetStorePackDownload).toHaveBeenCalledTimes(2);
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("imports without waiting for the download to be answered", async () => {
+    const { deps } = createDeps();
+    deps.appService.sendAssetStorePackDownload.mockReturnValue(
+      new Promise(() => {}),
+    );
+
+    await importChecked(deps);
+
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "import-complete" }),
+    );
+  });
+
+  it("sends no download when the choices are refused", async () => {
+    const { deps } = createDeps();
+    deps.projectService.validateResourceImportPlan.mockReturnValue({
+      valid: false,
+      error: { code: "invalid_choice" },
+    });
+
+    await importChecked(deps);
+
+    expect(deps.appService.sendAssetStorePackDownload).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.executeResourceImportPlan,
+    ).not.toHaveBeenCalled();
+  });
 });
+
+// Import from the selection page with the plan's one resource checked.
+const importChecked = (deps) =>
+  handleFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "import",
+        values: { resource_0_include: true },
+        valid: true,
+      },
+    },
+  });
 
 // The dialog's real store, driven the way the component drives it.
 const createStoreDeps = () => {
@@ -499,6 +580,7 @@ describe("resource-import-dialog asset store", () => {
     });
     expect(deps.appService.getAssetStorePack).toHaveBeenCalledWith({
       assetPackId: "pack-1",
+      view: true,
     });
 
     details.resolve(detail);
@@ -716,6 +798,52 @@ describe("resource-import-dialog asset store", () => {
     );
   });
 
+  it("sends one view each time a pack's page opens, and none when it shows again without a read", async () => {
+    const { deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    deps.appService.getAssetStorePack.mockResolvedValue({
+      ...storePack("pack-1"),
+      package: packagePlace("https://files.example/pack.zip"),
+    });
+    deps.appService.getAssetStoreCreator.mockResolvedValue({
+      creator: {
+        id: "creator-1",
+        name: "Creator One",
+        description: [],
+        links: [],
+      },
+      packs: [storePack("pack-1")],
+    });
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: { planId: "plan-1", package: {}, resources: [] },
+    });
+    openDialog(deps);
+    await settle();
+
+    await clickPack(deps, "pack-1");
+    // Its creator's page, and the pack again from there, keep the pack
+    // loaded, so nothing is read.
+    await handlePackCreatorClick(deps);
+    await clickPack(deps, "pack-1");
+    handlePackImport(deps);
+    handleSelectionBack(deps);
+    expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
+      [{ assetPackId: "pack-1", view: true }],
+    ]);
+
+    // Back to the list, then the pack again: a second opening.
+    handlePackBack(deps);
+    handleCreatorBack(deps);
+    await clickPack(deps, "pack-1");
+    expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
+      [{ assetPackId: "pack-1", view: true }],
+      [{ assetPackId: "pack-1", view: true }],
+    ]);
+  });
+
   it("shows a localized message when a pack is no longer available", async () => {
     const { state, deps } = createStoreDeps();
     deps.i18n = {
@@ -792,6 +920,7 @@ describe("resource-import-dialog asset store", () => {
     expect(enter.preventDefault).toHaveBeenCalledTimes(1);
     expect(deps.appService.getAssetStorePack).toHaveBeenCalledWith({
       assetPackId: "pack-1",
+      view: true,
     });
   });
 

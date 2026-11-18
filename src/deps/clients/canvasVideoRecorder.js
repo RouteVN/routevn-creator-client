@@ -6,6 +6,10 @@ const CANVAS_VIDEO_MIME_TYPES = [
   "video/mp4",
 ];
 const RECORDER_FLUSH_TIMEOUT_MS = 150;
+// A recorder that was given no frames can still write the few bytes that
+// close a video file. A file with even one frame starts with a header larger
+// than this.
+const MIN_RECORDING_BYTES = 64;
 
 const wait = (durationMs) =>
   new Promise((resolve) => globalThis.setTimeout(resolve, durationMs));
@@ -91,7 +95,7 @@ export const startCanvasVideoRecording = ({
     });
     cleanup();
 
-    if (video.size === 0) {
+    if (video.size < MIN_RECORDING_BYTES) {
       rejectRecording(new Error("Canvas video recording is empty."));
       return;
     }
