@@ -163,6 +163,14 @@ template:
                                       - 'div style="width:128px; height:128px; ${androidSplashBackgroundStyle}"':
                                           - rvn-file-image fileId=${splashIconFileId} w=128 h=128: null
                               - $if showAndroidPreviews:
+                                  - rtgl-view slot=android-icon-background-color d=h av=c g=sm:
+                                      - 'div style="width: 20px; height: 20px; flex: 0 0 20px; border-radius: 4px; border: 1px solid var(--border); ${androidIconBackgroundStyle}"': null
+                                      - rtgl-text: ${androidIconBackgroundColor}
+                              - $if showAndroidPreviews:
+                                  - rtgl-view slot=android-splash-background-color d=h av=c g=sm:
+                                      - 'div style="width: 20px; height: 20px; flex: 0 0 20px; border-radius: 4px; border: 1px solid var(--border); ${androidSplashBackgroundStyle}"': null
+                                      - rtgl-text: ${androidSplashBackgroundColor}
+                              - $if showAndroidPreviews:
                                   - rtgl-view slot=android-previews d=v g=md w=f:
                                       - rtgl-text s=sm: ${androidLauncherPreviewLabel}
                                       - rtgl-view d=h g=md wrap:

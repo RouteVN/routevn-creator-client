@@ -398,16 +398,19 @@ it.each(["web", "tauri", "android", "ios"])(
       iconBackgroundColor: "#AABBCC",
       splashBackgroundColor: "#123456",
     });
+    // Each colour row is a swatch next to its hex value.
     expect(view.platformDetailFields).toContainEqual({
-      type: "text",
+      type: "slot",
+      slot: "android-icon-background-color",
       label: EN_I18N.platformDetailsPage.androidIconBackgroundColorLabel,
-      value: "#AABBCC",
     });
     expect(view.platformDetailFields).toContainEqual({
-      type: "text",
+      type: "slot",
+      slot: "android-splash-background-color",
       label: EN_I18N.platformDetailsPage.androidSplashBackgroundColorLabel,
-      value: "#123456",
     });
+    expect(view.androidIconBackgroundColor).toBe("#AABBCC");
+    expect(view.androidSplashBackgroundColor).toBe("#123456");
     expect(view.showAndroidPreviews).toBe(true);
     expect(view.androidIconBackgroundStyle).toBe("background-color: #AABBCC;");
     expect(view.androidSplashBackgroundStyle).toBe(

@@ -189,14 +189,14 @@ const buildPlatformDetailFields = (
   if (platform === "android") {
     fields.push(
       {
-        type: "text",
+        type: "slot",
+        slot: "android-icon-background-color",
         label: copy.androidIconBackgroundColorLabel,
-        value: _applicationInfo.iconBackgroundColor,
       },
       {
-        type: "text",
+        type: "slot",
+        slot: "android-splash-background-color",
         label: copy.androidSplashBackgroundColorLabel,
-        value: _applicationInfo.splashBackgroundColor,
       },
       {
         type: "slot",
@@ -488,6 +488,10 @@ export const selectViewData = ({ state, i18n }) => {
     androidSplashPreviewSize: selectedPlatformInfo?.splashIconFileId ? 96 : 67,
     androidLauncherPreviewLabel: copy.androidLauncherPreviewLabel,
     androidSplashPreviewLabel: copy.androidSplashPreviewLabel,
+    androidIconBackgroundColor:
+      selectedPlatformInfo?.iconBackgroundColor ?? "#FFFFFF",
+    androidSplashBackgroundColor:
+      selectedPlatformInfo?.splashBackgroundColor ?? "#000000",
     androidIconBackgroundStyle: `background-color: ${selectedPlatformInfo?.iconBackgroundColor ?? "#FFFFFF"};`,
     androidSplashBackgroundStyle: `background-color: ${selectedPlatformInfo?.splashBackgroundColor ?? "#000000"};`,
     platformApplicationIconFileId: selectedPlatformInfo?.iconFileId,
