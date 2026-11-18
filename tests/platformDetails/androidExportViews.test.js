@@ -50,6 +50,21 @@ describe("Android export views", () => {
       preview.querySelector('div[style*="width: 200px"]').style.backgroundColor,
     ).toBe("rgb(18, 52, 86)");
     expect(preview.querySelectorAll("rvn-file-image")).toHaveLength(3);
+    // Each color row shows a swatch of the color next to its hex value.
+    const iconColor = dom.window.document.querySelector(
+      '[slot="android-icon-background-color"]',
+    );
+    expect(iconColor.querySelector("div").style.backgroundColor).toBe(
+      "rgb(171, 205, 239)",
+    );
+    expect(iconColor.textContent).toContain("#ABCDEF");
+    const splashColor = dom.window.document.querySelector(
+      '[slot="android-splash-background-color"]',
+    );
+    expect(splashColor.querySelector("div").style.backgroundColor).toBe(
+      "rgb(18, 52, 86)",
+    );
+    expect(splashColor.textContent).toContain("#123456");
     dom.window.close();
   });
 
