@@ -21,6 +21,16 @@ const NAVIGATION_ACTION_TYPE_SET = new Set(NAVIGATION_ACTION_TYPES);
 export const isNavigationActionType = (actionType) =>
   NAVIGATION_ACTION_TYPE_SET.has(actionType);
 
+// The navigation actions that move the story to the first line of the section
+// named in their `sectionId`.
+const SECTION_JUMP_ACTION_TYPE_SET = new Set([
+  "sectionTransition",
+  "resetStoryAtSection",
+]);
+
+export const isSectionJumpActionType = (actionType) =>
+  SECTION_JUMP_ACTION_TYPE_SET.has(actionType);
+
 // Whether running the actions can navigate: they hold a navigation action, or
 // a conditional with a branch that can.
 export const canActionsNavigate = (actions = {}) =>

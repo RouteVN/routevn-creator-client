@@ -29,6 +29,7 @@ import {
   withInteractionPayload,
 } from "./interactionPayload.js";
 import { generateId } from "../id.js";
+import { isSectionJumpActionType } from "../navigationActions.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../projectResolution.js";
 import { areEditHistoryValuesEqual } from "../editHistory.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
@@ -3134,7 +3135,7 @@ export const extractTransitionTargetSceneIds = (projectData, sceneId) => {
   const sceneIds = new Set();
 
   traverseScene(scene, (key, entry) => {
-    if (key !== "sectionTransition" && key !== "resetStoryAtSection") {
+    if (!isSectionJumpActionType(key)) {
       return;
     }
 
@@ -3160,7 +3161,7 @@ export const extractTransitionTargetSceneIdsFromActions = (
 
   const sceneIds = new Set();
   traverseScene(actions, (key, entry) => {
-    if (key !== "sectionTransition" && key !== "resetStoryAtSection") {
+    if (!isSectionJumpActionType(key)) {
       return;
     }
 

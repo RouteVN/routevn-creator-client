@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canActionsNavigate,
   isNavigationActionType,
+  isSectionJumpActionType,
   mergeSubmittedActions,
   upgradeResetStoryActions,
 } from "../../src/internal/navigationActions.js";
@@ -290,5 +291,24 @@ describe("upgradeResetStoryActions", () => {
     upgrade(actions);
 
     expect(actions).toEqual(before);
+  });
+});
+
+describe("isSectionJumpActionType", () => {
+  it("names the actions that move the story to the start of a section", () => {
+    expect(isSectionJumpActionType("sectionTransition")).toBe(true);
+    expect(isSectionJumpActionType("resetStoryAtSection")).toBe(true);
+  });
+
+  it("leaves out navigation that names no section to start", () => {
+    expect(isSectionJumpActionType("jumpToLine")).toBe(false);
+    expect(isSectionJumpActionType("nextLine")).toBe(false);
+    expect(isSectionJumpActionType("dialogue")).toBe(false);
+  });
+
+  it("only names navigation actions", () => {
+    for (const actionType of ["sectionTransition", "resetStoryAtSection"]) {
+      expect(isNavigationActionType(actionType)).toBe(true);
+    }
   });
 });

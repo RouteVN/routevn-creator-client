@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPlayerAssetPreloader } from "../../scripts/playerAssetPreloader.js";
+import {
+  createPlayerAssetPreloader,
+  MAX_PRELOAD_ATTEMPTS,
+} from "../../scripts/playerAssetPreloader.js";
 
 const flushPromises = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -79,16 +82,56 @@ describe("createPlayerAssetPreloader", () => {
     expect(started).toEqual(["a", "d"]);
   });
 
-  it("skips a failed asset and does not try it again", async () => {
+  it("skips a failed asset and goes on with the queue", async () => {
     const { preloader, started, onError, fail } = createPreloader();
     const error = new Error("unreadable");
 
     preloader.setPlan(["a", "b"]);
     await fail("a", error);
+
     expect(onError).toHaveBeenCalledWith(error, { assetId: "a" });
     expect(started).toEqual(["a", "b"]);
+    expect(preloader.hasGivenUp("a")).toBe(false);
+  });
 
-    preloader.setPlan(["a", "c"]);
-    expect(started).toEqual(["a", "b"]);
+  it("tries a failed asset again when a later plan lists it", async () => {
+    const { preloader, started, fail, finish } = createPreloader();
+
+    preloader.setPlan(["a"]);
+    await fail("a", new Error("read failed once"));
+    preloader.setPlan(["a"]);
+    expect(started).toEqual(["a", "a"]);
+
+    await finish("a");
+    expect(preloader.hasGivenUp("a")).toBe(false);
+  });
+
+  it("gives up on an asset that keeps failing", async () => {
+    const { preloader, started, onError, fail } = createPreloader();
+
+    for (let attempt = 1; attempt <= MAX_PRELOAD_ATTEMPTS; attempt++) {
+      expect(preloader.hasGivenUp("a")).toBe(false);
+      preloader.setPlan(["a"]);
+      await fail("a", new Error("unreadable"));
+    }
+
+    expect(preloader.hasGivenUp("a")).toBe(true);
+    expect(onError).toHaveBeenCalledTimes(MAX_PRELOAD_ATTEMPTS);
+
+    preloader.setPlan(["a", "b"]);
+    expect(started).toEqual([...Array(MAX_PRELOAD_ATTEMPTS).fill("a"), "b"]);
+  });
+
+  it("counts failures in a row only", async () => {
+    const { preloader, fail, finish } = createPreloader();
+
+    for (let round = 0; round < MAX_PRELOAD_ATTEMPTS; round++) {
+      preloader.setPlan(["a"]);
+      await fail("a", new Error("read failed"));
+      preloader.setPlan(["a"]);
+      await finish("a");
+    }
+
+    expect(preloader.hasGivenUp("a")).toBe(false);
   });
 });

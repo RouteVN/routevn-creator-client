@@ -1,6 +1,7 @@
 import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems } from "./tree.js";
+import { isSectionJumpActionType } from "../navigationActions.js";
 
 const LAYOUT_ACTION_INTERACTION_KEYS = [
   "click",
@@ -40,7 +41,7 @@ const getActionTargetSceneIds = (actions, repositoryState) => {
       return;
     }
 
-    if (key === "sectionTransition" || key === "resetStoryAtSection") {
+    if (isSectionJumpActionType(key)) {
       const sceneId =
         value.sceneId ??
         resolveSceneIdFromSectionId(repositoryState, value.sectionId);
