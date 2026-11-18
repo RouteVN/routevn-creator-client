@@ -21,13 +21,13 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "uk", label: "Українська (Beta)" }),
   Object.freeze({ value: "it", label: "Italiano (Beta)" }),
   Object.freeze({ value: "pl", label: "Polski (Beta)" }),
-  Object.freeze({ value: "ar", label: "العربية (Preview)" }),
+  Object.freeze({ value: "ar", label: "العربية (Beta)" }),
   Object.freeze({ value: "ur", label: "اردو (Preview)" }),
 ]);
 
-// Right-to-left previews: only the Projects page is translated, so the app
-// does not suggest them from the device language.
-export const PREVIEW_APP_LOCALES = Object.freeze(["ar", "ur"]);
+// Urdu is a right-to-left preview: only its Projects page is translated,
+// so the app does not suggest it from the device language.
+export const PREVIEW_APP_LOCALES = Object.freeze(["ur"]);
 
 const getAvailableAppLocales = (localeService) => {
   return (
