@@ -27,7 +27,6 @@ vi.mock("../../src/deps/clients/canvasVideoRecorder.js", () => ({
 import {
   createLayoutPreviewRenderer,
   renderAnimationPreviewVideos,
-  renderAnimationThumbnailVideo,
   renderFontPreviewImage,
   renderFontPreviewImages,
   renderParticlePreviewVideos,
@@ -219,13 +218,24 @@ describe("asset package preview client", () => {
       new Blob(["slide-thumbnail"], { type: "video/webm" }),
       new Blob(["static-thumbnail"], { type: "video/webm" }),
     ];
-    const renderThumbnailVideo = vi
-      .fn()
-      .mockResolvedValueOnce(thumbnailBlobs[0])
-      .mockResolvedValueOnce(thumbnailBlobs[1])
-      .mockResolvedValueOnce(thumbnailBlobs[2]);
+    startCanvasVideoRecording.mockReset();
+    for (const thumbnailBlob of thumbnailBlobs) {
+      startCanvasVideoRecording.mockReturnValueOnce({
+        stop: vi.fn(async () => thumbnailBlob),
+      });
+    }
+    const drawImage = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      clearRect: vi.fn(),
+      drawImage,
+    });
+    const createElement = vi.spyOn(document, "createElement");
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = 320;
+    sourceCanvas.height = 180;
     const graphicsService = {
       destroy: vi.fn(async () => {}),
+      getCanvas: () => sourceCanvas,
       init: vi.fn(async () => {}),
       loadAssets: vi.fn(async () => {}),
       render: vi.fn(async () => {}),
@@ -291,7 +301,6 @@ describe("asset package preview client", () => {
       ],
       imagesData: { items: {}, tree: [] },
       projectResolution: { width: 320, height: 180 },
-      renderThumbnailVideo,
     });
 
     expect(previews).toEqual([
@@ -326,7 +335,15 @@ describe("asset package preview client", () => {
       });
     }
     expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledTimes(3);
-    expect(renderThumbnailVideo).toHaveBeenCalledTimes(3);
+    // Each thumbnail is recorded next to its full video, from a small copy of
+    // the same canvas, and no video is played back to make it.
+    expect(startCanvasVideoRecording).toHaveBeenCalledTimes(3);
+    expect(startCanvasVideoRecording).toHaveBeenCalledWith({
+      canvas: expect.objectContaining({ width: 160, height: 90 }),
+      frameRate: 60,
+    });
+    expect(drawImage).toHaveBeenCalledWith(sourceCanvas, 0, 0, 160, 90);
+    expect(createElement).not.toHaveBeenCalledWith("video");
     expect(previews[0].thumbnailBlob).toBe(thumbnailBlobs[0]);
     expect(previews[1].thumbnailBlob).toBe(thumbnailBlobs[1]);
     expect(previews[2].thumbnailBlob).toBe(thumbnailBlobs[2]);
@@ -358,6 +375,7 @@ describe("asset package preview client", () => {
     );
     const graphicsService = {
       destroy: vi.fn(async () => {}),
+      getCanvas: () => document.createElement("canvas"),
       init: vi.fn(async () => {}),
       loadAssets: vi.fn(async () => {}),
       render: vi.fn(async () => {}),
@@ -369,9 +387,15 @@ describe("asset package preview client", () => {
         .mockImplementationOnce(() => ({ stop: successfulRecordingStop })),
     };
     createGraphicsService.mockResolvedValueOnce(graphicsService);
-    const renderThumbnailVideo = vi.fn(async () => {
-      return new Blob(["thumbnail"], { type: "video/webm" });
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
     });
+    const thumbnailStop = vi.fn(
+      async () => new Blob(["thumbnail"], { type: "video/webm" }),
+    );
+    startCanvasVideoRecording.mockReset();
+    startCanvasVideoRecording.mockReturnValue({ stop: thumbnailStop });
 
     const previews = await renderAnimationPreviewVideos({
       animations: [
@@ -396,7 +420,6 @@ describe("asset package preview client", () => {
       ],
       imagesData: { items: {}, tree: [] },
       projectResolution: { width: 320, height: 180 },
-      renderThumbnailVideo,
     });
 
     expect(previews).toEqual([
@@ -407,89 +430,11 @@ describe("asset package preview client", () => {
       },
     ]);
     expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledTimes(2);
-    expect(renderThumbnailVideo).toHaveBeenCalledOnce();
+    expect(startCanvasVideoRecording).toHaveBeenCalledTimes(2);
+    expect(thumbnailStop).toHaveBeenCalledTimes(2);
     expect(emptyRecordingStop).toHaveBeenCalledOnce();
     expect(successfulRecordingStop).toHaveBeenCalledOnce();
     expect(graphicsService.destroy).toHaveBeenCalledOnce();
-  });
-
-  it("derives an animation thumbnail from its completed full preview video", async () => {
-    const listeners = new Map();
-    let nextFrameCallback;
-    const video = {
-      readyState: 2,
-      videoWidth: 1920,
-      videoHeight: 1080,
-      duration: 1,
-      ended: false,
-      muted: false,
-      playsInline: false,
-      preload: "",
-      src: "",
-      addEventListener: vi.fn((type, listener) => {
-        listeners.set(type, listener);
-      }),
-      removeEventListener: vi.fn(),
-      requestVideoFrameCallback: vi.fn((callback) => {
-        nextFrameCallback = callback;
-        return 1;
-      }),
-      cancelVideoFrameCallback: vi.fn(),
-      load: vi.fn(),
-      pause: vi.fn(),
-      play: vi.fn(async () => {
-        nextFrameCallback();
-        video.ended = true;
-        listeners.get("ended")();
-      }),
-      removeAttribute: vi.fn(),
-      remove: vi.fn(),
-    };
-    const originalCreateElement = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tagName) => {
-      if (tagName === "video") {
-        return video;
-      }
-      return originalCreateElement(tagName);
-    });
-    const drawImage = vi.fn();
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-      clearRect: vi.fn(),
-      drawImage,
-      imageSmoothingEnabled: false,
-      imageSmoothingQuality: "low",
-    });
-    const derivedThumbnail = new Blob(["derived-thumbnail"], {
-      type: "video/webm",
-    });
-    const thumbnailStop = vi.fn(async () => derivedThumbnail);
-    startCanvasVideoRecording.mockReturnValueOnce({ stop: thumbnailStop });
-    Object.defineProperties(URL, {
-      createObjectURL: {
-        configurable: true,
-        value: vi.fn(() => "blob:full-animation-preview"),
-      },
-      revokeObjectURL: {
-        configurable: true,
-        value: vi.fn(),
-      },
-    });
-
-    const thumbnailBlob = await renderAnimationThumbnailVideo({
-      previewBlob: new Blob(["full-preview"], { type: "video/webm" }),
-    });
-
-    expect(thumbnailBlob).toBe(derivedThumbnail);
-    expect(startCanvasVideoRecording).toHaveBeenCalledWith({
-      canvas: expect.objectContaining({ width: 640, height: 360 }),
-      frameRate: 60,
-    });
-    expect(drawImage).toHaveBeenCalledWith(video, 0, 0, 640, 360);
-    expect(video.play).toHaveBeenCalledOnce();
-    expect(video.pause).toHaveBeenCalledOnce();
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith(
-      "blob:full-animation-preview",
-    );
   });
 });
 
