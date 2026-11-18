@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBundleAssetLoader } from "../../scripts/playerBundleAssetLoader.js";
 
+// The first byte of a test asset stands for the type found in its bytes.
 vi.mock("file-type", () => ({
-  fileTypeFromBuffer: async () => undefined,
+  fileTypeFromBuffer: async (content) =>
+    content[0] === 0x89 ? { mime: "image/png" } : undefined,
 }));
 
 const flushPromises = async () => {
@@ -14,6 +16,8 @@ const MANIFEST_ASSETS = {
   "picture-2": { mime: "image/webp" },
   "sound-1": { mime: "audio/ogg" },
   "font-1": { mime: "font/woff2" },
+  // A picture the package lists under a generic type.
+  "generic-1": { mime: "application/octet-stream", bytes: [0x89, 2, 3] },
 };
 
 // A graphics engine stand-in. Unloads stay open until the test finishes or
@@ -51,7 +55,7 @@ const createLoader = () => {
     readAsset: vi.fn(async (assetId) => {
       reads.push(assetId);
       return {
-        buffer: new Uint8Array([1, 2, 3]),
+        buffer: new Uint8Array(MANIFEST_ASSETS[assetId].bytes ?? [1, 2, 3]),
         mime: MANIFEST_ASSETS[assetId].mime,
       };
     }),
@@ -99,10 +103,18 @@ describe("createBundleAssetLoader", () => {
 
     expect(loader.getLoadedImageAssetIds()).toEqual(["picture-1"]);
     expect(loader.isAssetLoaded("sound-1")).toBe(true);
-    expect(loader.isPreloadableAsset("picture-1")).toBe(true);
-    expect(loader.isPreloadableAsset("sound-1")).toBe(true);
-    expect(loader.isPreloadableAsset("font-1")).toBe(false);
-    expect(loader.isPreloadableAsset("not-in-package")).toBe(false);
+  });
+
+  it("counts a loaded file as a picture when its bytes are one", async () => {
+    const { loader } = createLoader();
+    const renderState = { src: "generic-1" };
+    // Before the load, only the type the package lists is known.
+    expect(loader.collectImageAssetIds(renderState)).toEqual([]);
+
+    await loader.loadAsset("generic-1");
+
+    expect(loader.getLoadedImageAssetIds()).toEqual(["generic-1"]);
+    expect(loader.collectImageAssetIds(renderState)).toEqual(["generic-1"]);
   });
 
   it("finds the missing assets and the pictures of a screen", async () => {
@@ -236,6 +248,43 @@ describe("createBundleAssetLoader", () => {
 
     await loader.loadAsset("picture-1");
     expect(loader.isAssetLoaded("picture-1")).toBe(true);
+  });
+
+  it("loads an asset again for a screen when a load under way fails", async () => {
+    const { loader, bundleReader, reads } = createLoader();
+    bundleReader.readAsset.mockRejectedValueOnce(new Error("read failed once"));
+    // The background load, which the screen's load joins.
+    const background = loader.loadAsset("picture-1").catch((error) => error);
+
+    await loader.ensureAssetsLoaded(["picture-1"]);
+
+    expect((await background).message).toBe(
+      'Failed to read bundle asset "picture-1".',
+    );
+    expect(loader.isAssetLoaded("picture-1")).toBe(true);
+    expect(reads).toEqual(["picture-1"]);
+    expect(bundleReader.readAsset).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails the screen when its own second load fails as well", async () => {
+    const { loader, bundleReader } = createLoader();
+    bundleReader.readAsset.mockRejectedValue(new Error("unreadable"));
+    const background = loader.loadAsset("picture-1").catch((error) => error);
+
+    await expect(loader.ensureAssetsLoaded(["picture-1"])).rejects.toThrow(
+      'Failed to read bundle asset "picture-1".',
+    );
+    await background;
+    expect(bundleReader.readAsset).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not load an asset twice when the screen's own load fails", async () => {
+    const { loader, bundleReader } = createLoader();
+    bundleReader.readAsset.mockRejectedValue(new Error("unreadable"));
+
+    await expect(loader.ensureAssetsLoaded(["picture-1"])).rejects.toThrow();
+
+    expect(bundleReader.readAsset).toHaveBeenCalledTimes(1);
   });
 
   it("names the asset when the package cannot be read", async () => {

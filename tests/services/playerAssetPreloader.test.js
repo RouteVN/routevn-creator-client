@@ -91,7 +91,13 @@ describe("createPlayerAssetPreloader", () => {
 
     expect(onError).toHaveBeenCalledWith(error, { assetId: "a" });
     expect(started).toEqual(["a", "b"]);
-    expect(preloader.hasGivenUp("a")).toBe(false);
+  });
+
+  it("returns the assets it queued", () => {
+    const { preloader } = createPreloader();
+
+    expect(preloader.setPlan(["a", "b"])).toEqual(["a", "b"]);
+    expect(preloader.setPlan([])).toEqual([]);
   });
 
   it("tries a failed asset again when a later plan lists it", async () => {
@@ -103,22 +109,20 @@ describe("createPlayerAssetPreloader", () => {
     expect(started).toEqual(["a", "a"]);
 
     await finish("a");
-    expect(preloader.hasGivenUp("a")).toBe(false);
+    expect(preloader.setPlan(["a"])).toEqual(["a"]);
   });
 
   it("gives up on an asset that keeps failing", async () => {
     const { preloader, started, onError, fail } = createPreloader();
 
     for (let attempt = 1; attempt <= MAX_PRELOAD_ATTEMPTS; attempt++) {
-      expect(preloader.hasGivenUp("a")).toBe(false);
-      preloader.setPlan(["a"]);
+      expect(preloader.setPlan(["a"])).toEqual(["a"]);
       await fail("a", new Error("unreadable"));
     }
 
-    expect(preloader.hasGivenUp("a")).toBe(true);
     expect(onError).toHaveBeenCalledTimes(MAX_PRELOAD_ATTEMPTS);
 
-    preloader.setPlan(["a", "b"]);
+    expect(preloader.setPlan(["a", "b"])).toEqual(["b"]);
     expect(started).toEqual([...Array(MAX_PRELOAD_ATTEMPTS).fill("a"), "b"]);
   });
 
@@ -132,6 +136,6 @@ describe("createPlayerAssetPreloader", () => {
       await finish("a");
     }
 
-    expect(preloader.hasGivenUp("a")).toBe(false);
+    expect(preloader.setPlan(["a"])).toEqual(["a"]);
   });
 });

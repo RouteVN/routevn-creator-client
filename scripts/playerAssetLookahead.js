@@ -17,13 +17,38 @@ export const createSectionLineIndex = (projectData) => {
   return sections;
 };
 
-const collectJumps = ({ value, key, unconditional, jumps }) => {
+// A jump may name only a scene. The story then starts at the scene's initial
+// section.
+export const createSceneStartIndex = (projectData) => {
+  const sceneStarts = new Map();
+  for (const [sceneId, scene] of Object.entries(
+    projectData?.story?.scenes ?? {},
+  )) {
+    const sectionId =
+      scene?.initialSectionId ?? Object.keys(scene?.sections ?? {})[0];
+    if (sectionId) {
+      sceneStarts.set(sceneId, sectionId);
+    }
+  }
+  return sceneStarts;
+};
+
+const collectJumps = ({ value, key, unconditional, jumps, resourceIds }) => {
+  if (key === "resourceId" && typeof value === "string") {
+    resourceIds?.add(value);
+    return;
+  }
+
   if (!value || typeof value !== "object") {
     return;
   }
 
   if (isSectionJumpActionType(key)) {
-    jumps.push({ sectionId: value.sectionId, unconditional });
+    jumps.push({
+      sectionId: value.sectionId,
+      sceneId: value.sceneId,
+      unconditional,
+    });
     return;
   }
 
@@ -39,7 +64,13 @@ const collectJumps = ({ value, key, unconditional, jumps }) => {
 
   // Anything nested runs only on a choice, a click, or a condition.
   for (const [entryKey, entry] of Object.entries(value)) {
-    collectJumps({ value: entry, key: entryKey, unconditional: false, jumps });
+    collectJumps({
+      value: entry,
+      key: entryKey,
+      unconditional: false,
+      jumps,
+      resourceIds,
+    });
   }
 };
 
@@ -48,22 +79,35 @@ const collectJumps = ({ value, key, unconditional, jumps }) => {
 // inside a choice item, an event, or a conditional branch may not be taken.
 // `jumpToLine` names a line and, when it has no `sectionId`, stays in the
 // section of the line that holds it.
-export const collectLineJumps = (line) => {
+//
+// A line can also show a layout or a control whose buttons jump, such as the
+// Start button of a title screen. With `resources`, those jumps are included
+// as ones that may not be taken.
+export const collectLineJumps = (line, resources) => {
   const jumps = [];
+  const resourceIds = new Set();
   for (const [actionType, action] of Object.entries(line?.actions ?? {})) {
     collectJumps({
       value: action,
       key: actionType,
       unconditional: true,
       jumps,
+      resourceIds,
     });
+  }
+
+  for (const resourceId of resourceIds) {
+    const shown =
+      resources?.layouts?.[resourceId] ?? resources?.controls?.[resourceId];
+    collectJumps({ value: shown, unconditional: false, jumps });
   }
   return jumps;
 };
 
-const resolveJump = ({ jump, sections, sectionId }) => {
+const resolveJump = ({ jump, sections, sceneStarts, sectionId }) => {
   const targetSectionId =
-    jump.sectionId ?? (jump.toLine ? sectionId : undefined);
+    jump.sectionId ??
+    (jump.toLine ? sectionId : sceneStarts?.get(jump.sceneId));
   const lines = sections.get(targetSectionId);
   if (!lines) {
     return undefined;
@@ -77,7 +121,8 @@ const resolveJump = ({ jump, sections, sectionId }) => {
 
 // Lists asset ids in the order the story is likely to need them. It walks the
 // lines after the current one and follows an unconditional jump to its target,
-// so the lines behind such a jump are not listed. Each line is followed by the
+// so the lines behind such a jump are not listed. The walk ends at an
+// unconditional jump whose target is unknown. Each line is followed by the
 // opening lines of the places it may jump to: every branch of a choice is
 // included because the player's pick is unknown.
 //
@@ -87,6 +132,7 @@ const resolveJump = ({ jump, sections, sectionId }) => {
 // walk ends there and `complete` is false.
 export const createLookaheadPlan = ({
   sections,
+  sceneStarts,
   pointer,
   getLineAssetIds,
   getAssetSize,
@@ -142,14 +188,14 @@ export const createLookaheadPlan = ({
       const target = resolveJump({
         jump,
         sections,
+        sceneStarts,
         sectionId: position.sectionId,
       });
-      if (!target) {
-        continue;
-      }
-
       if (jump.unconditional) {
         next = target;
+        continue;
+      }
+      if (!target) {
         continue;
       }
 
@@ -161,6 +207,10 @@ export const createLookaheadPlan = ({
           return incomplete();
         }
       }
+    }
+    // The story leaves through a jump to a place that is not known.
+    if (!next) {
+      break;
     }
     position = next;
   }
@@ -199,15 +249,57 @@ export const MAX_LOADED_IMAGE_BYTES = 160 * 1024 * 1024;
 // times. Art with flat colors compresses far more than photos, and guessing
 // high only frees pictures a little early.
 const UNKNOWN_IMAGE_COMPRESSION = 16;
+// Counted for a picture when not even its file size is known.
+const UNKNOWN_IMAGE_BYTES = 8 * 1024 * 1024;
 
 const pixelBytes = (width, height) =>
   width > 0 && height > 0 ? width * height * 4 : undefined;
 
+// Tells whether an asset of the package is an "image" or "audio"; other
+// assets have no kind and are not loaded ahead. The package's `mime` decides.
+// A package can list a file under a generic type, so a file with another
+// `mime` is looked up in the project's pictures and sounds.
+export const createAssetKindLookup = ({ projectData, manifestAssets }) => {
+  const resources = projectData?.resources ?? {};
+  const kinds = new Map();
+  const setKind = (items, kind) => {
+    for (const item of Object.values(items ?? {})) {
+      if (item?.fileId) {
+        kinds.set(item.fileId, kind);
+      }
+    }
+  };
+  setKind(resources.images, "image");
+  setKind(resources.spritesheets, "image");
+  setKind(resources.sounds, "audio");
+  for (const sceneVoices of Object.values(resources.voices ?? {})) {
+    setKind(sceneVoices, "audio");
+  }
+
+  return (assetId) => {
+    const asset = manifestAssets?.[assetId];
+    if (!asset) {
+      return undefined;
+    }
+    if (asset.mime?.startsWith("image/")) {
+      return "image";
+    }
+    if (asset.mime?.startsWith("audio/")) {
+      return "audio";
+    }
+    return kinds.get(assetId);
+  };
+};
+
 // Returns what an asset counts for against the picture limit: four bytes per
 // pixel once decoded. Sounds count for nothing, because the limit is for
-// pictures and sounds are never freed. `manifestAssets` is the package's list of assets, with `mime`,
-// `size` and, for some pictures, `width` and `height`.
-export const createAssetSizeLookup = ({ projectData, manifestAssets }) => {
+// pictures and sounds are never freed. `manifestAssets` is the package's list
+// of assets, with `mime`, `size` and, for some pictures, `width` and `height`.
+export const createAssetSizeLookup = ({
+  projectData,
+  manifestAssets,
+  getAssetKind = createAssetKindLookup({ projectData, manifestAssets }),
+}) => {
   const sizes = new Map();
   const setSize = (fileId, size) => {
     if (fileId && size !== undefined) {
@@ -230,16 +322,18 @@ export const createAssetSizeLookup = ({ projectData, manifestAssets }) => {
   }
 
   return (assetId) => {
-    const asset = manifestAssets?.[assetId];
-    if (!asset?.mime?.startsWith("image/")) {
+    if (getAssetKind(assetId) !== "image") {
       return 0;
     }
 
     if (!sizes.has(assetId)) {
+      const asset = manifestAssets[assetId];
       sizes.set(
         assetId,
         pixelBytes(asset.width, asset.height) ??
-          (asset.size ?? 0) * UNKNOWN_IMAGE_COMPRESSION,
+          (asset.size > 0
+            ? asset.size * UNKNOWN_IMAGE_COMPRESSION
+            : UNKNOWN_IMAGE_BYTES),
       );
     }
     return sizes.get(assetId);
@@ -255,18 +349,15 @@ export const createLineAssetScanner = ({ scanLine, now, budgetMs }) => {
   const lineAssetIds = new WeakMap();
   let deadline = 0;
   let scannedInPass = 0;
-  let behind = false;
 
   return {
     startPass() {
       deadline = now() + budgetMs;
       scannedInPass = 0;
-      behind = false;
     },
     getLineAssetIds(line) {
       if (!lineAssetIds.has(line)) {
         if (scannedInPass > 0 && now() >= deadline) {
-          behind = true;
           return undefined;
         }
 
@@ -275,8 +366,56 @@ export const createLineAssetScanner = ({ scanLine, now, budgetMs }) => {
       }
       return lineAssetIds.get(line);
     },
-    // True when the pass left lines unread.
-    isBehind: () => behind,
+  };
+};
+
+// The engine announces each line it enters in a `handleLineActions` effect
+// that carries the line's position. Returns the effects handler wrapped so
+// that `onLineEntered` hears of it; everything else is passed through.
+export const watchLineEntries = (handleEffects, onLineEntered) => {
+  const watched = (effects) => {
+    for (const effect of effects) {
+      if (effect?.name === "handleLineActions" && effect.payload?.pointer) {
+        onLineEntered(effect.payload.pointer);
+      }
+    }
+    return handleEffects(effects);
+  };
+  return Object.assign(watched, handleEffects);
+};
+
+// Follows the story's position from the lines the engine enters, because
+// asking the engine for its state copies all of it. `readSystemState` is that
+// copy; it is read once, for a story whose first line was entered unseen.
+//
+// It also remembers which screens were queued right after a line was entered,
+// which tells a new line's screen from the same screen drawn again.
+export const createStoryPosition = ({ readSystemState }) => {
+  const lineScreens = new WeakSet();
+  let pointer;
+  let stateRead = false;
+  let lineEntered = false;
+
+  return {
+    onLineEntered(nextPointer) {
+      pointer = nextPointer;
+      lineEntered = true;
+    },
+    onScreenQueued(renderState) {
+      if (lineEntered) {
+        lineScreens.add(renderState);
+        lineEntered = false;
+      }
+    },
+    entersLine: (renderState) => lineScreens.has(renderState),
+    getPointer() {
+      if (!pointer && !stateRead) {
+        stateRead = true;
+        const context = readSystemState()?.contexts?.at(-1);
+        pointer = context?.pointers?.[context.currentPointerMode ?? "read"];
+      }
+      return pointer;
+    },
   };
 };
 
@@ -284,19 +423,24 @@ const isSubset = (assetIds, others) =>
   assetIds.every((assetId) => others.includes(assetId));
 
 // Plans the loads and frees pictures after screens are drawn. `update` takes
-// the screens drawn since the last call, oldest first. It queues the assets
-// the story is about to need and frees the pictures used longest ago.
+// the screens drawn since the last call, oldest first, each as
+// `{ renderState, entersLine }`. It queues the assets the story is about to
+// need and frees the pictures used longest ago.
 //
 // Never freed: pictures on the current screen, the screen before it (it may
 // still be fading out), every screen drawn since the last call, screens
-// waiting to be drawn, and the plan. A screen drawn again with a picture
-// added or removed, such as a hovered button, counts as the same screen, so
-// it does not push out the screen that is fading.
+// waiting to be drawn, and the plan. A screen is the same screen as the one
+// before when the story did not enter a line for it, such as a hovered button
+// or a toggled picture, or when it only adds or removes pictures. The same
+// screen does not push out the screen that is fading.
 //
 // `getLoadedAssetIds` and `getStateAssetIds` list pictures only, so sounds
 // are never freed. `isAssetLoaded` answers for pictures and sounds.
+// `preloader.setPlan` returns the assets it will load.
 export const createPlayerAssetLookahead = ({
   sections,
+  sceneStarts,
+  resources,
   getPointer,
   getLineAssetIds,
   getStateAssetIds,
@@ -312,17 +456,29 @@ export const createPlayerAssetLookahead = ({
   const lineJumps = new WeakMap();
   const getLineJumps = (line) => {
     if (!lineJumps.has(line)) {
-      lineJumps.set(line, collectLineJumps(line));
+      lineJumps.set(line, collectLineJumps(line, resources));
     }
     return lineJumps.get(line);
+  };
+  // A screen is asked for on every pass while it waits to be drawn.
+  const stateAssetIds = new WeakMap();
+  const getScreenAssetIds = (renderState) => {
+    if (!stateAssetIds.has(renderState)) {
+      stateAssetIds.set(renderState, getStateAssetIds(renderState));
+    }
+    return stateAssetIds.get(renderState);
   };
   let updateCount = 0;
   // The pictures of the last screens drawn, oldest first.
   let screens = [];
 
-  const addScreen = (assetIds) => {
+  const addScreen = ({ renderState, entersLine }) => {
+    const assetIds = getScreenAssetIds(renderState);
     const latest = screens.at(-1);
-    if (latest && (isSubset(assetIds, latest) || isSubset(latest, assetIds))) {
+    if (
+      latest &&
+      (!entersLine || isSubset(assetIds, latest) || isSubset(latest, assetIds))
+    ) {
       screens[screens.length - 1] = Array.from(
         new Set([...latest, ...assetIds]),
       );
@@ -334,12 +490,10 @@ export const createPlayerAssetLookahead = ({
   return {
     // Returns false when the plan stopped short and `update` should run
     // again; nothing is freed until the plan is whole.
-    update(renderStates = []) {
+    update(drawnScreens = []) {
       updateCount += 1;
       const knownScreenCount = screens.length;
-      renderStates.forEach((renderState) => {
-        addScreen(getStateAssetIds(renderState));
-      });
+      drawnScreens.forEach(addScreen);
       // With new screens, the oldest known one has been replaced twice.
       if (screens.length > knownScreenCount) {
         screens = screens.slice(Math.max(0, knownScreenCount - 1));
@@ -347,6 +501,7 @@ export const createPlayerAssetLookahead = ({
 
       const plan = createLookaheadPlan({
         sections,
+        sceneStarts,
         pointer: getPointer(),
         getLineAssetIds,
         getLineJumps,
@@ -355,7 +510,7 @@ export const createPlayerAssetLookahead = ({
       });
       const keep = new Set([
         ...screens.flat(),
-        ...getWaitingStates().flatMap(getStateAssetIds),
+        ...getWaitingStates().flatMap(getScreenAssetIds),
         ...plan.assetIds,
       ]);
       screens = screens.slice(-2);
@@ -363,8 +518,8 @@ export const createPlayerAssetLookahead = ({
         lastUsed.set(assetId, updateCount);
       }
 
-      const pending = plan.assetIds.filter(
-        (assetId) => !isAssetLoaded(assetId) && !preloader.hasGivenUp(assetId),
+      const pending = preloader.setPlan(
+        plan.assetIds.filter((assetId) => !isAssetLoaded(assetId)),
       );
       if (plan.complete) {
         // Pending assets count as loaded so room is made before they arrive.
@@ -383,22 +538,29 @@ export const createPlayerAssetLookahead = ({
         }
       }
 
-      preloader.setPlan(pending);
       return plan.complete;
     },
   };
 };
 
+// How often in a row a failed pass is run again before the runner waits for
+// the next screen.
+export const MAX_LOOKAHEAD_RETRIES = 2;
+// Only the last screens matter to a later pass.
+const MAX_KEPT_SCREENS = 8;
+
 // Runs the lookahead after screens are drawn: once for a burst of screens,
 // and again while a plan is still short. Loading ahead only saves time, so a
-// failure is reported and never stops the story.
+// failure is reported and never stops the story. The screens of a failed pass
+// are given to the next one, so a screen that is fading out stays known.
 export const createLookaheadRunner = ({
   update,
   onError,
   schedule = (run) => setTimeout(run, 0),
 }) => {
-  let drawnStates = [];
+  let drawnScreens = [];
   let scheduled = false;
+  let failures = 0;
 
   const request = () => {
     if (!scheduled) {
@@ -409,20 +571,27 @@ export const createLookaheadRunner = ({
 
   function run() {
     scheduled = false;
-    const renderStates = drawnStates;
-    drawnStates = [];
+    const screens = drawnScreens;
+    drawnScreens = [];
     try {
-      if (!update(renderStates)) {
+      const complete = update(screens);
+      failures = 0;
+      if (!complete) {
         request();
       }
     } catch (error) {
+      drawnScreens = [...screens, ...drawnScreens].slice(-MAX_KEPT_SCREENS);
+      failures += 1;
       onError?.(error);
+      if (failures <= MAX_LOOKAHEAD_RETRIES) {
+        request();
+      }
     }
   }
 
   return {
-    onRendered(renderState) {
-      drawnStates.push(renderState);
+    onRendered(screen) {
+      drawnScreens.push(screen);
       request();
     },
   };

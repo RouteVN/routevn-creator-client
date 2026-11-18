@@ -72,12 +72,67 @@ for (const { imageId, fileId, color } of pictures) {
   };
 }
 
-// One section that shows a new picture on every line and jumps back to its
-// own start, so the story never ends.
+// One second of silence as a 8-bit mono WAV file.
+const createWav = () => {
+  const sampleRate = 8000;
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + sampleRate, 4);
+  header.write("WAVEfmt ", 8);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(sampleRate, 28);
+  header.writeUInt16LE(1, 32);
+  header.writeUInt16LE(8, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(sampleRate, 40);
+  return Buffer.concat([header, Buffer.alloc(sampleRate, 128)]);
+};
+const SOUND_FILE_ID = "file-sound";
+assets[SOUND_FILE_ID] = { mime: "audio/wav", buffer: createWav() };
+
+// The first section shows this many pictures and then jumps to the second.
+const FIRST_SECTION_PICTURE_COUNT = 3;
+const pictureLines = pictures.map(({ imageId }, index) => {
+  const actions = {
+    background: { resourceId: imageId, resourceType: "image" },
+  };
+  // Each section sets the control that listens for taps on its first line.
+  if (index === 0 || index === FIRST_SECTION_PICTURE_COUNT) {
+    actions.control = { resourceId: "control-1", resourceType: "control" };
+  }
+  // The first line of the second section starts music.
+  if (index === FIRST_SECTION_PICTURE_COUNT) {
+    actions.bgm = {
+      sounds: [
+        {
+          id: "sound-1",
+          resourceId: "sound-1",
+          loop: true,
+          volume: 100,
+          startDelayMs: 0,
+        },
+      ],
+    };
+  }
+  return { id: `line-${index + 1}`, actions };
+});
+const jumpLine = (id, sectionId) => ({
+  id,
+  actions: { sectionTransition: { sceneId: "scene-1", sectionId } },
+});
+
+// Two sections that show a new picture on every line. Each ends in a jump to
+// the other, so the story never ends and every plan crosses a jump.
 const projectData = {
   screen: { width: WIDTH, height: HEIGHT, backgroundColor: "#000000" },
   resources: {
     images,
+    sounds: {
+      "sound-1": { fileId: SOUND_FILE_ID, fileType: "audio/wav" },
+    },
     controls: {
       "control-1": {
         id: "control-1",
@@ -108,27 +163,15 @@ const projectData = {
           "section-1": {
             name: "Section One",
             lines: [
-              ...pictures.map(({ imageId }, index) => {
-                const actions = {
-                  background: { resourceId: imageId, resourceType: "image" },
-                };
-                if (index === 0) {
-                  actions.control = {
-                    resourceId: "control-1",
-                    resourceType: "control",
-                  };
-                }
-                return { id: `line-${index + 1}`, actions };
-              }),
-              {
-                id: "line-jump",
-                actions: {
-                  sectionTransition: {
-                    sceneId: "scene-1",
-                    sectionId: "section-1",
-                  },
-                },
-              },
+              ...pictureLines.slice(0, FIRST_SECTION_PICTURE_COUNT),
+              jumpLine("line-jump-1", "section-2"),
+            ],
+          },
+          "section-2": {
+            name: "Section Two",
+            lines: [
+              ...pictureLines.slice(FIRST_SECTION_PICTURE_COUNT),
+              jumpLine("line-jump-2", "section-1"),
             ],
           },
         },
@@ -150,7 +193,7 @@ const manifest = JSON.parse(
   new TextDecoder().decode(bundle.subarray(16, 16 + manifestLength)),
 );
 const fileIdByRangeStart = new Map(
-  pictures.map(({ fileId }) => [
+  [...pictures, { fileId: SOUND_FILE_ID }].map(({ fileId }) => [
     16 +
       manifestLength +
       manifest.chunks[manifest.assets[fileId].chunks[0]].start,
@@ -259,9 +302,14 @@ try {
       await until("the first picture", () => showsPicture(0));
 
       // The pictures after the first load without a tap. Half of the limit
-      // of 160 MB is planned ahead: the shown picture and the next four.
-      await until("the next pictures to be read", () =>
-        [1, 2, 3, 4].every((i) => readCounts.has(pictures[i].fileId)),
+      // of 160 MB is planned ahead: the shown picture and the next four. Two
+      // of those are behind the jump to the second section, and so is the
+      // music, which does not count against the limit.
+      await until(
+        "the next pictures and the music to be read",
+        () =>
+          [1, 2, 3, 4].every((i) => readCounts.has(pictures[i].fileId)) &&
+          readCounts.has(SOUND_FILE_ID),
       );
       assert.equal(readCounts.has(pictures[5].fileId), false);
 
@@ -306,6 +354,8 @@ try {
           `${fileId} was read ${readCounts.get(fileId)} time(s), so it was never freed`,
         );
       }
+      // Sounds are never freed, and a loaded one is not read again.
+      assert.equal(readCounts.get(SOUND_FILE_ID), 1);
 
       // Skip mode runs through the lines already read, faster than pictures
       // load, and passes the memory limit several times.

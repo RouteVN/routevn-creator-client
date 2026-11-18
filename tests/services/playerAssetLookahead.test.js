@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   collectLineJumps,
+  createAssetKindLookup,
   createAssetSizeLookup,
   createLineAssetScanner,
   createLookaheadPlan,
   createLookaheadRunner,
   createPlayerAssetLookahead,
+  createSceneStartIndex,
   createSectionLineIndex,
+  createStoryPosition,
+  MAX_LOOKAHEAD_RETRIES,
   selectAssetsToEvict,
+  watchLineEntries,
 } from "../../scripts/playerAssetLookahead.js";
 
 const MB = 1024 * 1024;
@@ -97,6 +102,71 @@ describe("collectLineJumps", () => {
       ),
     ).toEqual([]);
     expect(collectLineJumps({ id: "1", sectionId: "next" })).toEqual([]);
+  });
+
+  it("keeps the scene of a jump that names one", () => {
+    expect(
+      collectLineJumps(
+        line("1", [], { sectionTransition: { sceneId: "scene-2" } }),
+      ),
+    ).toEqual([
+      { sectionId: undefined, sceneId: "scene-2", unconditional: true },
+    ]);
+  });
+
+  it("finds the jumps of buttons in a layout or control the line shows", () => {
+    const resources = {
+      layouts: {
+        title: {
+          elements: [
+            {
+              type: "container",
+              children: [
+                { click: { payload: { actions: jump("chapter-1") } } },
+                { click: { payload: { actions: jump("gallery") } } },
+              ],
+            },
+          ],
+        },
+      },
+      controls: {
+        keys: { keyboard: { enter: { actions: jump("skip-target") } } },
+      },
+    };
+    const titleLine = line("1", [], {
+      layout: { resourceId: "title", resourceType: "layout" },
+      control: { resourceId: "keys", resourceType: "control" },
+      background: { resourceId: "image-1", resourceType: "image" },
+    });
+
+    expect(collectLineJumps(titleLine, resources)).toEqual([
+      { sectionId: "chapter-1", unconditional: false },
+      { sectionId: "gallery", unconditional: false },
+      { sectionId: "skip-target", unconditional: false },
+    ]);
+    expect(collectLineJumps(titleLine)).toEqual([]);
+  });
+});
+
+describe("createSceneStartIndex", () => {
+  it("maps a scene to its initial section, or else its first one", () => {
+    const sceneStarts = createSceneStartIndex({
+      story: {
+        scenes: {
+          "scene-1": {
+            initialSectionId: "b",
+            sections: { a: { lines: [] }, b: { lines: [] } },
+          },
+          "scene-2": { sections: { c: { lines: [] } } },
+          "scene-3": { sections: {} },
+        },
+      },
+    });
+
+    expect(Array.from(sceneStarts)).toEqual([
+      ["scene-1", "b"],
+      ["scene-2", "c"],
+    ]);
   });
 });
 
@@ -249,11 +319,17 @@ describe("createLookaheadPlan", () => {
     ).toEqual(["a", "d", "e", "b"]);
   });
 
-  it("ignores a jump to a section or a line that does not exist", () => {
+  it("ignores an optional jump to a section or line that does not exist", () => {
     const sections = {
       main: [
-        line("1", ["a"], jump("missing")),
-        line("2", ["b"], { jumpToLine: { sectionId: "main", lineId: "9" } }),
+        line("1", ["a"], choice("missing")),
+        line("2", ["b"], {
+          conditional: {
+            branches: [
+              { actions: { jumpToLine: { sectionId: "main", lineId: "9" } } },
+            ],
+          },
+        }),
         line("3", ["c"]),
       ],
     };
@@ -263,6 +339,63 @@ describe("createLookaheadPlan", () => {
       "b",
       "c",
     ]);
+  });
+
+  it("ends at a jump that is always taken to an unknown place", () => {
+    const pointer = { sectionId: "main", lineId: "1" };
+    for (const actions of [
+      jump("missing"),
+      { jumpToLine: { sectionId: "main", lineId: "9" } },
+      { sectionTransition: { sceneId: "missing-scene" } },
+    ]) {
+      const sections = {
+        main: [line("1", ["a"]), line("2", ["b"], actions), line("3", ["c"])],
+      };
+
+      expect(createPlan(sections, pointer)).toEqual({
+        assetIds: ["a", "b"],
+        complete: true,
+      });
+    }
+  });
+
+  it("follows a jump that names only a scene to its initial section", () => {
+    const projectData = {
+      story: {
+        scenes: {
+          "scene-1": {
+            sections: {
+              main: {
+                lines: [
+                  line("1", ["a"], {
+                    sectionTransition: { sceneId: "scene-2" },
+                  }),
+                  line("2", ["never"]),
+                ],
+              },
+            },
+          },
+          "scene-2": {
+            initialSectionId: "opening",
+            sections: {
+              other: { lines: [line("o1", ["other"])] },
+              opening: { lines: [line("s1", ["b"])] },
+            },
+          },
+        },
+      },
+    };
+
+    expect(
+      createLookaheadPlan({
+        sections: createSectionLineIndex(projectData),
+        sceneStarts: createSceneStartIndex(projectData),
+        pointer: { sectionId: "main", lineId: "1" },
+        getLineAssetIds: (item) => item.assets,
+        getAssetSize: () => MB,
+        maxBytes: 100 * MB,
+      }).assetIds,
+    ).toEqual(["a", "b"]);
   });
 
   it("ends when the story jumps back to a line already listed", () => {
@@ -394,7 +527,7 @@ describe("selectAssetsToEvict", () => {
 
 // A player stand-in: the preloader loads the whole plan at once, and showing
 // a line loads whatever it still needs.
-const createPlayer = ({ sectionsById, maxBytes, sizes = {} }) => {
+const createPlayer = ({ sectionsById, maxBytes, sizes = {}, resources }) => {
   const sections = createSectionLineIndex(createProjectData(sectionsById));
   const loaded = new Set();
   const givenUp = new Set();
@@ -405,12 +538,14 @@ const createPlayer = ({ sectionsById, maxBytes, sizes = {} }) => {
   let pointer;
   let waitingStates = [];
   let unreadLineIds = new Set();
+  const getStateAssetIds = vi.fn((state) => state.assets);
   const lookahead = createPlayerAssetLookahead({
     sections,
+    resources,
     getPointer: () => pointer,
     getLineAssetIds: (item) =>
       unreadLineIds.has(item.id) ? undefined : item.assets,
-    getStateAssetIds: (state) => state.assets,
+    getStateAssetIds,
     getWaitingStates: () => waitingStates,
     getAssetSize: (assetId) => sizes[assetId] ?? MB,
     getLoadedAssetIds: () =>
@@ -418,10 +553,11 @@ const createPlayer = ({ sectionsById, maxBytes, sizes = {} }) => {
     isAssetLoaded: (assetId) => loaded.has(assetId),
     unloadAssets,
     preloader: {
-      hasGivenUp: (assetId) => givenUp.has(assetId),
       setPlan: (assetIds) => {
-        plans.push(assetIds);
-        assetIds.forEach((id) => loaded.add(id));
+        const queued = assetIds.filter((id) => !givenUp.has(id));
+        plans.push(queued);
+        queued.forEach((id) => loaded.add(id));
+        return queued;
       },
     },
     maxBytes,
@@ -434,6 +570,7 @@ const createPlayer = ({ sectionsById, maxBytes, sizes = {} }) => {
     plans,
     unloadAssets,
     lookahead,
+    getStateAssetIds,
     setWaitingStates: (states) => {
       waitingStates = states;
     },
@@ -443,10 +580,26 @@ const createPlayer = ({ sectionsById, maxBytes, sizes = {} }) => {
     setPointer: (sectionId, lineId) => {
       pointer = { sectionId, lineId };
     },
-    // Draws screens the story did not move for, such as a hovered button.
+    // Draws the screens of new lines, without moving the plan's position.
     draw(...screens) {
       screens.flat().forEach((id) => loaded.add(id));
-      return lookahead.update(screens.map((assets) => ({ assets })));
+      return lookahead.update(
+        screens.map((assets) => ({
+          renderState: { assets },
+          entersLine: true,
+        })),
+      );
+    },
+    // Draws screens the story did not enter a line for, such as a hovered
+    // button.
+    redraw(...screens) {
+      screens.flat().forEach((id) => loaded.add(id));
+      return lookahead.update(
+        screens.map((assets) => ({
+          renderState: { assets },
+          entersLine: false,
+        })),
+      );
     },
     // Returns the pictures the line had to wait for.
     show(sectionId, lineId) {
@@ -456,7 +609,9 @@ const createPlayer = ({ sectionsById, maxBytes, sizes = {} }) => {
         .find((item) => item.id === lineId);
       const missing = shownLine.assets.filter((id) => !loaded.has(id));
       shownLine.assets.forEach((id) => loaded.add(id));
-      lookahead.update([{ assets: shownLine.assets }]);
+      lookahead.update([
+        { renderState: { assets: shownLine.assets }, entersLine: true },
+      ]);
       return missing;
     },
   };
@@ -552,9 +707,11 @@ describe("createPlayerAssetLookahead", () => {
       player.draw(["new"]);
 
       // A text reveal or auto mode draws the same screen many times.
+      player.redraw(["new"]);
+      player.redraw(["new"], ["new"]);
+      player.redraw();
+      // A line that changes no picture is the same screen as well.
       player.draw(["new"]);
-      player.draw(["new"], ["new"]);
-      player.draw();
 
       expect(player.loaded.has("old")).toBe(true);
       expect(player.unloadAssets).not.toHaveBeenCalled();
@@ -565,13 +722,55 @@ describe("createPlayerAssetLookahead", () => {
       player.draw(["old"]);
       player.draw(["new"]);
 
-      player.draw(["new", "hover"]);
-      player.draw(["new"]);
-      player.draw([]);
+      player.redraw(["new", "hover"]);
+      player.redraw(["new"]);
+      player.redraw([]);
 
       expect(player.loaded.has("old")).toBe(true);
       // The picture the screen lost may be fading out as well.
       expect(player.loaded.has("hover")).toBe(true);
+    });
+
+    it("stays loaded when a new line only adds or removes a picture", () => {
+      const player = createTightPlayer();
+      player.draw(["old"]);
+      player.draw(["new"]);
+
+      player.draw(["new", "character"]);
+      player.draw(["new"]);
+      player.draw([]);
+
+      expect(player.unloadAssets).not.toHaveBeenCalled();
+      expect(player.loaded.has("old")).toBe(true);
+      expect(player.loaded.has("character")).toBe(true);
+    });
+
+    it("stays loaded when a redraw swaps one picture for another", () => {
+      const player = createTightPlayer();
+      player.draw(["old"]);
+      player.draw(["new", "toggle-off"]);
+
+      // A toggle button or a slider thumb replaces its picture.
+      player.redraw(["new", "toggle-on"]);
+      player.redraw(["new", "toggle-off"]);
+
+      expect(player.unloadAssets).not.toHaveBeenCalled();
+      expect(player.loaded.has("old")).toBe(true);
+    });
+
+    it("is replaced by a new line that swaps a picture", () => {
+      const player = createTightPlayer();
+      player.draw(["old"]);
+      player.draw(["new", "left"]);
+
+      player.draw(["new", "right"]);
+
+      expect(player.loaded.has("old")).toBe(false);
+      expect(Array.from(player.loaded).sort()).toEqual([
+        "left",
+        "new",
+        "right",
+      ]);
     });
 
     it("stays loaded when several screens are drawn in one burst", () => {
@@ -650,7 +849,11 @@ describe("createPlayerAssetLookahead", () => {
     player.setPointer("main", "1");
     player.setUnreadLineIds(["2", "3", "4", "5", "6"]);
 
-    expect(player.lookahead.update([{ assets: ["picture-1"] }])).toBe(false);
+    expect(
+      player.lookahead.update([
+        { renderState: { assets: ["picture-1"] }, entersLine: true },
+      ]),
+    ).toBe(false);
     expect(player.unloadAssets).not.toHaveBeenCalled();
 
     player.setUnreadLineIds([]);
@@ -658,6 +861,48 @@ describe("createPlayerAssetLookahead", () => {
     expect(player.unloadAssets).toHaveBeenCalled();
     expect(player.loaded.has("picture-1")).toBe(true);
     expect(player.loaded.has("picture-2")).toBe(true);
+  });
+
+  it("reads the pictures of a screen once while it waits to be drawn", () => {
+    const player = createPlayer({
+      sectionsById: { main: [line("1")] },
+      maxBytes: 8 * MB,
+    });
+    const waiting = { assets: ["menu"] };
+    const drawn = { renderState: { assets: ["a"] }, entersLine: true };
+    player.setPointer("main", "1");
+    player.setWaitingStates([waiting]);
+
+    player.lookahead.update([drawn]);
+    player.lookahead.update([]);
+    player.lookahead.update([]);
+
+    expect(player.getStateAssetIds).toHaveBeenCalledTimes(2);
+  });
+
+  it("loads the story behind a button of a layout the line shows", () => {
+    const player = createPlayer({
+      sectionsById: {
+        title: [
+          line("1", ["title-art"], {
+            layout: { resourceId: "title-menu", resourceType: "layout" },
+          }),
+        ],
+        "chapter-1": [line("c1", ["first-background"])],
+      },
+      resources: {
+        layouts: {
+          "title-menu": {
+            elements: [{ click: { payload: { actions: jump("chapter-1") } } }],
+          },
+        },
+      },
+      maxBytes: 8 * MB,
+    });
+
+    player.show("title", "1");
+
+    expect(player.show("chapter-1", "c1")).toEqual([]);
   });
 
   // Random stories and random walks through them. A failing seed is printed
@@ -706,7 +951,7 @@ describe("createPlayerAssetLookahead", () => {
         player.show(sectionId, current.id);
         // Now and then the same screen is drawn again.
         if (random(3) === 0) {
-          player.draw(current.assets);
+          player.redraw(current.assets);
         }
 
         const message = `seed ${seed}, step ${step}`;
@@ -743,6 +988,52 @@ describe("createPlayerAssetLookahead", () => {
   });
 });
 
+describe("createAssetKindLookup", () => {
+  const getAssetKind = createAssetKindLookup({
+    projectData: {
+      resources: {
+        images: { "image-1": { fileId: "generic-picture" } },
+        spritesheets: { "sheet-1": { fileId: "generic-sheet" } },
+        sounds: { "sound-1": { fileId: "generic-sound" } },
+        voices: { "scene-1": { "voice-1": { fileId: "generic-voice" } } },
+        fonts: { "font-1": { fileId: "generic-font" } },
+        images2: {},
+      },
+    },
+    manifestAssets: {
+      picture: { mime: "image/png" },
+      music: { mime: "audio/ogg" },
+      font: { mime: "font/woff2" },
+      video: { mime: "video/mp4" },
+      "generic-picture": { mime: "application/octet-stream" },
+      "generic-sheet": { mime: "application/octet-stream" },
+      "generic-sound": { mime: "application/octet-stream" },
+      "generic-voice": {},
+      "generic-font": { mime: "application/octet-stream" },
+    },
+  });
+
+  it("takes the kind from the type the package lists", () => {
+    expect(getAssetKind("picture")).toBe("image");
+    expect(getAssetKind("music")).toBe("audio");
+  });
+
+  it("looks up a file of another type in the project's resources", () => {
+    expect(getAssetKind("generic-picture")).toBe("image");
+    expect(getAssetKind("generic-sheet")).toBe("image");
+    expect(getAssetKind("generic-sound")).toBe("audio");
+    expect(getAssetKind("generic-voice")).toBe("audio");
+  });
+
+  it("gives no kind to other files and to ids outside the package", () => {
+    expect(getAssetKind("font")).toBeUndefined();
+    expect(getAssetKind("video")).toBeUndefined();
+    expect(getAssetKind("generic-font")).toBeUndefined();
+    expect(getAssetKind("image-1")).toBeUndefined();
+    expect(getAssetKind("not-in-package")).toBeUndefined();
+  });
+});
+
 describe("createAssetSizeLookup", () => {
   const getAssetSize = createAssetSizeLookup({
     projectData: {
@@ -750,6 +1041,8 @@ describe("createAssetSizeLookup", () => {
         images: {
           "image-1": { fileId: "picture", width: 1000, height: 500 },
           "image-2": { fileId: "no-size" },
+          "image-3": { fileId: "generic", width: 100, height: 100 },
+          "image-4": { fileId: "nothing-known" },
         },
         spritesheets: {
           "sheet-1": { fileId: "sheet", sheetWidth: 4096, sheetHeight: 2048 },
@@ -768,6 +1061,8 @@ describe("createAssetSizeLookup", () => {
       sheet: { mime: "image/png", size: 10 },
       atlas: { mime: "image/png", size: 10 },
       diced: { mime: "image/png", size: 10, width: 300, height: 200 },
+      generic: { mime: "application/octet-stream", size: 10 },
+      "nothing-known": { mime: "image/png" },
       music: { mime: "audio/ogg", size: 25 * MB },
       font: { mime: "font/woff2", size: 1000 },
     },
@@ -788,6 +1083,11 @@ describe("createAssetSizeLookup", () => {
 
   it("guesses high for a picture of unknown pixel size", () => {
     expect(getAssetSize("no-size")).toBe(16_000);
+    expect(getAssetSize("nothing-known")).toBe(8 * MB);
+  });
+
+  it("counts a picture the package lists under a generic type", () => {
+    expect(getAssetSize("generic")).toBe(100 * 100 * 4);
   });
 
   it("counts nothing for sounds and other files", () => {
@@ -819,9 +1119,7 @@ describe("createLineAssetScanner", () => {
     scanner.startPass();
     expect(scanner.getLineAssetIds(lines[0])).toEqual(["a"]);
     expect(scanner.getLineAssetIds(lines[1])).toEqual(["b"]);
-    expect(scanner.isBehind()).toBe(false);
     expect(scanner.getLineAssetIds(lines[2])).toBeUndefined();
-    expect(scanner.isBehind()).toBe(true);
   });
 
   it("goes on in the next pass and reads each line once", () => {
@@ -835,7 +1133,6 @@ describe("createLineAssetScanner", () => {
       ["b"],
       ["c"],
     ]);
-    expect(scanner.isBehind()).toBe(false);
     expect(scanLine).toHaveBeenCalledTimes(3);
   });
 
@@ -902,20 +1199,174 @@ describe("createLookaheadRunner", () => {
     expect(scheduled).toHaveLength(0);
   });
 
-  it("reports a failure and keeps running for later screens", () => {
+  it("gives the screens of a failed pass to the next one", () => {
     const error = new Error("bad line");
     const update = vi.fn().mockImplementationOnce(() => {
       throw error;
     });
     update.mockReturnValue(true);
-    const { runner, onError, runScheduled } = createRunner(update);
+    const { runner, onError, scheduled, runScheduled } = createRunner(update);
 
     runner.onRendered("a");
-    runScheduled();
-    expect(onError).toHaveBeenCalledWith(error);
-
     runner.onRendered("b");
     runScheduled();
-    expect(update).toHaveBeenLastCalledWith(["b"]);
+    expect(onError).toHaveBeenCalledWith(error);
+    expect(scheduled).toHaveLength(1);
+
+    runner.onRendered("c");
+    runScheduled();
+    expect(update).toHaveBeenLastCalledWith(["a", "b", "c"]);
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("stops running a pass again when it keeps failing", () => {
+    const update = vi.fn(() => {
+      throw new Error("always bad");
+    });
+    const { runner, onError, scheduled, runScheduled } = createRunner(update);
+
+    runner.onRendered("a");
+    for (let pass = 0; pass < MAX_LOOKAHEAD_RETRIES + 5; pass++) {
+      runScheduled();
+    }
+
+    expect(update).toHaveBeenCalledTimes(MAX_LOOKAHEAD_RETRIES + 1);
+    expect(onError).toHaveBeenCalledTimes(MAX_LOOKAHEAD_RETRIES + 1);
+    expect(scheduled).toHaveLength(0);
+
+    // The next screen starts it again.
+    update.mockImplementation(() => true);
+    runner.onRendered("b");
+    runScheduled();
+    expect(update).toHaveBeenLastCalledWith(["a", "b"]);
+  });
+
+  it("keeps only the last screens of passes that fail", () => {
+    const update = vi.fn(() => {
+      throw new Error("always bad");
+    });
+    const { runner, runScheduled } = createRunner(update);
+
+    for (let index = 0; index < 30; index++) {
+      runner.onRendered(index);
+      runScheduled();
+    }
+
+    // Eight kept screens and the one just drawn.
+    expect(update.mock.lastCall[0]).toEqual([
+      21, 22, 23, 24, 25, 26, 27, 28, 29,
+    ]);
+  });
+});
+
+describe("watchLineEntries", () => {
+  const createHandler = () => {
+    const handleEffects = vi.fn(() => "handled");
+    handleEffects.reset = vi.fn();
+    handleEffects.dispose = vi.fn();
+    handleEffects.reconcilePlaybackScheduleV1 = vi.fn();
+    return handleEffects;
+  };
+
+  it("reports the position of each line the engine enters", () => {
+    const handleEffects = createHandler();
+    const onLineEntered = vi.fn();
+    const watched = watchLineEntries(handleEffects, onLineEntered);
+    const effects = [
+      { name: "render" },
+      {
+        name: "handleLineActions",
+        payload: { pointer: { sectionId: "main", lineId: "2" } },
+      },
+      // The effect of the engine's start carries no position.
+      { name: "handleLineActions" },
+    ];
+
+    expect(watched(effects)).toBe("handled");
+
+    expect(onLineEntered.mock.calls).toEqual([
+      [{ sectionId: "main", lineId: "2" }],
+    ]);
+    expect(handleEffects).toHaveBeenCalledWith(effects);
+  });
+
+  it("keeps the other abilities of the effects handler", () => {
+    const handleEffects = createHandler();
+    const watched = watchLineEntries(handleEffects, vi.fn());
+
+    watched.reset();
+    watched.dispose();
+    watched.reconcilePlaybackScheduleV1("schedule");
+
+    expect(handleEffects.reset).toHaveBeenCalled();
+    expect(handleEffects.dispose).toHaveBeenCalled();
+    expect(handleEffects.reconcilePlaybackScheduleV1).toHaveBeenCalledWith(
+      "schedule",
+    );
+  });
+});
+
+describe("createStoryPosition", () => {
+  it("follows the lines the engine enters without reading its state", () => {
+    const readSystemState = vi.fn();
+    const position = createStoryPosition({ readSystemState });
+
+    position.onLineEntered({ sectionId: "main", lineId: "1" });
+    expect(position.getPointer()).toEqual({ sectionId: "main", lineId: "1" });
+
+    position.onLineEntered({ sectionId: "main", lineId: "2" });
+    expect(position.getPointer()).toEqual({ sectionId: "main", lineId: "2" });
+    expect(position.getPointer()).toEqual({ sectionId: "main", lineId: "2" });
+    expect(readSystemState).not.toHaveBeenCalled();
+  });
+
+  it("reads the engine state once when no line was seen yet", () => {
+    const readSystemState = vi.fn(() => ({
+      contexts: [
+        { pointers: { read: { sectionId: "menu", lineId: "m1" } } },
+        {
+          currentPointerMode: "history",
+          pointers: {
+            read: { sectionId: "main", lineId: "9" },
+            history: { sectionId: "main", lineId: "3" },
+          },
+        },
+      ],
+    }));
+    const position = createStoryPosition({ readSystemState });
+
+    // The line the engine shows, which is not always the one it reads.
+    expect(position.getPointer()).toEqual({ sectionId: "main", lineId: "3" });
+    position.getPointer();
+    expect(readSystemState).toHaveBeenCalledTimes(1);
+  });
+
+  it("has no position for an engine without a story context", () => {
+    const readSystemState = vi.fn(() => ({ contexts: [] }));
+    const position = createStoryPosition({ readSystemState });
+
+    expect(position.getPointer()).toBeUndefined();
+    expect(position.getPointer()).toBeUndefined();
+    expect(readSystemState).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the first screen queued after a line was entered", () => {
+    const position = createStoryPosition({ readSystemState: vi.fn() });
+    const [first, second, redraw, third] = [{}, {}, {}, {}];
+
+    position.onScreenQueued(first);
+    position.onLineEntered({ sectionId: "main", lineId: "1" });
+    position.onScreenQueued(second);
+    position.onScreenQueued(redraw);
+    position.onLineEntered({ sectionId: "main", lineId: "2" });
+    position.onLineEntered({ sectionId: "main", lineId: "3" });
+    position.onScreenQueued(third);
+
+    expect([first, second, redraw, third].map(position.entersLine)).toEqual([
+      false,
+      true,
+      false,
+      true,
+    ]);
   });
 });

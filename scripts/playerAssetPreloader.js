@@ -39,13 +39,14 @@ export const createPlayerAssetPreloader = ({
   };
 
   return {
-    // True once an asset has failed `MAX_PRELOAD_ATTEMPTS` times in a row. It
-    // is not loaded ahead again.
-    hasGivenUp,
     // Replaces the queue, so assets the story no longer leads to are dropped.
+    // An asset that failed `MAX_PRELOAD_ATTEMPTS` times in a row is not
+    // loaded ahead again. Returns the assets that were queued.
     setPlan(assetIds) {
-      pending = assetIds.filter((assetId) => !hasGivenUp(assetId));
+      const queued = assetIds.filter((assetId) => !hasGivenUp(assetId));
+      pending = [...queued];
       schedule(loadNext);
+      return queued;
     },
   };
 };

@@ -45,6 +45,9 @@ export const createBundleAssetLoader = ({
   recordDiagnosticStep,
 }) => {
   const loadedAssetIds = new Set();
+  // The type found in an asset's bytes when it was loaded. The package can
+  // list a picture under a generic type.
+  const detectedAssetTypes = new Map();
   const assetLoadPromises = new Map();
   const assetUnloadPromises = new Map();
   const dicedAtlasPixelCache = new Map();
@@ -156,6 +159,9 @@ export const createBundleAssetLoader = ({
       // The graphics engine may still be freeing this asset.
       await assetUnloadPromises.get(assetId);
       const asset = await createRuntimeAsset(assetId);
+      if (asset?.type) {
+        detectedAssetTypes.set(assetId, asset.type);
+      }
       try {
         const loadedAssets = await routeGraphics.loadAssets({
           [assetId]: asset,
@@ -192,14 +198,13 @@ export const createBundleAssetLoader = ({
   };
 
   const getAssetMime = (assetId) =>
-    bundleReader.manifest.assets?.[assetId]?.mime ?? "";
+    detectedAssetTypes.get(assetId) ??
+    bundleReader.manifest.assets?.[assetId]?.mime ??
+    "";
   const isImageAsset = (assetId) => getAssetMime(assetId).startsWith("image/");
 
   return {
     loadAsset,
-    // Pictures and sounds both hold up the line that first uses them.
-    isPreloadableAsset: (assetId) =>
-      isImageAsset(assetId) || getAssetMime(assetId).startsWith("audio/"),
 
     collectMissingAssetIds(renderState) {
       const assetIds = collectBundleAssetIds({
@@ -261,7 +266,17 @@ export const createBundleAssetLoader = ({
       onProgress?.({ loaded, total });
       await Promise.all(
         uniqueAssetIds.map(async (assetId) => {
-          await loadAsset(assetId);
+          // A load already under way was started in the background. If it
+          // fails, the screen that needs the asset gets a load of its own.
+          const joinsLoad = assetLoadPromises.has(assetId);
+          try {
+            await loadAsset(assetId);
+          } catch (error) {
+            if (!joinsLoad) {
+              throw error;
+            }
+            await loadAsset(assetId);
+          }
           loaded += 1;
           onProgress?.({ loaded, total });
         }),

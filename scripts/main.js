@@ -27,11 +27,15 @@ import { updatePlayerLoadingProgress } from "./playerLoadingProgress.js";
 import { createPlayerStartupEffects } from "./playerStartupEffects.js";
 import { createPlayerRenderQueue } from "./playerRenderQueue.js";
 import {
+  createAssetKindLookup,
   createAssetSizeLookup,
   createLineAssetScanner,
   createLookaheadRunner,
   createPlayerAssetLookahead,
+  createSceneStartIndex,
   createSectionLineIndex,
+  createStoryPosition,
+  watchLineEntries,
 } from "./playerAssetLookahead.js";
 import { createPlayerAssetPreloader } from "./playerAssetPreloader.js";
 import {
@@ -316,8 +320,11 @@ const createBundleAssetLookahead = ({
   bundleReader,
   bundleAssetLoader,
   renderQueue,
+  storyPosition,
   getEngine,
 }) => {
+  const manifestAssets = bundleReader.manifest.assets;
+  const getAssetKind = createAssetKindLookup({ projectData, manifestAssets });
   const preloader = createPlayerAssetPreloader({
     loadAsset: (assetId) => bundleAssetLoader.loadAsset(assetId),
     canLoad: () =>
@@ -331,21 +338,23 @@ const createBundleAssetLookahead = ({
     scanLine: (line) =>
       extractFileIdsForValue(projectData, line)
         .map((file) => file.url)
-        .filter((assetId) => bundleAssetLoader.isPreloadableAsset(assetId)),
+        .filter((assetId) => getAssetKind(assetId) !== undefined),
     now: () => performance.now(),
     budgetMs: LINE_SCAN_BUDGET_MS,
   });
   const lookahead = createPlayerAssetLookahead({
     sections: createSectionLineIndex(projectData),
-    getPointer: () =>
-      getEngine().selectSystemState().contexts.at(-1)?.pointers?.read,
+    sceneStarts: createSceneStartIndex(projectData),
+    resources: projectData?.resources,
+    getPointer: () => storyPosition.getPointer(),
     getLineAssetIds: (line) => lineScanner.getLineAssetIds(line),
     getStateAssetIds: (renderState) =>
       bundleAssetLoader.collectImageAssetIds(renderState),
     getWaitingStates: () => renderQueue.getWaitingStates(),
     getAssetSize: createAssetSizeLookup({
       projectData,
-      manifestAssets: bundleReader.manifest.assets,
+      manifestAssets,
+      getAssetKind,
     }),
     getLoadedAssetIds: () => bundleAssetLoader.getLoadedImageAssetIds(),
     isAssetLoaded: (assetId) => bundleAssetLoader.isAssetLoaded(assetId),
@@ -354,9 +363,9 @@ const createBundleAssetLookahead = ({
   });
 
   return createLookaheadRunner({
-    update: (renderStates) => {
+    update: (drawnScreens) => {
       lineScanner.startPass();
-      return lookahead.update(renderStates);
+      return lookahead.update(drawnScreens);
     },
     onError: (error) => {
       console.warn("Failed to plan asset preloading.", error);
@@ -594,6 +603,10 @@ const prepareEngine = async (
     }
   };
 
+  const storyPosition = createStoryPosition({
+    readSystemState: () => engine.selectSystemState(),
+  });
+
   const prepareRenderState = (renderState) => {
     const audioRenderState = prepareRenderStateAudioChannelsForGraphics({
       renderState,
@@ -610,7 +623,11 @@ const prepareEngine = async (
     ensureAssetsLoaded: (assetIds) =>
       bundleAssetLoader.ensureAssetsLoaded(assetIds),
     render: renderPreparedState,
-    onRendered: (renderState) => assetLookahead.onRendered(renderState),
+    onRendered: (renderState) =>
+      assetLookahead.onRendered({
+        renderState,
+        entersLine: storyPosition.entersLine(renderState),
+      }),
     onAssetLoadStart: ({ assetIds }) => {
       recordDiagnosticStep("Loading render assets", { assetIds });
     },
@@ -634,7 +651,9 @@ const prepareEngine = async (
   });
 
   const renderEngineState = (renderState) => {
-    renderQueue.enqueue(prepareRenderState(renderState));
+    const preparedState = prepareRenderState(renderState);
+    storyPosition.onScreenQueued(preparedState);
+    renderQueue.enqueue(preparedState);
   };
 
   const assetLookahead = createBundleAssetLookahead({
@@ -642,6 +661,7 @@ const prepareEngine = async (
     bundleReader,
     bundleAssetLoader,
     renderQueue,
+    storyPosition,
     getEngine: () => engine,
   });
 
@@ -771,7 +791,10 @@ const prepareEngine = async (
     ? createPlayerStartupEffects({ getEngine: () => engine, effectsHandler })
     : undefined;
   engine = createRouteEngine({
-    handlePendingEffects: startupEffects ?? effectsHandler,
+    handlePendingEffects: watchLineEntries(
+      startupEffects ?? effectsHandler,
+      (pointer) => storyPosition.onLineEntered(pointer),
+    ),
   });
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
     routeGraphics,

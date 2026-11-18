@@ -951,19 +951,30 @@ from appearing late, the player loads ahead of the story:
   `scripts/playerAssetLookahead.js` lists the pictures and sounds of the next
   30 lines the story leads to. A jump among a line's own actions
   (`sectionTransition`, `resetStoryAtSection`, `jumpToLine`) is always taken,
-  so the plan follows it to its target and leaves out the lines behind it. A
-  jump inside a choice item, an event, or a conditional branch may not be
-  taken, so the plan adds the first 5 lines of every such target, because the
-  player's pick is unknown. `jumpToLine` targets start at the line it names.
+  so the plan follows it to its target and leaves out the lines behind it. The
+  plan ends at such a jump when its target is unknown. A jump inside a choice
+  item, an event, or a conditional branch may not be taken, so the plan adds
+  the first 5 lines of every such target, because the player's pick is
+  unknown. The same goes for the buttons of a layout or control the line
+  shows, such as the Start button of a title screen. `jumpToLine` targets
+  start at the line it names, and a jump that names only a scene starts at the
+  scene's initial section.
+- The plan starts at the line the engine last entered. The engine announces
+  each line in a `handleLineActions` effect that carries the position;
+  `watchLineEntries` reads it from there, because `selectSystemState()` copies
+  the whole engine state. That selector is read once at most, when no line
+  has been announced yet.
 - Reading the assets of a line is slow, so one pass reads lines for 4 ms
   (`LINE_SCAN_BUDGET_MS` in `scripts/main.js`) and the plan grows over the
-  next passes. Nothing is freed while the plan is short.
+  next passes. Nothing is freed while the plan is short. A pass that fails is
+  run again twice and its screens are kept for the next pass.
 - `scripts/playerAssetPreloader.js` loads that list in the background, one
   asset at a time, and starts nothing while a screen waits for its own assets.
   A screen that needs an asset right away loads it directly, as before. A
   background load that fails is tried again by a later plan and dropped after
-  3 failures in a row; the failure is reported if the story reaches that
-  asset.
+  3 failures in a row. A screen that needs an asset while its background load
+  is under way waits for that load, and loads the asset once more itself if
+  the background load fails.
 - Loaded pictures may hold 160 MB of decoded pixels
   (`MAX_LOADED_IMAGE_BYTES`), and the plan may claim half of that. A picture
   that does not fit in what is left of the plan is left out and the plan goes
@@ -971,25 +982,31 @@ from appearing late, the player loads ahead of the story:
   pixel, takes a spritesheet as the whole sheet, and assumes 16 to 1
   compression for a picture of unknown pixel size. Sounds count for nothing:
   they are loaded ahead but not freed.
+- Whether a file is a picture or a sound comes from the type the package
+  lists. A file listed under another type is looked up in the project's
+  pictures and sounds (`createAssetKindLookup`), and once loaded, the type
+  found in its bytes decides.
 - Past the limit, the pictures used longest ago are freed with
   `routeGraphics.unloadAssets`. Pictures on the current screen, the screen
   before it, every screen drawn since the last pass, screens waiting to be
-  drawn, and the plan are never freed. A screen drawn again with a picture
-  added or removed, such as a hovered button, counts as the same screen. A
-  freed picture loads again when the story returns to it.
+  drawn, and the plan are never freed. A screen is the same screen as the one
+  before when the story did not enter a line for it, such as a hovered or
+  toggled button, or when it only adds or removes pictures. A freed picture
+  loads again when the story returns to it.
 - `scripts/playerBundleAssetLoader.js` tracks which assets are loaded. An
   asset counts as missing from the moment it is freed, and a reload waits for
   the graphics engine to finish freeing it.
 
-`tests/services/playerAssetLookahead.test.js` covers the plan, the sizes and
-the freeing rules, including random stories;
+`tests/services/playerAssetLookahead.test.js` covers the plan, the sizes, the
+position tracking and the freeing rules, including random stories;
 `tests/services/playerAssetPreloader.test.js` and
 `tests/services/playerBundleAssetLoader.test.js` cover the background queue
-and the loader. `bun run test:player-lookahead` plays a generated story in the
-built player in Chromium and WebKit: it stops answering package reads and
-checks that the next pictures still appear, then plays past the memory limit
-and checks that freed pictures are read again and shown, and runs skip mode
-through the story and checks that it continues in order.
+and the loader. `bun run test:player-lookahead` plays a generated story of two
+sections with music in the built player in Chromium and WebKit: it stops
+answering package reads and checks that the next pictures, across the jump to
+the second section, still appear, then plays past the memory limit and checks
+that freed pictures are read again and shown, and runs skip mode through the
+story and checks that it continues in order.
 
 Service boundary test:
 
