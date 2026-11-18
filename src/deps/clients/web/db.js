@@ -72,6 +72,37 @@ export const createDb = ({ path, withEvents = false }) => {
       });
     },
 
+    // Keeps `value` under `key` unless a value is already there, and answers
+    // the kept value. One read-write transaction does both, and the browser
+    // runs such transactions on the store one at a time, so tabs racing to
+    // set the key all answer the same value.
+    async getOrSet(key, value) {
+      if (!initialized)
+        throw new Error("Db not initialized. Call init() first.");
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("kv", "readwrite");
+        const store = transaction.objectStore("kv");
+        let kept;
+        const request = store.get(key);
+        request.onsuccess = (event) => {
+          const result = event.target.result;
+          if (result && result.value !== undefined) {
+            try {
+              kept = JSON.parse(result.value);
+            } catch {
+              kept = result.value;
+            }
+            return;
+          }
+          kept = value;
+          store.put({ key, value: JSON.stringify(value) });
+        };
+        transaction.oncomplete = () => resolve(kept);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    },
+
     async remove(key) {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");

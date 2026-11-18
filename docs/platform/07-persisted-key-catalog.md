@@ -45,6 +45,10 @@ Current keys:
     - `iconFileId`
     - `createdAt`
     - `lastOpenedAt`
+- `deviceId`
+  - the app's random device ID, 24 Base58 characters, made on first use
+  - independent of accounts, projects and hardware; sent with update checks
+    and asset store pack views
 - `userConfig`
   - global app-level user/session/UI config object
   - current nested keys:

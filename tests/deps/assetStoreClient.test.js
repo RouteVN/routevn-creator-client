@@ -56,15 +56,48 @@ const rpcResponse = (body, init) =>
     ...init,
   });
 
-const createClient = (respond) => {
+const createClient = (respond, { getDevice } = {}) => {
   const fetchImpl = vi.fn(async (_url, request) =>
     respond(JSON.parse(request.body)),
   );
   return {
     fetchImpl,
-    client: createAssetStoreClient({ url: RPC_URL, fetchImpl }),
+    client: createAssetStoreClient({ url: RPC_URL, fetchImpl, getDevice }),
   };
 };
+
+// What the app says of the device a view is made on: its ID and facts.
+const device = {
+  id: "123456789ABC123456789ABC",
+  language: "ja",
+  uiLanguage: "en",
+  os: "windows",
+  formFactor: "desktop",
+  client: "desktopApp",
+  channel: "direct",
+  app: "routevn-creator",
+  appVersion: "1.22.1",
+};
+
+const packResponse = () =>
+  rpcResponse({
+    jsonrpc: "2.0",
+    id: 1,
+    result: {
+      assetPack: {
+        id: "AsPkPackOne00001",
+        data: {
+          ...packItem("AsPkPackOne00001").data,
+          package: packagePlace,
+        },
+      },
+      creator,
+      files,
+    },
+  });
+
+const sentParams = (fetchImpl) =>
+  fetchImpl.mock.calls.map(([, request]) => JSON.parse(request.body).params);
 
 describe("assetStoreClient", () => {
   it("uses the production API in release builds and a local API in development", () => {
@@ -609,6 +642,89 @@ describe("assetStoreClient", () => {
     await expect(
       client.getCreatorById({ creatorId: "Cr8rMissing00001" }),
     ).rejects.toMatchObject({ code: "asset_creator_not_found" });
+  });
+
+  it("sends a view with the device's ID and facts when a pack's page opens", async () => {
+    const getDevice = vi.fn(async () => device);
+    const { client, fetchImpl } = createClient(packResponse, { getDevice });
+
+    const viewed = await client.getAssetPackById({
+      assetPackId: "AsPkPackOne00001",
+      view: true,
+    });
+
+    expect(sentParams(fetchImpl)).toEqual([
+      { assetPackId: "AsPkPackOne00001", view: true, device },
+    ]);
+    // The answer is read as it is without the flag.
+    expect(viewed).toEqual(
+      await client.getAssetPackById({ assetPackId: "AsPkPackOne00001" }),
+    );
+  });
+
+  it("sends no flag and no device on any other read", async () => {
+    const getDevice = vi.fn(async () => device);
+    const { client, fetchImpl } = createClient(
+      (body) =>
+        body.method === "assetStore.getAssetPackById"
+          ? packResponse()
+          : rpcResponse({
+              jsonrpc: "2.0",
+              id: 1,
+              result: {
+                items: [],
+                files: [],
+                nextCursor: null,
+                creator: {
+                  id: "Cr8rCreatorOne01",
+                  data: { name: "Creator One" },
+                },
+                assetPacks: [],
+              },
+            }),
+      { getDevice },
+    );
+
+    await client.getAssetPackById({ assetPackId: "AsPkPackOne00001" });
+    await client.listAssetPacks();
+    await client.getCreatorById({ creatorId: "Cr8rCreatorOne01" });
+
+    const [packRead, ...otherReads] = sentParams(fetchImpl);
+    expect(packRead).toEqual({ assetPackId: "AsPkPackOne00001" });
+    for (const params of otherReads) {
+      expect(params).not.toHaveProperty("view");
+      expect(params).not.toHaveProperty("download");
+      expect(params).not.toHaveProperty("device");
+    }
+    expect(getDevice).not.toHaveBeenCalled();
+  });
+
+  it("still reads the pack, unflagged, when the device can't be read", async () => {
+    const { client, fetchImpl } = createClient(packResponse, {
+      getDevice: vi.fn(async () => {
+        throw new Error("Database unavailable");
+      }),
+    });
+
+    const pack = await client.getAssetPackById({
+      assetPackId: "AsPkPackOne00001",
+      view: true,
+    });
+
+    expect(sentParams(fetchImpl)).toEqual([
+      { assetPackId: "AsPkPackOne00001" },
+    ]);
+    expect(pack).toMatchObject({ id: "AsPkPackOne00001" });
+  });
+
+  it("reports a failed view like any failed read of the pack", async () => {
+    const { client } = createClient(() => new Response("", { status: 503 }), {
+      getDevice: async () => device,
+    });
+
+    await expect(
+      client.getAssetPackById({ assetPackId: "AsPkPackOne00001", view: true }),
+    ).rejects.toMatchObject({ code: "asset_store_unavailable" });
   });
 
   it("reports a missing pack separately from an unavailable store", async () => {

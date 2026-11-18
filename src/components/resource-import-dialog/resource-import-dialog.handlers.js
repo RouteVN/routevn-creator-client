@@ -288,7 +288,9 @@ export const handleLoadMorePacks = (deps) => {
 // package, the import plan whose assets the page lists. Reopening the pack
 // whose plan is loaded, from its creator's page, keeps the choices made for
 // it; opening another pack leaves this one. A response for a pack the user
-// has left is dropped, and a plan made for it is freed.
+// has left is dropped, and a plan made for it is freed. The details read
+// counts one view of the pack; showing it again without that read counts
+// none.
 const openPack = async (deps, packId) => {
   const { appService, projectService, store, render } = deps;
   if (store.selectPlan() && store.selectPlanPackId() === packId) {
@@ -306,7 +308,10 @@ const openPack = async (deps, packId) => {
   render();
   let pack;
   try {
-    pack = await appService.getAssetStorePack({ assetPackId: packId });
+    pack = await appService.getAssetStorePack({
+      assetPackId: packId,
+      view: true,
+    });
   } catch (error) {
     if (store.selectOperationId() !== operationId) return;
     store.setPackLoadError({
