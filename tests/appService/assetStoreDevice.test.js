@@ -79,7 +79,7 @@ const startApp = ({ platform, distribution, userAgent }) => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("asset store views", () => {
+describe("asset store views and downloads", () => {
   it("names the desktop app, its channel and its version on a pack's view", async () => {
     const { appService, sent } = startApp({
       platform: "tauri",
@@ -132,5 +132,49 @@ describe("asset store views", () => {
       app: "routevn-creator",
       appVersion: "1.22.1",
     });
+  });
+
+  it("sends one download, with the device, when an import starts", async () => {
+    const { appService, sent } = startApp({
+      platform: "tauri",
+      distribution: "direct",
+      userAgent: WINDOWS,
+    });
+
+    await appService.sendAssetStorePackDownload({
+      assetPackId: "AsPkPackOne00001",
+    });
+
+    expect(sent()).toEqual([
+      {
+        assetPackId: "AsPkPackOne00001",
+        download: true,
+        device: {
+          id: DEVICE_ID,
+          language: "ja",
+          uiLanguage: "en",
+          os: "windows",
+          formFactor: "desktop",
+          client: "desktopApp",
+          channel: "direct",
+          app: "routevn-creator",
+          appVersion: "1.22.1",
+        },
+      },
+    ]);
+  });
+
+  it("never fails when the download can't be sent", async () => {
+    const { appService } = startApp({
+      platform: "web",
+      userAgent: IPHONE,
+    });
+    vi.mocked(fetch).mockRejectedValue(new TypeError("offline"));
+
+    await expect(
+      appService.sendAssetStorePackDownload({
+        assetPackId: "AsPkPackOne00001",
+      }),
+    ).resolves.toBeUndefined();
   });
 });

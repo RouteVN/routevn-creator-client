@@ -717,6 +717,38 @@ describe("assetStoreClient", () => {
     expect(pack).toMatchObject({ id: "AsPkPackOne00001" });
   });
 
+  it("sends a download with the device's ID and facts, and no source", async () => {
+    const getDevice = vi.fn(async () => device);
+    const { client, fetchImpl } = createClient(packResponse, { getDevice });
+
+    const downloaded = await client.getAssetPackById({
+      assetPackId: "AsPkPackOne00001",
+      download: true,
+    });
+
+    expect(sentParams(fetchImpl)).toEqual([
+      { assetPackId: "AsPkPackOne00001", download: true, device },
+    ]);
+    expect(downloaded).toMatchObject({ id: "AsPkPackOne00001" });
+  });
+
+  it("still reads the pack, unflagged, when the device can't be read for a download", async () => {
+    const { client, fetchImpl } = createClient(packResponse, {
+      getDevice: vi.fn(async () => {
+        throw new Error("Database unavailable");
+      }),
+    });
+
+    await client.getAssetPackById({
+      assetPackId: "AsPkPackOne00001",
+      download: true,
+    });
+
+    expect(sentParams(fetchImpl)).toEqual([
+      { assetPackId: "AsPkPackOne00001" },
+    ]);
+  });
+
   it("reports a failed view like any failed read of the pack", async () => {
     const { client } = createClient(() => new Response("", { status: 503 }), {
       getDevice: async () => device,

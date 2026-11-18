@@ -450,10 +450,15 @@ with the `X-RouteVN-RPC: 1` header and no credentials:
 | `assetStore.getCreatorById`   | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                           |
 
 Opening a pack's page adds `view: true` and `device` to its
-`assetStore.getAssetPackById` read, which counts one view of the pack. The API
-answers the same with or without them. Every other read leaves both out, and
-so does showing a pack page again without reading the pack, such as reopening
-it from its creator's page. `device` says what the view was made on:
+`assetStore.getAssetPackById` read, which counts one view of the pack. Starting
+an import, once the chosen resources pass their checks, reads the pack again
+with `download: true` and `device`, which counts one download, however many of
+the pack's files the import reads; each import started is one download. The
+import does not wait for that read, and a failed one does not stop it. The API
+answers the same with or without the flags. Every other read leaves them out,
+and so does showing a pack page again without reading the pack, such as
+reopening it from its creator's page. `device` says what the view or download
+was made on:
 
 | Field        | Value                                                                                                                                                                  |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -468,8 +473,9 @@ it from its creator's page. `device` says what the view was made on:
 | `appVersion` | The app's version, such as `1.22.1`.                                                                                                                                   |
 
 A fact that can't be read is left out. When the device ID can't be read, the
-read goes out without `view` and `device`, and the page loads as usual. The
-view sends no `source`: nothing outside the app leads to a pack's page.
+read goes out without the flag and `device`, and the page or the import goes
+on as usual. Neither sends `source`: nothing outside the app leads to a pack's
+page.
 
 Development builds call `http://127.0.0.1:3100/asset-store/rpc` instead. Set
 `VITE_ROUTEVN_ASSET_STORE_RPC_URL` when starting the watch server to use another

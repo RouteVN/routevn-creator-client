@@ -66,7 +66,7 @@ Currently approved lengths:
     identifier when the code wants to make that contract explicit
 - `24`
   - app-installation device IDs sent to the update API and with asset store
-    pack views
+    pack views and downloads
   - use `generateId(24)` for more random bits across installations
 
 If a new use case needs a different length, document the reason in this file in

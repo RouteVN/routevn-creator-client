@@ -97,8 +97,8 @@ export const createAppServiceCore = ({
     },
   });
 
-  // A view of an asset store pack names this device and the app's active
-  // language.
+  // A view or a download of an asset store pack names this device and the
+  // app's active language.
   const assetStore =
     assetStoreClient ??
     createAssetStoreClient({
@@ -181,6 +181,17 @@ export const createAppServiceCore = ({
     // `view` is set when a person opens the pack's page.
     getAssetStorePack({ assetPackId, view } = {}) {
       return assetStore.getAssetPackById({ assetPackId, view });
+    },
+
+    // Starting an import of a pack counts one download of it, however many
+    // of its files the import reads. The import doesn't wait for the answer,
+    // and a failed read never stops it, so this never rejects.
+    async sendAssetStorePackDownload({ assetPackId } = {}) {
+      try {
+        await assetStore.getAssetPackById({ assetPackId, download: true });
+      } catch {
+        // The import goes on without it.
+      }
     },
 
     getFileDisplayPath(path) {
