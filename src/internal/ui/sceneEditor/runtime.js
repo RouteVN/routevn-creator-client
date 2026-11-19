@@ -63,7 +63,12 @@ import {
 import { selectSceneEditorCopy } from "./sceneEditorCopy.js";
 import { withErrorDetails } from "../../errorDetails.js";
 import { getComputedVariableErrorName } from "../../computedVariableError.js";
-import { isRoutingCycleError } from "../../routingCycleError.js";
+import {
+  formatRoutingCycleMessage,
+  getRoutingCycleLines,
+  isRoutingCycleError,
+  ROUTING_CYCLE_FALLBACK_COPY,
+} from "../../routingCycleError.js";
 import {
   emitSceneEditorTiming,
   shouldMeasureSceneEditorTiming,
@@ -2643,13 +2648,16 @@ const reportCanvasRenderFailure = (
 // A transition loop and a computed variable that cannot be calculated are
 // explained as the full-screen preview explains them.
 const getCanvasRenderFailureMessage = (deps, error) => {
-  const { i18n, projectService } = deps;
+  const { i18n, projectService, store } = deps;
   const copy = selectSceneEditorCopy(i18n);
   if (isRoutingCycleError(error)) {
-    return (
-      copy.transitionLoop ??
-      "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
-    );
+    const loopCopy = { ...ROUTING_CYCLE_FALLBACK_COPY, ...copy };
+    return formatRoutingCycleMessage({
+      message: loopCopy.transitionLoop,
+      copy: loopCopy,
+      // The canvas plays the project data the store builds.
+      cycleLines: getRoutingCycleLines(error, store.selectProjectData()),
+    });
   }
   const variableName = getComputedVariableErrorName(error, () =>
     projectService.getRepositoryState(),
