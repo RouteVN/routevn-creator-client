@@ -12,6 +12,7 @@ Current target: one broader spec per page, with responsive coverage folded into 
 - Versions page empty, create, and edit coverage.
 - Web server release route and web-platform empty state coverage.
 - Scenes page map creation, preview, scene editor, and sections overview coverage.
+- Scene editor Random action: empty Submit warning, outcome weights and chances, submit, and reopen.
 
 ## Images
 

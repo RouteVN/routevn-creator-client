@@ -34,6 +34,17 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
     "mapEveryInputFieldToStringVariable",
   "No input fields found.": "noInputFieldsFound",
   "Please add at least one branch.": "addBranchRequired",
+  "Please add at least one outcome.": "addOutcomeRequired",
+  "Give at least one outcome a weight greater than 0.":
+    "positiveOutcomeWeightRequired",
+  "Each weight must be 0 or greater.": "outcomeWeightInvalid",
+  "One outcome's weight is so small compared with the largest weight that the outcome can never be picked. Raise it or set it to 0.":
+    "outcomeWeightTooSmall",
+  "This random action is too large to save. Use fewer outcomes, or fewer actions in them.":
+    "randomActionTooLarge",
+  "A random action can have at most 100 outcomes.": "outcomeLimitReached",
+  "This random action is saved in a format that RouteVN Creator can't edit.":
+    "unsupportedRandomDistribution",
   "Please add at least one valid variable operation.":
     "validVariableOperationRequired",
   "Please select an input layout.": "selectInputLayoutRequired",
@@ -123,6 +134,8 @@ const DEFAULT_COMMAND_LINE_PLURAL_COPY = Object.freeze({
   rollbackLineCount_other: "Rollback by {count} lines",
   branchCount_one: "{count} branch",
   branchCount_other: "{count} branches",
+  outcomeCount_one: "{count} outcome",
+  outcomeCount_other: "{count} outcomes",
 });
 
 // Formats a count message such as `actionCount`, so that each language can

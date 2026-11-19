@@ -33,6 +33,13 @@ const UPDATE_VARIABLE_ACTION = {
   mode: "updateVariable",
 };
 
+const RANDOM_ACTION = {
+  id: "31",
+  label: "Random",
+  icon: "random",
+  mode: "random",
+};
+
 const SYSTEM_ACTION_SECTIONS = [
   createSection("Story", [
     {
@@ -103,6 +110,7 @@ const SYSTEM_ACTION_SECTIONS = [
   ]),
   createSection("Logic", [
     UPDATE_VARIABLE_ACTION,
+    RANDOM_ACTION,
     {
       id: "27",
       label: "Conditional",
@@ -245,6 +253,7 @@ const PRESENTATION_ACTION_SECTIONS = [
   ]),
   createSection("Logic", [
     UPDATE_VARIABLE_ACTION,
+    RANDOM_ACTION,
     {
       id: "27",
       label: "Conditional",

@@ -403,6 +403,15 @@ describe("scene editor: one navigation action per line", () => {
       { actions: {} },
     ],
   });
+  const randomWith = (outcomeActions) => ({
+    distribution: {
+      type: "weighted",
+      outcomes: [
+        { weight: 1, actions: outcomeActions },
+        { weight: 1, actions: {} },
+      ],
+    },
+  });
   const lineOneActions = {
     background: { resourceId: "image-1" },
     dialogue: { content: [{ text: "First" }] },
@@ -485,6 +494,37 @@ describe("scene editor: one navigation action per line", () => {
     expect(savedLineOne(page)).toEqual({
       ...lineOneActions,
       conditional: conditionalWith({ resetStoryAtSection }),
+    });
+  });
+
+  it("takes the navigation out of the line's random when a section transition is added", async () => {
+    const page = createPage();
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    await submit(page, {
+      random: randomWith({ resetStoryAtSection, updateVariable }),
+    });
+
+    await submit(page, { sectionTransition });
+
+    expect(savedLineOne(page)).toEqual({
+      ...lineOneActions,
+      random: randomWith({ updateVariable }),
+      sectionTransition,
+    });
+  });
+
+  it("removes the line's section transition when a random that navigates is saved", async () => {
+    const page = createPage();
+    page.store.setSelectedLineId({ selectedLineId: "line-1" });
+    await submit(page, { sectionTransition });
+
+    await submit(page, {
+      random: randomWith({ resetStoryAtSection }),
+    });
+
+    expect(savedLineOne(page)).toEqual({
+      ...lineOneActions,
+      random: randomWith({ resetStoryAtSection }),
     });
   });
 

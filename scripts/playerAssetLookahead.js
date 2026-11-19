@@ -62,7 +62,8 @@ const collectJumps = ({ value, key, unconditional, jumps, resourceIds }) => {
     return;
   }
 
-  // Anything nested runs only on a choice, a click, or a condition.
+  // Anything nested runs only on a choice, a click, a condition, or a random
+  // pick.
   for (const [entryKey, entry] of Object.entries(value)) {
     collectJumps({
       value: entry,
@@ -76,7 +77,8 @@ const collectJumps = ({ value, key, unconditional, jumps, resourceIds }) => {
 
 // The places a line can move the story to. A jump among the line's own
 // actions is `unconditional`: the story always leaves through it. A jump
-// inside a choice item, an event, or a conditional branch may not be taken.
+// inside a choice item, an event, a conditional branch, or a random outcome
+// may not be taken.
 // `jumpToLine` names a line and, when it has no `sectionId`, stays in the
 // section of the line that holds it.
 //

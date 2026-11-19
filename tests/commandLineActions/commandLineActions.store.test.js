@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   selectItems as selectItemsBase,
@@ -111,6 +112,26 @@ describe("commandLineActions.store", () => {
     expect(iconByMode.conditional).toBe("settings");
   });
 
+  it.each(["presentation", "system"])(
+    "uses the random icon for the %s random action",
+    (actionsType) => {
+      const randomAction = selectItems({
+        props: {
+          actionsType,
+        },
+      }).find((item) => item.mode === "random");
+
+      expect(randomAction).toMatchObject({
+        id: "31",
+        label: "Random",
+        icon: "random",
+      });
+      expect(existsSync(new URL("../../svg/random.svg", import.meta.url))).toBe(
+        true,
+      );
+    },
+  );
+
   it("offers sectionTransition without deprecated reset actions", () => {
     const modes = selectItems({
       props: {
@@ -176,7 +197,7 @@ describe("commandLineActions.store", () => {
     }
   });
 
-  it("shows conditional actions in the logic section", () => {
+  it("shows random and conditional actions in the logic section", () => {
     const systemItems = selectItems({
       props: {
         actionsType: "system",
@@ -190,16 +211,20 @@ describe("commandLineActions.store", () => {
 
     expect(getSectionModes(systemItems, "Logic")).toEqual([
       "updateVariable",
+      "random",
       "conditional",
     ]);
     expect(getSectionModes(presentationItems, "Logic")).toEqual([
       "updateVariable",
+      "random",
       "conditional",
     ]);
     expect(systemItems.some((item) => item.mode === "conditional")).toBe(true);
     expect(presentationItems.some((item) => item.mode === "conditional")).toBe(
       true,
     );
+    expect(systemItems.some((item) => item.mode === "random")).toBe(true);
+    expect(presentationItems.some((item) => item.mode === "random")).toBe(true);
   });
 
   it("honors explicit hidden modes for conditional actions", () => {
@@ -213,6 +238,22 @@ describe("commandLineActions.store", () => {
 
     expect(getSectionModes(items, "Logic")).toEqual(["updateVariable"]);
     expect(items.some((item) => item.mode === "conditional")).toBe(false);
+  });
+
+  it("honors explicit hidden modes for random actions", () => {
+    const items = selectItems({
+      props: {
+        actionsType: "system",
+        hiddenModes: ["random"],
+        allowedModes: ["conditional", "random", "updateVariable"],
+      },
+    });
+
+    expect(getSectionModes(items, "Logic")).toEqual([
+      "updateVariable",
+      "conditional",
+    ]);
+    expect(items.some((item) => item.mode === "random")).toBe(false);
   });
 
   it("moves dialogue text speed into the dialogue section", () => {

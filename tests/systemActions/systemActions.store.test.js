@@ -11,7 +11,7 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 import { PRESENTATION_ACTION_CSS_ORDER } from "../../src/internal/presentationActionOrder.js";
 import { selectCommandLineCopy } from "../../src/internal/ui/sceneEditor/commandLineCopy.js";
-import { FR_I18N, RU_I18N } from "../support/i18n.js";
+import { FR_I18N, JA_I18N, RU_I18N } from "../support/i18n.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -157,6 +157,7 @@ describe("systemActions.store", () => {
       props: {
         actions: {
           conditional: { branches: [] },
+          random: { distribution: { type: "weighted", outcomes: [] } },
           rollbackByOffset: { offset: -1 },
         },
       },
@@ -165,6 +166,12 @@ describe("systemActions.store", () => {
     });
 
     expect(preview.conditional.actionsSummary).toBe(
+      copy.nestedActionCount_one.replace("{count}", "0"),
+    );
+    expect(preview.random.summary).toBe(
+      copy.outcomeCount_one.replace("{count}", "0"),
+    );
+    expect(preview.random.actionsSummary).toBe(
       copy.nestedActionCount_one.replace("{count}", "0"),
     );
     expect(preview.rollbackByOffset.summary).toBe(
@@ -218,6 +225,36 @@ describe("systemActions.store", () => {
       "При подтверждении: 1 действие, при отмене: 5 действий",
     );
   });
+
+  // 1, 2 and 5 take the Russian one, few and many forms; English rules would
+  // pick one, other and other.
+  it.each([
+    [1, "1 исход", "1 вложенное действие"],
+    [2, "2 исхода", "2 вложенных действия"],
+    [5, "5 исходов", "5 вложенных действий"],
+  ])(
+    "follows the Russian plural rules for a random with %s outcome(s)",
+    (outcomeCount, summary, actionsSummary) => {
+      const outcomes = Array.from({ length: outcomeCount }, () => ({
+        weight: 1,
+        actions: { nextLine: {} },
+      }));
+      const { preview } = selectActionsData({
+        state: createInitialState(),
+        props: {
+          actions: {
+            random: { distribution: { type: "weighted", outcomes } },
+          },
+        },
+        copy: selectCommandLineCopy(RU_I18N),
+        dateTime: RU_I18N.dateTime,
+      });
+
+      expect(preview.random.summary).toBe(summary);
+      expect(preview.random.actionsSummary).toBe(actionsSummary);
+      expect(preview.random.title).toBe(`Случайный выбор: ${summary}`);
+    },
+  );
 
   it("counts each side of a confirm dialog in English", () => {
     const { preview } = selectActionsData({
@@ -332,6 +369,112 @@ describe("systemActions.store", () => {
       summary: "1 branch + default",
       actionsSummary: "2 nested actions",
       title: "Conditional: 1 branch + default",
+    });
+  });
+
+  it("preserves and previews random actions", () => {
+    const state = createInitialState();
+    const random = {
+      distribution: {
+        type: "weighted",
+        outcomes: [
+          {
+            weight: 70,
+            actions: {
+              nextLine: {},
+              updateVariable: {
+                id: "update-1",
+                operations: [{ variableId: "variable-1", op: "set", value: 1 }],
+              },
+            },
+          },
+          {
+            weight: 30,
+            actions: {
+              sectionTransition: {
+                sceneId: "scene-2",
+                sectionId: "section-2",
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          random,
+        },
+      },
+    });
+
+    expect(actions.random).toEqual(random);
+    expect(preview.random).toEqual({
+      outcomeCount: 2,
+      actionCount: 3,
+      summary: "2 outcomes",
+      actionsSummary: "3 nested actions",
+      title: "Random: 2 outcomes",
+    });
+  });
+
+  it("counts the nested actions of a conditional and a random in Japanese", () => {
+    const { preview } = selectActionsData({
+      state: createInitialState(),
+      props: {
+        actions: {
+          conditional: {
+            branches: [{ actions: { nextLine: {} } }],
+          },
+          random: {
+            distribution: {
+              type: "weighted",
+              outcomes: [
+                { weight: 1, actions: { nextLine: {}, toggleAutoMode: {} } },
+                { weight: 1, actions: { nextLine: {} } },
+              ],
+            },
+          },
+        },
+      },
+      copy: selectCommandLineCopy(JA_I18N),
+      dateTime: JA_I18N.dateTime,
+    });
+
+    expect(preview.conditional.actionsSummary).toBe("含まれるアクション1件");
+    expect(preview.random.actionsSummary).toBe("含まれるアクション3件");
+    expect(preview.random.title).toBe("ランダム: 2件の結果");
+  });
+
+  it("keeps a random action in a form it cannot edit, with no outcomes", () => {
+    const state = createInitialState();
+    const random = {
+      distribution: {
+        type: "integer",
+        min: 1,
+        max: 6,
+      },
+      variableId: "variable-1",
+    };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          random,
+        },
+      },
+    });
+
+    expect(actions.random).toEqual(random);
+    expect(preview.random).toEqual({
+      outcomeCount: 0,
+      actionCount: 0,
+      summary: "0 outcomes",
+      actionsSummary: "0 nested actions",
+      title: "Random: 0 outcomes",
     });
   });
 

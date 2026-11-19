@@ -954,9 +954,9 @@ from appearing late, the player loads ahead of the story:
   (`sectionTransition`, `resetStoryAtSection`, `jumpToLine`) is always taken,
   so the plan follows it to its target and leaves out the lines behind it. The
   plan ends at such a jump when its target is unknown. A jump inside a choice
-  item, an event, or a conditional branch may not be taken, so the plan adds
-  the first 5 lines of every such target, because the player's pick is
-  unknown. The same goes for the buttons of a layout or control the line
+  item, an event, a conditional branch, or a random outcome may not be taken,
+  so the plan adds the first 5 lines of every such target, because the
+  player's pick or the draw is unknown. The same goes for the buttons of a layout or control the line
   shows, such as the Start button of a title screen. `jumpToLine` targets
   start at the line it names, and a jump that names only a scene starts at the
   scene's initial section.

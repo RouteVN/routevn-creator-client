@@ -24,6 +24,12 @@ const createState = () => {
                   actions: {
                     rollbackByOffset: { offset: -1 },
                     conditional: { branches: [] },
+                    random: {
+                      distribution: {
+                        type: "weighted",
+                        outcomes: [{ weight: 1, actions: {} }],
+                      },
+                    },
                   },
                 },
               },
@@ -66,12 +72,12 @@ const getActionLabels = (i18n) =>
 describe("controls.store", () => {
   it("names every keyboard action, not by its id", () => {
     expect(getActionLabels(EN_I18N)).toEqual({
-      enter: "Rollback, Conditional",
+      enter: "Rollback, Conditional, Random",
       space: "Save Slot, Load Slot",
       esc: "Show Confirm Dialog, Hide Confirm Dialog",
     });
     expect(getActionLabels(PT_I18N)).toEqual({
-      enter: "Retroceder, Condicional",
+      enter: "Retroceder, Condicional, Aleatório",
       space: "Guardar no slot, Carregar do slot",
       esc: "Mostrar janela de confirmação, Ocultar janela de confirmação",
     });

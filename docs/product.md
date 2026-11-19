@@ -157,7 +157,7 @@ it would make it happen again or move the story away from the new section.
 | Copied                                                       | Not copied                                                                                                                                                                 |
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Background, characters, and visuals                          | Choice and input, which block advancing until they are answered                                                                                                            |
-| Background music and sound effect channels set to persistent | Section transition, reset story at section, next line, conditional, and rollback, which move the story                                                                     |
+| Background music and sound effect channels set to persistent | Section transition, reset story at section, next line, conditional, random, and rollback, which move the story                                                             |
 | Dialogue box and speaker settings, with the text cleared     | Voice, one-shot sound effect channels, one-time animations on the background, characters, and visuals, and the speaker portrait's animation, which play only on their line |
 | Controls and screen effects                                  |                                                                                                                                                                            |
 

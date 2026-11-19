@@ -1167,14 +1167,15 @@ const createCanvasPlaybackErrorHandler = (deps) => {
 
 // Route Engine leaves a line as soon as it enters it through these actions: a
 // section transition or a story reset moves to another section, and a
-// conditional does that or continues to the next line. The canvas shows one
-// line, so the line it enters keeps none of them. Following them would show
-// another line, and a transition loop in the story would stop the canvas. The
-// full-screen preview still plays them.
+// conditional or a random action does that or continues to the next line. The
+// canvas shows one line, so the line it enters keeps none of them. Following
+// them would show another line, and a transition loop in the story would stop
+// the canvas. The full-screen preview still plays them.
 const CANVAS_ENTRY_LINE_ROUTING_ACTION_TYPES = [
   "sectionTransition",
   "resetStoryAtSection",
   "conditional",
+  "random",
 ];
 
 // The entered line is the selected line, or the section's first line when the

@@ -172,6 +172,9 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorSystemActionDocsUrl("screen")).toBe(
       "https://routevn.com/en/creator/docs/scene-editor/#add-an-action-to-a-line",
     );
+    expect(getRoutevnCreatorSystemActionDocsUrl("random")).toBe(
+      "https://routevn.com/en/creator/docs/scene-editor/#add-an-action-to-a-line",
+    );
     expect(getRoutevnCreatorSystemActionDocsUrl(undefined)).toBe(
       ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL,
     );

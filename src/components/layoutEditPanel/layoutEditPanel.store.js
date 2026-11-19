@@ -90,7 +90,7 @@ import {
 } from "./support/layoutEditPanelTextRevealIndicator.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
-const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
+const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional", "random"]);
 const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
 // Touch image and sound pickers show up to four a row, each at least 120px
 // wide: four on a tablet, two on a phone.

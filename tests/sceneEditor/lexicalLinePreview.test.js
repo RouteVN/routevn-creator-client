@@ -72,6 +72,56 @@ describe("lexical scene document editor line previews", () => {
     }
   });
 
+  it("renders random action markers right after conditional ones in right-gutter preview items", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const previewHost = {
+        createIconPreview({ icon }) {
+          const item = document.createElement("div");
+          item.className = "preview-item";
+          const iconElement = document.createElement("rtgl-svg");
+          iconElement.setAttribute("svg", icon);
+          item.append(iconElement);
+          return item;
+        },
+      };
+      const getPreviewIcons = (lineDecoration) =>
+        Array.from(
+          LexicalSceneDocumentEditorElement.prototype.createPreviewItems
+            .call(previewHost, lineDecoration)
+            .querySelectorAll("rtgl-svg"),
+        ).map((icon) => icon.getAttribute("svg"));
+
+      const signature = JSON.parse(
+        LexicalSceneDocumentEditorElement.prototype.buildRightGutterSignature({
+          hasRandom: true,
+        }),
+      );
+      const signatureWithoutRandom = JSON.parse(
+        LexicalSceneDocumentEditorElement.prototype.buildRightGutterSignature(
+          {},
+        ),
+      );
+
+      expect(signature.hasRandom).toBe(true);
+      expect(signatureWithoutRandom.hasRandom).toBe(false);
+      expect(getPreviewIcons({ hasRandom: true })).toEqual(["random"]);
+      expect(
+        getPreviewIcons({
+          hasConditional: true,
+          hasRandom: true,
+          hasUpdateVariable: true,
+        }),
+      ).toEqual(["settings", "random", "variable"]);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("renders update variable action markers in right-gutter preview items", async () => {
     const restoreDomGlobals = installDomGlobals();
 

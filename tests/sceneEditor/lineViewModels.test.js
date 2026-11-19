@@ -531,6 +531,41 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[1].hasConditional).toBe(false);
   });
 
+  it("marks random actions for inline action previews", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          random: {
+            distribution: {
+              type: "weighted",
+              outcomes: [
+                { weight: 70, actions: { nextLine: {} } },
+                { weight: 30, actions: {} },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: "line-2",
+        actions: {},
+      },
+    ];
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].hasRandom).toBe(true);
+    expect(viewModels[0].hasConditional).toBe(false);
+    expect(viewModels[1].hasRandom).toBe(false);
+  });
+
   it("marks update variable actions for inline action previews", () => {
     const lines = [
       {
