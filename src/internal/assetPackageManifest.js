@@ -265,6 +265,19 @@ const dropSectionJumpScenes = (value) => {
   );
 };
 
+// App versions whose model has no thumbnail source hash on an animation read
+// these package schemas too, and turn the whole package away over that one
+// field. A package leaves it out, and the app that imports the animation
+// draws its thumbnail again.
+const dropAnimationThumbnailSourceHash = (item) => {
+  if (item.type !== "animation" || item.thumbnailSourceHash === undefined) {
+    return item;
+  }
+  const data = { ...item };
+  delete data.thumbnailSourceHash;
+  return data;
+};
+
 // What the picks use, directly or through each other, that is not a pick,
 // with the picks that use each; and the links: the story sections and scenes
 // they jump to, and the layouts they open that the pack does not carry, with
@@ -543,7 +556,7 @@ export const createAssetPackageContents = ({
       if (item.type === "folder") continue;
       collection.items[itemId] = mapAssetPackageLinks(
         keepAssetPackageCharacterSprites(
-          dropSectionJumpScenes(item),
+          dropSectionJumpScenes(dropAnimationThumbnailSourceHash(item)),
           isNamedCharacterSprite,
         ),
         resolveLink,
