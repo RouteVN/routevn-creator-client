@@ -4509,7 +4509,7 @@ dependencies = [
 
 [[package]]
 name = "routevn-creator"
-version = "1.22.1"
+version = "1.23.0"
 dependencies = [
  "cc",
  "dirs",
