@@ -1654,7 +1654,8 @@ the detail panel does). The frame is part of the `thumbnailSourceHash` saved
 with the thumbnail, so a change to the animation, to its preview images, or to
 the time the frame is held at draws it again. The animations page requests
 every animation's when it opens, and leaving the animation editor requests
-that animation's.
+that animation's. A hash on an animation needs `@routevn/creator-model` 1.21.0
+(schema 21).
 
 The audio effects editor has undo and redo the same way. It keeps edits on the
 page and saves the whole audio effect when the page is left, so a step holds
