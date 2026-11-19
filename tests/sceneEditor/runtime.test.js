@@ -2877,9 +2877,34 @@ describe("scene editor canvas transition loop", () => {
       errorDetailsLabel: "Details label:",
       failedRenderCanvas: "Canvas message",
       transitionLoop: "Loop message",
+      transitionLoopLines: "Loop lines:",
+      transitionLoopStoppedAt: "Stopped at:",
+      transitionLoopLine: "{scene} / {section} / {line}",
     },
   };
-  const LOOP_ALERT = { title: "Error title", message: "Loop message" };
+  const LOOP_ALERT = {
+    title: "Error title",
+    message: "Loop message\n\nStopped at:\n• Scene One / Section One / 2",
+  };
+  // The project data the canvas was playing when the loop error was raised.
+  const selectProjectData = () => ({
+    story: {
+      scenes: {
+        "scene-1": {
+          name: "Scene One",
+          sections: {
+            "section-1": {
+              name: "Section One",
+              lines: [
+                { id: "line-1", actions: {} },
+                { id: "line-2", actions: {} },
+              ],
+            },
+          },
+        },
+      },
+    },
+  });
   const ORDINARY_ALERT = {
     title: "Error title",
     message: "Canvas message\n\nDetails label:\nCanvas render failed",
@@ -2916,7 +2941,10 @@ describe("scene editor canvas transition loop", () => {
         subject,
         appService,
         i18n,
-        store: { selectIsScenePageLoading: () => pageLoading() },
+        store: {
+          selectIsScenePageLoading: () => pageLoading(),
+          selectProjectData,
+        },
       });
       const consoleError = silenceConsoleError();
 
@@ -2951,6 +2979,7 @@ describe("scene editor canvas transition loop", () => {
         appService,
         i18n,
         store: {
+          selectProjectData,
           selectSceneId: () => {
             throw createLoopError();
           },
@@ -2982,6 +3011,7 @@ describe("scene editor canvas transition loop", () => {
         i18n,
         store: {
           selectIsScenePageLoading,
+          selectProjectData,
           // A press, click or scroll on the canvas reads the selected line
           // before it moves the story on.
           selectSelectedLineId: () => "line-1",
