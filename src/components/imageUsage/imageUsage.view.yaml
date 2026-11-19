@@ -1,0 +1,92 @@
+refs:
+  panelRow*:
+    eventListeners:
+      click:
+        handler: handlePanelRowClick
+      keydown:
+        handler: handlePanelRowKeyDown
+  showAllButton:
+    eventListeners:
+      click:
+        handler: handleShowAllClick
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+        stopPropagation: true
+      keydown:
+        handler: handleDialogKeyDown
+  dialogList: {}
+  dialogRow*:
+    eventListeners:
+      click:
+        handler: handleDialogRowClick
+styles:
+  ".imageUsageRow":
+    cursor: pointer
+    border-radius: 6px
+    box-sizing: border-box
+  ".imageUsageRow:hover":
+    background: var(--muted)
+  ".imageUsageRow:focus-visible":
+    outline: 2px solid var(--ring)
+    outline-offset: -2px
+  '.imageUsageRow[data-active="true"]':
+    background: var(--accent)
+  # A scene's closed arrow points toward the inline end.
+  '.imageUsageArrow[svg="chevronRight"]:dir(rtl)':
+    transform: scaleX(-1)
+  "#dialogList":
+    outline: none
+    width: 100%
+    max-height: 60vh
+    overflow-y: auto
+    min-height: 0
+template:
+  - $if showPanel:
+      - 'rtgl-view d=v w=f g=xs style="min-width: 0;"':
+          - rtgl-text c=mu-fg: ${headerLabel}
+          - $if isLoading:
+              - rtgl-text s=sm c=mu-fg: ${loadingLabel}
+            $elif isFailed:
+              - rtgl-text s=sm c=mu-fg: ${loadFailedLabel}
+            $elif isEmpty:
+              - rtgl-text: ${notUsedLabel}
+            $else:
+              - rtgl-view d=v w=f:
+                  - $for row, i in panelRows:
+                      - 'rtgl-view#panelRow${i}.imageUsageRow data-row-id="${row.rowId}" role=button tabindex=0 title="${row.title}" d=h av=c g=sm w=f h=28':
+                          - 'rtgl-svg svg=${row.icon} wh=16 c=mu-fg style="flex: 0 0 auto;"': null
+                          - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0;"': ${row.name}
+                          - $if row.meta:
+                              - 'rtgl-text s=sm c=mu-fg style="flex: 0 0 auto;"': ${row.meta}
+                  - $if showAllVisible:
+                      - rtgl-view w=f pt=xs:
+                          - rtgl-button#showAllButton v=gh s=sm: ${showAllLabel}
+  - $if isDialogOpen:
+      - rtgl-dialog#dialog ?open=${isDialogOpen} s=md:
+          - 'rtgl-view slot=content d=v w=f g=md p=lg style="min-height: 0;"':
+              - rtgl-view d=v w=f g=sm:
+                  - rtgl-text s=lg: ${dialogTitle}
+                  - $if dialogMessage:
+                      - rtgl-text c=mu-fg: ${dialogMessage}
+              - div#dialogList tabindex=0 role=tree:
+                  - $for row, i in dialogRows:
+                      - $if row.kind == 'group':
+                          - rtgl-view d=h av=c g=sm w=f pt=sm pb=xs:
+                              - $if row.icon:
+                                  - 'rtgl-svg svg=${row.icon} wh=16 c=mu-fg style="flex: 0 0 auto;"': null
+                              - rtgl-text s=sm c=mu-fg: ${row.label}
+                        $elif row.kind == 'scene':
+                          - 'rtgl-view#dialogRow${i}.imageUsageRow data-row-id="${row.rowId}" data-active="${row.isActive}" role=treeitem aria-expanded="${row.ariaExpanded}" d=h av=c g=sm w=f h=32 style="padding-inline: ${row.indent}px 8px;"':
+                              - 'rtgl-svg.imageUsageArrow svg=${row.dialogIcon} wh=16 c=mu-fg style="flex: 0 0 auto;"': null
+                              - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0;"': ${row.name}
+                              - $if row.meta:
+                                  - 'rtgl-text s=sm c=mu-fg style="flex: 0 0 auto;"': ${row.meta}
+                        $elif row.kind == 'line':
+                          - 'rtgl-view#dialogRow${i}.imageUsageRow data-row-id="${row.rowId}" data-active="${row.isActive}" role=treeitem d=h av=c g=sm w=f h=32 style="padding-inline: ${row.indent}px 8px;"':
+                              - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0;"': ${row.name}
+                        $else:
+                          - 'rtgl-view#dialogRow${i}.imageUsageRow data-row-id="${row.rowId}" data-active="${row.isActive}" role=treeitem title="${row.title}" d=h av=c g=sm w=f h=32 style="padding-inline: ${row.indent}px 8px;"':
+                              - 'rtgl-svg svg=${row.icon} wh=16 c=mu-fg style="flex: 0 0 auto;"': null
+                              - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0;"': ${row.name}

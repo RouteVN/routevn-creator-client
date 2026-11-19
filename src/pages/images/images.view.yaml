@@ -71,6 +71,14 @@ refs:
     eventListeners:
       click:
         handler: handleDeleteDialogConfirm
+  blockedDeleteDialog:
+    eventListeners:
+      close:
+        handler: handleBlockedDeleteDialogClose
+  blockedFolderDeleteDialog:
+    eventListeners:
+      close:
+        handler: handleBlockedDeleteDialogClose
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -257,6 +265,7 @@ template:
                                               - 'div#detailImagePreview.imageDetailPreviewFrame.imagePreviewTransparencyGrid slot="image-file-id"':
                                                   - rvn-file-image fileId=${selectedPreviewFileId} originalFileId=${selectedOriginalFileId} show-error-message w=f h=f: null
                                           - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
+                                          - rvn-image-usage key=${selectedItemId} slot="image-usage" :imageId=${selectedItemId} :imageName=${selectedItemName}: null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                                   - rtgl-text s=md c=mu-fg: ${noSelectionLabel}
@@ -279,6 +288,7 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect key=${selectedItemId} slot="image-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} :placeholder=${addTagPlaceholder}: null
+                      - rvn-image-usage key=${selectedItemId} slot="image-usage" :imageId=${selectedItemId} :imageName=${selectedItemName}: null
   - $if deleteDialogOpen:
       - rtgl-dialog#deleteDialog ?open=${deleteDialogOpen} s=sm:
           - rtgl-view slot=content g=lg p=lg:
@@ -287,6 +297,13 @@ template:
                   - rtgl-text c=mu-fg: ${deleteDialogMessage}
               - rtgl-view d=h g=sm w=f ah=e:
                   - rtgl-button#deleteConfirmButton v=de: ${deleteDialogConfirmLabel}
+  # An image that is used cannot be deleted: this lists where it is used.
+  - $if blockedDeleteImageId:
+      - rvn-image-usage#blockedDeleteDialog key=${blockedDeleteImageId} mode=blocked-delete :imageId=${blockedDeleteImageId} :imageName=${blockedDeleteImageName}: null
+  # A folder that holds a used image cannot be deleted: this lists those
+  # images and where each is used.
+  - $if blockedDeleteFolderId:
+      - rvn-image-usage#blockedFolderDeleteDialog key=${blockedDeleteFolderId} mode=blocked-folder-delete :folderId=${blockedDeleteFolderId} :folderName=${blockedDeleteFolderName}: null
   - $if isEditDialogOpen:
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:

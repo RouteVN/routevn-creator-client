@@ -2261,6 +2261,45 @@ const checkNode = (node, resourceId, keys, usages) => {
   }
 };
 
+const collectReferencedIds = (node, keys, resourceIds, referencedIds) => {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    if (keys.includes(key)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (resourceIds.has(item)) {
+            referencedIds.add(item);
+          }
+        }
+      } else if (resourceIds.has(value)) {
+        referencedIds.add(value);
+      }
+    }
+
+    if (typeof value === "object" && value !== null) {
+      collectReferencedIds(value, keys, resourceIds, referencedIds);
+    }
+  }
+};
+
+// The ids from the `resourceIds` set that `node` names under a resource key,
+// by the rule `recursivelyCheckResource` uses for one id. `target` is
+// "scenes", "layouts", "controls" or "textStyles" and picks the keys; pass
+// `keys` to check other ones.
+export const collectReferencedResourceIds = ({
+  node,
+  target,
+  keys = RESOURCE_KEYS_MAP[target],
+  resourceIds,
+}) => {
+  const referencedIds = new Set();
+  collectReferencedIds(node, keys, resourceIds, referencedIds);
+  return referencedIds;
+};
+
 const filterTreeNodesByIds = (nodes, keepIds) => {
   if (!Array.isArray(nodes)) {
     return [];

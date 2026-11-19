@@ -3,11 +3,14 @@ import { EN_I18N, FR_I18N, RU_I18N } from "../support/i18n.js";
 import {
   clearFullImagePreviewSuppressNextClick,
   clearFullImagePreviewTouchStartPoint,
+  closeBlockedDeleteDialog,
   closeDeleteDialog,
   commitDetailTagIds,
   createInitialState,
   finishDeletingItem,
   hideFullImagePreview,
+  openBlockedDeleteDialog,
+  openBlockedFolderDeleteDialog,
   openDeleteDialog,
   selectAdjacentImageItemId,
   selectFullImagePreviewSuppressNextClick,
@@ -242,6 +245,50 @@ describe("images store delete dialog", () => {
 
     expect(selectDeleteDialogItemId(context)).toBeUndefined();
     expect(selectViewData(context).deleteDialogOpen).toBe(false);
+  });
+
+  it("tracks the used image, or the folder of used images, that cannot be deleted", () => {
+    const context = createContext();
+    setItems(context, {
+      data: {
+        tree: [{ id: "folder-1", children: [{ id: "image-1" }] }],
+        items: {
+          "folder-1": { id: "folder-1", type: "folder", name: "Folder One" },
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Hero",
+            parentId: "folder-1",
+          },
+        },
+      },
+    });
+
+    openDeleteDialog(context, { itemId: "image-1" });
+    openBlockedDeleteDialog(context, { itemId: "image-1" });
+
+    expect(selectViewData(context)).toMatchObject({
+      deleteDialogOpen: false,
+      blockedDeleteImageId: "image-1",
+      blockedDeleteImageName: "Hero",
+      blockedDeleteFolderId: undefined,
+    });
+
+    closeBlockedDeleteDialog(context);
+    openBlockedFolderDeleteDialog(context, { folderId: "folder-1" });
+
+    expect(selectViewData(context)).toMatchObject({
+      blockedDeleteImageId: undefined,
+      blockedDeleteFolderId: "folder-1",
+      blockedDeleteFolderName: "Folder One",
+    });
+
+    closeBlockedDeleteDialog(context);
+
+    expect(selectViewData(context)).toMatchObject({
+      blockedDeleteImageId: undefined,
+      blockedDeleteFolderId: undefined,
+    });
   });
 
   it("tracks the images whose delete is running", () => {
@@ -487,7 +534,9 @@ describe("images store preview navigation", () => {
     });
     setSelectedItemId(context, { itemId: "image-1" });
     const dimensions = (i18n) =>
-      selectViewData({ state: context.state, i18n }).detailFields.at(-1).value;
+      selectViewData({ state: context.state, i18n }).detailFields.findLast(
+        (field) => field.type === "text",
+      ).value;
 
     expect(dimensions(EN_I18N)).toBe("1920 × 1080");
     expect(dimensions(FR_I18N)).toBe("1920\u00a0×\u00a01080");

@@ -1890,16 +1890,23 @@ const getSceneSectionIds = (scene) => {
   return sectionIds;
 };
 
-export const resolveSceneEditorEntrySelection = (scene, { sectionId } = {}) => {
+// `entryLineId` is the line a link into the scene asks for, such as a line
+// that uses a resource. The `lineId` the editor keeps in the payload is the
+// line it last had selected, and an entry does not go back to it.
+export const resolveSceneEditorEntrySelection = (
+  scene,
+  { sectionId, entryLineId } = {},
+) => {
   const sections = Array.isArray(scene?.sections) ? scene.sections : [];
   const selectedSection =
     sections.find((section) => section.id === sectionId) ||
     sections.find((section) => section.id === scene?.initialSectionId) ||
     sections[0];
+  const lines = selectedSection?.lines ?? [];
   const selectedLine =
-    selectedSection?.lines?.find(
-      (line) => line.id === selectedSection.initialLineId,
-    ) ?? selectedSection?.lines?.[0];
+    lines.find((line) => line.id === entryLineId) ??
+    lines.find((line) => line.id === selectedSection.initialLineId) ??
+    lines[0];
 
   return {
     sectionId: selectedSection?.id,
@@ -1977,7 +1984,11 @@ export const initializeSceneEditorPage = async (deps) => {
   setSceneLoadingProgress(deps, { stage: "repository" });
   await projectService.ensureRepository();
 
-  const { s, sectionId: payloadSectionId } = appService.getPayload();
+  const {
+    s,
+    sectionId: payloadSectionId,
+    entryLineId,
+  } = appService.getPayload();
   const sceneId = s;
 
   setSceneLoadingProgress(deps, { stage: "scenes" });
@@ -1991,6 +2002,7 @@ export const initializeSceneEditorPage = async (deps) => {
   if (scene?.sections?.length > 0) {
     const entrySelection = resolveSceneEditorEntrySelection(scene, {
       sectionId: payloadSectionId,
+      entryLineId,
     });
     store.setSelectedSectionId({
       selectedSectionId: entrySelection.sectionId,
@@ -2001,6 +2013,7 @@ export const initializeSceneEditorPage = async (deps) => {
       s: sceneId,
     };
     delete nextPayload.sceneId;
+    delete nextPayload.entryLineId;
     if (entrySelection.sectionId) {
       nextPayload.sectionId = entrySelection.sectionId;
     } else {
@@ -2019,6 +2032,7 @@ export const initializeSceneEditorPage = async (deps) => {
     delete nextPayload.sceneId;
     delete nextPayload.sectionId;
     delete nextPayload.lineId;
+    delete nextPayload.entryLineId;
     appService.setPayload?.(nextPayload);
   }
 

@@ -75,6 +75,12 @@ const buildDetailFields = (item, { copy, dateTime } = {}) => {
           ? formatDimensions(item.width, item.height, dateTime)
           : "",
     },
+    // Where the image is used. The slotted list shows its own heading.
+    {
+      type: "slot",
+      slot: "image-usage",
+      label: "",
+    },
   ];
 };
 
@@ -300,6 +306,12 @@ const {
       itemName: deleteDialogItemName,
     });
     viewData.deleteDialogConfirmLabel = copy.deleteButton;
+    viewData.blockedDeleteImageId = state.blockedDeleteItemId;
+    viewData.blockedDeleteImageName =
+      state.data?.items?.[state.blockedDeleteItemId]?.name ?? "";
+    viewData.blockedDeleteFolderId = state.blockedDeleteFolderId;
+    viewData.blockedDeleteFolderName =
+      state.data?.items?.[state.blockedDeleteFolderId]?.name ?? "";
     return viewData;
   },
 });
@@ -314,6 +326,8 @@ export const createInitialState = () => ({
   fullImagePreviewSuppressNextClick: false,
   deleteDialogOpen: false,
   deleteDialogItemId: undefined,
+  blockedDeleteItemId: undefined,
+  blockedDeleteFolderId: undefined,
   deletingItemIds: [],
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
 });
@@ -453,6 +467,25 @@ export const closeDeleteDialog = ({ state }) => {
 };
 
 export const selectDeleteDialogItemId = ({ state }) => state.deleteDialogItemId;
+
+// An image that is used cannot be deleted. Asking to delete it shows where it
+// is used instead of the confirm dialog.
+export const openBlockedDeleteDialog = ({ state }, { itemId } = {}) => {
+  state.deleteDialogOpen = false;
+  state.deleteDialogItemId = undefined;
+  state.blockedDeleteItemId = itemId;
+};
+
+// A folder that holds a used image cannot be deleted. Asking to delete it
+// shows those images and where each is used.
+export const openBlockedFolderDeleteDialog = ({ state }, { folderId } = {}) => {
+  state.blockedDeleteFolderId = folderId;
+};
+
+export const closeBlockedDeleteDialog = ({ state }) => {
+  state.blockedDeleteItemId = undefined;
+  state.blockedDeleteFolderId = undefined;
+};
 
 // An image stays on the page until its delete has finished and the page
 // refreshed, so it can be sent to delete again while the first delete runs.
