@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 
 const resourcePages = [
   [
+    "animations",
+    "animations/animations.view.yaml",
+    "groupAnimationsView.itemsPerRow",
+  ],
+  [
     "character sprites",
     "characterSprites/characterSprites.view.yaml",
     "groupCharacterSpritesView.itemsPerRow",
@@ -37,7 +42,6 @@ const resourcePages = [
 ];
 
 const fullWidthResourcePages = [
-  ["animations", "animations/animations.view.yaml"],
   ["characters", "characters/characters.view.yaml"],
 ];
 

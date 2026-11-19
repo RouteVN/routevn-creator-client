@@ -1,17 +1,7 @@
 import { getTransitionMaskDuration } from "./animationMasks.js";
-import {
-  cameraTimelineProperties,
-  groupCameraTrack,
-} from "./animationCamera.js";
 
 const getDialogType = (animationType) => {
   return animationType === "transition" ? "transition" : "update";
-};
-
-const getAnimationTypeLabel = (animationType) => {
-  return getDialogType(animationType) === "transition"
-    ? "Transition"
-    : "Update";
 };
 
 export const getUpdateAnimationTween = (item = {}) => {
@@ -72,43 +62,8 @@ export const getTransitionTimelineDuration = ({
   );
 };
 
-export const toAnimationDisplayItem = (
-  item,
-  { cameraLabel = "Camera", dateTime } = {},
-) => {
+export const toAnimationDisplayItem = (item) => {
   const animationType = getDialogType(item?.animation?.type);
-  const displayProperties = (properties, side) =>
-    item?.cameraTracks?.includes(side)
-      ? cameraTimelineProperties(
-          groupCameraTrack(properties),
-          cameraLabel,
-          dateTime,
-        )
-      : structuredClone(properties);
-  const prevProperties = displayProperties(
-    getTransitionSideTween(item, "prev"),
-    "prev",
-  );
-  const nextProperties = displayProperties(
-    getTransitionSideTween(item, "next"),
-    "next",
-  );
-  const updateProperties = displayProperties(
-    getUpdateAnimationTween(item),
-    "update",
-  );
-  const propertyCount =
-    animationType === "transition"
-      ? Object.keys(prevProperties).length + Object.keys(nextProperties).length
-      : Object.keys(updateProperties).length;
-  const transitionTimelineDuration =
-    animationType === "transition"
-      ? getTransitionTimelineDuration({
-          prevProperties,
-          nextProperties,
-          mask: item?.animation?.mask,
-        })
-      : 0;
   const duration =
     animationType === "transition"
       ? getTransitionTimelineDuration({
@@ -121,17 +76,7 @@ export const toAnimationDisplayItem = (
   return {
     ...item,
     animationType,
-    animationTypeLabel: getAnimationTypeLabel(item?.animation?.type),
-    updateProperties,
-    prevProperties,
-    nextProperties,
-    transitionTimelineDuration,
-    propertyCount,
     duration,
-    cardKind: "animation",
-    itemWidth: "f",
-    thumbnailFileId: undefined,
-    previewFileId: undefined,
   };
 };
 

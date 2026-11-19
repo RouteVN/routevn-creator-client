@@ -3774,6 +3774,7 @@ describe("animationEditor.handlers", () => {
     };
     const projectService = {
       updateAnimation: vi.fn(async () => ({ valid: true })),
+      requestAnimationThumbnails: vi.fn(async () => {}),
       getRepositoryState: vi.fn(() => ({
         animations: { items: {}, tree: [] },
       })),
@@ -3815,15 +3816,27 @@ describe("animationEditor.handlers", () => {
       ],
     ]);
 
-    // An edit with the same preview images saves without them.
+    // Leaving asks for the animation's thumbnail, after the save.
+    expect(projectService.requestAnimationThumbnails.mock.calls).toEqual([
+      [{ animationIds: ["animation-1"] }],
+    ]);
+    expect(
+      projectService.requestAnimationThumbnails.mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      projectService.updateAnimation.mock.invocationCallOrder[0],
+    );
+
+    // An edit with the same preview images saves without them. A backup
+    // keeps the page open, so it only saves.
     store.selectAnimationName.mockReturnValue("Fade Out");
     version = 3;
-    await beforeNavigation();
+    await beforeNavigation({ reason: "backup" });
     expect(projectService.updateAnimation.mock.lastCall[0].data).toEqual({
       name: "Fade Out",
       description: "",
       animation: { type: "update", tween: {} },
       cameraTracks: undefined,
     });
+    expect(projectService.requestAnimationThumbnails).toHaveBeenCalledOnce();
   });
 });

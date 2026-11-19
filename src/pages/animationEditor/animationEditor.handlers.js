@@ -1262,7 +1262,14 @@ export const handlePreviewPlaybackShortcutKeyDown = (deps, payload) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, render, store, uiConfig, windowMetricsClient } = deps;
+  const {
+    appService,
+    projectService,
+    render,
+    store,
+    uiConfig,
+    windowMetricsClient,
+  } = deps;
   store.setUiConfig({ uiConfig });
   const cleanupTimelinePanSubscriptions = mountTimelinePanSubscriptions(deps);
   // Phones and tablets place the tabs and the navbar's buttons differently.
@@ -1271,14 +1278,23 @@ export const handleBeforeMount = (deps) => {
     store,
     render,
   });
+  // Leaving saves waiting changes, then has the thumbnail brought up to date
+  // in the background, so leaving waits only for the save. A backup, the app
+  // going to the background, or quitting only saves.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
-    async () => {
+    async ({ reason } = {}) => {
       const autosaveAttempt = await flushQueuedAutosave({
         deps,
         force: true,
       });
       if (!autosaveAttempt.ok) {
         throw new Error("Failed to save animation changes before navigation.");
+      }
+      const animationId = store.selectEditItemId();
+      if (animationId && !reason) {
+        void projectService.requestAnimationThumbnails({
+          animationIds: [animationId],
+        });
       }
     },
   );

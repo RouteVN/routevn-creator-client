@@ -209,8 +209,11 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+// Animations with no thumbnail yet have theirs drawn in the background.
 export const handleAfterMount = (deps) => {
+  const { projectService } = deps;
   handleAfterMountBase(deps);
+  void projectService.requestAnimationThumbnails();
   void renderSelectedAnimationPreview(deps, {
     forceInit: true,
   });

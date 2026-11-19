@@ -70,6 +70,10 @@ let rendererCount = 0;
 // `assets`, which maps each file id the state draws to `{ url, type }`, and a
 // font's to its `fontWeightDescriptor` too. `release` frees the renderer.
 //
+// With `animationFrame`, the state's animations are held at `timeMs` instead
+// of playing: `resetState` is what they start from, drawn first, and
+// `preparationPassCount` is how many times both are drawn before the frame.
+//
 // Its files load under keys of the renderer's own, starting with `keyPrefix`.
 // Assets are cached by key for every renderer, and freeing a renderer unloads
 // the keys it loaded, so a key shared with the page's renderer would take the
@@ -126,12 +130,34 @@ export const createOffscreenRenderer = ({ keyPrefix, capture }) => {
     return renderer;
   };
 
+  // A transition shows its outgoing side only once that has been drawn, so the
+  // start is drawn before the animation, as the Animations page does.
+  const drawAnimationFrame = async ({
+    graphicsService,
+    renderState,
+    animationFrame,
+  }) => {
+    const { resetState, timeMs, preparationPassCount } = animationFrame;
+    graphicsService.setAnimationPlaybackMode("manual");
+    graphicsService.setAnimationTime(0);
+    for (let pass = 0; pass < preparationPassCount; pass += 1) {
+      await graphicsService.render(resetState);
+      await waitForPaint();
+      await graphicsService.render(renderState);
+      graphicsService.setAnimationTime(0);
+      await waitForPaint();
+    }
+    graphicsService.setAnimationTime(timeMs);
+    await waitForPaint();
+  };
+
   const render = async ({
     width,
     height,
     renderState,
     assets,
     settleMs = 0,
+    animationFrame,
   }) => {
     try {
       const current = await take({ width, height });
@@ -155,6 +181,25 @@ export const createOffscreenRenderer = ({ keyPrefix, capture }) => {
       if (Object.keys(assetsToLoad).length > 0) {
         await graphicsService.loadAssets(assetsToLoad);
         Object.keys(assetsToLoad).forEach((key) => loadedKeys.add(key));
+      }
+      if (animationFrame) {
+        try {
+          await drawAnimationFrame({
+            graphicsService,
+            renderState: mapRenderStateSources(renderState, toKey),
+            animationFrame: {
+              ...animationFrame,
+              resetState: mapRenderStateSources(
+                animationFrame.resetState,
+                toKey,
+              ),
+            },
+          });
+          return await capture(graphicsService);
+        } finally {
+          // The renderer is shared, and the next drawing may run on its clock.
+          graphicsService.setAnimationPlaybackMode("auto");
+        }
       }
       await graphicsService.render(mapRenderStateSources(renderState, toKey));
       await waitForPaint();

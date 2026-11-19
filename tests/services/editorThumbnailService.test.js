@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditorThumbnailService } from "../../src/deps/services/shared/editorThumbnailService.js";
 import { createThumbnailSourceHash } from "../../src/deps/services/shared/thumbnailSourceHash.js";
+import { createAnimationThumbnailSource } from "../../src/internal/animationPreview.js";
 import {
   createLayoutThumbnailSource,
   LAYOUT_THUMBNAIL_VERSION,
@@ -38,9 +39,56 @@ const createRepositoryState = () => ({
         width: 1920,
         height: 1080,
       },
+      "image-2": {
+        id: "image-2",
+        type: "image",
+        name: "Image Two",
+        fileId: "file-2",
+        fileType: "image/png",
+        width: 1920,
+        height: 1080,
+      },
     },
   },
   characters: { tree: [], items: {} },
+  animations: {
+    tree: [{ id: "animation-1" }, { id: "animation-2" }],
+    items: {
+      "animation-1": {
+        id: "animation-1",
+        type: "animation",
+        name: "Animation One",
+        preview: {
+          outgoing: { imageId: "image-1" },
+          incoming: { imageId: "image-2" },
+        },
+        animation: {
+          type: "transition",
+          prev: {
+            tween: { alpha: { keyframes: [{ duration: 600, value: 0 }] } },
+          },
+          next: {
+            tween: {
+              alpha: {
+                initialValue: 0,
+                keyframes: [{ delay: 200, duration: 800, value: 1 }],
+              },
+            },
+          },
+        },
+      },
+      "animation-2": {
+        id: "animation-2",
+        type: "animation",
+        name: "Animation Two",
+        thumbnailFileId: "thumb-saved",
+        animation: {
+          type: "update",
+          tween: { x: { keyframes: [{ duration: 300, value: 100 }] } },
+        },
+      },
+    },
+  },
   fonts: {
     tree: [{ id: "font-1" }],
     items: {
@@ -168,6 +216,10 @@ const createService = ({ repositoryState = createRepositoryState() } = {}) => {
     }),
     updateLayout: vi.fn(async ({ layoutId, data }) => {
       Object.assign(repositoryState.layouts.items[layoutId], data);
+      return { valid: true };
+    }),
+    updateAnimation: vi.fn(async ({ animationId, data }) => {
+      Object.assign(repositoryState.animations.items[animationId], data);
       return { valid: true };
     }),
     renderThumbnail: vi.fn(async () => thumbnailImage),
@@ -511,6 +563,123 @@ describe("editor thumbnail service", () => {
     repositoryState.textStyles.items["style-1"].fontSize = 48;
     await service.requestLayoutThumbnails({ layoutIds: ["layout-1"] });
     expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
+  });
+
+  it("draws an animation halfway through its preview, from its start, and saves only the thumbnail", async () => {
+    const { deps, repositoryState, service } = createService();
+    const item = repositoryState.animations.items["animation-1"];
+    const source = createAnimationThumbnailSource({ item, repositoryState });
+
+    await service.requestAnimationThumbnails({
+      animationIds: ["animation-1"],
+    });
+
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+    const [options] = deps.renderThumbnail.mock.calls[0];
+    expect(options).toEqual({
+      width: 1920,
+      height: 1080,
+      renderState: source.renderState,
+      // The outgoing image is drawn only in the start.
+      assets: {
+        "file-1": { url: "blob:file-1", type: "image/webp" },
+        "file-2": { url: "blob:file-2", type: "image/png" },
+      },
+      settleMs: undefined,
+      animationFrame: source.animationFrame,
+    });
+    // The longest side runs for a second, and a transition is prepared twice.
+    expect(options.animationFrame).toMatchObject({
+      timeMs: 500,
+      preparationPassCount: 2,
+    });
+    expect(
+      options.animationFrame.resetState.elements.map((element) => element.src),
+    ).toContain("file-1");
+    expect(
+      options.renderState.elements.map((element) => element.src),
+    ).toContain("file-2");
+    // A saved animation has no field for the source hash.
+    expect(deps.updateAnimation).toHaveBeenCalledWith({
+      animationId: "animation-1",
+      data: { thumbnailFileId: "stored-1" },
+      fileRecords: [{ id: "record-1" }],
+    });
+  });
+
+  it("holds an animation that does not move at its start, prepared once", () => {
+    const repositoryState = createRepositoryState();
+    const item = repositoryState.animations.items["animation-2"];
+    item.animation.tween = {};
+
+    expect(
+      createAnimationThumbnailSource({ item, repositoryState }).animationFrame,
+    ).toMatchObject({ timeMs: 0, preparationPassCount: 1 });
+  });
+
+  it("draws the animations with no thumbnail when none are named, and keeps a saved one it cannot compare", async () => {
+    const { deps, service } = createService();
+
+    await service.requestAnimationThumbnails();
+
+    expect(
+      deps.updateAnimation.mock.calls.map(([call]) => call.animationId),
+    ).toEqual(["animation-1"]);
+
+    // Drawn here, so its hash is known: asking again draws nothing.
+    await service.requestAnimationThumbnails();
+    await service.requestAnimationThumbnails({
+      animationIds: ["animation-1"],
+    });
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+  });
+
+  it("draws a named animation's saved thumbnail again once, then only when the animation changes", async () => {
+    const repositoryState = createRepositoryState();
+    delete repositoryState.animations.items["animation-1"];
+    const { deps, service } = createService({ repositoryState });
+    const request = () =>
+      service.requestAnimationThumbnails({ animationIds: ["animation-2"] });
+
+    // An editor may have just changed it, and the saved thumbnail has no hash.
+    await request();
+    expect(deps.updateAnimation).toHaveBeenLastCalledWith({
+      animationId: "animation-2",
+      data: { thumbnailFileId: "stored-1" },
+      fileRecords: [{ id: "record-1" }],
+    });
+
+    await request();
+    await service.requestAnimationThumbnails();
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+
+    repositoryState.animations.items["animation-2"].animation.tween.x = {
+      keyframes: [{ duration: 300, value: 400 }],
+    };
+    await service.requestAnimationThumbnails();
+    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
+
+    // A thumbnail saved from elsewhere since is not the one drawn here.
+    repositoryState.animations.items["animation-2"].thumbnailFileId =
+      "thumb-other";
+    await service.requestAnimationThumbnails();
+    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
+    await request();
+    expect(deps.renderThumbnail).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps a waiting request by name when every animation is asked for after it", async () => {
+    const { deps, service } = createService();
+
+    const running = service.requestAnimationThumbnails({
+      animationIds: ["animation-2"],
+    });
+    service.requestAnimationThumbnails();
+    await running;
+
+    expect(
+      deps.updateAnimation.mock.calls.map(([call]) => call.animationId).sort(),
+    ).toEqual(["animation-1", "animation-2"]);
   });
 
   it("frees its renderer once the queue is empty, and only after it drew", async () => {
