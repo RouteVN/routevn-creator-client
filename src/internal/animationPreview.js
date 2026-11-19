@@ -811,15 +811,20 @@ export const createAnimationThumbnailSource = ({ item, repositoryState }) => {
       imagesData: repositoryState.images,
       projectResolution,
     });
-  const imagesByFileId = new Map(
-    Object.values(repositoryState.images?.items ?? {})
-      .filter((image) => image.fileId)
-      .map((image) => [image.fileId, image]),
-  );
   const fileIds = new Set([
     ...collectAnimationPreviewFileIds(resetState),
     ...collectAnimationPreviewFileIds(renderState),
   ]);
+  // This runs for every animation each time thumbnails are checked, and most
+  // previews draw no image, so the images are read only for one that does.
+  const fileTypes = new Map();
+  if (fileIds.size > 0) {
+    for (const image of Object.values(repositoryState.images?.items ?? {})) {
+      if (fileIds.has(image.fileId)) {
+        fileTypes.set(image.fileId, image.fileType);
+      }
+    }
+  }
 
   return {
     width: projectResolution.width,
@@ -832,7 +837,7 @@ export const createAnimationThumbnailSource = ({ item, repositoryState }) => {
     },
     assets: Array.from(fileIds, (fileId) => ({
       fileId,
-      fileType: imagesByFileId.get(fileId)?.fileType,
+      fileType: fileTypes.get(fileId),
     })),
   };
 };

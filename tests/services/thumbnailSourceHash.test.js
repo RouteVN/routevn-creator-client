@@ -56,10 +56,10 @@ describe("thumbnail source hash", () => {
       animationFrame,
     });
 
-    // A thumbnail with no frame hashes as it did before frames were hashed.
     expect(hash).not.toBe(
       await createThumbnailSourceHash({ version: 1, renderState }),
     );
+    // A thumbnail with no frame hashes as it did before frames were hashed.
     expect(
       await createThumbnailSourceHash({
         version: 1,
