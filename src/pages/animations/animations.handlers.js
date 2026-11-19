@@ -209,7 +209,7 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-// Animations with no thumbnail yet have theirs drawn in the background.
+// Missing and out-of-date thumbnails are drawn in the background.
 export const handleAfterMount = (deps) => {
   const { projectService } = deps;
   handleAfterMountBase(deps);

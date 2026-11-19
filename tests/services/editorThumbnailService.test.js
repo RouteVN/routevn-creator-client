@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEditorThumbnailService } from "../../src/deps/services/shared/editorThumbnailService.js";
 import { createThumbnailSourceHash } from "../../src/deps/services/shared/thumbnailSourceHash.js";
-import { createAnimationThumbnailSource } from "../../src/internal/animationPreview.js";
+import {
+  ANIMATION_THUMBNAIL_VERSION,
+  createAnimationThumbnailSource,
+} from "../../src/internal/animationPreview.js";
 import {
   createLayoutThumbnailSource,
   LAYOUT_THUMBNAIL_VERSION,
@@ -565,7 +568,7 @@ describe("editor thumbnail service", () => {
     expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
   });
 
-  it("draws an animation halfway through its preview, from its start, and saves only the thumbnail", async () => {
+  it("draws an animation halfway through its preview, from its start, and saves it as an animation", async () => {
     const { deps, repositoryState, service } = createService();
     const item = repositoryState.animations.items["animation-1"];
     const source = createAnimationThumbnailSource({ item, repositoryState });
@@ -599,12 +602,25 @@ describe("editor thumbnail service", () => {
     expect(
       options.renderState.elements.map((element) => element.src),
     ).toContain("file-2");
-    // A saved animation has no field for the source hash.
+    // The hash covers the frame too, not only what is drawn.
     expect(deps.updateAnimation).toHaveBeenCalledWith({
       animationId: "animation-1",
-      data: { thumbnailFileId: "stored-1" },
+      data: {
+        thumbnailFileId: "stored-1",
+        thumbnailSourceHash: await createThumbnailSourceHash({
+          version: ANIMATION_THUMBNAIL_VERSION,
+          renderState: source.renderState,
+          animationFrame: source.animationFrame,
+        }),
+      },
       fileRecords: [{ id: "record-1" }],
     });
+    expect(deps.updateTransform).not.toHaveBeenCalled();
+
+    await service.requestAnimationThumbnails({
+      animationIds: ["animation-1"],
+    });
+    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
   });
 
   it("holds an animation that does not move at its start, prepared once", () => {
@@ -617,69 +633,27 @@ describe("editor thumbnail service", () => {
     ).toMatchObject({ timeMs: 0, preparationPassCount: 1 });
   });
 
-  it("draws the animations with no thumbnail when none are named, and keeps a saved one it cannot compare", async () => {
-    const { deps, service } = createService();
+  it("draws every animation whose thumbnail has no hash or an old one when none are named", async () => {
+    const { deps, repositoryState, service } = createService();
 
+    // One has no thumbnail, and the other's was saved without a hash.
     await service.requestAnimationThumbnails();
 
     expect(
       deps.updateAnimation.mock.calls.map(([call]) => call.animationId),
-    ).toEqual(["animation-1"]);
+    ).toEqual(["animation-1", "animation-2"]);
 
-    // Drawn here, so its hash is known: asking again draws nothing.
     await service.requestAnimationThumbnails();
-    await service.requestAnimationThumbnails({
-      animationIds: ["animation-1"],
-    });
-    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
-  });
-
-  it("draws a named animation's saved thumbnail again once, then only when the animation changes", async () => {
-    const repositoryState = createRepositoryState();
-    delete repositoryState.animations.items["animation-1"];
-    const { deps, service } = createService({ repositoryState });
-    const request = () =>
-      service.requestAnimationThumbnails({ animationIds: ["animation-2"] });
-
-    // An editor may have just changed it, and the saved thumbnail has no hash.
-    await request();
-    expect(deps.updateAnimation).toHaveBeenLastCalledWith({
-      animationId: "animation-2",
-      data: { thumbnailFileId: "stored-1" },
-      fileRecords: [{ id: "record-1" }],
-    });
-
-    await request();
-    await service.requestAnimationThumbnails();
-    expect(deps.renderThumbnail).toHaveBeenCalledOnce();
+    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
 
     repositoryState.animations.items["animation-2"].animation.tween.x = {
       keyframes: [{ duration: 300, value: 400 }],
     };
     await service.requestAnimationThumbnails();
-    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
-
-    // A thumbnail saved from elsewhere since is not the one drawn here.
-    repositoryState.animations.items["animation-2"].thumbnailFileId =
-      "thumb-other";
-    await service.requestAnimationThumbnails();
-    expect(deps.renderThumbnail).toHaveBeenCalledTimes(2);
-    await request();
     expect(deps.renderThumbnail).toHaveBeenCalledTimes(3);
-  });
-
-  it("keeps a waiting request by name when every animation is asked for after it", async () => {
-    const { deps, service } = createService();
-
-    const running = service.requestAnimationThumbnails({
-      animationIds: ["animation-2"],
-    });
-    service.requestAnimationThumbnails();
-    await running;
-
-    expect(
-      deps.updateAnimation.mock.calls.map(([call]) => call.animationId).sort(),
-    ).toEqual(["animation-1", "animation-2"]);
+    expect(deps.updateAnimation.mock.lastCall[0].animationId).toBe(
+      "animation-2",
+    );
   });
 
   it("frees its renderer once the queue is empty, and only after it drew", async () => {

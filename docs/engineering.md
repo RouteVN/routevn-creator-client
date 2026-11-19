@@ -710,10 +710,10 @@ workflows.
 
 ### Animation Camera Presentation
 
-`src/internal/animationCamera.js` holds the animation editor's Camera grouping
-and timeline presentation. Only sides explicitly listed
-in `cameraTracks` are grouped; stored/runtime animation tracks remain numeric.
-Editor-only preview artwork stays in `src/pages/animationEditor/support/`.
+`src/pages/animationEditor/support/animationCamera.js` holds the animation
+editor's Camera grouping, timeline presentation, and preview artwork. Only
+sides explicitly listed in `cameraTracks` are grouped; stored/runtime animation
+tracks remain numeric.
 
 ## Code Placement
 
@@ -1650,17 +1650,15 @@ the detail panel plays, from the saved animation and its saved preview images,
 halfway through its duration. The source carries an `animationFrame`: the
 off-screen renderer draws the start state, then the animation, holds it at
 that time in manual playback, and captures (a transition is prepared twice, as
-the detail panel does); the frame is part of the hash. A saved animation has
-no `thumbnailSourceHash` field, so only `thumbnailFileId` is saved, and the
-service remembers the hash of each thumbnail it drew until the app closes
-(`remembersSourceHash`). A thumbnail it drew is redrawn when the hash
-changes. One it did not draw cannot be compared: it is kept when every
-animation is requested, and redrawn when the animation is requested by name.
-The animations page requests every animation's when it opens, which draws the
-ones with no thumbnail; leaving the animation editor requests that
-animation's by name. So a change made outside the editor, such as replacing a
-preview image's file, reaches a thumbnail drawn in an earlier session only
-once the animation is opened in the editor again.
+the detail panel does). The frame is part of the `thumbnailSourceHash` saved
+with the thumbnail, so a change to the animation, to its preview images, or to
+the time the frame is held at draws it again. The animations page requests
+every animation's when it opens, and leaving the animation editor requests
+that animation's. A hash on an animation needs `@routevn/creator-model` 1.21.0
+(schema 21). Opening the animations page saves thumbnails, so it writes to the
+project like an edit does: an older app version then asks to update before
+opening that project, and cannot import an asset package whose animations
+carry a hash.
 
 The audio effects editor has undo and redo the same way. It keeps edits on the
 page and saves the whole audio effect when the page is left, so a step holds

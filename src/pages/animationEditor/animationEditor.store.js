@@ -62,12 +62,12 @@ import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
   cameraTimelineProperties,
   createCameraPose,
+  createCameraPreviewElement,
   expandCameraTrack,
   formatCameraPoseLabel,
   groupCameraTrack,
   roundCameraPose,
-} from "../../internal/animationCamera.js";
-import { createCameraPreviewElement } from "./support/animationCamera.js";
+} from "./support/animationCamera.js";
 
 const TIMELINE_ZOOM_DEFAULT = 2;
 const TIMELINE_ZOOM_MIN = 0.25;
