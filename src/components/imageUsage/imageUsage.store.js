@@ -1,3 +1,4 @@
+import { formatList } from "../../internal/dates.js";
 import {
   formatI18nCopy,
   formatPluralCopy,
@@ -297,13 +298,17 @@ const formatLineName = ({ copy, i18n, line }) => {
     section: line.sectionName,
     line: String(line.lineNumber),
   };
-  const actionLabel =
-    i18n.commandLinePage?.[LINE_ACTION_LABEL_KEYS[line.actionType]];
-  if (!actionLabel) {
+  const actionLabels = line.actionTypes
+    .map(
+      (actionType) =>
+        i18n.commandLinePage?.[LINE_ACTION_LABEL_KEYS[actionType]],
+    )
+    .filter(Boolean);
+  if (actionLabels.length === 0) {
     return formatI18nCopy(copy.lineLocation, replacements);
   }
 
-  replacements.action = actionLabel;
+  replacements.action = formatList(actionLabels, i18n.dateTime);
   return formatI18nCopy(copy.lineLocationWithAction, replacements);
 };
 

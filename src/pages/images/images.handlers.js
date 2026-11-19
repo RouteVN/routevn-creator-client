@@ -111,6 +111,23 @@ const pickAndUploadImage = async (deps, copy) => {
   return { uploadResult };
 };
 
+// The file explorer's delete uses the check this page shows the places of,
+// so the two cannot disagree about a folder.
+const validateImageExplorerDeletion = async ({
+  projectService,
+  currentItem,
+  itemId,
+}) => {
+  const usage =
+    currentItem.type === "folder"
+      ? await projectService.getImageFolderUsage({ folderId: itemId })
+      : await projectService.getImageUsage({ imageId: itemId });
+
+  return usage.blocksDelete
+    ? { canDelete: false, reason: "in-use" }
+    : { canDelete: true };
+};
+
 const syncImagePageData = ({ store, repositoryState } = {}) => {
   const tagsData = getTagsCollection(repositoryState, IMAGE_TAG_SCOPE_KEY);
   const collectionWithFileMetadata = withResolvedCollectionFileMetadata({
@@ -169,6 +186,7 @@ const {
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
   suppressMobileDetailSheetOnEdit: true,
+  validateFileExplorerDeletion: validateImageExplorerDeletion,
   copy: ({ i18n }) => selectImagesPageCopy(i18n),
   tagging: {
     scopeKey: IMAGE_TAG_SCOPE_KEY,

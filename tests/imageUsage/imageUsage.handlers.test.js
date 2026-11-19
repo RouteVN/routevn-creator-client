@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
   handleDialogClose,
-  handleDialogListKeyDown,
+  handleDialogKeyDown,
   handleDialogRowClick,
   handleOnUpdate,
   handlePanelRowClick,
@@ -23,14 +23,14 @@ const USAGES = [
         sectionName: "Section One",
         lineId: "line-2",
         lineNumber: 2,
-        actionType: "background",
+        actionTypes: ["background"],
       },
       {
         sectionId: "section-2",
         sectionName: "Section Two",
         lineId: "line-9",
         lineNumber: 4,
-        actionType: "visual",
+        actionTypes: ["visual"],
       },
     ],
   },
@@ -44,7 +44,7 @@ const USAGES = [
         sectionName: "Section Three",
         lineId: "line-12",
         lineNumber: 1,
-        actionType: "background",
+        actionTypes: ["background"],
       },
     ],
   },
@@ -92,6 +92,7 @@ const createDeps = ({
     },
     appService: {
       getPayload: vi.fn(() => payload),
+      getDocumentDirection: vi.fn(() => "ltr"),
       navigate: vi.fn(),
       showToast: vi.fn(),
     },
@@ -99,7 +100,7 @@ const createDeps = ({
 };
 
 const createKeyEvent = (key) => ({
-  _event: { key, preventDefault: vi.fn() },
+  _event: { key, preventDefault: vi.fn(), stopPropagation: vi.fn() },
 });
 
 const createRowEvent = (rowId) => ({
@@ -288,6 +289,7 @@ describe("imageUsage.handlers", () => {
       _event: {
         key: "Enter",
         preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
         currentTarget: { dataset: { rowId: "layout:layout-1" } },
       },
     });
@@ -302,7 +304,7 @@ describe("imageUsage.handlers", () => {
     await handleShowAllClick(deps);
 
     // The arrow keys were on a row before the mouse took over.
-    handleDialogListKeyDown(deps, createKeyEvent("ArrowDown"));
+    handleDialogKeyDown(deps, createKeyEvent("ArrowDown"));
     handleDialogRowClick(deps, createRowEvent("scene:scene-1"));
 
     expect(deps.context.state.expandedRowIds).toEqual(["scene:scene-1"]);
@@ -330,7 +332,7 @@ describe("imageUsage.handlers", () => {
     await handleShowAllClick(deps);
     const press = (key) => {
       const event = createKeyEvent(key);
-      handleDialogListKeyDown(deps, event);
+      handleDialogKeyDown(deps, event);
       return event;
     };
 
@@ -376,12 +378,85 @@ describe("imageUsage.handlers", () => {
     await handleAfterMount(deps);
     await handleShowAllClick(deps);
 
-    handleDialogListKeyDown(deps, createKeyEvent("ArrowDown"));
+    handleDialogKeyDown(deps, createKeyEvent("ArrowDown"));
     expect(deps.context.state.activeRowId).toBe("layout:layout-1");
 
     const tab = createKeyEvent("Tab");
-    handleDialogListKeyDown(deps, tab);
+    handleDialogKeyDown(deps, tab);
     expect(tab._event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  // The panel's dialog sits inside the page's detail area, which moves the
+  // image selection with the same keys.
+  it("keeps every key pressed in the dialog from reaching the page behind it", async () => {
+    const deps = createDeps();
+    await handleAfterMount(deps);
+    await handleShowAllClick(deps);
+
+    for (const key of ["ArrowDown", "Enter", "e", "j", "Tab"]) {
+      const event = createKeyEvent(key);
+      handleDialogKeyDown(deps, event);
+      expect(event._event.stopPropagation).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("keeps Enter on a panel row from reaching the page, and leaves other keys to it", async () => {
+    const deps = createDeps();
+    await handleAfterMount(deps);
+
+    const arrow = { _event: { ...createKeyEvent("ArrowDown")._event } };
+    handlePanelRowKeyDown(deps, arrow);
+    expect(arrow._event.stopPropagation).not.toHaveBeenCalled();
+
+    const enter = createKeyEvent("Enter");
+    enter._event.currentTarget = { dataset: { rowId: "layout:layout-1" } };
+    handlePanelRowKeyDown(deps, enter);
+    expect(enter._event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.appService.navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a scene's lines with Left and hides them with Right under a right-to-left layout", async () => {
+    const deps = createDeps();
+    deps.appService.getDocumentDirection.mockReturnValue("rtl");
+    await handleAfterMount(deps);
+    await handleShowAllClick(deps);
+    const press = (key) => handleDialogKeyDown(deps, createKeyEvent(key));
+
+    press("ArrowDown");
+    press("ArrowRight");
+    expect(deps.context.state.expandedRowIds).toEqual([]);
+
+    press("ArrowLeft");
+    expect(deps.context.state.expandedRowIds).toEqual(["scene:scene-1"]);
+    press("ArrowLeft");
+    expect(deps.context.state.activeRowId).toBe("line:scene-1:0");
+
+    press("ArrowRight");
+    expect(deps.context.state.activeRowId).toBe("scene:scene-1");
+    press("ArrowRight");
+    expect(deps.context.state.expandedRowIds).toEqual([]);
+  });
+
+  // The panel lists the same places under the same row ids.
+  it("scrolls the dialog's row into view, not the panel row of the same place", async () => {
+    const deps = createDeps();
+    const panelRow = {
+      dataset: { rowId: "scene:scene-1" },
+      scrollIntoView: vi.fn(),
+    };
+    const dialogRow = {
+      dataset: { rowId: "scene:scene-1" },
+      scrollIntoView: vi.fn(),
+    };
+    deps.refs.panelRow0 = panelRow;
+    deps.refs.dialogRow1 = dialogRow;
+    await handleAfterMount(deps);
+    await handleShowAllClick(deps);
+
+    handleDialogKeyDown(deps, createKeyEvent("ArrowDown"));
+
+    expect(dialogRow.scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    expect(panelRow.scrollIntoView).not.toHaveBeenCalled();
   });
 
   it("closes the full list", async () => {
@@ -420,6 +495,33 @@ describe("imageUsage.handlers", () => {
         "/project/layout-editor",
         expect.objectContaining({ c: "control-1" }),
       );
+    });
+
+    it("lists only the places that keep the image from being deleted", async () => {
+      const deps = createBlockedDeps({
+        usages: [
+          { type: "layout", id: "layout-1", name: "Layout One" },
+          {
+            type: "particle",
+            id: "particle-1",
+            name: "Shown Particle",
+            isShown: true,
+          },
+          {
+            type: "particle",
+            id: "particle-2",
+            name: "Unshown Particle",
+            isShown: false,
+          },
+        ],
+      });
+
+      await handleAfterMount(deps);
+
+      expect(deps.context.state.usages.map((usage) => usage.id)).toEqual([
+        "layout-1",
+        "particle-1",
+      ]);
     });
 
     it("closes when nothing uses the image any more", async () => {
@@ -483,6 +585,36 @@ describe("imageUsage.handlers", () => {
         usedImages: USED_IMAGES,
       });
       expect(deps.dispatchEvent).not.toHaveBeenCalled();
+    });
+
+    it("leaves a particle nothing shows out of an image's places", async () => {
+      const deps = createFolderDeps({
+        usedImages: [
+          {
+            id: "image-1",
+            name: "Image One",
+            usages: [
+              { type: "layout", id: "layout-1", name: "Layout One" },
+              {
+                type: "particle",
+                id: "particle-2",
+                name: "Unshown Particle",
+                isShown: false,
+              },
+            ],
+          },
+        ],
+      });
+
+      await handleAfterMount(deps);
+
+      expect(deps.context.state.usedImages).toEqual([
+        {
+          id: "image-1",
+          name: "Image One",
+          usages: [{ type: "layout", id: "layout-1", name: "Layout One" }],
+        },
+      ]);
     });
 
     it("asks to close when no image in the folder is used any more", async () => {

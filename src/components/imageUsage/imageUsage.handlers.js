@@ -13,6 +13,11 @@ const isBlockedDeleteMode = ({ mode }) =>
 const selectSubjectId = (props) =>
   props.mode === FOLDER_MODE ? props.folderId : props.imageId;
 
+// A particle nothing shows uses the image without keeping it from being
+// deleted, so a "Can't delete" list leaves it out.
+const keepsImageFromDelete = (usage) =>
+  usage.type !== "particle" || usage.isShown;
+
 const closeBlockedDeleteDialog = ({ dispatchEvent }) => {
   dispatchEvent(new CustomEvent("close"));
 };
@@ -36,10 +41,16 @@ const loadUsage = async (deps, { subjectId } = {}) => {
       const folderUsage = await projectService.getImageFolderUsage({
         folderId: subjectId,
       });
-      usedImages = folderUsage.images;
+      usedImages = folderUsage.images.map((image) => ({
+        id: image.id,
+        name: image.name,
+        usages: image.usages.filter(keepsImageFromDelete),
+      }));
     } else {
       const usage = await projectService.getImageUsage({ imageId: subjectId });
-      usages = usage.usages;
+      usages = isBlockedDeleteMode(props)
+        ? usage.usages.filter(keepsImageFromDelete)
+        : usage.usages;
     }
   } catch (error) {
     console.error("Failed to load where the image is used:", error);
@@ -77,9 +88,13 @@ const focusDialogList = ({ refs }) => {
 const scrollActiveRowIntoView = ({ refs, store }) => {
   const activeRowId = store.selectActiveRowId();
   requestAnimationFrame(() => {
-    const activeRow = Object.values(refs).find(
-      (element) => element?.dataset?.rowId === activeRowId,
-    );
+    // The panel's rows carry the same row ids, so only the dialog's rows are
+    // looked through.
+    const activeRow = Object.entries(refs).find(
+      ([refName, element]) =>
+        refName.startsWith("dialogRow") &&
+        element?.dataset?.rowId === activeRowId,
+    )?.[1];
     activeRow?.scrollIntoView?.({ block: "nearest" });
   });
 };
@@ -185,7 +200,9 @@ export const handlePanelRowKeyDown = (deps, payload) => {
     return;
   }
 
+  // The page around the panel has its own Enter key.
   payload._event.preventDefault();
+  payload._event.stopPropagation();
   handlePanelRowClick(deps, payload);
 };
 
@@ -235,9 +252,13 @@ export const handleDialogRowClick = (deps, payload) => {
   focusDialogList(deps);
 };
 
-export const handleDialogListKeyDown = (deps, payload) => {
-  const { render, store } = deps;
+export const handleDialogKeyDown = (deps, payload) => {
+  const { appService, render, store } = deps;
   const event = payload._event;
+  // The dialog can sit inside a page area that has its own keys. A key
+  // pressed in the dialog must not also act on the page behind it.
+  event.stopPropagation();
+
   const rows = store.selectDialogRows();
   const activeIndex = rows.findIndex(
     (row) => row.rowId === store.selectActiveRowId(),
@@ -269,7 +290,13 @@ export const handleDialogListKeyDown = (deps, payload) => {
     return;
   }
 
-  if (event.key === "ArrowRight") {
+  // A scene's lines open toward the inline end, so under right-to-left
+  // layouts Left shows them and Right hides them.
+  const isRightToLeft = appService.getDocumentDirection() === "rtl";
+  const expandKey = isRightToLeft ? "ArrowLeft" : "ArrowRight";
+  const collapseKey = isRightToLeft ? "ArrowRight" : "ArrowLeft";
+
+  if (event.key === expandKey) {
     event.preventDefault();
     if (activeRow.kind === "scene" && activeRow.canExpand) {
       if (activeRow.isExpanded) {
@@ -283,7 +310,7 @@ export const handleDialogListKeyDown = (deps, payload) => {
     return;
   }
 
-  if (event.key === "ArrowLeft") {
+  if (event.key === collapseKey) {
     event.preventDefault();
     if (activeRow.kind === "line") {
       setActiveRow(rows.find((row) => row.rowId === activeRow.sceneRowId));

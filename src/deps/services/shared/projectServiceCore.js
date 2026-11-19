@@ -976,13 +976,17 @@ export const createProjectServiceCore = ({
   // layouts, controls, animations, particles and platform details fields, and
   // `blocksDelete` tells whether any of them keeps it from being deleted.
   const getImageUsage = async ({ imageId } = {}) => {
-    const repository = await ensureRepository();
-    const [index, platformDetailsUsages] = await Promise.all([
+    const [index, platformDetailsUsagesByFileId] = await Promise.all([
       loadImageUsageIndex(),
-      findPlatformDetailsImageUsages({ itemId: imageId, repository }),
+      loadPlatformDetailsFileUsages(),
     ]);
     const usage = selectImageUsage({ index, imageId });
-    addPlatformDetailsUsages(usage, platformDetailsUsages);
+    // The index holds the images, so the project state is not copied again
+    // for every image that is looked up.
+    addPlatformDetailsUsages(
+      usage,
+      platformDetailsUsagesByFileId.get(index.images.items[imageId]?.fileId),
+    );
 
     return usage;
   };
@@ -991,12 +995,11 @@ export const createProjectServiceCore = ({
   // deleted, each with where it is used. The folder cannot be deleted while
   // it holds any, which `blocksDelete` tells.
   const getImageFolderUsage = async ({ folderId } = {}) => {
-    const repository = await ensureRepository();
     const [index, platformDetailsUsagesByFileId] = await Promise.all([
       loadImageUsageIndex(),
       loadPlatformDetailsFileUsages(),
     ]);
-    const images = repository.getState().images;
+    const { images } = index;
     const usedImages = [];
 
     for (const imageId of selectFolderImageIds({ images, folderId })) {

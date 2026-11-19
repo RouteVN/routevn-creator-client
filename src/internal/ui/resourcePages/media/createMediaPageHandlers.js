@@ -30,6 +30,9 @@ export const createMediaPageHandlers = ({
   suppressMobileDetailSheetOnEdit = false,
   onEnterKey,
   onEditKey,
+  // Checks whether the file explorer may delete an item, in place of the
+  // check every resource page shares.
+  validateFileExplorerDeletion,
   tagging,
   copy,
 }) => {
@@ -299,6 +302,7 @@ export const createMediaPageHandlers = ({
       resourceType,
       refresh: refreshData,
       copy: resolveCopy,
+      validateDeletion: validateFileExplorerDeletion,
     });
   const {
     focusKeyboardScope,

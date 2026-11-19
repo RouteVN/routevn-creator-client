@@ -273,8 +273,9 @@ export const checkProjectResourceUsage = async ({
   return usage;
 };
 
-// The scene snapshots read from storage in one query. Reading them in batches
-// keeps a large project from parsing every scene in one go.
+// The scenes read in one go, from storage or through the repository. Reading
+// them in batches keeps a large project from holding every scene's lines at
+// once.
 const IMAGE_USAGE_SCENE_BATCH_SIZE = 20;
 
 // The ids of a collection's items: the ones in its tree, in tree order, then
@@ -429,7 +430,10 @@ const addSceneImageUsages = ({
   trackedIds,
 }) => {
   const usagesByImageId = new Map();
-  const addUsage = (referencedId, line) => {
+  // A line is listed once for an image, with each of its actions that uses
+  // the image. A line's fields and actions are visited one after another, so
+  // the line being added to is the last one listed.
+  const addUsage = (referencedId, location, actionType) => {
     if (particleIds.has(referencedId)) {
       index.shownParticleIds.add(referencedId);
       return;
@@ -440,18 +444,27 @@ const addSceneImageUsages = ({
       usage = { id: scene.id, name: scene.name ?? "", lines: [] };
       usagesByImageId.set(referencedId, usage);
     }
-    if (line) {
+    if (!location) {
+      return;
+    }
+
+    let line = usage.lines.at(-1);
+    if (line?.lineId !== location.lineId) {
+      line = { ...location, actionTypes: [] };
       usage.lines.push(line);
     }
+    if (actionType) {
+      line.actionTypes.push(actionType);
+    }
   };
-  const addNodeUsages = (node, line) => {
+  const addNodeUsages = (node, location, actionType) => {
     const referencedIds = collectReferencedResourceIds({
       node,
       target: "scenes",
       resourceIds: trackedIds,
     });
     for (const referencedId of referencedIds) {
-      addUsage(referencedId, line);
+      addUsage(referencedId, location, actionType);
     }
   };
 
@@ -482,7 +495,7 @@ const addSceneImageUsages = ({
 
       addNodeUsages(lineFields, location);
       for (const [actionType, action] of Object.entries(actions ?? {})) {
-        addNodeUsages({ [actionType]: action }, { ...location, actionType });
+        addNodeUsages({ [actionType]: action }, location, actionType);
       }
     });
   }
@@ -547,6 +560,8 @@ export const buildImageUsageIndex = async ({ repository, store }) => {
   const index = {
     usagesByImageId: new Map(),
     shownParticleIds: new Set(),
+    // The images and their folders as they were when the index was built.
+    images: repositoryState.images,
   };
 
   addMainStateImageUsages({
@@ -611,11 +626,21 @@ export const buildImageUsageIndex = async ({ repository, store }) => {
     }
   }
 
-  if (unloadedSceneIds.length > 0) {
+  // The repository returns the whole project with the lines of the scenes
+  // asked for, so these are loaded in batches too.
+  for (
+    let start = 0;
+    start < unloadedSceneIds.length;
+    start += IMAGE_USAGE_SCENE_BATCH_SIZE
+  ) {
+    const batchSceneIds = unloadedSceneIds.slice(
+      start,
+      start + IMAGE_USAGE_SCENE_BATCH_SIZE,
+    );
     const loadedState = await repository.getContextState({
-      sceneIds: unloadedSceneIds,
+      sceneIds: batchSceneIds,
     });
-    for (const sceneId of unloadedSceneIds) {
+    for (const sceneId of batchSceneIds) {
       const loadedScene = loadedState.scenes?.items?.[sceneId];
       if (loadedScene) {
         addScene(sceneId, loadedScene);

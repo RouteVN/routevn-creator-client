@@ -164,9 +164,20 @@ const createTestProjectService = (overrides = {}) =>
     ...overrides,
   });
 
+const INDEXED_IMAGES = {
+  items: {
+    "image-1": { id: "image-1", type: "image", fileId: "file-image-1" },
+  },
+  tree: [{ id: "image-1" }],
+};
+
 // The image usage index as buildImageUsageIndex returns it, from the places
-// that use each image.
-const createImageUsageIndex = (usagesByImageId = {}) => ({
+// that use each image and the images it was built from.
+const createImageUsageIndex = (
+  usagesByImageId = {},
+  images = INDEXED_IMAGES,
+) => ({
+  images,
   usagesByImageId: new Map(
     Object.entries(usagesByImageId).map(([imageId, usages]) => [
       imageId,
@@ -340,6 +351,9 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     };
     repository.getRevision = () => 1;
     mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.buildImageUsageIndex.mockResolvedValue(
+      createImageUsageIndex({}, repository.getState().images),
+    );
     mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
       async (platform) =>
         platform === "windows" ? { iconFileId: "file-icon-1" } : undefined,
@@ -522,7 +536,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
           sectionName: "Section One",
           lineId: "line-1",
           lineNumber: 1,
-          actionType: "background",
+          actionTypes: ["background"],
         },
       ],
     };
@@ -666,65 +680,58 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     describe("of a folder", () => {
       // Folder One holds a used image, an unused one, and Folder Two, which
       // holds an image that platform details shows.
-      const createFolderRepository = () => {
-        const repository = {
-          revision: 1,
-          getRevision: () => repository.revision,
-          getState: vi.fn(() => ({
-            images: {
-              items: {
-                "folder-1": { id: "folder-1", type: "folder" },
-                "image-1": {
-                  id: "image-1",
-                  type: "image",
-                  name: "Image One",
-                  fileId: "file-image-1",
-                },
-                "image-2": {
-                  id: "image-2",
-                  type: "image",
-                  name: "Image Two",
-                  fileId: "file-image-2",
-                },
-                "folder-2": { id: "folder-2", type: "folder" },
-                "image-3": {
-                  id: "image-3",
-                  type: "image",
-                  name: "Image Three",
-                  fileId: "file-image-3",
-                },
-                "image-4": {
-                  id: "image-4",
-                  type: "image",
-                  name: "Image Four",
-                  fileId: "file-image-4",
-                },
-              },
-              tree: [
-                {
-                  id: "folder-1",
-                  children: [
-                    { id: "image-1" },
-                    { id: "image-2" },
-                    { id: "folder-2", children: [{ id: "image-3" }] },
-                  ],
-                },
-                { id: "image-4" },
-              ],
-            },
-          })),
-        };
-        mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
-        return repository;
+      const FOLDER_IMAGES = {
+        items: {
+          "folder-1": { id: "folder-1", type: "folder" },
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Image One",
+            fileId: "file-image-1",
+          },
+          "image-2": {
+            id: "image-2",
+            type: "image",
+            name: "Image Two",
+            fileId: "file-image-2",
+          },
+          "folder-2": { id: "folder-2", type: "folder" },
+          "image-3": {
+            id: "image-3",
+            type: "image",
+            name: "Image Three",
+            fileId: "file-image-3",
+          },
+          "image-4": {
+            id: "image-4",
+            type: "image",
+            name: "Image Four",
+            fileId: "file-image-4",
+          },
+        },
+        tree: [
+          {
+            id: "folder-1",
+            children: [
+              { id: "image-1" },
+              { id: "image-2" },
+              { id: "folder-2", children: [{ id: "image-3" }] },
+            ],
+          },
+          { id: "image-4" },
+        ],
       };
 
       it("lists the images that cannot be deleted, each with where it is used", async () => {
-        createFolderRepository();
+        createImageRepository();
         mocked.buildImageUsageIndex.mockResolvedValue(
-          createImageUsageIndex({
-            "image-1": { scenes: [sceneUsage] },
-            "image-4": { scenes: [sceneUsage] },
-          }),
+          createImageUsageIndex(
+            {
+              "image-1": { scenes: [sceneUsage] },
+              "image-4": { scenes: [sceneUsage] },
+            },
+            FOLDER_IMAGES,
+          ),
         );
         mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
           async (platform) =>
@@ -758,15 +765,18 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       });
 
       it("lets a folder be deleted when none of its images is used", async () => {
-        createFolderRepository();
+        createImageRepository();
         mocked.buildImageUsageIndex.mockResolvedValue(
-          createImageUsageIndex({
-            // A particle nothing shows does not keep its image.
-            "image-2": {
-              particles: [{ id: "particle-1", name: "Particle One" }],
+          createImageUsageIndex(
+            {
+              // A particle nothing shows does not keep its image.
+              "image-2": {
+                particles: [{ id: "particle-1", name: "Particle One" }],
+              },
+              "image-4": { scenes: [sceneUsage] },
             },
-            "image-4": { scenes: [sceneUsage] },
-          }),
+            FOLDER_IMAGES,
+          ),
         );
         const projectService = createProjectService();
 

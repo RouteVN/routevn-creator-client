@@ -21,7 +21,7 @@ const createLine = (lineNumber, overrides = {}) => ({
   sectionName: "Section One",
   lineId: `line-${lineNumber}`,
   lineNumber,
-  actionType: "background",
+  actionTypes: ["background"],
   ...overrides,
 });
 
@@ -35,7 +35,7 @@ const createSceneUsage = (id, name, lines) => ({
 const USAGES = [
   createSceneUsage("scene-1", "Scene One", [
     createLine(2),
-    createLine(5, { actionType: "visual" }),
+    createLine(5, { actionTypes: ["visual"] }),
   ]),
   createSceneUsage("scene-2", "Scene Two", [createLine(1)]),
   { type: "layout", id: "layout-1", name: "Layout One" },
@@ -201,8 +201,9 @@ describe("imageUsage.store", () => {
   it("names a line without the action when the action has no name, and by its section when it has no number", () => {
     const context = createLoadedContext([
       createSceneUsage("scene-1", "Scene One", [
-        createLine(3, { actionType: "somethingNew" }),
+        createLine(3, { actionTypes: ["somethingNew"] }),
         createLine(4, { lineNumber: undefined }),
+        createLine(5, { actionTypes: [] }),
       ]),
     ]);
     openDialog(context);
@@ -211,7 +212,25 @@ describe("imageUsage.store", () => {
       selectView(context)
         .dialogRows.filter((row) => row.kind === "line")
         .map((row) => row.name),
-    ).toEqual(["Section One - Line 3", "Section One"]);
+    ).toEqual(["Section One - Line 3", "Section One", "Section One - Line 5"]);
+  });
+
+  it("names every action of a line that uses the image", () => {
+    const context = createLoadedContext([
+      createSceneUsage("scene-1", "Scene One", [
+        createLine(3, { actionTypes: ["background", "visual"] }),
+      ]),
+    ]);
+    openDialog(context);
+
+    const view = selectView(context);
+    expect(
+      view.dialogRows
+        .filter((row) => row.kind === "line")
+        .map((row) => row.name),
+    ).toEqual(["Section One - Line 3 - Background, Visual"]);
+    // The line is one line, however many of its actions use the image.
+    expect(view.panelRows[0].meta).toBe("1 line");
   });
 
   it("shows the lines at once when a single scene uses the image", () => {

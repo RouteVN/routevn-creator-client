@@ -280,14 +280,14 @@ describe("buildImageUsageIndex", () => {
               sectionName: "Section 1",
               lineId: "line-1",
               lineNumber: 1,
-              actionType: "background",
+              actionTypes: ["background"],
             },
             {
               sectionId: "section-1",
               sectionName: "Section 1",
               lineId: "line-3",
               lineNumber: 3,
-              actionType: "background",
+              actionTypes: ["background"],
             },
           ],
         },
@@ -301,7 +301,7 @@ describe("buildImageUsageIndex", () => {
               sectionName: "Section 1",
               lineId: "line-7",
               lineNumber: 1,
-              actionType: "background",
+              actionTypes: ["background"],
             },
           ],
         },
@@ -346,7 +346,7 @@ describe("buildImageUsageIndex", () => {
               sectionName: "Section 1",
               lineId: "line-6",
               lineNumber: 2,
-              actionType: "visual",
+              actionTypes: ["visual"],
             },
           ],
         },
@@ -394,6 +394,91 @@ describe("buildImageUsageIndex", () => {
         },
       ],
     });
+  });
+
+  it("lists a line once when two of its actions use the image", async () => {
+    const { fullState, repository, store } = createRepositoryFixture();
+    const line =
+      fullState.scenes.items["scene-rooftop"].sections.items["section-3"].lines
+        .items["line-6"];
+    line.actions.background = {
+      resourceId: "image-button",
+      resourceType: "image",
+    };
+    repository.getState = () => structuredClone(fullState);
+
+    const index = await buildImageUsageIndex({ repository, store });
+
+    expect(
+      selectImageUsage({ index, imageId: "image-button" }).usages[0].lines,
+    ).toEqual([
+      {
+        sectionId: "section-3",
+        sectionName: "Section 1",
+        lineId: "line-6",
+        lineNumber: 2,
+        actionTypes: ["visual", "background"],
+      },
+    ]);
+  });
+
+  it("keeps the images the index was built from", async () => {
+    const { repository, store } = createRepositoryFixture();
+
+    const index = await buildImageUsageIndex({ repository, store });
+
+    expect(index.images.items["image-bg"]).toMatchObject({
+      name: "Classroom",
+      fileId: "file-image-bg",
+    });
+    expect(index.images.tree).toHaveLength(6);
+  });
+
+  it("loads the scenes that have no stored snapshot in batches", async () => {
+    const state = structuredClone(initialProjectData);
+    state.images = createCollection([createImage("image-bg", "Classroom")]);
+    const fullScenes = Array.from({ length: 45 }, (_, sceneIndex) =>
+      createScene({
+        id: `scene-${sceneIndex}`,
+        name: `Scene ${sceneIndex}`,
+        sections: [
+          createSection({
+            id: `section-${sceneIndex}`,
+            name: "Section 1",
+            lines: [backgroundLine(`line-${sceneIndex}`, "image-bg")],
+          }),
+        ],
+      }),
+    );
+    const fullState = structuredClone(state);
+    fullState.scenes = createCollection(fullScenes);
+    const repositoryState = stripLines(fullState);
+    const repository = {
+      getState: () => structuredClone(repositoryState),
+      getContextState: vi.fn(async ({ sceneIds }) => {
+        const loadedState = structuredClone(repositoryState);
+        for (const sceneId of sceneIds) {
+          loadedState.scenes.items[sceneId] = structuredClone(
+            fullState.scenes.items[sceneId],
+          );
+        }
+        return loadedState;
+      }),
+    };
+    const store = { loadMaterializedViewCheckpoints: vi.fn(async () => []) };
+
+    const index = await buildImageUsageIndex({ repository, store });
+
+    expect(
+      repository.getContextState.mock.calls.map(
+        ([{ sceneIds }]) => sceneIds.length,
+      ),
+    ).toEqual([20, 20, 5]);
+    expect(
+      selectImageUsage({ index, imageId: "image-bg" }).usages.map(
+        (usage) => usage.id,
+      ),
+    ).toEqual(fullScenes.map((scene) => scene.id));
   });
 
   it("finds no usage for an image nothing uses", async () => {

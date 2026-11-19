@@ -677,6 +677,26 @@ describe("images handlers", () => {
     expect(deps.store.setItems).toHaveBeenCalledTimes(1);
   });
 
+  it("refuses a folder whose image comes into use between the check and the delete", async () => {
+    const deps = createFolderDeleteDeps();
+    deps.projectService.getImageFolderUsage
+      .mockResolvedValueOnce({ images: [], blocksDelete: false })
+      .mockResolvedValueOnce({
+        images: [
+          { id: "image-1", name: "Image One", usages: USED_IMAGE_USAGE.usages },
+        ],
+        blocksDelete: true,
+      });
+
+    await handleFileExplorerAction(deps, FOLDER_DELETE_EVENT);
+
+    expect(deps.projectService.getImageFolderUsage).toHaveBeenCalledTimes(2);
+    expect(deps.projectService.deleteImages).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Cannot delete folder. There are items in use.",
+    });
+  });
+
   it("alerts and deletes nothing when the folder's usage cannot be loaded", async () => {
     const consoleError = vi
       .spyOn(console, "error")
