@@ -170,6 +170,12 @@ package, and import rejects one that has them.
 The creator exports v3 when a character it carries has sprite tags, and v2
 otherwise, so a package without them opens in apps that read only v2.
 
+An animation in a package keeps its `thumbnailFileId` and carries no
+`thumbnailSourceHash`. App versions on `@routevn/creator-model` before 1.21.0
+read these schemas and reject a package whose animation has that field, so the
+exporter leaves it out, and the app that imports the animation draws its
+thumbnail again. Transforms, particles and layouts keep theirs.
+
 The creator exports only `package.kind`. Catalog metadata such as package id,
 name, version, description, publisher, or source may be supplied by a publishing
 system, but is not required in a creator-generated manifest.

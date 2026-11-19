@@ -1657,8 +1657,8 @@ every animation's when it opens, and leaving the animation editor requests
 that animation's. A hash on an animation needs `@routevn/creator-model` 1.21.0
 (schema 21). Opening the animations page saves thumbnails, so it writes to the
 project like an edit does: an older app version then asks to update before
-opening that project, and cannot import an asset package whose animations
-carry a hash.
+opening that project. An asset package leaves the hash out of its animations,
+so those app versions still import it (see `docs/import-packages.md`).
 
 The audio effects editor has undo and redo the same way. It keeps edits on the
 page and saves the whole audio effect when the page is left, so a step holds
