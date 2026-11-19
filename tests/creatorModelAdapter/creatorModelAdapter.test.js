@@ -4,6 +4,7 @@ import {
   toCreatorModelState,
   validateClientModelExtensionCommand,
 } from "../../src/internal/creatorModelAdapter.js";
+import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
 
 const createSpritesheetSprite = () => ({
   type: "spritesheet",
@@ -61,6 +62,84 @@ const createSpriteUpdateCommand = (data) => ({
 });
 
 describe("creatorModelAdapter", () => {
+  it("saves an animation's thumbnail with its source hash, and keeps both through the editor's save", () => {
+    const file = (id) => ({
+      id,
+      type: "image",
+      mimeType: "image/jpeg",
+      size: 1,
+      sha256: `${id}-sha256`,
+    });
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.files = {
+      items: { "thumb-1": file("thumb-1"), "thumb-2": file("thumb-2") },
+      tree: [{ id: "thumb-1" }, { id: "thumb-2" }],
+    };
+    repositoryState.animations = {
+      items: {
+        "animation-1": {
+          id: "animation-1",
+          type: "animation",
+          name: "Animation One",
+          // Saved before thumbnails had a hash.
+          thumbnailFileId: "thumb-1",
+          animation: {
+            type: "update",
+            tween: { alpha: { keyframes: [{ duration: 100, value: 1 }] } },
+          },
+        },
+      },
+      tree: [{ id: "animation-1" }],
+    };
+    const update = (state, data) =>
+      applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: state,
+        command: {
+          type: "animation.update",
+          payload: { animationId: "animation-1", data },
+        },
+      });
+
+    const saved = update(repositoryState, {
+      thumbnailFileId: "thumb-2",
+      thumbnailSourceHash: "hash-2",
+    });
+
+    expect(saved.error).toBeUndefined();
+    expect(saved.valid).toBe(true);
+    expect(saved.repositoryState.animations.items["animation-1"]).toMatchObject(
+      { thumbnailFileId: "thumb-2", thumbnailSourceHash: "hash-2" },
+    );
+    expect(
+      toCreatorModelState(saved.repositoryState).animations.items[
+        "animation-1"
+      ],
+    ).toMatchObject({
+      thumbnailFileId: "thumb-2",
+      thumbnailSourceHash: "hash-2",
+    });
+
+    // The editor saves the whole animation, without its thumbnail.
+    const edited = update(saved.repositoryState, {
+      name: "Animation Two",
+      description: "",
+      animation: {
+        type: "update",
+        tween: { alpha: { keyframes: [{ duration: 300, value: 0 }] } },
+      },
+      cameraTracks: undefined,
+    });
+
+    expect(edited.valid).toBe(true);
+    expect(
+      edited.repositoryState.animations.items["animation-1"],
+    ).toMatchObject({
+      name: "Animation Two",
+      thumbnailFileId: "thumb-2",
+      thumbnailSourceHash: "hash-2",
+    });
+  });
+
   it("normalizes legacy stored number variables without defaults to zero", () => {
     const state = {
       variables: {
