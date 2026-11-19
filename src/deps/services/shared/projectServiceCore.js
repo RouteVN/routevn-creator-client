@@ -10,8 +10,11 @@ import { createProjectRepositoryService } from "./projectRepositoryService.js";
 import { createResourcePackageImportService } from "./resourcePackageImportService.js";
 import { importImageFile as importProjectImageFile } from "./resourceImports.js";
 import {
+  buildImageUsageIndex,
+  selectFolderImageIds,
   checkProjectResourceUsage,
   checkSceneDeleteUsage,
+  selectImageUsage,
 } from "./resourceUsage.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import { upgradeResetStoryActions } from "../../../internal/navigationActions.js";
@@ -56,6 +59,7 @@ const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
 const LOAD_MENU_ELEMENT_ID = "icn4dknq2kyp";
 const LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID = "5rwEfyx2GBEi";
 const RELEASE_PLATFORM_IDS = ["web", "windows", "macos", "android", "ios"];
+const IMAGE_USAGE_INDEX_BUILD_ATTEMPTS = 3;
 
 export const createProjectServiceCore = ({
   router,
@@ -825,19 +829,8 @@ export const createProjectServiceCore = ({
     });
   };
 
-  const checkPlatformDetailsImageUsage = async ({
-    itemId,
-    repository,
-  } = {}) => {
-    const image = repository.getState()?.images?.items?.[itemId];
-    if (image?.type !== "image" || !image.fileId) {
-      return {
-        inProps: {},
-        isUsed: false,
-        count: 0,
-      };
-    }
-
+  // The platform details fields that show an image file, by file id.
+  const loadPlatformDetailsFileUsages = async () => {
     const platformDetailsByPlatform = await Promise.all(
       RELEASE_PLATFORM_IDS.map(async (platform) => ({
         platform,
@@ -845,14 +838,45 @@ export const createProjectServiceCore = ({
           await repositoryService.getCurrentPlatformDetails(platform),
       })),
     );
-    const usages = [];
+    const usagesByFileId = new Map();
     for (const { platform, applicationInfo } of platformDetailsByPlatform) {
       for (const property of PLATFORM_DETAILS_IMAGE_PROPERTIES) {
-        if (applicationInfo?.[property] === image.fileId) {
-          usages.push({ property: `${platform}.${property}` });
+        const fileId = applicationInfo?.[property];
+        if (!fileId) {
+          continue;
         }
+
+        const usages = usagesByFileId.get(fileId) ?? [];
+        usages.push({ platform, property });
+        usagesByFileId.set(fileId, usages);
       }
     }
+
+    return usagesByFileId;
+  };
+
+  // The platform details fields that show the image's file.
+  const findPlatformDetailsImageUsages = async ({
+    itemId,
+    repository,
+  } = {}) => {
+    const image = repository.getState()?.images?.items?.[itemId];
+    if (image?.type !== "image" || !image.fileId) {
+      return [];
+    }
+
+    return (await loadPlatformDetailsFileUsages()).get(image.fileId) ?? [];
+  };
+
+  const checkPlatformDetailsImageUsage = async ({
+    itemId,
+    repository,
+  } = {}) => {
+    const usages = (
+      await findPlatformDetailsImageUsages({ itemId, repository })
+    ).map(({ platform, property }) => ({
+      property: `${platform}.${property}`,
+    }));
 
     return {
       inProps: usages.length > 0 ? { platformDetails: usages } : {},
@@ -880,17 +904,138 @@ export const createProjectServiceCore = ({
     return checkPlatformDetailsImageUsage({ itemId, repository });
   };
 
-  const deleteImageIfUnused = async ({ imageId, checkTargets = [] } = {}) => {
-    const repository = await ensureRepository();
-    const platformDetailsUsage = await checkPlatformDetailsImageUsage({
-      itemId: imageId,
-      repository,
-    });
-    if (platformDetailsUsage.isUsed) {
-      return { deleted: false, usage: platformDetailsUsage };
+  // Where every image is used, kept until the project changes. Building it
+  // reads every scene's lines, so the pages that show or check image usage
+  // share one build per project revision.
+  let imageUsageIndexCache;
+
+  const startImageUsageIndexBuild = (repository) => {
+    const revision = repository.getRevision();
+    if (
+      imageUsageIndexCache?.repository === repository &&
+      imageUsageIndexCache.revision === revision
+    ) {
+      return imageUsageIndexCache;
     }
 
-    return collabService.deleteImageIfUnused({ imageId, checkTargets });
+    const cacheEntry = {
+      repository,
+      revision,
+      promise: buildImageUsageIndex({
+        repository,
+        store: repositoryService.getCachedStore(),
+      }),
+    };
+    imageUsageIndexCache = cacheEntry;
+    cacheEntry.promise.catch(() => {
+      if (imageUsageIndexCache === cacheEntry) {
+        imageUsageIndexCache = undefined;
+      }
+    });
+
+    return cacheEntry;
+  };
+
+  // A change that lands while the index is built can leave it out of date,
+  // so it is built again. After a few builds the newest one is returned as
+  // it is, rather than waiting for a project that keeps changing.
+  const loadImageUsageIndex = async () => {
+    const repository = await ensureRepository();
+    let index;
+    for (
+      let attempt = 0;
+      attempt < IMAGE_USAGE_INDEX_BUILD_ATTEMPTS;
+      attempt += 1
+    ) {
+      const cacheEntry = startImageUsageIndexBuild(repository);
+      index = await cacheEntry.promise;
+      if (repository.getRevision() === cacheEntry.revision) {
+        break;
+      }
+    }
+
+    return index;
+  };
+
+  // Builds the image usage index ahead of the first lookup.
+  const prepareImageUsage = async () => {
+    await loadImageUsageIndex();
+  };
+
+  // An image that platform details shows cannot be deleted.
+  const addPlatformDetailsUsages = (usage, platformDetailsUsages = []) => {
+    for (const { platform, property } of platformDetailsUsages) {
+      usage.usages.push({ type: "platformDetails", platform, property });
+    }
+    if (platformDetailsUsages.length > 0) {
+      usage.blocksDelete = true;
+    }
+  };
+
+  // Where the image is used: `usages` lists the scenes (with their lines),
+  // layouts, controls, animations, particles and platform details fields, and
+  // `blocksDelete` tells whether any of them keeps it from being deleted.
+  const getImageUsage = async ({ imageId } = {}) => {
+    const repository = await ensureRepository();
+    const [index, platformDetailsUsages] = await Promise.all([
+      loadImageUsageIndex(),
+      findPlatformDetailsImageUsages({ itemId: imageId, repository }),
+    ]);
+    const usage = selectImageUsage({ index, imageId });
+    addPlatformDetailsUsages(usage, platformDetailsUsages);
+
+    return usage;
+  };
+
+  // The images in a folder, and in the folders inside it, that cannot be
+  // deleted, each with where it is used. The folder cannot be deleted while
+  // it holds any, which `blocksDelete` tells.
+  const getImageFolderUsage = async ({ folderId } = {}) => {
+    const repository = await ensureRepository();
+    const [index, platformDetailsUsagesByFileId] = await Promise.all([
+      loadImageUsageIndex(),
+      loadPlatformDetailsFileUsages(),
+    ]);
+    const images = repository.getState().images;
+    const usedImages = [];
+
+    for (const imageId of selectFolderImageIds({ images, folderId })) {
+      const image = images.items[imageId];
+      const usage = selectImageUsage({ index, imageId });
+      addPlatformDetailsUsages(
+        usage,
+        platformDetailsUsagesByFileId.get(image.fileId),
+      );
+      if (usage.blocksDelete) {
+        usedImages.push({
+          id: imageId,
+          name: image.name,
+          usages: usage.usages,
+        });
+      }
+    }
+
+    return {
+      images: usedImages,
+      blocksDelete: usedImages.length > 0,
+    };
+  };
+
+  const deleteImageIfUnused = async ({ imageId } = {}) => {
+    const usage = await getImageUsage({ imageId });
+    if (usage.blocksDelete) {
+      return {
+        deleted: false,
+        usage: {
+          isUsed: true,
+          count: usage.usages.length,
+          usages: usage.usages,
+        },
+      };
+    }
+
+    // The usage was checked above, so the delete skips its own check.
+    return collabService.deleteImageIfUnused({ imageId, checkTargets: [] });
   };
 
   const checkSceneDeletionUsage = async ({ sceneId } = {}) => {
@@ -1062,6 +1207,9 @@ export const createProjectServiceCore = ({
     updateVersionInProject: collabService.updateVersionInProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,
     deleteImageIfUnused,
+    getImageUsage,
+    getImageFolderUsage,
+    prepareImageUsage,
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,
     repairSoundFileType,
     deleteVideoIfUnused: collabService.deleteVideoIfUnused,

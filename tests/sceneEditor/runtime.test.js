@@ -414,6 +414,37 @@ describe("renderSceneEditorState", () => {
     });
   });
 
+  it("enters at the line a link asks for, or at the section's entry line when the section has no such line", () => {
+    const scene = {
+      sections: [
+        {
+          id: "section-1",
+          initialLineId: "line-entry",
+          lines: [{ id: "line-1" }, { id: "line-entry" }, { id: "line-3" }],
+        },
+      ],
+    };
+
+    expect(
+      resolveSceneEditorEntrySelection(scene, {
+        sectionId: "section-1",
+        entryLineId: "line-3",
+      }),
+    ).toEqual({
+      sectionId: "section-1",
+      lineId: "line-3",
+    });
+    expect(
+      resolveSceneEditorEntrySelection(scene, {
+        sectionId: "section-1",
+        entryLineId: "line-deleted",
+      }),
+    ).toEqual({
+      sectionId: "section-1",
+      lineId: "line-entry",
+    });
+  });
+
   it("resolves scene entry from initial section or falls back to first section", () => {
     expect(
       resolveSceneEditorEntrySelection({

@@ -1349,6 +1349,7 @@ export const syncSceneEditorRoutePayload = async (
 
     const entrySelection = resolveSceneEditorEntrySelection(scene, {
       sectionId: routePayload.sectionId,
+      entryLineId: routePayload.entryLineId,
     });
     store.setSelectedSectionId({
       selectedSectionId: entrySelection.sectionId,
@@ -1361,6 +1362,7 @@ export const syncSceneEditorRoutePayload = async (
       s: nextSceneId,
     };
     delete nextPayload.sceneId;
+    delete nextPayload.entryLineId;
     if (entrySelection.sectionId) {
       nextPayload.sectionId = entrySelection.sectionId;
     } else {

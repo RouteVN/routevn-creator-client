@@ -24,6 +24,8 @@ import {
   startDeletingItem,
 } from "../../src/pages/images/images.store.js";
 import {
+  handleAfterMount,
+  handleBlockedDeleteDialogClose,
   handleCreateTagFormAction,
   handleCreateTagDialogClose,
   handleDetailTagAddOptionClick,
@@ -92,6 +94,78 @@ const createDeleteAppService = () => ({
   reportError: vi.fn(),
   getAppCopy: () => EN_I18N.appPage,
 });
+
+// What the project service answers for an image nothing uses, and for one a
+// scene uses.
+const UNUSED_IMAGE_USAGE = { usages: [], blocksDelete: false };
+const USED_IMAGE_USAGE = {
+  usages: [{ type: "scene", id: "scene-1", name: "Scene One", lines: [] }],
+  blocksDelete: true,
+};
+
+const createDeleteDialogDeps = ({ usage = UNUSED_IMAGE_USAGE } = {}) => ({
+  i18n: EN_I18N,
+  projectService: {
+    getImageUsage: vi.fn(async () => usage),
+    deleteImageIfUnused: vi.fn(),
+  },
+  appService: createDeleteAppService(),
+  store: {
+    selectSelectedItemId: vi.fn(() => "image-1"),
+    selectImageItemById: vi.fn(() => ({ id: "image-1", type: "image" })),
+    openDeleteDialog: vi.fn(),
+    openBlockedDeleteDialog: vi.fn(),
+  },
+  render: vi.fn(),
+});
+
+// A folder delete from the file explorer, over a project that holds only
+// that folder.
+const createFolderDeleteDeps = ({
+  folderUsage = { images: [], blocksDelete: false },
+} = {}) => {
+  const repositoryState = {
+    images: {
+      items: {
+        "folder-1": { id: "folder-1", type: "folder", name: "Folder One" },
+      },
+      tree: [{ id: "folder-1" }],
+    },
+  };
+
+  return {
+    i18n: EN_I18N,
+    projectService: {
+      getImageFolderUsage: vi.fn(async () => folderUsage),
+      ensureRepository: vi.fn(async () => {}),
+      getState: vi.fn(() => repositoryState),
+      getRepositoryState: vi.fn(() => repositoryState),
+      deleteImages: vi.fn(async ({ imageIds }) => {
+        for (const imageId of imageIds) {
+          delete repositoryState.images.items[imageId];
+        }
+        repositoryState.images.tree = [];
+      }),
+    },
+    appService: createDeleteAppService(),
+    store: {
+      selectImageItemById: vi.fn(() => undefined),
+      selectFolderById: vi.fn(() => ({ id: "folder-1", type: "folder" })),
+      openBlockedFolderDeleteDialog: vi.fn(),
+      setTagsData: vi.fn(),
+      setItems: vi.fn(),
+      setProjectResolution: vi.fn(),
+    },
+    render: vi.fn(),
+    refs: {},
+  };
+};
+
+const FOLDER_DELETE_EVENT = {
+  _event: {
+    detail: { item: { value: "delete-item" }, itemId: "folder-1" },
+  },
+};
 
 describe("images handlers", () => {
   it("closes the native preview dialog even while a post-swipe click is suppressed", () => {
@@ -472,19 +546,12 @@ describe("images handlers", () => {
     });
   });
 
-  it("opens a confirmation dialog for selected mobile detail image deletes", () => {
+  it("opens a confirmation dialog for selected mobile detail image deletes", async () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
-    const deps = {
-      i18n: EN_I18N,
-      store: {
-        selectSelectedItemId: vi.fn(() => "image-1"),
-        openDeleteDialog: vi.fn(),
-      },
-      render: vi.fn(),
-    };
+    const deps = createDeleteDialogDeps();
 
-    handleMobileDetailDeleteClick(deps, {
+    await handleMobileDetailDeleteClick(deps, {
       _event: {
         preventDefault,
         stopPropagation,
@@ -493,24 +560,19 @@ describe("images handlers", () => {
 
     expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.getImageUsage).toHaveBeenCalledWith({
+      imageId: "image-1",
+    });
     expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
       itemId: "image-1",
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
 
-  it("opens a confirmation dialog instead of deleting an image directly", () => {
-    const deps = {
-      projectService: {
-        deleteImageIfUnused: vi.fn(),
-      },
-      store: {
-        openDeleteDialog: vi.fn(),
-      },
-      render: vi.fn(),
-    };
+  it("opens a confirmation dialog instead of deleting an image directly", async () => {
+    const deps = createDeleteDialogDeps();
 
-    handleItemDelete(deps, {
+    await handleItemDelete(deps, {
       _event: {
         detail: {
           itemId: "image-1",
@@ -521,21 +583,13 @@ describe("images handlers", () => {
     expect(deps.store.openDeleteDialog).toHaveBeenCalledWith({
       itemId: "image-1",
     });
+    expect(deps.store.openBlockedDeleteDialog).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(1);
     expect(deps.projectService.deleteImageIfUnused).not.toHaveBeenCalled();
   });
 
   it("opens the same confirmation dialog for file explorer image deletes", async () => {
-    const deps = {
-      store: {
-        selectImageItemById: vi.fn(() => ({
-          id: "image-1",
-          type: "image",
-        })),
-        openDeleteDialog: vi.fn(),
-      },
-      render: vi.fn(),
-    };
+    const deps = createDeleteDialogDeps();
 
     await handleFileExplorerAction(deps, {
       _event: {
@@ -550,6 +604,167 @@ describe("images handlers", () => {
       itemId: "image-1",
     });
     expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      "the grid",
+      (deps) =>
+        handleItemDelete(deps, { _event: { detail: { itemId: "image-1" } } }),
+    ],
+    [
+      "the file explorer",
+      (deps) =>
+        handleFileExplorerAction(deps, {
+          _event: {
+            detail: { item: { value: "delete-item" }, itemId: "image-1" },
+          },
+        }),
+    ],
+    [
+      "the mobile detail sheet",
+      (deps) => handleMobileDetailDeleteClick(deps, { _event: {} }),
+    ],
+  ])(
+    "shows where a used image is used, without asking to confirm, when it is deleted from %s",
+    async (_source, deleteImage) => {
+      const deps = createDeleteDialogDeps({ usage: USED_IMAGE_USAGE });
+
+      await deleteImage(deps);
+
+      expect(deps.store.openBlockedDeleteDialog).toHaveBeenCalledWith({
+        itemId: "image-1",
+      });
+      expect(deps.store.openDeleteDialog).not.toHaveBeenCalled();
+      expect(deps.render).toHaveBeenCalledTimes(1);
+      expect(deps.projectService.deleteImageIfUnused).not.toHaveBeenCalled();
+    },
+  );
+
+  it("shows the used images of a folder instead of deleting it", async () => {
+    const deps = createFolderDeleteDeps({
+      folderUsage: {
+        images: [
+          { id: "image-1", name: "Image One", usages: USED_IMAGE_USAGE.usages },
+        ],
+        blocksDelete: true,
+      },
+    });
+
+    await handleFileExplorerAction(deps, FOLDER_DELETE_EVENT);
+
+    expect(deps.projectService.getImageFolderUsage).toHaveBeenCalledWith({
+      folderId: "folder-1",
+    });
+    expect(deps.store.openBlockedFolderDeleteDialog).toHaveBeenCalledWith({
+      folderId: "folder-1",
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.deleteImages).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("deletes a folder that holds no used image", async () => {
+    const deps = createFolderDeleteDeps();
+
+    await handleFileExplorerAction(deps, FOLDER_DELETE_EVENT);
+
+    expect(deps.projectService.deleteImages).toHaveBeenCalledWith({
+      imageIds: ["folder-1"],
+    });
+    expect(deps.store.openBlockedFolderDeleteDialog).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.store.setItems).toHaveBeenCalledTimes(1);
+  });
+
+  it("alerts and deletes nothing when the folder's usage cannot be loaded", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const error = new Error("scene could not be read");
+    const deps = createFolderDeleteDeps();
+    deps.projectService.getImageFolderUsage.mockRejectedValue(error);
+
+    await handleFileExplorerAction(deps, FOLDER_DELETE_EVENT);
+    consoleError.mockRestore();
+
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    const { message } = deps.appService.showAlert.mock.calls[0][0];
+    expect(message).toContain("Failed to delete resource.");
+    expect(message).toContain("scene could not be read");
+    expect(deps.projectService.deleteImages).not.toHaveBeenCalled();
+    expect(deps.store.openBlockedFolderDeleteDialog).not.toHaveBeenCalled();
+  });
+
+  it("alerts and opens no dialog when the image's usage cannot be loaded", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const error = new Error("scene could not be read");
+    const deps = createDeleteDialogDeps();
+    deps.projectService.getImageUsage.mockRejectedValue(error);
+
+    await handleItemDelete(deps, {
+      _event: { detail: { itemId: "image-1" } },
+    });
+    consoleError.mockRestore();
+
+    expect(deps.appService.reportError).toHaveBeenCalledWith(error, {
+      operation: "resourcePage.mutation",
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+    const { message } = deps.appService.showAlert.mock.calls[0][0];
+    expect(message).toContain("Failed to delete resource.");
+    expect(message).toContain("scene could not be read");
+    expect(deps.store.openDeleteDialog).not.toHaveBeenCalled();
+    expect(deps.store.openBlockedDeleteDialog).not.toHaveBeenCalled();
+  });
+
+  it("closes the list of where a used image is used", () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const deps = {
+      store: { closeBlockedDeleteDialog: vi.fn() },
+      render: vi.fn(),
+      refs: {},
+    };
+
+    handleBlockedDeleteDialogClose(deps);
+
+    expect(deps.store.closeBlockedDeleteDialog).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts finding where images are used when the page mounts", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const deps = {
+      projectService: { prepareImageUsage: vi.fn(async () => {}) },
+      refs: {},
+    };
+
+    await handleAfterMount(deps);
+
+    expect(deps.projectService.prepareImageUsage).toHaveBeenCalledTimes(1);
+  });
+
+  it("mounts the page even when finding where images are used fails", async () => {
+    globalThis.requestAnimationFrame = (callback) => callback();
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const deps = {
+      projectService: {
+        prepareImageUsage: vi.fn(async () => {
+          throw new Error("scene could not be read");
+        }),
+      },
+      refs: {},
+    };
+
+    await expect(handleAfterMount(deps)).resolves.toBeUndefined();
+    await Promise.resolve();
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    consoleError.mockRestore();
   });
 
   it("deletes confirmed images and clears the selection", async () => {
@@ -580,7 +795,6 @@ describe("images handlers", () => {
     expect(deps.store.closeDeleteDialog).toHaveBeenCalledTimes(1);
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
-      checkTargets: ["scenes", "layouts", "controls", "animations"],
     });
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: undefined,
@@ -614,7 +828,6 @@ describe("images handlers", () => {
 
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
-      checkTargets: ["scenes", "layouts", "controls", "animations"],
     });
     expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
     const { message, title } = deps.appService.showAlert.mock.calls[0][0];
@@ -624,7 +837,7 @@ describe("images handlers", () => {
     expect(deps.render).toHaveBeenCalled();
   });
 
-  it("tells the user an image in use cannot be deleted", async () => {
+  it("shows where the image is used when it came into use before the confirmed delete ran", async () => {
     globalThis.requestAnimationFrame = (callback) => callback();
     const deps = {
       i18n: EN_I18N,
@@ -637,15 +850,16 @@ describe("images handlers", () => {
         })),
       },
       appService: createDeleteAppService(),
-      store: createDeleteGuardStore(),
+      store: createDeleteGuardStore({ openBlockedDeleteDialog: vi.fn() }),
       render: vi.fn(),
     };
 
     await handleDeleteDialogConfirm(deps);
 
-    expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message: "Cannot delete resource, it is currently in use.",
+    expect(deps.store.openBlockedDeleteDialog).toHaveBeenCalledWith({
+      itemId: "image-1",
     });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalled();
   });
 
@@ -728,7 +942,7 @@ describe("images handlers", () => {
         })),
       },
       appService: createDeleteAppService(),
-      store: createDeleteGuardStore(),
+      store: createDeleteGuardStore({ openBlockedDeleteDialog: vi.fn() }),
       render: vi.fn(),
     };
 
@@ -736,7 +950,7 @@ describe("images handlers", () => {
     await handleDeleteDialogConfirm(deps);
 
     expect(deps.projectService.deleteImageIfUnused).toHaveBeenCalledTimes(2);
-    expect(deps.appService.showAlert).toHaveBeenCalledTimes(2);
+    expect(deps.store.openBlockedDeleteDialog).toHaveBeenCalledTimes(2);
   });
 
   it("marks pending uploads with the created image id before importing", async () => {

@@ -4,6 +4,7 @@ const mocked = vi.hoisted(() => ({
   importImageFile: vi.fn(),
   checkProjectResourceUsage: vi.fn(),
   checkSceneDeleteUsage: vi.fn(),
+  buildImageUsageIndex: vi.fn(),
   extractFontWeightCapabilities: vi.fn(),
   fetch: vi.fn(),
   repositoryService: {
@@ -111,10 +112,19 @@ vi.mock("../../src/deps/services/shared/resourceImports.js", () => ({
   importImageFile: mocked.importImageFile,
 }));
 
-vi.mock("../../src/deps/services/shared/resourceUsage.js", () => ({
-  checkProjectResourceUsage: mocked.checkProjectResourceUsage,
-  checkSceneDeleteUsage: mocked.checkSceneDeleteUsage,
-}));
+vi.mock(
+  "../../src/deps/services/shared/resourceUsage.js",
+  async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+      checkProjectResourceUsage: mocked.checkProjectResourceUsage,
+      checkSceneDeleteUsage: mocked.checkSceneDeleteUsage,
+      buildImageUsageIndex: mocked.buildImageUsageIndex,
+      selectFolderImageIds: actual.selectFolderImageIds,
+      selectImageUsage: actual.selectImageUsage,
+    };
+  },
+);
 
 vi.mock("../../src/internal/fontCapabilities.js", async (importOriginal) => {
   const actual = await importOriginal();
@@ -154,6 +164,43 @@ const createTestProjectService = (overrides = {}) =>
     ...overrides,
   });
 
+// The image usage index as buildImageUsageIndex returns it, from the places
+// that use each image.
+const createImageUsageIndex = (usagesByImageId = {}) => ({
+  usagesByImageId: new Map(
+    Object.entries(usagesByImageId).map(([imageId, usages]) => [
+      imageId,
+      {
+        scenes: [],
+        layouts: [],
+        controls: [],
+        animations: [],
+        particles: [],
+        ...usages,
+      },
+    ]),
+  ),
+  shownParticleIds: new Set(),
+});
+
+const createProjectService = () =>
+  createProjectServiceCore({
+    router: {
+      getPayload: () => ({ p: "project-1" }),
+    },
+    db: {},
+    filePicker: {},
+    idGenerator: () => "generated-id",
+    now: () => 0,
+    collabLog: () => {},
+    creatorVersion: 1,
+    storageAdapter: {
+      initializeProject: vi.fn(),
+    },
+    fileAdapter: {},
+    collabAdapter: {},
+  });
+
 describe("projectServiceCore releaseProjectRuntime", () => {
   beforeEach(() => {
     mocked.importImageFile.mockReset();
@@ -189,6 +236,10 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.projectStore.app.set.mockReset();
     mocked.checkProjectResourceUsage.mockReset();
     mocked.checkSceneDeleteUsage.mockReset();
+    mocked.buildImageUsageIndex.mockReset();
+    mocked.buildImageUsageIndex.mockImplementation(async () =>
+      createImageUsageIndex(),
+    );
 
     mocked.repositoryService.getCachedStore.mockReturnValue(
       mocked.projectStore,
@@ -287,6 +338,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
         layouts: { items: {} },
       })),
     };
+    repository.getRevision = () => 1;
     mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
     mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
       async (platform) =>
@@ -311,18 +363,19 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     });
 
     await expect(
-      projectService.deleteImageIfUnused({
-        imageId: "image-1",
-        checkTargets: ["scenes", "layouts"],
-      }),
+      projectService.deleteImageIfUnused({ imageId: "image-1" }),
     ).resolves.toEqual({
       deleted: false,
       usage: {
-        inProps: {
-          platformDetails: [{ property: "windows.iconFileId" }],
-        },
         isUsed: true,
         count: 1,
+        usages: [
+          {
+            type: "platformDetails",
+            platform: "windows",
+            property: "iconFileId",
+          },
+        ],
       },
     });
     expect(mocked.collabService.deleteImageIfUnused).not.toHaveBeenCalled();
@@ -406,6 +459,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
         layouts: { items: {} },
       })),
     };
+    repository.getRevision = () => 1;
     mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
     mocked.collabService.deleteImageIfUnused.mockResolvedValue({
       deleted: true,
@@ -429,14 +483,313 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     });
 
     await expect(
-      projectService.deleteImageIfUnused({
-        imageId: "image-1",
-        checkTargets: ["scenes", "layouts"],
-      }),
+      projectService.deleteImageIfUnused({ imageId: "image-1" }),
     ).resolves.toEqual({ deleted: true });
+    // The index already checked the usage, so the delete skips its own check.
     expect(mocked.collabService.deleteImageIfUnused).toHaveBeenCalledWith({
       imageId: "image-1",
-      checkTargets: ["scenes", "layouts"],
+      checkTargets: [],
+    });
+  });
+
+  describe("image usage", () => {
+    const createImageRepository = () => {
+      const repository = {
+        revision: 1,
+        getRevision: () => repository.revision,
+        getState: vi.fn(() => ({
+          images: {
+            items: {
+              "image-1": {
+                id: "image-1",
+                type: "image",
+                fileId: "file-image-1",
+              },
+            },
+          },
+        })),
+      };
+      mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+      return repository;
+    };
+
+    const sceneUsage = {
+      id: "scene-1",
+      name: "Scene One",
+      lines: [
+        {
+          sectionId: "section-1",
+          sectionName: "Section One",
+          lineId: "line-1",
+          lineNumber: 1,
+          actionType: "background",
+        },
+      ],
+    };
+
+    it("lists where an image is used, with the platform details that use its file last", async () => {
+      createImageRepository();
+      mocked.buildImageUsageIndex.mockResolvedValue(
+        createImageUsageIndex({ "image-1": { scenes: [sceneUsage] } }),
+      );
+      mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
+        async (platform) =>
+          platform === "web"
+            ? { loadingBackgroundFileId: "file-image-1" }
+            : undefined,
+      );
+      const projectService = createProjectService();
+
+      await expect(
+        projectService.getImageUsage({ imageId: "image-1" }),
+      ).resolves.toEqual({
+        blocksDelete: true,
+        usages: [
+          { type: "scene", ...sceneUsage },
+          {
+            type: "platformDetails",
+            platform: "web",
+            property: "loadingBackgroundFileId",
+          },
+        ],
+      });
+    });
+
+    it("refuses to delete an image a scene uses and lists the scene", async () => {
+      createImageRepository();
+      mocked.buildImageUsageIndex.mockResolvedValue(
+        createImageUsageIndex({ "image-1": { scenes: [sceneUsage] } }),
+      );
+      const projectService = createProjectService();
+
+      await expect(
+        projectService.deleteImageIfUnused({ imageId: "image-1" }),
+      ).resolves.toEqual({
+        deleted: false,
+        usage: {
+          isUsed: true,
+          count: 1,
+          usages: [{ type: "scene", ...sceneUsage }],
+        },
+      });
+      expect(mocked.collabService.deleteImageIfUnused).not.toHaveBeenCalled();
+    });
+
+    it("deletes an image that only a particle nothing shows uses", async () => {
+      createImageRepository();
+      mocked.buildImageUsageIndex.mockResolvedValue(
+        createImageUsageIndex({
+          "image-1": {
+            particles: [{ id: "particle-1", name: "Particle One" }],
+          },
+        }),
+      );
+      mocked.collabService.deleteImageIfUnused.mockResolvedValue({
+        deleted: true,
+      });
+      const projectService = createProjectService();
+
+      await expect(
+        projectService.getImageUsage({ imageId: "image-1" }),
+      ).resolves.toEqual({
+        blocksDelete: false,
+        usages: [
+          {
+            type: "particle",
+            id: "particle-1",
+            name: "Particle One",
+            isShown: false,
+          },
+        ],
+      });
+      await expect(
+        projectService.deleteImageIfUnused({ imageId: "image-1" }),
+      ).resolves.toEqual({ deleted: true });
+    });
+
+    it("builds the index once for a project revision and again after the project changes", async () => {
+      const repository = createImageRepository();
+      const projectService = createProjectService();
+
+      await projectService.prepareImageUsage();
+      await projectService.getImageUsage({ imageId: "image-1" });
+      await projectService.getImageUsage({ imageId: "image-2" });
+
+      expect(mocked.buildImageUsageIndex).toHaveBeenCalledTimes(1);
+      expect(mocked.buildImageUsageIndex).toHaveBeenCalledWith({
+        repository,
+        store: mocked.projectStore,
+      });
+
+      repository.revision = 2;
+      await projectService.getImageUsage({ imageId: "image-1" });
+
+      expect(mocked.buildImageUsageIndex).toHaveBeenCalledTimes(2);
+    });
+
+    it("builds the index again when the project changes while it is built", async () => {
+      const repository = createImageRepository();
+      mocked.buildImageUsageIndex
+        .mockImplementationOnce(async () => {
+          // A scene starts using the image while the first index is built.
+          repository.revision = 2;
+          return createImageUsageIndex();
+        })
+        .mockImplementationOnce(async () =>
+          createImageUsageIndex({ "image-1": { scenes: [sceneUsage] } }),
+        );
+      const projectService = createProjectService();
+
+      await expect(
+        projectService.getImageUsage({ imageId: "image-1" }),
+      ).resolves.toEqual({
+        blocksDelete: true,
+        usages: [{ type: "scene", ...sceneUsage }],
+      });
+      expect(mocked.buildImageUsageIndex).toHaveBeenCalledTimes(2);
+    });
+
+    it("stops building the index again for a project that keeps changing", async () => {
+      const repository = createImageRepository();
+      mocked.buildImageUsageIndex.mockImplementation(async () => {
+        repository.revision += 1;
+        return createImageUsageIndex();
+      });
+      const projectService = createProjectService();
+
+      await expect(
+        projectService.getImageUsage({ imageId: "image-1" }),
+      ).resolves.toEqual({ blocksDelete: false, usages: [] });
+      expect(mocked.buildImageUsageIndex).toHaveBeenCalledTimes(3);
+    });
+
+    describe("of a folder", () => {
+      // Folder One holds a used image, an unused one, and Folder Two, which
+      // holds an image that platform details shows.
+      const createFolderRepository = () => {
+        const repository = {
+          revision: 1,
+          getRevision: () => repository.revision,
+          getState: vi.fn(() => ({
+            images: {
+              items: {
+                "folder-1": { id: "folder-1", type: "folder" },
+                "image-1": {
+                  id: "image-1",
+                  type: "image",
+                  name: "Image One",
+                  fileId: "file-image-1",
+                },
+                "image-2": {
+                  id: "image-2",
+                  type: "image",
+                  name: "Image Two",
+                  fileId: "file-image-2",
+                },
+                "folder-2": { id: "folder-2", type: "folder" },
+                "image-3": {
+                  id: "image-3",
+                  type: "image",
+                  name: "Image Three",
+                  fileId: "file-image-3",
+                },
+                "image-4": {
+                  id: "image-4",
+                  type: "image",
+                  name: "Image Four",
+                  fileId: "file-image-4",
+                },
+              },
+              tree: [
+                {
+                  id: "folder-1",
+                  children: [
+                    { id: "image-1" },
+                    { id: "image-2" },
+                    { id: "folder-2", children: [{ id: "image-3" }] },
+                  ],
+                },
+                { id: "image-4" },
+              ],
+            },
+          })),
+        };
+        mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+        return repository;
+      };
+
+      it("lists the images that cannot be deleted, each with where it is used", async () => {
+        createFolderRepository();
+        mocked.buildImageUsageIndex.mockResolvedValue(
+          createImageUsageIndex({
+            "image-1": { scenes: [sceneUsage] },
+            "image-4": { scenes: [sceneUsage] },
+          }),
+        );
+        mocked.repositoryService.getCurrentPlatformDetails.mockImplementation(
+          async (platform) =>
+            platform === "android" ? { iconFileId: "file-image-3" } : undefined,
+        );
+        const projectService = createProjectService();
+
+        await expect(
+          projectService.getImageFolderUsage({ folderId: "folder-1" }),
+        ).resolves.toEqual({
+          blocksDelete: true,
+          images: [
+            {
+              id: "image-1",
+              name: "Image One",
+              usages: [{ type: "scene", ...sceneUsage }],
+            },
+            {
+              id: "image-3",
+              name: "Image Three",
+              usages: [
+                {
+                  type: "platformDetails",
+                  platform: "android",
+                  property: "iconFileId",
+                },
+              ],
+            },
+          ],
+        });
+      });
+
+      it("lets a folder be deleted when none of its images is used", async () => {
+        createFolderRepository();
+        mocked.buildImageUsageIndex.mockResolvedValue(
+          createImageUsageIndex({
+            // A particle nothing shows does not keep its image.
+            "image-2": {
+              particles: [{ id: "particle-1", name: "Particle One" }],
+            },
+            "image-4": { scenes: [sceneUsage] },
+          }),
+        );
+        const projectService = createProjectService();
+
+        await expect(
+          projectService.getImageFolderUsage({ folderId: "folder-1" }),
+        ).resolves.toEqual({ blocksDelete: false, images: [] });
+      });
+    });
+
+    it("builds the index again after a build that failed", async () => {
+      createImageRepository();
+      mocked.buildImageUsageIndex.mockRejectedValueOnce(
+        new Error("scene could not be read"),
+      );
+      const projectService = createProjectService();
+
+      await expect(
+        projectService.getImageUsage({ imageId: "image-1" }),
+      ).rejects.toThrow("scene could not be read");
+      await expect(
+        projectService.getImageUsage({ imageId: "image-1" }),
+      ).resolves.toEqual({ blocksDelete: false, usages: [] });
+      expect(mocked.buildImageUsageIndex).toHaveBeenCalledTimes(2);
     });
   });
 
