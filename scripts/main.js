@@ -7,9 +7,11 @@ import createRouteEngine, {
 import { Ticker } from "pixi.js";
 
 import createRouteGraphics, { configureAudioRuntime } from "route-graphics";
-import { createRuntimeAssetFromDicedImage } from "../src/internal/bundleRuntimeDicedImages.js";
 import { prepareRenderStateAudioChannelsForGraphics } from "../src/internal/audioRenderState.js";
-import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
+import {
+  extractFileIdsForValue,
+  prepareRenderStateKeyboardForGraphics,
+} from "../src/internal/project/layout.js";
 import {
   createRuntimeEventContext,
   getRuntimeEventActions,
@@ -24,6 +26,22 @@ import { waitForPlayerStart } from "./playerStartGate.js";
 import { updatePlayerLoadingProgress } from "./playerLoadingProgress.js";
 import { createPlayerStartupEffects } from "./playerStartupEffects.js";
 import { createPlayerRenderQueue } from "./playerRenderQueue.js";
+import {
+  createAssetKindLookup,
+  createAssetSizeLookup,
+  createLineAssetScanner,
+  createLookaheadRunner,
+  createPlayerAssetLookahead,
+  createSceneStartIndex,
+  createSectionLineIndex,
+  createStoryPosition,
+  watchLineEntries,
+} from "./playerAssetLookahead.js";
+import { createPlayerAssetPreloader } from "./playerAssetPreloader.js";
+import {
+  createBundleAssetLoader,
+  createRuntimeError,
+} from "./playerBundleAssetLoader.js";
 
 const hostAudioRuntime = globalThis.__ROUTEVN_PLAYER_HOST__?.audioRuntime;
 if (hostAudioRuntime) configureAudioRuntime(hostAudioRuntime);
@@ -91,15 +109,6 @@ const formatErrorForDiagnostics = (error) => {
   }
 
   return lines.filter(Boolean).join("\n");
-};
-
-const createRuntimeError = (message, cause, details) => {
-  const error = new Error(message);
-  error.cause = cause;
-  if (details !== undefined) {
-    error.details = details;
-  }
-  return error;
 };
 
 const recordDiagnosticStep = (message, details) => {
@@ -303,205 +312,65 @@ const loadBundleFavicon = async ({ bundleMetadata, bundleReader }) => {
   }
 };
 
-const collectBundleAssetIds = ({ value, hasAsset, result = new Set() }) => {
-  if (typeof value === "string") {
-    if (hasAsset(value)) {
-      result.add(value);
-    }
-    return result;
-  }
+// The most time one lookahead pass may spend reading the assets of lines.
+const LINE_SCAN_BUDGET_MS = 4;
 
-  if (!value || typeof value !== "object") {
-    return result;
-  }
-
-  if (Array.isArray(value)) {
-    value.forEach((item) => {
-      collectBundleAssetIds({ value: item, hasAsset, result });
-    });
-    return result;
-  }
-
-  Object.values(value).forEach((item) => {
-    collectBundleAssetIds({ value: item, hasAsset, result });
+const createBundleAssetLookahead = ({
+  projectData,
+  bundleReader,
+  bundleAssetLoader,
+  renderQueue,
+  storyPosition,
+  getEngine,
+}) => {
+  const manifestAssets = bundleReader.manifest.assets;
+  const getAssetKind = createAssetKindLookup({ projectData, manifestAssets });
+  const preloader = createPlayerAssetPreloader({
+    loadAsset: (assetId) => bundleAssetLoader.loadAsset(assetId),
+    canLoad: () =>
+      !renderQueue.hasWaitingStates() &&
+      !getEngine().selectHasPendingRenderWork(),
+    onError: (error, { assetId }) => {
+      console.warn(`Failed to preload asset "${assetId}".`, error);
+    },
+  });
+  const lineScanner = createLineAssetScanner({
+    scanLine: (line) =>
+      extractFileIdsForValue(projectData, line)
+        .map((file) => file.url)
+        .filter((assetId) => getAssetKind(assetId) !== undefined),
+    now: () => performance.now(),
+    budgetMs: LINE_SCAN_BUDGET_MS,
+  });
+  const lookahead = createPlayerAssetLookahead({
+    sections: createSectionLineIndex(projectData),
+    sceneStarts: createSceneStartIndex(projectData),
+    resources: projectData?.resources,
+    getPointer: () => storyPosition.getPointer(),
+    getLineAssetIds: (line) => lineScanner.getLineAssetIds(line),
+    getStateAssetIds: (renderState) =>
+      bundleAssetLoader.collectImageAssetIds(renderState),
+    getWaitingStates: () => renderQueue.getWaitingStates(),
+    getAssetSize: createAssetSizeLookup({
+      projectData,
+      manifestAssets,
+      getAssetKind,
+    }),
+    getLoadedAssetIds: () => bundleAssetLoader.getLoadedImageAssetIds(),
+    isAssetLoaded: (assetId) => bundleAssetLoader.isAssetLoaded(assetId),
+    unloadAssets: (assetIds) => bundleAssetLoader.unloadAssets(assetIds),
+    preloader,
   });
 
-  return result;
-};
-
-const createBundleAssetLoader = ({ bundleReader, routeGraphics }) => {
-  const loadedAssetIds = new Set();
-  const assetLoadPromises = new Map();
-  const dicedAtlasPixelCache = new Map();
-
-  const createAssetBuffer = (content) => {
-    if (content instanceof ArrayBuffer) {
-      return content.slice(0);
-    }
-
-    return content.buffer.slice(
-      content.byteOffset,
-      content.byteOffset + content.byteLength,
-    );
-  };
-
-  const createRuntimeAsset = async (assetId) => {
-    recordDiagnosticStep("Reading bundle asset", { assetId });
-    let metadata;
-    try {
-      metadata = await bundleReader.readAsset(assetId);
-    } catch (error) {
-      throw createRuntimeError(
-        `Failed to read bundle asset "${assetId}".`,
-        error,
-        { assetId },
-      );
-    }
-
-    if (metadata?.encoding === "diced-image") {
-      let atlas;
-      if (!dicedAtlasPixelCache.has(metadata.atlasId)) {
-        recordDiagnosticStep("Reading diced image atlas", {
-          assetId,
-          atlasId: metadata.atlasId,
-        });
-        try {
-          atlas = await bundleReader.readAtlas(metadata.atlasId);
-        } catch (error) {
-          throw createRuntimeError(
-            `Failed to read diced atlas "${metadata.atlasId}" for asset "${assetId}".`,
-            error,
-            { assetId, atlasId: metadata.atlasId },
-          );
-        }
-      }
-
-      try {
-        return await createRuntimeAssetFromDicedImage({
-          asset: metadata,
-          atlases: atlas
-            ? {
-                [metadata.atlasId]: atlas,
-              }
-            : {},
-          atlasCache: dicedAtlasPixelCache,
-        });
-      } catch (error) {
-        throw createRuntimeError(
-          `Failed to reconstruct diced image asset "${assetId}".`,
-          error,
-          {
-            assetId,
-            atlasId: metadata.atlasId,
-            width: metadata.width,
-            height: metadata.height,
-          },
-        );
-      }
-    }
-
-    const content = metadata.buffer;
-    let fileType;
-    try {
-      fileType = await fileTypeFromBuffer(content);
-    } catch (error) {
-      throw createRuntimeError(
-        `Failed to inspect bundle asset "${assetId}".`,
-        error,
-        {
-          assetId,
-          mime: metadata.mime,
-          size: content?.byteLength,
-        },
-      );
-    }
-    const detectedType = resolveBundleAssetMimeType({
-      bundleMime: metadata.mime,
-      detectedMime: fileType?.mime,
-    });
-
-    return {
-      buffer: createAssetBuffer(content),
-      source: "buffer",
-      type: detectedType,
-      size: content.byteLength,
-    };
-  };
-
-  const loadAsset = async (assetId) => {
-    if (loadedAssetIds.has(assetId)) {
-      return;
-    }
-
-    if (assetLoadPromises.has(assetId)) {
-      return assetLoadPromises.get(assetId);
-    }
-
-    const loadPromise = (async () => {
-      const asset = await createRuntimeAsset(assetId);
-      try {
-        const loadedAssets = await routeGraphics.loadAssets({
-          [assetId]: asset,
-        });
-        recordDiagnosticStep("Loaded route graphics asset", {
-          assetId,
-          source: asset?.source,
-          type: asset?.type,
-          size: asset?.size,
-          returnedAssetCount: Array.isArray(loadedAssets)
-            ? loadedAssets.length
-            : undefined,
-        });
-      } catch (error) {
-        throw createRuntimeError(
-          `Graphics engine failed to load asset "${assetId}".`,
-          error,
-          {
-            assetId,
-            source: asset?.source,
-            type: asset?.type,
-            size: asset?.size,
-          },
-        );
-      }
-
-      loadedAssetIds.add(assetId);
-    })().finally(() => {
-      assetLoadPromises.delete(assetId);
-    });
-
-    assetLoadPromises.set(assetId, loadPromise);
-    return loadPromise;
-  };
-
-  return {
-    collectMissingAssetIds(renderState) {
-      const assetIds = collectBundleAssetIds({
-        value: renderState,
-        hasAsset: (assetId) => bundleReader.hasAsset(assetId),
-      });
-
-      return Array.from(assetIds).filter(
-        (assetId) => !loadedAssetIds.has(assetId),
-      );
+  return createLookaheadRunner({
+    update: (drawnScreens) => {
+      lineScanner.startPass();
+      return lookahead.update(drawnScreens);
     },
-
-    async ensureAssetsLoaded(assetIds = [], onProgress) {
-      const uniqueAssetIds = Array.from(
-        new Set(assetIds.filter((assetId) => bundleReader.hasAsset(assetId))),
-      );
-      let loaded = 0;
-      const total = uniqueAssetIds.length;
-      onProgress?.({ loaded, total });
-      await Promise.all(
-        uniqueAssetIds.map(async (assetId) => {
-          await loadAsset(assetId);
-          loaded += 1;
-          onProgress?.({ loaded, total });
-        }),
-      );
+    onError: (error) => {
+      console.warn("Failed to plan asset preloading.", error);
     },
-  };
+  });
 };
 
 const hideLoadingOverlay = () => {
@@ -655,6 +524,7 @@ const prepareEngine = async (
     rejectFirstRender = reject;
   });
   const bundleAssetLoader = createBundleAssetLoader({
+    recordDiagnosticStep,
     bundleReader,
     routeGraphics,
   });
@@ -733,6 +603,10 @@ const prepareEngine = async (
     }
   };
 
+  const storyPosition = createStoryPosition({
+    readSystemState: () => engine.selectSystemState(),
+  });
+
   const prepareRenderState = (renderState) => {
     const audioRenderState = prepareRenderStateAudioChannelsForGraphics({
       renderState,
@@ -749,6 +623,11 @@ const prepareEngine = async (
     ensureAssetsLoaded: (assetIds) =>
       bundleAssetLoader.ensureAssetsLoaded(assetIds),
     render: renderPreparedState,
+    onRendered: (renderState) =>
+      assetLookahead.onRendered({
+        renderState,
+        entersLine: storyPosition.entersLine(renderState),
+      }),
     onAssetLoadStart: ({ assetIds }) => {
       recordDiagnosticStep("Loading render assets", { assetIds });
     },
@@ -772,8 +651,19 @@ const prepareEngine = async (
   });
 
   const renderEngineState = (renderState) => {
-    renderQueue.enqueue(prepareRenderState(renderState));
+    const preparedState = prepareRenderState(renderState);
+    storyPosition.onScreenQueued(preparedState);
+    renderQueue.enqueue(preparedState);
   };
+
+  const assetLookahead = createBundleAssetLookahead({
+    projectData: jsonData,
+    bundleReader,
+    bundleAssetLoader,
+    renderQueue,
+    storyPosition,
+    getEngine: () => engine,
+  });
 
   const persistence = createRuntimePersistence({ namespace });
   const persistenceKind = persistence.kind ?? "indexed-db";
@@ -859,8 +749,13 @@ const prepareEngine = async (
   // While a state waits for its assets the screen still shows the one before
   // it. A tap there would run that old screen's actions in the story position
   // the engine has already moved to.
+  // Releasing the skip key is the exception: it does not depend on the screen
+  // shown, and dropping it would leave the story skipping.
   const routeGraphicsEventHandler = (eventName, payload) => {
-    if (renderQueue.hasWaitingStates() && getRuntimeEventActions(payload)) {
+    const actions = getRuntimeEventActions(payload);
+    const stopsSkipModeOnly =
+      actions && Object.keys(actions).every((name) => name === "stopSkipMode");
+    if (renderQueue.hasWaitingStates() && actions && !stopsSkipModeOnly) {
       return false;
     }
 
@@ -896,7 +791,10 @@ const prepareEngine = async (
     ? createPlayerStartupEffects({ getEngine: () => engine, effectsHandler })
     : undefined;
   engine = createRouteEngine({
-    handlePendingEffects: startupEffects ?? effectsHandler,
+    handlePendingEffects: watchLineEntries(
+      startupEffects ?? effectsHandler,
+      (pointer) => storyPosition.onLineEntered(pointer),
+    ),
   });
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
     routeGraphics,

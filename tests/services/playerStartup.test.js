@@ -52,6 +52,8 @@ vi.mock("route-engine-js", () => ({
       ],
     }),
     selectPresentationState: () => ({}),
+    selectSystemState: () => ({ contexts: [] }),
+    selectHasPendingRenderWork: () => false,
   }),
   createIndexedDbPersistence: () => ({ load: async () => ({ saveSlots: {} }) }),
   createEffectsHandler: ({ routeGraphics }) => {

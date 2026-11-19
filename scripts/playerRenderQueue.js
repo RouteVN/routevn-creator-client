@@ -7,30 +7,36 @@ export const createPlayerRenderQueue = ({
   collectMissingAssetIds,
   ensureAssetsLoaded,
   render,
+  onRendered,
   onAssetLoadStart,
   onAssetLoadError,
 }) => {
   let waiting = [];
   let stopped = false;
 
+  const renderState = (state) => {
+    render(state);
+    onRendered?.(state);
+  };
+
   const renderReadyStates = () => {
     while (waiting[0]?.ready) {
-      render(waiting.shift().renderState);
+      renderState(waiting.shift().renderState);
     }
   };
 
-  const enqueue = (renderState) => {
+  const enqueue = (state) => {
     if (stopped) {
       return;
     }
 
-    const assetIds = collectMissingAssetIds(renderState);
+    const assetIds = collectMissingAssetIds(state);
     if (assetIds.length === 0 && waiting.length === 0) {
-      render(renderState);
+      renderState(state);
       return;
     }
 
-    const entry = { renderState, ready: assetIds.length === 0 };
+    const entry = { renderState: state, ready: assetIds.length === 0 };
     waiting.push(entry);
     if (entry.ready) {
       return;
@@ -63,5 +69,6 @@ export const createPlayerRenderQueue = ({
     enqueue,
     // True while the screen still shows a state the engine has already left.
     hasWaitingStates: () => waiting.length > 0,
+    getWaitingStates: () => waiting.map((entry) => entry.renderState),
   };
 };
