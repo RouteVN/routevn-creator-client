@@ -710,8 +710,8 @@ workflows.
 
 ### Animation Camera Presentation
 
-`src/internal/animationCamera.js` shares Camera grouping and timeline presentation
-between the animation editor and animation catalog. Only sides explicitly listed
+`src/internal/animationCamera.js` holds the animation editor's Camera grouping
+and timeline presentation. Only sides explicitly listed
 in `cameraTracks` are grouped; stored/runtime animation tracks remain numeric.
 Editor-only preview artwork stays in `src/pages/animationEditor/support/`.
 
@@ -1640,6 +1640,27 @@ Preview images, a mask still being added, and view state such as zoom and the
 playhead are not part of the history, and undo and redo are off while a video
 export runs. The shortcuts step aside only for text fields, so they still work
 after a slider, checkbox, or select change.
+
+The animations page is a grid of thumbnail cards; selecting one plays its
+preview in the detail panel. Animation thumbnails are drawn in the background
+as transforms' are (`projectService.requestAnimationThumbnails`,
+`createAnimationThumbnailSource` and `ANIMATION_THUMBNAIL_VERSION` in
+`src/internal/animationPreview.js`). A thumbnail is one frame of the preview
+the detail panel plays, from the saved animation and its saved preview images,
+halfway through its duration. The source carries an `animationFrame`: the
+off-screen renderer draws the start state, then the animation, holds it at
+that time in manual playback, and captures (a transition is prepared twice, as
+the detail panel does); the frame is part of the hash. A saved animation has
+no `thumbnailSourceHash` field, so only `thumbnailFileId` is saved, and the
+service remembers the hash of each thumbnail it drew until the app closes
+(`remembersSourceHash`). A thumbnail it drew is redrawn when the hash
+changes. One it did not draw cannot be compared: it is kept when every
+animation is requested, and redrawn when the animation is requested by name.
+The animations page requests every animation's when it opens, which draws the
+ones with no thumbnail; leaving the animation editor requests that
+animation's by name. So a change made outside the editor, such as replacing a
+preview image's file, reaches a thumbnail drawn in an earlier session only
+once the animation is opened in the editor again.
 
 The audio effects editor has undo and redo the same way. It keeps edits on the
 page and saves the whole audio effect when the page is left, so a step holds

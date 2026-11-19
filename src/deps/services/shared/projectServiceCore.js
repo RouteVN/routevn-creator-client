@@ -234,6 +234,7 @@ export const createProjectServiceCore = ({
     updateTransform: collabService.commandApi.updateTransform,
     updateParticle: collabService.commandApi.updateParticle,
     updateLayout: collabService.commandApi.updateLayoutItem,
+    updateAnimation: collabService.commandApi.updateAnimation,
   });
 
   const spritesheetFramesService = createSpritesheetFramesService({
@@ -1109,6 +1110,8 @@ export const createProjectServiceCore = ({
       editorThumbnailService.requestTransformThumbnails,
     requestParticleThumbnails: editorThumbnailService.requestParticleThumbnails,
     requestLayoutThumbnails: editorThumbnailService.requestLayoutThumbnails,
+    requestAnimationThumbnails:
+      editorThumbnailService.requestAnimationThumbnails,
     downloadMetadata: assetService.downloadMetadata,
     loadFontFile: assetService.loadFontFile,
     detectFileType: assetService.detectFileType,
