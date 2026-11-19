@@ -82,15 +82,10 @@ export const createEditorThumbnailService = ({
       collection: "animations",
       version: ANIMATION_THUMBNAIL_VERSION,
       createSource: createAnimationThumbnailSource,
-      // A saved animation has no field for the source hash.
-      remembersSourceHash: true,
       save: ({ id, data, fileRecords }) =>
         updateAnimation({ animationId: id, data, fileRecords }),
     },
   };
-  // The source hash of each thumbnail drawn here for a kind that cannot save
-  // it, kept until the app closes.
-  const rememberedThumbnails = new Map();
   const pendingJobs = new Map();
   let running;
   let rendererInUse = false;
@@ -98,31 +93,9 @@ export const createEditorThumbnailService = ({
   // A job's work counts only while its project is the one open.
   const isOpen = (projectId) => getEnsuredProjectId() === projectId;
 
-  // Whether a thumbnail saved without its source hash still shows the item.
-  // One drawn here is compared by the hash remembered for it. One this
-  // session did not draw cannot be compared: it is drawn again when the item
-  // was asked for by name, as an editor does after it may have changed the
-  // item, and kept otherwise.
-  const isRememberedThumbnailCurrent = ({
-    key,
-    item,
-    thumbnailSourceHash,
-    named,
-  }) => {
-    if (!item.thumbnailFileId) {
-      return false;
-    }
-    const remembered = rememberedThumbnails.get(key);
-    if (remembered?.thumbnailFileId !== item.thumbnailFileId) {
-      return !named;
-    }
-    return remembered.thumbnailSourceHash === thumbnailSourceHash;
-  };
-
   // The item's thumbnail source and its hash, when it is out of date.
-  const findStaleThumbnail = async ({ key, kind, id, named }) => {
-    const { collection, version, createSource, remembersSourceHash } =
-      kinds[kind];
+  const findStaleThumbnail = async ({ kind, id }) => {
+    const { collection, version, createSource } = kinds[kind];
     const repositoryState = getRepositoryState();
     const item = repositoryState[collection]?.items?.[id];
     if (item?.type !== kind) {
@@ -135,10 +108,9 @@ export const createEditorThumbnailService = ({
       renderState: source.renderState,
       animationFrame: source.animationFrame,
     });
-    const current = remembersSourceHash
-      ? isRememberedThumbnailCurrent({ key, item, thumbnailSourceHash, named })
-      : item.thumbnailSourceHash === thumbnailSourceHash;
-    return current ? undefined : { source, thumbnailSourceHash };
+    return item.thumbnailSourceHash === thumbnailSourceHash
+      ? undefined
+      : { source, thumbnailSourceHash };
   };
 
   // A file that cannot be read leaves the old thumbnail in place, since
@@ -187,7 +159,7 @@ export const createEditorThumbnailService = ({
   // Checking a hash is cheap, so only drawing waits for the app to be idle,
   // and the item is read again after the wait.
   const syncThumbnail = async (job) => {
-    const { key, projectId, kind, id } = job;
+    const { projectId, kind, id } = job;
     if (!isOpen(projectId) || !(await findStaleThumbnail(job))) {
       return;
     }
@@ -214,13 +186,12 @@ export const createEditorThumbnailService = ({
     }
     // The hash describes what was drawn, so it stays right even if the item
     // changed meanwhile; the next request draws that change.
-    const data = { thumbnailFileId: thumbnailFile.fileId };
-    if (!kinds[kind].remembersSourceHash) {
-      data.thumbnailSourceHash = stale.thumbnailSourceHash;
-    }
     const result = await kinds[kind].save({
       id,
-      data,
+      data: {
+        thumbnailFileId: thumbnailFile.fileId,
+        thumbnailSourceHash: stale.thumbnailSourceHash,
+      },
       fileRecords: [thumbnailFile.fileRecord],
     });
     if (result?.valid === false) {
@@ -228,13 +199,6 @@ export const createEditorThumbnailService = ({
         kind,
         id,
         result,
-      });
-      return;
-    }
-    if (kinds[kind].remembersSourceHash) {
-      rememberedThumbnails.set(key, {
-        thumbnailFileId: thumbnailFile.fileId,
-        thumbnailSourceHash: stale.thumbnailSourceHash,
       });
     }
   };
@@ -291,15 +255,7 @@ export const createEditorThumbnailService = ({
         .filter((item) => item.type === kind)
         .map((item) => item.id);
     for (const id of itemIds) {
-      const key = `${projectId}:${kind}:${id}`;
-      pendingJobs.set(key, {
-        key,
-        projectId,
-        kind,
-        id,
-        // A waiting request by name is not undone by one for every item.
-        named: ids !== undefined || pendingJobs.get(key)?.named === true,
-      });
+      pendingJobs.set(`${projectId}:${kind}:${id}`, { projectId, kind, id });
     }
     return startRunning();
   };
