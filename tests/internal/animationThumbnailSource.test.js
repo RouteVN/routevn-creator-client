@@ -193,6 +193,24 @@ describe("animation thumbnail source", () => {
     });
   });
 
+  it("prepares a transition with nothing to animate once, as the Animations page does", () => {
+    const source = createAnimationThumbnailSource({
+      item: {
+        id: "animation-3",
+        type: "animation",
+        name: "Animation Three",
+        animation: { type: "transition" },
+      },
+      repositoryState: createRepositoryState(),
+    });
+
+    expect(source.renderState.animations).toEqual([]);
+    expect(source.animationFrame).toMatchObject({
+      timeMs: 0,
+      preparationPassCount: 1,
+    });
+  });
+
   it("needs the project's resolution", () => {
     const repositoryState = createRepositoryState();
     delete repositoryState.project.resolution;

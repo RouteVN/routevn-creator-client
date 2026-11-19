@@ -710,10 +710,10 @@ workflows.
 
 ### Animation Camera Presentation
 
-`src/internal/animationCamera.js` holds the animation editor's Camera grouping
-and timeline presentation. Only sides explicitly listed
-in `cameraTracks` are grouped; stored/runtime animation tracks remain numeric.
-Editor-only preview artwork stays in `src/pages/animationEditor/support/`.
+`src/pages/animationEditor/support/animationCamera.js` holds the animation
+editor's Camera grouping, timeline presentation, and preview artwork. Only
+sides explicitly listed in `cameraTracks` are grouped; stored/runtime animation
+tracks remain numeric.
 
 ## Code Placement
 

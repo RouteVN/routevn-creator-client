@@ -1,6 +1,8 @@
 import {
+  ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR,
   collectAnimationPreviewFileIds,
   createAnimationResourcePreviewStates,
+  hasTransitionPreviewAnimation,
 } from "../../../internal/animationPreview.js";
 import { generateId } from "../../../internal/id.js";
 import { requireProjectResolution } from "../../../internal/projectResolution.js";
@@ -8,7 +10,6 @@ import { resolveResourceFileType } from "../../../internal/resourceFileMetadata.
 import { selectAnimationsPageCopy } from "./animationsPageCopy.js";
 
 const ANIMATION_PREVIEW_LOOP_PAUSE_MS = 1000;
-const ANIMATION_DETAIL_PREVIEW_BACKGROUND_COLOR = "#000000";
 
 export const stopAnimationPreviewPlayback = ({ store } = {}) => {
   const frameId = store.selectAnimationPreviewFrameId?.();
@@ -127,12 +128,6 @@ const ensureAnimationPreviewRuntime = async ({
     height,
   });
   return true;
-};
-
-const hasTransitionPreviewAnimation = (renderState = {}) => {
-  return (renderState.animations ?? []).some(
-    (animation) => animation?.type === "transition",
-  );
 };
 
 const primeTransitionPreviewFrame = async ({
@@ -387,7 +382,7 @@ export const renderSelectedAnimationPreview = async (
     const { resetState, renderState, durationMs } =
       createAnimationResourcePreviewStates({
         animationItem: selectedAnimation,
-        backgroundColor: ANIMATION_DETAIL_PREVIEW_BACKGROUND_COLOR,
+        backgroundColor: ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR,
         imagesData: store.selectImagesData(),
         projectResolution,
       });

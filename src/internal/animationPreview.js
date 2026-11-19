@@ -791,11 +791,21 @@ export const collectAnimationPreviewFileIds = (renderState = {}) => {
   ];
 };
 
+// What the Animations page's preview and an animation's thumbnail are drawn
+// on, so the two show the same picture.
+export const ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR = "#000000";
+
+// A transition shows its outgoing side only once that has been drawn, so a
+// preview with one is drawn from its start once more before it is shown.
+export const hasTransitionPreviewAnimation = (renderState = {}) => {
+  return (renderState.animations ?? []).some(
+    (animation) => animation?.type === "transition",
+  );
+};
+
 // Bump when an animation's preview starts drawing the same saved animation
 // differently, so saved thumbnails are drawn again.
 export const ANIMATION_THUMBNAIL_VERSION = 1;
-
-const ANIMATION_THUMBNAIL_BACKGROUND_COLOR = "#000000";
 
 // What a saved animation's thumbnail shows: its preview, as the Animations
 // page plays it, halfway through, and the files that draws.
@@ -807,7 +817,7 @@ export const createAnimationThumbnailSource = ({ item, repositoryState }) => {
   const { resetState, renderState, durationMs } =
     createAnimationResourcePreviewStates({
       animationItem: item,
-      backgroundColor: ANIMATION_THUMBNAIL_BACKGROUND_COLOR,
+      backgroundColor: ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR,
       imagesData: repositoryState.images,
       projectResolution,
     });
@@ -833,7 +843,7 @@ export const createAnimationThumbnailSource = ({ item, repositoryState }) => {
     animationFrame: {
       resetState,
       timeMs: Math.round(durationMs / 2),
-      preparationPassCount: item.animation?.type === "transition" ? 2 : 1,
+      preparationPassCount: hasTransitionPreviewAnimation(renderState) ? 2 : 1,
     },
     assets: Array.from(fileIds, (fileId) => ({
       fileId,
