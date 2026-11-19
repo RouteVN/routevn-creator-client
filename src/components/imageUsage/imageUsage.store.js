@@ -53,6 +53,8 @@ export const createInitialState = () => ({
   usedImages: [],
   isDialogOpen: false,
   expandedRowIds: [],
+  // The row the arrow keys are on. No row is marked until a key moves onto
+  // one, so a list used with the mouse shows only the hovered row.
   activeRowId: undefined,
 });
 
@@ -220,7 +222,7 @@ export const finishUsageLoad = (
 
   const rows = selectFocusableDialogRows(state);
   if (!rows.some((row) => row.rowId === state.activeRowId)) {
-    state.activeRowId = rows[0]?.rowId;
+    state.activeRowId = undefined;
   }
 };
 
@@ -237,7 +239,7 @@ export const failUsageLoad = ({ state }, { subjectId } = {}) => {
 
 export const openDialog = ({ state }) => {
   state.isDialogOpen = true;
-  state.activeRowId = selectFocusableDialogRows(state)[0]?.rowId;
+  state.activeRowId = undefined;
 };
 
 export const closeDialog = ({ state }) => {

@@ -210,7 +210,7 @@ describe("imageUsage.handlers", () => {
     await handleShowAllClick(deps);
 
     expect(deps.context.state.isDialogOpen).toBe(true);
-    expect(deps.context.state.activeRowId).toBe("scene:scene-1");
+    expect(deps.context.state.activeRowId).toBeUndefined();
     expect(deps.refs.dialogList.focus).toHaveBeenCalled();
     expect(deps.projectService.getImageUsage).toHaveBeenCalledTimes(2);
   });
@@ -301,9 +301,12 @@ describe("imageUsage.handlers", () => {
     await handleAfterMount(deps);
     await handleShowAllClick(deps);
 
+    // The arrow keys were on a row before the mouse took over.
+    handleDialogListKeyDown(deps, createKeyEvent("ArrowDown"));
     handleDialogRowClick(deps, createRowEvent("scene:scene-1"));
 
     expect(deps.context.state.expandedRowIds).toEqual(["scene:scene-1"]);
+    expect(deps.context.state.activeRowId).toBeUndefined();
     expect(deps.appService.navigate).not.toHaveBeenCalled();
     expect(deps.context.state.isDialogOpen).toBe(true);
 
@@ -331,7 +334,11 @@ describe("imageUsage.handlers", () => {
       return event;
     };
 
-    // Up at the first row stays there.
+    // No row is marked until a key is pressed. The first key goes to the
+    // first row, and Up there stays on it.
+    expect(deps.context.state.activeRowId).toBeUndefined();
+    press("ArrowDown");
+    expect(deps.context.state.activeRowId).toBe("scene:scene-1");
     press("ArrowUp");
     expect(deps.context.state.activeRowId).toBe("scene:scene-1");
 

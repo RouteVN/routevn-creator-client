@@ -229,7 +229,8 @@ export const handleDialogRowClick = (deps, payload) => {
     return;
   }
 
-  store.setActiveRowId({ rowId });
+  // A click hands the list back to the mouse, so no row stays marked.
+  store.setActiveRowId({ rowId: undefined });
   activateDialogRow(deps, { row });
   focusDialogList(deps);
 };

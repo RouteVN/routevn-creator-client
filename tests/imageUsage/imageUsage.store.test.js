@@ -170,8 +170,11 @@ describe("imageUsage.store", () => {
       dialogIcon: "chevronRight",
       ariaExpanded: "false",
       meta: "2 lines",
-      isActive: true,
     });
+    // No row is marked until an arrow key moves onto one.
+    expect(
+      view.dialogRows.filter((row) => row.isActive).map((row) => row.rowId),
+    ).toEqual([]);
   });
 
   it("lists a scene's lines under it once it is expanded", () => {
@@ -273,7 +276,7 @@ describe("imageUsage.store", () => {
     expect(selectView(context).headerLabel).toBe("Used in - 6");
   });
 
-  it("moves the active row to the first row when its place stops using the image", () => {
+  it("marks no row once the active row's place stops using the image", () => {
     const context = createLoadedContext();
     openDialog(context);
     setActiveRowId(context, { rowId: "layout:layout-1" });
@@ -283,7 +286,24 @@ describe("imageUsage.store", () => {
       usages: USAGES.filter((usage) => usage.id !== "layout-1"),
     });
 
-    expect(selectActiveRowId(context)).toBe("scene:scene-1");
+    expect(selectActiveRowId(context)).toBeUndefined();
+  });
+
+  it("marks the row the arrow keys are on", () => {
+    const context = createLoadedContext();
+    openDialog(context);
+    setActiveRowId(context, { rowId: "layout:layout-1" });
+
+    expect(
+      selectView(context)
+        .dialogRows.filter((row) => row.isActive)
+        .map((row) => row.rowId),
+    ).toEqual(["layout:layout-1"]);
+
+    // Opening the list again starts with no row marked.
+    openDialog(context);
+
+    expect(selectActiveRowId(context)).toBeUndefined();
   });
 
   it("starts over for another image and ignores a late answer for the previous one", () => {
@@ -519,7 +539,7 @@ describe("imageUsage.store", () => {
       expect(context.state.expandedRowIds).toEqual([
         "image:image-1:scene:scene-1",
       ]);
-      expect(selectActiveRowId(context)).toBe("image:image-1:scene:scene-1");
+      expect(selectActiveRowId(context)).toBeUndefined();
     });
 
     it("keeps the panel list empty", () => {
