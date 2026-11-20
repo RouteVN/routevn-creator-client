@@ -270,6 +270,18 @@ describe("projects.store addProject", () => {
               label: "English",
             },
             {
+              value: "es",
+              label: "Español (Beta)",
+            },
+            {
+              value: "pt",
+              label: "Português (Beta)",
+            },
+            {
+              value: "ru",
+              label: "Русский (Beta)",
+            },
+            {
               value: "ja",
               label: "日本語 (Beta)",
             },
@@ -286,20 +298,8 @@ describe("projects.store addProject", () => {
               label: "한국어 (Beta)",
             },
             {
-              value: "es",
-              label: "Español (Beta)",
-            },
-            {
               value: "th",
               label: "ไทย (Beta)",
-            },
-            {
-              value: "ru",
-              label: "Русский (Beta)",
-            },
-            {
-              value: "pt",
-              label: "Português (Beta)",
             },
             {
               value: "fr",

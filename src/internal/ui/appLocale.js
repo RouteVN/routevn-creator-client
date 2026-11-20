@@ -5,16 +5,20 @@ export const APP_LOCALE_SUGGESTION_DISMISSED_CONFIG_KEY =
   "app.localeSuggestionDismissed";
 export const DEFAULT_APP_LOCALE = "en";
 
+// The most used come first: English, Spanish, Portuguese, Russian, Japanese,
+// Simplified and Traditional Chinese, then Korean, as project languages
+// (src/internal/projectLanguage.js) start too. Each is also a project
+// language.
 export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "en", label: "English" }),
+  Object.freeze({ value: "es", label: "Español (Beta)" }),
+  Object.freeze({ value: "pt", label: "Português (Beta)" }),
+  Object.freeze({ value: "ru", label: "Русский (Beta)" }),
   Object.freeze({ value: "ja", label: "日本語 (Beta)" }),
   Object.freeze({ value: "zh-hans", label: "简体中文 (Beta)" }),
   Object.freeze({ value: "zh-hant", label: "繁體中文 (Beta)" }),
   Object.freeze({ value: "ko", label: "한국어 (Beta)" }),
-  Object.freeze({ value: "es", label: "Español (Beta)" }),
   Object.freeze({ value: "th", label: "ไทย (Beta)" }),
-  Object.freeze({ value: "ru", label: "Русский (Beta)" }),
-  Object.freeze({ value: "pt", label: "Português (Beta)" }),
   Object.freeze({ value: "fr", label: "Français (Beta)" }),
   Object.freeze({ value: "vi", label: "Tiếng Việt (Beta)" }),
   Object.freeze({ value: "id", label: "Bahasa Indonesia (Beta)" }),
