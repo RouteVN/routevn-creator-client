@@ -35,6 +35,10 @@
         {
           "youtubeId": "yIbe1GWUvgk",
           "title": "How to Arrange Folders"
+        },
+        {
+          "youtubeId": "-6kjV9KdKeA",
+          "title": "How to Insert Character Sprites Part 1 (Basic) on Mobile"
         }
       ]
     }
@@ -51,6 +55,14 @@
     "/project/images": {
       "desktop": "Sngq78OLSB8",
       "mobile": "Sngq78OLSB8"
+    },
+    "/project/characters": {
+      "desktop": "-6kjV9KdKeA",
+      "mobile": "-6kjV9KdKeA"
+    },
+    "/project/character-sprites": {
+      "desktop": "-6kjV9KdKeA",
+      "mobile": "-6kjV9KdKeA"
     },
     "/project/colors": {
       "desktop": "LjKw3fx84BM",
