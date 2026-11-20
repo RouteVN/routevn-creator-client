@@ -3398,6 +3398,8 @@ resourceImportErrors:
     invalid_url: "Wpisz prawidłowy adres URL importu."
     asset_store_unavailable: "Nie udało się wczytać sklepu z zasobami. Sprawdź połączenie z internetem i spróbuj ponownie."
     asset_pack_not_found: "Ten pakiet zasobów jest już niedostępny."
+    package_changed: "Ten pakiet został zaktualizowany po otwarciu. Otwórz go ponownie, aby go zaimportować."
+    package_unavailable: "Nie udało się pobrać pakietu. Sprawdź połączenie i spróbuj ponownie."
     asset_creator_not_found: "Profil tego twórcy jest już niedostępny."
     unsupported_protocol: "Linki do importu muszą używać protokołu HTTPS. Protokół HTTP jest dozwolony tylko do testów lokalnych (localhost)."
     authorization_required: "Ten pakiet wymaga autoryzacji."

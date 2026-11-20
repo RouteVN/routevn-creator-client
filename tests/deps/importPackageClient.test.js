@@ -739,3 +739,209 @@ describe("importPackageClient: a link to a ZIP or a manifest", () => {
     ).rejects.toMatchObject({ code: "manifest_timeout", retryable: true });
   });
 });
+
+describe("importPackageClient: an asset store pack", () => {
+  const image = new TextEncoder().encode("image bytes");
+  const sound = new TextEncoder().encode("sound bytes");
+  const imageUrl = "https://files.example/asset-store/PackageFile00001/image";
+  const signedUrl = (token) =>
+    `https://uploads.example/objects/PackageFile00001?X-Amz-Signature=${token}`;
+  const packManifest = () => ({
+    schema: "routevn.import-pack.v1",
+    repository: {
+      files: {
+        items: {
+          image: {
+            mimeType: "image/png",
+            size: image.byteLength,
+            source: { url: "./files/image" },
+          },
+          sound: {
+            mimeType: "audio/mpeg",
+            size: sound.byteLength,
+            source: { url: "./files/sound" },
+          },
+        },
+      },
+    },
+  });
+
+  // The pack's media on the files CDN, and its package ZIP behind signed
+  // URLs that the server refuses once `refuse` says so.
+  const createPack = async ({ zipManifest = packManifest(), refuse } = {}) => {
+    const { bytes, zip } = await publishedPackage({
+      "asset-package.json": JSON.stringify(zipManifest),
+      "files/image": image,
+      "files/sound": sound,
+    });
+    const place = {
+      size: zip.size,
+      directoryOffset: zip.directoryOffset,
+      directorySize: zip.directorySize,
+    };
+    const fetchImpl = vi.fn(async (url, { headers }) => {
+      const href = `${url}`;
+      if (href === imageUrl) {
+        return new Response(image, {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        });
+      }
+      if (refuse?.(href)) return new Response("", { status: 403 });
+      const match = /^bytes=(\d+)-(\d+)$/.exec(headers?.Range ?? "");
+      const [start, end] = [Number(match[1]), Number(match[2])];
+      return new Response(bytes.slice(start, end + 1), {
+        status: 206,
+        headers: { "content-length": `${end - start + 1}` },
+      });
+    });
+    let token = 0;
+    const getZip = vi.fn(async () => {
+      token += 1;
+      return {
+        url: signedUrl(token),
+        expiresAt: Date.now() + 10 * 60_000,
+        ...place,
+      };
+    });
+    const source = createImportPackageClient({ fetchImpl }).openPackage({
+      assetPack: {
+        id: "AsPkPackOne00001",
+        manifest: packManifest(),
+        fileUrls: { image: imageUrl },
+        getZip,
+      },
+    });
+    return { source, fetchImpl, getZip, place };
+  };
+  const descriptorOf = (fileId) =>
+    packManifest().repository.files.items[fileId];
+  const urlsOf = (fetchImpl) => fetchImpl.mock.calls.map(([url]) => `${url}`);
+
+  it("gives its manifest without any request, and reads review media from their own URLs", async () => {
+    const { source, fetchImpl, getZip } = await createPack();
+
+    const opened = await source.readManifest();
+    expect(opened).toEqual({
+      manifest: packManifest(),
+      manifestUrl: "asset-store:///AsPkPackOne00001",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    const file = await source.readFile({
+      descriptor: descriptorOf("image"),
+      fileId: "image",
+    });
+    expect(file.bytes).toEqual(image);
+    expect(urlsOf(fetchImpl)).toEqual([imageUrl]);
+    // A file with no URL of its own, such as one only an import reads, is
+    // not read from the package for a review.
+    await expect(
+      source.readFile({ descriptor: descriptorOf("sound"), fileId: "sound" }),
+    ).rejects.toMatchObject({ code: "file_not_found" });
+    expect(getZip).not.toHaveBeenCalled();
+  });
+
+  it("opens its signed package when an import starts, and reads files from it by range", async () => {
+    const { source, fetchImpl, getZip } = await createPack();
+    await source.readManifest();
+
+    const packageSource = await source.openImport();
+    const file = await packageSource.readFile({
+      descriptor: descriptorOf("sound"),
+      fileId: "sound",
+    });
+
+    expect(file.bytes).toEqual(sound);
+    expect(getZip.mock.calls).toEqual([[{ importing: true }]]);
+    // The directory, the manifest, then the file.
+    expect(urlsOf(fetchImpl)).toEqual([
+      signedUrl(1),
+      signedUrl(1),
+      signedUrl(1),
+    ]);
+    for (const [, init] of fetchImpl.mock.calls) {
+      expect(init.headers.Range).toMatch(/^bytes=\d+-\d+$/);
+    }
+  });
+
+  it("refuses a package whose manifest isn't the one its review showed", async () => {
+    const zipManifest = packManifest();
+    zipManifest.repository.files.items.image.size += 1;
+    const { source } = await createPack({ zipManifest });
+
+    await expect(source.openImport()).rejects.toMatchObject({
+      code: "package_changed",
+    });
+  });
+
+  it("takes a fresh URL, counting no download, when the server refuses an expired one", async () => {
+    let expired = false;
+    const { source, getZip } = await createPack({
+      refuse: (href) => expired && href === signedUrl(1),
+    });
+    const packageSource = await source.openImport();
+    expired = true;
+
+    const file = await packageSource.readFile({
+      descriptor: descriptorOf("sound"),
+      fileId: "sound",
+    });
+
+    expect(file.bytes).toEqual(sound);
+    expect(getZip.mock.calls).toEqual([[{ importing: true }], []]);
+  });
+
+  it("takes a fresh URL shortly before the one it has expires", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { source, fetchImpl, getZip } = await createPack();
+      const packageSource = await source.openImport();
+
+      vi.setSystemTime(Date.now() + 9 * 60_000 + 45_000);
+      await packageSource.readFile({
+        descriptor: descriptorOf("sound"),
+        fileId: "sound",
+      });
+
+      expect(getZip).toHaveBeenCalledTimes(2);
+      expect(urlsOf(fetchImpl).at(-1)).toBe(signedUrl(2));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("refuses a fresh URL that names another package", async () => {
+    let expired = false;
+    const { source, getZip, place } = await createPack({
+      refuse: (href) => expired && href === signedUrl(1),
+    });
+    const packageSource = await source.openImport();
+    expired = true;
+    getZip.mockResolvedValueOnce({
+      url: signedUrl(2),
+      expiresAt: Date.now() + 10 * 60_000,
+      ...place,
+      size: place.size + 1,
+    });
+
+    await expect(
+      packageSource.readFile({
+        descriptor: descriptorOf("sound"),
+        fileId: "sound",
+      }),
+    ).rejects.toMatchObject({ code: "package_changed" });
+  });
+
+  it("keeps the asset store's code when its package can't be asked for", async () => {
+    const { source, getZip } = await createPack();
+    getZip.mockRejectedValueOnce(
+      Object.assign(new Error("Not listed."), { code: "asset_pack_not_found" }),
+    );
+
+    await expect(source.openImport()).rejects.toMatchObject({
+      name: "ImportPackageClientError",
+      code: "asset_pack_not_found",
+    });
+  });
+});

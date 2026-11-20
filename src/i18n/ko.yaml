@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "올바른 가져오기 URL을 입력하세요."
     asset_store_unavailable: "리소스 스토어를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."
     asset_pack_not_found: "이 리소스 팩은 더 이상 제공되지 않아요."
+    package_changed: "이 팩은 연 뒤에 업데이트되었어요. 가져오려면 다시 열어 주세요."
+    package_unavailable: "팩을 다운로드하지 못했어요. 연결을 확인하고 다시 시도해 주세요."
     asset_creator_not_found: "이 제작자의 정보를 더 이상 볼 수 없어요."
     unsupported_protocol: "가져오기 링크는 HTTPS를 사용해야 해요. HTTP는 localhost에서 테스트할 때만 사용할 수 있어요."
     authorization_required: "이 패키지를 가져오려면 권한이 필요해요."

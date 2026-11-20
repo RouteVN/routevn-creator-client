@@ -8,41 +8,44 @@ const WINDOWS =
 const IPHONE =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 
-const packResponse = () =>
-  new Response(
-    JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      result: {
-        assetPack: {
-          id: "AsPkPackOne00001",
-          data: {
-            title: "Pack One",
-            pricing: { type: "FREE" },
-            assetCounts: { IMAGES: 1 },
-            package: {
-              fileId: "FiPackPackage001",
-              size: 100,
-              directoryOffset: 60,
-              directorySize: 40,
-            },
-          },
-        },
-        creator: { id: "Cr8rCreatorOne01", name: "Creator One" },
-        files: [
-          {
-            fileId: "FiPackPackage001",
-            url: "https://files.example/FiPackPackage001",
-          },
-        ],
-      },
-    }),
+const respond = (result) =>
+  new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+
+const packResult = {
+  assetPack: {
+    id: "AsPkPackOne00001",
+    data: {
+      title: "Pack One",
+      pricing: { type: "FREE" },
+      assetCounts: { IMAGES: 1 },
+    },
+  },
+  creator: { id: "Cr8rCreatorOne01", name: "Creator One" },
+  files: [],
+  manifest: { schema: "routevn.import-pack.v3" },
+  mediaFiles: [],
+};
+
+const downloadResult = {
+  versionName: "1.0.0",
+  downloadUrl: "https://uploads.example/FiPackPackage001?X-Amz-Signature=abc",
+  expiresAt: 1786579800000,
+  size: 100,
+  directoryOffset: 60,
+  directorySize: 40,
+};
+
+const answer = async (_url, request) =>
+  respond(
+    JSON.parse(request.body).method === "assetStore.getAssetPackDownloadUrl"
+      ? downloadResult
+      : packResult,
   );
 
 // The app as each platform starts it, with the app database already holding
 // the device ID it made for update checks.
 const startApp = ({ platform, distribution, userAgent }) => {
-  const fetchImpl = vi.fn(async () => packResponse());
+  const fetchImpl = vi.fn(answer);
   vi.stubGlobal("fetch", fetchImpl);
   vi.stubGlobal("navigator", {
     languages: ["ja-JP"],
@@ -87,15 +90,11 @@ describe("asset store views and downloads", () => {
       userAgent: WINDOWS,
     });
 
-    await appService.getAssetStorePack({
-      assetPackId: "AsPkPackOne00001",
-      view: true,
-    });
+    await appService.getAssetStorePack({ assetPackId: "AsPkPackOne00001" });
 
     expect(sent()).toEqual([
       {
         assetPackId: "AsPkPackOne00001",
-        view: true,
         device: {
           id: DEVICE_ID,
           language: "ja",
@@ -117,10 +116,7 @@ describe("asset store views and downloads", () => {
       userAgent: IPHONE,
     });
 
-    await appService.getAssetStorePack({
-      assetPackId: "AsPkPackOne00001",
-      view: true,
-    });
+    await appService.getAssetStorePack({ assetPackId: "AsPkPackOne00001" });
 
     expect(sent()[0].device).toEqual({
       id: DEVICE_ID,
@@ -134,21 +130,22 @@ describe("asset store views and downloads", () => {
     });
   });
 
-  it("sends one download, with the device, when an import starts", async () => {
+  it("sends the device when an import starts, which counts one download", async () => {
     const { appService, sent } = startApp({
       platform: "tauri",
       distribution: "direct",
       userAgent: WINDOWS,
     });
 
-    await appService.sendAssetStorePackDownload({
+    const download = await appService.getAssetStorePackDownload({
       assetPackId: "AsPkPackOne00001",
+      countDownload: true,
     });
 
+    expect(download).toMatchObject({ url: downloadResult.downloadUrl });
     expect(sent()).toEqual([
       {
         assetPackId: "AsPkPackOne00001",
-        download: true,
         device: {
           id: DEVICE_ID,
           language: "ja",
@@ -164,17 +161,16 @@ describe("asset store views and downloads", () => {
     ]);
   });
 
-  it("never fails when the download can't be sent", async () => {
-    const { appService } = startApp({
+  it("sends no device when an import only needs a fresh package URL", async () => {
+    const { appService, sent } = startApp({
       platform: "web",
       userAgent: IPHONE,
     });
-    vi.mocked(fetch).mockRejectedValue(new TypeError("offline"));
 
-    await expect(
-      appService.sendAssetStorePackDownload({
-        assetPackId: "AsPkPackOne00001",
-      }),
-    ).resolves.toBeUndefined();
+    await appService.getAssetStorePackDownload({
+      assetPackId: "AsPkPackOne00001",
+    });
+
+    expect(sent()).toEqual([{ assetPackId: "AsPkPackOne00001" }]);
   });
 });

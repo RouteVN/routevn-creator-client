@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "请输入有效的导入链接。"
     asset_store_unavailable: "无法加载素材商店。请检查网络连接后重试。"
     asset_pack_not_found: "此素材包已不再提供。"
+    package_changed: "此素材包在打开后已更新。请重新打开以导入。"
+    package_unavailable: "无法下载素材包。请检查网络连接后重试。"
     asset_creator_not_found: "该创作者已不可用。"
     unsupported_protocol: "导入链接必须使用 HTTPS。HTTP 仅可用于本地主机测试。"
     authorization_required: "此素材包需要授权。"

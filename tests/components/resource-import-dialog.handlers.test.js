@@ -31,13 +31,10 @@ import {
 } from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 import * as dialogStore from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
 
-// A pack's published package, as the store client reads it.
-const packagePlace = (url) => ({
-  url,
-  size: 1000,
-  directoryOffset: 900,
-  directorySize: 100,
-});
+// A pack's package manifest and the URLs of its media, as the store client
+// reads them with the pack.
+const packManifest = { schema: "routevn.import-pack.v3" };
+const packMediaFileUrls = { image: "https://files.example/pack-1/image" };
 
 const createDeps = () => {
   const plan = {
@@ -50,9 +47,7 @@ const createDeps = () => {
       i18n: {},
       render: vi.fn(),
       dispatchEvent: vi.fn(),
-      appService: {
-        sendAssetStorePackDownload: vi.fn(async () => {}),
-      },
+      appService: {},
       store: {
         selectStep: vi.fn(() => "selection"),
         selectPlan: vi.fn(() => plan),
@@ -304,7 +299,6 @@ describe("resource-import-dialog.handlers", () => {
     expect(
       deps.projectService.executeResourceImportPlan,
     ).not.toHaveBeenCalled();
-    expect(deps.appService.sendAssetStorePackDownload).not.toHaveBeenCalled();
     expect(deps.store.saveReviewValues).toHaveBeenCalledWith({
       values: {},
     });
@@ -314,7 +308,7 @@ describe("resource-import-dialog.handlers", () => {
     });
   });
 
-  it("sends one download of the pack when an import starts, however many files it reads", async () => {
+  it("reports the import's progress as its files are read", async () => {
     const { deps } = createDeps();
     deps.projectService.executeResourceImportPlan.mockImplementation(
       async ({ onProgress }) => {
@@ -327,44 +321,13 @@ describe("resource-import-dialog.handlers", () => {
 
     await importChecked(deps);
 
-    const { sendAssetStorePackDownload } = deps.appService;
-    expect(sendAssetStorePackDownload).toHaveBeenCalledExactlyOnceWith({
-      assetPackId: "pack-1",
-    });
-    // It goes out as the import starts, before the pack's files are read.
-    expect(sendAssetStorePackDownload.mock.invocationCallOrder[0]).toBeLessThan(
-      deps.projectService.executeResourceImportPlan.mock.invocationCallOrder[0],
-    );
     expect(deps.store.setProgress).toHaveBeenCalledTimes(3);
-  });
-
-  it("sends a download for each import started", async () => {
-    const { deps } = createDeps();
-    deps.projectService.executeResourceImportPlan
-      .mockResolvedValueOnce({ valid: false, error: { code: "failed" } })
-      .mockResolvedValueOnce({ valid: true });
-
-    await importChecked(deps);
-    await importChecked(deps);
-
-    expect(deps.appService.sendAssetStorePackDownload).toHaveBeenCalledTimes(2);
-    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
-  });
-
-  it("imports without waiting for the download to be answered", async () => {
-    const { deps } = createDeps();
-    deps.appService.sendAssetStorePackDownload.mockReturnValue(
-      new Promise(() => {}),
-    );
-
-    await importChecked(deps);
-
     expect(deps.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "import-complete" }),
     );
   });
 
-  it("sends no download when the choices are refused", async () => {
+  it("starts no import when the choices are refused", async () => {
     const { deps } = createDeps();
     deps.projectService.validateResourceImportPlan.mockReturnValue({
       valid: false,
@@ -373,7 +336,6 @@ describe("resource-import-dialog.handlers", () => {
 
     await importChecked(deps);
 
-    expect(deps.appService.sendAssetStorePackDownload).not.toHaveBeenCalled();
     expect(
       deps.projectService.executeResourceImportPlan,
     ).not.toHaveBeenCalled();
@@ -411,6 +373,7 @@ const createStoreDeps = () => {
     appService: {
       listAssetStorePacks: vi.fn(),
       getAssetStorePack: vi.fn(),
+      getAssetStorePackDownload: vi.fn(),
       getAssetStoreCreator: vi.fn(),
       openUrl: vi.fn(),
       getPath: vi.fn(() => "/project/scenes"),
@@ -538,14 +501,15 @@ describe("resource-import-dialog asset store", () => {
     expect(state.catalog.packs.map((pack) => pack.id)).toEqual(["fresh"]);
   });
 
-  it("opens a pack's page at once, then loads its details and its assets through its import link", async () => {
+  it("opens a pack's page at once, then loads its details and plans its assets from its manifest", async () => {
     const { state, deps } = createStoreDeps();
     const plan = { planId: "plan-1", package: {}, resources: [] };
     const detail = {
       ...storePack("pack-1"),
       description: [{ text: "About the pack." }],
       versionName: "1.0.0",
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     };
     const details = deferred();
     const planned = deferred();
@@ -580,7 +544,6 @@ describe("resource-import-dialog asset store", () => {
     });
     expect(deps.appService.getAssetStorePack).toHaveBeenCalledWith({
       assetPackId: "pack-1",
-      view: true,
     });
 
     details.resolve(detail);
@@ -591,12 +554,29 @@ describe("resource-import-dialog asset store", () => {
       description: [{ text: "About the pack." }],
       versionName: "1.0.0",
     });
+    // The plan comes from the pack's manifest; the page's media from their
+    // own URLs.
     expect(deps.projectService.createResourceImportPlan).toHaveBeenCalledWith({
-      zip: packagePlace("https://files.example/pack.zip"),
+      assetPack: {
+        id: "pack-1",
+        manifest: packManifest,
+        fileUrls: packMediaFileUrls,
+        getZip: expect.any(Function),
+      },
       operationId: state.operationId,
       // The pack's dependencies go into a folder named after it.
       dependencyFolderName: expect.any(String),
     });
+    // Only an import reads the pack's package: asking for it as an import
+    // starts counts one download, and a fresh URL counts none.
+    const [{ assetPack }] =
+      deps.projectService.createResourceImportPlan.mock.calls[0];
+    assetPack.getZip({ importing: true });
+    assetPack.getZip();
+    expect(deps.appService.getAssetStorePackDownload.mock.calls).toEqual([
+      [{ assetPackId: "pack-1", countDownload: true }],
+      [{ assetPackId: "pack-1", countDownload: false }],
+    ]);
 
     planned.resolve({ valid: true, plan });
     await opening;
@@ -633,7 +613,8 @@ describe("resource-import-dialog asset store", () => {
 
     details.resolve({
       ...storePack("pack-1"),
-      package: packagePlace("https://x.test/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     await opening;
     expect(state.step).toBe("store");
@@ -648,7 +629,8 @@ describe("resource-import-dialog asset store", () => {
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockReturnValue(
       planned.promise,
@@ -682,7 +664,8 @@ describe("resource-import-dialog asset store", () => {
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,
@@ -731,7 +714,8 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
       description: [],
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.appService.getAssetStoreCreator.mockResolvedValue({
       creator: {
@@ -768,7 +752,8 @@ describe("resource-import-dialog asset store", () => {
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,
@@ -798,14 +783,15 @@ describe("resource-import-dialog asset store", () => {
     );
   });
 
-  it("sends one view each time a pack's page opens, and none when it shows again without a read", async () => {
+  it("reads the pack, counting one view, each time its page opens, and not when it shows again", async () => {
     const { deps } = createStoreDeps();
     deps.appService.listAssetStorePacks.mockResolvedValue({
       packs: [storePack("pack-1")],
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.appService.getAssetStoreCreator.mockResolvedValue({
       creator: {
@@ -831,7 +817,7 @@ describe("resource-import-dialog asset store", () => {
     handlePackImport(deps);
     handleSelectionBack(deps);
     expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
-      [{ assetPackId: "pack-1", view: true }],
+      [{ assetPackId: "pack-1" }],
     ]);
 
     // Back to the list, then the pack again: a second opening.
@@ -839,8 +825,8 @@ describe("resource-import-dialog asset store", () => {
     handleCreatorBack(deps);
     await clickPack(deps, "pack-1");
     expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
-      [{ assetPackId: "pack-1", view: true }],
-      [{ assetPackId: "pack-1", view: true }],
+      [{ assetPackId: "pack-1" }],
+      [{ assetPackId: "pack-1" }],
     ]);
   });
 
@@ -880,7 +866,8 @@ describe("resource-import-dialog asset store", () => {
       packs: [storePack("pack-1")],
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: false,
@@ -920,7 +907,6 @@ describe("resource-import-dialog asset store", () => {
     expect(enter.preventDefault).toHaveBeenCalledTimes(1);
     expect(deps.appService.getAssetStorePack).toHaveBeenCalledWith({
       assetPackId: "pack-1",
-      view: true,
     });
   });
 
@@ -1108,7 +1094,8 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack(packId),
       description: [],
-      package: packagePlace(`https://files.example/${packId}.zip`),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,

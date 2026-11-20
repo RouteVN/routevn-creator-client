@@ -3358,6 +3358,8 @@ resourceImportErrors:
   invalid_url: "درآمد کا ایک درست URL درج کریں۔"
   asset_store_unavailable: "اثاثہ اسٹور لوڈ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔"
   asset_pack_not_found: "یہ اثاثہ پیک اب دستیاب نہیں ہے۔"
+  package_changed: "یہ پیک کھولنے کے بعد اپ ڈیٹ ہو گیا۔ درآمد کرنے کے لیے اسے دوبارہ کھولیں۔"
+  package_unavailable: "پیک ڈاؤن لوڈ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔"
   asset_creator_not_found: "یہ تخلیق کار اب دستیاب نہیں ہے۔"
   unsupported_protocol: "درآمد کے لنکس میں HTTPS استعمال ہونا چاہیے۔ HTTP صرف localhost پر جانچ کے لیے استعمال کیا جا سکتا ہے۔"
   authorization_required: "اس پیک تک رسائی کے لیے اجازت درکار ہے۔"

@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "ป้อน URL สำหรับนำเข้าที่ถูกต้อง"
     asset_store_unavailable: "โหลดร้านค้าทรัพยากรไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
     asset_pack_not_found: "แพ็กเกจทรัพยากรนี้ไม่มีให้ใช้งานแล้ว"
+    package_changed: "แพ็กเกจนี้มีการอัปเดตหลังจากที่คุณเปิด เปิดอีกครั้งเพื่อนำเข้า"
+    package_unavailable: "ดาวน์โหลดแพ็กเกจไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
     asset_creator_not_found: "ผู้สร้างรายนี้ไม่มีให้ใช้งานแล้ว"
     unsupported_protocol: "ลิงก์นำเข้าต้องใช้ HTTPS ส่วน HTTP ใช้ได้เฉพาะการทดสอบบน localhost เท่านั้น"
     authorization_required: "ต้องได้รับอนุญาตจึงจะเข้าถึงแพ็กเกจนี้ได้"

@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "Saisissez une URL d’importation valide."
     asset_store_unavailable: "Impossible de charger la boutique de ressources. Vérifiez la connexion, puis réessayez."
     asset_pack_not_found: "Ce paquet de ressources n’est plus disponible."
+    package_changed: "Ce paquet a été mis à jour après son ouverture. Ouvrez-le à nouveau pour l’importer."
+    package_unavailable: "Le paquet n’a pas pu être téléchargé. Vérifiez votre connexion et réessayez."
     asset_creator_not_found: "Ce créateur n’est plus disponible."
     unsupported_protocol: "Les liens d’importation doivent utiliser HTTPS. HTTP n’est autorisé que pour les tests sur localhost."
     authorization_required: "Ce paquet nécessite une autorisation."

@@ -10,12 +10,12 @@ import * as store from "../../src/components/resource-import-dialog/resource-imp
 import Subject from "../../src/deps/subject.js";
 
 // A pack's published package, as the store client reads it.
-const packagePlace = (url) => ({
-  url,
-  size: 1000,
-  directoryOffset: 900,
-  directorySize: 100,
-});
+// A pack's package manifest and the URLs of its media, as the store client
+// reads them with the pack.
+const packContents = {
+  manifest: { schema: "routevn.import-pack.v3" },
+  mediaFileUrls: {},
+};
 
 const readYaml = (path) =>
   yaml.load(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -254,7 +254,7 @@ describe("resource-import-dialog rendering", () => {
       ],
       versionName: "1.0.0",
       releaseNotes: "Adds masks.\nFixes fades.",
-      package: packagePlace("https://files.example/pack.zip"),
+      ...packContents,
     });
     await settle();
 
