@@ -13,18 +13,10 @@ refs:
         handler: handleOutcomeClick
       contextmenu:
         handler: handleOutcomeContextMenu
-  outcomeMenuButton*:
+  weightSelect:
     eventListeners:
-      click:
-        handler: handleOutcomeMenuButtonClick
-      keydown:
-        handler: handleOutcomeMenuButtonKeyDown
-  weightInput:
-    eventListeners:
-      value-input:
-        handler: handleWeightInputChange
       value-change:
-        handler: handleWeightInputChange
+        handler: handleWeightSelectChange
   outcomeActionsEditor:
     eventListeners:
       actions-change:
@@ -61,7 +53,6 @@ template:
                               - rtgl-view d=v w=1fg:
                                   - rtgl-text s=sm: ${outcome.summary}
                                   - rtgl-text s=xs c=mu-fg: ${outcome.actionsSummary}
-                              - 'rtgl-button#outcomeMenuButton${outcome.id} data-outcome-id=${outcome.id} sq s=sm v=gh pre=ellipsis title="${outcomeMenuButtonLabel}" aria-label="${outcomeMenuButtonLabel}" aria-haspopup=menu aria-keyshortcuts="${outcome.menuKeyShortcuts}"': null
                       - rtgl-button#addOutcomeButton v=ol w=f mt=md: ${addOutcomeButton}
                   - $if !isDistributionSupported:
                       - rtgl-text#unsupportedDistributionNotice s=sm c=mu-fg: ${unsupportedDistributionLabel}
@@ -75,7 +66,7 @@ template:
               - rtgl-view g=md mt=md w=f p=md ph=md:
                   - rtgl-view g=md w=f:
                       - rtgl-text s=sm c=mu-fg: ${weightLabel}
-                      - 'rtgl-input-number#weightInput w=f min=0 value="${tempOutcome.weight}" aria-label="${weightLabel}"': null
+                      - rtgl-select#weightSelect w=f no-clear :selectedValue=${tempOutcome.weight} :options=${weightOptions} :ariaLabel=${weightLabel}: null
                       - rtgl-text s=sm c=mu-fg mt=md: ${chanceLabel}
                       - rtgl-text#outcomeChance s=sm: ${tempOutcome.chance}
                   - rtgl-view w=f h=1 bgc=mu mt=lg mb=sm: null

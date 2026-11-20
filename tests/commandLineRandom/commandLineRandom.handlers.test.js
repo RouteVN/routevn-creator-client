@@ -14,11 +14,9 @@ const {
   handleOutcomeActionsDelete,
   handleOutcomeClick,
   handleOutcomeContextMenu,
-  handleOutcomeMenuButtonClick,
-  handleOutcomeMenuButtonKeyDown,
   handleSaveOutcomeClick,
   handleSubmitClick,
-  handleWeightInputChange,
+  handleWeightSelectChange,
 } = randomHandlers;
 
 const EN_COPY = EN_I18N.commandLinePage;
@@ -71,10 +69,7 @@ const clickEvent = () => ({ _event: { stopPropagation: vi.fn() } });
 
 const outcomeEvent = (outcomeId, fields = {}) => ({
   _event: {
-    currentTarget: {
-      dataset: { outcomeId },
-      getBoundingClientRect: () => ({ right: 320, bottom: 240 }),
-    },
+    currentTarget: { dataset: { outcomeId } },
     preventDefault: vi.fn(),
     stopPropagation: vi.fn(),
     ...fields,
@@ -361,7 +356,7 @@ describe("commandLineRandom.handlers", () => {
     expect(state.mode).toBe("editOutcome");
     expect(state.tempOutcome).toEqual({ weight: 1, actions: {} });
 
-    handleWeightInputChange(deps, weightEvent(30));
+    handleWeightSelectChange(deps, weightEvent(30));
     handleOutcomeActionsChange(deps, {
       _event: { detail: { sectionTransition } },
     });
@@ -450,7 +445,7 @@ describe("commandLineRandom.handlers", () => {
       actions: { updateVariable },
     });
 
-    handleWeightInputChange(deps, weightEvent(20));
+    handleWeightSelectChange(deps, weightEvent(20));
     handleSaveOutcomeClick(deps, clickEvent());
 
     expect(outcomeIds(state)).toEqual(ids);
@@ -459,19 +454,11 @@ describe("commandLineRandom.handlers", () => {
     expect(state.mode).toBe("current");
   });
 
-  // rtgl-input-number sends null for an empty field, and shows a negative
-  // value as its minimum.
-  it.each([
-    [-5, 0],
-    [null, undefined],
-    [2.5, 2.5],
-    [0, 0],
-    [40, 40],
-  ])("keeps %s from the weight field as %s", (value, weight) => {
+  it.each([1, 40, 100])("keeps the picked weight %s", (weight) => {
     const { deps, state } = mountWithWeights(5);
 
     handleOutcomeClick(deps, outcomeEvent(outcomeIds(state)[0]));
-    handleWeightInputChange(deps, weightEvent(value));
+    handleWeightSelectChange(deps, weightEvent(weight));
 
     expect(state.tempOutcome.weight).toBe(weight);
     expect(deps.render).toHaveBeenCalledTimes(2);
@@ -482,7 +469,7 @@ describe("commandLineRandom.handlers", () => {
     const ids = outcomeIds(state);
 
     handleOutcomeClick(deps, outcomeEvent(ids[0]));
-    handleWeightInputChange(deps, weightEvent(50));
+    handleWeightSelectChange(deps, weightEvent(50));
     handleBreadcrumbClick(deps, { _event: { detail: { id: "current" } } });
 
     expect(state.mode).toBe("current");
@@ -505,11 +492,12 @@ describe("commandLineRandom.handlers", () => {
     expect(dispatchedEvents[0].bubbles).toBe(false);
   });
 
-  it("warns instead of saving an outcome whose weight field is empty", () => {
-    const { deps, state } = mountWithWeights(5);
+  it("warns instead of saving an outcome saved without a weight", () => {
+    const { deps, state } = mountRandom({
+      random: weightedRandom({ weight: "5", actions: {} }),
+    });
 
     handleOutcomeClick(deps, outcomeEvent(outcomeIds(state)[0]));
-    handleWeightInputChange(deps, weightEvent(null));
     const renders = deps.render.mock.calls.length;
     const event = clickEvent();
 
@@ -522,19 +510,18 @@ describe("commandLineRandom.handlers", () => {
       title: "Warning",
     });
     expect(state.mode).toBe("editOutcome");
-    expect(state.tempOutcome.weight).toBeUndefined();
-    expect(outcomeWeights(state)).toEqual([5]);
+    expect(state.tempOutcome.weight).toBe("5");
+    expect(outcomeWeights(state)).toEqual(["5"]);
     expect(deps.render).toHaveBeenCalledTimes(renders);
   });
 
-  it("warns in Japanese about an outcome whose weight field is empty", () => {
+  it("warns in Japanese about an outcome saved without a weight", () => {
     const { deps, state } = mountRandom(
-      { random: weightedRandom(...outcomesWithWeights(5)) },
+      { random: weightedRandom({ weight: "5", actions: {} }) },
       { i18n: JA_I18N },
     );
 
     handleOutcomeClick(deps, outcomeEvent(outcomeIds(state)[0]));
-    handleWeightInputChange(deps, weightEvent(null));
     handleSaveOutcomeClick(deps, clickEvent());
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
@@ -543,18 +530,18 @@ describe("commandLineRandom.handlers", () => {
     });
   });
 
-  it("opens the outcome menu from its button and from a right-click", () => {
+  it("opens the outcome menu from a right-click on the outcome", () => {
     const { deps, state } = mountWithWeights(1, 2);
     const [firstId, secondId] = outcomeIds(state);
-    const buttonEvent = outcomeEvent(secondId);
+    const secondEvent = outcomeEvent(secondId, { clientX: 56, clientY: 78 });
 
-    handleOutcomeMenuButtonClick(deps, buttonEvent);
+    handleOutcomeContextMenu(deps, secondEvent);
 
-    expect(buttonEvent._event.stopPropagation).toHaveBeenCalledOnce();
+    expect(secondEvent._event.preventDefault).toHaveBeenCalledOnce();
     expect(state.dropdownMenu).toMatchObject({
       isOpen: true,
       outcomeId: secondId,
-      position: { x: 320, y: 240 },
+      position: { x: 56, y: 78 },
     });
     expect(state.dropdownMenu.items.map((item) => item.value)).toEqual([
       "move-up",
@@ -564,13 +551,10 @@ describe("commandLineRandom.handlers", () => {
     handleDropdownMenuClose(deps);
     expect(state.dropdownMenu.isOpen).toBe(false);
 
-    const contextMenuEvent = outcomeEvent(firstId, {
-      clientX: 12,
-      clientY: 34,
-    });
-    handleOutcomeContextMenu(deps, contextMenuEvent);
+    const firstEvent = outcomeEvent(firstId, { clientX: 12, clientY: 34 });
+    handleOutcomeContextMenu(deps, firstEvent);
 
-    expect(contextMenuEvent._event.preventDefault).toHaveBeenCalledOnce();
+    expect(firstEvent._event.preventDefault).toHaveBeenCalledOnce();
     expect(state.dropdownMenu).toMatchObject({
       isOpen: true,
       outcomeId: firstId,
@@ -595,10 +579,7 @@ describe("commandLineRandom.handlers", () => {
     (value, index, expectedWeights) => {
       const { deps, state } = mountWithWeights(1, 2, 3);
 
-      handleOutcomeMenuButtonClick(
-        deps,
-        outcomeEvent(outcomeIds(state)[index]),
-      );
+      handleOutcomeContextMenu(deps, outcomeEvent(outcomeIds(state)[index]));
       handleDropdownMenuClickItem(deps, {
         _event: { detail: { item: { value } } },
       });
@@ -606,50 +587,6 @@ describe("commandLineRandom.handlers", () => {
       expect(outcomeWeights(state)).toEqual(expectedWeights);
       expect(state.dropdownMenu.isOpen).toBe(false);
       expect(state.dropdownMenu.outcomeId).toBeUndefined();
-    },
-  );
-
-  it("moves and deletes the same outcome with keyboard shortcuts", () => {
-    const { deps, state } = mountWithWeights(1, 2, 3);
-    const lastId = outcomeIds(state)[2];
-    const pressShortcut = (key) => {
-      const event = outcomeEvent(lastId, { key });
-      handleOutcomeMenuButtonKeyDown(deps, event);
-      return event._event;
-    };
-
-    pressShortcut("ArrowDown");
-    expect(outcomeWeights(state)).toEqual([1, 2, 3]);
-
-    pressShortcut("ArrowUp");
-    pressShortcut("ArrowUp");
-    expect(outcomeWeights(state)).toEqual([3, 1, 2]);
-
-    const firstRowUp = pressShortcut("ArrowUp");
-    expect(outcomeWeights(state)).toEqual([3, 1, 2]);
-    expect(firstRowUp.preventDefault).toHaveBeenCalledOnce();
-    expect(firstRowUp.stopPropagation).toHaveBeenCalledOnce();
-
-    pressShortcut("ArrowDown");
-    expect(outcomeWeights(state)).toEqual([1, 3, 2]);
-
-    pressShortcut("Delete");
-    expect(outcomeWeights(state)).toEqual([1, 2]);
-    expect(deps.render).toHaveBeenCalledTimes(6);
-  });
-
-  it.each(["Enter", " ", "a", "Backspace"])(
-    "leaves the %j key to the menu button",
-    (key) => {
-      const { deps, state } = mountWithWeights(1, 2);
-      const event = outcomeEvent(outcomeIds(state)[1], { key });
-
-      handleOutcomeMenuButtonKeyDown(deps, event);
-
-      expect(event._event.preventDefault).not.toHaveBeenCalled();
-      expect(event._event.stopPropagation).not.toHaveBeenCalled();
-      expect(outcomeWeights(state)).toEqual([1, 2]);
-      expect(deps.render).not.toHaveBeenCalled();
     },
   );
 

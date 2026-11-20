@@ -33,12 +33,6 @@ const toEditorOutcomes = (outcomes) =>
     actions: outcome.actions ?? {},
   }));
 
-// The keys that move an outcome from its menu button. Delete deletes it.
-const MENU_BUTTON_MOVE_DIRECTIONS = {
-  ArrowUp: "up",
-  ArrowDown: "down",
-};
-
 const showWarning = ({ appService, i18n }, message) => {
   const copy = selectCommandLineCopy(i18n);
   appService.showAlert({
@@ -98,49 +92,11 @@ export const handleOutcomeContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleOutcomeMenuButtonClick = (deps, payload) => {
-  payload._event.stopPropagation();
-  const { store, render } = deps;
-  const { currentTarget } = payload._event;
-  const rect = currentTarget.getBoundingClientRect();
-
-  store.showDropdownMenu({
-    position: { x: rect.right, y: rect.bottom },
-    outcomeId: currentTarget.dataset.outcomeId,
-  });
-  render();
-};
-
-export const handleOutcomeMenuButtonKeyDown = (deps, payload) => {
-  const { store, render } = deps;
-  const { key, currentTarget } = payload._event;
-  const direction = MENU_BUTTON_MOVE_DIRECTIONS[key];
-
-  if (!direction && key !== "Delete") {
-    return;
-  }
-
-  payload._event.preventDefault();
-  payload._event.stopPropagation();
-  const { outcomeId } = currentTarget.dataset;
-
-  if (direction) {
-    store.moveOutcome({ outcomeId, direction });
-  } else {
-    store.deleteOutcome({ outcomeId });
-  }
-  render();
-};
-
-// rtgl-input-number sends null for an empty field. It shows a negative value
-// as its minimum, 0, so the draft keeps 0 as well.
-export const handleWeightInputChange = (deps, payload) => {
+export const handleWeightSelectChange = (deps, payload) => {
   const { store, render } = deps;
   const { value } = payload._event.detail;
 
-  store.setTempOutcomeWeight({
-    weight: value === null ? undefined : Math.max(0, value),
-  });
+  store.setTempOutcomeWeight({ weight: value });
   render();
 };
 

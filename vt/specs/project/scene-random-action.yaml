@@ -1,6 +1,6 @@
 ---
 title: Scene Random Action Workflow
-description: Covers adding a Random action from the scene editor actions dialog, entering outcome weights and their chances, and the saved Random row and line marker.
+description: Covers adding a Random action from the scene editor actions dialog, picking outcome weights and their chances, and the saved Random row and line marker.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -139,15 +139,22 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-random#commandLineRandom rtgl-input-number#weightInput input"
+    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect [data-testid='select-button']"
     state: visible
     timeoutMs: 10000
   - action: select
-    selector: "rvn-command-line-random#commandLineRandom rtgl-input-number#weightInput input"
+    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect [data-testid='select-button']"
     steps:
-      - action: clear
-      - action: write
-        value: "3"
+      - action: click
+  # The weight options are 1 to 100, so option 2 is weight 3.
+  - action: waitFor
+    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect #option2"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect #option2"
+    steps:
+      - action: click
   - action: wait
     ms: 250
   - action: assert
@@ -168,7 +175,7 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-random#commandLineRandom rtgl-input-number#weightInput input"
+    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect [data-testid='select-button']"
     state: visible
     timeoutMs: 10000
   - action: assert

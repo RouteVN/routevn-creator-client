@@ -68,19 +68,16 @@ describe("commandLineRandom.store", () => {
         id: "outcome-1",
         summary: "Weight 70 (70%)",
         actionsSummary: "1 action",
-        menuKeyShortcuts: "ArrowDown Delete",
       },
       {
         id: "outcome-2",
         summary: "Weight 30 (30%)",
         actionsSummary: "2 actions",
-        menuKeyShortcuts: "ArrowUp ArrowDown Delete",
       },
       {
         id: "outcome-3",
         summary: "Weight 0 (0%)",
-        actionsSummary: "No actions",
-        menuKeyShortcuts: "ArrowUp Delete",
+        actionsSummary: "No actions (move to next line)",
       },
     ]);
   });
@@ -164,7 +161,6 @@ describe("commandLineRandom.store", () => {
     expect(viewDataOf(state).dropdownMenu.items).toEqual([
       { label: "Delete", type: "item", value: "delete" },
     ]);
-    expect(viewDataOf(state).outcomes[0].menuKeyShortcuts).toBe("Delete");
   });
 
   it("moves outcomes one place and stops at either end", () => {
@@ -342,7 +338,10 @@ describe("commandLineRandom.store", () => {
     openOutcomeDraft({ state }, { outcomeId: "outcome-1" });
     setTempOutcomeWeight({ state }, { weight: undefined });
 
-    expect(viewDataOf(state).tempOutcome).toEqual({ weight: "", chance: "0%" });
+    expect(viewDataOf(state).tempOutcome).toEqual({
+      weight: undefined,
+      chance: "0%",
+    });
   });
 
   it("gives the outcome's actions editor the inherited hidden modes and its allowed modes", () => {
@@ -373,7 +372,6 @@ describe("commandLineRandom.store", () => {
       actionsLabel: "Actions",
       addOutcomeButton: "+ Add Outcome",
       chanceLabel: "Chance",
-      outcomeMenuButtonLabel: "Outcome Menu",
       outcomesLabel: "Outcomes",
       saveOutcomeButton: "Save Outcome",
       submitButton: "Submit",
@@ -394,7 +392,6 @@ describe("commandLineRandom.store", () => {
       actionsLabel: "アクション",
       addOutcomeButton: "+ 結果を追加",
       chanceLabel: "確率",
-      outcomeMenuButtonLabel: "結果メニュー",
       outcomesLabel: "結果",
       saveOutcomeButton: "結果を保存",
       submitButton: "確定",
@@ -416,7 +413,10 @@ describe("commandLineRandom.store", () => {
         actionsSummary,
       })),
     ).toEqual([
-      { summary: "重み70（70%）", actionsSummary: "アクションなし" },
+      {
+        summary: "重み70（70%）",
+        actionsSummary: "アクションなし（次の行へ進む）",
+      },
       { summary: "重み30（30%）", actionsSummary: "1件のアクション" },
     ]);
 

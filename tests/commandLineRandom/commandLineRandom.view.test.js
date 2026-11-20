@@ -59,33 +59,27 @@ const mountedState = (random) => {
 };
 
 describe("commandLineRandom view", () => {
-  it("keys the outcome rows and their menu buttons by outcome id", () => {
+  it("keys the outcome rows by outcome id, with no menu button", () => {
     const state = createStateWithWeights(1, 2, 3);
 
     expect(renderedElementIds(render(state))).toEqual([
       "breadcrumb",
       "randomOutcomeo1",
-      "outcomeMenuButtono1",
       "randomOutcomeo2",
-      "outcomeMenuButtono2",
       "randomOutcomeo3",
-      "outcomeMenuButtono3",
       "addOutcomeButton",
       "submitButton",
       "dropdownMenu",
     ]);
+    expect(render(state)).not.toContain("ellipsis");
 
     moveOutcome({ state }, { outcomeId: "o3", direction: "up" });
 
     expect(
       renderedElementIds(render(state)).filter((id) =>
-        id.startsWith("outcomeMenuButton"),
+        id.startsWith("randomOutcome"),
       ),
-    ).toEqual([
-      "outcomeMenuButtono1",
-      "outcomeMenuButtono3",
-      "outcomeMenuButtono2",
-    ]);
+    ).toEqual(["randomOutcomeo1", "randomOutcomeo3", "randomOutcomeo2"]);
   });
 
   it("shows each outcome's weight, chance and actions", () => {
@@ -94,7 +88,7 @@ describe("commandLineRandom view", () => {
     expect(html).toContain(">Outcomes<");
     expect(html).toContain(">Weight 70 (70%)<");
     expect(html).toContain(">Weight 30 (30%)<");
-    expect(html).toContain(">No actions<");
+    expect(html).toContain(">No actions (move to next line)<");
     expect(elementTag(html, "randomOutcomeo1")).toMatch(
       /^<rtgl-view [^>]*data-outcome-id="o1"/,
     );
@@ -102,27 +96,6 @@ describe("commandLineRandom view", () => {
       /^<rtgl-view [^>]*data-outcome-id="o2"/,
     );
   });
-
-  it.each([
-    ["o1", "ArrowDown Delete"],
-    ["o2", "ArrowUp ArrowDown Delete"],
-    ["o3", "ArrowUp Delete"],
-  ])(
-    "labels the menu button of %s with its shortcuts",
-    (outcomeId, shortcuts) => {
-      const button = elementTag(
-        render(createStateWithWeights(1, 2, 3)),
-        `outcomeMenuButton${outcomeId}`,
-      );
-
-      expect(button).toContain('pre="ellipsis"');
-      expect(button).toContain('title="Outcome Menu"');
-      expect(button).toContain('aria-label="Outcome Menu"');
-      expect(button).toContain('aria-haspopup="menu"');
-      expect(button).toContain(`aria-keyshortcuts="${shortcuts}"`);
-      expect(button).toContain(`data-outcome-id="${outcomeId}"`);
-    },
-  );
 
   // Pressing Submit or Add Outcome says what is wrong instead.
   it.each([
@@ -256,17 +229,17 @@ describe("commandLineRandom view", () => {
 
     expect(renderedElementIds(html)).toEqual([
       "breadcrumb",
-      "weightInput",
+      "weightSelect",
       "outcomeChance",
       "outcomeActionsEditor",
       "saveOutcomeButton",
       "dropdownMenu",
     ]);
-    const weightInput = elementTag(html, "weightInput");
-    expect(weightInput).toMatch(/^<rtgl-input-number /);
-    expect(weightInput).toContain('min="0"');
-    expect(weightInput).toContain('value="30"');
-    expect(weightInput).toContain('aria-label="Weight"');
+    const weightSelect = elementTag(html, "weightSelect");
+    expect(weightSelect).toMatch(/^<rtgl-select /);
+    expect(weightSelect).toContain('selectedvalue="30"');
+    expect(weightSelect).toContain('noclear="true"');
+    expect(weightSelect).toContain('arialabel="Weight"');
     expect(html).toContain(">Weight<");
     expect(html).toContain(">Chance<");
     expect(html).toContain(">30%<");
@@ -286,6 +259,41 @@ describe("commandLineRandom view", () => {
     expect(elementTag(html, "saveOutcomeButton")).not.toContain("disabled");
   });
 
+  it("offers the weights 1 to 100", () => {
+    const state = createStateWithWeights(30);
+    openOutcomeDraft({ state }, { outcomeId: "o1" });
+    const { weightOptions } = selectViewData({
+      state,
+      props: {},
+      i18n: EN_I18N,
+    });
+
+    expect(weightOptions).toEqual(
+      Array.from({ length: 100 }, (_, index) => ({
+        value: index + 1,
+        label: String(index + 1),
+      })),
+    );
+  });
+
+  it.each([
+    [0, 0],
+    [2.5, 2],
+    [250, 100],
+  ])("adds a saved weight of %s to the options in order", (weight, index) => {
+    const state = createStateWithWeights(weight);
+    openOutcomeDraft({ state }, { outcomeId: "o1" });
+    const values = selectViewData({
+      state,
+      props: {},
+      i18n: EN_I18N,
+    }).weightOptions.map((option) => option.value);
+
+    expect(values).toHaveLength(101);
+    expect(values.indexOf(weight)).toBe(index);
+    expect(values).toEqual([...values].sort((a, b) => a - b));
+  });
+
   it("keeps Save Outcome enabled while the weight field is empty", () => {
     const state = createStateWithWeights(1);
     openOutcomeDraft({ state }, { outcomeId: "o1" });
@@ -296,7 +304,7 @@ describe("commandLineRandom view", () => {
       /^<rtgl-button [^>]*id="saveOutcomeButton"/,
     );
     expect(elementTag(html, "saveOutcomeButton")).not.toContain("disabled");
-    expect(elementTag(html, "weightInput")).not.toContain("value=");
+    expect(elementTag(html, "weightSelect")).not.toContain("selectedvalue=");
     expect(html).toContain(">0%<");
   });
 
@@ -308,9 +316,6 @@ describe("commandLineRandom view", () => {
     expect(html).toContain(">重み70（70%）<");
     expect(html).toContain(">+ 結果を追加<");
     expect(html).toContain(">確定<");
-    expect(elementTag(html, "outcomeMenuButtono1")).toContain(
-      'aria-label="結果メニュー"',
-    );
 
     openOutcomeDraft({ state }, { outcomeId: "o1" });
     const editHtml = render(state, { i18n: JA_I18N });
@@ -342,14 +347,7 @@ describe("commandLineRandom view", () => {
         click: "handleOutcomeClick",
         contextmenu: "handleOutcomeContextMenu",
       },
-      "outcomeMenuButton*": {
-        click: "handleOutcomeMenuButtonClick",
-        keydown: "handleOutcomeMenuButtonKeyDown",
-      },
-      weightInput: {
-        "value-input": "handleWeightInputChange",
-        "value-change": "handleWeightInputChange",
-      },
+      weightSelect: { "value-change": "handleWeightSelectChange" },
       outcomeActionsEditor: {
         "actions-change": "handleOutcomeActionsChange",
         "action-delete": "handleOutcomeActionsDelete",

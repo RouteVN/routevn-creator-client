@@ -128,8 +128,6 @@ export const formatCommandLineCopy = (template, replacements = {}, copy = {}) =>
 const DEFAULT_COMMAND_LINE_PLURAL_COPY = Object.freeze({
   actionCount_one: "{count} action",
   actionCount_other: "{count} actions",
-  nestedActionCount_one: "{count} nested action",
-  nestedActionCount_other: "{count} nested actions",
   rollbackLineCount_one: "Rollback by {count} line",
   rollbackLineCount_other: "Rollback by {count} lines",
   branchCount_one: "{count} branch",

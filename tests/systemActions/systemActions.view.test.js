@@ -169,22 +169,47 @@ describe("systemActions view", () => {
     },
   );
 
-  it("shows a random action as a row with its outcomes and nested actions", () => {
-    const elements = renderSystemActions({
-      actions: { random: randomWithThreeActions },
-      props: { showSelected: true },
-    });
-    const [row] = elements.filter(
-      (element) => element.data?.attrs?.id === "actionItemRandom",
-    );
-    const rowHtml = toHTML(row);
+  it.each([
+    ["random", "actionItemRandom", "random", "Random: 2 outcomes"],
+    [
+      "conditional",
+      "actionItemConditional",
+      "settings",
+      "Conditional: 1 branch + default",
+    ],
+  ])(
+    "shows a %s action as a one-line row without its nested actions",
+    (actionType, rowId, icon, title) => {
+      const actions = {
+        random: randomWithThreeActions,
+        conditional: {
+          branches: [
+            {
+              when: { eq: [{ var: "variables.trust" }, 1] },
+              actions: { nextLine: {} },
+            },
+            { actions: { nextLine: {}, toggleAutoMode: {} } },
+          ],
+        },
+      };
+      const elements = renderSystemActions({
+        actions: { [actionType]: actions[actionType] },
+        props: { showSelected: true },
+      });
+      const [row] = elements.filter(
+        (element) => element.data?.attrs?.id === rowId,
+      );
+      const rowHtml = toHTML(row);
 
-    expect(row.sel).toBe("rtgl-view");
-    expect(row.data.attrs["data-mode"]).toBe("random");
-    expect(rowHtml).toContain('<rtgl-svg svg="random" wh="24">');
-    expect(rowHtml).toContain(">Random: 2 outcomes<");
-    expect(rowHtml).toContain(">3 nested actions<");
-  });
+      expect(row.sel).toBe("rtgl-view");
+      expect(row.data.attrs["data-mode"]).toBe(actionType);
+      expect(row.data.attrs.h).toBe("36");
+      expect(rowHtml).toContain(`<rtgl-svg svg="${icon}" wh="24">`);
+      expect(rowHtml).toContain(`>${title}<`);
+      expect(rowHtml).not.toContain("nested");
+      expect(rowHtml.match(/<rtgl-text /g)).toHaveLength(1);
+    },
+  );
 
   it("places the random row in the presentation order", () => {
     const elements = renderSystemActions({

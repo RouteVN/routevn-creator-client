@@ -35,18 +35,6 @@ const getOutcomeDropdownMenuItems = (outcomes, outcomeId) => {
   return items;
 };
 
-const getMenuKeyShortcuts = (index, outcomeCount) => {
-  const shortcuts = [];
-  if (index > 0) {
-    shortcuts.push("ArrowUp");
-  }
-  if (index < outcomeCount - 1) {
-    shortcuts.push("ArrowDown");
-  }
-  shortcuts.push("Delete");
-  return shortcuts.join(" ");
-};
-
 // Chances arrive rounded by getOutcomeChancePercents, which can keep more
 // digits than formatPercent's two decimals, so every digit is shown in the
 // locale's percent template.
@@ -55,13 +43,32 @@ const formatChance = (percent, dateTime = {}) =>
     formatNumber(percent, dateTime),
   );
 
+// The weights the weight select offers.
+const WEIGHT_CHOICES = Array.from({ length: 100 }, (_, index) => index + 1);
+
+// The options of the weight select: the whole numbers from 1 to 100, in the
+// locale's digits. A saved weight outside them, such as 0 or 250, is added in
+// order, so that the select shows it and keeps it until another is picked.
+const getWeightOptions = (weight, dateTime) => {
+  const weights =
+    Number.isFinite(weight) && !WEIGHT_CHOICES.includes(weight)
+      ? [...WEIGHT_CHOICES, weight].sort((a, b) => a - b)
+      : WEIGHT_CHOICES;
+  return weights.map((value) => ({
+    value,
+    label: formatNumber(value, dateTime),
+  }));
+};
+
 const countActions = (actions) => Object.keys(actions).length;
 
+// An outcome with no actions does nothing, and the line moves on to the next
+// line, as after any outcome.
 const formatActionsSummary = (actions, copy, dateTime) => {
   const actionCount = countActions(actions);
   return actionCount > 0
     ? formatCommandLineActionCount(actionCount, copy, dateTime)
-    : localizeCommandLineText("No actions", copy);
+    : localizeCommandLineText("No actions (move to next line)", copy);
 };
 
 // The chance of the outcome being edited, with the draft's weight in place of
@@ -211,7 +218,6 @@ export const selectViewData = ({ state, props, i18n }) => {
       copy,
     ),
     actionsSummary: formatActionsSummary(outcome.actions, copy, dateTime),
-    menuKeyShortcuts: getMenuKeyShortcuts(index, state.outcomes.length),
   }));
 
   const breadcrumb = [
@@ -228,9 +234,10 @@ export const selectViewData = ({ state, props, i18n }) => {
     isDistributionSupported: state.isDistributionSupported,
     outcomes,
     tempOutcome: {
-      weight: state.tempOutcome.weight ?? "",
+      weight: state.tempOutcome.weight,
       chance: formatChance(getTempOutcomeChancePercent(state), dateTime),
     },
+    weightOptions: getWeightOptions(state.tempOutcome.weight, dateTime),
     outcomeActions: state.tempOutcome.actions,
     outcomeActionAllowedModes: OUTCOME_ACTION_ALLOWED_MODES,
     hiddenModes: props.hiddenModes ?? [],
@@ -238,7 +245,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     actionsLabel: localizeCommandLineText("Actions", copy),
     addOutcomeButton: localizeCommandLineText("+ Add Outcome", copy),
     chanceLabel: localizeCommandLineText("Chance", copy),
-    outcomeMenuButtonLabel: localizeCommandLineText("Outcome Menu", copy),
     outcomesLabel: localizeCommandLineText("Outcomes", copy),
     saveOutcomeButton: localizeCommandLineText("Save Outcome", copy),
     submitButton: localizeCommandLineText("Submit", copy),

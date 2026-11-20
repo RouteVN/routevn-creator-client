@@ -24,6 +24,9 @@ import {
 const DEFAULT_BRANCH_LABEL = "Default branch";
 
 const BRANCH_ACTION_ALLOWED_MODES = ["sectionTransition", "updateVariable"];
+// A branch with no actions does nothing, and the line moves on to the next
+// line, as after any branch.
+const NO_BRANCH_ACTIONS_LABEL = "No actions (move to next line)";
 
 const toPlainObject = (value) => {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -494,7 +497,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       actionsSummary:
         branchActionCount > 0
           ? formatCommandLineActionCount(branchActionCount, copy, i18n.dateTime)
-          : localizeCommandLineText("No actions", copy),
+          : localizeCommandLineText(NO_BRANCH_ACTIONS_LABEL, copy),
     };
   };
   const conditionBranchItems = state.branches.filter((branch) =>
@@ -572,7 +575,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     branchActionsSummary:
       actionCount > 0
         ? formatCommandLineActionCount(actionCount, copy, i18n.dateTime)
-        : localizeCommandLineText("No actions", copy),
+        : localizeCommandLineText(NO_BRANCH_ACTIONS_LABEL, copy),
     branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,
     canSaveBranch,

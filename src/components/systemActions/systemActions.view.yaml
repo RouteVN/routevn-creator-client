@@ -251,17 +251,13 @@ template:
                       - rtgl-svg svg=variable wh=24: null
                       - rtgl-text s=sm: ${preview.updateVariable.summary}
               - $if preview.random:
-                  - 'rtgl-view#actionItemRandom data-mode=random g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md style="order: ${presentationActionOrder.random};"':
+                  - 'rtgl-view#actionItemRandom data-mode=random g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.random};"':
                       - rtgl-svg svg=random wh=24: null
-                      - rtgl-view d=v:
-                          - rtgl-text s=sm: ${preview.random.title}
-                          - rtgl-text s=xs c=mu-fg: ${preview.random.actionsSummary}
+                      - rtgl-text s=sm: ${preview.random.title}
               - $if preview.conditional:
-                  - 'rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md style="order: ${presentationActionOrder.conditional};"':
+                  - 'rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.conditional};"':
                       - rtgl-svg svg=settings wh=24: null
-                      - rtgl-view d=v:
-                          - rtgl-text s=sm: ${preview.conditional.title}
-                          - rtgl-text s=xs c=mu-fg: ${preview.conditional.actionsSummary}
+                      - rtgl-text s=sm: ${preview.conditional.title}
           - rtgl-button#addActionButton v=ol w=f: +
           - $if showEmbeddedClose:
               - rtgl-view d=h av=c ah=e w=f g=lg:

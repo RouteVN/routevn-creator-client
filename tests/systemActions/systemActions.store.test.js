@@ -165,14 +165,8 @@ describe("systemActions.store", () => {
       dateTime: FR_I18N.dateTime,
     });
 
-    expect(preview.conditional.actionsSummary).toBe(
-      copy.nestedActionCount_one.replace("{count}", "0"),
-    );
     expect(preview.random.summary).toBe(
       copy.outcomeCount_one.replace("{count}", "0"),
-    );
-    expect(preview.random.actionsSummary).toBe(
-      copy.nestedActionCount_one.replace("{count}", "0"),
     );
     expect(preview.rollbackByOffset.summary).toBe(
       copy.rollbackLineCount_one.replace("{count}", "1"),
@@ -219,7 +213,6 @@ describe("systemActions.store", () => {
     });
 
     expect(preview.conditional.summary).toBe("5 веток + ветка по умолчанию");
-    expect(preview.conditional.actionsSummary).toBe("2 вложенных действия");
     expect(preview.rollbackByOffset.summary).toBe("Откат на 5 строк");
     expect(preview.showConfirmDialog.summary).toBe(
       "При подтверждении: 1 действие, при отмене: 5 действий",
@@ -229,12 +222,12 @@ describe("systemActions.store", () => {
   // 1, 2 and 5 take the Russian one, few and many forms; English rules would
   // pick one, other and other.
   it.each([
-    [1, "1 исход", "1 вложенное действие"],
-    [2, "2 исхода", "2 вложенных действия"],
-    [5, "5 исходов", "5 вложенных действий"],
+    [1, "1 исход"],
+    [2, "2 исхода"],
+    [5, "5 исходов"],
   ])(
     "follows the Russian plural rules for a random with %s outcome(s)",
-    (outcomeCount, summary, actionsSummary) => {
+    (outcomeCount, summary) => {
       const outcomes = Array.from({ length: outcomeCount }, () => ({
         weight: 1,
         actions: { nextLine: {} },
@@ -251,7 +244,6 @@ describe("systemActions.store", () => {
       });
 
       expect(preview.random.summary).toBe(summary);
-      expect(preview.random.actionsSummary).toBe(actionsSummary);
       expect(preview.random.title).toBe(`Случайный выбор: ${summary}`);
     },
   );
@@ -365,9 +357,7 @@ describe("systemActions.store", () => {
     expect(actions.conditional).toEqual(conditional);
     expect(preview.conditional).toEqual({
       branchCount: 2,
-      actionCount: 2,
       summary: "1 branch + default",
-      actionsSummary: "2 nested actions",
       title: "Conditional: 1 branch + default",
     });
   });
@@ -413,14 +403,12 @@ describe("systemActions.store", () => {
     expect(actions.random).toEqual(random);
     expect(preview.random).toEqual({
       outcomeCount: 2,
-      actionCount: 3,
       summary: "2 outcomes",
-      actionsSummary: "3 nested actions",
       title: "Random: 2 outcomes",
     });
   });
 
-  it("counts the nested actions of a conditional and a random in Japanese", () => {
+  it("titles a conditional and a random in Japanese", () => {
     const { preview } = selectActionsData({
       state: createInitialState(),
       props: {
@@ -443,8 +431,8 @@ describe("systemActions.store", () => {
       dateTime: JA_I18N.dateTime,
     });
 
-    expect(preview.conditional.actionsSummary).toBe("含まれるアクション1件");
-    expect(preview.random.actionsSummary).toBe("含まれるアクション3件");
+    expect(Object.keys(preview.conditional)).not.toContain("actionsSummary");
+    expect(Object.keys(preview.random)).not.toContain("actionsSummary");
     expect(preview.random.title).toBe("ランダム: 2件の結果");
   });
 
@@ -471,9 +459,7 @@ describe("systemActions.store", () => {
     expect(actions.random).toEqual(random);
     expect(preview.random).toEqual({
       outcomeCount: 0,
-      actionCount: 0,
       summary: "0 outcomes",
-      actionsSummary: "0 nested actions",
       title: "Random: 0 outcomes",
     });
   });

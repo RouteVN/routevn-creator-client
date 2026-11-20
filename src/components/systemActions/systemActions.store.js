@@ -1010,23 +1010,11 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       distribution?.type === "weighted" && Array.isArray(distribution.outcomes)
         ? distribution.outcomes
         : [];
-    const actionCount = outcomes.reduce(
-      (total, outcome) => total + countActions(outcome?.actions),
-      0,
-    );
-
     preview.random = {
       outcomeCount: outcomes.length,
-      actionCount,
       summary: formatCommandLinePluralCopy(
         "outcomeCount",
         outcomes.length,
-        copy,
-        dateTime,
-      ),
-      actionsSummary: formatCommandLinePluralCopy(
-        "nestedActionCount",
-        actionCount,
         copy,
         dateTime,
       ),
@@ -1043,21 +1031,9 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     const branches = Array.isArray(actions.conditional.branches)
       ? actions.conditional.branches
       : [];
-    const actionCount = branches.reduce(
-      (total, branch) => total + countActions(branch?.actions),
-      0,
-    );
-
     preview.conditional = {
       branchCount: branches.length,
-      actionCount,
       summary: formatConditionalSummary(branches, copy, dateTime),
-      actionsSummary: formatCommandLinePluralCopy(
-        "nestedActionCount",
-        actionCount,
-        copy,
-        dateTime,
-      ),
     };
     preview.conditional.title = formatCommandLineCopy(
       "Conditional: {summary}",
