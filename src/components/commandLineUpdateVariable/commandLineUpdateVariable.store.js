@@ -16,6 +16,8 @@ import {
 import {
   formatRandomChance,
   formatRandomDistributionSummary,
+  getRandomWeightOptions,
+  isRandomWeightChoice,
 } from "../../internal/ui/sceneEditor/randomCopy.js";
 
 // Operations available per variable type
@@ -259,6 +261,8 @@ const selectTempRandomViewData = (random, dateTime) => {
   const chancePercents = getOutcomeChancePercents(
     random.values.map((entry) => entry.weight),
   );
+  // Rows share the options of the usual weights.
+  const weightOptions = getRandomWeightOptions(undefined, dateTime);
   return {
     type: random.type,
     min: random.min ?? "",
@@ -267,7 +271,10 @@ const selectTempRandomViewData = (random, dateTime) => {
       id: entry.id,
       value: entry.value ?? "",
       booleanValue: String(entry.value),
-      weight: entry.weight ?? "",
+      weight: entry.weight,
+      weightOptions: isRandomWeightChoice(entry.weight)
+        ? weightOptions
+        : getRandomWeightOptions(entry.weight, dateTime),
       chance: formatRandomChance(chancePercents[index], dateTime),
     })),
   };

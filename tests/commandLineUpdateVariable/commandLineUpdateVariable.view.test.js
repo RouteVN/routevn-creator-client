@@ -124,19 +124,19 @@ describe("commandLineUpdateVariable view", () => {
     handlers.handleAddRandomValueClick(deps, clickEvent());
     const [firstId, secondId] = randomValueIds(state);
     handlers.handleRandomNumberValueChange(deps, rowEvent(firstId, 2));
-    handlers.handleRandomWeightInputChange(deps, rowEvent(secondId, 3));
+    handlers.handleRandomWeightSelectChange(deps, rowEvent(secondId, 3));
     const html = render(state);
 
     expect(randomFieldIds(html, state)).toEqual([
       "randomTypeControl",
       "randomValue#1",
       "randomNumberInput#1",
-      "randomWeightInput#1",
+      "randomWeightSelect#1",
       "randomChance#1",
       "removeRandomValueButton#1",
       "randomValue#2",
       "randomNumberInput#2",
-      "randomWeightInput#2",
+      "randomWeightSelect#2",
       "randomChance#2",
       "removeRandomValueButton#2",
       "addRandomValueButton",
@@ -152,12 +152,12 @@ describe("commandLineUpdateVariable view", () => {
     expect(elementTag(html, `randomNumberInput${secondId}`)).not.toContain(
       "value=",
     );
-    const weightInput = elementTag(html, `randomWeightInput${secondId}`);
-    expect(weightInput).toMatch(/^<rtgl-input-number /);
-    expect(weightInput).toContain('min="0"');
-    expect(weightInput).toContain('value="3"');
-    expect(weightInput).toContain('aria-label="Weight"');
-    expect(weightInput).toContain(`data-value-id="${secondId}"`);
+    const weightSelect = elementTag(html, `randomWeightSelect${secondId}`);
+    expect(weightSelect).toMatch(/^<rtgl-select /);
+    expect(weightSelect).toContain('selectedvalue="3"');
+    expect(weightSelect).toContain('noclear="true"');
+    expect(weightSelect).toContain('arialabel="Weight"');
+    expect(weightSelect).toContain(`data-value-id="${secondId}"`);
     expect(html).toMatch(new RegExp(`id="randomChance${firstId}"[^>]*>25%<`));
     expect(html).toMatch(new RegExp(`id="randomChance${secondId}"[^>]*>75%<`));
     const removeButton = elementTag(html, `removeRandomValueButton${firstId}`);
@@ -174,7 +174,7 @@ describe("commandLineUpdateVariable view", () => {
     startRandomOperation(deps, "lucky");
     handlers.handleAddRandomValueClick(deps, clickEvent());
     const ids = randomValueIds(state);
-    handlers.handleRandomWeightInputChange(deps, rowEvent(ids[2], 1998));
+    handlers.handleRandomWeightSelectChange(deps, rowEvent(ids[2], 1998));
     const html = render(state);
 
     expect(html).toMatch(new RegExp(`id="randomChance${ids[0]}"[^>]*>0.05%<`));
@@ -202,12 +202,12 @@ describe("commandLineUpdateVariable view", () => {
     expect(randomFieldIds(html, state)).toEqual([
       "randomValue#1",
       "randomBooleanSelect#1",
-      "randomWeightInput#1",
+      "randomWeightSelect#1",
       "randomChance#1",
       "removeRandomValueButton#1",
       "randomValue#2",
       "randomBooleanSelect#2",
-      "randomWeightInput#2",
+      "randomWeightSelect#2",
       "randomChance#2",
       "removeRandomValueButton#2",
       "addRandomValueButton",
@@ -465,10 +465,9 @@ describe("commandLineUpdateVariable view", () => {
           "value-change": { handler: "handleRandomNumberValueChange" },
         },
       },
-      "randomWeightInput*": {
+      "randomWeightSelect*": {
         eventListeners: {
-          "value-input": { handler: "handleRandomWeightInputChange" },
-          "value-change": { handler: "handleRandomWeightInputChange" },
+          "value-change": { handler: "handleRandomWeightSelectChange" },
         },
       },
       "randomTextInput*": {

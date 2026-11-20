@@ -1,6 +1,9 @@
 import { formatNumber } from "../../internal/dates.js";
 import { getOutcomeChancePercents } from "../../internal/randomActions.js";
-import { formatRandomChance } from "../../internal/ui/sceneEditor/randomCopy.js";
+import {
+  formatRandomChance,
+  getRandomWeightOptions,
+} from "../../internal/ui/sceneEditor/randomCopy.js";
 import {
   formatCommandLineActionCount,
   formatCommandLineCopy,
@@ -34,23 +37,6 @@ const getOutcomeDropdownMenuItems = (outcomes, outcomeId) => {
 
   items.push({ label: "Delete", type: "item", value: "delete" });
   return items;
-};
-
-// The weights the weight select offers.
-const WEIGHT_CHOICES = Array.from({ length: 100 }, (_, index) => index + 1);
-
-// The options of the weight select: the whole numbers from 1 to 100, in the
-// locale's digits. A saved weight outside them, such as 0 or 250, is added in
-// order, so that the select shows it and keeps it until another is picked.
-const getWeightOptions = (weight, dateTime) => {
-  const weights =
-    Number.isFinite(weight) && !WEIGHT_CHOICES.includes(weight)
-      ? [...WEIGHT_CHOICES, weight].sort((a, b) => a - b)
-      : WEIGHT_CHOICES;
-  return weights.map((value) => ({
-    value,
-    label: formatNumber(value, dateTime),
-  }));
 };
 
 const countActions = (actions) => Object.keys(actions).length;
@@ -230,7 +216,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       weight: state.tempOutcome.weight,
       chance: formatRandomChance(getTempOutcomeChancePercent(state), dateTime),
     },
-    weightOptions: getWeightOptions(state.tempOutcome.weight, dateTime),
+    weightOptions: getRandomWeightOptions(state.tempOutcome.weight, dateTime),
     outcomeActions: state.tempOutcome.actions,
     outcomeActionAllowedModes: OUTCOME_ACTION_ALLOWED_MODES,
     hiddenModes: props.hiddenModes ?? [],

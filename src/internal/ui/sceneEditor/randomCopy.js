@@ -17,6 +17,40 @@ export const formatRandomChance = (percent, dateTime = {}) =>
     formatNumber(percent, dateTime),
   );
 
+// The weights the weight selects offer.
+const RANDOM_WEIGHT_CHOICES = Array.from(
+  { length: 100 },
+  (_, index) => index + 1,
+);
+
+/**
+ * Whether a weight is one the weight selects offer: a whole number from 1 to
+ * 100.
+ * @param {unknown} weight
+ * @returns {boolean}
+ */
+export const isRandomWeightChoice = (weight) =>
+  Number.isInteger(weight) && weight >= 1 && weight <= 100;
+
+/**
+ * The options of a weight select: the whole numbers from 1 to 100, in the
+ * locale's digits. A saved weight outside them, such as 0 or 250, is added in
+ * order, so that the select shows it and keeps it until another is picked.
+ * @param {unknown} weight - The weight the select shows
+ * @param {object} [dateTime] - The `dateTime` catalog of the active locale
+ * @returns {{ value: number, label: string }[]}
+ */
+export const getRandomWeightOptions = (weight, dateTime) => {
+  const weights =
+    Number.isFinite(weight) && !isRandomWeightChoice(weight)
+      ? [...RANDOM_WEIGHT_CHOICES, weight].sort((a, b) => a - b)
+      : RANDOM_WEIGHT_CHOICES;
+  return weights.map((value) => ({
+    value,
+    label: formatNumber(value, dateTime),
+  }));
+};
+
 const formatRandomValue = (value, copy, dateTime) => {
   if (typeof value === "boolean") {
     return localizeCommandLineText(value ? "True" : "False", copy);

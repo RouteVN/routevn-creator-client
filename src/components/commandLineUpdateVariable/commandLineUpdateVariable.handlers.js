@@ -530,15 +530,13 @@ export const handleRandomEnumValueChange = (deps, payload) => {
   render();
 };
 
-// rtgl-input-number sends null for an empty field. It shows a negative value
-// as its minimum, 0, so the draft keeps 0 as well.
-export const handleRandomWeightInputChange = (deps, payload) => {
+export const handleRandomWeightSelectChange = (deps, payload) => {
   const { store, render } = deps;
   const { currentTarget, detail } = payload._event;
 
   store.setTempRandomValueWeight({
     id: currentTarget.dataset.valueId,
-    weight: detail.value === null ? undefined : Math.max(0, detail.value),
+    weight: detail.value,
   });
   render();
 };

@@ -19,7 +19,7 @@ const {
   handleRandomNumberValueChange,
   handleRandomTextValueChange,
   handleRandomTypeChange,
-  handleRandomWeightInputChange,
+  handleRandomWeightSelectChange,
   handleSaveOperationClick,
   handleSubmitClick,
 } = handlers;
@@ -125,7 +125,7 @@ const buildRandomUpdateVariable = async () => {
       handleAddRandomValueClick(deps, clickEvent());
     }
     handleRandomTextValueChange(deps, rowEvent(lastRowId(), value));
-    handleRandomWeightInputChange(deps, rowEvent(lastRowId(), weight));
+    handleRandomWeightSelectChange(deps, rowEvent(lastRowId(), weight));
   });
   save(deps);
 

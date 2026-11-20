@@ -27,7 +27,7 @@ const {
   handleRandomNumberValueChange,
   handleRandomTextValueChange,
   handleRandomTypeChange,
-  handleRandomWeightInputChange,
+  handleRandomWeightSelectChange,
   handleRemoveRandomValueClick,
   handleSaveOperationClick,
   handleSubmitClick,
@@ -166,7 +166,7 @@ describe("commandLineUpdateVariable random operation", () => {
       handleRandomTypeChange(deps, valueEvent("weighted"));
       const [firstId] = randomValueIds(state);
       handleRandomNumberValueChange(deps, rowEvent(firstId, 2));
-      handleRandomWeightInputChange(deps, rowEvent(firstId, 3));
+      handleRandomWeightSelectChange(deps, rowEvent(firstId, 3));
       handleAddRandomValueClick(deps, clickEvent());
       const [, secondId] = randomValueIds(state);
       handleRandomNumberValueChange(deps, rowEvent(secondId, -0.5));
@@ -192,7 +192,7 @@ describe("commandLineUpdateVariable random operation", () => {
       const [trueId, falseId] = randomValueIds(state);
       handleRandomBooleanValueChange(deps, rowEvent(trueId, "false"));
       handleRandomBooleanValueChange(deps, rowEvent(falseId, "true"));
-      handleRandomWeightInputChange(deps, rowEvent(falseId, 9));
+      handleRandomWeightSelectChange(deps, rowEvent(falseId, 9));
       save(deps);
       submit(deps);
 
@@ -280,20 +280,13 @@ describe("commandLineUpdateVariable random operation", () => {
       ]);
     });
 
-    // rtgl-input-number sends null for an empty field, and shows a negative
-    // value as its minimum.
-    it.each([
-      [-5, 0],
-      [null, undefined],
-      [2.5, 2.5],
-      [0, 0],
-    ])("keeps %s from a weight field as %s", async (value, weight) => {
+    it.each([1, 40, 100])("keeps the picked weight %s", async (weight) => {
       const { deps, state } = await mountEditor();
 
       startRandomOperation(deps, "lucky");
-      handleRandomWeightInputChange(
+      handleRandomWeightSelectChange(
         deps,
-        rowEvent(randomValueIds(state)[1], value),
+        rowEvent(randomValueIds(state)[1], weight),
       );
 
       expect(randomValues(state)[1].weight).toBe(weight);
@@ -747,7 +740,7 @@ describe("commandLineUpdateVariable random operation", () => {
       async () => {
         const editor = await mountEditor();
         startRandomOperation(editor.deps, "lucky");
-        handleRandomWeightInputChange(
+        handleRandomWeightSelectChange(
           editor.deps,
           rowEvent(randomValueIds(editor.state)[0], null),
         );
@@ -762,7 +755,7 @@ describe("commandLineUpdateVariable random operation", () => {
         const editor = await mountEditor();
         startRandomOperation(editor.deps, "lucky");
         for (const id of randomValueIds(editor.state)) {
-          handleRandomWeightInputChange(editor.deps, rowEvent(id, 0));
+          handleRandomWeightSelectChange(editor.deps, rowEvent(id, 0));
         }
         return editor;
       },
@@ -774,7 +767,7 @@ describe("commandLineUpdateVariable random operation", () => {
       async () => {
         const editor = await mountEditor();
         startRandomOperation(editor.deps, "lucky");
-        handleRandomWeightInputChange(
+        handleRandomWeightSelectChange(
           editor.deps,
           rowEvent(randomValueIds(editor.state)[1], 2 ** -53),
         );
