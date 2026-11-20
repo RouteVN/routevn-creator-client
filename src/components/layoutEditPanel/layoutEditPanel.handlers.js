@@ -33,7 +33,10 @@ import {
   getTextRevealIndicatorStateNameFromItemName,
   isTextRevealIndicatorItemName,
 } from "./support/layoutEditPanelTextRevealIndicator.js";
-import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import {
+  getLayoutEditorElementDefinition,
+  isLayoutEditorVerticalTextItem,
+} from "../../internal/layoutEditorElementRegistry.js";
 import {
   parseSpritesheetAnimationSelectionValue,
   toSpritesheetAnimationSelectionValue,
@@ -62,6 +65,7 @@ const ACTION_INTERACTION_TYPES = [
   "change",
 ];
 const DEFAULT_TEXT_FIXED_WIDTH = 300;
+const DEFAULT_TEXT_FIXED_COLUMN_LENGTH = 300;
 const EMPTY_TREE = { items: {}, tree: [] };
 const INTEGER_ONLY_FIELDS = new Set([
   "x",
@@ -456,23 +460,44 @@ const isDirectedContainerSizeMode = (deps) => {
   );
 };
 
+const getTextFixedColumnLengthFallback = ({ props } = {}) => {
+  const projectHeight = getPositiveRoundedNumber(
+    props?.projectResolution?.height,
+  );
+  if (projectHeight !== undefined) {
+    return Math.min(projectHeight, DEFAULT_TEXT_FIXED_COLUMN_LENGTH);
+  }
+
+  return DEFAULT_TEXT_FIXED_COLUMN_LENGTH;
+};
+
 const applySizeModeUpdate = (deps, { name, value } = {}) => {
   const { props, store } = deps;
+  const values = store.selectValues();
   const fieldName = name === "heightMode" ? "height" : "width";
-  const isTextWidthMode =
-    fieldName === "width" && props.itemType?.startsWith("text") === true;
+  // Text sets the side it wraps at, its width or, written vertically, its
+  // column length, and measures the other.
+  const textSizeFieldName = isLayoutEditorVerticalTextItem({
+    type: props.itemType,
+    writingMode: values.writingMode,
+  })
+    ? "height"
+    : "width";
+  const isTextSizeMode =
+    props.itemType?.startsWith("text") === true &&
+    fieldName === textSizeFieldName;
   const usesDirectedContainerAutoSize = isDirectedContainerSizeMode(deps);
   const selectedElementMetrics =
     store.selectSelectedElementMetrics?.() ?? props.selectedElementMetrics;
 
-  if (!isTextWidthMode && !usesDirectedContainerAutoSize) {
+  if (!isTextSizeMode && !usesDirectedContainerAutoSize) {
     return;
   }
 
   if (value === "auto") {
     applyPanelValueUpdate(deps, {
       name: fieldName,
-      value: isTextWidthMode ? undefined : 0,
+      value: isTextSizeMode ? undefined : 0,
     });
     return;
   }
@@ -481,14 +506,17 @@ const applySizeModeUpdate = (deps, { name, value } = {}) => {
     return;
   }
 
-  const values = store.selectValues();
   const currentSize = Number(values[fieldName]);
-  const nextSize = isTextWidthMode
-    ? (getMeasuredTextWidth(selectedElementMetrics) ??
+  const nextSize = isTextSizeMode
+    ? ((fieldName === "width"
+        ? getMeasuredTextWidth(selectedElementMetrics)
+        : getMeasuredDimension(selectedElementMetrics, fieldName)) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
         : undefined) ??
-      getTextFixedWidthFallback({ props, values }))
+      (fieldName === "width"
+        ? getTextFixedWidthFallback({ props, values })
+        : getTextFixedColumnLengthFallback({ props })))
     : (getMeasuredDimension(selectedElementMetrics, fieldName) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
@@ -1304,6 +1332,13 @@ export const handleOptionSelected = (deps, payload) => {
 
   if (name === "widthMode" || name === "heightMode") {
     applySizeModeUpdate(deps, { name, value });
+    return;
+  }
+
+  if (name === "textDirection") {
+    store.setTextDirection({ textDirection: value });
+    render();
+    emitPanelUpdate(deps, { name, value });
     return;
   }
 

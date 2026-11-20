@@ -214,9 +214,23 @@ export const applyCanvasItemResizeChange = ({
     !dragStartPosition ||
     typeof resizeEdge !== "string" ||
     typeof x !== "number" ||
-    typeof y !== "number" ||
-    typeof dragStartPosition.itemStartWidth !== "number" ||
-    typeof dragStartPosition.itemStartHeight !== "number"
+    typeof y !== "number"
+  ) {
+    return item;
+  }
+
+  // Only the sides that change need a start size. Text sets only the side it
+  // wraps at, its width or, written vertically, its height, and measures the
+  // other.
+  const aspectRatioLock = getAspectRatioLock(item);
+  const keepsAspectRatio = aspectRatioLock !== undefined;
+  const resizesWidth =
+    resizeEdge === "left" || resizeEdge === "right" || keepsAspectRatio;
+  const resizesHeight =
+    resizeEdge === "top" || resizeEdge === "bottom" || keepsAspectRatio;
+  if (
+    (resizesWidth && typeof dragStartPosition.itemStartWidth !== "number") ||
+    (resizesHeight && typeof dragStartPosition.itemStartHeight !== "number")
   ) {
     return item;
   }
@@ -237,7 +251,6 @@ export const applyCanvasItemResizeChange = ({
   const nextItem = {
     ...item,
   };
-  const aspectRatioLock = getAspectRatioLock(item);
   // While the aspect ratio is fixed, the pair stops shrinking when the
   // shorter side reaches its least size.
   const minWidth = getMinLayoutEditorItemSize({
@@ -291,8 +304,12 @@ export const applyCanvasItemResizeChange = ({
   // it so the side opposite the dragged one stays where it was: the right and
   // bottom sides for the left and top handles, the left and top sides
   // otherwise.
-  const widthChange = nextItem.width - dragStartPosition.itemStartWidth;
-  const heightChange = nextItem.height - dragStartPosition.itemStartHeight;
+  const widthChange = resizesWidth
+    ? nextItem.width - dragStartPosition.itemStartWidth
+    : 0;
+  const heightChange = resizesHeight
+    ? nextItem.height - dragStartPosition.itemStartHeight
+    : 0;
   const shiftX =
     ((item.anchorX ?? 0) - (resizeEdge === "left" ? 1 : 0)) * widthChange;
   const shiftY =

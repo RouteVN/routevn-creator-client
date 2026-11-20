@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "テキストスタイルを選択"
   conditionTargetCharacterType: "キャラクター"
   blurSummary: "X {x}、Y {y}、品質{quality}、カーネル{kernel}、{edge}"
+  textDirectionSection: "テキスト方向"
+  horizontalLeftToRightOption: "横書き（左から右）"
+  horizontalRightToLeftOption: "横書き（右から左）"
+  verticalRightToLeftOption: "縦書き（右から左）"
+  verticalLeftToRightOption: "縦書き（左から右）"
+  topOption: "上"
+  bottomOption: "下"
 controlsPage:
   actionDecrementSaveLoadPagination: "前のセーブ/ロードページへ"
   actionIncrementSaveLoadPagination: "次のセーブ/ロードページへ"

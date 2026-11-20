@@ -14,7 +14,7 @@
         "@rettangoli/fe": "2.2.0",
         "@rettangoli/ui": "2.2.0",
         "@rettangoli/vt": "2.0.0",
-        "@routevn/creator-model": "1.21.0",
+        "@routevn/creator-model": "1.21.1",
         "@sentry/browser": "10.44.0",
         "@tauri-apps/api": "2.11.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
@@ -37,7 +37,7 @@
         "nanoid": "5.1.11",
         "ogg-opus-decoder": "1.7.5",
         "route-engine-js": "1.55.0",
-        "route-graphics": "1.50.2",
+        "route-graphics": "1.52.0",
         "rxjs": "7.8.2",
         "snabbdom": "3.6.3",
         "snabbdom-to-html": "7.1.0",
@@ -385,7 +385,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.21.0", "", {}, "sha512-eq2st/tvUmFCWXDK168jIEN1Vxx8TTY6kLgqHuPNLly891oe5kl+Q9OHOcxFKwLtULxKH86e6H0V95on1xPfVw=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.21.1", "", {}, "sha512-40/da8dYLO07DzLuFXfjSpTy3edjAf15Vo5EQzCM9izxYQwHZxLz2WkaMIzCyycf89FAJ7UC4oN74IfgUVm+xw=="],
 
     "@sentry-internal/browser-utils": ["@sentry-internal/browser-utils@10.44.0", "", { "dependencies": { "@sentry/core": "10.44.0" } }, "sha512-z9xz3T/v+MnfHY6kdUCmOZI8CiAl3LlKYtGH2p3rAsrxhwX+BTnUp01VhMVnEZIDgUXNt3AhJac+4kcDIPu1Hg=="],
 
@@ -516,6 +516,8 @@
     "base64-js": ["base64-js@1.5.1", "", {}, "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA=="],
 
     "better-sqlite3": ["better-sqlite3@12.10.0", "", { "dependencies": { "bindings": "^1.5.0", "prebuild-install": "^7.1.1" } }, "sha512-CyzaZRQKyHkB2ZInfTTl2nvT33EbDpjkLEbE8/Zck3Ll6O0qqvuGdrJ45HgtH+HykRg88ITY3AdreBGN70aBSQ=="],
+
+    "bidi-js": ["bidi-js@1.0.3", "", { "dependencies": { "require-from-string": "^2.0.2" } }, "sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
 
@@ -845,6 +847,8 @@
 
     "regex-utilities": ["regex-utilities@2.3.0", "", {}, "sha512-8VhliFJAWRaUiVvREIiW2NXXTmHs4vMNnSzuJVhscgmGav3g9VDxLrQndI3dZZVVdp0ZO/5v0xmX516/7M9cng=="],
 
+    "require-from-string": ["require-from-string@2.0.2", "", {}, "sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw=="],
+
     "restore-cursor": ["restore-cursor@5.1.0", "", { "dependencies": { "onetime": "^7.0.0", "signal-exit": "^4.1.0" } }, "sha512-oMA2dcrw6u0YfxJQXm342bFKX/E4sG9rbTzO9ptUcR/e8A33cHuvStiYOwH7fszkZlZ1z/ta9AAoPk2F4qIOHA=="],
 
     "restructure": ["restructure@3.0.2", "", {}, "sha512-gSfoiOEA0VPE6Tukkrr7I0RBdE0s7H1eFCDBk05l1KIQT1UIKNc5JZy6jdyW6eYH3aR3g5b3PuL77rq0hvwtAw=="],
@@ -857,7 +861,7 @@
 
     "route-engine-js": ["route-engine-js@1.55.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.1.2", "js-yaml": "^4.1.0", "puty": "^0.1.1", "unicode-segmenter": "0.17.0" } }, "sha512-DAqj0VO5qGxYRe65HUJJCjMUpC+/NDnDjNPSHwjezkOOHfTB1KZLsuSc/6JMKhosQuqJtPV+VdUeSAsat7F9cQ=="],
 
-    "route-graphics": ["route-graphics@1.50.2", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-8y9CzUrbnQz811louSF1FXq3khutGnIWT6xhB4spHneF8D7MLrZnjcY9oLlapZgMUgVMvbzkCFC/rvq68a0fQQ=="],
+    "route-graphics": ["route-graphics@1.52.0", "", { "dependencies": { "@wasm-audio-decoders/ogg-vorbis": "^0.1.20", "bidi-js": "1.0.3", "gsap": "3.15.0", "hotkeys-js": "^4.0.0-beta.7", "js-yaml": "^4.1.0", "ogg-opus-decoder": "^1.7.3", "pixi.js": "8.10.2", "playwright": "1.57.0" }, "bin": { "route-graphics": "bin/route-graphics.js" } }, "sha512-mOAsZAtLGh57Zad/OrQClT1KB578ROAFRmry+xtahA2QqVIYmikh3SQEEAL4G7U7DOz1OylPEuSEV8FieRqibA=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 

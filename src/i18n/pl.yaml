@@ -2320,6 +2320,13 @@ layoutEditPanel:
   textStylePlaceholder: "Wybierz styl tekstu"
   conditionTargetCharacterType: "postać"
   blurSummary: "X {x}; Y {y}; jakość {quality}; jądro {kernel}; {edge}"
+  textDirectionSection: "Kierunek tekstu"
+  horizontalLeftToRightOption: "Poziomo, od lewej do prawej"
+  horizontalRightToLeftOption: "Poziomo, od prawej do lewej"
+  verticalRightToLeftOption: "Pionowo, od prawej do lewej"
+  verticalLeftToRightOption: "Pionowo, od lewej do prawej"
+  topOption: "Do góry"
+  bottomOption: "Do dołu"
 controlsPage:
   actionDecrementSaveLoadPagination: "Poprzednia strona zapisów"
   actionIncrementSaveLoadPagination: "Następna strona zapisów"

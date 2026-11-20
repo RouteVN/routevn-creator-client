@@ -15,26 +15,38 @@ const createVisibilityOptions = (copy = {}) => [
   { label: copy.visibleOption ?? "Visible", value: true },
   { label: copy.hiddenOption ?? "Hidden", value: false },
 ];
-const createTextAlignmentOptions = (copy = {}) => [
-  {
-    label: copy.leftOption ?? "Left",
-    svg: "text-align-left",
-    ariaLabel: copy.leftOption ?? "Left",
-    value: "left",
-  },
-  {
-    label: copy.centerOption ?? "Center",
-    svg: "text-align-center",
-    ariaLabel: copy.centerOption ?? "Center",
-    value: "center",
-  },
-  {
-    label: copy.rightOption ?? "Right",
-    svg: "text-align-right",
-    ariaLabel: copy.rightOption ?? "Right",
-    value: "right",
-  },
-];
+// Vertical text aligns along its columns: left is the top and right the
+// bottom.
+const createTextAlignmentOptions = (copy = {}, { isVerticalText } = {}) => {
+  const startLabel = isVerticalText
+    ? (copy.topOption ?? "Top")
+    : (copy.leftOption ?? "Left");
+  const centerLabel = copy.centerOption ?? "Center";
+  const endLabel = isVerticalText
+    ? (copy.bottomOption ?? "Bottom")
+    : (copy.rightOption ?? "Right");
+
+  return [
+    {
+      label: startLabel,
+      svg: isVerticalText ? "text-align-top" : "text-align-left",
+      ariaLabel: startLabel,
+      value: "left",
+    },
+    {
+      label: centerLabel,
+      svg: isVerticalText ? "text-align-middle" : "text-align-center",
+      ariaLabel: centerLabel,
+      value: "center",
+    },
+    {
+      label: endLabel,
+      svg: isVerticalText ? "text-align-bottom" : "text-align-right",
+      ariaLabel: endLabel,
+      value: "right",
+    },
+  ];
+};
 const ANCHOR_OPTIONS = [
   { label: "Top Left", value: "topLeft", x: 0, y: 0 },
   { label: "Top Center", value: "topCenter", x: 0.5, y: 0 },
@@ -526,6 +538,7 @@ export const createConditionalOverrideAttributeForm = ({
   textStyleOptions,
   submitLabel = "Save",
   copy = {},
+  isVerticalText,
 } = {}) => {
   return {
     title: copy.conditionAttributeTitle ?? "Condition Attribute",
@@ -581,7 +594,7 @@ export const createConditionalOverrideAttributeForm = ({
         label: copy.alignmentLabel ?? "Alignment",
         required: true,
         clearable: false,
-        options: createTextAlignmentOptions(copy),
+        options: createTextAlignmentOptions(copy, { isVerticalText }),
       },
       {
         $when: "fieldName == 'visible'",
@@ -612,6 +625,7 @@ const formatConditionalOverrideAttributeValue = (
   textStylesData = {},
   imagesData = {},
   copy = {},
+  { isVerticalText } = {},
 ) => {
   if (TEXT_STYLE_ATTRIBUTE_FIELD_SET.has(fieldName)) {
     const textStyleId = set?.[fieldName];
@@ -641,8 +655,9 @@ const formatConditionalOverrideAttributeValue = (
   if (fieldName === "textStyle.align") {
     const value = set?.textStyle?.align;
     return (
-      createTextAlignmentOptions(copy).find((item) => item.value === value)
-        ?.label ??
+      createTextAlignmentOptions(copy, { isVerticalText }).find(
+        (item) => item.value === value,
+      )?.label ??
       value ??
       ""
     );
@@ -662,6 +677,7 @@ export const toConditionalOverrideAttributeItems = (
   textStylesData = {},
   imagesData = {},
   copy = {},
+  { isVerticalText } = {},
 ) => {
   return getConditionalOverrideSetFieldNames(rule?.set).map((fieldName) => {
     const value = formatConditionalOverrideAttributeValue(
@@ -670,6 +686,7 @@ export const toConditionalOverrideAttributeItems = (
       textStylesData,
       imagesData,
       copy,
+      { isVerticalText },
     );
     const label = getConditionalOverrideAttributeLabel(fieldName, copy);
 

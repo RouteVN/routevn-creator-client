@@ -33,6 +33,10 @@ import { isSectionJumpActionType } from "../navigationActions.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../projectResolution.js";
 import { areEditHistoryValuesEqual } from "../editHistory.js";
 import { toRouteGraphicsLayoutTextContent } from "../layoutTextContent.js";
+import {
+  isRightToLeftTextDirection,
+  isVerticalTextWritingMode,
+} from "../layoutTextWritingMode.js";
 import { normalizeSaveLoadDateFormat } from "../saveLoadDateFormats.js";
 import { toFontIds } from "../fontIds.js";
 import { getFontFaceWeightDescriptor } from "../fontCapabilities.js";
@@ -1891,6 +1895,14 @@ const applyTextNode = ({ element, node, context }) => {
     nextElement.content = toTextRevealingSegments(content);
   } else {
     nextElement.content = content;
+  }
+
+  if (isVerticalTextWritingMode(node.writingMode)) {
+    nextElement.writingMode = node.writingMode;
+  }
+
+  if (isRightToLeftTextDirection(node.direction)) {
+    nextElement.direction = node.direction;
   }
 
   const textStyleId = ensureNodeTextStyleId({

@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "选择文本样式"
   conditionTargetCharacterType: "角色"
   blurSummary: "X {x}，Y {y}，质量 {quality}，卷积核 {kernel}，{edge}"
+  textDirectionSection: "文本方向"
+  horizontalLeftToRightOption: "横排（从左到右）"
+  horizontalRightToLeftOption: "横排（从右到左）"
+  verticalRightToLeftOption: "竖排（从右到左）"
+  verticalLeftToRightOption: "竖排（从左到右）"
+  topOption: "顶端对齐"
+  bottomOption: "底端对齐"
 controlsPage:
   actionDecrementSaveLoadPagination: "存档/读档上一页"
   actionIncrementSaveLoadPagination: "存档/读档下一页"

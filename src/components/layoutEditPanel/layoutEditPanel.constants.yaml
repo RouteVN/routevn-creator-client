@@ -197,6 +197,7 @@ layoutSections:
             value: fixed
       - "$when": "showLayoutSizeSection && supportsHeightMode && !groupSizeModes"
         type: segmented-control
+        stacked: "${stackHeightMode}"
         label: Height
         name: heightMode
         value: "${heightMode}"
@@ -603,10 +604,32 @@ layoutSections:
             label: Click
             soundId: "${values.clickSoundId}"
             volumeLabel: "${clickSoundVolumeLabel}"
+  - "$when": "supportsTextWritingMode"
+    label: Text Direction
+    items:
+      # One choice sets both the writing mode and the base direction.
+      - type: select
+        name: textDirection
+        value: "${textDirection}"
+        noClear: true
+        options:
+          - label: Horizontal, Left to Right
+            labelKey: horizontalLeftToRightOption
+            value: horizontal-ltr
+          - label: Horizontal, Right to Left
+            labelKey: horizontalRightToLeftOption
+            value: horizontal-rtl
+          - label: Vertical, Right to Left
+            labelKey: verticalRightToLeftOption
+            value: vertical-rl
+          - label: Vertical, Left to Right
+            labelKey: verticalLeftToRightOption
+            value: vertical-lr
   - "$when": "supportsTextAlignment"
     label: Text Alignment
     items:
-      - type: segmented-control
+      - "$when": "!isVerticalText"
+        type: segmented-control
         stacked: true
         label: Alignment
         name: textStyle.align
@@ -623,6 +646,27 @@ layoutSections:
           - label: Right
             svg: text-align-right
             ariaLabel: Right
+            value: right
+      # Vertical text aligns along its columns: left is the top and right
+      # the bottom.
+      - "$when": "isVerticalText"
+        type: segmented-control
+        stacked: true
+        label: Alignment
+        name: textStyle.align
+        value: "${values.textStyle.align}"
+        options:
+          - label: Top
+            svg: text-align-top
+            ariaLabel: Top
+            value: left
+          - label: Center
+            svg: text-align-middle
+            ariaLabel: Center
+            value: center
+          - label: Bottom
+            svg: text-align-bottom
+            ariaLabel: Bottom
             value: right
   - id: visibilityCondition
     label: Visibility

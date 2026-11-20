@@ -7,6 +7,11 @@ import {
   toLayoutTextBackwardCompatibleText,
 } from "./layoutTextContent.js";
 import { DEFAULT_SAVE_LOAD_DATE_FORMAT } from "./saveLoadDateFormats.js";
+import {
+  getLayoutTextDirectionFields,
+  isRightToLeftTextDirection,
+  isVerticalTextWritingMode,
+} from "./layoutTextWritingMode.js";
 
 const BASE_TRANSFORM = {
   x: 0,
@@ -44,6 +49,72 @@ const CONTAINER_TYPE_SET = new Set([
 
 const supportsLayoutEditorWidthMode = (itemType) => {
   return typeof itemType === "string" && itemType.startsWith("text");
+};
+
+// Vertical text wraps its columns at its height and measures its width.
+export const isLayoutEditorVerticalTextItem = (item) => {
+  return (
+    TEXT_TYPE_SET.has(item?.type) &&
+    isVerticalTextWritingMode(item?.writingMode)
+  );
+};
+
+const MIRRORED_TEXT_ALIGN = {
+  left: "right",
+  right: "left",
+};
+
+// Vertical text has no base direction.
+const isRightToLeftText = (item) =>
+  isRightToLeftTextDirection(item.direction) &&
+  !isVerticalTextWritingMode(item.writingMode);
+
+const mirrorTextAlign = (textStyle) => {
+  const mirroredAlign = MIRRORED_TEXT_ALIGN[textStyle?.align];
+  if (mirroredAlign) {
+    textStyle.align = mirroredAlign;
+  }
+};
+
+// Applies the panel's text direction choice to a layout text item in place.
+// One choice sets both the writing mode and the base direction, so a
+// direction hidden by vertical text is not kept.
+export const applyLayoutTextDirectionChoice = (item, choice) => {
+  const wasVertical = isVerticalTextWritingMode(item.writingMode);
+  const wasRightToLeft = isRightToLeftText(item);
+
+  delete item.textDirection;
+  delete item.writingMode;
+  delete item.direction;
+  const { writingMode, direction } = getLayoutTextDirectionFields(choice);
+  if (writingMode) {
+    item.writingMode = writingMode;
+  }
+  if (direction) {
+    item.direction = direction;
+  }
+
+  // Horizontal text wraps at its width and vertical text at its height, with
+  // the other side measured. Horizontal text does not use a height, so one
+  // stored on it is not a column length the author chose. Either way the
+  // text starts with its size measured.
+  if (wasVertical !== isVerticalTextWritingMode(item.writingMode)) {
+    delete item.width;
+    delete item.height;
+  }
+
+  // A line starts at the left in left-to-right text, at the right in
+  // right-to-left text and at the top, which alignment calls left, in
+  // vertical text. Text aligned to its start, including through a conditional
+  // override, stays aligned to its start.
+  if (wasRightToLeft !== isRightToLeftText(item)) {
+    mirrorTextAlign(item.textStyle);
+    for (const rule of item.conditionalOverrides ?? []) {
+      mirrorTextAlign(rule?.set?.textStyle);
+    }
+  }
+
+  return item;
 };
 
 const ABSOLUTE_DIRECTION = "absolute";
@@ -564,6 +635,7 @@ const DEFAULT_CAPABILITIES = {
   supportsTextStyles: false,
   supportsSoundSelection: false,
   supportsTextAlignment: false,
+  supportsTextWritingMode: false,
   supportsActions: false,
   supportsSpriteImages: false,
   supportsSpriteBlur: false,
@@ -617,6 +689,7 @@ const FAMILY_CAPABILITIES = {
     supportsTextStyles: true,
     supportsSoundSelection: true,
     supportsTextAlignment: true,
+    supportsTextWritingMode: true,
   },
   input: {
     supportsAnchor: true,
@@ -735,6 +808,13 @@ const TYPE_RULES = {
       }
 
       return value;
+    },
+    applyFieldChange: ({ nextItem, name, value }) => {
+      if (name === "textDirection") {
+        return applyLayoutTextDirectionChoice(nextItem, value);
+      }
+
+      return nextItem;
     },
     finalizeFieldChange: ({ nextItem, name, value }) => {
       if (name === "content") {
@@ -1007,7 +1087,7 @@ export const canResizeLayoutEditorItemWidth = (item = {}) => {
   }
 
   if (supportsLayoutEditorWidthMode(item?.type)) {
-    return item?.width !== undefined;
+    return !isLayoutEditorVerticalTextItem(item) && item?.width !== undefined;
   }
 
   return true;
@@ -1015,9 +1095,15 @@ export const canResizeLayoutEditorItemWidth = (item = {}) => {
 
 export const canResizeLayoutEditorItemHeight = (item = {}) => {
   const capabilities = getLayoutEditorItemCapabilities(item?.type);
-  return (
-    capabilities.supportsSize === true && capabilities.supportsHeight === true
-  );
+  if (capabilities.supportsSize !== true) {
+    return false;
+  }
+
+  if (isLayoutEditorVerticalTextItem(item)) {
+    return item.height !== undefined;
+  }
+
+  return capabilities.supportsHeight === true;
 };
 
 // An element 0 wide or high draws nothing and cannot be picked on the

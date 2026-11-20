@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "Selecione um estilo de texto"
   conditionTargetCharacterType: "personagem"
   blurSummary: "X {x}, Y {y}, qualidade {quality}, kernel {kernel}, {edge}"
+  textDirectionSection: "Direção do texto"
+  horizontalLeftToRightOption: "Horizontal, da esquerda para a direita"
+  horizontalRightToLeftOption: "Horizontal, da direita para a esquerda"
+  verticalRightToLeftOption: "Vertical, da direita para a esquerda"
+  verticalLeftToRightOption: "Vertical, da esquerda para a direita"
+  topOption: "Superior"
+  bottomOption: "Inferior"
 controlsPage:
   actionDecrementSaveLoadPagination: "Página anterior de jogos guardados"
   actionIncrementSaveLoadPagination: "Página seguinte de jogos guardados"
