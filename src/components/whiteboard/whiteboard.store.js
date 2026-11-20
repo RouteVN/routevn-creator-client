@@ -92,6 +92,8 @@ export const createInitialState = () => ({
   isPinnedPanMode: false,
   isKeyboardPanMode: false,
   isPanning: false,
+  // The mouse button that started the pan, whose release ends it.
+  panButton: undefined,
   panAnimationFrameId: undefined,
   panX: 0,
   panY: 0,
@@ -200,8 +202,9 @@ export const setKeyboardPanMode = ({ state }, { isPanMode } = {}) => {
   state.isKeyboardPanMode = isPanMode;
 };
 
-export const startPanning = ({ state }, { mouseX, mouseY } = {}) => {
+export const startPanning = ({ state }, { mouseX, mouseY, button } = {}) => {
   state.isPanning = true;
+  state.panButton = button;
   state.panStartX = state.panX;
   state.panStartY = state.panY;
   state.panStartMouseX = mouseX;
@@ -599,6 +602,7 @@ export const selectIsPanMode = ({ state }) =>
 export const selectIsPinnedPanMode = ({ state }) => state.isPinnedPanMode;
 export const selectIsKeyboardPanMode = ({ state }) => state.isKeyboardPanMode;
 export const selectIsPanning = ({ state }) => state.isPanning;
+export const selectPanButton = ({ state }) => state.panButton;
 export const setPanAnimationFrameId = ({ state }, { frameId } = {}) => {
   state.panAnimationFrameId = frameId;
 };

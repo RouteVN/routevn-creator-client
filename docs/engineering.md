@@ -1516,7 +1516,7 @@ cancel them: macOS WebKit hides the cursor until the mouse moves after every
 key press a page handles, which hides the hand and makes it flicker through a
 drag. Instead focus moves to the pan layer, so Space's default action (scrolling
 from the focused or last clicked element, or pressing a focused button) has
-nothing to do. The middle mouse button pans anywhere. The wheel never pans: over the empty workspace it zooms 10% per
+nothing to do. The middle mouse button pans anywhere, as on the scene map. The wheel never pans: over the empty workspace it zooms 10% per
 step around the pointer, as on the scene map, and over the canvas it reaches the
 canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
 on the canvas still edits; a first finger that already touched it gets a
