@@ -1,6 +1,7 @@
 import {
   DIALOGUE_CHARACTER_ID_CONDITION_TARGET,
   getSpecialLayoutConditionItems,
+  getVisibilityConditionOperators,
   parseVariableConditionTarget,
   splitLayoutConditionFromWhen,
   toVariableConditionTarget,
@@ -13,11 +14,14 @@ import { toFlatGroups } from "../../../internal/project/tree.js";
 import { getRuntimeFieldPresetValues } from "../../../internal/runtimeActions.js";
 import { parseRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
 import { localizeCommandLineText } from "../../../internal/ui/sceneEditor/commandLineCopy.js";
+import { CONDITION_OPERATOR_LABELS } from "../../../internal/ui/sceneEditor/commandLineConditionOperators.js";
 import { getConditionTargetLabel } from "./layoutEditPanelRuntimeLabels.js";
 
-const createVisibilityConditionOpOptions = (copy = {}) => [
-  { label: copy.equalsOption ?? "Equals", value: "eq" },
-];
+const getVisibilityOperatorLabel = (op, copy, commandLineCopy) =>
+  op === "eq"
+    ? (copy.equalsOption ?? "Equals")
+    : localizeCommandLineText(CONDITION_OPERATOR_LABELS[op], commandLineCopy);
+
 const createVisibilityBooleanOptions = (copy = {}) => [
   { label: copy.trueOption ?? "True", value: true },
   { label: copy.falseOption ?? "False", value: false },
@@ -358,7 +362,7 @@ const getVisibilityConditionValueLabel = (
     getConditionTargetPresetKind(target),
   )?.find((preset) => preset.value === value)?.label;
   if (presetLabel) {
-    return localizeCommandLineText(presetLabel, options.presetValueCopy);
+    return localizeCommandLineText(presetLabel, options.commandLineCopy);
   }
   if (typeof value === "boolean") {
     return createVisibilityBooleanOptions(copy).find(
@@ -377,7 +381,12 @@ export const getVisibilityConditionSummaryParts = (
   options = {},
   copy = {},
 ) => {
-  if (!visibilityCondition?.target || visibilityCondition?.op !== "eq") {
+  if (
+    !visibilityCondition?.target ||
+    !getVisibilityConditionOperators(typeof visibilityCondition.value).includes(
+      visibilityCondition.op,
+    )
+  ) {
     return [
       {
         kind: "text",
@@ -397,9 +406,11 @@ export const getVisibilityConditionSummaryParts = (
     },
     {
       kind: "operator",
-      text: createVisibilityConditionOpOptions(copy).find(
-        (option) => option.value === visibilityCondition.op,
-      ).label,
+      text: getVisibilityOperatorLabel(
+        visibilityCondition.op,
+        copy,
+        options.commandLineCopy,
+      ),
     },
     {
       kind: "value",
@@ -448,8 +459,23 @@ export const createVisibilityConditionDialogDefaults = (
 
 export const createVisibilityConditionForm = ({
   targetOptions,
+  targetType,
+  enumOptions,
+  commandLineCopy,
   copy = {},
 } = {}) => {
+  const stringField = {
+    $when: "target && selectedValueKind == 'string'",
+    name: "stringValue",
+    type: "input-text",
+    label: copy.valueLabel ?? "Value",
+    required: true,
+  };
+  if (enumOptions) {
+    stringField.type = "select";
+    stringField.options = enumOptions;
+    stringField.clearable = false;
+  }
   return {
     title: copy.visibilityConditionTitle ?? "Visibility Condition",
     fields: [
@@ -468,11 +494,14 @@ export const createVisibilityConditionForm = ({
       {
         $when: "target",
         name: "op",
-        type: "segmented-control",
+        type: targetType === "number" ? "select" : "segmented-control",
         label: copy.operationLabel ?? "Operation",
         required: true,
         clearable: false,
-        options: createVisibilityConditionOpOptions(copy),
+        options: getVisibilityConditionOperators(targetType).map((op) => ({
+          value: op,
+          label: getVisibilityOperatorLabel(op, copy, commandLineCopy),
+        })),
       },
       {
         $when: "target && selectedVariableType == 'boolean'",
@@ -490,13 +519,7 @@ export const createVisibilityConditionForm = ({
         label: copy.valueLabel ?? "Value",
         required: true,
       },
-      {
-        $when: "target && selectedValueKind == 'string'",
-        name: "stringValue",
-        type: "input-text",
-        label: copy.valueLabel ?? "Value",
-        required: true,
-      },
+      stringField,
       ...createConditionPresetValueFields(copy),
       {
         $when: "target && selectedValueKind == 'character'",

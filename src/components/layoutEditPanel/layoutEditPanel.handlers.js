@@ -5,6 +5,7 @@ import {
 } from "../../internal/project/interactionPayload.js";
 import {
   buildVisibilityConditionExpression,
+  getVisibilityConditionOperators,
   mergeWhenExpressions,
   splitVisibilityConditionFromWhen,
 } from "../../internal/layoutConditions.js";
@@ -1008,25 +1009,6 @@ export const handleGroupItemWheel = (deps, payload) => {
 
 export const handleVisibilityConditionItemClick = (deps) => {
   const { render, store } = deps;
-  const targetTypeByTarget =
-    store.selectVisibilityConditionTargetTypeByTarget();
-  const targetValueKindByTarget =
-    store.selectVisibilityConditionTargetValueKindByTarget();
-  const currentVisibilityCondition = splitVisibilityConditionFromWhen(
-    store.selectValues()["$when"],
-  ).visibilityCondition;
-  const target = currentVisibilityCondition?.target;
-
-  store.setVisibilityConditionDialogSelectedVariableType({
-    selectedVariableType: target
-      ? (targetTypeByTarget?.[target] ?? "string")
-      : undefined,
-    selectedValueKind: target
-      ? (targetValueKindByTarget?.[target] ??
-        targetTypeByTarget?.[target] ??
-        "string")
-      : undefined,
-  });
   store.openVisibilityConditionDialog();
   render();
 };
@@ -1189,11 +1171,13 @@ const selectConditionTargetKinds = (store, target) => {
   return { selectedVariableType, selectedValueKind };
 };
 
-// A picked target starts at Equals, and a Boolean target at True, whichever
-// target came before. Undefined when the form already has them.
+// Keep a compatible operation when switching targets. Default to Equals
+// and, for a new Boolean value, True.
 const getConditionTargetDefaults = (
   values,
   { selectedVariableType, selectedValueKind },
+  allowedOperators = ["eq"],
+  enumOptions,
 ) => {
   if (!values.target) {
     return undefined;
@@ -1209,7 +1193,14 @@ const getConditionTargetDefaults = (
     Object.assign(nextValues, presetDefaults);
     hasDefaults = true;
   }
-  if (values.op === undefined) {
+  if (
+    enumOptions?.length &&
+    !enumOptions.some(({ value }) => value === values.stringValue)
+  ) {
+    nextValues.stringValue = enumOptions[0].value;
+    hasDefaults = true;
+  }
+  if (!allowedOperators.includes(values.op)) {
     nextValues.op = "eq";
     hasDefaults = true;
   }
@@ -1227,10 +1218,15 @@ export const handleVisibilityConditionFormChange = (deps, payload) => {
   const values = payload._event.detail?.values ?? {};
   const kinds = selectConditionTargetKinds(store, values.target);
 
-  store.setVisibilityConditionDialogSelectedVariableType(kinds);
+  store.setVisibilityConditionDialogTarget({ target: values.target });
   render();
 
-  const defaults = getConditionTargetDefaults(values, kinds);
+  const defaults = getConditionTargetDefaults(
+    values,
+    kinds,
+    getVisibilityConditionOperators(kinds.selectedVariableType),
+    store.selectVisibilityConditionEnumOptions({ target: values.target }),
+  );
   if (defaults) {
     refs.visibilityConditionForm.setValues({ values: defaults });
   }

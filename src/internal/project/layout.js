@@ -85,9 +85,9 @@ export const normalizeLayoutRotation = (value) => {
 };
 
 import {
-  buildVisibilityConditionExpression,
-  mergeWhenExpressions,
-  splitVisibilityConditionFromWhen,
+  combineLayoutConditions,
+  compileSavedLayoutWhen,
+  compileVisibilityCondition,
 } from "../layoutConditions.js";
 import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
@@ -1224,23 +1224,21 @@ const buildConditionalOverrideTextStyleId = ({
 };
 
 const applyConditionalVisibilityOverride = (
-  currentWhenExpression,
-  expression,
+  currentWhen,
+  condition,
   visible,
 ) => {
   if (typeof visible !== "boolean") {
-    return currentWhenExpression;
+    return currentWhen;
   }
 
-  if (visible === true) {
-    return currentWhenExpression
-      ? `(${expression}) || (${currentWhenExpression})`
-      : currentWhenExpression;
+  if (visible) {
+    return currentWhen === undefined
+      ? undefined
+      : combineLayoutConditions("any", condition, currentWhen);
   }
 
-  return currentWhenExpression
-    ? `!(${expression}) && (${currentWhenExpression})`
-    : `!(${expression})`;
+  return combineLayoutConditions("all", { not: condition }, currentWhen);
 };
 
 const applyConditionalOverrides = ({ element, node, context }) => {
@@ -1262,8 +1260,8 @@ const applyConditionalOverrides = ({ element, node, context }) => {
       return;
     }
 
-    const expression = buildVisibilityConditionExpression(rule.when);
-    if (!expression) {
+    const condition = compileVisibilityCondition(rule.when);
+    if (!condition) {
       return;
     }
 
@@ -1353,7 +1351,7 @@ const applyConditionalOverrides = ({ element, node, context }) => {
 
     conditionalWhenExpression = applyConditionalVisibilityOverride(
       conditionalWhenExpression,
-      expression,
+      condition,
       rule.set.visible,
     );
 
@@ -1361,7 +1359,10 @@ const applyConditionalOverrides = ({ element, node, context }) => {
       return;
     }
 
-    nextElement[`$if ${expression}`] = nextConditionalOverride;
+    // $if merges the guarded attributes into the element. Each positive
+    // index gives an ordered override its own always-true directive key.
+    nextConditionalOverride.$when = condition;
+    nextElement[`$if ${index + 1}`] = nextConditionalOverride;
   });
 
   if (conditionalWhenExpression) {
@@ -1807,15 +1808,10 @@ const buildBaseElement = (node, context = {}) => {
     }
   });
 
-  const parsedWhen = splitVisibilityConditionFromWhen(node["$when"]);
-  const normalizedBaseWhen = parsedWhen.baseWhen;
-  const normalizedVisibilityWhen = buildVisibilityConditionExpression(
-    parsedWhen.visibilityCondition,
-  );
-  const whenExpression = mergeWhenExpressions(
-    normalizedBaseWhen,
-    normalizedVisibilityWhen,
-    buildVisibilityConditionExpression(node.visibilityCondition),
+  const whenExpression = combineLayoutConditions(
+    "all",
+    compileSavedLayoutWhen(node.$when),
+    compileVisibilityCondition(node.visibilityCondition),
   );
   if (whenExpression) {
     element["$when"] = whenExpression;
@@ -2295,10 +2291,6 @@ const applyContainerNode = ({ element, node }) => {
       return {
         ...nextElement,
         type: "container",
-        $when: mergeWhenExpressions(
-          nextElement["$when"],
-          `choice.items[${choiceItemIndex}]`,
-        ),
         click: mergeInteractionPayloadActions(
           nextElement.click,
           createChoiceSingleItemClickInteraction(choiceItemIndex),
@@ -2413,6 +2405,13 @@ const mapLayoutNode = ({ node, imageItems, context, ancestry = [] }) => {
     node: effectiveNode,
     context: nodeContext,
   });
+
+  // A Show override can reveal a hidden choice, but the choice must exist.
+  if (node.type === CHOICE_SINGLE_ITEM_CONTAINER_TYPE) {
+    element.$when = combineLayoutConditions("all", element.$when, {
+      var: `choice.items[${nodeContext.choiceItemIndex}]`,
+    });
+  }
 
   if (
     element.type === "text-revealing" &&

@@ -69,7 +69,7 @@ describe("layoutEditPanel condition predefined values", () => {
     [
       handleVisibilityConditionFormChange,
       "visibilityConditionForm",
-      "setVisibilityConditionDialogSelectedVariableType",
+      "setVisibilityConditionDialogTarget",
     ],
     [
       handleConditionalOverrideConditionFormChange,
@@ -84,6 +84,7 @@ describe("layoutEditPanel condition predefined values", () => {
           refs: { [ref]: { setValues } },
           render: vi.fn(),
           store: {
+            selectVisibilityConditionEnumOptions: () => undefined,
             selectVisibilityConditionTargetTypeByTarget: () => TYPES,
             selectVisibilityConditionTargetValueKindByTarget: () => KINDS,
             [set]: vi.fn(),
@@ -141,7 +142,10 @@ describe("layoutEditPanel condition predefined values", () => {
     expect(resolveConditionPresetValue("string", {})).toBeUndefined();
   });
 
-  it("saves the predefined value as the visibility condition", () => {
+  it.each([
+    ["eq", "=="],
+    ["neq", "!="],
+  ])("saves a predefined visibility value with %s", (op, symbol) => {
     const applied = [];
     handleVisibilityConditionFormAction(
       {
@@ -162,7 +166,7 @@ describe("layoutEditPanel condition predefined values", () => {
             actionId: "submit",
             values: {
               target: MENU_PAGE,
-              op: "eq",
+              op,
               valueChoice: "predefined",
               presetValue: "save",
             },
@@ -171,7 +175,12 @@ describe("layoutEditPanel condition predefined values", () => {
       },
     );
 
-    expect(JSON.stringify(applied)).toContain("save");
+    expect(applied).toContainEqual(
+      expect.objectContaining({
+        name: "$when",
+        value: `runtime.menuPage ${symbol} "save"`,
+      }),
+    );
   });
 
   it("shows the select for Predefined and the text input for Custom", () => {

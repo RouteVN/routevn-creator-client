@@ -21,7 +21,14 @@ import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
 import { getRuntimeFieldLabel } from "./support/layoutEditPanelRuntimeLabels.js";
 import { getFragmentLayoutOptions } from "../../internal/ui/layoutEditor/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
-import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
+import {
+  buildVariableEnumOptions,
+  isVariableEnumEnabled,
+} from "../../internal/variableEnums.js";
+import {
+  parseVariableConditionTarget,
+  splitLayoutConditionFromWhen,
+} from "../../internal/layoutConditions.js";
 import { formatPercent } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
@@ -752,8 +759,7 @@ const resetSelectionUiState = (state) => {
   state.visibilityConditionDialog = {
     open: false,
     key: 0,
-    selectedVariableType: undefined,
-    selectedValueKind: undefined,
+    target: undefined,
   };
   state.dropdownMenu = {
     isOpen: false,
@@ -1153,17 +1159,39 @@ export const closeConditionalOverrideConditionDialog = (
 
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
   state.visibilityConditionDialog.open = false;
-  state.visibilityConditionDialog.selectedValueKind = undefined;
+  state.visibilityConditionDialog.target = undefined;
 };
 
-export const setVisibilityConditionDialogSelectedVariableType = (
+export const setVisibilityConditionDialogTarget = (
   { state },
-  { selectedVariableType, selectedValueKind } = {},
+  { target } = {},
 ) => {
-  state.visibilityConditionDialog.selectedVariableType =
-    selectedVariableType ?? "string";
-  state.visibilityConditionDialog.selectedValueKind =
-    selectedValueKind ?? selectedVariableType ?? "string";
+  state.visibilityConditionDialog.target = target ?? "";
+};
+
+export const selectVisibilityConditionEnumOptions = (
+  { state },
+  { target } = {},
+) => {
+  const variable =
+    state.variablesData?.items?.[parseVariableConditionTarget(target)];
+  if (!isVariableEnumEnabled(variable)) return undefined;
+
+  const options = buildVariableEnumOptions(variable.enumValues);
+  const { visibilityCondition } = splitLayoutConditionFromWhen(
+    state.values?.$when,
+  );
+  if (
+    visibilityCondition?.target === target &&
+    typeof visibilityCondition.value === "string" &&
+    !options.some(({ value }) => value === visibilityCondition.value)
+  ) {
+    options.push({
+      label: visibilityCondition.value,
+      value: visibilityCondition.value,
+    });
+  }
+  return options;
 };
 
 export const setConditionalOverrideConditionDialogSelectedVariableType = (
@@ -1705,7 +1733,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     systemSectionLabel: copy.systemSection ?? "System",
     variablesSectionLabel: copy.variablesSection ?? "Variables",
     targetLabelCopy: copy,
-    presetValueCopy: commandLineCopy,
+    commandLineCopy,
     targetTypeLabels: createConditionTargetTypeLabels(i18n, copy),
   };
   // Visibility and conditional overrides list the same targets, by section.
@@ -1949,12 +1977,15 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       state.imagesData,
       state.conditionalOverrideAttributeDialog.selectedImageId,
     );
-  const selectedVisibilityConditionVariableType =
-    state.visibilityConditionDialog.selectedVariableType ??
-    visibilityConditionDialogDefaults.selectedVariableType;
+  const visibilityTarget =
+    state.visibilityConditionDialog.target ??
+    visibilityConditionDialogDefaults.target;
+  const selectedVisibilityConditionVariableType = visibilityTarget
+    ? (visibilityConditionTargetTypeByTarget[visibilityTarget] ?? "string")
+    : undefined;
   const selectedVisibilityConditionValueKind =
-    state.visibilityConditionDialog.selectedValueKind ??
-    visibilityConditionDialogDefaults.selectedValueKind;
+    visibilityConditionTargetValueKindByTarget[visibilityTarget] ??
+    selectedVisibilityConditionVariableType;
   const selectedConditionalOverrideVariableType =
     state.conditionalOverrideConditionDialog.selectedVariableType ??
     conditionalOverrideConditionDefaults.selectedVariableType;
@@ -2039,6 +2070,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
+      targetType: selectedVisibilityConditionVariableType,
+      enumOptions: selectVisibilityConditionEnumOptions(
+        { state },
+        { target: visibilityTarget },
+      ),
+      commandLineCopy,
       targetOptions: conditionTargetOptions,
       copy,
     }),
