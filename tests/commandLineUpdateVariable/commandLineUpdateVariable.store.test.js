@@ -190,6 +190,19 @@ describe("commandLineUpdateVariable.store random operation", () => {
     });
   });
 
+  it("gives a value weighted 0 the usual 0 to 100 weight options", () => {
+    const state = createRandomState("boolean");
+    addTempRandomValue({ state }, { id: "v2", value: false, weight: 0 });
+
+    const [first, second] = selectViewData({ state, i18n: EN_I18N }).tempRandom
+      .values;
+    expect(second.weight).toBe(0);
+    expect(second.weightOptions).toBe(first.weightOptions);
+    expect(second.weightOptions.map((option) => option.value)).toEqual(
+      Array.from({ length: 101 }, (_, index) => index),
+    );
+  });
+
   it("shows the draft's values, weights and chances, with empty fields as empty", () => {
     const weightOptions = Array.from({ length: 101 }, (_, index) => ({
       value: index,

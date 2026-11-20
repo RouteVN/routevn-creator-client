@@ -276,6 +276,18 @@ describe("commandLineRandom view", () => {
     );
   });
 
+  it("offers a saved weight of 0 once, as one of the usual options", () => {
+    const state = createStateWithWeights(0, 1);
+    openOutcomeDraft({ state }, { outcomeId: "o1" });
+    const values = selectViewData({
+      state,
+      props: {},
+      i18n: EN_I18N,
+    }).weightOptions.map((option) => option.value);
+
+    expect(values).toEqual(Array.from({ length: 101 }, (_, index) => index));
+  });
+
   it.each([
     [2.5, 3],
     [250, 101],
