@@ -280,7 +280,7 @@ describe("commandLineUpdateVariable random operation", () => {
       ]);
     });
 
-    it.each([1, 40, 100])("keeps the picked weight %s", async (weight) => {
+    it.each([0, 1, 40, 100])("keeps the picked weight %s", async (weight) => {
       const { deps, state } = await mountEditor();
 
       startRandomOperation(deps, "lucky");

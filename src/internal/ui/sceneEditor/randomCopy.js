@@ -17,24 +17,22 @@ export const formatRandomChance = (percent, dateTime = {}) =>
     formatNumber(percent, dateTime),
   );
 
-// The weights the weight selects offer.
-const RANDOM_WEIGHT_CHOICES = Array.from(
-  { length: 100 },
-  (_, index) => index + 1,
-);
+// The weights the weight selects offer. A weight of 0 keeps an outcome or
+// value from being picked, so that another always is, as when playtesting it.
+const RANDOM_WEIGHT_CHOICES = Array.from({ length: 101 }, (_, index) => index);
 
 /**
- * Whether a weight is one the weight selects offer: a whole number from 1 to
+ * Whether a weight is one the weight selects offer: a whole number from 0 to
  * 100.
  * @param {unknown} weight
  * @returns {boolean}
  */
 export const isRandomWeightChoice = (weight) =>
-  Number.isInteger(weight) && weight >= 1 && weight <= 100;
+  Number.isInteger(weight) && weight >= 0 && weight <= 100;
 
 /**
- * The options of a weight select: the whole numbers from 1 to 100, in the
- * locale's digits. A saved weight outside them, such as 0 or 250, is added in
+ * The options of a weight select: the whole numbers from 0 to 100, in the
+ * locale's digits. A saved weight outside them, such as 2.5 or 250, is added in
  * order, so that the select shows it and keeps it until another is picked.
  * @param {unknown} weight - The weight the select shows
  * @param {object} [dateTime] - The `dateTime` catalog of the active locale

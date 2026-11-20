@@ -454,7 +454,7 @@ describe("commandLineRandom.handlers", () => {
     expect(state.mode).toBe("current");
   });
 
-  it.each([1, 40, 100])("keeps the picked weight %s", (weight) => {
+  it.each([0, 1, 40, 100])("keeps the picked weight %s", (weight) => {
     const { deps, state } = mountWithWeights(5);
 
     handleOutcomeClick(deps, outcomeEvent(outcomeIds(state)[0]));
