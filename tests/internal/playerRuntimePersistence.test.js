@@ -588,7 +588,7 @@ describe("player runtime persistence key/value contract", () => {
             slot.state.contexts[0].rollback.timeline[1].randomOutcomes;
           outcomes.push(cloneFixture(outcomes[0]));
         },
-        message: "duplicates random outcome random#0",
+        message: "duplicates random outcome updateVariable.operations.0#0",
       },
       {
         name: "random outcome type",

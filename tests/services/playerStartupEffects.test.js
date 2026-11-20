@@ -81,13 +81,16 @@ describe("player startup effects", () => {
     const { engine, startupEffects, render, persist, ticker, randomSource } =
       createPlayer({
         background: { resourceId: "opening", resourceType: "image" },
-        random: {
-          distribution: { type: "integer", min: 1, max: 20 },
-          variableId: "roll",
-        },
         updateVariable: {
           id: "countVisit",
-          operations: [{ variableId: "visits", op: "increment", value: 1 }],
+          operations: [
+            {
+              variableId: "roll",
+              op: "random",
+              distribution: { type: "integer", min: 1, max: 20 },
+            },
+            { variableId: "visits", op: "increment", value: 1 },
+          ],
         },
         setNextLineConfig: {
           auto: { enabled: true, trigger: "fromStart", delay: 1000 },
@@ -117,6 +120,8 @@ describe("player startup effects", () => {
     expect(ticker.add).toHaveBeenCalledOnce();
     expect(randomSource.nextUint32).toHaveBeenCalledOnce();
     expect(engine.selectSystemState().global.variables.visits).toBe(1);
+    // 16 % 20 = 16, so the roll is 1 + 16.
+    expect(engine.selectSystemState().contexts[0].variables.roll).toBe(17);
     expect(engine.selectSystemState().contexts[0].pointers.read.lineId).toBe(
       openingLine,
     );
