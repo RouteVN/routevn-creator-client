@@ -22,6 +22,10 @@ refs:
     eventListeners:
       value-input:
         handler: handleSearchInput
+  noneSprite:
+    eventListeners:
+      click:
+        handler: handleSpriteItemClick
   spriteItem*:
     eventListeners:
       click:
@@ -155,6 +159,20 @@ styles:
     background-position: "0 0, 0 12px, 12px -12px, -12px 0"
     background-repeat: repeat
     background-size: 24px 24px
+  "#noneSprite":
+    background: var(--background)
+    border: "var(--border-width-xs) solid var(--border)"
+    border-radius: var(--border-radius-sm)
+    cursor: pointer
+    padding: 0
+    text-align: start
+  "#noneSprite:hover":
+    border-color: var(--accent)
+  "#noneSprite[aria-pressed='true']":
+    border-color: var(--primary)
+  "#noneSprite:focus-visible":
+    outline: "2px solid var(--ring)"
+    outline-offset: -2px
   ".commandLineSelectorRow":
     container-type: inline-size
   # A narrow picker gives the folder list's room to the cards.
@@ -269,6 +287,12 @@ template:
                   - rtgl-view.commandLineSelectorExplorer h=f w=1fg sv:
                       - rvn-base-file-explorer#baseFileExplorer :items=${spriteItems}: null
               - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
+                  - 'rtgl-view d=h w=f wrap g=lg style="${resourceSelectorGridStyle}"':
+                      - 'button#noneSprite type=button aria-pressed="${isNoneSpriteSelected}" aria-label="${noneSpriteLabel}" style="${resourceSelectorItemStyle}"':
+                          - 'rtgl-view p=sm g=sm br=md style="${resourceSelectorCardStyle}"':
+                              - 'rtgl-view av=c ah=c bgc=mu br=sm style="${characterSelectorPreviewStyle}"':
+                                  - rtgl-svg svg=circle-slash wh=24 c=mu-fg aria-hidden=true: null
+                              - rtgl-text s=sm c=mu-fg ellipsis w=f: ${noneSpriteLabel}
                   - $if spriteSelectorEmptyMessage:
                       - rtgl-view w=f h=1fg av=c ah=c p=md:
                           - rtgl-text s=sm c=mu-fg ta=c: ${spriteSelectorEmptyMessage}

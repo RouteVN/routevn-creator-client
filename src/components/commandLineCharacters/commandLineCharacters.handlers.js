@@ -1,3 +1,7 @@
+import {
+  buildCharacterSpritesFromGroups,
+  restoreCharacterSpriteGroups,
+} from "../../internal/characterSpriteSelection.js";
 import { buildCharacterSpritePreviewLayer } from "../../internal/characterSpritePreview.js";
 import {
   localizeCommandLineText,
@@ -102,43 +106,6 @@ const beginAddCharacterSelection = (store) => {
 const getTopSpriteSelectionGroupId = (spriteSelectionGroups = []) =>
   spriteSelectionGroups[spriteSelectionGroups.length - 1]?.id;
 
-const buildTempSelectedSpriteIdsByGroup = ({
-  character,
-  spriteSelectionGroups,
-} = {}) => {
-  const nextSelectedSpriteIds = {};
-  const currentSprites = Array.isArray(character?.sprites)
-    ? character.sprites
-    : [];
-  const firstSelectedSpriteId = currentSprites.find(
-    (sprite) =>
-      typeof sprite?.resourceId === "string" && sprite.resourceId.length > 0,
-  )?.resourceId;
-
-  for (const [index, spriteSelectionGroup] of (
-    spriteSelectionGroups ?? []
-  ).entries()) {
-    const matchingSprite = currentSprites.find(
-      (sprite) =>
-        sprite?.id === spriteSelectionGroup.id &&
-        typeof sprite?.resourceId === "string" &&
-        sprite.resourceId.length > 0,
-    );
-
-    if (matchingSprite?.resourceId) {
-      nextSelectedSpriteIds[spriteSelectionGroup.id] =
-        matchingSprite.resourceId;
-      continue;
-    }
-
-    if (index === 0 && firstSelectedSpriteId) {
-      nextSelectedSpriteIds[spriteSelectionGroup.id] = firstSelectedSpriteId;
-    }
-  }
-
-  return nextSelectedSpriteIds;
-};
-
 const beginExistingCharacterSpriteSelection = (store, index) => {
   const selectedCharacters = store.selectSelectedCharacters();
   const selectedCharacter = selectedCharacters[index];
@@ -150,7 +117,7 @@ const beginExistingCharacterSpriteSelection = (store, index) => {
   store.clearPendingCharacterIndex();
   store.setSelectedCharacterIndex({ index });
   store.setTempSelectedSpriteIds({
-    spriteIdsByGroupId: buildTempSelectedSpriteIdsByGroup({
+    spriteIdsByGroupId: restoreCharacterSpriteGroups({
       character: selectedCharacter,
       spriteSelectionGroups,
     }),
@@ -201,7 +168,7 @@ const beginNewCharacterSpriteSelection = (store, characterId) => {
   store.setPendingCharacterIndex({ index: newCharacterIndex });
   store.setSelectedCharacterIndex({ index: newCharacterIndex });
   store.setTempSelectedSpriteIds({
-    spriteIdsByGroupId: buildTempSelectedSpriteIdsByGroup({
+    spriteIdsByGroupId: restoreCharacterSpriteGroups({
       character: currentCharacters[newCharacterIndex],
       spriteSelectionGroups,
     }),
@@ -275,19 +242,10 @@ const buildCharacterItemsFromState = (
     }
 
     if (shouldUseTemporarySprites && index === selectedCharacterIndex) {
-      item.sprites = spriteSelectionGroups
-        .map((spriteSelectionGroup) => {
-          const resourceId = tempSelectedSpriteIds[spriteSelectionGroup.id];
-          if (!resourceId) {
-            return undefined;
-          }
-
-          return {
-            id: spriteSelectionGroup.id,
-            resourceId,
-          };
-        })
-        .filter(Boolean);
+      item.sprites = buildCharacterSpritesFromGroups({
+        spriteSelectionGroups,
+        spriteIdsByGroup: tempSelectedSpriteIds,
+      });
     }
 
     if (char.animations?.resourceId) {
@@ -873,9 +831,7 @@ export const handleAddCharacterClick = (deps, payload = {}) => {
 
 export const handleSpriteItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const target = payload._event.currentTarget;
-  const spriteId =
-    target?.dataset?.spriteId || target?.id?.replace("spriteItem", "") || "";
+  const { spriteId } = payload._event.currentTarget.dataset;
 
   store.setTempSelectedSpriteId({
     groupId: store.selectSelectedSpriteGroupId(),
@@ -924,19 +880,10 @@ export const handleButtonSelectClick = (deps) => {
 
     store.updateCharacterSprites({
       index: selectedCharacterIndex,
-      sprites: spriteSelectionGroups
-        .map((spriteSelectionGroup) => {
-          const resourceId = tempSelectedSpriteIds[spriteSelectionGroup.id];
-          if (!resourceId) {
-            return undefined;
-          }
-
-          return {
-            id: spriteSelectionGroup.id,
-            resourceId,
-          };
-        })
-        .filter(Boolean),
+      sprites: buildCharacterSpritesFromGroups({
+        spriteSelectionGroups,
+        spriteIdsByGroup: tempSelectedSpriteIds,
+      }),
     });
 
     store.clearPendingCharacterIndex();
