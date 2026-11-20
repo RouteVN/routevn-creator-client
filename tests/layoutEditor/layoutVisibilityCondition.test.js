@@ -84,6 +84,46 @@ describe("layout visibility conditions", () => {
     expect(elements[0].$when).toBe("variables.score == 10");
   });
 
+  it.each([
+    ["gt", ">", "variables.score", 100],
+    ["gte", ">=", 'variables["score-one"]', 100],
+    ["lt", "<", "runtime.saveLoadPagination", -2.5],
+    ["lte", "<=", "variables.score", 0],
+    ["neq", "!=", "variables.score", 20],
+    ["neq", "!=", "variables.title", "chapter )"],
+    ["neq", "!=", "dialogue.characterId", "character-one"],
+    ["neq", "!=", "runtime.menuPage", "load"],
+  ])(
+    "round-trips %s on %s with its existing condition",
+    (op, symbol, target, value) => {
+      const condition = { target, op, value };
+      const expression = buildVisibilityConditionExpression(condition);
+      expect(expression).toBe(`${target} ${symbol} ${JSON.stringify(value)}`);
+      expect(
+        splitVisibilityConditionFromWhen(
+          `(variables.level >= 1) && (${expression})`,
+        ),
+      ).toEqual({
+        baseWhen: "variables.level >= 1",
+        visibilityCondition: condition,
+      });
+    },
+  );
+
+  it.each([
+    "runtime.autoMode != true",
+    'runtime.menuPage < "save"',
+    "line.characterName || item.savedAt && variables.score >= 1",
+  ])(
+    "preserves an expression outside the editable comparisons",
+    (expression) => {
+      expect(splitVisibilityConditionFromWhen(expression)).toEqual({
+        baseWhen: expression,
+        visibilityCondition: undefined,
+      });
+    },
+  );
+
   it("maps editor opacity to runtime alpha", () => {
     const { elements } = buildLayoutElements(
       [
