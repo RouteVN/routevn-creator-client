@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  findRandomWeightProblem,
   getOutcomeChancePercents,
+  isEditableRandomDistribution,
+  isEditableRandomOperation,
   isValidOutcomeWeight,
   MAX_RANDOM_OUTCOMES,
+  MAX_RANDOM_VALUES,
   toRandomAction,
+  validateRandomDistribution,
   validateRandomOutcomes,
+  validateUpdateVariableSize,
 } from "../../src/internal/randomActions.js";
 
 const outcomesWithWeights = (...weights) =>
@@ -336,5 +342,399 @@ describe("validateRandomOutcomes", () => {
         "One outcome's weight is so small compared with the largest weight that the outcome can never be picked. Raise it or set it to 0.",
       );
     });
+  });
+});
+
+describe("validateRandomOutcomes order", () => {
+  it("reports too many outcomes before a weight that can never be picked", () => {
+    expect(
+      validateRandomOutcomes(
+        outcomesWithWeights(...Array(100).fill(1), 2 ** -53),
+      ),
+    ).toBe("A random action can have at most 100 outcomes.");
+  });
+});
+
+describe("findRandomWeightProblem", () => {
+  it.each([
+    ["weights Route Engine accepts", [70, 30, 0], undefined],
+    ["a negative weight", [1, -1], "invalid"],
+    ["an empty weight", [1, undefined], "invalid"],
+    ["a weight as text", [1, "2"], "invalid"],
+    ["every weight 0", [0, 0], "noPositive"],
+    ["no weights", [], "noPositive"],
+    ["a share Route Engine could never pick", [1, 2 ** -53], "unreachable"],
+    ["a share just above the limit", [1, 2 ** -51], undefined],
+    ["a weight that scales to 0", [Number.MAX_VALUE, 5e-324], "unreachable"],
+    ["an invalid weight before every weight 0", [0, -1], "invalid"],
+  ])("finds %s", (_label, weights, problem) => {
+    expect(findRandomWeightProblem(weights)).toBe(problem);
+  });
+});
+
+const numberVariable = { variableType: "number" };
+const booleanVariable = { variableType: "boolean" };
+const textVariable = { variableType: "string" };
+const enumVariable = {
+  variableType: "string",
+  isEnum: true,
+  enumValues: ["happy", "sad"],
+};
+const objectVariable = { variableType: "object" };
+
+const range = (min, max) => ({ type: "integer", min, max });
+const list = (...values) => ({
+  type: "weighted",
+  // A pair with no weight gets weight 1; one with an undefined weight keeps it.
+  values: values.map((entry) => ({
+    weight: entry.length > 1 ? entry[1] : 1,
+    value: entry[0],
+  })),
+});
+
+describe("validateRandomDistribution", () => {
+  it("allows 100 values", () => {
+    expect(MAX_RANDOM_VALUES).toBe(100);
+  });
+
+  it.each([
+    ["a range of whole numbers", range(1, 6), numberVariable],
+    ["a range of one number", range(-3, -3), numberVariable],
+    ["the widest range", range(0, 2 ** 32 - 1), numberVariable],
+    [
+      "the widest range of the smallest safe integers",
+      range(-Number.MAX_SAFE_INTEGER, -Number.MAX_SAFE_INTEGER + 2 ** 32 - 1),
+      numberVariable,
+    ],
+    ["a list of numbers", list([1.5], [-2, 3]), numberVariable],
+    ["true and false", list([true], [false, 0]), booleanVariable],
+    ["a list of text", list(["sunny", 60], ["rain", 40]), textVariable],
+    ["text with a lone $ or #", list(["$5 {or} #1 $"]), textVariable],
+    [
+      "text that only starts like _event",
+      list(["_events"], ["_event_x"], ["my_event.value"], ["event.value"]),
+      textVariable,
+    ],
+    ["enum values", list(["happy"], ["sad", 2]), enumVariable],
+    ["100 values", list(...Array(100).fill([1])), numberVariable],
+  ])("accepts %s", (_label, distribution, variable) => {
+    expect(validateRandomDistribution(distribution, variable)).toBeUndefined();
+  });
+
+  it.each([
+    [
+      "a range that is not whole",
+      range(1.5, 6),
+      numberVariable,
+      "Minimum and Maximum must be whole numbers.",
+    ],
+    [
+      "an empty minimum",
+      range(undefined, 6),
+      numberVariable,
+      "Minimum and Maximum must be whole numbers.",
+    ],
+    [
+      "an empty maximum",
+      range(1, undefined),
+      numberVariable,
+      "Minimum and Maximum must be whole numbers.",
+    ],
+    [
+      "a minimum beyond the safe integers",
+      range(2 ** 53, 2 ** 53),
+      numberVariable,
+      "Minimum and Maximum must be whole numbers.",
+    ],
+    [
+      "a minimum above the maximum",
+      range(7, 6),
+      numberVariable,
+      "Minimum can't be greater than Maximum.",
+    ],
+    [
+      "more than 2^32 numbers",
+      range(0, 2 ** 32),
+      numberVariable,
+      "Minimum and Maximum can be at most 4294967295 apart.",
+    ],
+    [
+      "the widest range of safe integers",
+      range(-Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER),
+      numberVariable,
+      "Minimum and Maximum can be at most 4294967295 apart.",
+    ],
+    [
+      "a range for a variable that is not a number",
+      range(1, 6),
+      textVariable,
+      "Variable operation value is invalid.",
+    ],
+    ["no values", list(), textVariable, "Please add at least one value."],
+    [
+      "an empty number",
+      list([1], [undefined]),
+      numberVariable,
+      "Enter a number for each value.",
+    ],
+    [
+      "a number that is not finite",
+      list([Infinity]),
+      numberVariable,
+      "Enter a number for each value.",
+    ],
+    [
+      "a number as text",
+      list(["1"]),
+      numberVariable,
+      "Enter a number for each value.",
+    ],
+    [
+      "empty text",
+      list(["sunny"], [""]),
+      textVariable,
+      "Enter text for each value.",
+    ],
+    [
+      "a template",
+      list(["Hello ${name}"]),
+      textVariable,
+      "Values can't contain ${ or #{.",
+    ],
+    [
+      "a path reference",
+      list(["#{item}"]),
+      textVariable,
+      "Values can't contain ${ or #{.",
+    ],
+    [
+      "an escaped template",
+      list(["\\${name}"]),
+      textVariable,
+      "Values can't contain ${ or #{.",
+    ],
+    [
+      "_event",
+      list(["sunny"], ["_event"]),
+      textVariable,
+      "Values can't be _event or start with _event.",
+    ],
+    [
+      "a value that starts with _event.",
+      list(["_event."]),
+      textVariable,
+      "Values can't be _event or start with _event.",
+    ],
+    [
+      "an enum value that is _event",
+      list(["_event.value"]),
+      { ...enumVariable, enumValues: ["_event.value"] },
+      "Values can't be _event or start with _event.",
+    ],
+    [
+      "a template in a value that starts with _event.",
+      list(["_event.${name}"]),
+      textVariable,
+      "Values can't contain ${ or #{.",
+    ],
+    [
+      "a value that is not one of the enum values",
+      list(["happy"], ["angry"]),
+      enumVariable,
+      "Choose a value in each row.",
+    ],
+    [
+      "an enum value with a template",
+      list(["${mood}"]),
+      { ...enumVariable, enumValues: ["${mood}"] },
+      "Values can't contain ${ or #{.",
+    ],
+    [
+      "a boolean as text",
+      list(["true"]),
+      booleanVariable,
+      "Variable operation value is invalid.",
+    ],
+    [
+      "a list for an object variable",
+      list(["{}"]),
+      objectVariable,
+      "Variable operation value is invalid.",
+    ],
+    [
+      "a negative weight",
+      list([1], [2, -1]),
+      numberVariable,
+      "Each weight must be 0 or greater.",
+    ],
+    [
+      "an empty weight",
+      list([true, undefined], [false]),
+      booleanVariable,
+      "Each weight must be 0 or greater.",
+    ],
+    [
+      "every weight 0",
+      list(["sunny", 0], ["rain", 0]),
+      textVariable,
+      "Give at least one value a weight greater than 0.",
+    ],
+    [
+      "a weight that can never be picked",
+      list([1, 1], [2, 2 ** -53]),
+      numberVariable,
+      "One value's weight is so small compared with the largest weight that the value can never be picked. Raise it or set it to 0.",
+    ],
+    [
+      "more than 100 values",
+      list(...Array(101).fill([1])),
+      numberVariable,
+      "A random operation can have at most 100 values.",
+    ],
+  ])("refuses %s", (_label, distribution, variable, message) => {
+    expect(validateRandomDistribution(distribution, variable)).toBe(message);
+  });
+
+  it("names the values before the weights, and the weights before the count", () => {
+    expect(
+      validateRandomDistribution(list([1, -1], [undefined]), numberVariable),
+    ).toBe("Enter a number for each value.");
+    expect(
+      validateRandomDistribution(
+        list(...Array(101).fill([1, 0])),
+        numberVariable,
+      ),
+    ).toBe("Give at least one value a weight greater than 0.");
+  });
+});
+
+describe("isEditableRandomDistribution", () => {
+  it.each([
+    ["a range", range(1, 6), numberVariable],
+    ["a range that is not whole", range(1.5, -3), numberVariable],
+    ["a list of numbers", list([2], [4, 0]), numberVariable],
+    ["an empty list", list(), textVariable],
+    ["booleans", list([true], [false]), booleanVariable],
+    ["text, even empty", list(["sunny"], [""]), textVariable],
+    ["a value outside the enum values", list(["angry"]), enumVariable],
+    ["more than 100 values", list(...Array(101).fill([1])), numberVariable],
+  ])("accepts %s", (_label, distribution, variable) => {
+    expect(isEditableRandomDistribution(distribution, variable)).toBe(true);
+  });
+
+  it.each([
+    ["no distribution", undefined, numberVariable],
+    ["a distribution as a list", [range(1, 6)], numberVariable],
+    ["another type", { type: "other", values: [] }, numberVariable],
+    ["a range for a boolean variable", range(0, 1), booleanVariable],
+    ["a range for a text variable", range(0, 1), textVariable],
+    ["a range as text", range("1", "6"), numberVariable],
+    ["a range without a maximum", { type: "integer", min: 1 }, numberVariable],
+    ["a range with another field", { ...range(1, 6), step: 2 }, numberVariable],
+    ["a list with another field", { ...list([1]), seed: 3 }, numberVariable],
+    [
+      "values that are not a list",
+      { type: "weighted", values: { a: { weight: 1, value: 1 } } },
+      numberVariable,
+    ],
+    [
+      "a null value entry",
+      { type: "weighted", values: [{ weight: 1, value: 1 }, null] },
+      numberVariable,
+    ],
+    [
+      "a value entry with another field",
+      { type: "weighted", values: [{ weight: 1, value: 1, label: "One" }] },
+      numberVariable,
+    ],
+    [
+      "a value entry without a weight",
+      { type: "weighted", values: [{ value: 1 }] },
+      numberVariable,
+    ],
+    ["a weight as text", list([1, "2"]), numberVariable],
+    ["a negative weight", list([1, -1]), numberVariable],
+    ["a text value for a number variable", list(["1"]), numberVariable],
+    ["a number for a text variable", list([1]), textVariable],
+    ["a number for a boolean variable", list([0]), booleanVariable],
+    ["a value for an object variable", list(["{}"]), objectVariable],
+    ["a missing variable", range(1, 6), undefined],
+  ])("refuses %s", (_label, distribution, variable) => {
+    expect(isEditableRandomDistribution(distribution, variable)).toBe(false);
+  });
+});
+
+describe("isEditableRandomOperation", () => {
+  it("accepts an operation with only a variable, op and distribution", () => {
+    expect(
+      isEditableRandomOperation(
+        { variableId: "dice", op: "random", distribution: range(1, 6) },
+        numberVariable,
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["a value", { value: 3 }],
+    ["another field", { note: "Keep" }],
+    ["roundTo", { roundTo: 2 }],
+  ])("refuses an operation with %s", (_label, extraFields) => {
+    expect(
+      isEditableRandomOperation(
+        {
+          variableId: "dice",
+          op: "random",
+          distribution: range(1, 6),
+          ...extraFields,
+        },
+        numberVariable,
+      ),
+    ).toBe(false);
+  });
+
+  it("refuses an operation whose distribution it cannot show", () => {
+    expect(
+      isEditableRandomOperation(
+        { variableId: "dice", op: "random", distribution: range(1, 6) },
+        textVariable,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("validateUpdateVariableSize", () => {
+  // An Update Variable action of this many bytes of JSON.
+  const updateVariableOfSize = (bytes, character = "a") => {
+    const updateVariable = {
+      id: "update-1",
+      operations: [
+        { variableId: "weather", op: "random", distribution: list([""]) },
+      ],
+    };
+    const characterBytes = jsonByteLength(character);
+    const count =
+      (bytes - jsonByteLength(updateVariable)) / (characterBytes - 2);
+    updateVariable.operations[0].distribution.values[0].value =
+      character.repeat(count);
+    return updateVariable;
+  };
+
+  it("accepts an action of 48 KiB", () => {
+    const updateVariable = updateVariableOfSize(48 * 1024);
+
+    expect(jsonByteLength(updateVariable)).toBe(48 * 1024);
+    expect(validateUpdateVariableSize(updateVariable)).toBeUndefined();
+  });
+
+  it.each([
+    ["one byte over 48 KiB", updateVariableOfSize(48 * 1024 + 1)],
+    [
+      "over 48 KiB in fewer characters",
+      updateVariableOfSize(48 * 1024 + 2, "é"),
+    ],
+  ])("refuses an action %s", (_label, updateVariable) => {
+    expect(validateUpdateVariableSize(updateVariable)).toBe(
+      "This Update Variable action is too large to save. Use fewer or shorter values.",
+    );
   });
 });

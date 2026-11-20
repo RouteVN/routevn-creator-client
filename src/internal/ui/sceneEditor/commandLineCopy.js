@@ -45,6 +45,25 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
   "A random action can have at most 100 outcomes.": "outcomeLimitReached",
   "This random action is saved in a format that RouteVN Creator can't edit.":
     "unsupportedRandomDistribution",
+  // The Random operation of Update Variable.
+  "Please add at least one value.": "addRandomValueRequired",
+  "Minimum and Maximum must be whole numbers.": "randomRangeNotWholeNumbers",
+  "Minimum can't be greater than Maximum.": "randomRangeMinAboveMax",
+  "Minimum and Maximum can be at most 4294967295 apart.": "randomRangeTooLarge",
+  "Enter a number for each value.": "randomNumberValueRequired",
+  "Enter text for each value.": "randomTextValueRequired",
+  "Choose a value in each row.": "randomEnumValueRequired",
+  "Values can't contain ${ or #{.": "randomValueTemplateSyntax",
+  "Values can't be _event or start with _event.": "randomValueEventBinding",
+  "This Update Variable action is too large to save. Use fewer or shorter values.":
+    "updateVariableActionTooLarge",
+  "Give at least one value a weight greater than 0.":
+    "positiveRandomValueWeightRequired",
+  "One value's weight is so small compared with the largest weight that the value can never be picked. Raise it or set it to 0.":
+    "randomValueWeightTooSmall",
+  "A random operation can have at most 100 values.": "randomValueLimitReached",
+  "This random operation is saved in a format that RouteVN Creator can't edit.":
+    "unsupportedRandomOperation",
   "Please add at least one valid variable operation.":
     "validVariableOperationRequired",
   "Please select an input layout.": "selectInputLayoutRequired",

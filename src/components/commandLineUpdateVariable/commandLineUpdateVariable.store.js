@@ -1,4 +1,5 @@
 import { getVariableOptions } from "../../internal/project/projection.js";
+import { getOutcomeChancePercents } from "../../internal/randomActions.js";
 import {
   buildVariableEnumOptions,
   isVariableEnumEnabled,
@@ -12,6 +13,10 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import {
+  formatRandomChance,
+  formatRandomDistributionSummary,
+} from "../../internal/ui/sceneEditor/randomCopy.js";
 
 // Operations available per variable type
 const OPERATIONS_BY_TYPE = {
@@ -21,13 +26,34 @@ const OPERATIONS_BY_TYPE = {
     { value: "decrement", label: "Decrement by" },
     { value: "multiply", label: "Multiply by" },
     { value: "divide", label: "Divide by" },
+    { value: "random", label: "Set to random" },
   ],
   boolean: [
     { value: "set", label: "Set to" },
     { value: "toggle", label: "Toggle" },
+    { value: "random", label: "Set to random" },
   ],
-  string: [{ value: "set", label: "Set to" }],
+  string: [
+    { value: "set", label: "Set to" },
+    { value: "random", label: "Set to random" },
+  ],
+  // Route Engine draws only numbers, booleans and text.
+  object: [{ value: "set", label: "Set to" }],
 };
+
+// The label of each operation, also for one saved on a variable whose type
+// does not offer it.
+const OPERATION_LABELS = Object.fromEntries(
+  Object.values(OPERATIONS_BY_TYPE)
+    .flat()
+    .map((operation) => [operation.value, operation.label]),
+);
+
+// A number variable draws from a range or a list; other variables from a list.
+const RANDOM_TYPE_OPTIONS = [
+  { value: "integer", label: "Range" },
+  { value: "weighted", label: "List" },
+];
 
 const DEFAULT_DIVIDE_ROUND_TO = 2;
 const MAX_DIVIDE_ROUND_TO = 12;
@@ -117,6 +143,45 @@ export const setTempOperation = ({ state }, params = {}) => {
   state.tempOperation = { ...state.tempOperation, ...params };
 };
 
+// The random draft of the operation being edited: `type` is "integer" for a
+// range or "weighted" for a list, and a number variable keeps both a range
+// and a list so that switching between them loses neither.
+export const setTempRandomType = ({ state }, { type } = {}) => {
+  state.tempOperation.random.type = type;
+};
+
+export const setTempRandomMin = ({ state }, { min } = {}) => {
+  state.tempOperation.random.min = min;
+};
+
+export const setTempRandomMax = ({ state }, { max } = {}) => {
+  state.tempOperation.random.max = max;
+};
+
+export const addTempRandomValue = ({ state }, { id, value, weight } = {}) => {
+  state.tempOperation.random.values.push({ id, value, weight });
+};
+
+export const setTempRandomValue = ({ state }, { id, value } = {}) => {
+  const entry = state.tempOperation.random.values.find(
+    (item) => item.id === id,
+  );
+  entry.value = value;
+};
+
+export const setTempRandomValueWeight = ({ state }, { id, weight } = {}) => {
+  const entry = state.tempOperation.random.values.find(
+    (item) => item.id === id,
+  );
+  entry.weight = weight;
+};
+
+export const removeTempRandomValue = ({ state }, { id } = {}) => {
+  state.tempOperation.random.values = state.tempOperation.random.values.filter(
+    (item) => item.id !== id,
+  );
+};
+
 export const resetTempOperation = ({ state }, _payload = {}) => {
   state.tempOperation = {
     variableId: "",
@@ -164,6 +229,11 @@ export const selectOperationChangeData = ({ state }) => ({
   variable: state.variablesData?.items?.[state.tempOperation.variableId],
 });
 
+export const selectRandomDraftData = ({ state }) => ({
+  random: state.tempOperation.random,
+  variable: state.variablesData?.items?.[state.tempOperation.variableId],
+});
+
 export const selectOperationSaveData = ({ state }) => ({
   currentEditingId: state.currentEditingId,
   tempOperation: state.tempOperation,
@@ -176,8 +246,36 @@ export const selectSubmitData = ({ state }) => ({
   variablesData: state.variablesData,
 });
 
+// The kind of control each value of a random list uses, as the Set operation
+// does for the variable.
+const getRandomValueInputType = (variable, variableType) => {
+  if (variableType === "number" || variableType === "boolean") {
+    return variableType;
+  }
+  return isVariableEnumEnabled(variable) ? "enum" : "text";
+};
+
+const selectTempRandomViewData = (random, dateTime) => {
+  const chancePercents = getOutcomeChancePercents(
+    random.values.map((entry) => entry.weight),
+  );
+  return {
+    type: random.type,
+    min: random.min ?? "",
+    max: random.max ?? "",
+    values: random.values.map((entry, index) => ({
+      id: entry.id,
+      value: entry.value ?? "",
+      booleanValue: String(entry.value),
+      weight: entry.weight ?? "",
+      chance: formatRandomChance(chancePercents[index], dateTime),
+    })),
+  };
+};
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCommandLineCopy(i18n);
+  const { dateTime } = i18n;
   const variableItems = state.variablesData?.items ?? {};
 
   const variableOptions = getVariableOptions(state.variablesData, {
@@ -205,8 +303,17 @@ export const selectViewData = ({ state, i18n }) => {
   const operationOptions =
     OPERATIONS_BY_TYPE[selectedType] || OPERATIONS_BY_TYPE.string;
 
+  const isRandomOperation = state.tempOperation.op === "random";
   const showValueField =
-    state.tempOperation.op !== "toggle" && state.tempOperation.op !== "";
+    state.tempOperation.op !== "toggle" &&
+    state.tempOperation.op !== "" &&
+    !isRandomOperation;
+  // A random operation saved in a format the editor cannot edit shows only a
+  // notice, so it stays as it is.
+  const isEditingUnsupportedRandom =
+    state.operations.find((op) => op.id === state.currentEditingId)
+      ?.unsupportedOperation !== undefined;
+  const showRandomFields = isRandomOperation && !isEditingUnsupportedRandom;
   const valueInputType = selectedType;
   const showRoundToField =
     selectedType === "number" && state.tempOperation.op === "divide";
@@ -220,12 +327,16 @@ export const selectViewData = ({ state, i18n }) => {
   const operationsWithData = state.operations.map((op) => {
     const variable = variableItems[op.variableId];
     const varType = (variable?.variableType || "string").toLowerCase();
-    const opDef = OPERATIONS_BY_TYPE[varType]?.find((o) => o.value === op.op);
 
     // Format display value; a boolean uses its label from the value select.
     let displayValue = op.value;
     if (op.op === "toggle") {
       displayValue = "";
+    } else if (op.op === "random") {
+      displayValue =
+        op.unsupportedOperation === undefined
+          ? formatRandomDistributionSummary(op.distribution, copy, dateTime)
+          : "";
     } else if (varType === "boolean") {
       displayValue = localizeCommandLineText(
         op.value === true || op.value === "true" ? "True" : "False",
@@ -244,7 +355,7 @@ export const selectViewData = ({ state, i18n }) => {
         copy,
       ),
       type: varType,
-      opLabel: localizeCommandLineText(opDef?.label || op.op, copy),
+      opLabel: localizeCommandLineText(OPERATION_LABELS[op.op] ?? op.op, copy),
       displayValue,
     };
   });
@@ -281,6 +392,17 @@ export const selectViewData = ({ state, i18n }) => {
     showRoundToField,
     showValueField,
     valueInputType,
+    isEditingUnsupportedRandom,
+    showRandomFields,
+    showRandomTypeControl: showRandomFields && selectedType === "number",
+    randomTypeOptions: localizeCommandLineOptions(RANDOM_TYPE_OPTIONS, copy),
+    randomValueInputType: getRandomValueInputType(
+      selectedVariable,
+      selectedType,
+    ),
+    tempRandom: showRandomFields
+      ? selectTempRandomViewData(state.tempOperation.random, dateTime)
+      : undefined,
     tempOperation: {
       ...state.tempOperation,
       booleanValue,
@@ -288,6 +410,17 @@ export const selectViewData = ({ state, i18n }) => {
     },
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     addOperationButton: localizeCommandLineText("+ Add Operation", copy),
+    addRandomValueButton: localizeCommandLineText("+ Add Value", copy),
+    chanceLabel: localizeCommandLineText("Chance", copy),
+    maximumLabel: localizeCommandLineText("Maximum", copy),
+    minimumLabel: localizeCommandLineText("Minimum", copy),
+    removeRandomValueLabel: localizeCommandLineText("Remove Value", copy),
+    unsupportedRandomLabel: localizeCommandLineText(
+      "This random operation is saved in a format that RouteVN Creator can't edit.",
+      copy,
+    ),
+    valuesLabel: localizeCommandLineText("Values", copy),
+    weightLabel: localizeCommandLineText("Weight", copy),
     decimalPlacesLabel: localizeCommandLineText("Decimal Places", copy),
     operationLabel: localizeCommandLineText("Operation", copy),
     operationPlaceholder: localizeCommandLineText(

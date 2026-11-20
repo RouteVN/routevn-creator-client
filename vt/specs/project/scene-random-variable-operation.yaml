@@ -1,0 +1,259 @@
+---
+title: Scene Random Variable Operation Workflow
+description: Covers the Set to random operation of an Update Variable action, from a number range and a weighted list to the saved operation and its summary.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='description'] input
+    steps:
+      - action: clear
+      - action: write
+        value: Random variable operation coverage.
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select[data-field-name='language'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-form#createProjectForm rtgl-select[data-field-name='language'] #option1"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-select[data-field-name='language'] #option1"
+    steps:
+      - action: click
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: customEvent
+    name: routevn:vt:navigate
+    detail:
+      path: /project/variables
+  - action: waitFor
+    selector: rvn-variables
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 450
+  - action: select
+    selector: "#addVariableButtonRef0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-dropdown-menu#dropdownMenu [role='menuitem']:has-text('Variable')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#variableDialog"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#variableDialog rtgl-input[data-field-name='name'] input"
+    steps:
+      - action: clear
+      - action: write
+        value: dice
+  - action: select
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] #option1"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#variableDialog rtgl-select[data-field-name='variableType'] #option1"
+    steps:
+      - action: click
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#variableDialog #variableSubmitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#variableDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#sidebar [data-item-id='scenes']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#whiteboard #itemRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#mapAddHintClose"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#mapAddHintClose"
+    steps:
+      - action: click
+  - action: select
+    selector: "#whiteboard #itemRef0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-scene-editor-lexical
+    state: attached
+    timeoutMs: 20000
+  - action: waitFor
+    selector: 'rvn-lexical-scene-document-editor .editor-paragraph[data-selected="true"][data-mode="block"]'
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#systemActions #addActionButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-system-actions-dialog-surface rtgl-dialog[open][bare]"
+    state: attached
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-actions#commandLineActions [data-action-id='17']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable #addOperationButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable #addOperationButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#variableSelect [data-testid='select-button']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#variableSelect [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#variableSelect [id^='option']:has-text('dice')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#variableSelect [id^='option']:has-text('dice')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#operationSelect [data-testid='select-button']"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#operationSelect [data-testid='select-button']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#operationSelect [id^='option']:has-text('Set to random')"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-select#operationSelect [id^='option']:has-text('Set to random')"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-input-number#randomMinInput input"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-segmented-control#randomTypeControl #option1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable #addRandomValueButton"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable #addRandomValueButton"
+    steps:
+      - action: click
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-segmented-control#randomTypeControl #option0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable rtgl-input-number#randomMinInput input"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable #saveOperationButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable #submitButton"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-update-variable#commandLineUpdateVariable #submitButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#actionItemUpdateVariable"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "rvn-lexical-scene-document-editor rtgl-svg[svg='variable']"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: screenshot
+---

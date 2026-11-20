@@ -1,5 +1,6 @@
 import { formatNumber } from "../../internal/dates.js";
 import { getOutcomeChancePercents } from "../../internal/randomActions.js";
+import { formatRandomChance } from "../../internal/ui/sceneEditor/randomCopy.js";
 import {
   formatCommandLineActionCount,
   formatCommandLineCopy,
@@ -34,14 +35,6 @@ const getOutcomeDropdownMenuItems = (outcomes, outcomeId) => {
   items.push({ label: "Delete", type: "item", value: "delete" });
   return items;
 };
-
-// Chances arrive rounded by getOutcomeChancePercents, which can keep more
-// digits than formatPercent's two decimals, so every digit is shown in the
-// locale's percent template.
-const formatChance = (percent, dateTime = {}) =>
-  (dateTime.percent ?? "{value}%").replaceAll("{value}", () =>
-    formatNumber(percent, dateTime),
-  );
 
 // The weights the weight select offers.
 const WEIGHT_CHOICES = Array.from({ length: 100 }, (_, index) => index + 1);
@@ -213,7 +206,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       "Weight {weight} ({chance})",
       {
         weight: formatNumber(outcome.weight, dateTime),
-        chance: formatChance(chancePercents[index], dateTime),
+        chance: formatRandomChance(chancePercents[index], dateTime),
       },
       copy,
     ),
@@ -235,7 +228,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     outcomes,
     tempOutcome: {
       weight: state.tempOutcome.weight,
-      chance: formatChance(getTempOutcomeChancePercent(state), dateTime),
+      chance: formatRandomChance(getTempOutcomeChancePercent(state), dateTime),
     },
     weightOptions: getWeightOptions(state.tempOutcome.weight, dateTime),
     outcomeActions: state.tempOutcome.actions,
