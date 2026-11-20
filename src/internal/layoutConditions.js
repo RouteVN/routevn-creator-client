@@ -1,3 +1,5 @@
+import { parseConditionExpression } from "jempl";
+import { BinaryOp, NodeType } from "jempl/src/parse/constants.js";
 import { getRuntimeConditionItems } from "./runtimeFields.js";
 
 export const SAVE_DATA_AVAILABLE_CONDITION_TARGET = "item.savedAt";
@@ -257,20 +259,16 @@ const parseConditionValue = (value) => {
   return undefined;
 };
 
+const isLayoutComparison = (condition) =>
+  typeof condition?.target === "string" &&
+  condition.target.length > 0 &&
+  getVisibilityConditionOperators(typeof condition.value).includes(
+    condition.op,
+  );
+
 export const buildLayoutConditionExpression = (condition) => {
-  if (
-    !getVisibilityConditionOperators(typeof condition?.value).includes(
-      condition?.op,
-    )
-  ) {
-    return undefined;
-  }
-
-  const target = condition?.target;
-  if (typeof target !== "string" || target.length === 0) {
-    return undefined;
-  }
-
+  if (!isLayoutComparison(condition)) return undefined;
+  const { target } = condition;
   if (
     target === SAVE_DATA_AVAILABLE_CONDITION_TARGET &&
     typeof condition.value === "boolean"
@@ -392,6 +390,86 @@ export const splitLayoutConditionFromWhen = (expression) => {
     baseWhen: mergeWhenExpressions(...remainingClauses),
     visibilityCondition,
   };
+};
+
+// Project data keeps the editable expression. Playback gets the literal value
+// directly so quotes, backslashes and operator characters survive rendering.
+export const compileVisibilityCondition = (condition) => {
+  if (!isLayoutComparison(condition)) return undefined;
+  const { target, op, value } = condition;
+  const variable = { var: target };
+  if (
+    target === SAVE_DATA_AVAILABLE_CONDITION_TARGET &&
+    typeof value === "boolean"
+  ) {
+    return value ? variable : { not: variable };
+  }
+  return { [op]: [variable, value ?? ""] };
+};
+
+const jsonBinaryOperators = {
+  [BinaryOp.EQ]: "eq",
+  [BinaryOp.NEQ]: "neq",
+  [BinaryOp.GT]: "gt",
+  [BinaryOp.GTE]: "gte",
+  [BinaryOp.LT]: "lt",
+  [BinaryOp.LTE]: "lte",
+  [BinaryOp.IN]: "in",
+  [BinaryOp.AND]: "all",
+  [BinaryOp.OR]: "any",
+  [BinaryOp.ADD]: "add",
+  [BinaryOp.SUBTRACT]: "sub",
+};
+
+// Jempl's JSON form treats every string as a literal. Parse an existing
+// expression with Jempl before combining it with an editor comparison.
+const toConditionJson = (node) => {
+  switch (node.type) {
+    case NodeType.VARIABLE:
+      return { var: node.path };
+    case NodeType.LITERAL:
+      return { literal: node.value };
+    case NodeType.FUNCTION:
+      return { call: node.name, args: node.args.map(toConditionJson) };
+    case NodeType.UNARY:
+      return { not: toConditionJson(node.operand) };
+    case NodeType.BINARY:
+      return {
+        [jsonBinaryOperators[node.op]]: [
+          toConditionJson(node.left),
+          toConditionJson(node.right),
+        ],
+      };
+    default:
+      throw new Error("Unsupported layout condition expression");
+  }
+};
+
+export const combineLayoutConditions = (operator, ...conditions) => {
+  const parts = conditions.filter((condition) => condition !== undefined);
+  if (parts.length < 2) return parts[0];
+  return {
+    [operator]: parts.map((part) =>
+      typeof part === "string"
+        ? toConditionJson(parseConditionExpression(part))
+        : part,
+    ),
+  };
+};
+
+export const compileSavedLayoutWhen = (expression) => {
+  if (typeof expression !== "string") return expression;
+  const clauses = splitTopLevelAndExpressions(trimOuterParentheses(expression));
+  if (clauses.length === 0) return undefined;
+  if (clauses.length === 1) {
+    const comparison = parseConditionTargetClause(clauses[0]);
+    return comparison ? compileVisibilityCondition(comparison) : expression;
+  }
+
+  const conditions = clauses.map(compileSavedLayoutWhen);
+  return conditions.some((condition) => typeof condition === "object")
+    ? combineLayoutConditions("all", ...conditions)
+    : expression;
 };
 
 export const getFixedVisibilityStateItems = getRuntimeLayoutConditionItems;

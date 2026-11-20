@@ -46,7 +46,9 @@ describe("buildLayoutElements choice single item containers", () => {
       id: "choice-single-item",
       type: "container",
       direction: "absolute",
-      $when: "(variables.showChoices) && (choice.items[1])",
+      $when: {
+        all: [{ var: "variables.showChoices" }, { var: "choice.items[1]" }],
+      },
       click: {
         inheritToChildren: true,
         payload: {
@@ -61,6 +63,33 @@ describe("buildLayoutElements choice single item containers", () => {
         },
       ],
     });
+  });
+
+  it("requires the assigned choice even when an override reveals it", () => {
+    const elements = buildChoiceLayoutElements([
+      {
+        id: "choice-one",
+        type: "container-ref-choice-single-item",
+        choiceItemIndex: 1,
+        $when: 'variables.mood != "Calm && Quiet"',
+        conditionalOverrides: [
+          {
+            when: { target: "variables.reveal", op: "eq", value: true },
+            set: { visible: true },
+          },
+        ],
+      },
+    ]);
+    const render = (mood, reveal, items) =>
+      parseAndRender(elements, {
+        variables: { mood, reveal },
+        choice: { items },
+      });
+    const choices = [{}, {}];
+    expect(render("Calm && Quiet", false, choices)).toHaveLength(0);
+    expect(render("Other", false, choices)).toHaveLength(1);
+    expect(render("Calm && Quiet", true, choices)).toHaveLength(1);
+    expect(render("Calm && Quiet", true, [{}])).toHaveLength(0);
   });
 
   it("renders only when the assigned choice exists", () => {
