@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "เลือกรูปแบบตัวอักษร"
   conditionTargetCharacterType: "ตัวละคร"
   blurSummary: "X {x}, Y {y} คุณภาพ {quality} เคอร์เนล {kernel} {edge}"
+  textDirectionSection: "ทิศทางข้อความ"
+  horizontalLeftToRightOption: "แนวนอน จากซ้ายไปขวา"
+  horizontalRightToLeftOption: "แนวนอน จากขวาไปซ้าย"
+  verticalRightToLeftOption: "แนวตั้ง จากขวาไปซ้าย"
+  verticalLeftToRightOption: "แนวตั้ง จากซ้ายไปขวา"
+  topOption: "บน"
+  bottomOption: "ล่าง"
 controlsPage:
   actionDecrementSaveLoadPagination: "หน้าบันทึก/โหลดก่อนหน้า"
   actionIncrementSaveLoadPagination: "หน้าบันทึก/โหลดถัดไป"

@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "Pilih gaya teks"
   conditionTargetCharacterType: "karakter"
   blurSummary: "X {x}; Y {y}; kualitas {quality}; kernel {kernel}; {edge}"
+  textDirectionSection: "Arah teks"
+  horizontalLeftToRightOption: "Horizontal, kiri ke kanan"
+  horizontalRightToLeftOption: "Horizontal, kanan ke kiri"
+  verticalRightToLeftOption: "Vertikal, kanan ke kiri"
+  verticalLeftToRightOption: "Vertikal, kiri ke kanan"
+  topOption: "Atas"
+  bottomOption: "Bawah"
 controlsPage:
   actionDecrementSaveLoadPagination: "Halaman simpanan sebelumnya"
   actionIncrementSaveLoadPagination: "Halaman simpanan berikutnya"

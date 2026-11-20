@@ -2320,6 +2320,13 @@ layoutEditPanel:
   textStylePlaceholder: "Виберіть стиль тексту"
   conditionTargetCharacterType: "персонаж"
   blurSummary: "X {x}; Y {y}; якість {quality}; ядро {kernel}; {edge}"
+  textDirectionSection: "Напрямок тексту"
+  horizontalLeftToRightOption: "По горизонталі, зліва направо"
+  horizontalRightToLeftOption: "По горизонталі, справа наліво"
+  verticalRightToLeftOption: "По вертикалі, справа наліво"
+  verticalLeftToRightOption: "По вертикалі, зліва направо"
+  topOption: "Вгорі"
+  bottomOption: "Внизу"
 controlsPage:
   actionDecrementSaveLoadPagination: "Попередня сторінка збережень"
   actionIncrementSaveLoadPagination: "Наступна сторінка збережень"

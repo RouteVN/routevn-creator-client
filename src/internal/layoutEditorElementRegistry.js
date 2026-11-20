@@ -7,6 +7,11 @@ import {
   toLayoutTextBackwardCompatibleText,
 } from "./layoutTextContent.js";
 import { DEFAULT_SAVE_LOAD_DATE_FORMAT } from "./saveLoadDateFormats.js";
+import {
+  getLayoutTextDirectionFields,
+  isRightToLeftTextDirection,
+  isVerticalTextWritingMode,
+} from "./layoutTextWritingMode.js";
 
 const BASE_TRANSFORM = {
   x: 0,
@@ -44,6 +49,64 @@ const CONTAINER_TYPE_SET = new Set([
 
 const supportsLayoutEditorWidthMode = (itemType) => {
   return typeof itemType === "string" && itemType.startsWith("text");
+};
+
+// Vertical text wraps its columns at its height and measures its width.
+export const isLayoutEditorVerticalTextItem = (item) => {
+  return (
+    TEXT_TYPE_SET.has(item?.type) &&
+    isVerticalTextWritingMode(item?.writingMode)
+  );
+};
+
+const MIRRORED_TEXT_ALIGN = {
+  left: "right",
+  right: "left",
+};
+
+// Vertical text has no base direction.
+const isRightToLeftText = (item) =>
+  isRightToLeftTextDirection(item.direction) &&
+  !isVerticalTextWritingMode(item.writingMode);
+
+// A line starts at the left in left-to-right text, at the right in
+// right-to-left text and at the top, which alignment calls left, in vertical
+// text. Text aligned to its start stays aligned to its start.
+const keepTextAlignedToItsStart = ({ currentItem, nextItem }) => {
+  const mirroredAlign = MIRRORED_TEXT_ALIGN[nextItem.textStyle?.align];
+  if (
+    mirroredAlign &&
+    isRightToLeftText(currentItem) !== isRightToLeftText(nextItem)
+  ) {
+    nextItem.textStyle.align = mirroredAlign;
+  }
+
+  return nextItem;
+};
+
+// The panel's one text direction choice sets both the writing mode and the
+// base direction, so a direction hidden by vertical text is not kept.
+// Horizontal text wraps at its width and vertical text at its height, with
+// the other side measured, so a size set for one does not carry over.
+const applyTextDirectionChange = ({ currentItem, nextItem, value }) => {
+  delete nextItem.textDirection;
+  delete nextItem.writingMode;
+  delete nextItem.direction;
+  const { writingMode, direction } = getLayoutTextDirectionFields(value);
+  if (writingMode) {
+    nextItem.writingMode = writingMode;
+  }
+  if (direction) {
+    nextItem.direction = direction;
+  }
+
+  const wasVertical = isVerticalTextWritingMode(currentItem.writingMode);
+  const isVertical = isVerticalTextWritingMode(nextItem.writingMode);
+  if (wasVertical !== isVertical) {
+    delete nextItem[isVertical ? "width" : "height"];
+  }
+
+  return keepTextAlignedToItsStart({ currentItem, nextItem });
 };
 
 const ABSOLUTE_DIRECTION = "absolute";
@@ -564,6 +627,7 @@ const DEFAULT_CAPABILITIES = {
   supportsTextStyles: false,
   supportsSoundSelection: false,
   supportsTextAlignment: false,
+  supportsTextWritingMode: false,
   supportsActions: false,
   supportsSpriteImages: false,
   supportsSpriteBlur: false,
@@ -617,6 +681,7 @@ const FAMILY_CAPABILITIES = {
     supportsTextStyles: true,
     supportsSoundSelection: true,
     supportsTextAlignment: true,
+    supportsTextWritingMode: true,
   },
   input: {
     supportsAnchor: true,
@@ -735,6 +800,13 @@ const TYPE_RULES = {
       }
 
       return value;
+    },
+    applyFieldChange: ({ currentItem, nextItem, name, value }) => {
+      if (name === "textDirection") {
+        return applyTextDirectionChange({ currentItem, nextItem, value });
+      }
+
+      return nextItem;
     },
     finalizeFieldChange: ({ nextItem, name, value }) => {
       if (name === "content") {
@@ -1007,7 +1079,7 @@ export const canResizeLayoutEditorItemWidth = (item = {}) => {
   }
 
   if (supportsLayoutEditorWidthMode(item?.type)) {
-    return item?.width !== undefined;
+    return !isLayoutEditorVerticalTextItem(item) && item?.width !== undefined;
   }
 
   return true;
@@ -1015,9 +1087,15 @@ export const canResizeLayoutEditorItemWidth = (item = {}) => {
 
 export const canResizeLayoutEditorItemHeight = (item = {}) => {
   const capabilities = getLayoutEditorItemCapabilities(item?.type);
-  return (
-    capabilities.supportsSize === true && capabilities.supportsHeight === true
-  );
+  if (capabilities.supportsSize !== true) {
+    return false;
+  }
+
+  if (isLayoutEditorVerticalTextItem(item)) {
+    return item.height !== undefined;
+  }
+
+  return capabilities.supportsHeight === true;
 };
 
 // An element 0 wide or high draws nothing and cannot be picked on the

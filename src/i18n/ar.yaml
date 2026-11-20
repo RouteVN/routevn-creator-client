@@ -2328,6 +2328,13 @@ layoutEditPanel:
   textStylePlaceholder: "اختيار نمط نص"
   conditionTargetCharacterType: "شخصية"
   blurSummary: "X {x}، Y {y}، الجودة {quality}، النواة {kernel}، {edge}"
+  textDirectionSection: "اتجاه النص"
+  horizontalLeftToRightOption: "أفقي، من اليسار إلى اليمين"
+  horizontalRightToLeftOption: "أفقي، من اليمين إلى اليسار"
+  verticalRightToLeftOption: "عمودي، من اليمين إلى اليسار"
+  verticalLeftToRightOption: "عمودي، من اليسار إلى اليمين"
+  topOption: "أعلى"
+  bottomOption: "أسفل"
 controlsPage:
   actionDecrementSaveLoadPagination: "صفحة الحفظ السابقة"
   actionIncrementSaveLoadPagination: "صفحة الحفظ التالية"

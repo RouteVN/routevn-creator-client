@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "텍스트 스타일 선택"
   conditionTargetCharacterType: "캐릭터"
   blurSummary: "X {x}, Y {y}, 품질 {quality}, 커널 {kernel}, {edge}"
+  textDirectionSection: "텍스트 방향"
+  horizontalLeftToRightOption: "가로쓰기, 왼쪽에서 오른쪽"
+  horizontalRightToLeftOption: "가로쓰기, 오른쪽에서 왼쪽"
+  verticalRightToLeftOption: "세로쓰기, 오른쪽에서 왼쪽"
+  verticalLeftToRightOption: "세로쓰기, 왼쪽에서 오른쪽"
+  topOption: "위쪽"
+  bottomOption: "아래쪽"
 controlsPage:
   actionDecrementSaveLoadPagination: "이전 저장/불러오기 페이지"
   actionIncrementSaveLoadPagination: "다음 저장/불러오기 페이지"

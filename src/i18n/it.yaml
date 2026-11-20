@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "Seleziona uno stile del testo"
   conditionTargetCharacterType: "personaggio"
   blurSummary: "X {x}; Y {y}; qualità {quality}; kernel {kernel}; {edge}"
+  textDirectionSection: "Direzione del testo"
+  horizontalLeftToRightOption: "Orizzontale, da sinistra a destra"
+  horizontalRightToLeftOption: "Orizzontale, da destra a sinistra"
+  verticalRightToLeftOption: "Verticale, da destra a sinistra"
+  verticalLeftToRightOption: "Verticale, da sinistra a destra"
+  topOption: "In alto"
+  bottomOption: "In basso"
 controlsPage:
   actionDecrementSaveLoadPagination: "Pagina precedente dei salvataggi"
   actionIncrementSaveLoadPagination: "Pagina successiva dei salvataggi"

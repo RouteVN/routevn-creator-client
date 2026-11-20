@@ -2304,6 +2304,13 @@ layoutEditPanel:
   textStylePlaceholder: "متن کا انداز منتخب کریں"
   conditionTargetCharacterType: "کردار"
   blurSummary: "X {x}،‏ Y {y}، معیار {quality}، کرنل {kernel}، {edge}"
+  textDirectionSection: "متن کی سمت"
+  horizontalLeftToRightOption: "افقی، بائیں سے دائیں"
+  horizontalRightToLeftOption: "افقی، دائیں سے بائیں"
+  verticalRightToLeftOption: "عمودی، دائیں سے بائیں"
+  verticalLeftToRightOption: "عمودی، بائیں سے دائیں"
+  topOption: "اوپر"
+  bottomOption: "نیچے"
 controlsPage:
   actionDecrementSaveLoadPagination: "محفوظ/لوڈ کا پچھلا صفحہ"
   actionIncrementSaveLoadPagination: "محفوظ/لوڈ کا اگلا صفحہ"

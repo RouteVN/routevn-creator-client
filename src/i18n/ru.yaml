@@ -2320,6 +2320,13 @@ layoutEditPanel:
   textStylePlaceholder: "Выберите стиль текста"
   conditionTargetCharacterType: "персонаж"
   blurSummary: "X {x}; Y {y}; качество {quality}; ядро {kernel}; {edge}"
+  textDirectionSection: "Направление текста"
+  horizontalLeftToRightOption: "По горизонтали, слева направо"
+  horizontalRightToLeftOption: "По горизонтали, справа налево"
+  verticalRightToLeftOption: "По вертикали, справа налево"
+  verticalLeftToRightOption: "По вертикали, слева направо"
+  topOption: "Сверху"
+  bottomOption: "Снизу"
 controlsPage:
   actionDecrementSaveLoadPagination: "Предыдущая страница сохранений"
   actionIncrementSaveLoadPagination: "Следующая страница сохранений"

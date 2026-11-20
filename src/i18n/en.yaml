@@ -2308,6 +2308,13 @@ layoutEditPanel:
   textStylePlaceholder: "Select a text style"
   conditionTargetCharacterType: "character"
   blurSummary: "X {x}, Y {y}, quality {quality}, kernel {kernel}, {edge}"
+  textDirectionSection: "Text Direction"
+  horizontalLeftToRightOption: "Horizontal, Left to Right"
+  horizontalRightToLeftOption: "Horizontal, Right to Left"
+  verticalRightToLeftOption: "Vertical, Right to Left"
+  verticalLeftToRightOption: "Vertical, Left to Right"
+  topOption: "Top"
+  bottomOption: "Bottom"
 controlsPage:
   actionDecrementSaveLoadPagination: "Previous Save/Load Page"
   actionIncrementSaveLoadPagination: "Next Save/Load Page"

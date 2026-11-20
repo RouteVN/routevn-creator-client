@@ -26,6 +26,11 @@ import {
   isVariableEnumEnabled,
 } from "../../internal/variableEnums.js";
 import {
+  getLayoutTextDirectionChoice,
+  getLayoutTextDirectionFields,
+  isVerticalTextWritingMode,
+} from "../../internal/layoutTextWritingMode.js";
+import {
   parseVariableConditionTarget,
   splitLayoutConditionFromWhen,
 } from "../../internal/layoutConditions.js";
@@ -126,6 +131,7 @@ const STATIC_LABEL_COPY_KEYS = {
   Appearance: "appearanceSection",
   Auto: "autoOption",
   Blur: "blurTitle",
+  Bottom: "bottomOption",
   "Bottom Center": "anchorBottomCenter",
   "Bottom Left": "anchorBottomLeft",
   "Bottom Right": "anchorBottomRight",
@@ -195,7 +201,9 @@ const STATIC_LABEL_COPY_KEYS = {
   Submit: "submitButton",
   Text: "textTitle",
   "Text Alignment": "textAlignmentLabel",
+  "Text Direction": "textDirectionSection",
   "Text Styles": "textStylesSection",
+  Top: "topOption",
   "Top Center": "anchorTopCenter",
   "Top Left": "anchorTopLeft",
   "Top Right": "anchorTopRight",
@@ -846,6 +854,21 @@ export const createInitialState = () => {
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+// The text direction choice is not stored. It sets the writing mode and base
+// direction it stands for.
+export const setTextDirection = ({ state }, { textDirection } = {}) => {
+  const { writingMode, direction } =
+    getLayoutTextDirectionFields(textDirection);
+  delete state.values.writingMode;
+  delete state.values.direction;
+  if (writingMode) {
+    state.values.writingMode = writingMode;
+  }
+  if (direction) {
+    state.values.direction = direction;
+  }
 };
 
 export const updateValueProperty = ({ state }, { value, name } = {}) => {
@@ -1811,25 +1834,35 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     capabilities,
     values,
   );
+  const isText = props.itemType?.startsWith("text") === true;
+  // Vertical text sets its column length and measures its width.
+  const isVerticalText =
+    capabilities.supportsTextWritingMode === true &&
+    isVerticalTextWritingMode(values.writingMode);
   const supportsWidthMode =
-    props.itemType?.startsWith("text") === true ||
-    showsDirectedContainerSizeMode;
-  const stackWidthMode = props.itemType?.startsWith("text") === true;
-  const supportsHeightMode = showsDirectedContainerSizeMode;
+    (isText && !isVerticalText) || showsDirectedContainerSizeMode;
+  const stackWidthMode = isText;
+  const supportsHeightMode = isVerticalText || showsDirectedContainerSizeMode;
+  const stackHeightMode = isVerticalText;
   const groupSizeModes = showsDirectedContainerSizeMode;
-  const widthMode =
-    props.itemType?.startsWith("text") === true
-      ? values.width === undefined
-        ? "auto"
-        : "fixed"
-      : supportsWidthMode && isAutoContainerSize(values.width)
-        ? "auto"
-        : "fixed";
-  const heightMode =
-    supportsHeightMode && isAutoContainerSize(values.height) ? "auto" : "fixed";
-  const showWidthField = !supportsWidthMode || widthMode === "fixed";
+  const widthMode = isText
+    ? values.width === undefined
+      ? "auto"
+      : "fixed"
+    : supportsWidthMode && isAutoContainerSize(values.width)
+      ? "auto"
+      : "fixed";
+  const heightMode = isVerticalText
+    ? values.height === undefined
+      ? "auto"
+      : "fixed"
+    : supportsHeightMode && isAutoContainerSize(values.height)
+      ? "auto"
+      : "fixed";
+  const showWidthField =
+    !isVerticalText && (!supportsWidthMode || widthMode === "fixed");
   const showHeightField =
-    capabilities.supportsHeight === true &&
+    (capabilities.supportsHeight === true || isVerticalText) &&
     (!supportsHeightMode || heightMode === "fixed");
   const showLayoutSizeSection =
     capabilities.supportsSize === true || showsDirectedContainerSizeMode;
@@ -1874,11 +1907,14 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       stackWidthMode,
       widthMode,
       supportsHeightMode,
+      stackHeightMode,
       groupSizeModes,
       heightMode,
       showWidthField,
       showHeightField,
       showAspectRatioMode,
+      isVerticalText,
+      textDirection: getLayoutTextDirectionChoice(values),
       paginationSummary: getSaveLoadPaginationSummary({
         values,
         variablesData: state.variablesData,
