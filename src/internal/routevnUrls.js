@@ -108,6 +108,8 @@ const creatorDocsPathBySystemActionMode = {
   updateVariable: "/line-actions/update-variable/",
   input: "/line-actions/input/",
   conditional: "/line-actions/conditional/",
+  // Random has no page of its own yet.
+  random: "/scene-editor/#add-an-action-to-a-line",
 };
 
 const normalizeRoutePattern = (routePattern) => {

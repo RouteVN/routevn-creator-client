@@ -2848,6 +2848,22 @@ describe("scene editor canvas entry line", () => {
         },
       },
     ],
+    [
+      "a random transition",
+      {
+        random: {
+          distribution: {
+            type: "weighted",
+            outcomes: [
+              {
+                weight: 1,
+                actions: { sectionTransition: { sectionId: "section-1" } },
+              },
+            ],
+          },
+        },
+      },
+    ],
   ])(
     "shows a selected line that loops back to itself through %s",
     async (_label, routing) => {
@@ -2867,6 +2883,20 @@ describe("scene editor canvas entry line", () => {
     const projectData = createProjectData();
     getFirstLine(projectData).actions.conditional = {
       branches: [{ actions: {} }],
+    };
+
+    await expect(
+      renderCanvasLine(projectData, { lineId: "line-1" }),
+    ).resolves.toBe("first");
+  });
+
+  it("does not continue past a selected line whose random stays", async () => {
+    const projectData = createProjectData();
+    getFirstLine(projectData).actions.random = {
+      distribution: {
+        type: "weighted",
+        outcomes: [{ weight: 1, actions: {} }],
+      },
     };
 
     await expect(

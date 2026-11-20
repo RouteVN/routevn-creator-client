@@ -1,0 +1,13 @@
+componentName: rvn-command-line-random
+propsSchema:
+  type: object
+  properties:
+    random:
+      type: object
+      properties:
+        distribution:
+          type: object
+    hiddenModes:
+      type: array
+      items:
+        type: string

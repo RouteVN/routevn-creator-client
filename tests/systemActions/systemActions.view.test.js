@@ -1,7 +1,57 @@
 import { readFileSync } from "node:fs";
+import toHTML from "snabbdom-to-html";
 import { describe, expect, it } from "vitest";
 import yaml from "js-yaml";
 import * as systemActionsHandlers from "../../src/components/systemActions/systemActions.handlers.js";
+import {
+  createInitialState,
+  selectViewData,
+  setMode,
+  showActionsDialog,
+  updateActions,
+} from "../../src/components/systemActions/systemActions.store.js";
+import { PRESENTATION_ACTION_CSS_ORDER } from "../../src/internal/presentationActionOrder.js";
+import { EN_I18N } from "../support/i18n.js";
+import { renderViewTree, viewElements } from "../support/renderView.js";
+
+const SYSTEM_ACTIONS_VIEW_PATH =
+  "src/components/systemActions/systemActions.view.yaml";
+
+// The system actions editor with these actions, its dialog open on `mode`
+// when one is given.
+const renderSystemActions = ({ actions, mode, props = {} }) => {
+  const state = createInitialState();
+  updateActions({ state }, actions);
+  if (mode) {
+    showActionsDialog({ state });
+    setMode({ state }, { mode });
+  }
+  return viewElements(
+    renderViewTree(
+      SYSTEM_ACTIONS_VIEW_PATH,
+      selectViewData({
+        state,
+        props: { actionType: "system", ...props },
+        i18n: EN_I18N,
+      }),
+    ),
+  );
+};
+
+const commandLineEditorTags = (elements) =>
+  elements
+    .map((element) => element.sel)
+    .filter((tag) => tag.startsWith("rvn-command-line-"));
+
+const randomWithThreeActions = {
+  distribution: {
+    type: "weighted",
+    outcomes: [
+      { weight: 1, actions: { nextLine: {}, toggleAutoMode: {} } },
+      { weight: 3, actions: { nextLine: {} } },
+    ],
+  },
+};
 
 describe("systemActions view", () => {
   it("propagates hidden modes into conditional action editors", () => {
@@ -81,6 +131,97 @@ describe("systemActions view", () => {
     );
     expect(conditionalView).toContain(
       "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes}",
+    );
+  });
+
+  it("opens the random editor with the action and the hidden modes", () => {
+    const hiddenModes = ["showConfirmDialog", "random"];
+    const elements = renderSystemActions({
+      actions: { random: randomWithThreeActions },
+      mode: "random",
+      props: { hiddenModes },
+    });
+    const [randomEditor] = elements.filter(
+      (element) => element.sel === "rvn-command-line-random",
+    );
+
+    expect(commandLineEditorTags(elements)).toEqual([
+      "rvn-command-line-random",
+    ]);
+    expect(randomEditor.data.attrs.id).toBe("commandLineRandom");
+    expect(randomEditor.data.props).toEqual({
+      random: randomWithThreeActions,
+      hiddenModes,
+    });
+  });
+
+  it.each(["conditional", "updateVariable"])(
+    "opens no random editor in %s mode",
+    (mode) => {
+      const elements = renderSystemActions({
+        actions: { random: randomWithThreeActions },
+        mode,
+      });
+
+      expect(commandLineEditorTags(elements)).not.toContain(
+        "rvn-command-line-random",
+      );
+    },
+  );
+
+  it.each([
+    ["random", "actionItemRandom", "random", "Random: 2 outcomes"],
+    [
+      "conditional",
+      "actionItemConditional",
+      "settings",
+      "Conditional: 1 branch + default",
+    ],
+  ])(
+    "shows a %s action as a one-line row without its nested actions",
+    (actionType, rowId, icon, title) => {
+      const actions = {
+        random: randomWithThreeActions,
+        conditional: {
+          branches: [
+            {
+              when: { eq: [{ var: "variables.trust" }, 1] },
+              actions: { nextLine: {} },
+            },
+            { actions: { nextLine: {}, toggleAutoMode: {} } },
+          ],
+        },
+      };
+      const elements = renderSystemActions({
+        actions: { [actionType]: actions[actionType] },
+        props: { showSelected: true },
+      });
+      const [row] = elements.filter(
+        (element) => element.data?.attrs?.id === rowId,
+      );
+      const rowHtml = toHTML(row);
+
+      expect(row.sel).toBe("rtgl-view");
+      expect(row.data.attrs["data-mode"]).toBe(actionType);
+      expect(row.data.attrs.h).toBe("36");
+      expect(rowHtml).toContain(`<rtgl-svg svg="${icon}" wh="24">`);
+      expect(rowHtml).toContain(`>${title}<`);
+      expect(rowHtml).not.toContain("nested");
+      expect(rowHtml.match(/<rtgl-text /g)).toHaveLength(1);
+    },
+  );
+
+  it("places the random row in the presentation order", () => {
+    const elements = renderSystemActions({
+      actions: { random: randomWithThreeActions },
+      props: { showSelected: true, actionType: "presentation" },
+    });
+    const [row] = elements.filter(
+      (element) => element.data?.attrs?.id === "actionItemRandom",
+    );
+
+    expect(toHTML(row)).toContain(
+      `style="order: ${PRESENTATION_ACTION_CSS_ORDER.random};"`,
     );
   });
 

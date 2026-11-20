@@ -230,6 +230,12 @@ describe("scene editor section operations", () => {
           resetStoryAtSection: { sectionId: "section-1" },
           nextLine: {},
           conditional: { branches: [] },
+          random: {
+            distribution: {
+              type: "weighted",
+              outcomes: [{ weight: 1, actions: {} }],
+            },
+          },
           rollbackByOffset: { offset: -1 },
           voice: { resourceId: "voice-1" },
           layout: { resourceId: "layout-1" },

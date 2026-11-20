@@ -64,6 +64,7 @@ const createSystemActionLabels = (copy = {}) => ({
   rollbackByOffset: copy.actionRollbackByOffset ?? "Rollback",
   updateVariable: copy.actionUpdateVariable ?? "Update Variable",
   conditional: copy.actionConditional ?? "Conditional",
+  random: copy.actionRandom ?? "Random",
   showConfirmDialog: copy.actionShowConfirmDialog ?? "Show Confirm Dialog",
   hideConfirmDialog: copy.actionHideConfirmDialog ?? "Hide Confirm Dialog",
   saveSlot: copy.actionSaveSlot ?? "Save Slot",

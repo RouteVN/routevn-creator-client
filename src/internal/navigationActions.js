@@ -1,8 +1,8 @@
 // Route Engine runs at most one navigation action per action batch. It
-// refuses a batch that holds two, and one whose conditional branch navigates
-// while the batch has a navigation action of its own. These are the action
-// types of its navigation phase (route-engine-js 1.51.0), which it does not
-// export.
+// refuses a batch that holds two, and one whose conditional branch or random
+// outcome navigates while the batch has a navigation action of its own. These
+// are the action types of its navigation phase (route-engine-js 1.51.0), which
+// it does not export.
 export const NAVIGATION_ACTION_TYPES = Object.freeze([
   "loadSlot",
   "rollbackByOffset",
@@ -31,14 +31,32 @@ const SECTION_JUMP_ACTION_TYPE_SET = new Set([
 export const isSectionJumpActionType = (actionType) =>
   SECTION_JUMP_ACTION_TYPE_SET.has(actionType);
 
+// The action sets that Route Engine runs in the same batch as the action that
+// holds them: a conditional's branches and a random action's outcomes.
+const getNestedActionSets = (actionType, action) => {
+  if (actionType === "conditional") {
+    return action.branches?.map((branch) => branch.actions) ?? [];
+  }
+
+  if (actionType === "random") {
+    const outcomes = action?.distribution?.outcomes;
+    return Array.isArray(outcomes)
+      ? outcomes.map((outcome) => outcome?.actions).filter(isPlainObject)
+      : [];
+  }
+
+  return [];
+};
+
 // Whether running the actions can navigate: they hold a navigation action, or
-// a conditional with a branch that can.
+// a conditional branch or random outcome that can.
 export const canActionsNavigate = (actions = {}) =>
   Object.entries(actions).some(
     ([actionType, action]) =>
       isNavigationActionType(actionType) ||
-      (actionType === "conditional" &&
-        action.branches?.some((branch) => canActionsNavigate(branch.actions))),
+      getNestedActionSets(actionType, action).some((nestedActions) =>
+        canActionsNavigate(nestedActions),
+      ),
   );
 
 const removeNavigationActions = (actions = {}) => {
@@ -63,6 +81,26 @@ const removeNavigationActions = (actions = {}) => {
       continue;
     }
 
+    if (actionType === "random" && canActionsNavigate({ random: action })) {
+      // Only the navigation goes: the outcomes keep their weights and other
+      // actions.
+      const distribution = { ...action.distribution };
+      distribution.outcomes = action.distribution.outcomes.map((outcome) => {
+        // An outcome in a form the editor cannot write is kept as it is.
+        if (!isPlainObject(outcome) || !isPlainObject(outcome.actions)) {
+          return outcome;
+        }
+
+        const nextOutcome = { ...outcome };
+        nextOutcome.actions = removeNavigationActions(outcome.actions);
+        return nextOutcome;
+      });
+      const nextRandom = { ...action };
+      nextRandom.distribution = distribution;
+      nextActions.random = nextRandom;
+      continue;
+    }
+
     nextActions[actionType] = action;
   }
   return nextActions;
@@ -70,8 +108,9 @@ const removeNavigationActions = (actions = {}) => {
 
 // Applies the actions an actions editor submitted over the current ones.
 // Submitted actions that can navigate replace every navigation action the
-// current ones hold, also in a conditional's branches, so that the set never
-// runs two. Submitting other actions leaves the current ones as they are.
+// current ones hold, also in a conditional's branches and a random action's
+// outcomes, so that the set never runs two. Submitting other actions leaves
+// the current ones as they are.
 export const mergeSubmittedActions = (currentActions, submittedActions) => {
   const keptActions = canActionsNavigate(submittedActions)
     ? removeNavigationActions(currentActions)

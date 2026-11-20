@@ -8705,6 +8705,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       sfxChangeType: lineDecoration.sfxChangeType,
       hasChoices: Boolean(lineDecoration.hasChoices),
       hasConditional: Boolean(lineDecoration.hasConditional),
+      hasRandom: Boolean(lineDecoration.hasRandom),
       hasUpdateVariable: Boolean(lineDecoration.hasUpdateVariable),
       hasInput: Boolean(lineDecoration.hasInput),
       hasSetNextLineConfig: Boolean(lineDecoration.hasSetNextLineConfig),
@@ -9596,6 +9597,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       container.append(
         this.createIconPreview({
           icon: "settings",
+        }),
+      );
+    }
+
+    if (lineDecoration.hasRandom) {
+      container.append(
+        this.createIconPreview({
+          icon: "random",
         }),
       );
     }

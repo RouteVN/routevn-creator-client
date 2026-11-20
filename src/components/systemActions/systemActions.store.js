@@ -1001,26 +1001,39 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     );
   }
 
+  if (actions.random) {
+    actionsObject.random = actions.random;
+    // A form other than weighted counts no outcomes, but the row still shows
+    // so that the action can be opened and deleted.
+    const distribution = actions.random.distribution;
+    const outcomes =
+      distribution?.type === "weighted" && Array.isArray(distribution.outcomes)
+        ? distribution.outcomes
+        : [];
+    preview.random = {
+      outcomeCount: outcomes.length,
+      summary: formatCommandLinePluralCopy(
+        "outcomeCount",
+        outcomes.length,
+        copy,
+        dateTime,
+      ),
+    };
+    preview.random.title = formatCommandLineCopy(
+      "Random: {summary}",
+      { summary: preview.random.summary },
+      copy,
+    );
+  }
+
   if (actions.conditional) {
     actionsObject.conditional = actions.conditional;
     const branches = Array.isArray(actions.conditional.branches)
       ? actions.conditional.branches
       : [];
-    const actionCount = branches.reduce(
-      (total, branch) => total + countActions(branch?.actions),
-      0,
-    );
-
     preview.conditional = {
       branchCount: branches.length,
-      actionCount,
       summary: formatConditionalSummary(branches, copy, dateTime),
-      actionsSummary: formatCommandLinePluralCopy(
-        "nestedActionCount",
-        actionCount,
-        copy,
-        dateTime,
-      ),
     };
     preview.conditional.title = formatCommandLineCopy(
       "Conditional: {summary}",

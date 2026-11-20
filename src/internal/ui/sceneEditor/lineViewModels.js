@@ -363,6 +363,7 @@ const buildSceneDocumentLineViewModels = ({
         copy?.actionSectionTransition ?? "Section Transition",
       hasChoices: choicesPreview.hasChoices,
       hasConditional: buildConditionalPreview(lineActions),
+      hasRandom: !!lineActions?.random,
       hasUpdateVariable: buildUpdateVariablePreview(lineActions),
       hasInput: buildInputPreview(lineActions),
       hasVoice: buildVoicePreview(lineActions, changes),
