@@ -26,8 +26,7 @@ import {
   handleAddDefaultClick,
   handleBranchActionsChange,
   handleBranchClick,
-  handleBranchMenuButtonClick,
-  handleBranchMenuButtonKeyDown,
+  handleBranchContextMenu,
   handleDropdownMenuClickItem,
   handleEnumValueSelectChange,
   handleOneOfValueChange,
@@ -876,119 +875,63 @@ describe("commandLineConditional.handlers", () => {
     expect(render).toHaveBeenCalledOnce();
   });
 
-  it("opens the branch menu from its button", () => {
-    const state = createInitialState();
-    const store = createStore(state);
-    const render = vi.fn();
-    const stopPropagation = vi.fn();
-    const createConditionBranch = (id) => ({
-      id,
-      when: {
-        eq: [{ var: "variables.trust" }, id],
-      },
-      actions: {},
-    });
-
-    setBranches(
-      { state },
-      {
-        branches: [
-          createConditionBranch("branch-1"),
-          createConditionBranch("branch-2"),
-        ],
-      },
-    );
-    const currentTarget = {
-      dataset: { branchId: "branch-2" },
-      getBoundingClientRect: () => ({ right: 320, bottom: 240 }),
-    };
-
-    handleBranchMenuButtonClick(
-      { store, render },
-      {
-        _event: {
-          currentTarget,
-          stopPropagation,
+  it.each([
+    ["branch-2", ["move-up", "move-down", "delete"]],
+    ["branch-default", ["delete"]],
+  ])(
+    "opens the menu of %s from a right-click on its row",
+    (branchId, menuValues) => {
+      const state = createInitialState();
+      const render = vi.fn();
+      const preventDefault = vi.fn();
+      const createConditionBranch = (id) => ({
+        id,
+        when: {
+          eq: [{ var: "variables.trust" }, id],
         },
-      },
-    );
+        actions: {},
+      });
 
-    expect(state.dropdownMenu).toMatchObject({
-      isOpen: true,
-      branchId: "branch-2",
-      position: { x: 320, y: 240 },
-    });
-    expect(stopPropagation).toHaveBeenCalledOnce();
-    expect(render).toHaveBeenCalledOnce();
-  });
+      setBranches(
+        { state },
+        {
+          branches: [
+            createConditionBranch("branch-1"),
+            createConditionBranch("branch-2"),
+            createConditionBranch("branch-3"),
+            { id: "branch-default", actions: {} },
+          ],
+        },
+      );
 
-  it("repeatedly moves and deletes the same branch with keyboard shortcuts", () => {
-    const state = createInitialState();
-    const store = createStore(state);
-    const render = vi.fn();
-    const stopPropagation = vi.fn();
-    const preventDefault = vi.fn();
-    const createConditionBranch = (id) => ({
-      id,
-      when: {
-        eq: [{ var: "variables.trust" }, id],
-      },
-      actions: {},
-    });
-
-    setBranches(
-      { state },
-      {
-        branches: [
-          createConditionBranch("branch-1"),
-          createConditionBranch("branch-2"),
-          createConditionBranch("branch-3"),
-        ],
-      },
-    );
-    const currentTarget = {
-      dataset: { branchId: "branch-3" },
-    };
-    const pressShortcut = (key) => {
-      handleBranchMenuButtonKeyDown(
-        { store, render },
+      handleBranchContextMenu(
+        { store: createStore(state), render },
         {
           _event: {
-            key,
-            currentTarget,
+            currentTarget: { dataset: { branchId } },
+            clientX: 320,
+            clientY: 240,
             preventDefault,
-            stopPropagation,
           },
         },
       );
-    };
 
-    pressShortcut("ArrowUp");
-    pressShortcut("ArrowUp");
+      expect(preventDefault).toHaveBeenCalledOnce();
+      expect(state.dropdownMenu).toMatchObject({
+        isOpen: true,
+        branchId,
+        position: { x: 320, y: 240 },
+      });
+      expect(state.dropdownMenu.items.map((item) => item.value)).toEqual(
+        menuValues,
+      );
+      expect(render).toHaveBeenCalledOnce();
+    },
+  );
 
-    expect(state.branches.map((branch) => branch.id)).toEqual([
-      "branch-3",
-      "branch-1",
-      "branch-2",
-    ]);
-
-    pressShortcut("Delete");
-
-    expect(state.branches.map((branch) => branch.id)).toEqual([
-      "branch-1",
-      "branch-2",
-    ]);
-    expect(preventDefault).toHaveBeenCalledTimes(3);
-    expect(stopPropagation).toHaveBeenCalledTimes(3);
-    expect(render).toHaveBeenCalledTimes(3);
-  });
-
-  it("deletes the default branch with its keyboard shortcut", () => {
+  it("deletes the default branch from its menu", () => {
     const state = createInitialState();
-    const store = createStore(state);
     const render = vi.fn();
-    const stopPropagation = vi.fn();
-    const preventDefault = vi.fn();
 
     setBranches(
       { state },
@@ -1005,24 +948,18 @@ describe("commandLineConditional.handlers", () => {
         ],
       },
     );
+    showDropdownMenu(
+      { state },
+      { branchId: "branch-default", position: { x: 10, y: 20 } },
+    );
 
-    handleBranchMenuButtonKeyDown(
-      { store, render },
-      {
-        _event: {
-          key: "Delete",
-          currentTarget: {
-            dataset: { branchId: "branch-default" },
-          },
-          preventDefault,
-          stopPropagation,
-        },
-      },
+    handleDropdownMenuClickItem(
+      { store: createStore(state), render },
+      { _event: { detail: { item: { value: "delete" } } } },
     );
 
     expect(state.branches.map((branch) => branch.id)).toEqual(["branch-1"]);
-    expect(preventDefault).toHaveBeenCalledOnce();
-    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(state.dropdownMenu.isOpen).toBe(false);
     expect(render).toHaveBeenCalledOnce();
   });
 

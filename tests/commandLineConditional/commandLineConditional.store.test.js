@@ -321,13 +321,10 @@ describe("commandLineConditional.store", () => {
     expect(viewData.oneOfValues).toEqual(["happy", "neutral"]);
     expect(viewData.oneOfRemoveButtonStyle).toBe("");
     expect(viewData.addValueButton).toBe("Add Value");
-    expect(viewData.branchMenuButtonLabel).toBe("Branch Menu");
     const jaViewData = selectViewData({ state, i18n: JA_I18N });
     expect(jaViewData.addValueButton).toBe("値を追加");
-    expect(jaViewData.branchMenuButtonLabel).toBe("分岐メニュー");
     const zhHansViewData = selectViewData({ state, i18n: ZH_HANS_I18N });
     expect(zhHansViewData.addValueButton).toBe("添加值");
-    expect(zhHansViewData.branchMenuButtonLabel).toBe("分支菜单");
     expect(viewData.canSaveBranch).toBe(true);
 
     setTempBranch({ state }, { value: ["happy"] });
@@ -496,12 +493,11 @@ describe("commandLineConditional.store", () => {
     );
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.branches.map((branch) => branch.menuKeyShortcuts)).toEqual([
-      "ArrowDown Delete",
-      "ArrowUp ArrowDown Delete",
-      "ArrowUp Delete",
+    expect(viewData.branches.map((branch) => branch.id)).toEqual([
+      "branch-1",
+      "branch-2",
+      "branch-3",
     ]);
-    expect(viewData.defaultBranch.menuKeyShortcuts).toBe("Delete");
 
     showDropdownMenu(
       { state },
