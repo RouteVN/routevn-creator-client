@@ -20,14 +20,16 @@ import { toFlatItems } from "../../internal/project/tree.js";
 import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
 import { getRuntimeFieldLabel } from "./support/layoutEditPanelRuntimeLabels.js";
 import { getFragmentLayoutOptions } from "../../internal/ui/layoutEditor/layoutFragments.js";
-import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import {
+  applyLayoutTextDirectionChoice,
+  getLayoutEditorElementDefinition,
+} from "../../internal/layoutEditorElementRegistry.js";
 import {
   buildVariableEnumOptions,
   isVariableEnumEnabled,
 } from "../../internal/variableEnums.js";
 import {
   getLayoutTextDirectionChoice,
-  getLayoutTextDirectionFields,
   isVerticalTextWritingMode,
 } from "../../internal/layoutTextWritingMode.js";
 import {
@@ -856,19 +858,10 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
 };
 
-// The text direction choice is not stored. It sets the writing mode and base
-// direction it stands for.
+// The text direction choice is not stored. It changes the values as saving it
+// changes the item, so the panel shows the result before the item comes back.
 export const setTextDirection = ({ state }, { textDirection } = {}) => {
-  const { writingMode, direction } =
-    getLayoutTextDirectionFields(textDirection);
-  delete state.values.writingMode;
-  delete state.values.direction;
-  if (writingMode) {
-    state.values.writingMode = writingMode;
-  }
-  if (direction) {
-    state.values.direction = direction;
-  }
+  applyLayoutTextDirectionChoice(state.values, textDirection);
 };
 
 export const updateValueProperty = ({ state }, { value, name } = {}) => {
@@ -1801,6 +1794,13 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
   const currentVisibilityCondition = splitLayoutConditionFromWhen(
     values["$when"],
   ).visibilityCondition;
+  const capabilities =
+    getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
+  // Vertical text sets its column length, measures its width and aligns
+  // along its columns.
+  const isVerticalText =
+    capabilities.supportsTextWritingMode === true &&
+    isVerticalTextWritingMode(values.writingMode);
   const conditionalOverrideRules = normalizeConditionalOverrideRules(
     values.conditionalOverrides,
   );
@@ -1825,20 +1825,15 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         state.textStylesData,
         state.imagesData,
         copy,
+        { isVerticalText },
       ),
     }),
   );
-  const capabilities =
-    getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
   const showsDirectedContainerSizeMode = isDirectedContainer(
     capabilities,
     values,
   );
   const isText = props.itemType?.startsWith("text") === true;
-  // Vertical text sets its column length and measures its width.
-  const isVerticalText =
-    capabilities.supportsTextWritingMode === true &&
-    isVerticalTextWritingMode(values.writingMode);
   const supportsWidthMode =
     (isText && !isVerticalText) || showsDirectedContainerSizeMode;
   const stackWidthMode = isText;
@@ -2180,6 +2175,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       state.textStylesData,
       state.imagesData,
       copy,
+      { isVerticalText },
     ),
     conditionalOverrideConditionDialogContext: {
       selectedVariableType: selectedConditionalOverrideVariableType,
@@ -2205,6 +2201,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         ? (copy.saveButton ?? "Save")
         : (copy.addButton ?? "Add"),
       copy,
+      isVerticalText,
     }),
     conditionalOverrideAttributeDialogContext: {
       hasAttributeOptions: conditionalOverrideAttributeOptions.length > 0,

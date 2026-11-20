@@ -9,6 +9,10 @@ import {
   updateValueProperty,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { handleOptionSelected } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+import {
+  createConditionalOverrideAttributeForm,
+  toConditionalOverrideAttributeItems,
+} from "../../src/components/layoutEditPanel/support/layoutEditPanelConditionalOverrides.js";
 import { EN_I18N } from "../support/i18n.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
@@ -161,6 +165,67 @@ describe("layoutEditPanel text writing mode", () => {
 
     selectOption(deps, "textDirection", "horizontal-ltr");
     expect(state.values).toEqual({ type: "text", text: "Hello" });
+  });
+
+  it("changes its own values as saving the choice changes the item", () => {
+    const state = createInitialState();
+    setValues(
+      { state },
+      {
+        values: {
+          type: "text",
+          width: 500,
+          height: 72,
+          textStyle: { align: "left" },
+        },
+      },
+    );
+
+    setTextDirection({ state }, { textDirection: "horizontal-rtl" });
+    expect(state.values).toEqual({
+      type: "text",
+      direction: "rtl",
+      width: 500,
+      height: 72,
+      textStyle: { align: "right" },
+    });
+
+    setTextDirection({ state }, { textDirection: "vertical-rl" });
+    expect(state.values).toEqual({
+      type: "text",
+      writingMode: "vertical-rl",
+      textStyle: { align: "left" },
+    });
+  });
+
+  it("names conditional override alignment along the columns of vertical text", () => {
+    const alignField = (isVerticalText) =>
+      createConditionalOverrideAttributeForm({
+        attributeOptions: [],
+        textStyleOptions: [],
+        copy: EN_I18N.layoutEditPanel,
+        isVerticalText,
+      }).fields.find((field) => field.name === "align");
+
+    expect(alignField(true).options.map(({ label }) => label)).toEqual([
+      "Top",
+      "Center",
+      "Bottom",
+    ]);
+    expect(alignField(false).options.map(({ label }) => label)).toEqual([
+      "Left",
+      "Center",
+      "Right",
+    ]);
+    expect(
+      toConditionalOverrideAttributeItems(
+        { set: { textStyle: { align: "right" } } },
+        EMPTY_TREE,
+        EMPTY_TREE,
+        EN_I18N.layoutEditPanel,
+        { isVerticalText: true },
+      )[0].value,
+    ).toBe("Bottom");
   });
 
   it("sets a vertical column length from the measured height", () => {

@@ -69,44 +69,52 @@ const isRightToLeftText = (item) =>
   isRightToLeftTextDirection(item.direction) &&
   !isVerticalTextWritingMode(item.writingMode);
 
-// A line starts at the left in left-to-right text, at the right in
-// right-to-left text and at the top, which alignment calls left, in vertical
-// text. Text aligned to its start stays aligned to its start.
-const keepTextAlignedToItsStart = ({ currentItem, nextItem }) => {
-  const mirroredAlign = MIRRORED_TEXT_ALIGN[nextItem.textStyle?.align];
-  if (
-    mirroredAlign &&
-    isRightToLeftText(currentItem) !== isRightToLeftText(nextItem)
-  ) {
-    nextItem.textStyle.align = mirroredAlign;
+const mirrorTextAlign = (textStyle) => {
+  const mirroredAlign = MIRRORED_TEXT_ALIGN[textStyle?.align];
+  if (mirroredAlign) {
+    textStyle.align = mirroredAlign;
   }
-
-  return nextItem;
 };
 
-// The panel's one text direction choice sets both the writing mode and the
-// base direction, so a direction hidden by vertical text is not kept.
-// Horizontal text wraps at its width and vertical text at its height, with
-// the other side measured, so a size set for one does not carry over.
-const applyTextDirectionChange = ({ currentItem, nextItem, value }) => {
-  delete nextItem.textDirection;
-  delete nextItem.writingMode;
-  delete nextItem.direction;
-  const { writingMode, direction } = getLayoutTextDirectionFields(value);
+// Applies the panel's text direction choice to a layout text item in place.
+// One choice sets both the writing mode and the base direction, so a
+// direction hidden by vertical text is not kept.
+export const applyLayoutTextDirectionChoice = (item, choice) => {
+  const wasVertical = isVerticalTextWritingMode(item.writingMode);
+  const wasRightToLeft = isRightToLeftText(item);
+
+  delete item.textDirection;
+  delete item.writingMode;
+  delete item.direction;
+  const { writingMode, direction } = getLayoutTextDirectionFields(choice);
   if (writingMode) {
-    nextItem.writingMode = writingMode;
+    item.writingMode = writingMode;
   }
   if (direction) {
-    nextItem.direction = direction;
+    item.direction = direction;
   }
 
-  const wasVertical = isVerticalTextWritingMode(currentItem.writingMode);
-  const isVertical = isVerticalTextWritingMode(nextItem.writingMode);
-  if (wasVertical !== isVertical) {
-    delete nextItem[isVertical ? "width" : "height"];
+  // Horizontal text wraps at its width and vertical text at its height, with
+  // the other side measured. Horizontal text does not use a height, so one
+  // stored on it is not a column length the author chose. Either way the
+  // text starts with its size measured.
+  if (wasVertical !== isVerticalTextWritingMode(item.writingMode)) {
+    delete item.width;
+    delete item.height;
   }
 
-  return keepTextAlignedToItsStart({ currentItem, nextItem });
+  // A line starts at the left in left-to-right text, at the right in
+  // right-to-left text and at the top, which alignment calls left, in
+  // vertical text. Text aligned to its start, including through a conditional
+  // override, stays aligned to its start.
+  if (wasRightToLeft !== isRightToLeftText(item)) {
+    mirrorTextAlign(item.textStyle);
+    for (const rule of item.conditionalOverrides ?? []) {
+      mirrorTextAlign(rule?.set?.textStyle);
+    }
+  }
+
+  return item;
 };
 
 const ABSOLUTE_DIRECTION = "absolute";
@@ -801,9 +809,9 @@ const TYPE_RULES = {
 
       return value;
     },
-    applyFieldChange: ({ currentItem, nextItem, name, value }) => {
+    applyFieldChange: ({ nextItem, name, value }) => {
       if (name === "textDirection") {
-        return applyTextDirectionChange({ currentItem, nextItem, value });
+        return applyLayoutTextDirectionChoice(nextItem, value);
       }
 
       return nextItem;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildLayoutElements } from "../../src/internal/project/layout.js";
 import { applyLayoutItemFieldChange } from "../../src/internal/ui/layoutEditor/layoutEditorMutations.js";
 import { getLayoutEditorItemResizeEdges } from "../../src/internal/layoutEditorElementRegistry.js";
+import { applyCanvasItemResizeChange } from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.handlers.js";
 
 const emptyCollection = { items: {}, tree: [] };
 
@@ -167,6 +168,57 @@ describe("layout text writing mode editing", () => {
     ).toBe("right");
   });
 
+  it("does not turn a height stored on horizontal text into a column length", () => {
+    // Line text templates store a height that horizontal text does not use.
+    const item = changeTextDirection(
+      {
+        id: "line-content",
+        type: "text-ref-dialogue-line-content",
+        width: 1640,
+        height: 72,
+      },
+      "vertical-rl",
+    );
+
+    expect(item).toStrictEqual({
+      id: "line-content",
+      type: "text-ref-dialogue-line-content",
+      writingMode: "vertical-rl",
+    });
+  });
+
+  it("keeps conditional override alignment aligned to the start", () => {
+    const item = changeTextDirection(
+      {
+        id: "text-1",
+        type: "text",
+        textStyle: { align: "left" },
+        conditionalOverrides: [
+          {
+            when: { target: "variables.mood", op: "eq", value: "calm" },
+            set: { textStyle: { align: "left" } },
+          },
+          {
+            when: { target: "variables.mood", op: "eq", value: "tense" },
+            set: { textStyle: { align: "center" }, opacity: 0.5 },
+          },
+          {
+            when: { target: "variables.mood", op: "eq", value: "dark" },
+            set: { opacity: 0.2 },
+          },
+        ],
+      },
+      "horizontal-rtl",
+    );
+
+    expect(item.textStyle.align).toBe("right");
+    expect(item.conditionalOverrides.map(({ set }) => set)).toEqual([
+      { textStyle: { align: "right" } },
+      { textStyle: { align: "center" }, opacity: 0.5 },
+      { opacity: 0.2 },
+    ]);
+  });
+
   it("resizes vertical text by its column length", () => {
     expect(
       getLayoutEditorItemResizeEdges({ type: "text", width: 300 }),
@@ -184,5 +236,54 @@ describe("layout text writing mode editing", () => {
         writingMode: "vertical-rl",
       }),
     ).toEqual([]);
+  });
+
+  describe("dragging a text resize handle", () => {
+    const resize = (item, { resizeEdge, x, y }) =>
+      applyCanvasItemResizeChange({
+        item,
+        dragStartPosition: {
+          x: 100,
+          y: 100,
+          itemStartX: item.x,
+          itemStartY: item.y,
+          itemStartWidth: item.width,
+          itemStartHeight: item.height,
+        },
+        resizeEdge,
+        x,
+        y,
+      });
+
+    it("sets the column length of vertical text, which has no width", () => {
+      const item = {
+        id: "text-1",
+        type: "text",
+        writingMode: "vertical-rl",
+        x: 40,
+        y: 40,
+        height: 200,
+      };
+
+      expect(resize(item, { resizeEdge: "bottom", x: 100, y: 150 })).toEqual({
+        ...item,
+        height: 250,
+      });
+      // The top handle keeps the bottom where it was.
+      expect(resize(item, { resizeEdge: "top", x: 100, y: 150 })).toEqual({
+        ...item,
+        y: 90,
+        height: 150,
+      });
+    });
+
+    it("sets the width of horizontal text, which has no height", () => {
+      const item = { id: "text-1", type: "text", x: 40, y: 40, width: 300 };
+
+      expect(resize(item, { resizeEdge: "right", x: 130, y: 100 })).toEqual({
+        ...item,
+        width: 330,
+      });
+    });
   });
 });
