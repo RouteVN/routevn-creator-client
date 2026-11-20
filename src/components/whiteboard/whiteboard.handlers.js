@@ -11,6 +11,13 @@ const TOUCH_ITEM_DRAG_THRESHOLD_PX = 6;
 const TOUCH_LONG_PRESS_MS = 500;
 const TOUCH_DOUBLE_TAP_MS = 320;
 const TOUCH_DOUBLE_TAP_DISTANCE_PX = 28;
+const LEFT_MOUSE_BUTTON = 0;
+const MIDDLE_MOUSE_BUTTON = 1;
+// Each button's bit in MouseEvent.buttons, which lists the held buttons.
+const HELD_BUTTON_BITS = {
+  [LEFT_MOUSE_BUTTON]: 1,
+  [MIDDLE_MOUSE_BUTTON]: 4,
+};
 
 const syncContainerSize = ({ store, refs } = {}) => {
   const container = refs?.container;
@@ -266,8 +273,19 @@ const isSpaceKey = (event) => {
 };
 
 const isPrimaryMouseButton = (event) => {
-  return event?.button === 0 && !event?.ctrlKey;
+  return event?.button === LEFT_MOUSE_BUTTON && !event?.ctrlKey;
 };
+
+const isMiddleMouseButton = (event) => event.button === MIDDLE_MOUSE_BUTTON;
+
+// A pan, a scene box press or drag, or a minimap drag holds the mouse until
+// the button that started it is released. Presses of other buttons in the
+// meantime do nothing.
+const isMouseGestureActive = (store) =>
+  store.selectIsPanning() ||
+  store.selectIsDragging() ||
+  store.selectMouseItemPress()?.type === "item-press" ||
+  store.selectIsDraggingMinimapViewport();
 
 const getItemIdFromElement = (element) => {
   return element?.dataset?.itemId || "";
@@ -877,18 +895,30 @@ export const handlePanButtonClick = (deps) => {
 export const handleContainerMouseDown = (deps, payload) => {
   const { store, refs } = deps;
   const { _event: event } = payload;
+  const isMiddleButton = isMiddleMouseButton(event);
 
-  if (!isPrimaryMouseButton(event)) {
+  if (!isPrimaryMouseButton(event) && !isMiddleButton) {
+    return;
+  }
+
+  if (isMouseGestureActive(store)) {
     return;
   }
 
   cancelPanAnimation(deps);
 
-  if (store.selectIsPanMode()) {
+  if (isMiddleButton) {
+    // The middle button pans anywhere, so keep the browser's own middle
+    // click, such as autoscroll, from starting.
+    event.preventDefault();
+  }
+
+  if (isMiddleButton || store.selectIsPanMode()) {
     // Start panning
     store.startPanning({
       mouseX: event.clientX,
       mouseY: event.clientY,
+      button: event.button,
     });
     syncCursorStyles(deps);
   } else {
@@ -1319,10 +1349,10 @@ export const handleZoomOutClick = (deps) => {
 };
 
 export const handleMinimapViewportMouseDown = (deps, payload) => {
-  const { refs } = deps;
+  const { store, refs } = deps;
   const { _event: event } = payload;
 
-  if (!isPrimaryMouseButton(event)) {
+  if (!isPrimaryMouseButton(event) || isMouseGestureActive(store)) {
     return;
   }
 
@@ -1416,7 +1446,7 @@ export const handleItemMouseDown = (deps, payload) => {
   const { store, dispatchEvent } = deps;
   const { _event: event } = payload;
 
-  if (!isPrimaryMouseButton(event)) {
+  if (!isPrimaryMouseButton(event) || isMouseGestureActive(store)) {
     return;
   }
 
@@ -1528,7 +1558,14 @@ export const handleWindowMouseMove = (deps, payload) => {
     });
     syncPanPresentation(deps);
   } else if (store.selectIsPanning()) {
-    // Handle panning
+    // A release outside the app can be missed. Without this, the stuck pan
+    // would keep moving the map and block every other press.
+    if (!(payload._event.buttons & HELD_BUTTON_BITS[store.selectPanButton()])) {
+      store.stopPanning();
+      renderWithCursorSync(deps);
+      return;
+    }
+
     store.updatePan({
       mouseX: payload._event.clientX,
       mouseY: payload._event.clientY,
@@ -1561,8 +1598,16 @@ export const handleWindowMouseMove = (deps, payload) => {
   }
 };
 
-export const handleWindowMouseUp = (deps) => {
+export const handleWindowMouseUp = (deps, payload) => {
   const { store, dispatchEvent } = deps;
+  const { _event: event } = payload;
+  const gestureButton = store.selectIsPanning()
+    ? store.selectPanButton()
+    : LEFT_MOUSE_BUTTON;
+
+  if (event.button !== gestureButton) {
+    return;
+  }
 
   if (store.selectIsDraggingMinimapViewport()) {
     store.stopMinimapViewportDragging();
@@ -1572,6 +1617,11 @@ export const handleWindowMouseUp = (deps) => {
   }
 
   if (store.selectIsPanning()) {
+    if (isMiddleMouseButton(event)) {
+      // Keep the browser's own middle click, such as paste on Linux, from
+      // acting where the pan ends.
+      event.preventDefault();
+    }
     store.stopPanning();
     renderWithCursorSync(deps);
   } else if (store.selectIsDragging()) {
