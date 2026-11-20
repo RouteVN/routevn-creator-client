@@ -92,9 +92,21 @@ describe("commandLineUpdateVariable view", () => {
 
     expect(randomFieldIds(html, state)).toEqual([
       "randomTypeControl",
+      "randomRangeRow",
       "randomMinInput",
       "randomMaxInput",
     ]);
+    // Minimum and Maximum share a wrapping row, each at least 160px wide.
+    const rangeRow = elementTag(html, "randomRangeRow");
+    expect(rangeRow).toMatch(/^<rtgl-view /);
+    expect(rangeRow).toContain('d="h"');
+    expect(rangeRow).toContain('wrap="true"');
+    expect(
+      html.match(/<rtgl-view style="flex: 1 1 160px; min-width: 0;">/g),
+    ).toHaveLength(2);
+    expect(html.indexOf("randomRangeRow")).toBeLessThan(
+      html.indexOf("randomMinInput"),
+    );
     const typeControl = elementTag(html, "randomTypeControl");
     expect(typeControl).toMatch(/^<rtgl-segmented-control /);
     expect(typeControl).toContain('noclear="true"');

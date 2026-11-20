@@ -146,10 +146,15 @@ template:
                           - $if showRandomTypeControl:
                               - rtgl-segmented-control#randomTypeControl w=f no-clear :selectedValue=${tempRandom.type} :options=${randomTypeOptions} :ariaLabel=${valuesLabel}: null
                           - $if tempRandom.type == 'integer':
-                              - rtgl-text s=sm c=mu-fg mt=md mb=sm: ${minimumLabel}
-                              - 'rtgl-input-number#randomMinInput w=f step=1 value="${tempRandom.min}" aria-label="${minimumLabel}"': null
-                              - rtgl-text s=sm c=mu-fg mt=md mb=sm: ${maximumLabel}
-                              - 'rtgl-input-number#randomMaxInput w=f step=1 value="${tempRandom.max}" aria-label="${maximumLabel}"': null
+                              # Minimum and Maximum share a row when the panel
+                              # has room for both, and stack when it does not.
+                              - rtgl-view#randomRangeRow d=h wrap g=md w=f mt=md:
+                                  - 'rtgl-view style="flex: 1 1 160px; min-width: 0;"':
+                                      - rtgl-text s=sm c=mu-fg mb=sm: ${minimumLabel}
+                                      - 'rtgl-input-number#randomMinInput w=f step=1 value="${tempRandom.min}" aria-label="${minimumLabel}"': null
+                                  - 'rtgl-view style="flex: 1 1 160px; min-width: 0;"':
+                                      - rtgl-text s=sm c=mu-fg mb=sm: ${maximumLabel}
+                                      - 'rtgl-input-number#randomMaxInput w=f step=1 value="${tempRandom.max}" aria-label="${maximumLabel}"': null
                           - $if tempRandom.type == 'weighted':
                               - rtgl-view g=sm w=f mt=md:
                                   - rtgl-view d=h av=c g=sm w=f:
