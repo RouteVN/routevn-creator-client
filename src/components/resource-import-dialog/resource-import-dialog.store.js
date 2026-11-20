@@ -393,6 +393,14 @@ const createProjectTargets = () => ({
   resourcesByType: {},
 });
 
+// On phones the store's search opens in a popover under the header's search
+// button; its input takes focus once the popover is placed.
+const createSearchPopoverState = () => ({
+  isOpen: false,
+  focusPending: false,
+  position: { x: 0, y: 0 },
+});
+
 export const createInitialState = () => ({
   // Tells this dialog's search events apart from another mounted dialog's.
   instanceId: generateId(),
@@ -405,6 +413,7 @@ export const createInitialState = () => ({
   // The URL typed on the URL step, kept when the step shows again.
   urlValue: "",
   searchText: "",
+  searchPopover: createSearchPopoverState(),
   catalog: createCatalogState(),
   planPackId: undefined,
   pack: undefined,
@@ -441,6 +450,7 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
     state.sourceName = undefined;
     state.urlValue = "";
     state.searchText = "";
+    state.searchPopover = createSearchPopoverState();
     state.catalog = createCatalogState();
     state.planPackId = undefined;
     state.pack = undefined;
@@ -461,6 +471,21 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
 
 export const setSearchText = ({ state }, { value } = {}) => {
   state.searchText = value;
+};
+
+export const openSearchPopover = ({ state }, { position } = {}) => {
+  state.searchPopover.isOpen = true;
+  state.searchPopover.focusPending = true;
+  state.searchPopover.position = position;
+};
+
+export const closeSearchPopover = ({ state }) => {
+  state.searchPopover.isOpen = false;
+  state.searchPopover.focusPending = false;
+};
+
+export const clearSearchPopoverFocusPending = ({ state }) => {
+  state.searchPopover.focusPending = false;
 };
 
 // A new query reloads the store from its first page.
@@ -795,6 +820,9 @@ export const selectStep = ({ state }) => state.step;
 export const selectOperationId = ({ state }) => state.operationId;
 export const selectReviewValues = ({ state }) => state.reviewValues;
 export const selectInstanceId = ({ state }) => state.instanceId;
+export const selectSearchText = ({ state }) => state.searchText;
+export const selectSearchPopoverFocusPending = ({ state }) =>
+  state.searchPopover.isOpen && state.searchPopover.focusPending;
 export const selectCatalogQuery = ({ state }) => state.catalog.query;
 export const selectCatalogRequestId = ({ state }) => state.catalog.requestId;
 export const selectCatalogNextCursor = ({ state }) => state.catalog.nextCursor;
@@ -851,6 +879,12 @@ const getCatalogViewData = ({ state, copy }) => {
     searchTitle: copy.searchTitle ?? "Search",
     searchLabel: copy.searchPlaceholder ?? "Search asset packs",
     searchText: state.searchText,
+    // The phone search button and popover work like the resource pages'
+    // filter: the button is filled while a search narrows the list, and
+    // Clear is off when there is nothing to clear.
+    searchButtonVariant: isFiltered ? "pr" : "ol",
+    clearSearchLabel: copy.clearButton ?? "Clear",
+    clearSearchDisabled: state.searchText === "" && !isFiltered,
     isCatalogEmpty:
       catalog.status === "ready" && catalog.packs.length === 0 && !isFiltered,
     isNoResults:
@@ -1105,6 +1139,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     formContext: state.reviewValues,
     errorMessage: state.error?.message,
     catalog: getCatalogViewData({ state, copy }),
+    searchPopover: state.searchPopover,
     pack: getPackViewData({ state, copy, dateTime: i18n.dateTime }),
     isAssetPreviewOpen: previewResource !== undefined,
     assetPreview: previewResource && {

@@ -62,16 +62,35 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("$if isStoreStep && !isBusy:");
     expect(viewSource).toContain("$if isSelectionStep && !isBusy:");
     expect(viewSource).toContain(
-      "rtgl-grid#packGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=1 g=lg w=f",
+      "rtgl-grid#packGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=2 g=lg sm-g=md w=f",
     );
     expect(viewSource).toContain("d=h md-d=v w=f h=1fg");
     expect(viewSource).toContain(
-      "rtgl-view d=v w=280 md-w=f g=lg p=lg sv style=",
+      "rtgl-view d=v w=280 md-hide g=lg p=lg sv style=",
     );
-    expect(viewSource).toContain("sv sbv=touch g=lg p=lg bwl=xs bc=bo");
+    expect(viewSource).toContain(
+      "sv sbv=touch g=lg p=lg bwl=xs md-bwl=none bc=bo",
+    );
     expect(viewSource).toContain("rtgl-text: ${catalog.searchTitle}");
     expect(viewSource).toContain("rtgl-input#storeSearchInput s=sm w=f");
     expect(viewSource).toContain("handler: handleStoreSearchInput");
+    // Phones search from a header button that opens a popover.
+    expect(viewSource).toContain("rtgl-view hide md-show:");
+    expect(viewSource).toContain(
+      "rtgl-button#storeSearchButton sq v=${catalog.searchButtonVariant} pre=search",
+    );
+    expect(viewSource).toContain(
+      "rtgl-popover#storeSearchPopover ?open=${searchPopover.isOpen}",
+    );
+    expect(viewSource).toContain("rtgl-input#storeSearchPopoverInput s=sm w=f");
+    expect(viewSource).toContain(
+      "rtgl-button#storeSearchClearButton v=se s=sm ?disabled=${catalog.clearSearchDisabled}: ${catalog.clearSearchLabel}",
+    );
+    expect(viewSource).toContain(
+      "rtgl-button#storeSearchSubmitButton v=pr s=sm: ${catalog.searchTitle}",
+    );
+    expect(viewSource).toContain("handler: handleStoreSearchClear");
+    expect(viewSource).toContain("handler: handleStoreSearchSubmit");
     expect(viewSource).not.toContain("storeAssetTypeSelect");
     expect(viewSource).toContain("${catalog.noResultsLabel}");
     expect(viewSource).toContain("$for pack in catalog.packs");
@@ -224,7 +243,7 @@ describe("resource-import-dialog.view", () => {
     expect(viewSource).toContain("rtgl-view#creatorLinks d=h g=sm wrap");
     expect(viewSource).toContain('data-url="${link.url}"');
     expect(viewSource).toContain(
-      "rtgl-grid#creatorPackGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=1 g=lg w=f",
+      "rtgl-grid#creatorPackGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=2 g=lg sm-g=md w=f",
     );
     expect(viewSource).toContain("$for pack in creator.packs");
     // Every pack comes with the profile, so the page has no Load More.

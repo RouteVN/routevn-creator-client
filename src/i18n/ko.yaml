@@ -3306,6 +3306,7 @@ resourceImport:
   storeNoResults: "검색 결과가 없어요."
   searchTitle: "검색"
   searchPlaceholder: "리소스 팩 검색"
+  clearButton: "지우기"
   storeLoadFailed: "리소스 스토어를 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."
   retryButton: "다시 시도"
   loadMoreButton: "더 불러오기"

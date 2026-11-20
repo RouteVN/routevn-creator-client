@@ -3306,6 +3306,7 @@ resourceImport:
   storeNoResults: "Aucun paquet de ressources ne correspond à votre recherche."
   searchTitle: "Rechercher"
   searchPlaceholder: "Rechercher des paquets de ressources"
+  clearButton: "Effacer"
   storeLoadFailed: "Impossible de charger la boutique de ressources. Vérifiez la connexion, puis réessayez."
   retryButton: "Réessayer"
   loadMoreButton: "Afficher plus"

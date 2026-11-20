@@ -3306,6 +3306,7 @@ resourceImport:
   storeNoResults: "Không có gói tài nguyên nào khớp với tìm kiếm."
   searchTitle: "Tìm kiếm"
   searchPlaceholder: "Tìm kiếm gói tài nguyên"
+  clearButton: "Xóa bộ lọc"
   storeLoadFailed: "Không tải được cửa hàng tài nguyên. Hãy kiểm tra kết nối rồi thử lại."
   retryButton: "Thử lại"
   loadMoreButton: "Tải thêm"

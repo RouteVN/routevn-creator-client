@@ -3374,6 +3374,7 @@ resourceImport:
   storeNoResults: "لا توجد حزم موارد تطابق البحث."
   searchTitle: "بحث"
   searchPlaceholder: "البحث في حزم الموارد"
+  clearButton: "مسح عوامل التصفية"
   storeLoadFailed: "تعذّر تحميل متجر الموارد. يُرجى التحقق من الاتصال والمحاولة مرة أخرى."
   retryButton: "إعادة المحاولة"
   loadMoreButton: "تحميل المزيد"

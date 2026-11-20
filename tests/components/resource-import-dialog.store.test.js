@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearSearchPopoverFocusPending,
   closeAssetPreview,
+  closeSearchPopover,
+  openSearchPopover,
   returnFromCreatorPage,
+  selectSearchPopoverFocusPending,
   setCreatorError,
   setCreatorPage,
   startCreatorLoad,
@@ -19,6 +23,7 @@ import {
   setPackLoadError,
   setPackPage,
   setResourceSelected,
+  setSearchText,
   togglePackGroup,
   setPlan,
   startCatalogLoad,
@@ -210,6 +215,50 @@ describe("resource-import-dialog.store", () => {
       isCatalogEmpty: true,
       isNoResults: false,
     });
+  });
+
+  it("opens the phone search popover under its button and focuses it once", () => {
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true } });
+    expect(selectViewData({ state, i18n: {} }).catalog).toMatchObject({
+      searchButtonVariant: "ol",
+      clearSearchLabel: "Clear",
+      clearSearchDisabled: true,
+    });
+    setSearchText({ state }, { value: "fo" });
+    expect(
+      selectViewData({
+        state,
+        i18n: { resourceImport: { clearButton: "Effacer" } },
+      }).catalog,
+    ).toMatchObject({
+      clearSearchLabel: "Effacer",
+      clearSearchDisabled: false,
+    });
+
+    openSearchPopover({ state }, { position: { x: 340, y: 56 } });
+    expect(selectViewData({ state, i18n: {} }).searchPopover).toEqual({
+      isOpen: true,
+      focusPending: true,
+      position: { x: 340, y: 56 },
+    });
+    expect(selectSearchPopoverFocusPending({ state })).toBe(true);
+    clearSearchPopoverFocusPending({ state });
+    expect(selectSearchPopoverFocusPending({ state })).toBe(false);
+
+    // The button stays filled while a search narrows the list.
+    setCatalogQuery({ state }, { query: "forest" });
+    closeSearchPopover({ state });
+    expect(selectViewData({ state, i18n: {} })).toMatchObject({
+      searchPopover: { isOpen: false, focusPending: false },
+      catalog: { searchButtonVariant: "pr" },
+    });
+
+    // Reopening the dialog starts with the popover closed.
+    openSearchPopover({ state }, { position: { x: 340, y: 56 } });
+    syncFromProps({ state }, { props: { open: false } });
+    syncFromProps({ state }, { props: { open: true } });
+    expect(state.searchPopover.isOpen).toBe(false);
   });
 
   it("groups the pack's assets by folder, labelled with their path, and collapses a group", () => {

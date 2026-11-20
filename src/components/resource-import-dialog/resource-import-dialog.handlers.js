@@ -273,6 +273,62 @@ export const handleStoreSearchInput = (deps, payload) => {
   });
 };
 
+// On phones the search opens in a popover under the header's search button.
+export const handleStoreSearchButtonClick = (deps, payload) => {
+  const { store, refs, render } = deps;
+  const { storeSearchButton } = refs;
+  payload._event.stopPropagation();
+  const rect = storeSearchButton.getBoundingClientRect();
+  store.openSearchPopover({
+    position: { x: Math.round(rect.right), y: Math.round(rect.bottom) },
+  });
+  render();
+};
+
+export const handleStoreSearchPopoverPositioned = (deps) => {
+  const { store, refs } = deps;
+  const { storeSearchPopoverInput } = refs;
+  if (!store.selectSearchPopoverFocusPending()) return;
+  store.clearSearchPopoverFocusPending();
+  storeSearchPopoverInput.focus();
+};
+
+export const handleStoreSearchPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSearchPopover();
+  render();
+};
+
+// The Search button, Enter or the keyboard's search key runs the search at
+// once, in place of the one waiting for typing to settle, and closes the
+// popover to show the results.
+export const handleStoreSearchSubmit = (deps) => {
+  const { store, subject, render } = deps;
+  subject.dispatch(STORE_SEARCH_CANCEL_ACTION, {
+    instanceId: store.selectInstanceId(),
+  });
+  store.closeSearchPopover();
+  render();
+  searchCatalog(deps, store.selectSearchText());
+};
+
+export const handleStoreSearchPopoverKeyDown = (deps, payload) => {
+  if (payload._event.key !== "Enter") return;
+  handleStoreSearchSubmit(deps);
+};
+
+// Clear empties the search and shows every pack at once, leaving the popover
+// open for another search.
+export const handleStoreSearchClear = (deps) => {
+  const { store, subject, render } = deps;
+  subject.dispatch(STORE_SEARCH_CANCEL_ACTION, {
+    instanceId: store.selectInstanceId(),
+  });
+  store.setSearchText({ value: "" });
+  render();
+  searchCatalog(deps, "");
+};
+
 export const handleCatalogRetry = (deps) => {
   const { store } = deps;
   return loadCatalog(deps, { cursor: store.selectCatalogFailedCursor() });

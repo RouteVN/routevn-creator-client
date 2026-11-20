@@ -3306,6 +3306,7 @@ resourceImport:
   storeNoResults: "Tidak ada paket aset yang cocok dengan pencarian."
   searchTitle: "Cari"
   searchPlaceholder: "Cari paket aset"
+  clearButton: "Kosongkan"
   storeLoadFailed: "Gagal memuat toko aset. Periksa koneksi internet, lalu coba lagi."
   retryButton: "Coba lagi"
   loadMoreButton: "Muat lebih banyak"
