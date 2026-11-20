@@ -144,3 +144,37 @@ export const buildSpriteIdsByGroup = (sprites = []) => {
   }
   return spriteIdsByGroup;
 };
+
+// Older character actions can have a sprite without a matching group ID.
+// Keep that sprite in the first group, without borrowing another group's pick.
+export const restoreCharacterSpriteGroups = ({
+  character,
+  spriteSelectionGroups,
+}) => {
+  const sprites = Array.isArray(character?.sprites)
+    ? character.sprites.filter(
+        (sprite) =>
+          typeof sprite?.resourceId === "string" &&
+          sprite.resourceId.length > 0,
+      )
+    : [];
+  const selected = {};
+  for (const group of spriteSelectionGroups) {
+    const match = sprites.find((sprite) => sprite.id === group.id);
+    if (match) {
+      selected[group.id] = match.resourceId;
+    }
+  }
+
+  const [firstGroup] = spriteSelectionGroups;
+  const [firstSprite] = sprites;
+  if (
+    firstGroup &&
+    !selected[firstGroup.id] &&
+    firstSprite &&
+    !spriteSelectionGroups.some((group) => group.id === firstSprite.id)
+  ) {
+    selected[firstGroup.id] = firstSprite.resourceId;
+  }
+  return selected;
+};
