@@ -146,15 +146,21 @@ steps:
     selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect [data-testid='select-button']"
     steps:
       - action: click
-  # The weight options are 1 to 100, so option 2 is weight 3.
+  # The weight options are 0 to 100, so option 3 is weight 3.
   - action: waitFor
-    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect #option2"
+    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect #option3"
     state: visible
     timeoutMs: 10000
   - action: select
-    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect #option2"
+    selector: "rvn-command-line-random#commandLineRandom rtgl-select#weightSelect #option3"
     steps:
       - action: click
+  # Rest the pointer on the chance, where it leaves no button in its hover
+  # style once the list closes.
+  - action: select
+    selector: "rvn-command-line-random#commandLineRandom #outcomeChance"
+    steps:
+      - action: hover
   - action: wait
     ms: 250
   - action: assert

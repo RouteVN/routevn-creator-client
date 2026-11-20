@@ -253,6 +253,33 @@ describe("random variable operations in Route Engine", () => {
     }
   });
 
+  // Picking 0 for one value makes the other the only one drawn, as when
+  // playtesting it.
+  it("never draws a value picked with weight 0", async () => {
+    const { deps, dispatchedEvents, state } = await mountEditor();
+    startRandomOperation(deps, "lucky");
+    const [trueId] = randomValueIds(state);
+    handleRandomWeightSelectChange(deps, rowEvent(trueId, 0));
+    save(deps);
+    handleSubmitClick(deps, clickEvent());
+
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    const updateVariable = dispatchedEvents.at(-1).detail.updateVariable;
+    expect(updateVariable.operations[0].distribution).toEqual({
+      type: "weighted",
+      values: [
+        { weight: 0, value: true },
+        { weight: 1, value: false },
+      ],
+    });
+    for (const share of [0, 0.5, 0.99]) {
+      expect(
+        runLine({ updateVariable }, createRandomSource(weightedDraw(share)))
+          .lucky,
+      ).toBe(false);
+    }
+  });
+
   // What Route Engine refuses when the line runs, the editor refuses before
   // it saves. Each case names part of the engine's own error.
   it.each([

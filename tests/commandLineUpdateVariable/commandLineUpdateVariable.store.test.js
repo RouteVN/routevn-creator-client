@@ -191,9 +191,9 @@ describe("commandLineUpdateVariable.store random operation", () => {
   });
 
   it("shows the draft's values, weights and chances, with empty fields as empty", () => {
-    const weightOptions = Array.from({ length: 100 }, (_, index) => ({
-      value: index + 1,
-      label: String(index + 1),
+    const weightOptions = Array.from({ length: 101 }, (_, index) => ({
+      value: index,
+      label: String(index),
     }));
     const state = createRandomState("boolean");
     addTempRandomValue({ state }, { id: "v2", value: false, weight: 3 });

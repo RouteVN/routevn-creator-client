@@ -259,7 +259,7 @@ describe("commandLineRandom view", () => {
     expect(elementTag(html, "saveOutcomeButton")).not.toContain("disabled");
   });
 
-  it("offers the weights 1 to 100", () => {
+  it("offers the weights 0 to 100", () => {
     const state = createStateWithWeights(30);
     openOutcomeDraft({ state }, { outcomeId: "o1" });
     const { weightOptions } = selectViewData({
@@ -269,17 +269,16 @@ describe("commandLineRandom view", () => {
     });
 
     expect(weightOptions).toEqual(
-      Array.from({ length: 100 }, (_, index) => ({
-        value: index + 1,
-        label: String(index + 1),
+      Array.from({ length: 101 }, (_, index) => ({
+        value: index,
+        label: String(index),
       })),
     );
   });
 
   it.each([
-    [0, 0],
-    [2.5, 2],
-    [250, 100],
+    [2.5, 3],
+    [250, 101],
   ])("adds a saved weight of %s to the options in order", (weight, index) => {
     const state = createStateWithWeights(weight);
     openOutcomeDraft({ state }, { outcomeId: "o1" });
@@ -289,7 +288,7 @@ describe("commandLineRandom view", () => {
       i18n: EN_I18N,
     }).weightOptions.map((option) => option.value);
 
-    expect(values).toHaveLength(101);
+    expect(values).toHaveLength(102);
     expect(values.indexOf(weight)).toBe(index);
     expect(values).toEqual([...values].sort((a, b) => a - b));
   });
