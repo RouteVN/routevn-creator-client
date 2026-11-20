@@ -67,6 +67,26 @@ describe("platform details validation", () => {
         },
       }),
     ).toEqual({ valid: true });
+    expect(
+      validatePlatformDetails({
+        platform: "windows",
+        applicationInfo: {
+          applicationName: "Project One",
+          iconFileId: "windows-icon",
+          applicationIdentifier: "project-one",
+        },
+      }),
+    ).toEqual({ valid: true });
+    expect(
+      validatePlatformDetails({
+        platform: "windows",
+        applicationInfo: {
+          applicationName: "Project One",
+          iconFileId: "windows-icon",
+          applicationIdentifier: "project..one",
+        },
+      }),
+    ).toEqual({ valid: false, code: "windows-identifier-invalid" });
   });
 
   it("requires icons for native platforms but keeps the Web icon optional", () => {

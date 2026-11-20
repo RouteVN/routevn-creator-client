@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   createNativeApplicationIdentifier,
+  createWindowsPlayerApplicationIdentifier,
   isValidNativeApplicationIdentifier,
+  isValidWindowsApplicationIdentifier,
   requireNativeApplicationIdentifier,
 } from "../../src/internal/nativeApplicationIdentifier.js";
 
@@ -22,5 +24,31 @@ describe("native application identifiers", () => {
     expect(() =>
       requireNativeApplicationIdentifier("invalid identifier"),
     ).toThrow("Native application identifier must use reverse-domain notation");
+  });
+
+  it("accepts one word or periods for Windows identifiers", () => {
+    expect(isValidWindowsApplicationIdentifier("project-one")).toBe(true);
+    expect(isValidWindowsApplicationIdentifier("com.example.project-one")).toBe(
+      true,
+    );
+    expect(isValidWindowsApplicationIdentifier("")).toBe(false);
+    expect(isValidWindowsApplicationIdentifier("Project One")).toBe(false);
+    expect(isValidWindowsApplicationIdentifier(" project-one")).toBe(false);
+    expect(isValidWindowsApplicationIdentifier(".project-one")).toBe(false);
+    expect(isValidWindowsApplicationIdentifier("project-one.")).toBe(false);
+    expect(isValidWindowsApplicationIdentifier("project..one")).toBe(false);
+    expect(isValidWindowsApplicationIdentifier("project_one")).toBe(false);
+  });
+
+  it("gives the Windows player an identifier with a period", () => {
+    expect(createWindowsPlayerApplicationIdentifier("project-one")).toBe(
+      "vn.routevn.player.project-one",
+    );
+    expect(
+      createWindowsPlayerApplicationIdentifier("com.example.project-one"),
+    ).toBe("com.example.project-one");
+    expect(() => createWindowsPlayerApplicationIdentifier("")).toThrow(
+      "Windows application identifier must use only letters, numbers, hyphens, and periods.",
+    );
   });
 });
