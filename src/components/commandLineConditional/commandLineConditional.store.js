@@ -487,7 +487,6 @@ export const selectViewData = ({ state, props, i18n }) => {
     return {
       ...branch,
       index,
-      menuKeyShortcuts: "Delete",
       summary: getBranchSummary(
         branch,
         state.variablesData,
@@ -503,21 +502,9 @@ export const selectViewData = ({ state, props, i18n }) => {
   const conditionBranchItems = state.branches.filter((branch) =>
     hasBranchCondition(branch),
   );
-  const conditionBranches = conditionBranchItems.map((branch, index) => {
-    const menuKeyShortcuts = [];
-    if (index > 0) {
-      menuKeyShortcuts.push("ArrowUp");
-    }
-    if (index < conditionBranchItems.length - 1) {
-      menuKeyShortcuts.push("ArrowDown");
-    }
-    menuKeyShortcuts.push("Delete");
-
-    return {
-      ...createBranchViewData(branch, index),
-      menuKeyShortcuts: menuKeyShortcuts.join(" "),
-    };
-  });
+  const conditionBranches = conditionBranchItems.map((branch, index) =>
+    createBranchViewData(branch, index),
+  );
   const defaultBranch = state.branches
     .filter((branch) => !hasBranchCondition(branch))
     .map(createBranchViewData)[0];
@@ -591,7 +578,6 @@ export const selectViewData = ({ state, props, i18n }) => {
       copy,
     ),
     branchesLabel: localizeCommandLineText("Branches", copy),
-    branchMenuButtonLabel: localizeCommandLineText("Branch Menu", copy),
     conditionLabel: localizeCommandLineText("Condition", copy),
     defaultBranchLabel: localizeCommandLineText(DEFAULT_BRANCH_LABEL, copy),
     operatorLabel: localizeCommandLineText("Operator", copy),
