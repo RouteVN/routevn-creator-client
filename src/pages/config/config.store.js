@@ -3,7 +3,7 @@ import {
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
-  APP_LOCALE_OPTIONS,
+  APP_LOCALE_SELECT_OPTIONS,
   DEFAULT_APP_LOCALE,
 } from "../../internal/ui/appLocale.js";
 import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
@@ -165,7 +165,7 @@ export const selectViewData = ({ state, i18n }) => {
       { value: false, label: copy.disabledLabel },
       { value: true, label: copy.enabledLabel },
     ],
-    languageOptions: APP_LOCALE_OPTIONS,
+    languageOptions: APP_LOCALE_SELECT_OPTIONS,
   };
 };
 

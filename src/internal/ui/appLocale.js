@@ -29,6 +29,18 @@ export const APP_LOCALE_OPTIONS = Object.freeze([
   Object.freeze({ value: "ur", label: "اردو (Beta)" }),
 ]);
 
+// The language selects' options: each language under its own name, with its
+// code on the right in its standard casing, such as "zh-Hans".
+export const APP_LOCALE_SELECT_OPTIONS = Object.freeze(
+  APP_LOCALE_OPTIONS.map(({ value, label }) =>
+    Object.freeze({
+      value,
+      label,
+      suffixText: Intl.getCanonicalLocales(value)[0],
+    }),
+  ),
+);
+
 const getAvailableAppLocales = (localeService) => {
   return (
     localeService?.available?.() ??
