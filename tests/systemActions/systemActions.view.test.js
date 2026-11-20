@@ -211,6 +211,25 @@ describe("systemActions view", () => {
     },
   );
 
+  it("keeps a long Update Variable summary on one line of its row", () => {
+    const elements = renderSystemActions({
+      actions: {
+        updateVariable: {
+          id: "update1",
+          operations: [{ variableId: "dice", op: "set", value: 1 }],
+        },
+      },
+      props: { showSelected: true },
+    });
+    const [row] = elements.filter(
+      (element) => element.data?.attrs?.id === "actionItemUpdateVariable",
+    );
+    const rowHtml = toHTML(row);
+
+    expect(row.data.attrs.h).toBe("36");
+    expect(rowHtml).toMatch(/<rtgl-text [^>]*ellipsis="true"[^>]*>dice = 1</);
+  });
+
   it("places the random row in the presentation order", () => {
     const elements = renderSystemActions({
       actions: { random: randomWithThreeActions },

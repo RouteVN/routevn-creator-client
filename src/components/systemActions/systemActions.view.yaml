@@ -249,7 +249,7 @@ template:
               - $if preview.updateVariable:
                   - 'rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.updateVariable};"':
                       - rtgl-svg svg=variable wh=24: null
-                      - rtgl-text s=sm: ${preview.updateVariable.summary}
+                      - rtgl-text s=sm w=1fg ellipsis=true: ${preview.updateVariable.summary}
               - $if preview.random:
                   - 'rtgl-view#actionItemRandom data-mode=random g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.random};"':
                       - rtgl-svg svg=random wh=24: null

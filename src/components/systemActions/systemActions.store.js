@@ -10,6 +10,7 @@ import {
 } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { formatList } from "../../internal/dates.js";
+import { isEditableRandomDistribution } from "../../internal/randomActions.js";
 import {
   NEUTRAL_PRESENTATION_ACTION_CSS_ORDER,
   PRESENTATION_ACTION_CSS_ORDER,
@@ -31,6 +32,7 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { formatRandomDistributionSummary } from "../../internal/ui/sceneEditor/randomCopy.js";
 
 export const createInitialState = () => ({
   mode: "actions",
@@ -1407,6 +1409,25 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
             return `${varName} *${op.value}`;
           } else if (op.op === "divide") {
             return `${varName} /${op.value}`;
+          } else if (op.op === "random") {
+            return isEditableRandomDistribution(op.distribution, variable)
+              ? formatCommandLineCopy(
+                  "{variable} = random ({values})",
+                  {
+                    variable: varName,
+                    values: formatRandomDistributionSummary(
+                      op.distribution,
+                      copy,
+                      dateTime,
+                    ),
+                  },
+                  copy,
+                )
+              : formatCommandLineCopy(
+                  "{variable} = random",
+                  { variable: varName },
+                  copy,
+                );
           }
           return `${varName} ${op.op}`;
         }),

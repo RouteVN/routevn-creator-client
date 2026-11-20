@@ -1,6 +1,10 @@
 import { formatNumber } from "../../internal/dates.js";
 import { getOutcomeChancePercents } from "../../internal/randomActions.js";
 import {
+  formatRandomChance,
+  getRandomWeightOptions,
+} from "../../internal/ui/sceneEditor/randomCopy.js";
+import {
   formatCommandLineActionCount,
   formatCommandLineCopy,
   localizeCommandLineBreadcrumb,
@@ -33,31 +37,6 @@ const getOutcomeDropdownMenuItems = (outcomes, outcomeId) => {
 
   items.push({ label: "Delete", type: "item", value: "delete" });
   return items;
-};
-
-// Chances arrive rounded by getOutcomeChancePercents, which can keep more
-// digits than formatPercent's two decimals, so every digit is shown in the
-// locale's percent template.
-const formatChance = (percent, dateTime = {}) =>
-  (dateTime.percent ?? "{value}%").replaceAll("{value}", () =>
-    formatNumber(percent, dateTime),
-  );
-
-// The weights the weight select offers.
-const WEIGHT_CHOICES = Array.from({ length: 100 }, (_, index) => index + 1);
-
-// The options of the weight select: the whole numbers from 1 to 100, in the
-// locale's digits. A saved weight outside them, such as 0 or 250, is added in
-// order, so that the select shows it and keeps it until another is picked.
-const getWeightOptions = (weight, dateTime) => {
-  const weights =
-    Number.isFinite(weight) && !WEIGHT_CHOICES.includes(weight)
-      ? [...WEIGHT_CHOICES, weight].sort((a, b) => a - b)
-      : WEIGHT_CHOICES;
-  return weights.map((value) => ({
-    value,
-    label: formatNumber(value, dateTime),
-  }));
 };
 
 const countActions = (actions) => Object.keys(actions).length;
@@ -213,7 +192,7 @@ export const selectViewData = ({ state, props, i18n }) => {
       "Weight {weight} ({chance})",
       {
         weight: formatNumber(outcome.weight, dateTime),
-        chance: formatChance(chancePercents[index], dateTime),
+        chance: formatRandomChance(chancePercents[index], dateTime),
       },
       copy,
     ),
@@ -235,9 +214,9 @@ export const selectViewData = ({ state, props, i18n }) => {
     outcomes,
     tempOutcome: {
       weight: state.tempOutcome.weight,
-      chance: formatChance(getTempOutcomeChancePercent(state), dateTime),
+      chance: formatRandomChance(getTempOutcomeChancePercent(state), dateTime),
     },
-    weightOptions: getWeightOptions(state.tempOutcome.weight, dateTime),
+    weightOptions: getRandomWeightOptions(state.tempOutcome.weight, dateTime),
     outcomeActions: state.tempOutcome.actions,
     outcomeActionAllowedModes: OUTCOME_ACTION_ALLOWED_MODES,
     hiddenModes: props.hiddenModes ?? [],
