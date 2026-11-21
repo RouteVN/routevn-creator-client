@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  hideActionsDialog,
   selectAction,
   selectActionsData,
+  selectViewData,
   setAuthoredDialogueWasCleared,
+  setEditVisualId,
+  setMode,
   setRepositoryState,
+  showActionsDialog,
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
 import {
@@ -27,6 +32,7 @@ import {
   handleTransformEditorDragCancel,
   handleTransformEditorPreview,
   handleTransformEditorPreviewCancel,
+  handleVisualLayoutEdit,
   handleSetBackgroundCustomTransform,
   handleSetBackgroundTransformEditorTransientTransform,
   handleSetActionCustomTransform,
@@ -186,14 +192,14 @@ describe("systemActions.handlers", () => {
     });
   });
 
-  it("replaces the navigation action already in the list with a submitted one", () => {
+  it("replaces a legacy reset with a resetting section transition", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
 
     updateActions(
       { state },
       {
-        sectionTransition: { sceneId: "scene-1", sectionId: "section-2" },
+        resetStoryAtSection: { sectionId: "section-2" },
         toggleAutoMode: {},
       },
     );
@@ -213,20 +219,34 @@ describe("systemActions.handlers", () => {
       {
         _event: {
           stopPropagation: () => {},
-          detail: { resetStoryAtSection: { sectionId: "section-3" } },
+          detail: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-3",
+              resetStory: true,
+            },
+          },
         },
       },
     );
 
     expect(selectAction({ state })).toEqual({
       toggleAutoMode: {},
-      resetStoryAtSection: { sectionId: "section-3" },
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-3",
+        resetStory: true,
+      },
     });
     // The host applies the same rule when it merges the submitted actions.
     expect(dispatchedEvents).toHaveLength(1);
     expect(dispatchedEvents[0].type).toBe("actions-change");
     expect(dispatchedEvents[0].detail).toEqual({
-      resetStoryAtSection: { sectionId: "section-3" },
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-3",
+        resetStory: true,
+      },
     });
   });
 
@@ -996,6 +1016,7 @@ describe("systemActions.handlers", () => {
           setAuthoredDialogueWasCleared({ state }, payload),
         showActionsDialog: () => {},
         setMode: () => {},
+        setEditVisualId: () => {},
       },
       render: () => {},
     };
@@ -1028,6 +1049,7 @@ describe("systemActions.handlers", () => {
           setAuthoredDialogueWasCleared({ state }, payload),
         showActionsDialog: () => {},
         setMode: () => {},
+        setEditVisualId: () => {},
       },
       render: () => {},
     };
@@ -1073,6 +1095,7 @@ describe("systemActions.handlers", () => {
           setAuthoredDialogueWasCleared({ state }, payload),
         showActionsDialog: () => {},
         setMode: () => {},
+        setEditVisualId: () => {},
       },
       render: () => {},
     };
@@ -1086,6 +1109,80 @@ describe("systemActions.handlers", () => {
         content: [{ text: "Keep writing" }],
       },
     });
+  });
+
+  it("opens the visual panel in a visual's edit view only when asked, and only once", () => {
+    const state = createInitialState();
+    const deps = {
+      props: { actions: {} },
+      store: {
+        updateActions: (payload) => updateActions({ state }, payload),
+        setAuthoredDialogueWasCleared: (payload) =>
+          setAuthoredDialogueWasCleared({ state }, payload),
+        showActionsDialog: () => showActionsDialog({ state }),
+        hideActionsDialog: () => hideActionsDialog({ state }),
+        setMode: (payload) => setMode({ state }, payload),
+        setEditVisualId: (payload) => setEditVisualId({ state }, payload),
+      },
+      render: () => {},
+    };
+    const editVisualId = () =>
+      selectViewData({
+        state,
+        props: {},
+        i18n: { resourcePages: {}, sceneEditorPage: {}, commandLinePage: {} },
+      }).editVisualId;
+
+    open(deps, { mode: "visual", actions: {}, editVisualId: "card" });
+    expect(state.mode).toBe("visual");
+    expect(editVisualId()).toBe("card");
+
+    // Another panel, or the visual panel opened again, starts as usual.
+    setMode({ state }, { mode: "actions" });
+    expect(editVisualId()).toBeUndefined();
+    open(deps, { mode: "visual", actions: {}, editVisualId: "card" });
+    hideActionsDialog({ state });
+    expect(editVisualId()).toBeUndefined();
+    open(deps, { mode: "visual", actions: {} });
+    expect(editVisualId()).toBeUndefined();
+  });
+
+  it("passes a visual's layout to the page with where the panel comes back to, and closes", () => {
+    const state = createInitialState();
+    showActionsDialog({ state });
+    setMode({ state }, { mode: "visual" });
+    const dispatchEvent = vi.fn();
+    const stopPropagation = vi.fn();
+    const actions = { visual: { items: [{ id: "card", layer: 50 }] } };
+
+    handleVisualLayoutEdit(
+      {
+        store: {
+          selectAction: () => selectAction({ state }),
+          updateActions: (payload) => updateActions({ state }, payload),
+          hideActionsDialog: () => hideActionsDialog({ state }),
+        },
+        render: () => {},
+        dispatchEvent,
+      },
+      {
+        _event: {
+          stopPropagation,
+          detail: { actions, visualId: "card", returnToEditView: true },
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalled();
+    const event = dispatchEvent.mock.calls[0][0];
+    expect(event.type).toBe("visual-layout-edit");
+    expect(event.detail).toEqual({
+      actions,
+      visualId: "card",
+      returnToEditView: true,
+    });
+    expect(selectAction({ state })).toEqual(actions);
+    expect(state.isActionsDialogOpen).toBe(false);
   });
 
   it("exposes the dedicated transform editor preview canvas root", () => {

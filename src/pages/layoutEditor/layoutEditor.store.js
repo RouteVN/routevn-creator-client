@@ -23,8 +23,8 @@ import {
   selectLayoutEditorSelectedItem,
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
-} from "./support/layoutEditorViewData.js";
-import { selectLayoutEditorPageCopy } from "./support/layoutEditorPageCopy.js";
+} from "../../internal/ui/layoutEditor/layoutEditorViewData.js";
+import { selectLayoutEditorPageCopy } from "../../internal/ui/layoutEditor/layoutEditorCopy.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
   createEditHistory,
@@ -32,6 +32,7 @@ import {
   dropEditHistoryStep as dropHistoryStep,
   moveEditHistoryStep as moveHistoryStep,
   recordEditHistoryStep as recordHistoryStep,
+  resumeEditHistory as resumeHistory,
 } from "../../internal/editHistory.js";
 import {
   isFragmentLayout,
@@ -95,6 +96,7 @@ const RIGHT_PANEL_MODES = new Set(["edit", "preview"]);
 
 const VALUE_LABEL_KEYS = Object.freeze({
   "rename-item": "renameMenuItem",
+  "duplicate-item": "duplicateMenuItem",
   "delete-item": "deleteMenuItem",
 });
 
@@ -175,7 +177,6 @@ const localizeMenuItems = (items = [], copy = {}) => {
 
 export const createInitialState = () => {
   return {
-    lastUpdateDate: undefined,
     layoutData: { tree: [], items: {} },
     selectedItemId: undefined,
     detailPanelSelectedItemId: undefined,
@@ -185,6 +186,7 @@ export const createInitialState = () => {
     soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
+    videosData: { tree: [], items: {} },
     charactersData: { tree: [], items: {} },
     layoutsData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
@@ -206,7 +208,7 @@ export const createInitialState = () => {
     isPreviewPickedFromTab: false,
     canvasZoom: 1,
     canvasPreviewItem: undefined,
-    // Undo and redo for edits made since the page opened.
+    // Undo and redo for the item's edits, kept when the page is left.
     editHistory: createEditHistory(),
     // Undone or redone steps not saved yet, kept on top of repository data.
     pendingHistoryRestores: [],
@@ -419,7 +421,6 @@ export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
   if (targetItemId && state.layoutData && state.layoutData.items) {
     state.layoutData.items[targetItemId] = updatedItem;
   }
-  state.lastUpdateDate = Date.now();
   state.selectedElementMetrics = undefined;
 };
 
@@ -436,6 +437,15 @@ export const recordEditHistoryStep = (
 
 export const selectEditHistoryStep = ({ state }, { direction } = {}) =>
   getEditHistoryStep(state.editHistory, direction);
+
+export const selectEditHistory = ({ state }) => state.editHistory;
+
+// Takes back the history kept when the page was last left. A step restores
+// only the elements it touched and is dropped when it no longer applies, so
+// the history is kept whatever the layout holds now.
+export const resumeEditHistory = ({ state }, { retainedEditHistory } = {}) => {
+  state.editHistory = resumeHistory(retainedEditHistory);
+};
 
 export const moveEditHistoryStep = ({ state }, { direction } = {}) => {
   moveHistoryStep(state.editHistory, direction);
@@ -557,6 +567,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     soundsData,
     spritesheetsData,
     particlesData,
+    videosData,
     charactersData,
     layoutsData,
     textStylesData,
@@ -624,6 +635,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   state.soundsData = soundsData ?? { items: {}, tree: [] };
   state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };
   state.particlesData = particlesData ?? { items: {}, tree: [] };
+  state.videosData = videosData ?? { items: {}, tree: [] };
   state.charactersData = charactersData ?? { items: {}, tree: [] };
   state.layoutsData = layoutsData ?? { items: {}, tree: [] };
   state.textStylesData = textStylesData ?? { items: {}, tree: [] };
@@ -665,6 +677,7 @@ export const selectImages = ({ state }) => state.images;
 export const selectSoundsData = ({ state }) => state.soundsData;
 export const selectSpritesheetsData = ({ state }) => state.spritesheetsData;
 export const selectParticlesData = ({ state }) => state.particlesData;
+export const selectVideosData = ({ state }) => state.videosData;
 export const selectLayoutsData = ({ state }) => state.layoutsData;
 
 export const selectSelectedItem = ({ state }) => {
@@ -932,6 +945,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
     soundsData: state.soundsData,
     spritesheetsData: state.spritesheetsData,
     particlesData: state.particlesData,
+    videosData: state.videosData,
     charactersData: state.charactersData,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,

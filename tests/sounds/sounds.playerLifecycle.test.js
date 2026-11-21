@@ -19,6 +19,8 @@ afterEach(() => vi.unstubAllGlobals());
 
 const mountSounds = () => {
   const dom = new JSDOM("<body><div id='root'></div></body>");
+  // The player stays silent without Web Audio, which jsdom lacks.
+  dom.window.AudioContext = class {};
   for (const name of ["window", "document", "HTMLElement", "CustomEvent"]) {
     vi.stubGlobal(name, name === "window" ? dom.window : dom.window[name]);
   }

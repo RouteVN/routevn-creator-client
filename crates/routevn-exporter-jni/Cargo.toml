@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 jni = "0.21"
+routevn-android-export = { path = "../routevn-android-export" }
 routevn-exporter = { path = "../routevn-exporter" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

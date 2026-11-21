@@ -5,3 +5,9 @@
 # Keep the reported exception type readable in crash reports.
 -keepnames class com.routevn.creator.MainActivity$WebViewRenderer*Exception
 -keepnames class com.routevn.creator.MainActivity$TestCrashException
+
+# Native code calls the APK export progress listener by name.
+-keep interface com.routevn.creator.NativeExporter$ProgressListener { *; }
+-keepclassmembers class * implements com.routevn.creator.NativeExporter$ProgressListener {
+    void onProgress(java.lang.String, long, long);
+}

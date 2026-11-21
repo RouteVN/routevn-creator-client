@@ -3,6 +3,7 @@ import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 import {
   CURRENT_LAYOUT_SCHEMA_VERSION,
   cloneLayoutElementsWithFreshIds,
+  createLayoutElementDuplicatePlan,
   normalizeLayoutSchemaVersion,
 } from "../../../../internal/project/layout.js";
 import {
@@ -98,7 +99,7 @@ const selectLayoutIdsBelowSchemaVersion = ({
   });
 };
 
-export const createLayoutCommandApi = (shared) => ({
+const createLayoutItemCommandApi = (shared) => ({
   async createLayoutItem({
     layoutId,
     name,
@@ -406,3 +407,38 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 });
+
+// Copies an element with everything inside it. If one of the copies cannot
+// be created, the ones already made are removed again.
+export const createLayoutCommandApi = (shared) => {
+  const api = createLayoutItemCommandApi(shared);
+
+  api.duplicateLayoutElement = async ({ layoutId, elementId }) => {
+    const context = await shared.ensureCommandContext();
+    const plan = createLayoutElementDuplicatePlan(
+      context.state?.layouts?.items?.[layoutId]?.elements,
+      elementId,
+      shared.createId,
+    );
+    if (plan.length === 0) {
+      return { valid: false, error: { message: "Element not found." } };
+    }
+
+    for (const [index, step] of plan.entries()) {
+      const result = await api.createLayoutElement({ layoutId, ...step });
+      if (result?.valid === false) {
+        if (index > 0) {
+          await api.deleteLayoutElement({
+            layoutId,
+            elementIds: [plan[0].elementId],
+          });
+        }
+        return result;
+      }
+    }
+
+    return plan[0].elementId;
+  };
+
+  return api;
+};

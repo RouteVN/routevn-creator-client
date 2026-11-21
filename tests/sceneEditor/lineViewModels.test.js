@@ -1,3 +1,4 @@
+import { FR_I18N } from "../support/i18n.js";
 import { describe, expect, it } from "vitest";
 import { buildSceneDocumentLineDecorations } from "../../src/internal/ui/sceneEditor/lineViewModels.js";
 
@@ -443,6 +444,53 @@ describe("sceneEditor.lineDecorations", () => {
     });
   });
 
+  it("uses particle thumbnails for line visual previews", () => {
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines: [{ id: "line-1" }],
+      repositoryState: {
+        ...createRepositoryState(),
+        particles: {
+          items: {
+            "snow-particle": {
+              id: "snow-particle",
+              type: "particle",
+              name: "Snowfall",
+              thumbnailFileId: "file-snowfall-thumbnail",
+            },
+          },
+          tree: [{ id: "snow-particle" }],
+        },
+      },
+      sectionLineChanges: {
+        lines: [
+          {
+            id: "line-1",
+            changes: {
+              visual: {
+                changeType: "add",
+                data: {
+                  items: [{ id: "snow-visual", resourceId: "snow-particle" }],
+                },
+              },
+            },
+            presentationState: {},
+          },
+        ],
+      },
+    });
+
+    expect(viewModels[0].visual).toEqual({
+      changeType: "add",
+      items: [
+        {
+          visualId: "snow-visual",
+          resourceId: "snow-particle",
+          fileId: "file-snowfall-thumbnail",
+        },
+      ],
+    });
+  });
+
   it("marks conditional actions for inline action previews", () => {
     const lines = [
       {
@@ -481,6 +529,41 @@ describe("sceneEditor.lineDecorations", () => {
 
     expect(viewModels[0].hasConditional).toBe(true);
     expect(viewModels[1].hasConditional).toBe(false);
+  });
+
+  it("marks random actions for inline action previews", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          random: {
+            distribution: {
+              type: "weighted",
+              outcomes: [
+                { weight: 70, actions: { nextLine: {} } },
+                { weight: 30, actions: {} },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: "line-2",
+        actions: {},
+      },
+    ];
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].hasRandom).toBe(true);
+    expect(viewModels[0].hasConditional).toBe(false);
+    expect(viewModels[1].hasRandom).toBe(false);
   });
 
   it("marks update variable actions for inline action previews", () => {
@@ -655,3 +738,23 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[2].screenTransition).toBe(false);
   });
 });
+
+it.each([
+  [{ resetStoryAtSection: { sectionId: "section-1" } }],
+  [{ sectionTransition: { sectionId: "section-1", resetStory: true } }],
+  [{ sectionTransition: { sectionId: "section-1" } }],
+])(
+  "shows localized transition summaries in line decorations (%j)",
+  (actions) => {
+    const [decoration] = buildSceneDocumentLineDecorations({
+      lines: [{ id: "line-1", actions }],
+      repositoryState: {},
+      sectionLineChanges: {},
+      i18n: FR_I18N,
+    });
+    expect(decoration.sectionTransition).toBe(true);
+    expect(decoration.sectionTransitionLabel).toBe(
+      FR_I18N.resourcePages.actionSectionTransition,
+    );
+  },
+);

@@ -6,10 +6,14 @@ import {
   EN_I18N,
   ES_I18N,
   FR_I18N,
+  ID_I18N,
+  IT_I18N,
   JA_I18N,
+  PL_I18N,
   PT_I18N,
   RU_I18N,
   TH_I18N,
+  UK_I18N,
   VI_I18N,
   ZH_HANS_I18N,
 } from "./support/i18n.js";
@@ -24,6 +28,10 @@ const CATALOGS = [
   ["Portuguese", PT_I18N],
   ["French", FR_I18N],
   ["Vietnamese", VI_I18N],
+  ["Indonesian", ID_I18N],
+  ["Ukrainian", UK_I18N],
+  ["Italian", IT_I18N],
+  ["Polish", PL_I18N],
 ];
 
 const placeholders = (message) => (message.match(/\{\w+\}/g) ?? []).sort();

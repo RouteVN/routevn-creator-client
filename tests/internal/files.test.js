@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatFileSize } from "../../src/internal/files.js";
+import { formatFileSize, nameFromFileName } from "../../src/internal/files.js";
 import { FR_I18N } from "../support/i18n.js";
 
 describe("files", () => {
@@ -32,5 +32,22 @@ describe("files", () => {
 
   it("stays in gigabytes from one terabyte", () => {
     expect(formatFileSize(2 * 1024 ** 4)).toBe("2,048 GB");
+  });
+});
+
+describe("nameFromFileName", () => {
+  it("removes the extension", () => {
+    expect(nameFromFileName("background.night.png")).toBe("background.night");
+    expect(nameFromFileName("Title.otf", /\.(ttf|otf|woff2)$/i)).toBe("Title");
+    expect(nameFromFileName("Title.woff", /\.(ttf|otf|woff2)$/i)).toBe(
+      "Title.woff",
+    );
+  });
+
+  it("composes names that macOS reports decomposed", () => {
+    const decomposed = "배경 é.png".normalize("NFD");
+
+    expect(decomposed).not.toBe("배경 é.png");
+    expect(nameFromFileName(decomposed)).toBe("배경 é");
   });
 });

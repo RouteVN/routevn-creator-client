@@ -187,6 +187,95 @@ describe("checkProjectResourceUsage", () => {
     expect(withoutAnimations.isUsed).toBe(false);
   });
 
+  // The line lives only in the scene's stored checkpoint, which the check
+  // loads, as it does when deleting from the Images page.
+  it("counts an image a particle draws with when a scene shows the particle as a visual", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.images.items["image-1"] = {
+      id: "image-1",
+      type: "image",
+      name: "Flake",
+      fileId: "file-image-1",
+      width: 32,
+      height: 32,
+    };
+    repositoryState.images.tree = [{ id: "image-1" }];
+    repositoryState.particles.items["particle-1"] = {
+      id: "particle-1",
+      type: "particle",
+      name: "Snowfall",
+      width: 1920,
+      height: 1080,
+      modules: { appearance: { texture: "image-1" } },
+    };
+    repositoryState.particles.tree = [{ id: "particle-1" }];
+    repositoryState.scenes.items["scene-1"] = createScene({
+      id: "scene-1",
+      sections: [createSection({ id: "section-1" })],
+    });
+    repositoryState.scenes.tree = [{ id: "scene-1" }];
+    const repository = {
+      getState: () => structuredClone(repositoryState),
+    };
+    const store = {
+      loadMaterializedViewCheckpoint: vi.fn(async ({ partition }) =>
+        partition === scenePartitionFor("scene-1")
+          ? {
+              value: {
+                scenes: {
+                  items: {
+                    "scene-1": createScene({
+                      id: "scene-1",
+                      sections: [
+                        createSection({
+                          id: "section-1",
+                          lines: [
+                            {
+                              id: "line-1",
+                              actions: {
+                                visual: {
+                                  items: [
+                                    {
+                                      id: "visual-1",
+                                      resourceId: "particle-1",
+                                      resourceType: "particle",
+                                    },
+                                  ],
+                                },
+                              },
+                            },
+                          ],
+                        }),
+                      ],
+                    }),
+                  },
+                },
+              },
+            }
+          : undefined,
+      ),
+    };
+
+    const usage = await checkProjectResourceUsage({
+      repository,
+      store,
+      projectId: "project-1",
+      itemId: "image-1",
+      checkTargets: ["scenes", "layouts", "controls", "animations"],
+    });
+
+    expect(usage).toMatchObject({
+      isUsed: true,
+      inProps: {
+        particles: [{ property: "modules.appearance.texture" }],
+      },
+    });
+    expect(store.loadMaterializedViewCheckpoint).toHaveBeenCalledWith({
+      viewName: "project_repository_scene_state",
+      partition: scenePartitionFor("scene-1"),
+    });
+  });
+
   it("marks a scene as in use when another scene transitions to it", () => {
     const usage = checkSceneDeleteUsage({
       sceneId: "scene-2",

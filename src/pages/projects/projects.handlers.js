@@ -26,6 +26,10 @@ import {
   DEFAULT_APP_LOCALE,
   resolveAppLocale,
 } from "../../internal/ui/appLocale.js";
+import {
+  ensureProjectFolder,
+  reconnectProjectFolder,
+} from "./support/projectFolderSetupFlow.js";
 import { selectProjectsPageCopy } from "./support/projectsPageCopy.js";
 import {
   getImportDestinationError,
@@ -136,6 +140,7 @@ export const handleAfterMount = async (deps) => {
   }
   await cloudProjectsPromise;
   render();
+  await reconnectProjectFolder(deps);
 };
 
 export const handleBeforeMount = (deps) => {
@@ -330,8 +335,9 @@ const createProjectFromValues = async (deps, values = {}) => {
   }
 };
 
-export const handleCreateButtonClick = (deps) => {
+export const handleCreateButtonClick = async (deps) => {
   const { store, render } = deps;
+  if (!(await ensureProjectFolder(deps))) return;
   store.openCreateDialog();
   render();
 };
@@ -467,6 +473,7 @@ const createImportMenuItems = (copy, platform) => {
 
 const runImportMenuAction = async (deps, value) => {
   const { store, render } = deps;
+  if (!(await ensureProjectFolder(deps))) return;
 
   if (value === "import-url") {
     store.openUrlImportDialog();
@@ -697,6 +704,8 @@ export const handleMobileActionMenuClickItem = async (deps, payload) => {
   store.closeMobileActionMenu();
 
   if (item.value === "create-project") {
+    render();
+    if (!(await ensureProjectFolder(deps))) return;
     store.openCreateDialog();
     render();
     return;
@@ -717,6 +726,7 @@ export const handleAppVersionClick = (deps, payload) => {
       label: copy.checkUpdateMenuItem,
       type: "item",
       value: "check-update",
+      icon: "download",
     });
   }
 
@@ -724,16 +734,19 @@ export const handleAppVersionClick = (deps, payload) => {
     label: copy.languageMenuItem,
     type: "item",
     value: "language",
+    icon: "translate",
   });
   items.push({
     label: copy.appearanceMenuItem,
     type: "item",
     value: "appearance",
+    icon: "sun",
   });
   items.push({
     label: copy.contactMenuItem,
     type: "item",
     value: "contact",
+    icon: "chat",
   });
 
   const menuPayload = {
@@ -794,6 +807,13 @@ export const handleAppVersionMenuClickItem = async (deps, payload) => {
   ) {
     await updaterService.checkForUpdates(false, { copy: i18n?.appPage ?? {} });
   }
+};
+
+// The box under the project list switched the app to the device language.
+export const handleLocaleSuggestionChange = (deps, payload) => {
+  const { store, render } = deps;
+  store.setCurrentLocale({ locale: payload._event.detail.locale });
+  render();
 };
 
 export const handleLanguageDialogClose = (deps) => {

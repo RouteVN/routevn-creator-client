@@ -3,9 +3,16 @@ import {
   handleAddPlatformButtonClick,
   handleAddPlatformMenuItemClick,
   handleAfterMount,
+  handleAndroidCreateKeyClick,
+  handleAndroidReplaceKeyClick,
+  handleAndroidSaveKeyCopyClick,
+  handleAndroidUploadKeyClick,
+  handleAndroidUseKeyAgainClick,
   handleBeforeMount,
   handlePlatformEditFormAction,
   handlePlatformEditIconCropDialogConfirm,
+  handlePlatformEditScreenBackgroundClick,
+  handlePlatformEditScreenBackgroundRightClick,
 } from "../../src/pages/platformDetails/platformDetails.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
 import {
@@ -17,6 +24,8 @@ import {
 const createDeps = () => ({
   appService: {
     getPlatform: vi.fn(() => "android"),
+    pickFiles: vi.fn(),
+    showDropdownMenu: vi.fn(),
     showAlert: vi.fn(),
     showDialog: vi.fn(async () => true),
     showToast: vi.fn(),
@@ -26,8 +35,12 @@ const createDeps = () => ({
     createCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetails: vi.fn(),
     getCurrentPlatformDetailsDefaults: vi.fn(),
+    getRepositoryState: vi.fn(() => ({
+      project: { resolution: { width: 1920, height: 1080 } },
+    })),
     updateCurrentPlatformDetails: vi.fn(),
     uploadFiles: vi.fn(),
+    supportsAndroidSigning: vi.fn(() => false),
   },
   refs: {
     platformEditForm: {
@@ -54,12 +67,32 @@ const createDeps = () => ({
       applicationName: "Project One",
     })),
     selectPlatformEditIconFileId: vi.fn(() => "windows-icon-1"),
+    selectPlatformEditAdaptiveIconFileId: vi.fn(() => undefined),
+    selectPlatformEditSplashIconFileId: vi.fn(() => undefined),
+    selectPlatformEditLoadingBackgroundFileId: vi.fn(() => undefined),
+    selectPlatformEditStartBackgroundFileId: vi.fn(() => undefined),
+    setPlatformEditScreenBackgroundFileId: vi.fn(),
+    selectPlatformEditScreenBackgroundFileId: vi.fn(() => undefined),
+    selectProjectResolution: vi.fn(() => ({ width: 1920, height: 1080 })),
+    setProjectResolution: vi.fn(),
+    selectPlatformEditIconCropTarget: vi.fn(() => "icon"),
     selectSelectedPlatform: vi.fn(() => "windows"),
     setPlatformApplicationInfo: vi.fn(),
     setPlatform: vi.fn(),
     setPlatformEditIconFileId: vi.fn(),
     setSelectedPlatform: vi.fn(),
     setUiConfig: vi.fn(),
+    setAndroidSigning: vi.fn(),
+    setAndroidSigningBusy: vi.fn(),
+    selectAndroidSigning: vi.fn(() => ({
+      supported: false,
+      currentKey: undefined,
+      busy: false,
+    })),
+    selectAndroidApplicationInfo: vi.fn(() => ({
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+    })),
   },
   uiConfig: { id: "touch" },
 });
@@ -147,7 +180,7 @@ describe("platformDetails handlers", () => {
     await handleAfterMount(deps);
 
     expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
-      3,
+      5,
     );
     expect(deps.store.setPlatformApplicationInfo).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalledTimes(1);
@@ -170,7 +203,7 @@ describe("platformDetails handlers", () => {
     await handleAfterMount(deps);
 
     expect(deps.projectService.getCurrentPlatformDetails).toHaveBeenCalledTimes(
-      3,
+      5,
     );
     expect(deps.store.setPlatformApplicationInfo).toHaveBeenCalledWith({
       platform: "web",
@@ -374,7 +407,11 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.createCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
+    });
     expect(
       deps.projectService.updateCurrentPlatformDetails,
     ).not.toHaveBeenCalled();
@@ -456,7 +493,11 @@ describe("platformDetails handlers", () => {
 
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
+    });
     expect(deps.store.closePlatformEditDialog).toHaveBeenCalledTimes(1);
   });
 
@@ -493,7 +534,11 @@ describe("platformDetails handlers", () => {
     expect(deps.appService.showDialog).not.toHaveBeenCalled();
     expect(
       deps.projectService.updateCurrentPlatformDetails,
-    ).toHaveBeenCalledWith("web", applicationInfo);
+    ).toHaveBeenCalledWith("web", {
+      ...applicationInfo,
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
+    });
   });
 
   it("does not create macOS platform details without a bundle identifier", async () => {
@@ -633,5 +678,490 @@ describe("platformDetails handlers", () => {
       iconFileId: "windows-icon-2",
     });
     expect(deps.store.closePlatformEditIconCropDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves the Web screen backgrounds with the platform details", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "web",
+    });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
+    });
+    deps.store.selectPlatformEditLoadingBackgroundFileId.mockReturnValue(
+      "loading-background-1",
+    );
+    deps.store.selectPlatformEditStartBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.projectService.updateCurrentPlatformDetails.mockResolvedValue({});
+
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Web Project",
+            applicationIdentifier: "com.example.web-project",
+            loadingFadeDuration: "1200",
+            startFadeDuration: "",
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).toHaveBeenCalledWith("web", {
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+      loadingFadeDuration: 1200,
+      startFadeDuration: 0,
+    });
+  });
+
+  it("uploads a picked Web screen background into platform edit state", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles.mockResolvedValue({
+      name: "loading.png",
+      uploadSucessful: true,
+      uploadResult: { fileId: "loading-background-1" },
+    });
+
+    await handlePlatformEditScreenBackgroundClick(deps, { target: "loading" });
+
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: "image/png,image/jpeg,image/webp",
+      multiple: false,
+      upload: true,
+      validations: [{ type: "image-aspect-ratio", width: 1920, height: 1080 }],
+    });
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).toHaveBeenCalledWith({
+      target: "loading",
+      fileId: "loading-background-1",
+    });
+  });
+
+  it("keeps the Web screen background when the picker is cancelled", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles.mockResolvedValue(undefined);
+
+    await handlePlatformEditScreenBackgroundClick(deps, { target: "start" });
+
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("alerts when a Web screen background cannot be uploaded", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles.mockResolvedValue({
+      name: "start.png",
+      uploadSucessful: false,
+      uploadResult: null,
+    });
+
+    await handlePlatformEditScreenBackgroundClick(deps, { target: "start" });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: EN_I18N.platformDetailsPage.failedUploadBackground,
+      title: EN_I18N.platformDetailsPage.errorTitle,
+    });
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("removes a Web screen background from its right-click menu", async () => {
+    const deps = createDeps();
+    const event = {
+      clientX: 10,
+      clientY: 20,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    deps.store.selectPlatformEditScreenBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.appService.showDropdownMenu.mockResolvedValue({
+      item: { key: "remove" },
+    });
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: event,
+      target: "start",
+    });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showDropdownMenu).toHaveBeenCalledWith({
+      items: [{ type: "item", label: "Remove", key: "remove" }],
+      x: 10,
+      y: 20,
+      place: "bs",
+    });
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).toHaveBeenCalledWith({ target: "start", fileId: undefined });
+  });
+
+  it("keeps the Web screen background when its menu is dismissed", async () => {
+    const deps = createDeps();
+    deps.store.selectPlatformEditScreenBackgroundFileId.mockReturnValue(
+      "start-background-1",
+    );
+    deps.appService.showDropdownMenu.mockResolvedValue(undefined);
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
+      target: "start",
+    });
+
+    expect(
+      deps.store.setPlatformEditScreenBackgroundFileId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("shows no menu for an empty Web screen background", async () => {
+    const deps = createDeps();
+
+    await handlePlatformEditScreenBackgroundRightClick(deps, {
+      _event: { preventDefault: vi.fn(), stopPropagation: vi.fn() },
+      target: "loading",
+    });
+
+    expect(deps.appService.showDropdownMenu).not.toHaveBeenCalled();
+  });
+});
+
+const KEY_ONE = "1".repeat(64);
+const KEY_TWO = "2".repeat(64);
+const COPY = EN_I18N.platformDetailsPage;
+
+const createSigningDeps = ({ currentKey } = {}) => {
+  const deps = createDeps();
+  deps.appService.showFormDialog = vi.fn(async () => undefined);
+  deps.appService.getFileDisplayPath = vi.fn((path) => path);
+  Object.assign(deps.projectService, {
+    supportsAndroidSigning: vi.fn(() => true),
+    getAndroidSigningSummary: vi.fn(async () => ({
+      currentKey: currentKey
+        ? { certificateSha256: currentKey, origin: "created", addedAt: 1 }
+        : undefined,
+      previousKeys: [],
+    })),
+    createAndroidSigningKey: vi.fn(async () => ({
+      certificateSha256: KEY_TWO,
+      changed: true,
+    })),
+    promptAndroidKeystore: vi.fn(async () => ({
+      name: "Project One.p12",
+      path: "/keys/Project One.p12",
+    })),
+    importAndroidSigningKey: vi.fn(async () => ({
+      certificateSha256: KEY_TWO,
+      changed: true,
+    })),
+    useAndroidSigningKeyAgain: vi.fn(async () => undefined),
+    promptAndroidKeyCopyPath: vi.fn(async () => "/keys/copy.p12"),
+    saveAndroidSigningKeyCopy: vi.fn(async () => undefined),
+  });
+  deps.store.selectAndroidSigning.mockReturnValue({
+    supported: true,
+    currentKey: currentKey
+      ? { certificateSha256: currentKey, origin: "created", addedAt: 1 }
+      : undefined,
+    busy: false,
+  });
+  return deps;
+};
+
+const keyButtonPayload = (certificateSha256) => ({
+  _event: { currentTarget: { dataset: { certificateSha256 } } },
+});
+
+describe("platformDetails Android signing keys", () => {
+  it("loads the project's keys after the platform details", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    await handleAfterMount(deps);
+    expect(deps.store.setAndroidSigning).toHaveBeenCalledWith({
+      supported: true,
+      currentKey: { certificateSha256: KEY_ONE, origin: "created", addedAt: 1 },
+      previousKeys: [],
+    });
+  });
+
+  it("hides the keys on a host that cannot sign", async () => {
+    const deps = createDeps();
+    await handleAfterMount(deps);
+    expect(deps.store.setAndroidSigning).toHaveBeenCalledWith({
+      supported: false,
+    });
+  });
+
+  it("warns before making a key for a project whose keys have no usable current key", async () => {
+    const deps = createSigningDeps();
+    deps.store.selectAndroidSigning.mockReturnValue({
+      supported: true,
+      currentKey: undefined,
+      currentKeyUnusable: true,
+      busy: false,
+    });
+    deps.appService.showDialog.mockResolvedValueOnce(false);
+    await handleAndroidCreateKeyClick(deps);
+    expect(deps.appService.showDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ title: COPY.androidReplaceKeyTitle }),
+    );
+    expect(deps.projectService.createAndroidSigningKey).not.toHaveBeenCalled();
+
+    // Uploading a key says what replacing means too.
+    deps.appService.showFormDialog.mockResolvedValueOnce(undefined);
+    await handleAndroidUploadKeyClick(deps);
+    const [{ form }] = deps.appService.showFormDialog.mock.calls[0];
+    expect(form.fields[0]).toEqual({
+      type: "read-only-text",
+      content: COPY.androidUploadKeyReplaceWarning,
+    });
+  });
+
+  it("makes the first key of a project without asking", async () => {
+    const deps = createSigningDeps();
+    await handleAndroidCreateKeyClick(deps);
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+    expect(deps.projectService.createAndroidSigningKey).toHaveBeenCalled();
+  });
+
+  it("replaces the key only after the creator confirms", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.appService.showDialog.mockResolvedValueOnce(false);
+    await handleAndroidReplaceKeyClick(deps);
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: COPY.androidReplaceKeyTitle,
+      message: COPY.androidReplaceKeyMessage,
+      confirmText: COPY.androidReplaceKeyConfirm,
+      cancelText: COPY.cancelButton,
+    });
+    expect(deps.projectService.createAndroidSigningKey).not.toHaveBeenCalled();
+
+    await handleAndroidReplaceKeyClick(deps);
+    expect(deps.projectService.createAndroidSigningKey).toHaveBeenCalledWith({
+      applicationName: "Project One",
+      applicationId: "com.example.project_one",
+    });
+    expect(deps.store.setAndroidSigningBusy.mock.calls).toEqual([
+      [{ busy: true }],
+      [{ busy: false }],
+    ]);
+    expect(deps.projectService.getAndroidSigningSummary).toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.androidKeyCreatedMessage,
+    });
+  });
+
+  it("ignores key buttons while a key change runs", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.store.selectAndroidSigning.mockReturnValue({
+      supported: true,
+      currentKey: undefined,
+      busy: true,
+    });
+    await handleAndroidReplaceKeyClick(deps);
+    await handleAndroidUploadKeyClick(deps);
+    expect(deps.appService.showDialog).not.toHaveBeenCalled();
+    expect(deps.projectService.promptAndroidKeystore).not.toHaveBeenCalled();
+  });
+
+  it("uploads a key and asks again after a wrong password", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.appService.showFormDialog
+      .mockResolvedValueOnce({
+        actionId: "submit",
+        values: { password: "wrong one", alias: " upload " },
+      })
+      .mockResolvedValueOnce({
+        actionId: "submit",
+        values: { password: "pass one", alias: " upload " },
+      });
+    deps.projectService.importAndroidSigningKey.mockRejectedValueOnce({
+      code: "keystore-password-incorrect",
+      message: "The keystore password is incorrect.",
+    });
+    await handleAndroidUploadKeyClick(deps);
+
+    expect(deps.projectService.promptAndroidKeystore).toHaveBeenCalledWith({
+      title: COPY.androidKeystorePickerTitle,
+      fileTypeName: COPY.androidKeystoreFileTypeName,
+    });
+    const [firstDialog, secondDialog] =
+      deps.appService.showFormDialog.mock.calls.map(([options]) => options);
+    expect(firstDialog.form.description).toBe(
+      COPY.androidUploadKeyDescription.replace("{fileName}", "Project One.p12"),
+    );
+    // Uploading over the current key says what that means for updates.
+    expect(firstDialog.form.fields[0]).toEqual({
+      type: "read-only-text",
+      content: COPY.androidUploadKeyReplaceWarning,
+    });
+    expect(secondDialog.defaultValues).toEqual({
+      password: "",
+      alias: "upload",
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: COPY.androidKeystorePasswordIncorrect,
+      title: COPY.errorTitle,
+    });
+    expect(
+      deps.projectService.importAndroidSigningKey,
+    ).toHaveBeenLastCalledWith({
+      keystore: { name: "Project One.p12", path: "/keys/Project One.p12" },
+      password: "pass one",
+      alias: "upload",
+    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.androidKeyUploadedMessage,
+    });
+  });
+
+  it("stops asking after a keystore Creator cannot read", async () => {
+    const deps = createSigningDeps();
+    deps.appService.showFormDialog.mockResolvedValue({
+      actionId: "submit",
+      values: { password: "pass one", alias: "" },
+    });
+    deps.projectService.importAndroidSigningKey.mockRejectedValue({
+      code: "keystore-legacy-format",
+      message: "legacy",
+    });
+    await handleAndroidUploadKeyClick(deps);
+    expect(deps.appService.showFormDialog).toHaveBeenCalledTimes(1);
+    expect(
+      deps.appService.showFormDialog.mock.calls[0][0].form.fields[0].name,
+    ).toBe("password");
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: COPY.androidKeystoreLegacyFormat,
+      title: COPY.errorTitle,
+    });
+  });
+
+  it("does nothing when no keystore is chosen", async () => {
+    const deps = createSigningDeps();
+    deps.projectService.promptAndroidKeystore.mockResolvedValue(undefined);
+    await handleAndroidUploadKeyClick(deps);
+    expect(deps.appService.showFormDialog).not.toHaveBeenCalled();
+    expect(deps.projectService.importAndroidSigningKey).not.toHaveBeenCalled();
+  });
+
+  it("uses a previous key again after confirmation", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    await handleAndroidUseKeyAgainClick(deps, keyButtonPayload(KEY_TWO));
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: COPY.androidUseKeyAgainTitle,
+      message: COPY.androidUseKeyAgainMessage,
+      confirmText: COPY.androidUseKeyAgainConfirm,
+      cancelText: COPY.cancelButton,
+    });
+    expect(deps.projectService.useAndroidSigningKeyAgain).toHaveBeenCalledWith(
+      KEY_TWO,
+    );
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.androidKeyInUseMessage,
+    });
+  });
+
+  it("saves a copy with a confirmed password of six characters or more", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.appService.showFormDialog
+      .mockResolvedValueOnce({
+        actionId: "submit",
+        values: { password: "short", confirmPassword: "short" },
+      })
+      .mockResolvedValueOnce({
+        // Three characters, though six UTF-16 code units.
+        actionId: "submit",
+        values: { password: "🔑🔑🔑", confirmPassword: "🔑🔑🔑" },
+      })
+      .mockResolvedValueOnce({
+        actionId: "submit",
+        values: { password: "pass one", confirmPassword: "pass two" },
+      })
+      .mockResolvedValueOnce({
+        actionId: "submit",
+        values: { password: "pass one", confirmPassword: "pass one" },
+      });
+    await handleAndroidSaveKeyCopyClick(deps, keyButtonPayload(KEY_ONE));
+    expect(
+      deps.appService.showAlert.mock.calls.map(([alert]) => alert),
+    ).toEqual([
+      {
+        message: COPY.androidKeystorePasswordTooShort.replace("{count}", "6"),
+        title: COPY.warningTitle,
+      },
+      {
+        message: COPY.androidKeystorePasswordTooShort.replace("{count}", "6"),
+        title: COPY.warningTitle,
+      },
+      {
+        message: COPY.androidKeystorePasswordMismatch,
+        title: COPY.warningTitle,
+      },
+    ]);
+    expect(deps.projectService.promptAndroidKeyCopyPath).toHaveBeenCalledWith(
+      { defaultFileName: "Project One-signing-key.p12" },
+      {
+        title: COPY.androidSaveKeyCopyDialogTitle,
+        fileTypeName: COPY.androidKeyCopyFileTypeName,
+      },
+    );
+    expect(deps.projectService.saveAndroidSigningKeyCopy).toHaveBeenCalledWith({
+      certificateSha256: KEY_ONE,
+      path: "/keys/copy.p12",
+      password: "pass one",
+    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: COPY.androidKeyCopySavedMessage.replace(
+        "{path}",
+        "/keys/copy.p12",
+      ),
+    });
+  });
+
+  it("warns before changing the application ID of a game with a signing key", async () => {
+    const deps = createSigningDeps({ currentKey: KEY_ONE });
+    deps.store.selectPlatformDialogState.mockReturnValue({
+      mode: "edit",
+      platform: "android",
+    });
+    deps.store.selectPlatformEditDefaultValues.mockReturnValue({
+      applicationIdentifier: "com.example.project_one",
+    });
+    deps.store.selectPlatformEditIconFileId.mockReturnValue("android-icon-1");
+    deps.appService.showDialog.mockResolvedValue(false);
+    await handlePlatformEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            applicationName: "Project One",
+            applicationIdentifier: "com.example.project_two",
+            iconBackgroundColor: "#FFFFFF",
+            splashBackgroundColor: "#000000",
+          },
+        },
+      },
+    });
+    expect(deps.appService.showDialog).toHaveBeenCalledWith({
+      title: COPY.androidApplicationIdentifierChangeTitle,
+      message: COPY.androidApplicationIdentifierChangeMessage,
+      confirmText: COPY.androidApplicationIdentifierChangeConfirm,
+      cancelText: COPY.cancelButton,
+    });
+    expect(
+      deps.projectService.updateCurrentPlatformDetails,
+    ).not.toHaveBeenCalled();
   });
 });

@@ -595,6 +595,9 @@ styles:
     background-position: "0 0, 0 6px, 6px -6px, -6px 0"
     background-repeat: repeat
     background-size: 12px 12px
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - 'rtgl-view#editorSurface d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - rvn-resizable-panel w=300 min-w=200 max-w=500 resize-side="right":
@@ -617,7 +620,7 @@ template:
           - 'rtgl-view h=1fg sv w=f p=md g=lg style="container-type: size;"':
               - 'rtgl-view#animationEditorCanvasBackground d=v w=f g=md p=${previewCanvasPadding} bgc=bg style="box-sizing: border-box; min-width: 0; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                   - 'rtgl-view pos=rel style="width: ${previewCanvasMaxWidth}; max-width: 100%; margin-left: auto; margin-right: auto; aspect-ratio: ${canvasAspectRatio};"':
-                      - rtgl-view pos=abs cor=full:
+                      - rtgl-view pos=abs edge=f:
                           - 'div#canvas style="width: 100%; height: 100%; display: flex;"': null
               - 'rtgl-view d=v w=f h=1fg g=md style="min-height: 0;"':
                   - rtgl-view#animationEditorToolbar d=h w=f av=c:
@@ -644,7 +647,7 @@ template:
                   - $if selectedEditorTab == 'tween':
                       - 'rtgl-view#animationTweenPanel role=tabpanel aria-label="${timelineTabLabel}" d=v w=f h=1fg g=md style="min-height: 0;"':
                           - $if dialogType == 'update':
-                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
+                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv dir=ltr cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - $if !activeTimelineEmpty:
                                           - 'rtgl-view data-timeline-property-column-fill=true pos=abs style="inset: 0; pointer-events: none; z-index: 5;"':
@@ -660,7 +663,7 @@ template:
                                       - $if timelinePlayheadVisible:
                                           - 'rtgl-view pos=abs bgc=fg op="0.5" style="${timelinePlayheadStyle}"': null
                             $else:
-                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
+                              - 'rtgl-view#timelineScrollContainer w=f h=1fg sh sv dir=ltr cur=${timelinePanCursor} style="min-width: 0; min-height: 0;"':
                                   - 'rtgl-view d=v g=md pos=rel style="${timelineCanvasStyle} min-height: 100%;"':
                                       - $if !activeTimelineEmpty:
                                           - 'rtgl-view data-timeline-property-column-fill=true pos=abs style="inset: 0; pointer-events: none; z-index: 5;"':
@@ -748,7 +751,7 @@ template:
                               - 'rtgl-button#selectedPropertyDeleteButton sq v=gh pre=trash aria-label="${deletePropertyButtonLabel}" title="${deletePropertyButtonLabel}"': null
                   - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                       - $if selectedKeyframeDetailId:
-                          - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} w=f :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
+                          - rvn-detail-view#selectedKeyframeDetails key=${selectedKeyframeDetailId} :fields=${selectedKeyframeDetailFields} :fillHeight=${false}:
                               - $if selectedKeyframeEditor.camera && selectedKeyframeEditor.hasInitialValue && selectedKeyframe.index == 0:
                                   - rtgl-view slot=camera-initial-value d=v w=f g=xs:
                                       - rtgl-view d=h w=f av=c:
@@ -784,7 +787,7 @@ template:
                                   - rtgl-input-number#selectedKeyframeValue slot=keyframe-value key=${selectedKeyframeDetailId} w=f step=${selectedKeyframeEditor.valueStep} value=${selectedKeyframeEditor.value}: null
                               - rtgl-segmented-control#selectedKeyframeRelative slot=keyframe-value-type w=f no-clear :selectedValue=${selectedKeyframeEditor.relative} :options=${selectedKeyframeEditor.relativeOptions}: null
                         $elif selectedPropertyDetailId:
-                          - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} w=f :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
+                          - rvn-detail-view#selectedPropertyDetails key=${selectedPropertyDetailId} :fields=${selectedPropertyDetailFields} :fillHeight=${false}:
                               - $if selectedPropertyEditor.camera && selectedPropertyEditor.hasInitialValue:
                                   - rtgl-view slot=camera-initial-value d=v w=f g=xs:
                                       - rtgl-view d=h w=f av=c:
@@ -983,8 +986,8 @@ template:
                   - 'rtgl-view#imageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
                       - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
               - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#cancelMaskImageSelection variant=se: ${cancelButton}
-                  - rtgl-button#confirmMaskImageSelection variant=pr: ${okButton}
+                  - rtgl-button#cancelMaskImageSelection v=se: ${cancelButton}
+                  - rtgl-button#confirmMaskImageSelection v=pr: ${okButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:
@@ -994,4 +997,4 @@ template:
                   - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null
   - $if cameraEditor:
       - rtgl-dialog#cameraDialog open layout=fixed p=none close-button:
-          - rvn-animation-camera-editor#cameraEditor slot=content w=f h=f :initial=${cameraEditorInitial} :pose=${cameraEditor.pose} :projectResolution=${projectResolution} imageId=${cameraImageId} :imageSize=${cameraImageSize}: null
+          - rvn-animation-camera-editor#cameraEditor slot=content :initial=${cameraEditorInitial} :pose=${cameraEditor.pose} :projectResolution=${projectResolution} imageId=${cameraImageId} :imageSize=${cameraImageSize}: null

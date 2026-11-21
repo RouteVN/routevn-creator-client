@@ -1,0 +1,34 @@
+refs:
+  backButton:
+    eventListeners:
+      click:
+        handler: handleBackClick
+  undoButton:
+    eventListeners:
+      click:
+        handler: handleUndoButtonClick
+  redoButton:
+    eventListeners:
+      click:
+        handler: handleRedoButtonClick
+  framesEditor:
+    eventListeners:
+      frames-change:
+        handler: handleFramesChange
+styles:
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
+template:
+  - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
+      - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md g=sm:
+          - 'rtgl-button#backButton sq pre=chevronLeft v=ol aria-label="${backLabel}" title="${backLabel}"': null
+          - 'rtgl-view w=1fg style="min-width: 0;"':
+              - rtgl-text w=f ellipsis=true: ${spritesheetName}
+          - rtgl-view d=h av=c g=xs:
+              - 'rtgl-button#undoButton sq pre=undo v=ol ?disabled=${undoDisabled} aria-label="${undoLabel}" title="${undoLabel}"': null
+              - 'rtgl-button#redoButton sq pre=redo v=ol ?disabled=${redoDisabled} aria-label="${redoLabel}" title="${redoLabel}"': null
+      - 'rtgl-view w=f h=1fg pos=rel style="min-height: 0;"':
+          - 'rtgl-view w=f h=f sv p=lg style="min-height: 0; box-sizing: border-box;"':
+              - rvn-spritesheet-frames-editor#framesEditor: null
+              - 'rtgl-view w=f h=240 aria-hidden=true style="flex: 0 0 240px;"': null

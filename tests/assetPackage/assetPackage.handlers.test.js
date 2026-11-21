@@ -122,6 +122,7 @@ const createDeps = () => ({
     setAssetPack: vi.fn(),
     setFilesData: vi.fn(),
     setScenesData: vi.fn(),
+    setTagsData: vi.fn(),
     setAssetPackage: vi.fn(),
     setResourceData: vi.fn(),
     setUiConfig: vi.fn(),
@@ -158,6 +159,10 @@ describe("asset package handlers", () => {
     expect(deps.store.setScenesData).toHaveBeenCalledWith({
       scenesData: repositoryState.scenes,
     });
+    // The tags hold each character's sprite tags.
+    expect(deps.store.setTagsData).toHaveBeenCalledWith({
+      tagsData: repositoryState.tags,
+    });
     expect(deps.store.setResourceData).toHaveBeenCalledWith({
       resourceDataByType: Object.fromEntries(
         ASSET_PACKAGE_RESOURCE_TYPES.map((resourceType) => [
@@ -182,7 +187,7 @@ describe("asset package handlers", () => {
     deps.store.selectAssetPackId.mockReturnValue(undefined);
     handleAfterMount(deps);
     expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Could not load the asset package. Please try again.",
+      message: "Could not load the asset pack. Please try again.",
       status: "error",
     });
     expect(deps.appService.navigate).toHaveBeenCalledWith(
@@ -301,7 +306,7 @@ describe("asset package handlers", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Error",
       message:
-        "Could not save the asset package. Please try again.\n\nDetails:\nStorage unavailable",
+        "Could not save the asset pack. Please try again.\n\nDetails:\nStorage unavailable",
     });
   });
 
@@ -319,7 +324,7 @@ describe("asset package handlers", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Error",
       message:
-        "Could not save the asset package. Please try again.\n\nDetails:\nDisk is gone",
+        "Could not save the asset pack. Please try again.\n\nDetails:\nDisk is gone",
     });
     expect(deps.store.setAssetPack).toHaveBeenCalledOnce();
     expect(deps.store.finishSavingPicks).toHaveBeenCalledWith();
@@ -534,7 +539,7 @@ describe("asset package handlers", () => {
     await handleDownloadAssetPackageButtonClick(deps);
 
     expect(deps.appService.saveFilePicker).toHaveBeenCalledWith({
-      title: "Save asset package",
+      title: "Save asset pack",
       defaultPath: "Fantasy UI.zip",
       filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
     });
@@ -546,9 +551,9 @@ describe("asset package handlers", () => {
     const progressDialog =
       deps.appService.showProgressDialog.mock.results[0].value;
     expect(deps.appService.showProgressDialog).toHaveBeenCalledWith({
-      title: "Asset package export in progress",
-      message: "Please wait while the asset package is being created...",
-      status: "Generating previews and package files...",
+      title: "Asset pack export in progress",
+      message: "Please wait while the asset pack is being created...",
+      status: "Generating previews and pack files...",
       progress: {},
     });
     expect(progressDialog.waitForPaint).toHaveBeenCalledOnce();
@@ -565,14 +570,13 @@ describe("asset package handlers", () => {
     expect(outputPath).toBe("/tmp/asset-package.zip");
     expect(bundle.type).toBe("application/zip");
     expect(progressDialog.update).toHaveBeenCalledWith({
-      status: "Saving asset package...",
+      status: "Saving asset pack...",
       progress: {},
     });
     expect(progressDialog.close).toHaveBeenCalledOnce();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Export completed",
-      message:
-        "Asset package export completed.\nSaved to: /tmp/asset-package.zip",
+      message: "Asset pack export completed.\nSaved to: /tmp/asset-package.zip",
     });
   });
 
@@ -636,7 +640,7 @@ describe("asset package handlers", () => {
     expect(deps.appService.writeFile).not.toHaveBeenCalled();
     expect(progressDialog.close).toHaveBeenCalledOnce();
     expect(deps.appService.showToast).toHaveBeenCalledWith({
-      message: "Could not download the asset package. Please try again.",
+      message: "Could not download the asset pack. Please try again.",
       status: "error",
     });
   });

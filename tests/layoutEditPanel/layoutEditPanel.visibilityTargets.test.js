@@ -5,10 +5,12 @@ import {
   createInitialState,
   selectViewData,
   setValues,
+  setVisibilityConditionDialogTarget,
   setVariablesData,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { selectLayoutEditPanelCopy } from "../../src/components/layoutEditPanel/support/layoutEditPanelCopy.js";
 import {
+  getVisibilityConditionCharacterValueOptions,
   getVisibilityConditionSummary,
   getVisibilityConditionSummaryParts,
   toSectionedVisibilityConditionTargetOptions,
@@ -118,6 +120,76 @@ describe("layoutEditPanel visibility condition dialog", () => {
       "utf8",
     ),
   );
+
+  it("reopens an enum comparison and uses each selected variable's own choices", () => {
+    const state = createInitialState();
+    const variable = (id, enumValues) => ({
+      id,
+      type: "variable",
+      name: id,
+      variableType: "string",
+      isEnum: true,
+      enumValues,
+    });
+    setVariablesData(
+      { state },
+      {
+        variablesData: {
+          items: {
+            mood: variable("mood", ["Calm", "Happy"]),
+            weather: variable("weather", ["Rain", "Sun"]),
+          },
+          tree: [{ id: "mood" }, { id: "weather" }],
+        },
+      },
+    );
+    setValues(
+      { state },
+      {
+        values: {
+          id: "text-1",
+          type: "text",
+          $when: 'variables.mood != "Retired"',
+        },
+      },
+    );
+    const view = () =>
+      selectViewData({
+        state,
+        props: { itemType: "text" },
+        constants: CONSTANTS,
+        i18n: FR_I18N,
+      });
+    const field = (name) =>
+      view().visibilityConditionDialogForm.fields.find(
+        (field) => field.name === name,
+      );
+    expect(view().visibilityConditionDialogDefaults).toMatchObject({
+      op: "neq",
+      stringValue: "Retired",
+    });
+    expect(field("op").options.map((option) => option.value)).toEqual([
+      "eq",
+      "neq",
+    ]);
+    expect(field("op").options[1].label).toBe(
+      FR_I18N.commandLinePage["Does Not Equal"],
+    );
+    expect(field("stringValue").type).toBe("select");
+    expect(field("stringValue").options.map((option) => option.value)).toEqual([
+      "Calm",
+      "Happy",
+      "Retired",
+    ]);
+    setVisibilityConditionDialogTarget(
+      { state },
+      { target: "variables.weather" },
+    );
+    expect(field("stringValue").options.map((option) => option.value)).toEqual([
+      "Rain",
+      "Sun",
+    ]);
+  });
 
   it("lists its targets by section, as the conditional override targets are, with search", () => {
     const state = createInitialState();
@@ -367,5 +439,38 @@ describe("layoutEditPanel visibility summary", () => {
       "rtgl-text key=${part.kind} s=sm: ${part.text}",
     );
     expect(view).not.toContain("layoutEditorConditionChip");
+  });
+});
+
+describe("layoutEditPanel visibility character options", () => {
+  it("groups characters by folder and shows their avatars", () => {
+    const options = getVisibilityConditionCharacterValueOptions({
+      charactersData: {
+        items: {
+          narrator: { id: "narrator", type: "character", name: "Narrator" },
+          heroes: { id: "heroes", type: "folder", name: "Heroes" },
+          hero: {
+            id: "hero",
+            type: "character",
+            name: "Hero",
+            fileId: "hero-file",
+          },
+        },
+        tree: [
+          { id: "narrator" },
+          { id: "heroes", children: [{ id: "hero" }] },
+        ],
+      },
+      currentValue: "",
+      noneLabel: "No Character",
+      imageSrcByFileId: { "hero-file": "blob:hero" },
+    });
+
+    expect(options).toEqual([
+      { value: "", label: "No Character" },
+      { value: "narrator", label: "Narrator" },
+      { type: "section", label: "Heroes" },
+      { value: "hero", label: "Hero", imageSrc: "blob:hero" },
+    ]);
   });
 });

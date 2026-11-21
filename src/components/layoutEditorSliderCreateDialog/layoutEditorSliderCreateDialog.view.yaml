@@ -53,7 +53,7 @@ styles:
     background-size: 12px 12px
 template:
   - rtgl-view g=md w=f:
-      - rtgl-form#sliderCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f:
+      - rtgl-form#sliderCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f p=none:
           - rtgl-view slot=slider-bar-image g=xs:
               - rtgl-view#sliderCreateImageFieldBar data-field-name=barImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.barImageId:
@@ -80,7 +80,7 @@ template:
                     $else:
                       - rtgl-text c=mu-fg: ${selectHoverBarImageLabel}
               - $if images.hoverBarImageId:
-                  - rtgl-button#clearSliderCreateImageHoverBar data-field-name=hoverBarImageId variant=se size=sm: ${clearImageButton}
+                  - rtgl-button#clearSliderCreateImageHoverBar data-field-name=hoverBarImageId v=se s=sm: ${clearImageButton}
           - rtgl-view slot=slider-hover-thumb-image d=h g=sm av=c:
               - rtgl-view#sliderCreateImageFieldHoverThumb data-field-name=hoverThumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
                   - $if images.hoverThumbImageId:
@@ -89,7 +89,7 @@ template:
                     $else:
                       - rtgl-text c=mu-fg ta=c: ${selectHoverThumbImageLabel}
               - $if images.hoverThumbImageId:
-                  - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId variant=se size=sm: ${clearImageButton}
+                  - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId v=se s=sm: ${clearImageButton}
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
       - rtgl-view slot=content d=v w=f g=md:
           - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
@@ -99,8 +99,8 @@ template:
               - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                   - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancelImageSelection variant=se: ${cancelButton}
-              - rtgl-button#confirmImageSelection variant=pr: ${okButton}
+              - rtgl-button#cancelImageSelection v=se: ${cancelButton}
+              - rtgl-button#confirmImageSelection v=pr: ${okButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

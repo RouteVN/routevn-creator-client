@@ -24,6 +24,12 @@ const createState = () => {
                   actions: {
                     rollbackByOffset: { offset: -1 },
                     conditional: { branches: [] },
+                    random: {
+                      distribution: {
+                        type: "weighted",
+                        outcomes: [{ weight: 1, actions: {} }],
+                      },
+                    },
                   },
                 },
               },
@@ -66,14 +72,43 @@ const getActionLabels = (i18n) =>
 describe("controls.store", () => {
   it("names every keyboard action, not by its id", () => {
     expect(getActionLabels(EN_I18N)).toEqual({
-      enter: "Rollback, Conditional",
+      enter: "Rollback, Conditional, Random",
       space: "Save Slot, Load Slot",
       esc: "Show Confirm Dialog, Hide Confirm Dialog",
     });
     expect(getActionLabels(PT_I18N)).toEqual({
-      enter: "Retroceder, Condicional",
+      enter: "Retroceder, Condicional, Aleatório",
       space: "Guardar no slot, Carregar do slot",
       esc: "Mostrar janela de confirmação, Ocultar janela de confirmação",
     });
   });
+});
+
+it.each([
+  [{ resetStoryAtSection: { sectionId: "section-1" } }],
+  [{ sectionTransition: { sectionId: "section-1", resetStory: true } }],
+  [{ sectionTransition: { sectionId: "section-1" } }],
+])("labels all keyboard transitions as Section Transition (%j)", (actions) => {
+  const state = createInitialState();
+  setItems(
+    { state },
+    {
+      data: {
+        items: {
+          "control-1": {
+            id: "control-1",
+            type: "control",
+            name: "Control One",
+            keyboard: { enter: { payload: { actions } } },
+          },
+        },
+        tree: [{ id: "control-1" }],
+      },
+    },
+  );
+  setSelectedItemId({ state }, { itemId: "control-1" });
+  const view = selectViewData({ state, props: {}, i18n: PT_I18N });
+  expect(view.keydownKeyboardItems[0].actionLabel).toBe(
+    PT_I18N.resourcePages.actionSectionTransition,
+  );
 });

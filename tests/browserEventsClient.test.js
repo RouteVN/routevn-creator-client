@@ -31,4 +31,13 @@ describe("browserEventsClient", () => {
       options,
     );
   });
+
+  it("reads the viewport size", () => {
+    const client = createBrowserEventsClient({
+      windowTarget: { innerWidth: 1280, innerHeight: 720 },
+    });
+
+    expect(client.getViewportWidth()).toBe(1280);
+    expect(client.getViewportHeight()).toBe(720);
+  });
 });

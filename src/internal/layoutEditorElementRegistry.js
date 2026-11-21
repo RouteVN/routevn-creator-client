@@ -7,6 +7,11 @@ import {
   toLayoutTextBackwardCompatibleText,
 } from "./layoutTextContent.js";
 import { DEFAULT_SAVE_LOAD_DATE_FORMAT } from "./saveLoadDateFormats.js";
+import {
+  getLayoutTextDirectionFields,
+  isRightToLeftTextDirection,
+  isVerticalTextWritingMode,
+} from "./layoutTextWritingMode.js";
 
 const BASE_TRANSFORM = {
   x: 0,
@@ -46,6 +51,72 @@ const supportsLayoutEditorWidthMode = (itemType) => {
   return typeof itemType === "string" && itemType.startsWith("text");
 };
 
+// Vertical text wraps its columns at its height and measures its width.
+export const isLayoutEditorVerticalTextItem = (item) => {
+  return (
+    TEXT_TYPE_SET.has(item?.type) &&
+    isVerticalTextWritingMode(item?.writingMode)
+  );
+};
+
+const MIRRORED_TEXT_ALIGN = {
+  left: "right",
+  right: "left",
+};
+
+// Vertical text has no base direction.
+const isRightToLeftText = (item) =>
+  isRightToLeftTextDirection(item.direction) &&
+  !isVerticalTextWritingMode(item.writingMode);
+
+const mirrorTextAlign = (textStyle) => {
+  const mirroredAlign = MIRRORED_TEXT_ALIGN[textStyle?.align];
+  if (mirroredAlign) {
+    textStyle.align = mirroredAlign;
+  }
+};
+
+// Applies the panel's text direction choice to a layout text item in place.
+// One choice sets both the writing mode and the base direction, so a
+// direction hidden by vertical text is not kept.
+export const applyLayoutTextDirectionChoice = (item, choice) => {
+  const wasVertical = isVerticalTextWritingMode(item.writingMode);
+  const wasRightToLeft = isRightToLeftText(item);
+
+  delete item.textDirection;
+  delete item.writingMode;
+  delete item.direction;
+  const { writingMode, direction } = getLayoutTextDirectionFields(choice);
+  if (writingMode) {
+    item.writingMode = writingMode;
+  }
+  if (direction) {
+    item.direction = direction;
+  }
+
+  // Horizontal text wraps at its width and vertical text at its height, with
+  // the other side measured. Horizontal text does not use a height, so one
+  // stored on it is not a column length the author chose. Either way the
+  // text starts with its size measured.
+  if (wasVertical !== isVerticalTextWritingMode(item.writingMode)) {
+    delete item.width;
+    delete item.height;
+  }
+
+  // A line starts at the left in left-to-right text, at the right in
+  // right-to-left text and at the top, which alignment calls left, in
+  // vertical text. Text aligned to its start, including through a conditional
+  // override, stays aligned to its start.
+  if (wasRightToLeft !== isRightToLeftText(item)) {
+    mirrorTextAlign(item.textStyle);
+    for (const rule of item.conditionalOverrides ?? []) {
+      mirrorTextAlign(rule?.set?.textStyle);
+    }
+  }
+
+  return item;
+};
+
 const ABSOLUTE_DIRECTION = "absolute";
 const MAX_CHOICE_SINGLE_ITEM_INDEX = 19;
 
@@ -75,6 +146,16 @@ const CREATE_TEMPLATES = {
     aspectRatioLock: 1,
     width: 0,
     height: 0,
+  }),
+  video: () => ({
+    type: "video",
+    name: "Video",
+    ...BASE_TRANSFORM,
+    aspectRatioLock: 1,
+    width: 0,
+    height: 0,
+    loop: true,
+    volume: 100,
   }),
   particle: () => ({
     type: "particle",
@@ -508,6 +589,7 @@ const TYPE_FAMILIES = {
   "fragment-ref": "fragment",
   sprite: "sprite",
   particle: "particle",
+  video: "video",
   "spritesheet-animation": "spritesheetAnimation",
   "sprite-ref-save-load-slot-image": "sprite",
   text: "text",
@@ -530,6 +612,7 @@ const ICONS_BY_FAMILY = {
   fragment: "fragment",
   sprite: "sprite",
   particle: "particles",
+  video: "video",
   spritesheetAnimation: "spritesheets",
   text: "text",
   input: "input",
@@ -552,11 +635,13 @@ const DEFAULT_CAPABILITIES = {
   supportsTextStyles: false,
   supportsSoundSelection: false,
   supportsTextAlignment: false,
+  supportsTextWritingMode: false,
   supportsActions: false,
   supportsSpriteImages: false,
   supportsSpriteBlur: false,
   supportsSpritesheetAnimation: false,
   supportsParticleSelection: false,
+  supportsVideoSelection: false,
   supportsSliderImages: false,
   supportsSliderValues: false,
   supportsDateFormat: false,
@@ -583,6 +668,11 @@ const FAMILY_CAPABILITIES = {
     supportsSpriteImages: true,
     supportsActions: true,
   },
+  video: {
+    supportsAnchor: true,
+    supportsVideoSelection: true,
+    supportsActions: true,
+  },
   particle: {
     supportsAnchor: true,
     supportsParticleSelection: true,
@@ -599,6 +689,7 @@ const FAMILY_CAPABILITIES = {
     supportsTextStyles: true,
     supportsSoundSelection: true,
     supportsTextAlignment: true,
+    supportsTextWritingMode: true,
   },
   input: {
     supportsAnchor: true,
@@ -680,6 +771,13 @@ const TYPE_RULES = {
       });
     },
   },
+  video: {
+    normalizeFieldValue: ({ name, value }) => {
+      if (name === "videoId" && (value === null || value === ""))
+        return undefined;
+      return value;
+    },
+  },
   particle: {
     normalizeFieldValue: ({ name, value }) => {
       if (name === "particleId" && (value === null || value === "")) {
@@ -710,6 +808,13 @@ const TYPE_RULES = {
       }
 
       return value;
+    },
+    applyFieldChange: ({ nextItem, name, value }) => {
+      if (name === "textDirection") {
+        return applyLayoutTextDirectionChoice(nextItem, value);
+      }
+
+      return nextItem;
     },
     finalizeFieldChange: ({ nextItem, name, value }) => {
       if (name === "content") {
@@ -814,6 +919,7 @@ const PANEL_FEATURES_BY_TYPE = {
   "container-ref-confirm-dialog-cancel": [...DEFAULT_PANEL_FEATURES, "actions"],
   sprite: [...DEFAULT_PANEL_FEATURES, "images", "actions"],
   particle: [...DEFAULT_PANEL_FEATURES, "particle", "actions"],
+  video: [...DEFAULT_PANEL_FEATURES, "video", "actions"],
   "spritesheet-animation": [
     ...DEFAULT_PANEL_FEATURES,
     "spritesheet",
@@ -981,7 +1087,7 @@ export const canResizeLayoutEditorItemWidth = (item = {}) => {
   }
 
   if (supportsLayoutEditorWidthMode(item?.type)) {
-    return item?.width !== undefined;
+    return !isLayoutEditorVerticalTextItem(item) && item?.width !== undefined;
   }
 
   return true;
@@ -989,9 +1095,15 @@ export const canResizeLayoutEditorItemWidth = (item = {}) => {
 
 export const canResizeLayoutEditorItemHeight = (item = {}) => {
   const capabilities = getLayoutEditorItemCapabilities(item?.type);
-  return (
-    capabilities.supportsSize === true && capabilities.supportsHeight === true
-  );
+  if (capabilities.supportsSize !== true) {
+    return false;
+  }
+
+  if (isLayoutEditorVerticalTextItem(item)) {
+    return item.height !== undefined;
+  }
+
+  return capabilities.supportsHeight === true;
 };
 
 // An element 0 wide or high draws nothing and cannot be picked on the

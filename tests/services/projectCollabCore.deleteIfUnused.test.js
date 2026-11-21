@@ -6,6 +6,7 @@ const mocked = vi.hoisted(() => ({
     deleteImages: vi.fn(),
     deleteSounds: vi.fn(),
     deleteVideos: vi.fn(),
+    deleteParticles: vi.fn(),
   },
 }));
 
@@ -170,6 +171,7 @@ const createProjectState = () => ({
   images: { items: { "image-1": { id: "image-1" } } },
   sounds: { items: { "sound-1": { id: "sound-1" } } },
   videos: { items: { "video-1": { id: "video-1" } } },
+  particles: { items: { "particle-1": { id: "particle-1" } } },
 });
 
 const RESOURCES = [
@@ -197,6 +199,14 @@ const RESOURCES = [
     deleteIfUnused: "deleteVideoIfUnused",
     commandMethod: "deleteVideos",
   },
+  {
+    name: "particle",
+    itemId: "particle-1",
+    idField: "particleId",
+    collection: "particles",
+    deleteIfUnused: "deleteParticleIfUnused",
+    commandMethod: "deleteParticles",
+  },
 ];
 
 const NOT_USED = {
@@ -211,6 +221,7 @@ describe("createProjectCollabCore deleteIfUnused", () => {
     mocked.commandApi.deleteImages.mockReset();
     mocked.commandApi.deleteSounds.mockReset();
     mocked.commandApi.deleteVideos.mockReset();
+    mocked.commandApi.deleteParticles.mockReset();
   });
 
   it("returns deleted false when the delete command fails validation", async () => {
@@ -241,6 +252,29 @@ describe("createProjectCollabCore deleteIfUnused", () => {
     });
   });
 
+  it("keeps a particle that a scene line shows as a visual", async () => {
+    const state = createProjectState();
+    state.lines = {
+      "line-1": {
+        id: "line-1",
+        actions: {
+          visual: { items: [{ id: "visual-1", resourceId: "particle-1" }] },
+        },
+      },
+    };
+    mocked.commandApi.getState.mockReturnValue(state);
+
+    const collabCore = createDeleteCollabCore();
+
+    const result = await collabCore.deleteParticleIfUnused({
+      particleId: "particle-1",
+      checkTargets: ["scenes", "layouts", "controls"],
+    });
+
+    expect(result).toMatchObject({ deleted: false, usage: { isUsed: true } });
+    expect(mocked.commandApi.deleteParticles).not.toHaveBeenCalled();
+  });
+
   it.each(RESOURCES)(
     "treats a $name that is already gone as deleted",
     async ({ itemId, idField, deleteIfUnused, commandMethod }) => {
@@ -248,6 +282,7 @@ describe("createProjectCollabCore deleteIfUnused", () => {
       state.images.items = {};
       state.sounds.items = {};
       state.videos.items = {};
+      state.particles.items = {};
       mocked.commandApi.getState.mockReturnValue(state);
 
       const collabCore = createDeleteCollabCore();

@@ -1,3 +1,4 @@
+import { formatList } from "../dates.js";
 import { generateId } from "../id.js";
 import { formatI18nCopy } from "./i18nCopy.js";
 import { getResourcePageErrorMessage } from "./resourcePages/resourcePageErrors.js";
@@ -12,7 +13,7 @@ import {
   recursivelyCheckResource,
 } from "../project/projection.js";
 
-const isTextElementType = (type) =>
+export const isTextElementType = (type) =>
   [
     "text",
     "text-revealing",
@@ -28,9 +29,9 @@ const isTextElementType = (type) =>
 const getResultErrorMessage = (appService, errorOrResult, fallbackMessage) =>
   getResourcePageErrorMessage({ appService, errorOrResult, fallbackMessage });
 
-const resolveMenuItem = (detail = {}) => detail.item || detail;
+export const resolveMenuItem = (detail = {}) => detail.item || detail;
 
-const resolveExplorerMove = (detail = {}) => {
+export const resolveExplorerMove = (detail = {}) => {
   const { position, source, target } = detail;
   if (!source?.id) {
     return null;
@@ -421,6 +422,7 @@ const validateVariableDeletion = async ({
   currentItem,
   itemId,
   copy,
+  dateTime,
 }) => {
   const resourceValidation = await validateResourceDeletion({
     projectService,
@@ -446,7 +448,10 @@ const validateVariableDeletion = async ({
       copy.computedVariableDeleteBlocked ??
       "This variable is used by: {dependents}"
     ).replace("{dependents}", () =>
-      dependents.map((item) => item.name).join(", "),
+      formatList(
+        dependents.map((item) => item.name),
+        dateTime,
+      ),
     ),
   };
 };
@@ -458,6 +463,7 @@ export const checkVariableDeletion = async ({
   projectService,
   itemId,
   copy = {},
+  dateTime,
 }) => {
   const currentItem = projectService.getState()?.variables?.items?.[itemId];
   const deletion = await validateVariableDeletion({
@@ -466,6 +472,7 @@ export const checkVariableDeletion = async ({
     currentItem,
     itemId,
     copy,
+    dateTime,
   });
   if (deletion.canDelete) {
     return deletion;
@@ -580,6 +587,7 @@ export const createResourceFileExplorerHandlers = ({
           currentItem,
           itemId,
           copy: resolvedCopy,
+          dateTime: deps.i18n.dateTime,
         });
         if (!deleteValidation.canDelete) {
           appService.showAlert({
@@ -1031,6 +1039,32 @@ export const createLayoutElementsFileExplorerHandlers = ({
           [ownerPayloadKey]: layoutId,
           elementIds: [itemId],
         });
+      } else if (action === "duplicate-item") {
+        if (!itemId) {
+          return;
+        }
+
+        const duplicateElement = isControls
+          ? projectService.duplicateControlElement.bind(projectService)
+          : projectService.duplicateLayoutElement.bind(projectService);
+        const duplicateResult = await duplicateElement({
+          [ownerPayloadKey]: layoutId,
+          elementId: itemId,
+        });
+        if (duplicateResult?.valid === false) {
+          appService.showAlert({
+            message: getResultErrorMessage(
+              appService,
+              duplicateResult,
+              resolvedCopy.failedDuplicateResource ??
+                "Failed to duplicate resource.",
+            ),
+            title: resolvedCopy.errorTitle ?? "Error",
+          });
+          return;
+        }
+
+        createdItemId = duplicateResult;
       } else if (action === "new-item") {
         createdItemId = generateId();
         await createElement({

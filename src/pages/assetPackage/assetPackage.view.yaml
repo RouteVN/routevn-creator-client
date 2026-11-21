@@ -51,6 +51,9 @@ styles:
   '@supports (height: 100dvh)':
     '#pickerContent':
       height: calc(100dvh - 96px)
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -157,7 +160,7 @@ template:
                           - rtgl-text s=sm c=mu-fg ph=sm: ${pickerSection.noFoldersHint}
                       - $for folder, folderIndex in pickerSection.folders:
                           # A folder is indented under the folder it sits in.
-                          - 'rtgl-view w=f style="padding-left: ${folder.indent}px; box-sizing: border-box;"':
+                          - 'rtgl-view w=f style="padding-inline-start: ${folder.indent}px; box-sizing: border-box;"':
                               # A folder inside a ticked one comes with it: ticked,
                               # and not ticked or unticked on its own.
                               - $if folder.isIncluded:

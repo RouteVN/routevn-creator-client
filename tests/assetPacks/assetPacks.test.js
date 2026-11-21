@@ -478,7 +478,7 @@ describe("asset packs", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Error",
       message:
-        "Could not move this project's earlier asset package into Asset Packs. It will be tried again the next time you open Asset Packs.\n\nDetails:\nRefused",
+        "Could not move this project's earlier asset pack into Asset Packs. It will be tried again the next time you open Asset Packs.\n\nDetails:\nRefused",
     });
     // The folder it made shows.
     expect(deps.store.setItems).toHaveBeenCalled();

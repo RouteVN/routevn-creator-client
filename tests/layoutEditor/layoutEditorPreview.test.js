@@ -11,6 +11,7 @@ import {
 import { createLayoutEditorPreviewData } from "../../src/internal/layoutEditorPreview/layoutEditorPreviewData.js";
 import {
   createLayoutThumbnailSource,
+  createLayoutPreviewElements,
   toLayoutPreviewType,
 } from "../../src/internal/layoutPreview.js";
 import * as previewComponentStore from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
@@ -162,8 +163,8 @@ describe("layoutEditorPreview", () => {
     expect(result.fileReferences).toEqual(
       expect.arrayContaining([expect.objectContaining({ url: "sheet-file" })]),
     );
-    const sprite = repositoryState.characters.items["character-1"].sprites
-      .items["sprite-1"];
+    const sprite =
+      repositoryState.characters.items["character-1"].sprites.items["sprite-1"];
     delete sprite.width;
     delete sprite.height;
     expect(
@@ -1598,6 +1599,115 @@ describe("layout thumbnails", () => {
         fontWeightDescriptor: "600",
       },
     ]);
+  });
+
+  const createVideoFixture = () => {
+    const repositoryState = {
+      project: { resolution: { width: 1280, height: 720 } },
+      videos: {
+        items: {
+          v1: {
+            id: "v1",
+            type: "video",
+            fileId: "file-v1",
+            thumbnailFileId: "file-v1-thumb",
+            width: 1920,
+            height: 1080,
+          },
+        },
+      },
+      files: {
+        items: {
+          "file-v1": { mimeType: "video/mp4" },
+          "file-v1-thumb": { mimeType: "image/jpeg" },
+        },
+      },
+      images: { items: {} },
+      fonts: { items: {} },
+      textStyles: { items: {} },
+      colors: { items: {} },
+      layouts: { items: {} },
+    };
+    const item = createLayout({
+      vid: {
+        id: "vid",
+        type: "video",
+        videoId: "v1",
+        x: 0,
+        y: 0,
+        width: 640,
+        height: 360,
+        loop: true,
+        volume: 80,
+      },
+    });
+    item.preview = undefined;
+    return { item, repositoryState };
+  };
+
+  it("draws a video thumbnail and loads only its image asset", () => {
+    const { item, repositoryState } = createVideoFixture();
+    const source = createLayoutThumbnailSource({ item, repositoryState });
+    const video = source.renderState.elements.find(
+      (element) => element.id === "vid",
+    );
+    expect(video).toMatchObject({
+      type: "sprite",
+      src: "file-v1-thumb",
+      fileType: "image/jpeg",
+      width: 640,
+      height: 360,
+    });
+    expect(video).not.toHaveProperty("loop");
+    expect(video).not.toHaveProperty("volume");
+    expect(source.assets).toContainEqual({
+      fileId: "file-v1-thumb",
+      fileType: "image/jpeg",
+    });
+    expect(source.assets.some((asset) => asset.fileId === "file-v1")).toBe(
+      false,
+    );
+  });
+
+  it("replaces videos nested in containers and handles missing thumbnails", () => {
+    const { item, repositoryState } = createVideoFixture();
+    item.elements.items.parent = {
+      id: "parent",
+      type: "container",
+      width: 640,
+      height: 360,
+    };
+    item.elements.tree = [{ id: "parent", children: [{ id: "vid" }] }];
+    const source = createLayoutThumbnailSource({ item, repositoryState });
+    expect(source.renderState.elements[0].children[0]).toMatchObject({
+      type: "sprite",
+      src: "file-v1-thumb",
+    });
+    repositoryState.videos.items.v1.thumbnailFileId = undefined;
+    const missing = createLayoutThumbnailSource({ item, repositoryState })
+      .renderState.elements[0].children[0];
+    expect(missing).toMatchObject({
+      id: "vid",
+      type: "container",
+      width: 640,
+      height: 360,
+    });
+    expect(missing).not.toHaveProperty("src");
+  });
+
+  it("keeps editor preview videos muted with their video asset", () => {
+    const { item, repositoryState } = createVideoFixture();
+    const { elements } = createLayoutPreviewElements({
+      layoutState: item,
+      repositoryState,
+      videoRenderMode: "editor",
+    });
+    expect(elements[0]).toMatchObject({
+      type: "video",
+      volume: 0,
+      src: "file-v1",
+      fileType: "video/mp4",
+    });
   });
 
   it("draws text that types itself out in full", () => {

@@ -1,3 +1,7 @@
+import {
+  isAudioAvailable,
+  createSilentGraphicsAudioRuntime,
+} from "./deps/clients/audioAvailability.js";
 import { errorReporter } from "./deps/clients/ios/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 import { configureAudioRuntime } from "route-graphics";
@@ -25,6 +29,7 @@ import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphi
 import { createBundleInstructions } from "./deps/services/shared/projectExportService.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "./internal/projectResolution.js";
+import { canEmbedYouTubeFrom } from "./internal/youtube.js";
 import { withErrorDetails } from "./internal/errorDetails.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import { installNativeBackOverlays } from "./primitives/nativeBackOverlays.js";
@@ -48,7 +53,11 @@ const iosGraphicsAudioOutput = createIOSGraphicsAudioOutput({
   runtime: iosAudioRuntime,
   onError: (error) => alertPreviewAudioFailure(error),
 });
-configureAudioRuntime(iosGraphicsAudioOutput.graphicsRuntime);
+configureAudioRuntime(
+  isAudioAvailable()
+    ? iosGraphicsAudioOutput.graphicsRuntime
+    : createSilentGraphicsAudioRuntime(),
+);
 
 const uiConfig = {
   id: "touch",
@@ -165,6 +174,7 @@ const appService = createAppService({
   distribution: updateContext?.distribution,
   updatesEnabled: true,
   updater,
+  youtubeEmbedsSupported: canEmbedYouTubeFrom(window.location),
   audioService,
   projectService,
   subject,
@@ -182,11 +192,11 @@ window.routeVNNativeBack = createNativeBackHandler({
 saveWhenAppGoesInactive({ runtime: iosAudioRuntime, appService });
 await appService.initUserConfig();
 await appService.initializeProjectFolderSetup();
-if (!appService.getProjectFolderSetup().configured) {
-  router.reset("/project-folder-setup");
-} else if (
-  initialPath === "/projects" &&
-  router.getPathName() === "/project-folder-setup"
+// Without a usable projects folder no project can be open, so start on
+// Projects, which asks for the folder in a dialog.
+if (
+  !appService.getProjectFolderSetup().configured &&
+  router.getPathName() !== "/projects"
 ) {
   router.reset("/projects");
 }
@@ -299,8 +309,9 @@ const alertPreviewAudioFailure = (error) => {
 
 const graphicsService = await createGraphicsService({
   subject,
+  audioAvailable: isAudioAvailable(),
   onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
-  audioOutput: iosGraphicsAudioOutput,
+  audioOutput: isAudioAvailable() ? iosGraphicsAudioOutput : undefined,
   onAudioOutputError: alertPreviewAudioFailure,
   onRenderError: (error) => {
     console.error(error);

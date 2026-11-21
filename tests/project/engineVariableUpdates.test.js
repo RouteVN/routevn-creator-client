@@ -60,6 +60,26 @@ const selectLineActions = (projectData) =>
   projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions;
 
 describe("variable updates in Route Engine project data", () => {
+  it("projects an invalid saved ID to a stable engine ID without changing the project", () => {
+    const state = createRepositoryState({
+      updateVariable: {
+        id: "update-score",
+        operations: [{ variableId: "score", op: "increment", value: 2 }],
+      },
+    });
+    const saved = structuredClone(state);
+    const projectData = constructProjectData(state);
+    const id = selectLineActions(projectData).updateVariable.id;
+    expect(id).toBe("uv007500700064006100740065002d00730063006f00720065");
+    expect(
+      selectLineActions(constructProjectData(state)).updateVariable.id,
+    ).toBe(id);
+    expect(
+      startRouteEngine(projectData).selectSystemState().contexts.at(-1)
+        .variables.score,
+    ).toBe(2);
+    expect(state).toEqual(saved);
+  });
   it("leaves out updates to a deleted variable and keeps the others", () => {
     const repositoryState = createRepositoryState({
       updateVariable: {

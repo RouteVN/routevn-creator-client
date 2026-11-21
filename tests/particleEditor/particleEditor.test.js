@@ -26,6 +26,7 @@ import {
 import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
 import { createParticleThumbnailSource } from "../../src/internal/particlePreview.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // Edits save on their own 300ms after the last one.
 const AUTOSAVE_WAIT_MS = 400;
@@ -82,6 +83,7 @@ const imagesData = {
 const createPage = async ({
   item = createSavedParticle(),
   uiConfig = {},
+  retainedEditHistoryService = createRetainedEditHistoryService(),
 } = {}) => {
   let state = particleEditorStore.createInitialState();
   const store = new Proxy(
@@ -141,6 +143,7 @@ const createPage = async ({
       },
     },
     appService: {
+      ...retainedEditHistoryService,
       getPayload: () => ({ p: "project-1", pt: item.id }),
       navigate: vi.fn(),
       showAlert: vi.fn(),
@@ -344,6 +347,27 @@ describe("particle editor", () => {
     expect(page.effect().modules.emission.rate).toBe(64);
     await handleRedoButtonClick(page.deps);
     expect(page.effect().modules.emission.rate).toBe(40);
+  });
+
+  it("keeps undo and redo when the page is left and opened again", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    await page.changeField("width", 800);
+    await page.cleanup();
+    const savedItem = createSavedParticle();
+    for (const { data } of page.savedData()) {
+      Object.assign(savedItem, data);
+    }
+
+    const reopened = await createPage({
+      item: savedItem,
+      retainedEditHistoryService,
+    });
+
+    expect(reopened.effect().width).toBe(800);
+    expect(reopened.state().editHistory.undo).toHaveLength(1);
+    await handleUndoButtonClick(reopened.deps);
+    expect(reopened.effect().width).toBe(640);
   });
 
   it("undoes with the shortcut, and puts the values back into the form", async () => {

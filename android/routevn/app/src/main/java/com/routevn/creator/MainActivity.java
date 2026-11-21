@@ -212,6 +212,11 @@ public class MainActivity extends Activity {
     // bridge thread so the rest of the app's bridge calls are not held up.
     private final ExecutorService importExecutor =
         Executors.newSingleThreadExecutor();
+    // APK export packages and encrypts the whole game; it gets its own thread
+    // for the same reason.
+    private final ExecutorService apkExportExecutor =
+        Executors.newSingleThreadExecutor();
+    private final Object androidPlayerTemplateLock = new Object();
     private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
     private final Map<String, ProjectFileWriteSession> projectFileWriteSessions =
@@ -837,8 +842,13 @@ public class MainActivity extends Activity {
             return false;
         }
 
+        // Web pages, and mailto: for the support email in Chat Support.
         String scheme = uri.getScheme();
-        if (!"http".equals(scheme) && !"https".equals(scheme)) {
+        if (
+            !"http".equals(scheme) &&
+            !"https".equals(scheme) &&
+            !"mailto".equals(scheme)
+        ) {
             return false;
         }
 
@@ -917,6 +927,7 @@ public class MainActivity extends Activity {
         projectBackup.close();
         backupExecutor.shutdownNow();
         importExecutor.shutdownNow();
+        apkExportExecutor.shutdownNow();
         // Cancellation is immediate; cleanup must wait behind storage work on
         // its own thread, not hold Activity destruction on media copies/hashes.
         bridgeExecutor.execute(() -> {
@@ -1090,7 +1101,20 @@ public class MainActivity extends Activity {
             WebView view,
             WebResourceRequest request
         ) {
-            return assetLoader.shouldInterceptRequest(request.getUrl());
+            Uri uri = request.getUrl();
+            String path = uri.getPath();
+            if ("https".equals(uri.getScheme()) && APP_ASSET_HOST.equals(uri.getHost())
+                && path != null && path.startsWith("/android-files/")) {
+                String range = null;
+                for (Map.Entry<String, String> header : request.getRequestHeaders().entrySet()) {
+                    if ("Range".equalsIgnoreCase(header.getKey())) {
+                        range = header.getValue();
+                        break;
+                    }
+                }
+                return createInternalFileResponse(path.substring("/android-files/".length()), range);
+            }
+            return assetLoader.shouldInterceptRequest(uri);
         }
 
         @Override
@@ -1204,25 +1228,32 @@ public class MainActivity extends Activity {
         implements WebViewAssetLoader.PathHandler {
         @Override
         public WebResourceResponse handle(String path) {
-            try {
-                String normalizedPath = normalizeInternalStoragePath(path);
-                File file = resolveInternalStorageFileForPath(normalizedPath);
-                if (!file.isFile()) {
-                    return null;
-                }
+            return createInternalFileResponse(path, null);
+        }
+    }
 
-                String mimeType = readMimeTypeForInternalPath(normalizedPath, file);
-                return new WebResourceResponse(
-                    mimeType,
-                    null,
-                    200,
-                    "OK",
-                    createInternalFileResponseHeaders(),
-                    new FileInputStream(file)
-                );
-            } catch (Exception error) {
+    private WebResourceResponse createInternalFileResponse(String path, String range) {
+        try {
+            String normalizedPath = normalizeInternalStoragePath(path);
+            File file = resolveInternalStorageFileForPath(normalizedPath);
+            if (!file.isFile()) {
                 return null;
             }
+
+            String mimeType = readMimeTypeForInternalPath(normalizedPath, file);
+            Map<String, String> headers = createInternalFileResponseHeaders();
+            ByteRangeResponse response = ByteRangeResponse.open(file, range);
+            try {
+                headers.putAll(response.headers);
+                return new WebResourceResponse(
+                    mimeType, null, response.status, response.reason, headers, response.body
+                );
+            } catch (Exception error) {
+                response.body.close();
+                throw error;
+            }
+        } catch (Exception error) {
+            return null;
         }
     }
 
@@ -1276,6 +1307,22 @@ public class MainActivity extends Activity {
                     try { result = bridgeSuccess(projectBackup.publish(projectId)); }
                     catch (Exception error) { result = bridgeFailure(error); }
                     reply.accept(attachBridgeResponseMetadata(backupRequestId, result));
+                });
+                return;
+            }
+
+            if (
+                "exportAndroidApkToUri".equals(method) ||
+                "exportAndroidBundleToUri".equals(method)
+            ) {
+                String exportRequestId = requestId;
+                JSONObject exportPayload = payload;
+                boolean bundle = "exportAndroidBundleToUri".equals(method);
+                apkExportExecutor.execute(() -> {
+                    String result;
+                    try { result = bridgeSuccess(exportAndroidToUri(exportPayload, bundle)); }
+                    catch (Throwable error) { result = bridgeFailure(error); }
+                    reply.accept(attachBridgeResponseMetadata(exportRequestId, result));
                 });
                 return;
             }
@@ -1402,6 +1449,20 @@ public class MainActivity extends Activity {
                 return bridge.discardPendingSaveDocument(payloadJson);
             case "createDistributionZipStreamedToUri":
                 return bridge.createDistributionZipStreamedToUri(payloadJson);
+            case "getAndroidExportAvailability":
+                return bridgeSuccess(getAndroidExportAvailability());
+            case "createAndroidSigningKey":
+                return bridgeSuccess(
+                    NativeExporter.createAndroidSigningKey(new JSONObject(payloadJson))
+                );
+            case "readAndroidKeystore":
+                return bridgeSuccess(
+                    NativeExporter.readAndroidKeystore(new JSONObject(payloadJson))
+                );
+            case "encodeAndroidKeystore":
+                return bridgeSuccess(
+                    NativeExporter.encodeAndroidKeystore(new JSONObject(payloadJson))
+                );
             case "openFilePicker":
                 return bridge.openFilePicker(payloadJson);
             case "openSaveFilePicker":
@@ -1945,12 +2006,30 @@ public class MainActivity extends Activity {
                 "message",
                 error.getMessage() == null ? "Android bridge call failed" : error.getMessage()
             );
-            errorBody.put("code", error instanceof ProjectBackup.Failure ? ProjectBackup.errorCode(error) : error.getClass().getSimpleName());
+            errorBody.put("code", bridgeErrorCode(error));
             result.put("error", errorBody);
             return result.toString();
         } catch (Exception jsonError) {
             return "{\"ok\":false,\"error\":{\"message\":\"Android bridge call failed\"}}";
         }
+    }
+
+    /**
+     * The code JavaScript reads from a failed bridge call. An Android export
+     * failure keeps the exporter's code even when the save step wrapped it.
+     */
+    private static String bridgeErrorCode(Throwable error) {
+        if (error instanceof ProjectBackup.Failure) {
+            return ProjectBackup.errorCode(error);
+        }
+        Throwable cause = error;
+        for (int depth = 0; cause != null && depth < 4; depth += 1) {
+            if (cause instanceof NativeExporter.ExportFailure) {
+                return ((NativeExporter.ExportFailure) cause).code;
+            }
+            cause = cause.getCause();
+        }
+        return error.getClass().getSimpleName();
     }
 
     private void initializeAppDatabase(boolean withEvents) throws Exception {
@@ -3143,6 +3222,350 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static final String ANDROID_PLAYER_TEMPLATE_ASSET_DIR =
+        "player-templates/android";
+    // Each template with its descriptor: the APK and the App Bundle.
+    private static final String[] ANDROID_PLAYER_APK_TEMPLATE = {
+        "RouteVNPlayerTemplate.apk",
+        "RouteVNPlayerTemplate.json"
+    };
+    private static final String[] ANDROID_PLAYER_BUNDLE_TEMPLATE = {
+        "RouteVNPlayerTemplate.aab",
+        "RouteVNPlayerTemplate.aab.json"
+    };
+
+    /**
+     * The exporter reads the player template by path, so the template bundled
+     * in this app's assets is copied out once per template version. `names`
+     * is the template file and its descriptor. Returns null when this build
+     * has no such template.
+     */
+    private File[] ensureAndroidPlayerTemplate(String[] names) throws Exception {
+        String templateName = names[0];
+        String descriptorName = names[1];
+        synchronized (androidPlayerTemplateLock) {
+            byte[] descriptor;
+            try (
+                InputStream input = getAssets().open(
+                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" + descriptorName
+                );
+                ByteArrayOutputStream output = new ByteArrayOutputStream()
+            ) {
+                writeOutputStream(output, input);
+                descriptor = output.toByteArray();
+            } catch (java.io.FileNotFoundException error) {
+                return null;
+            }
+
+            File directory = new File(
+                getNoBackupFilesDir(),
+                ANDROID_PLAYER_TEMPLATE_ASSET_DIR
+            );
+            File templateFile = new File(directory, templateName);
+            File descriptorFile = new File(directory, descriptorName);
+            if (
+                templateFile.isFile() &&
+                descriptorFile.isFile() &&
+                java.util.Arrays.equals(readBytes(descriptorFile), descriptor)
+            ) {
+                return new File[] { templateFile, descriptorFile };
+            }
+
+            if (!directory.isDirectory() && !directory.mkdirs()) {
+                throw new IllegalStateException(
+                    "Failed to create the Android player template folder."
+                );
+            }
+            // The descriptor is written last, so an interrupted copy is
+            // repeated on the next call.
+            deleteTemporaryFile(descriptorFile);
+            File partFile = new File(directory, templateName + ".part");
+            try (
+                InputStream input = getAssets().open(
+                    ANDROID_PLAYER_TEMPLATE_ASSET_DIR + "/" + templateName
+                );
+                FileOutputStream output = new FileOutputStream(partFile)
+            ) {
+                writeOutputStream(output, input);
+                output.getFD().sync();
+            }
+            deleteTemporaryFile(templateFile);
+            if (!partFile.renameTo(templateFile)) {
+                deleteTemporaryFile(partFile);
+                throw new IllegalStateException(
+                    "Failed to install the Android player template."
+                );
+            }
+            try (FileOutputStream output = new FileOutputStream(descriptorFile)) {
+                output.write(descriptor);
+                output.getFD().sync();
+            }
+            return new File[] { templateFile, descriptorFile };
+        }
+    }
+
+    private JSONObject getAndroidExportAvailability() throws Exception {
+        File[] template;
+        try {
+            template = ensureAndroidPlayerTemplate(ANDROID_PLAYER_APK_TEMPLATE);
+        } catch (Exception error) {
+            Log.w(TAG, "Android player template is unavailable", error);
+            JSONObject result = new JSONObject();
+            result.put("available", false);
+            result.put(
+                "reason",
+                "The Android player template could not be prepared."
+            );
+            return result;
+        }
+        if (template == null) {
+            JSONObject result = new JSONObject();
+            result.put("available", false);
+            return result;
+        }
+        JSONObject capabilities = NativeExporter.androidExportCapabilities(
+            template[0].getAbsolutePath(),
+            template[1].getAbsolutePath()
+        );
+        if (capabilities.optBoolean("available", false)) {
+            capabilities.put("bundleAvailable", isAndroidBundleExportAvailable());
+        }
+        return capabilities;
+    }
+
+    /** A failed App Bundle check leaves APK export available. */
+    private boolean isAndroidBundleExportAvailable() {
+        try {
+            File[] template = ensureAndroidPlayerTemplate(
+                ANDROID_PLAYER_BUNDLE_TEMPLATE
+            );
+            return template != null && NativeExporter.androidBundleExportCapabilities(
+                template[0].getAbsolutePath(),
+                template[1].getAbsolutePath()
+            ).optBoolean("available", false);
+        } catch (Exception error) {
+            Log.w(TAG, "Android App Bundle template is unavailable", error);
+            return false;
+        }
+    }
+
+    /**
+     * Exports an APK, or with `bundle` an App Bundle, to the chosen location.
+     * The payload's signingKey signs it; a bundle needs one.
+     */
+    private JSONObject exportAndroidToUri(JSONObject payload, boolean bundle)
+        throws Exception {
+        String safeProjectId = safePathSegment(payload.getString("projectId"));
+        String safeExportId = safePathSegment(payload.getString("exportId"));
+        String destinationUriString = payload.getString("uri").trim();
+        if (destinationUriString.isEmpty()) {
+            throw new IllegalArgumentException("Save location is required.");
+        }
+        Uri destinationUri = Uri.parse(destinationUriString);
+        boolean cleanupOnFailure = claimPendingSaveDocument(destinationUri);
+        File workDir = null;
+
+        try {
+            File[] template = ensureAndroidPlayerTemplate(
+                bundle ? ANDROID_PLAYER_BUNDLE_TEMPLATE : ANDROID_PLAYER_APK_TEMPLATE
+            );
+            if (template == null) {
+                throw new IllegalStateException(
+                    "This build does not include the Android player template."
+                );
+            }
+
+            File exportsRoot = new File(getCacheDir(), "distribution-exports");
+            workDir = new File(exportsRoot, "apk-" + safeExportId);
+            deleteRecursively(workDir);
+            if (!workDir.mkdirs()) {
+                throw new IllegalStateException(
+                    "Failed to create export cache directory."
+                );
+            }
+            File outputFile = new File(workDir, bundle ? "export.aab" : "export.apk");
+
+            String safeIconFileId = safePathSegment(payload.getString("iconFileId"));
+            File iconFile = resolveSafeRelativeFile(
+                new File(getProjectRoot(safeProjectId), "files"),
+                safeIconFileId
+            );
+            if (!iconFile.isFile()) {
+                throw new IllegalStateException(
+                    "Required project file is missing: " + safeIconFileId
+                );
+            }
+
+            JSONObject request = new JSONObject();
+            request.put("templatePath", template[0].getAbsolutePath());
+            request.put("descriptorPath", template[1].getAbsolutePath());
+            request.put("outputPath", outputFile.getAbsolutePath());
+            request.put(
+                "assets",
+                buildDistributionZipAssets(
+                    safeProjectId,
+                    payload.optJSONArray("fileEntries")
+                )
+            );
+            request.put("instructionsJson", payload.getString("instructionsJson"));
+            request.put("applicationId", payload.getString("applicationId"));
+            request.put("applicationName", payload.getString("applicationName"));
+            request.put("versionName", payload.getString("versionName"));
+            request.put("versionCode", payload.getLong("versionCode"));
+            request.put("orientation", payload.getString("orientation"));
+            request.put("iconPath", iconFile.getAbsolutePath());
+            for (String[] optionalIcon : new String[][] {
+                {"adaptiveIconFileId", "adaptiveIconPath"},
+                {"splashIconFileId", "splashIconPath"}
+            }) {
+                if (payload.has(optionalIcon[0]) && !payload.isNull(optionalIcon[0])) {
+                    String fileId = safePathSegment(payload.getString(optionalIcon[0]));
+                    File file = resolveSafeRelativeFile(
+                        new File(getProjectRoot(safeProjectId), "files"), fileId
+                    );
+                    if (!file.isFile()) {
+                        throw new IllegalStateException("Required project file is missing: " + fileId);
+                    }
+                    request.put(optionalIcon[1], file.getAbsolutePath());
+                }
+            }
+            request.put(
+                "iconBackgroundColor",
+                payload.getString("iconBackgroundColor")
+            );
+            request.put(
+                "splashBackgroundColor",
+                payload.getString("splashBackgroundColor")
+            );
+            request.put("workDir", workDir.getAbsolutePath());
+            JSONObject signingKey = payload.optJSONObject("signingKey");
+            if (signingKey != null) {
+                request.put("signingKey", signingKey);
+            }
+            // The file is copied to the chosen location after the export, so
+            // the exporter's free-space check leaves room for that copy.
+            request.put("copyAfterExport", true);
+
+            long startedNanos = System.nanoTime();
+            NativeExporter.ProgressListener listener =
+                apkExportProgressListener(safeExportId, startedNanos);
+            JSONObject result = bundle
+                ? NativeExporter.exportAndroidBundle(request, listener)
+                : NativeExporter.exportAndroidApk(request, listener);
+            sendApkExportProgress(
+                safeExportId,
+                "saveApk",
+                0,
+                0,
+                (System.nanoTime() - startedNanos) / 1_000_000L
+            );
+            copyFileToUriAndVerify(outputFile, destinationUri);
+
+            JSONObject response = new JSONObject();
+            response.put("uri", destinationUri.toString());
+            if (bundle) {
+                response.put("bundleBytes", result.optLong("bundleBytes"));
+            } else {
+                response.put("apkBytes", result.optLong("apkBytes"));
+            }
+            if (result.has("signingCertificateSha256")) {
+                response.put(
+                    "signingCertificateSha256",
+                    result.getString("signingCertificateSha256")
+                );
+            }
+            response.put("packageBinBytes", result.optLong("packageBinBytes"));
+            response.put(
+                "encryptedPayloadBytes",
+                result.optLong("encryptedPayloadBytes")
+            );
+            response.put("stats", result.optJSONObject("stats"));
+            return response;
+        } catch (Throwable error) {
+            throw createPublicationFailure(
+                bundle
+                    ? "Failed to save Android App Bundle."
+                    : "Failed to save Android APK.",
+                destinationUri,
+                cleanupOnFailure,
+                error
+            );
+        } finally {
+            if (workDir != null) {
+                try {
+                    deleteRecursively(workDir);
+                } catch (Exception error) {
+                    Log.w(TAG, "Failed to remove APK export files", error);
+                }
+            }
+        }
+    }
+
+    /**
+     * Forwards exporter progress to window.__routeVNApkExportProgress. Phase
+     * changes are always delivered, other updates at most every 100 ms.
+     */
+    private NativeExporter.ProgressListener apkExportProgressListener(
+        String exportId,
+        long startedNanos
+    ) {
+        Object lock = new Object();
+        String[] lastPhase = { "" };
+        long[] lastEmitNanos = { 0 };
+        return (phase, current, total) -> {
+            long now = System.nanoTime();
+            synchronized (lock) {
+                boolean phaseChanged = !phase.equals(lastPhase[0]);
+                boolean complete = total > 0 && current == total;
+                boolean intervalElapsed =
+                    now - lastEmitNanos[0] >=
+                    TransferProgress.MIN_INTERVAL_MS * 1_000_000L;
+                if (!phaseChanged && !complete && !intervalElapsed) {
+                    return;
+                }
+                lastPhase[0] = phase;
+                lastEmitNanos[0] = now;
+            }
+            sendApkExportProgress(
+                exportId,
+                phase,
+                current,
+                total,
+                (now - startedNanos) / 1_000_000L
+            );
+        };
+    }
+
+    private void sendApkExportProgress(
+        String exportId,
+        String phase,
+        long current,
+        long total,
+        long elapsedMs
+    ) {
+        JSONObject event = new JSONObject();
+        try {
+            event.put("exportId", exportId);
+            event.put("phase", phase);
+            event.put("current", current);
+            event.put("total", total);
+            event.put("elapsedMs", elapsedMs);
+        } catch (JSONException error) {
+            return;
+        }
+        mainHandler.post(() -> {
+            if (webView == null) {
+                return;
+            }
+            webView.evaluateJavascript(
+                "(function(event){if(window.__routeVNApkExportProgress){window.__routeVNApkExportProgress(event);}})(" +
+                event.toString() +
+                ");",
+                null
+            );
+        });
+    }
+
     private JSONArray buildDistributionZipAssets(
         String projectId,
         JSONArray fileEntries
@@ -4325,6 +4748,12 @@ public class MainActivity extends Activity {
         } catch (ActivityNotFoundException error) {
             clearPendingAndroidFilePicker();
             sendAndroidFilePickerError(requestId, "No file picker is available.");
+        } catch (SecurityException error) {
+            // Android can refuse to start a picker for this app, for example
+            // a gallery activity that other apps may not open. Uncaught, this
+            // ends the app.
+            clearPendingAndroidFilePicker();
+            sendAndroidFilePickerError(requestId, "The file picker could not be opened.");
         }
     }
 

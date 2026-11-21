@@ -2,19 +2,19 @@ import {
   areEditHistoryValuesEqual,
   createEditHistory,
   getEditHistoryChangeKey,
+  getEditHistoryOwner,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
+  resumeEditHistory,
 } from "../../internal/editHistory.js";
 import {
   collectParticleTextureImageIds,
   createRenderableParticleData,
+  isRenderableParticleTexture,
   resolveParticleTextureImageItem,
 } from "../../internal/particles.js";
-import {
-  formatParticleAspectRatio,
-  hasRenderableParticleTexture,
-} from "../../internal/particlePreview.js";
+import { formatParticleAspectRatio } from "../../internal/particlePreview.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
@@ -117,7 +117,7 @@ export const createInitialState = () => ({
   // drag on the canvas) or that it shows differently from how they were
   // typed.
   formRevision: 0,
-  // Undo and redo for edits made since the page opened.
+  // Undo and redo for the item's edits, kept when the page is left.
   editHistory: createEditHistory(),
   editHistoryBaseline: undefined,
   dragStartPosition: undefined,
@@ -151,14 +151,17 @@ export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
   }
 };
 
-export const loadParticle = ({ state }, { item, imagesData } = {}) => {
+export const loadParticle = (
+  { state },
+  { item, imagesData, retainedEditHistory } = {},
+) => {
   state.particleId = item.id;
   state.particleName = item.name ?? "";
   state.effect = toParticleEffect(item);
   state.savedEffect = state.effect;
   state.previewBackgroundImageId = item.preview?.background?.imageId;
   state.savedPreviewBackgroundImageId = state.previewBackgroundImageId;
-  state.editHistory = createEditHistory();
+  state.editHistory = resumeEditHistory(retainedEditHistory, state.effect);
   state.editHistoryBaseline = state.effect;
   state.dragStartPosition = undefined;
   state.imagesData = imagesData ?? createEmptyImageCollection();
@@ -168,6 +171,14 @@ export const loadParticle = ({ state }, { item, imagesData } = {}) => {
 };
 
 export const selectParticleId = ({ state }) => state.particleId;
+
+// What the page keeps when it is left, so coming back to it brings undo and
+// redo back.
+export const selectRetainedEditHistory = ({ state }) => ({
+  owner: getEditHistoryOwner("particle", state.particleId),
+  history: state.editHistory,
+  content: state.effect,
+});
 
 export const selectEffect = ({ state }) => state.effect;
 
@@ -542,7 +553,7 @@ export const selectViewData = ({ state, i18n }) => {
     canvasZoomFitLabel: copy.canvasZoomFitLabel,
     canvasAspectRatio: formatParticleAspectRatio(canvasResolution),
     // Without a texture the particles do not draw, so the canvas says so.
-    showTextureHint: !hasRenderableParticleTexture(
+    showTextureHint: !isRenderableParticleTexture(
       canvasParticle.modules?.appearance?.texture,
     ),
     textureHint: copy.textureHint,

@@ -1,6 +1,12 @@
+import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUNDLE_PLAYER_INDEX_HTML } from "../../src/deps/services/shared/projectExportService.js";
+
+// Each test imports the player script again after vi.resetModules(). That
+// import takes about 0.2 s in a full test run and close to 1 s, the default
+// vi.waitFor timeout, when the machine is busy.
+const PLAYER_IMPORT_TIMEOUT_MS = 10_000;
 
 const runtime = vi.hoisted(() => ({
   init: vi.fn(),
@@ -8,6 +14,9 @@ const runtime = vi.hoisted(() => ({
   loadAssets: vi.fn(),
   resumeAudio: vi.fn(),
   tickerStart: vi.fn(),
+  engineEvent: vi.fn(),
+  graphicsEventHandler: undefined,
+  renderEngineState: undefined,
 }));
 
 vi.mock("file-type", () => ({
@@ -21,7 +30,9 @@ vi.mock("pixi.js", () => ({
 vi.mock("route-graphics", () => ({
   default: () => ({
     canvas: document.createElement("canvas"),
-    init: async () => {},
+    init: async ({ eventHandler }) => {
+      runtime.graphicsEventHandler = eventHandler;
+    },
     render: runtime.render,
     loadAssets: runtime.loadAssets,
     resumeAudio: runtime.resumeAudio,
@@ -41,9 +52,12 @@ vi.mock("route-engine-js", () => ({
       ],
     }),
     selectPresentationState: () => ({}),
+    selectSystemState: () => ({ contexts: [] }),
+    selectHasPendingRenderWork: () => false,
   }),
   createIndexedDbPersistence: () => ({ load: async () => ({ saveSlots: {} }) }),
   createEffectsHandler: ({ routeGraphics }) => {
+    runtime.renderEngineState = routeGraphics.render;
     const handler = () =>
       routeGraphics.render({
         elements: [
@@ -55,7 +69,7 @@ vi.mock("route-engine-js", () => ({
     handler.reset = vi.fn();
     handler.dispose = vi.fn();
     handler.reconcilePlaybackScheduleV1 = vi.fn();
-    handler.createRouteGraphicsEventHandler = () => () => {};
+    handler.createRouteGraphicsEventHandler = () => runtime.engineEvent;
     return handler;
   },
 }));
@@ -69,7 +83,7 @@ vi.mock("../../src/internal/runtime/graphicsEngineRuntime.js", () => ({
   loadGraphicsEnginePlugins: async () => ({}),
   preloadRuntimeSaveSlotImages: async () => ({ failed: 0 }),
   createRuntimeEventContext: vi.fn(),
-  getRuntimeEventActions: vi.fn(),
+  getRuntimeEventActions: (payload) => payload.actions,
   prepareRuntimeInteractionExecution: vi.fn(),
 }));
 vi.mock(
@@ -77,14 +91,17 @@ vi.mock(
   async (importOriginal) => ({
     ...(await importOriginal()),
     createBundleRangeReader: async () => ({
-      manifest: { assets: { "image-one": {}, "image-two": {} } },
+      manifest: {
+        assets: { "image-one": {}, "image-two": {}, "image-three": {} },
+      },
       readInstructions: async () => ({
         projectData: { screen: { width: 1920, height: 1080 } },
         bundleMetadata: {
           project: { name: "Project One", namespace: "project-one" },
         },
       }),
-      hasAsset: (id) => id === "image-one" || id === "image-two",
+      hasAsset: (id) =>
+        id === "image-one" || id === "image-two" || id === "image-three",
       readAsset: async () => ({
         buffer: new Uint8Array([1]),
         mime: "image/png",
@@ -132,7 +149,10 @@ describe("exported player startup", () => {
     const loading = document.querySelector("#loading");
     const progress = document.querySelector("#loading-progress");
     const boot = import("../../scripts/main.js");
-    await vi.waitFor(() => expect(runtime.loadAssets).toHaveBeenCalledTimes(2));
+    await vi.waitFor(
+      () => expect(runtime.loadAssets).toHaveBeenCalledTimes(2),
+      { timeout: PLAYER_IMPORT_TIMEOUT_MS },
+    );
 
     expect(progress.value).toBe(20);
     expect(loading.classList.contains("ready")).toBe(false);
@@ -193,5 +213,100 @@ describe("exported player startup", () => {
     expect(
       document.querySelector("#loading").classList.contains("hidden"),
     ).toBe(true);
+  });
+
+  it("ignores taps on the old screen while the next one waits for its assets", async () => {
+    document.body.dataset.playerStart = "automatic";
+    await import("../../scripts/main.js");
+    expect(runtime.render).toHaveBeenCalledOnce();
+    const tap = { actions: { nextLine: {} } };
+    const nextScreen = { elements: [{ src: "image-three" }] };
+    const nextAssets = deferred();
+    runtime.loadAssets.mockReturnValue(nextAssets.promise);
+
+    runtime.renderEngineState(nextScreen);
+
+    expect(runtime.render).toHaveBeenCalledOnce();
+    expect(runtime.graphicsEventHandler("click", tap)).toBe(false);
+    expect(runtime.engineEvent).not.toHaveBeenCalled();
+    // Events without actions, such as a finished render, still reach the engine.
+    runtime.graphicsEventHandler("renderComplete", { id: "render-one" });
+    expect(runtime.engineEvent).toHaveBeenCalledExactlyOnceWith(
+      "renderComplete",
+      { id: "render-one" },
+    );
+
+    nextAssets.resolve([]);
+    await vi.waitFor(() => expect(runtime.render).toHaveBeenCalledTimes(2));
+    expect(runtime.render).toHaveBeenLastCalledWith(nextScreen);
+    runtime.graphicsEventHandler("click", tap);
+    expect(runtime.engineEvent).toHaveBeenLastCalledWith("click", tap);
+  });
+
+  it("draws the screens that waited for assets in the order the engine produced them", async () => {
+    document.body.dataset.playerStart = "automatic";
+    await import("../../scripts/main.js");
+    const waitingScreen = { elements: [{ src: "image-three" }] };
+    const laterScreen = { elements: [{ src: "image-one" }] };
+    const waitingAssets = deferred();
+    runtime.loadAssets.mockReturnValue(waitingAssets.promise);
+
+    runtime.renderEngineState(waitingScreen);
+    runtime.renderEngineState(laterScreen);
+    expect(runtime.render).toHaveBeenCalledOnce();
+
+    waitingAssets.resolve([]);
+    await vi.waitFor(() => expect(runtime.render).toHaveBeenCalledTimes(3));
+    expect(runtime.render.mock.calls.slice(1)).toEqual([
+      [waitingScreen],
+      [laterScreen],
+    ]);
+  });
+
+  it("keeps Android progress visible until the first frame and notifies its host once without Tauri", async () => {
+    dom.window.close();
+    dom = new JSDOM(
+      readFileSync(
+        new URL(
+          "../../scripts/player-templates/android/index.html",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      { url: "https://appassets.androidplatform.net/web/index.html" },
+    );
+    vi.stubGlobal("document", dom.window.document);
+    vi.stubGlobal("window", dom.window);
+    const onReady = vi.fn(() => {
+      expect(runtime.render).toHaveBeenCalledOnce();
+      expect(
+        document.querySelector("#loading").classList.contains("hidden"),
+      ).toBe(true);
+    });
+    vi.stubGlobal("__ROUTEVN_PLAYER_HOST__", { onReady });
+    const assets = deferred();
+    runtime.loadAssets.mockReturnValue(assets.promise);
+    const boot = import("../../scripts/main.js");
+    await vi.waitFor(() => expect(runtime.loadAssets).toHaveBeenCalledTimes(2));
+    expect(document.querySelector("#loading-progress").value).toBe(20);
+    expect(
+      document.querySelector("#loading").classList.contains("hidden"),
+    ).toBe(false);
+    expect(onReady).not.toHaveBeenCalled();
+    assets.resolve([]);
+    await boot;
+    expect(onReady).toHaveBeenCalledOnce();
+  });
+
+  it("notifies the host when startup diagnostics should become visible", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const onReady = vi.fn();
+    vi.stubGlobal("__ROUTEVN_PLAYER_HOST__", { onReady });
+    runtime.loadAssets.mockRejectedValue(new Error("Asset unavailable"));
+    await import("../../scripts/main.js");
+    expect(onReady).toHaveBeenCalledOnce();
+    expect(document.querySelector("#loading").classList.contains("error")).toBe(
+      true,
+    );
   });
 });

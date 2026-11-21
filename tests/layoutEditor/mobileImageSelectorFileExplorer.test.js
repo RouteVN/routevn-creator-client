@@ -286,7 +286,7 @@ describe("mobile layout edit panel image, sound, and spritesheet selectors", () 
       expect(guardIndex).toBeGreaterThan(-1);
       expect(branch.indexOf(explorer)).toBeGreaterThan(guardIndex);
       expect(branch).toContain(columnsProps);
-      expect(branch).toContain("variant=pr: ${selectButton}");
+      expect(branch).toContain("v=pr: ${selectButton}");
     },
   );
 

@@ -24,6 +24,8 @@ const createHarness = ({
     web: clone(initialPlatformDetails.web),
     windows: clone(initialPlatformDetails.windows),
     macos: clone(initialPlatformDetails.macos),
+    android: clone(initialPlatformDetails.android),
+    ios: clone(initialPlatformDetails.ios),
   };
   const legacyPlatformDetails = {
     web: clone(initialLegacyPlatformDetails.web),
@@ -46,6 +48,9 @@ const createHarness = ({
         if (key === "platformDetails.windows") {
           return clone(platformDetails.windows);
         }
+        if (key === "platformDetails.android")
+          return clone(platformDetails.android);
+        if (key === "platformDetails.ios") return clone(platformDetails.ios);
         if (key === "platformDetails.macos") {
           return clone(platformDetails.macos);
         }
@@ -70,6 +75,9 @@ const createHarness = ({
         if (key === "platformDetails.windows") {
           platformDetails.windows = clone(value);
         }
+        if (key === "platformDetails.android")
+          platformDetails.android = JSON.parse(JSON.stringify(value));
+        if (key === "platformDetails.ios") platformDetails.ios = clone(value);
         if (key === "platformDetails.macos") {
           platformDetails.macos = clone(value);
         }
@@ -110,6 +118,95 @@ const createHarness = ({
 };
 
 describe("projectRepositoryService platform details", () => {
+  it("creates iOS details and keeps the team through later edits", async () => {
+    const { service, getPlatformDetails } = createHarness();
+    await service.createCurrentPlatformDetails("ios", {
+      applicationIdentifier: "com.example.project-one",
+    });
+    expect(getPlatformDetails("ios")).toEqual({
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project-one",
+      iconFileId: "project-icon-1",
+      teamId: "",
+    });
+    await service.updateCurrentPlatformDetails("ios", { teamId: "ABCDE12345" });
+    await service.updateCurrentPlatformDetails("ios", {
+      applicationName: "Project One HD",
+      applicationIdentifier: "com.example.project-one",
+      iconFileId: "ios-icon-1",
+    });
+    expect(await service.getCurrentPlatformDetails("ios")).toEqual({
+      applicationName: "Project One HD",
+      applicationIdentifier: "com.example.project-one",
+      iconFileId: "ios-icon-1",
+      teamId: "ABCDE12345",
+    });
+  });
+
+  it("persists optional Android icons and clears them on a later save", async () => {
+    const { service, getPlatformDetails } = createHarness();
+    await service.createCurrentPlatformDetails("android", {
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+    });
+    expect(await service.getCurrentPlatformDetails("android")).toMatchObject({
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+    });
+    await service.updateCurrentPlatformDetails("android", {
+      adaptiveIconFileId: undefined,
+      splashIconFileId: undefined,
+    });
+    expect(getPlatformDetails("android").adaptiveIconFileId).toBeUndefined();
+    expect(getPlatformDetails("android").splashIconFileId).toBeUndefined();
+    expect(await service.getCurrentPlatformDetails("android")).toMatchObject({
+      adaptiveIconFileId: undefined,
+      splashIconFileId: undefined,
+    });
+  });
+  it("persists the Web screen backgrounds and clears them on a later save", async () => {
+    const { service, getPlatformDetails } = createHarness();
+    await service.createCurrentPlatformDetails("web", {
+      applicationName: "Web Project",
+      applicationIdentifier: "com.example.web-project",
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+    });
+    expect(await service.getCurrentPlatformDetails("web")).toMatchObject({
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
+    });
+
+    await service.updateCurrentPlatformDetails("web", {
+      loadingFadeDuration: 1200,
+      startFadeDuration: 99999,
+    });
+    expect(getPlatformDetails("web")).toMatchObject({
+      loadingFadeDuration: 1200,
+      startFadeDuration: 2000,
+    });
+
+    // A save that does not mention the backgrounds keeps them.
+    await service.updateCurrentPlatformDetails("web", {
+      applicationName: "Web Project Two",
+    });
+    expect(getPlatformDetails("web")).toMatchObject({
+      applicationName: "Web Project Two",
+      loadingBackgroundFileId: "loading-background-1",
+      startBackgroundFileId: "start-background-1",
+      loadingFadeDuration: 1200,
+    });
+
+    await service.updateCurrentPlatformDetails("web", {
+      loadingBackgroundFileId: undefined,
+      startBackgroundFileId: undefined,
+    });
+    expect(getPlatformDetails("web").loadingBackgroundFileId).toBeUndefined();
+    expect(getPlatformDetails("web").startBackgroundFileId).toBeUndefined();
+  });
+
   it("starts empty and explicitly creates each platform once", async () => {
     const harness = createHarness();
 
@@ -132,6 +229,8 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Project One",
       applicationIdentifier: "",
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
     await expect(
       harness.service.getCurrentPlatformDetailsDefaults("macos"),
@@ -154,6 +253,8 @@ describe("projectRepositoryService platform details", () => {
     ).resolves.toEqual({
       applicationName: "Web Release",
       applicationIdentifier: "",
+      loadingFadeDuration: 0,
+      startFadeDuration: 0,
     });
     await expect(
       harness.service.createCurrentPlatformDetails("windows"),
@@ -422,5 +523,65 @@ describe("projectRepositoryService platform details", () => {
     expect(harness.getPlatformDetails("macos").applicationName).toBe(
       "Project One",
     );
+  });
+});
+
+it("normalizes Android defaults and preserves platform details across reads and updates", async () => {
+  const harness = createHarness();
+  expect(
+    await harness.service.getCurrentPlatformDetails("android"),
+  ).toBeUndefined();
+  const defaults =
+    await harness.service.getCurrentPlatformDetailsDefaults("android");
+  expect(defaults).toEqual({
+    applicationName: "Project One",
+    applicationIdentifier: "",
+    iconFileId: "project-icon-1",
+    iconBackgroundColor: "#FFFFFF",
+    splashBackgroundColor: "#000000",
+  });
+  await harness.service.createCurrentPlatformDetails("android", {
+    applicationIdentifier: "com.example.project_one",
+    iconBackgroundColor: "#aabbcc",
+  });
+  expect(await harness.service.getCurrentPlatformDetails("android")).toEqual({
+    ...defaults,
+    applicationIdentifier: "com.example.project_one",
+    iconBackgroundColor: "#AABBCC",
+  });
+  await harness.service.updateCurrentPlatformDetails("android", {
+    splashBackgroundColor: "#abcdef",
+  });
+  expect(harness.getPlatformDetails("android")).toMatchObject({
+    iconBackgroundColor: "#AABBCC",
+    splashBackgroundColor: "#ABCDEF",
+    applicationIdentifier: "com.example.project_one",
+  });
+  await expect(
+    harness.service.updateCurrentPlatformDetails("android", {
+      iconBackgroundColor: "#fff",
+    }),
+  ).rejects.toThrow("#RRGGBB");
+  expect(harness.getPlatformDetails("android").iconBackgroundColor).toBe(
+    "#AABBCC",
+  );
+  expect(harness.store.app.get).not.toHaveBeenCalledWith(undefined);
+});
+
+it("normalizes older Android metadata without background colors", async () => {
+  const harness = createHarness({
+    platformDetails: {
+      android: {
+        applicationName: "Project One",
+        iconFileId: "icon-1",
+        applicationIdentifier: "com.example.project_one",
+      },
+    },
+  });
+  expect(
+    await harness.service.getCurrentPlatformDetails("android"),
+  ).toMatchObject({
+    iconBackgroundColor: "#FFFFFF",
+    splashBackgroundColor: "#000000",
   });
 });

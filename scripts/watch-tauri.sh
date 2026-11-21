@@ -10,6 +10,8 @@ if [ ! -x "${RTGL_BIN}" ]; then
 fi
 
 echo "Preparing Tauri watch static assets..."
+# The icon bundle is generated from svg/, so a new icon is in it.
+bun run build:icons
 mkdir -p _site
 cp -rf static/. _site/
 

@@ -29,6 +29,7 @@ import {
 } from "../../src/pages/textStyleEditor/textStyleEditor.handlers.js";
 import { createTestFontBytes } from "../support/fontFixtures.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // Edits save on their own 300ms after the last one.
 
@@ -116,6 +117,7 @@ const createRepositoryState = (item) => ({
 const createPage = async ({
   item = createSavedTextStyle(),
   uiConfig = {},
+  retainedEditHistoryService = createRetainedEditHistoryService(),
 } = {}) => {
   let state = textStyleEditorStore.createInitialState();
   const store = new Proxy(
@@ -163,6 +165,7 @@ const createPage = async ({
       },
     },
     appService: {
+      ...retainedEditHistoryService,
       getPayload: () => ({ p: "project-1", ts: item.id }),
       navigate: vi.fn(),
       showAlert: vi.fn(),
@@ -369,6 +372,27 @@ describe("text style editor", () => {
       { p: "project-1" },
       { historyMode: "replace" },
     );
+  });
+
+  it("keeps undo and redo when the page is left and opened again", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    await page.changeField("fontSize", 32);
+    await page.cleanup();
+    const savedItem = createSavedTextStyle();
+    for (const { data } of page.savedData()) {
+      Object.assign(savedItem, data);
+    }
+
+    const reopened = await createPage({
+      item: savedItem,
+      retainedEditHistoryService,
+    });
+
+    expect(reopened.values().fontSize).toBe(32);
+    expect(reopened.state().editHistory.undo).toHaveLength(1);
+    await handleUndoButtonClick(reopened.deps);
+    expect(reopened.values().fontSize).not.toBe(32);
   });
 
   it("applies the field that changed, and saves only how the text looks", async () => {

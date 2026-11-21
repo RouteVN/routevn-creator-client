@@ -4,7 +4,7 @@ propsSchema:
   properties:
     platform:
       type: string
-      description: Release platform being added (web, windows, or macos)
+      description: Release platform being added (web, windows, macos, android, or ios)
     applicationInfo:
       type: object
       description: Default application info used to prefill the form

@@ -3,7 +3,7 @@ import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
-  INITIAL_SPRITESHEET_CLIP_FPS,
+  FALLBACK_SPRITESHEET_CLIP_FPS,
   formatSpritesheetFps,
   normalizeSpritesheetAnimationsFps,
   normalizeSpritesheetFps,
@@ -37,6 +37,11 @@ import {
   setMobileResourcePageUiConfigState,
   setMobileResourcePageWindowMetricsState,
 } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  SPRITESHEET_CREATE_SOURCES,
+  createSpritesheetCreateSourceFields,
+  selectSpritesheetCreateFileLabels,
+} from "../../internal/ui/spritesheetFramesSave.js";
 import { selectSpritesheetsPageCopy } from "./support/spritesheetsPageCopy.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -88,6 +93,7 @@ const createFolderContextMenuItems = (copy = {}) => [
 ];
 
 const createItemContextMenuItems = (copy = {}) => [
+  { label: copy.openButton ?? "Open", type: "item", value: "edit-item" },
   {
     label: copy.renameMenuItem ?? "Rename",
     type: "item",
@@ -109,7 +115,7 @@ const createEmptyContextMenuItems = (copy = {}) => [
 ];
 
 const createCenterItemContextMenuItems = (copy = {}) => [
-  { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
+  { label: copy.openButton ?? "Open", type: "item", value: "edit-item" },
   {
     label: copy.deleteMenuItem ?? "Delete",
     type: "item",
@@ -117,21 +123,36 @@ const createCenterItemContextMenuItems = (copy = {}) => [
   },
 ];
 
-const createDialogForm = (copy = {}) => ({
+const createNameField = (copy = {}) => ({
+  name: "name",
+  type: "input-text",
+  label: copy.nameLabel ?? "Name",
+  required: true,
+});
+
+const createDescriptionField = (copy = {}) => ({
+  name: "description",
+  type: "input-textarea",
+  label: copy.descriptionLabel ?? "Description",
+  required: false,
+});
+
+const createTagsField = (copy = {}) => ({
+  name: "tagIds",
+  type: "tag-select",
+  label: copy.tagsLabel ?? "Tags",
+  placeholder: copy.selectTagsPlaceholder ?? "Select tags",
+  addOption: {
+    label: copy.addTagOption ?? "Add tag",
+  },
+  required: false,
+});
+
+const createEditDialogForm = (copy = {}) => ({
   title: copy.spritesheetTitle ?? "Spritesheet",
   fields: [
-    {
-      name: "name",
-      type: "input-text",
-      label: copy.nameLabel ?? "Name",
-      required: true,
-    },
-    {
-      name: "description",
-      type: "input-textarea",
-      label: copy.descriptionLabel ?? "Description",
-      required: false,
-    },
+    createNameField(copy),
+    createDescriptionField(copy),
     {
       type: "slot",
       slot: "spritesheet-image-source",
@@ -142,16 +163,7 @@ const createDialogForm = (copy = {}) => ({
       slot: "spritesheet-atlas-source",
       label: copy.spritesheetJsonLabel ?? "Spritesheet JSON",
     },
-    {
-      name: "tagIds",
-      type: "tag-select",
-      label: copy.tagsLabel ?? "Tags",
-      placeholder: copy.selectTagsPlaceholder ?? "Select tags",
-      addOption: {
-        label: copy.addTagOption ?? "Add tag",
-      },
-      required: false,
-    },
+    createTagsField(copy),
     {
       name: "width",
       type: "input-number",
@@ -165,6 +177,28 @@ const createDialogForm = (copy = {}) => ({
       required: false,
     },
   ],
+});
+
+// A new spritesheet starts empty, to fill in the spritesheet editor, or from
+// a PNG spritesheet and its JSON file.
+const createAddDialogForm = (copy = {}, i18n) => ({
+  title: copy.addSpritesheetTitle ?? "Add Spritesheet",
+  fields: [
+    createNameField(copy),
+    createDescriptionField(copy),
+    createTagsField(copy),
+    ...createSpritesheetCreateSourceFields(i18n),
+  ],
+  actions: {
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.addSpritesheetButton ?? "Add Spritesheet",
+      },
+    ],
+  },
 });
 
 const createFolderNameForm = (copy = {}) => ({
@@ -254,13 +288,13 @@ const resolveFrameCount = (item) =>
 
 const cloneDialogAnimations = (
   animations = {},
-  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+  missingClipFps = FALLBACK_SPRITESHEET_CLIP_FPS,
 ) => normalizeSpritesheetAnimationsFps(animations, missingClipFps);
 
 const buildClipOptions = (
   animations = {},
   selectedClipName,
-  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+  missingClipFps = FALLBACK_SPRITESHEET_CLIP_FPS,
   copy = {},
   dateTime,
 ) => {
@@ -446,7 +480,7 @@ const createDialogSourceFiles = () => ({
   atlasFile: undefined,
 });
 
-const createClipFpsDialogValues = (fps = INITIAL_SPRITESHEET_CLIP_FPS) => ({
+const createClipFpsDialogValues = (fps = FALLBACK_SPRITESHEET_CLIP_FPS) => ({
   fps,
 });
 
@@ -474,6 +508,7 @@ export const createInitialState = () => ({
     draftTagIds: [],
   },
   dialogMode: "create",
+  isDialogSubmitting: false,
   dialogItemId: undefined,
   dialogParentId: undefined,
   dialogValues: buildDialogValues(),
@@ -643,12 +678,13 @@ export const openCreateDialog = (
   state.dialogParentId = parentId;
   state.dialogValues = {
     ...buildDialogValues(),
+    source: SPRITESHEET_CREATE_SOURCES.EMPTY,
     ...values,
   };
   state.dialogImportData = importData;
   state.dialogDraftAnimations = cloneDialogAnimations(
     importData?.animations,
-    INITIAL_SPRITESHEET_CLIP_FPS,
+    FALLBACK_SPRITESHEET_CLIP_FPS,
   );
   state.dialogPreviewUrl = previewUrl;
   state.dialogSourceFiles = {
@@ -675,34 +711,13 @@ export const openEditDialog = (
   state.dialogImportData = undefined;
   state.dialogDraftAnimations = cloneDialogAnimations(
     animations,
-    INITIAL_SPRITESHEET_CLIP_FPS,
+    FALLBACK_SPRITESHEET_CLIP_FPS,
   );
   state.dialogPreviewUrl = previewUrl;
   state.dialogSourceFiles = {
     ...createDialogSourceFiles(),
     ...sourceFiles,
   };
-  state.dialogSelectedClipName = undefined;
-  closeClipFpsDialogState(state);
-  state.dialogRevision += 1;
-};
-
-export const openPreviewDialog = (
-  { state },
-  { itemId, values, previewUrl } = {},
-) => {
-  state.isDialogOpen = true;
-  state.dialogMode = "preview";
-  state.dialogItemId = itemId;
-  state.dialogParentId = undefined;
-  state.dialogValues = {
-    ...buildDialogValues(),
-    ...values,
-  };
-  state.dialogImportData = undefined;
-  state.dialogDraftAnimations = {};
-  state.dialogPreviewUrl = previewUrl;
-  state.dialogSourceFiles = createDialogSourceFiles();
   state.dialogSelectedClipName = undefined;
   closeClipFpsDialogState(state);
   state.dialogRevision += 1;
@@ -791,7 +806,7 @@ export const setDialogImport = (
   state.dialogImportData = importData;
   state.dialogDraftAnimations = cloneDialogAnimations(
     importData?.animations,
-    INITIAL_SPRITESHEET_CLIP_FPS,
+    FALLBACK_SPRITESHEET_CLIP_FPS,
   );
   state.dialogPreviewUrl = previewUrl;
   state.dialogSourceFiles = {
@@ -827,6 +842,10 @@ export const setDialogClipFps = ({ state }, { clipName, fps } = {}) => {
   delete animation.animationSpeed;
 };
 
+export const setDialogSubmitting = ({ state }, { value } = {}) => {
+  state.isDialogSubmitting = value === true;
+};
+
 export const setDialogSelectedClipName = ({ state }, { clipName } = {}) => {
   state.dialogSelectedClipName = clipName;
 };
@@ -846,7 +865,7 @@ export const openClipFpsDialog = ({ state }, { clipName } = {}) => {
   state.isClipFpsDialogOpen = true;
   state.clipFpsDialogClipName = clipName;
   state.clipFpsDialogValues = createClipFpsDialogValues(
-    resolveSpritesheetAnimationFps(animation, INITIAL_SPRITESHEET_CLIP_FPS),
+    resolveSpritesheetAnimationFps(animation, FALLBACK_SPRITESHEET_CLIP_FPS),
   );
   state.clipFpsDialogRevision += 1;
 };
@@ -884,6 +903,13 @@ export const selectIsCreateTagSubmitting = ({ state }) =>
   state.isCreateTagSubmitting;
 
 export const selectDialogMode = ({ state }) => state.dialogMode;
+
+// Only creating can start empty; editing always works on the file.
+export const selectDialogCreatesEmpty = ({ state }) =>
+  state.dialogMode === "create" &&
+  state.dialogValues.source !== SPRITESHEET_CREATE_SOURCES.FILE;
+
+export const selectIsDialogSubmitting = ({ state }) => state.isDialogSubmitting;
 
 export const selectDialogItemId = ({ state }) => state.dialogItemId;
 
@@ -925,7 +951,7 @@ export const selectViewData = ({ state, i18n }) => {
   const detailSelection = buildClipOptions(
     selectedItem?.animations,
     state.detailSelectedClipName,
-    INITIAL_SPRITESHEET_CLIP_FPS,
+    FALLBACK_SPRITESHEET_CLIP_FPS,
     copy,
     i18n.dateTime,
   );
@@ -944,7 +970,7 @@ export const selectViewData = ({ state, i18n }) => {
   const dialogSelection = buildClipOptions(
     dialogAnimations,
     state.dialogSelectedClipName,
-    INITIAL_SPRITESHEET_CLIP_FPS,
+    FALLBACK_SPRITESHEET_CLIP_FPS,
     copy,
     i18n.dateTime,
   );
@@ -969,14 +995,10 @@ export const selectViewData = ({ state, i18n }) => {
     state.dialogSourceFiles?.atlasFile || dialogBaseItem?.jsonData,
   );
   const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
-  const isDialogPreviewMode = state.dialogMode === "preview";
+  const isCreateDialog = state.dialogMode === "create";
   const detailFields = selectedItem
     ? buildDetailFields(selectedItem, copy, i18n.dateTime)
     : buildFolderDetailFields(selectedFolder, copy);
-  const dialogSubmitLabel =
-    state.dialogMode === "create"
-      ? (copy.addSpritesheetButton ?? "Add Spritesheet")
-      : (copy.updateSpritesheetButton ?? "Update");
   return {
     resourceCategory: "animatedAssets",
     selectedResourceId: "spritesheets",
@@ -1031,17 +1053,19 @@ export const selectViewData = ({ state, i18n }) => {
     detailPreviewKey,
     detailPreviewPaused: state.isDialogOpen,
     isDialogOpen: state.isDialogOpen,
-    isDialogPreviewMode,
+    isAddDialogOpen: state.isDialogOpen && isCreateDialog,
+    isEditDialogOpen: state.isDialogOpen && !isCreateDialog,
     dialogMode: state.dialogMode,
-    dialogTitle:
-      state.dialogMode === "create"
-        ? (copy.addSpritesheetTitle ?? "Add Spritesheet")
-        : state.dialogMode === "edit"
-          ? (copy.editSpritesheetTitle ?? "Edit Spritesheet")
-          : "",
-    dialogSubmitLabel,
-    dialogForm: createDialogForm(copy),
+    dialogTitle: copy.editSpritesheetTitle ?? "Edit Spritesheet",
+    dialogSubmitLabel: copy.updateSpritesheetButton ?? "Update",
+    addForm: createAddDialogForm(copy, i18n),
+    dialogForm: createEditDialogForm(copy),
     dialogFormKey: `${state.dialogMode}-${state.dialogItemId ?? "new"}-${state.dialogRevision}`,
+    createFileLabels: selectSpritesheetCreateFileLabels(i18n, {
+      source: state.dialogValues.source,
+      sourceFiles: state.dialogSourceFiles,
+    }),
+    isDialogSubmitting: state.isDialogSubmitting,
     dialogValues: state.dialogValues,
     isCreateTagDialogOpen: state.isCreateTagDialogOpen,
     createTagDefaultValues: state.createTagDefaultValues,
@@ -1080,7 +1104,7 @@ export const selectViewData = ({ state, i18n }) => {
     filesLabel: copy.filesLabel ?? "Files",
     noAnimationsFound: copy.noAnimationsFound ?? "No animations found",
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
-    previewButton: copy.previewMenuItem ?? "Preview",
+    openButton: copy.openButton ?? "Open",
     selectValidJsonToDetectClips:
       copy.selectValidJsonToDetectClips ??
       "Select valid spritesheet JSON to detect clips",

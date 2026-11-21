@@ -28,6 +28,7 @@ import {
   handleRightPanelModeChange,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const createLayoutEditorDeps = ({
   pendingPersistPayload,
@@ -67,6 +68,12 @@ const createLayoutEditorDeps = ({
     selectLayoutId: vi.fn(() => "layout-1"),
     selectLayoutName: vi.fn(() => "Layout One"),
     selectLayoutResourceType: vi.fn(() => resourceType),
+    selectProjectResolution: vi.fn(() => ({ width: 1920, height: 1080 })),
+    selectImages: vi.fn(() => ({ items: {}, tree: [] })),
+    selectSpritesheetsData: vi.fn(() => ({ items: {}, tree: [] })),
+    selectVideosData: vi.fn(() => ({ items: {}, tree: [] })),
+    selectParticlesData: vi.fn(() => ({ items: {}, tree: [] })),
+    selectLayoutsData: vi.fn(() => ({ items: {}, tree: [] })),
     selectPreviewData: vi.fn(() => state.previewData),
     setPreviewData: vi.fn(({ previewData: nextPreviewData } = {}) => {
       state.previewData = nextPreviewData;
@@ -97,6 +104,8 @@ const createLayoutEditorDeps = ({
     updateSelectedItem: vi.fn(),
     selectLayoutElements: vi.fn(() => ({ items: {}, tree: [] })),
     recordEditHistoryStep: vi.fn(),
+    selectEditHistory: vi.fn(() => ({ undo: [], redo: [] })),
+    resumeEditHistory: vi.fn(),
     addSavingPersistPayload: vi.fn(),
     removeSavingPersistPayload: vi.fn(),
     setStructureEditRunning: vi.fn(),
@@ -104,6 +113,7 @@ const createLayoutEditorDeps = ({
   };
 
   const appService = {
+    ...createRetainedEditHistoryService(),
     getPayload: vi.fn(() => ({
       p: "project-1",
       layoutId: "layout-1",
@@ -1346,6 +1356,57 @@ describe("layoutEditor.handleLayoutEditPanelUpdateHandler", () => {
 });
 
 describe("layoutEditor.handleFileExplorerAction", () => {
+  it.each([
+    [{ width: 800, height: 450 }, 800, 450],
+    [{ width: 800 }, 640, 360],
+  ])(
+    "creates a video with resource dimensions or the fallback",
+    async (size, width, height) => {
+      vi.useFakeTimers();
+      try {
+        const deps = createLayoutEditorDeps();
+        deps.store.selectVideosData = vi.fn(() => ({
+          items: { "video-one": { type: "video", name: "Video One", ...size } },
+          tree: [{ id: "video-one" }],
+        }));
+        deps.store.selectProjectResolution = vi.fn(() => ({
+          width: 1920,
+          height: 1080,
+        }));
+        deps.store.setSelectedItemId = vi.fn();
+        deps.store.setDetailPanelSelectedItemId = vi.fn();
+        deps.store.setRightPanelMode = vi.fn();
+        deps.refs.fileExplorer = { selectItem: vi.fn() };
+        deps.appService.showFormDialog = vi.fn(async () => ({
+          actionId: "submit",
+          values: { name: "Video One", videoId: "video-one" },
+        }));
+        await handleFileExplorerAction(deps, {
+          _event: {
+            detail: {
+              item: { value: { action: "new-child-item", type: "video" } },
+            },
+          },
+        });
+        expect(deps.projectService.createLayoutElement).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              type: "video",
+              videoId: "video-one",
+              width,
+              height,
+              loop: true,
+              volume: 100,
+              aspectRatioLock: width / height,
+            }),
+          }),
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("creates image elements at the top of the selected parent", async () => {
     vi.useFakeTimers();
     const createLayoutElement = vi.fn(async () => ({ valid: true }));

@@ -1,3 +1,4 @@
+import { warnOnceIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import { setSceneEditorPageLoading } from "../../internal/ui/sceneEditor/loadingProgress.js";
 import { mountSceneEditorWindowLayout } from "./support/windowLayout.js";
 import { getSceneStartupErrorMessage } from "./support/startupError.js";
@@ -27,6 +28,7 @@ import {
   getSceneEditorRestoreFocus,
   restoreSceneEditorSectionLines,
 } from "../../internal/ui/sceneEditorLexical/lineHistory.js";
+import { getEditHistoryOwner } from "../../internal/editHistory.js";
 import {
   resolveEditHistoryShortcut,
   selectEditHistoryCopy,
@@ -41,6 +43,7 @@ import {
   getSceneEditorTimingNow,
 } from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
 import {
+  captureSceneEditorVisualSnapshots,
   cloneWithDiagnostics,
   flushSceneEditorCanvasRender,
   initializeSceneEditorPage,
@@ -61,6 +64,7 @@ import {
   isBackgroundTransformResizeMode,
   normalizeBackgroundTransformEditorTransform,
 } from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import { getDefaultVisualLayoutTransform } from "../../internal/project/layout.js";
 import {
   createSceneEditorSectionWithName,
   isSectionsOverviewOpen,
@@ -74,6 +78,7 @@ import {
 } from "../../internal/ui/sceneEditor/sceneEditorCopy.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
 import { mergeSubmittedActions } from "../../internal/navigationActions.js";
+import { createLayoutEditorSceneBackdrop } from "../../internal/layoutEditorSceneBackdrop.js";
 import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import {
   createSceneCanvasFileName,
@@ -705,6 +710,11 @@ const dispatchLineNavigationRender = (
 // The command layer words its refusals in English, for logs. A refusal the
 // user can resolve is explained here in their language instead.
 const getSceneEditorCommandRefusalMessage = (copy, code) => {
+  if (code === "last_section") {
+    return (
+      copy.cannotDeleteLastSection ?? "A scene must keep at least one section."
+    );
+  }
   if (code === "section_referenced") {
     return (
       copy.cannotDeleteReferencedSection ??
@@ -766,11 +776,35 @@ const reconcileCurrentEditorSession = (deps) => {
   );
 };
 
+// Keeps the open scene's undo history for coming back to it, as the page or
+// the scene is left.
+const retainSceneEditorHistory = (deps) => {
+  const { appService, store } = deps;
+  appService.retainEditHistory({
+    owner: getEditHistoryOwner("scene", store.selectSceneId()),
+    history: store.selectEditHistory(),
+  });
+};
+
+// Takes back the history kept for the scene now open.
+const resumeSceneEditorHistory = (deps) => {
+  const { appService, store } = deps;
+  store.resumeEditHistory({
+    retainedEditHistory: appService.getRetainedEditHistory({
+      owner: getEditHistoryOwner("scene", store.selectSceneId()),
+    }),
+  });
+};
+
 // Puts a section whose draft could not be saved back to its stored lines, in
 // the store and in the editor showing it.
 const revertFailedDraftSection = (deps, { draftSection }) => {
-  const { projectService, refs, store, subject } = deps;
+  const { appService, projectService, refs, store, subject } = deps;
   const { sceneId, sectionId } = draftSection;
+  // A history kept for this scene could bring the dropped lines back.
+  appService.clearRetainedEditHistory({
+    owner: getEditHistoryOwner("scene", sceneId),
+  });
 
   syncStoreProjectState(store, projectService);
 
@@ -844,13 +878,24 @@ const persistSceneEditorCommand = async (deps, task, options) => {
   }
 };
 
-const refreshSceneEditorStateFromProject = async (deps) => {
+// Takes the project's lines into the page, under the drafts not saved yet.
+const takeProjectStateIntoPage = (deps) => {
   const { store, projectService } = deps;
   syncStoreProjectState(store, projectService);
   reconcileCurrentEditorSession(deps);
+};
+
+// What the page works out from its lines: what each line changes, from the
+// canvas's engine, and the scene's text stats.
+const refreshSceneEditorLineSummaries = async (deps) => {
   await updateSceneEditorSectionChanges(deps);
   refreshSceneTextStatsNow(deps, { render: false });
   await cacheCurrentSceneTextStats(deps);
+};
+
+const refreshSceneEditorStateFromProject = async (deps) => {
+  takeProjectStateIntoPage(deps);
+  await refreshSceneEditorLineSummaries(deps);
 };
 
 const SCENE_EDITOR_TEXT_EDITOR_TAG_NAME = "rvn-lexical-scene-document-editor";
@@ -1138,6 +1183,14 @@ export const handleEditHistoryShortcutKeyDown = (deps, payload) => {
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   const { store, render, subject } = deps;
+  // While a scene switch loads the next scene, the project state holds that
+  // scene's lines and none of the scene still in the store. Applied, it would
+  // show that scene's sections empty, and refresh its drafts to empty ones.
+  // The switch applies the project state once the store has the next scene.
+  if (store.selectIsNextSceneLoading()) {
+    return;
+  }
+
   const pendingDraftSections = store.selectPendingDraftSections?.() || [];
   const hadPendingSessionChanges =
     pendingDraftSections.length > 0 ||
@@ -1272,13 +1325,22 @@ export const syncSceneEditorRoutePayload = async (
       return;
     }
 
-    await projectService.setActiveSceneId(nextSceneId);
-    if (!canContinue()) {
-      return;
-    }
+    // Loading the next scene notifies the project state before the store has
+    // the next scene, see syncSceneEditorProjectPayload.
+    store.startNextSceneLoad();
+    try {
+      await projectService.setActiveSceneId(nextSceneId);
+      if (!canContinue()) {
+        return;
+      }
 
-    syncStoreProjectState(store, projectService);
-    store.setSceneId({ sceneId: nextSceneId });
+      syncStoreProjectState(store, projectService);
+      retainSceneEditorHistory(deps);
+      store.setSceneId({ sceneId: nextSceneId });
+      resumeSceneEditorHistory(deps);
+    } finally {
+      store.finishNextSceneLoad();
+    }
 
     const scene = store.selectScene();
     if (!scene) {
@@ -1287,6 +1349,7 @@ export const syncSceneEditorRoutePayload = async (
 
     const entrySelection = resolveSceneEditorEntrySelection(scene, {
       sectionId: routePayload.sectionId,
+      entryLineId: routePayload.entryLineId,
     });
     store.setSelectedSectionId({
       selectedSectionId: entrySelection.sectionId,
@@ -1299,6 +1362,7 @@ export const syncSceneEditorRoutePayload = async (
       s: nextSceneId,
     };
     delete nextPayload.sceneId;
+    delete nextPayload.entryLineId;
     if (entrySelection.sectionId) {
       nextPayload.sectionId = entrySelection.sectionId;
     } else {
@@ -1572,8 +1636,18 @@ const selectInitialBackgroundTransformEditorTransform = (
   });
 };
 
-const selectInitialActionTransformEditorTransform = (store, item = {}) => {
-  const transform = selectTransformResourceById(store, item.transformId);
+// A visual without a predefined transform is centered on the screen.
+const selectInitialActionTransformEditorTransform = (
+  store,
+  item = {},
+  targetType,
+) => {
+  const resolution = store.selectRepositoryState?.()?.project?.resolution;
+  const transform =
+    selectTransformResourceById(store, item.transformId) ??
+    (targetType === "visual"
+      ? getDefaultVisualLayoutTransform(resolution)
+      : undefined);
 
   return normalizeBackgroundTransformEditorTransform({
     ...toPlainObject(transform),
@@ -1950,7 +2024,11 @@ export const handleActionTransformCustomize = (deps, payload) => {
   );
   const itemIndex = detail.itemIndex;
   const item = toPlainObject(detail.item ?? action.items?.[itemIndex]);
-  const transform = selectInitialActionTransformEditorTransform(store, item);
+  const transform = selectInitialActionTransformEditorTransform(
+    store,
+    item,
+    targetType,
+  );
   const targetId = getActionTransformEditorTargetId({
     targetType,
     item,
@@ -2053,6 +2131,8 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    // Before the save below can let the next page open.
+    retainSceneEditorHistory(deps);
     store.advanceMountVersion();
     cleanupWindowLayout?.();
     unregisterBeforeNavigation();
@@ -2091,6 +2171,7 @@ export const handleAfterMount = async (deps) => {
       store.markCanvasUnavailable();
       setSceneEditorPageLoading(deps, false);
     });
+    resumeSceneEditorHistory(deps);
     const projectInfo = await projectService.getCurrentProjectInfo();
     store.setProjectLanguage({ language: projectInfo.language });
     reconcileCurrentEditorSession(deps);
@@ -2429,6 +2510,7 @@ const submitSceneEditorCommandLine = async (
 
   // Trigger debounced canvas render
   subject.dispatch("sceneEditor.renderCanvas", {});
+  return true;
 };
 
 export const handleCommandLineSubmit = (deps, payload) =>
@@ -2438,6 +2520,120 @@ export const handleCommandLineSubmit = (deps, payload) =>
     ({ lineId, line }) =>
       submitSceneEditorCommandLine(deps, payload, { lineId, line }),
   );
+
+// The line's scene as the canvas draws it, as the backdrop of a visual's
+// layout. A canvas that cannot draw it gives an empty backdrop.
+const captureVisualLayoutBackdrop = async (deps, visualId) => {
+  const { graphicsService, subject } = deps;
+  try {
+    await flushSceneEditorCanvasRender(subject, {
+      skipRender: true,
+      syncPresentationState: true,
+      skipAnimations: true,
+      preserveAnimationPlayback: true,
+    });
+  } catch (error) {
+    console.warn("[sceneEditor] The layout editor opens without the scene", {
+      error,
+    });
+  }
+  return createLayoutEditorSceneBackdrop(
+    graphicsService.engineSelectRenderState()?.elements,
+    { replacedElementId: `visual-${visualId}` },
+  );
+};
+
+// Edit Layout on a visual saves the line's visuals as Submit does, then opens
+// the visual's layout full screen over the page, drawn in the line's scene.
+// The page's canvas waits under it until it closes.
+export const handleVisualLayoutEdit = async (deps, payload) => {
+  const { render, store } = deps;
+  const { actions, visualId, returnToEditView } = payload._event.detail;
+  const lineId = resolveActionTargetLineId(store);
+  // Undo waits from the save until the editor is open, or the save failed.
+  store.startOpeningVisualLayoutEditor();
+  let didSave = false;
+  try {
+    didSave = await runRecordedLineCommand(
+      deps,
+      { lineId },
+      ({ lineId: targetLineId, line }) =>
+        submitSceneEditorCommandLine(
+          deps,
+          { _event: { detail: actions } },
+          { lineId: targetLineId, line },
+        ),
+    );
+  } finally {
+    if (didSave !== true) {
+      store.closeVisualLayoutEditor();
+    }
+  }
+  if (didSave !== true) {
+    return;
+  }
+
+  // Without graphics, which the user was told about, the layout opens
+  // without its scene, for its elements to be edited in the lists.
+  const sceneBackdrop = store.selectIsCanvasUnavailable()
+    ? undefined
+    : await captureVisualLayoutBackdrop(deps, visualId);
+  // The editor's saves are one undo step, taken when it closes.
+  store.setEditHistoryBaselines({ baselines: selectPageSectionLines(store) });
+  store.openVisualLayoutEditor({
+    sceneId: store.selectSceneId(),
+    sectionId: findSectionIdForLine(store, lineId),
+    lineId,
+    visualId,
+    returnToEditView,
+    sceneBackdrop,
+  });
+  render();
+};
+
+// Closing the layout editor takes the line as it saved it, records it as an
+// undo step, opens the visual panel again where the layout was opened from,
+// and gives the canvas back to the page.
+//
+// The panel takes the editor's place in the same render, and the canvas comes
+// back after, as it takes a moment. Until then, the presentation state is the
+// one from before the layout was edited, so the panel is given the line's
+// visuals as the editor saved them, as its unsaved state, and the editor's
+// picture of the layout until the canvas draws it. What each line changes is
+// worked out again once the canvas's engine has the edits.
+export const handleVisualLayoutEditorClose = async (deps, payload) => {
+  const { refs, render, store } = deps;
+  const { snapshotUrl } = payload._event.detail;
+  const { isOpen, lineId, visualId, returnToEditView } =
+    store.selectVisualLayoutEditor();
+  if (!isOpen) {
+    return;
+  }
+
+  if (snapshotUrl) {
+    store.setVisualSnapshot({ visualId, url: snapshotUrl });
+  }
+  takeProjectStateIntoPage(deps);
+  takeSavedLineActionsIntoDraft(deps, lineId);
+  recordSceneEditorLineEdits(deps, selectPageSectionLines(store));
+
+  const actions = toPlainObject(findSceneLine(store, lineId)?.actions);
+  store.setTemporaryPresentationState({
+    presentationState: { visual: actions.visual },
+  });
+  store.closeVisualLayoutEditor();
+  prepareActionsDialogOpen(deps, lineId);
+  render();
+  refs.systemActions.transformedHandlers.open({
+    mode: "visual",
+    actions,
+    editVisualId: returnToEditView ? visualId : undefined,
+  });
+
+  await restoreSceneEditorFromPreview(deps);
+  await refreshSceneEditorLineSummaries(deps);
+  render();
+};
 
 export const handleEditorDataChanged = async (deps, payload) => {
   const { refs, render, subject, store } = deps;
@@ -2870,6 +3066,8 @@ export const handleSystemActionsDialogOpen = (deps, payload) => {
   const { selectedLineId } = payload._event.detail;
   const lineId = selectedLineId ?? store.selectSelectedLineId();
   prepareActionsDialogOpen(deps, lineId);
+  // The line is drawn already: its visuals' pictures are taken from it.
+  void captureSceneEditorVisualSnapshots(deps);
 };
 
 export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
@@ -3699,8 +3897,7 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const sourceScene = store.selectCommittedScene();
-  if ((sourceScene?.sections?.length ?? 0) <= 1) {
+  if (store.selectWouldRemoveAllSections({ sectionIds: [sectionId] })) {
     appService?.showAlert({
       message:
         copy.sceneMustKeepOneSection ??
@@ -3935,7 +4132,10 @@ export const handleDownloadCanvasClick = async (deps) => {
 export const handlePreviewClick = (deps) => {
   const { store, render, appService, projectService } = deps;
   // The preview needs graphics too, which this device could not start.
-  if (store.selectIsCanvasUnavailable()) {
+  if (
+    store.selectIsCanvasUnavailable() ||
+    !store.selectScene()?.sections?.length
+  ) {
     return;
   }
 
@@ -3972,6 +4172,7 @@ export const handlePreviewClick = (deps) => {
       });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();
+      warnOnceIfAudioUnavailable(deps);
     } catch (error) {
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       console.error("[sceneEditor] Failed to open preview", error);

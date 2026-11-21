@@ -350,3 +350,164 @@ describe("import package command batch", () => {
     });
   });
 });
+
+describe("import package command batch: character sprite tags", () => {
+  const createProject = async () => {
+    const repository = await createProjectRepository({
+      projectId: "project-one",
+      store: {
+        appendEvents: vi.fn(async () => {}),
+        loadMaterializedViewCheckpoint: vi.fn(async () => undefined),
+        saveMaterializedViewCheckpoint: vi.fn(async () => {}),
+        deleteMaterializedViewCheckpoint: vi.fn(async () => {}),
+      },
+      events: [],
+      historyLoaded: true,
+    });
+    const actor = { userId: "user-1", clientId: "client-1" };
+    const session = {
+      getActor: () => actor,
+      submitCommands: vi.fn(async (commands) =>
+        commands.map((command) => command.id),
+      ),
+    };
+    let commandIndex = 0;
+    const shared = createCommandApiShared({
+      idGenerator: () => `generated-command-${++commandIndex}`,
+      now: () => 1,
+      getCurrentProjectId: () => "project-one",
+      getCurrentRepository: async () => repository,
+      getCachedRepository: () => repository,
+      ensureCommandSessionForProject: async () => session,
+      getOrCreateLocalActor: () => actor,
+      storyBasePartitionFor: () => "m",
+      storyScenePartitionFor: () => "m",
+      scenePartitionFor: () => "m",
+      resourceTypePartitionFor: () => "m",
+    });
+    return {
+      repository,
+      session,
+      api: createImportPackageCommandApi(shared),
+    };
+  };
+  const createCharacterEntry = () => ({
+    resourceType: "characters",
+    destinationId: "character-one",
+    commandId: "command-character",
+    folder: false,
+    index: 0,
+    data: {
+      type: "character",
+      name: "Character One",
+      sprites: {
+        items: {
+          "sprite-one": {
+            id: "sprite-one",
+            type: "image",
+            name: "Sprite One",
+            fileId: "file-sprite",
+          },
+          "sprite-two": {
+            id: "sprite-two",
+            type: "image",
+            name: "Sprite Two",
+            fileId: "file-sprite",
+          },
+        },
+        tree: [
+          { id: "sprite-one", children: [] },
+          { id: "sprite-two", children: [] },
+        ],
+      },
+    },
+    characterSpriteTags: {
+      tags: [
+        {
+          tagId: "tag-one",
+          commandId: "command-tag-one",
+          data: { type: "tag", name: "Tag One", color: "#112233" },
+        },
+        {
+          tagId: "tag-two",
+          commandId: "command-tag-two",
+          data: { type: "tag", name: "Tag Two" },
+        },
+      ],
+      sprites: [
+        {
+          spriteId: "sprite-one",
+          commandId: "command-sprite-one",
+          tagIds: ["tag-one"],
+        },
+      ],
+      spriteGroups: {
+        commandId: "command-groups",
+        items: [
+          { id: "group-one", name: "Group One", tags: ["tag-one"] },
+          { id: "group-two", name: "Group Two", tags: ["tag-two"] },
+        ],
+      },
+    },
+  });
+  const commit = ({ api, repository }, entries) =>
+    api.commitAssetImportPackage({
+      planId: "asset-plan",
+      projectId: "project-one",
+      repositoryRevision: repository.getRevision(),
+      fileRecords: [
+        { id: "file-sprite", mimeType: "image/png", size: 1, sha256: "sha" },
+      ],
+      fileCommandIds: { "file-sprite": "command-file-sprite" },
+      entries,
+    });
+
+  it("creates a character's tags after it, then tags its sprites and sets its groups", async () => {
+    const project = await createProject();
+
+    const result = await commit(project, [createCharacterEntry()]);
+
+    expect(result).toMatchObject({ valid: true });
+    const [commands] = project.session.submitCommands.mock.calls[0];
+    expect(commands.map(({ id, type }) => [id, type])).toEqual([
+      ["command-file-sprite", "file.create"],
+      ["command-character", "character.create"],
+      ["command-tag-one", "tag.create"],
+      ["command-tag-two", "tag.create"],
+      ["command-sprite-one", "character.sprite.update"],
+      ["command-groups", "character.update"],
+    ]);
+    const state = project.repository.getState();
+    expect(state.tags["characterSprites:character-one"]).toEqual({
+      items: {
+        "tag-one": {
+          id: "tag-one",
+          type: "tag",
+          name: "Tag One",
+          color: "#112233",
+        },
+        "tag-two": { id: "tag-two", type: "tag", name: "Tag Two" },
+      },
+      tree: [{ id: "tag-one" }, { id: "tag-two" }],
+    });
+    const character = state.characters.items["character-one"];
+    expect(character.spriteGroups).toEqual([
+      { id: "group-one", name: "Group One", tags: ["tag-one"] },
+      { id: "group-two", name: "Group Two", tags: ["tag-two"] },
+    ]);
+    expect(character.sprites.items["sprite-one"].tagIds).toEqual(["tag-one"]);
+    expect(character.sprites.items["sprite-two"].tagIds).toBeUndefined();
+  });
+
+  it("commits nothing when a tag cannot be created", async () => {
+    const project = await createProject();
+    const entry = createCharacterEntry();
+    entry.characterSpriteTags.tags[1].data.name = "Tag One";
+
+    const result = await commit(project, [entry]);
+
+    expect(result.valid).toBe(false);
+    expect(project.session.submitCommands).not.toHaveBeenCalled();
+    expect(project.repository.getState().characters.items).toEqual({});
+  });
+});

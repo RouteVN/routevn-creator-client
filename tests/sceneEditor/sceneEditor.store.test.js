@@ -15,6 +15,7 @@ import {
   selectPreviousPresentationState,
   selectViewData,
   selectSectionTransitionsDAG,
+  selectTemporaryPresentationStateForEngine,
   setRepositoryState,
   setSceneId,
   setSceneLoadingProgress,
@@ -839,6 +840,73 @@ describe("sceneEditorLexical.store", () => {
     });
   });
 
+  it("builds the temporary visual layouts for the engine from the project as it is now", () => {
+    const image = (fileId) => ({
+      items: {
+        door: {
+          id: "door",
+          type: "image",
+          name: "Door",
+          fileId,
+          width: 40,
+          height: 60,
+        },
+      },
+      tree: [{ id: "door" }],
+    });
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      { repository: { images: image("door-file-one") } },
+    );
+    setTemporaryPresentationState(
+      { state },
+      {
+        presentationState: {
+          visual: {
+            items: [
+              {
+                id: "card",
+                layout: {
+                  layoutSchemaVersion: 2,
+                  elements: {
+                    items: {
+                      volume: {
+                        type: "slider",
+                        thumbImageId: "door",
+                        width: 200,
+                        height: 20,
+                      },
+                    },
+                    tree: [{ id: "volume" }],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    );
+    const findSprite = () =>
+      JSON.stringify(
+        selectTemporaryPresentationStateForEngine({ state }).presentationState,
+      );
+
+    const first = findSprite();
+    expect(first).toContain("door-file-one");
+    // Asked again, as each slider tick asks, it builds the same.
+    expect(findSprite()).toBe(first);
+
+    // A project with another file for the image builds with that file.
+    setRepositoryState(
+      { state },
+      { repository: { images: image("door-file-two") } },
+    );
+    const second = findSprite();
+    expect(second).toContain("door-file-two");
+    expect(second).not.toContain("door-file-one");
+  });
+
   it("exposes the presentation state immediately before the selected line", () => {
     const state = createInitialState();
     setSelectedSectionId({ state }, { selectedSectionId: "section-1" });
@@ -1133,6 +1201,94 @@ describe("sceneEditorLexical.store", () => {
     expect(
       viewData.sectionEditorItems[1].documentLineDecorations[0].visual,
     ).toEqual({ changeType: "set", items: [] });
+  });
+
+  it("hides Delete and Move to scene when a section contains every other section", () => {
+    const state = createInitialState();
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {
+                    parent: {
+                      id: "parent",
+                      name: "Parent",
+                      lines: { items: {}, tree: [] },
+                    },
+                    child: {
+                      id: "child",
+                      name: "Child",
+                      lines: { items: {}, tree: [] },
+                    },
+                  },
+                  tree: [{ id: "parent", children: [{ id: "child" }] }],
+                },
+              },
+              "scene-2": {
+                id: "scene-2",
+                type: "scene",
+                name: "Scene 2",
+                sections: { items: {}, tree: [] },
+              },
+            },
+            tree: [{ id: "scene-1" }, { id: "scene-2" }],
+          },
+        },
+      },
+    );
+    showSectionDropdownMenu(
+      { state },
+      { sectionId: "parent", position: { x: 0, y: 0 } },
+    );
+    const values = state.dropdownMenu.items.map((item) => item.value);
+    expect(values).not.toContain("delete-section");
+    expect(values).not.toContain("move-section-scene");
+
+    showSectionDropdownMenu(
+      { state },
+      { sectionId: "child", position: { x: 0, y: 0 } },
+    );
+    expect(state.dropdownMenu.items.map((item) => item.value)).toEqual(
+      expect.arrayContaining(["delete-section", "move-section-scene"]),
+    );
+  });
+
+  it("offers to add a section, and hides Preview, for a scene without sections", () => {
+    const state = createInitialState();
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: { items: {}, tree: [] },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+
+    const view = selectViewData({ state, i18n: EN_I18N });
+
+    expect(view.hasNoSections).toBe(true);
+    expect(view.isPreviewHidden).toBe(true);
+    expect(view.emptySectionsMessage).toBe("This scene has no sections.");
+    expect(view.addSectionLabel).toBe("Add section");
   });
 
   it("builds section menu actions for add, reorder, and moving to another scene", () => {

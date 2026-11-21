@@ -20,3 +20,5 @@ propsSchema:
             type: array
     fillHeight:
       type: boolean
+    padding:
+      type: string

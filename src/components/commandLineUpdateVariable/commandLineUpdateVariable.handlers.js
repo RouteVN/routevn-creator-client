@@ -1,5 +1,12 @@
 import { generateId } from "../../internal/id.js";
 import {
+  getRandomVariableType,
+  isEditableRandomOperation,
+  MAX_RANDOM_VALUES,
+  validateRandomDistribution,
+  validateUpdateVariableSize,
+} from "../../internal/randomActions.js";
+import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
@@ -14,6 +21,82 @@ const getVariableItems = (variablesData = {}) => {
 
 const DEFAULT_DIVIDE_ROUND_TO = 2;
 const MAX_DIVIDE_ROUND_TO = 12;
+
+// A new random range draws like a die.
+const DEFAULT_RANDOM_MIN = 1;
+const DEFAULT_RANDOM_MAX = 6;
+const NEW_RANDOM_VALUE_WEIGHT = 1;
+
+const INVALID_OPERATION_VALUE_MESSAGE = "Variable operation value is invalid.";
+
+// The value a new row of a random list starts with: the first enum value, or
+// an empty field.
+const getNewRandomValue = (variable) => {
+  if (isVariableEnumEnabled(variable)) {
+    return normalizeVariableEnumValues(variable.enumValues)[0] ?? "";
+  }
+
+  const variableType = getRandomVariableType(variable);
+  if (variableType === "boolean") {
+    return true;
+  }
+  return variableType === "number" ? undefined : "";
+};
+
+const createRandomValueRow = (value, weight = NEW_RANDOM_VALUE_WEIGHT) => ({
+  id: generateId(),
+  value,
+  weight,
+});
+
+// A new random operation: a range from 1 to 6 for a number variable, true and
+// false for a boolean one, and one row for the others. A number variable also
+// gets a list, for when the user switches to it.
+const createDefaultRandomDraft = (variable) => {
+  const variableType = getRandomVariableType(variable);
+  const values =
+    variableType === "boolean"
+      ? [createRandomValueRow(true), createRandomValueRow(false)]
+      : [createRandomValueRow(getNewRandomValue(variable))];
+
+  return {
+    type: variableType === "number" ? "integer" : "weighted",
+    min: DEFAULT_RANDOM_MIN,
+    max: DEFAULT_RANDOM_MAX,
+    values,
+  };
+};
+
+// The form of a saved random operation that isEditableRandomDistribution
+// accepts. Each value gets an id for its row while it is edited.
+const toRandomDraft = (distribution, variable) => {
+  const draft = createDefaultRandomDraft(variable);
+  draft.type = distribution.type;
+  if (distribution.type === "integer") {
+    draft.min = distribution.min;
+    draft.max = distribution.max;
+  } else {
+    draft.values = distribution.values.map((entry) =>
+      createRandomValueRow(entry.value, entry.weight),
+    );
+  }
+  return draft;
+};
+
+// The Route Engine distribution of the draft, without the rows' ids.
+const toRandomDistribution = (random) => {
+  if (random.type === "integer") {
+    return { type: "integer", min: random.min, max: random.max };
+  }
+
+  return {
+    type: "weighted",
+    values: random.values.map((entry) => ({
+      weight: entry.weight,
+      value: entry.value,
+    })),
+  };
+};
 
 const getDefaultValueForVariable = (variable = {}) => {
   if (isVariableEnumEnabled(variable)) {
@@ -102,8 +185,34 @@ const normalizeRoundToValue = (value) => {
   };
 };
 
+const normalizeRandomOperationForSave = ({ operation, variable }) => {
+  const distribution = toRandomDistribution(operation.random);
+  const message = validateRandomDistribution(distribution, variable);
+  if (message) {
+    return {
+      message,
+      valid: false,
+    };
+  }
+
+  return {
+    operation: {
+      variableId: operation.variableId,
+      op: operation.op,
+      value: undefined,
+      roundTo: undefined,
+      distribution,
+    },
+    valid: true,
+  };
+};
+
 const normalizeOperationForSave = ({ operation, variableItems } = {}) => {
   const variable = variableItems[operation.variableId];
+  if (operation.op === "random") {
+    return normalizeRandomOperationForSave({ operation, variable });
+  }
+
   const variableType = (variable?.variableType || "string").toLowerCase();
   const normalized = normalizeOperationValue({
     operation: operation.op,
@@ -113,6 +222,7 @@ const normalizeOperationForSave = ({ operation, variableItems } = {}) => {
 
   if (!normalized.valid) {
     return {
+      message: INVALID_OPERATION_VALUE_MESSAGE,
       valid: false,
     };
   }
@@ -120,6 +230,7 @@ const normalizeOperationForSave = ({ operation, variableItems } = {}) => {
   const result = {
     variableId: operation.variableId,
     op: operation.op,
+    distribution: undefined,
   };
 
   if (normalized.includeValue) {
@@ -132,6 +243,7 @@ const normalizeOperationForSave = ({ operation, variableItems } = {}) => {
     const normalizedRoundTo = normalizeRoundToValue(operation.roundTo);
     if (!normalizedRoundTo.valid) {
       return {
+        message: INVALID_OPERATION_VALUE_MESSAGE,
         valid: false,
       };
     }
@@ -146,14 +258,15 @@ const normalizeOperationForSave = ({ operation, variableItems } = {}) => {
   };
 };
 
-const showInvalidOperationValueAlert = (appService, copy) => {
+const showWarning = (appService, copy, message) => {
   appService.showAlert({
-    message: localizeCommandLineText(
-      "Variable operation value is invalid.",
-      copy,
-    ),
+    message: localizeCommandLineText(message, copy),
     title: localizeCommandLineText("Warning", copy),
   });
+};
+
+const showInvalidOperationValueAlert = (appService, copy) => {
+  showWarning(appService, copy, INVALID_OPERATION_VALUE_MESSAGE);
 };
 
 const showComputedVariableReadOnlyAlert = (appService, copy) => {
@@ -187,6 +300,7 @@ export const handleAfterMount = async (deps) => {
     id: updateVariable.id || generateId(),
   });
 
+  const variableItems = getVariableItems(variables);
   const operations = (updateVariable.operations || []).map((op) => {
     const operation = {
       id: generateId(),
@@ -196,6 +310,14 @@ export const handleAfterMount = async (deps) => {
     };
     if (op.op === "divide") {
       operation.roundTo = op.roundTo ?? DEFAULT_DIVIDE_ROUND_TO;
+    }
+    if (op.op === "random") {
+      operation.distribution = op.distribution;
+      // Submit writes a random operation the editor cannot edit back as it
+      // was saved.
+      if (!isEditableRandomOperation(op, variableItems[op.variableId])) {
+        operation.unsupportedOperation = op;
+      }
     }
     return operation;
   });
@@ -225,12 +347,20 @@ export const handleOperationClick = (deps, payload) => {
   const operation = operations.find((op) => op.id === id);
 
   if (operation) {
+    const variable = store.selectVariableItemById({
+      variableId: operation.variableId,
+    });
     store.setCurrentEditingId({ id });
     store.setTempOperation({
       variableId: operation.variableId,
       op: operation.op,
       value: operation.value,
       roundTo: operation.roundTo,
+      random:
+        operation.op === "random" &&
+        operation.unsupportedOperation === undefined
+          ? toRandomDraft(operation.distribution, variable)
+          : undefined,
     });
     store.setMode({ mode: "edit" });
     render();
@@ -263,6 +393,7 @@ export const handleVariableSelectChange = (deps, payload) => {
     op: "set",
     value: getDefaultValueForVariable(variable),
     roundTo: undefined,
+    random: undefined,
   });
   render();
 };
@@ -285,6 +416,11 @@ export const handleOperationSelectChange = (deps, payload) => {
     roundTo:
       value === "divide"
         ? (currentTempOperation.roundTo ?? DEFAULT_DIVIDE_ROUND_TO)
+        : undefined,
+    // Picking Set to random again keeps the values being edited.
+    random:
+      value === "random"
+        ? (currentTempOperation.random ?? createDefaultRandomDraft(variable))
         : undefined,
   };
 
@@ -325,6 +461,114 @@ export const handleRoundToInputChange = (deps, payload) => {
   render();
 };
 
+export const handleRandomTypeChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { value } = payload._event.detail;
+
+  store.setTempRandomType({ type: value });
+  render();
+};
+
+// rtgl-input-number sends null for an empty field.
+export const handleRandomMinInputChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { value } = payload._event.detail;
+
+  store.setTempRandomMin({ min: value ?? undefined });
+  render();
+};
+
+export const handleRandomMaxInputChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { value } = payload._event.detail;
+
+  store.setTempRandomMax({ max: value ?? undefined });
+  render();
+};
+
+export const handleRandomNumberValueChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { currentTarget, detail } = payload._event;
+
+  store.setTempRandomValue({
+    id: currentTarget.dataset.valueId,
+    value: detail.value ?? undefined,
+  });
+  render();
+};
+
+export const handleRandomTextValueChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { currentTarget, detail } = payload._event;
+
+  store.setTempRandomValue({
+    id: currentTarget.dataset.valueId,
+    value: detail.value,
+  });
+  render();
+};
+
+export const handleRandomBooleanValueChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { currentTarget, detail } = payload._event;
+
+  store.setTempRandomValue({
+    id: currentTarget.dataset.valueId,
+    value: detail.value === "true",
+  });
+  render();
+};
+
+export const handleRandomEnumValueChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { currentTarget, detail } = payload._event;
+
+  store.setTempRandomValue({
+    id: currentTarget.dataset.valueId,
+    value: detail.value,
+  });
+  render();
+};
+
+export const handleRandomWeightSelectChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { currentTarget, detail } = payload._event;
+
+  store.setTempRandomValueWeight({
+    id: currentTarget.dataset.valueId,
+    weight: detail.value,
+  });
+  render();
+};
+
+export const handleRemoveRandomValueClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store, render } = deps;
+
+  store.removeTempRandomValue({
+    id: payload._event.currentTarget.dataset.valueId,
+  });
+  render();
+};
+
+export const handleAddRandomValueClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { appService, store, render, i18n } = deps;
+  const { random, variable } = store.selectRandomDraftData();
+
+  if (random.values.length >= MAX_RANDOM_VALUES) {
+    showWarning(
+      appService,
+      selectCommandLineCopy(i18n),
+      "A random operation can have at most 100 values.",
+    );
+    return;
+  }
+
+  store.addTempRandomValue(createRandomValueRow(getNewRandomValue(variable)));
+  render();
+};
+
 export const handleSaveOperationClick = (deps, payload) => {
   payload._event.stopPropagation();
   const { appService, store, render, i18n } = deps;
@@ -345,7 +589,7 @@ export const handleSaveOperationClick = (deps, payload) => {
     });
 
     if (!normalized.valid) {
-      showInvalidOperationValueAlert(appService, copy);
+      showWarning(appService, copy, normalized.message);
       return;
     }
 
@@ -355,6 +599,7 @@ export const handleSaveOperationClick = (deps, payload) => {
       op: normalized.operation.op,
       value: normalized.operation.value,
       roundTo: normalized.operation.roundTo,
+      distribution: normalized.operation.distribution,
     };
     store.updateOperation(operationUpdate);
     store.setMode({ mode: "current" });
@@ -370,6 +615,7 @@ export const handleSubmitClick = (deps, payload) => {
   const { actionId, operations, variablesData } = store.selectSubmitData();
   const variableItems = getVariableItems(variablesData);
   let hasInvalidOperationValue = false;
+  let randomOperationProblem;
 
   if (
     operations.some(
@@ -390,6 +636,17 @@ export const handleSubmitClick = (deps, payload) => {
       };
       // Skip value for toggle operation
       if (op.op === "toggle") {
+        return result;
+      }
+      if (op.op === "random") {
+        if (op.unsupportedOperation !== undefined) {
+          return op.unsupportedOperation;
+        }
+        randomOperationProblem ??= validateRandomDistribution(
+          op.distribution,
+          variableItems[op.variableId],
+        );
+        result.distribution = op.distribution;
         return result;
       }
       // Get variable type to determine if we should include empty string
@@ -438,6 +695,21 @@ export const handleSubmitClick = (deps, payload) => {
     return;
   }
 
+  if (randomOperationProblem) {
+    showWarning(appService, copy, randomOperationProblem);
+    return;
+  }
+
+  const updateVariable = {
+    id: actionId,
+    operations: validOperations,
+  };
+  const sizeProblem = validateUpdateVariableSize(updateVariable);
+  if (sizeProblem) {
+    showWarning(appService, copy, sizeProblem);
+    return;
+  }
+
   if (validOperations.length === 0) {
     appService.showAlert({
       message: localizeCommandLineText(
@@ -452,10 +724,7 @@ export const handleSubmitClick = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        updateVariable: {
-          id: actionId,
-          operations: validOperations,
-        },
+        updateVariable,
       },
       bubbles: true,
       composed: true,

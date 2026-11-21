@@ -115,6 +115,26 @@ afterEach(async () => {
 });
 
 describe("iOS scene engine audio output", () => {
+  it("does not create a context while constructing the output", async () => {
+    const documentTarget = Object.assign(new EventTarget(), { hidden: false });
+    const windowTarget = {
+      performance,
+      setTimeout,
+      clearTimeout,
+      queueMicrotask,
+    };
+    const runtime = createMobileAudioRuntime({ windowTarget, documentTarget });
+    const output = createIOSGraphicsAudioOutput({ runtime, documentTarget });
+    expect(output.graphicsRuntime).toBeDefined();
+    expect(() => output.graphicsRuntime.context).toThrowError(
+      expect.objectContaining({ name: "AudioUnavailableError" }),
+    );
+    await expect(output.resume()).rejects.toMatchObject({
+      name: "AudioUnavailableError",
+    });
+    await runtime.dispose();
+  });
+
   it("routes the engine to media while preserving native node methods and clock", async () => {
     const h = createHarness();
     const engineContext = h.output.graphicsRuntime.context;

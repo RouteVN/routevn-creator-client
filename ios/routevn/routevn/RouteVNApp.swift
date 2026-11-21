@@ -592,6 +592,18 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             return try writeFileToUri(payload)
         case "createDistributionZipStreamedToUri":
             return try createDistributionZipStreamedToUri(payload)
+        case "getAndroidExportAvailability":
+            return try AndroidApkExport.availability()
+        case "exportAndroidApkToUri":
+            return try exportAndroidToUri(payload, format: .apk)
+        case "exportAndroidBundleToUri":
+            return try exportAndroidToUri(payload, format: .bundle)
+        case "createAndroidSigningKey":
+            return try AndroidApkExport.createSigningKey(payload)
+        case "readAndroidKeystore":
+            return try AndroidApkExport.readKeystore(payload)
+        case "encodeAndroidKeystore":
+            return try AndroidApkExport.encodeKeystore(payload)
         case "openFilePicker":
             try launchFilePicker(payload)
             return true
@@ -637,6 +649,8 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func shouldHandleBridgeMethodInBackground(_ method: String) -> Bool {
         switch method {
         case "createDistributionZipStreamedToUri", "importProjectFolder", "exportProjectFolder",
+             "getAndroidExportAvailability", "exportAndroidApkToUri", "exportAndroidBundleToUri",
+             "createAndroidSigningKey", "readAndroidKeystore", "encodeAndroidKeystore",
              "renameLegacyProjectFolder", "getProjectFolderSetup", "previewProjectFolderSetup",
              "confirmProjectFolderSetup", "createTempFolder", "removeTempFolder",
              "downloadFile", "copyImportFile", "listImportArchive", "extractImportArchive",
@@ -652,7 +666,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
         payload: [String: Any],
         requestId: String?
     ) {
+        let backgroundTime = BridgeBackgroundTime(name: "RouteVN \(method)")
         backgroundBridgeQueue.async { [weak self] in
+            defer { DispatchQueue.main.async { backgroundTime.end() } }
             guard let self else {
                 return
             }
@@ -700,6 +716,9 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
     private func bridgeFailureCode(_ error: Error) -> String {
         if isStorageFull(error) {
             return "storageFull"
+        }
+        if let exportError = error as? AndroidApkExportError {
+            return exportError.code
         }
         return (error as? ProjectFolderSetupError)?.rawValue ?? String(describing: type(of: error))
     }
@@ -1234,6 +1253,89 @@ final class RouteVNViewController: UIViewController, WKNavigationDelegate, WKScr
             }
             throw error
         }
+    }
+
+    /// Exports an APK or an App Bundle to the chosen location. The payload's
+    /// `signingKey` signs it; a bundle needs one.
+    private func exportAndroidToUri(
+        _ payload: [String: Any],
+        format: AndroidApkExport.Format
+    ) throws -> [String: Any] {
+        let uri = try requiredString(payload, "uri")
+        if SaveFileDestinations.isSaveURI(uri) {
+            let result = try saveFileDestinations.write(to: uri) { stagedURL in
+                var stagedPayload = payload
+                stagedPayload["uri"] = stagedURL.absoluteString
+                return try self.exportAndroidToUri(stagedPayload, format: format)
+            }
+            var exported = result.value
+            exported["uri"] = result.url.absoluteString
+            return exported
+        }
+        guard let targetURL = URL(string: uri), targetURL.isFileURL else {
+            throw RouteVNError.message("Only file URLs are supported by the iOS Android export path.")
+        }
+        let projectId = try storage.safePathSegment(requiredString(payload, "projectId"))
+        var assets: [[String: Any]] = []
+        for entry in payload["fileEntries"] as? [[String: Any]] ?? [] {
+            let fileId = try storage.safePathSegment(requiredString(entry, "id"))
+            let fileURL = try storage.projectFilePath(projectId: projectId, fileId: fileId)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                NSLog("Skipping missing file during native iOS APK export: \(fileId)")
+                continue
+            }
+            let mime = try resolveDistributionAssetMimeType(
+                projectId: projectId,
+                fileId: fileId,
+                fileURL: fileURL,
+                preferredMimeType: stringValue(entry["mimeType"])
+            )
+            assets.append(["id": fileId, "path": fileURL.path, "mime": mime])
+        }
+        let iconFileId = try storage.safePathSegment(requiredString(payload, "iconFileId"))
+        let iconURL = try storage.projectFilePath(projectId: projectId, fileId: iconFileId)
+        guard FileManager.default.fileExists(atPath: iconURL.path) else {
+            throw RouteVNError.message("The Android application icon could not be exported.")
+        }
+        guard let versionCode = payload["versionCode"] as? NSNumber else {
+            throw RouteVNError.message("versionCode is required.")
+        }
+        var request: [String: Any] = [
+            "assets": assets,
+            "instructionsJson": try requiredString(payload, "instructionsJson"),
+            "applicationId": try requiredString(payload, "applicationId"),
+            "applicationName": try requiredString(payload, "applicationName"),
+            "versionName": try requiredString(payload, "versionName"),
+            "versionCode": versionCode,
+            "orientation": try requiredString(payload, "orientation"),
+            "iconPath": iconURL.path,
+            "iconBackgroundColor": try requiredString(payload, "iconBackgroundColor"),
+            "splashBackgroundColor": try requiredString(payload, "splashBackgroundColor")
+        ]
+        for (fileIdKey, pathKey) in [
+            ("adaptiveIconFileId", "adaptiveIconPath"),
+            ("splashIconFileId", "splashIconPath")
+        ] {
+            if let value = payload[fileIdKey], !(value is NSNull) {
+                let fileId = try storage.safePathSegment(requiredString(payload, fileIdKey))
+                let fileURL = try storage.projectFilePath(projectId: projectId, fileId: fileId)
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
+                    throw RouteVNError.message("Required project file is missing: \(fileId)")
+                }
+                request[pathKey] = fileURL.path
+            }
+        }
+        if let signingKey = payload["signingKey"] as? [String: Any] {
+            request["signingKey"] = signingKey
+        }
+        let progress = AndroidApkExportProgress(exportId: try requiredString(payload, "exportId")) { [weak self] json in
+            self?.webView.evaluateJavaScript(
+                "window.__routeVNApkExportProgress && window.__routeVNApkExportProgress(\(json));",
+                completionHandler: nil
+            )
+        }
+        return try AndroidApkExport.export(request: request, format: format, to: targetURL, progress: progress)
     }
 
     private func createDistributionPackagePlan(
@@ -2770,6 +2872,31 @@ private struct RouteVNCRC32 {
     }
 }
 
+/// Background time for one long bridge call, such as an export or an import,
+/// so that leaving the app does not suspend the work at once. iOS allows
+/// about 30 seconds. Past that the app is suspended, and the work continues
+/// when the creator returns unless iOS ends the app in the meantime.
+///
+/// Create it, and call `end()`, on the main thread. iOS also calls the
+/// expiration handler there, so the identifier needs no lock.
+final class BridgeBackgroundTime {
+    private var identifier = UIBackgroundTaskIdentifier.invalid
+
+    init(name: String) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            self?.end()
+        }
+    }
+
+    func end() {
+        guard identifier != .invalid else {
+            return
+        }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
+    }
+}
+
 private final class RouteVNZipStreamWriter {
     private struct CentralDirectoryEntry {
         let nameData: Data
@@ -2939,45 +3066,60 @@ private final class RouteVNZipStreamWriter {
 
 final class RouteVNSchemeHandler: NSObject, WKURLSchemeHandler {
     private let storage: RouteVNNativeStorage
+    private let fileQueue = DispatchQueue(label: "vn.routevn.scheme-files", qos: .userInitiated, attributes: .concurrent)
+    private var liveTasks = Set<ObjectIdentifier>()
 
     init(storage: RouteVNNativeStorage) {
         self.storage = storage
     }
 
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
+        let taskID = ObjectIdentifier(urlSchemeTask)
+        liveTasks.insert(taskID)
         do {
             guard let url = urlSchemeTask.request.url else {
                 throw RouteVNError.message("Invalid routevn URL.")
             }
-
             let resolved = try storage.resolveRouteVNURL(url)
-            let data = try Data(contentsOf: resolved.url)
-            let response = HTTPURLResponse(
-                url: url,
-                statusCode: 200,
-                httpVersion: "HTTP/1.1",
-                headerFields: [
-                    "Content-Type": resolved.mimeType,
-                    "Content-Length": String(data.count),
-                    "Access-Control-Allow-Origin": "*",
-                    "Cross-Origin-Resource-Policy": "cross-origin"
-                ]
-            ) ?? URLResponse(
-                url: url,
-                mimeType: resolved.mimeType,
-                expectedContentLength: data.count,
-                textEncodingName: nil
-            )
-
-            urlSchemeTask.didReceive(response)
-            urlSchemeTask.didReceive(data)
-            urlSchemeTask.didFinish()
+            let rangeHeader = urlSchemeTask.request.value(forHTTPHeaderField: "Range")
+            fileQueue.async {
+                let result = Result {
+                    try ByteRangeResponse.make(fileURL: resolved.url, contentType: resolved.mimeType, rangeHeader: rangeHeader)
+                }
+                DispatchQueue.main.async {
+                    guard self.liveTasks.contains(taskID) else { return }
+                    switch result {
+                    case let .success(value):
+                        guard let response = HTTPURLResponse(
+                            url: url,
+                            statusCode: value.statusCode,
+                            httpVersion: "HTTP/1.1",
+                            headerFields: value.headers
+                        ) else {
+                            urlSchemeTask.didFailWithError(RouteVNError.message("Could not create routevn response."))
+                            self.liveTasks.remove(taskID)
+                            return
+                        }
+                        urlSchemeTask.didReceive(response)
+                        if !value.body.isEmpty {
+                            urlSchemeTask.didReceive(value.body)
+                        }
+                        urlSchemeTask.didFinish()
+                    case let .failure(error):
+                        urlSchemeTask.didFailWithError(error)
+                    }
+                    self.liveTasks.remove(taskID)
+                }
+            }
         } catch {
             urlSchemeTask.didFailWithError(error)
+            liveTasks.remove(taskID)
         }
     }
 
-    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
+        liveTasks.remove(ObjectIdentifier(urlSchemeTask))
+    }
 }
 
 final class RouteVNNativeStorage {

@@ -575,14 +575,58 @@ describe("tauri project service adapters preflight reads", () => {
     await expect(
       fileAdapter.createWindowsPortableExecutableToPath(options),
     ).rejects.toThrow(
-      "Native application identifier must use reverse-domain notation with only letters, numbers, hyphens, and periods.",
+      "Windows application identifier must use only letters, numbers, hyphens, and periods.",
     );
     await expect(
       fileAdapter.createWindowsInstallerToPath(options),
     ).rejects.toThrow(
-      "Native application identifier must use reverse-domain notation with only letters, numbers, hyphens, and periods.",
+      "Windows application identifier must use only letters, numbers, hyphens, and periods.",
     );
     expect(mocked.invoke).not.toHaveBeenCalled();
+  });
+
+  it("prefixes a one-word Windows identifier for the player", async () => {
+    mocked.exists.mockResolvedValue(true);
+    mocked.resolveResource.mockResolvedValue(
+      "/resources/player-templates/windows/RouteVNPlayerTemplate.exe",
+    );
+    mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
+    mocked.invoke.mockResolvedValue({ outputPath: "/exports/Game.exe" });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const options = {
+      projectData: { bundleMetadata: { project: { namespace: "demo" } } },
+      fileEntries: [],
+      outputPath: "/exports/Game.exe",
+      title: "Game",
+      version: "1.0.0.4",
+      applicationIdentifier: "project-one",
+      iconFileId: "icon-1",
+      getCurrentReference: () => ({
+        projectPath: "/projects/demo",
+        cacheKey: "/projects/demo",
+      }),
+    };
+
+    await fileAdapter.createWindowsPortableExecutableToPath(options);
+    await fileAdapter.createWindowsInstallerToPath({
+      ...options,
+      outputPath: "/exports/Game Setup.exe",
+    });
+
+    for (const command of [
+      "export_windows_portable_executable",
+      "export_windows_installer_from_project",
+    ]) {
+      expect(mocked.invoke).toHaveBeenCalledWith(
+        command,
+        expect.objectContaining({
+          applicationIdentifier: "vn.routevn.player.project-one",
+        }),
+      );
+    }
   });
 
   it("preflights and invokes universal macOS application export", async () => {
@@ -1159,6 +1203,586 @@ describe("tauri project service adapters preflight reads", () => {
         type: "scene.create",
         createdAt: 10,
       }),
+    );
+  });
+
+  it.each(["template", "descriptor"])(
+    "hides Android export when the %s resource is missing",
+    async (missing) => {
+      mocked.resolveResource.mockImplementation(
+        async (path) => `/resources/${path}`,
+      );
+      mocked.exists.mockImplementation(async (path) =>
+        missing === "template"
+          ? !path.endsWith(".apk")
+          : !path.endsWith(".json"),
+      );
+      const { fileAdapter } = createTauriProjectServiceAdapters({
+        collabLog: () => {},
+        creatorVersion: 2,
+      });
+      expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+        available: false,
+      });
+      expect(mocked.invoke).not.toHaveBeenCalled();
+    },
+  );
+
+  it("checks Android capabilities with both resource paths and preserves native failure reasons", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    mocked.invoke.mockResolvedValue({
+      available: false,
+      reason: "invalid descriptor",
+    });
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: false,
+      reason: "invalid descriptor",
+    });
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "get_android_export_host_capabilities",
+      {
+        templatePath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.apk",
+        descriptorPath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.json",
+      },
+    );
+    mocked.invoke.mockRejectedValue(new Error("command unavailable"));
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: false,
+      reason: "command unavailable",
+    });
+  });
+
+  it("says whether the App Bundle template is installed too", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    mocked.exists.mockImplementation(async (path) => !path.includes(".aab"));
+    mocked.invoke.mockResolvedValue({
+      available: true,
+      signingSupported: true,
+    });
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: true,
+      signingSupported: true,
+      bundleAvailable: false,
+    });
+    expect(mocked.invoke).toHaveBeenCalledTimes(1);
+
+    mocked.exists.mockResolvedValue(true);
+    mocked.invoke.mockReset();
+    mocked.invoke.mockImplementation(async (command) =>
+      command === "get_android_bundle_export_capabilities"
+        ? { available: true }
+        : { available: true, signingSupported: true },
+    );
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: true,
+      signingSupported: true,
+      bundleAvailable: true,
+    });
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "get_android_bundle_export_capabilities",
+      {
+        templatePath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.aab",
+        descriptorPath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.aab.json",
+      },
+    );
+  });
+
+  it("keeps APK export when the App Bundle check fails", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    mocked.invoke.mockImplementation(async (command) => {
+      if (command === "get_android_bundle_export_capabilities") {
+        throw new Error("command unavailable");
+      }
+      return { available: true, signingSupported: true };
+    });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    expect(await fileAdapter.getAndroidExportAvailability()).toEqual({
+      available: true,
+      signingSupported: true,
+      bundleAvailable: false,
+    });
+  });
+
+  it("prompts for an App Bundle with localized dialog copy", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const filePicker = {
+      saveFilePicker: vi.fn(async () => "/exports/Project One-1.2.3.aab"),
+    };
+    await fileAdapter.promptAndroidBundlePath({
+      defaultFileName: "Project One-1.2.3.aab",
+      filePicker,
+      options: { title: "Save One", fileTypeName: "Type One" },
+    });
+    expect(filePicker.saveFilePicker).toHaveBeenCalledWith({
+      title: "Save One",
+      defaultPath: "Project One-1.2.3.aab",
+      filters: [{ name: "Type One", extensions: ["aab"] }],
+    });
+  });
+
+  it("exports an App Bundle with the bundle template and the signing key", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const result = { outputPath: "/exports/project.aab" };
+    mocked.invoke.mockResolvedValue(result);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const payload = {
+      projectData: { projectData: {} },
+      fileEntries: [],
+      outputPath: "/exports/project.aab",
+      applicationName: "Project One",
+      applicationId: "com.example.project_one",
+      versionName: "1.2.3",
+      versionCode: 42,
+      orientation: "landscape",
+      iconFileId: "icon-1",
+      iconBackgroundColor: "#FFFFFF",
+      splashBackgroundColor: "#000000",
+      options: {},
+      getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+    };
+    await expect(
+      fileAdapter.createAndroidBundleToPath(payload),
+    ).rejects.toThrow("signing key");
+    expect(mocked.invoke).not.toHaveBeenCalled();
+
+    const signingKey = {
+      certificateSha256: "a".repeat(64),
+      certificate: "Certificate One",
+      privateKey: "Key One",
+    };
+    expect(
+      await fileAdapter.createAndroidBundleToPath({ ...payload, signingKey }),
+    ).toBe(result);
+    expect(mocked.invoke).toHaveBeenCalledWith("export_android_app_bundle", {
+      request: expect.objectContaining({
+        templatePath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.aab",
+        descriptorPath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.aab.json",
+        outputPath: "/exports/project.aab",
+        applicationId: "com.example.project_one",
+        orientation: "landscape",
+        iconPath: "/projects/project-one/files/icon-1",
+      }),
+      signingKey,
+      onProgress: mocked.channels[0],
+    });
+  });
+
+  it("names a picked keystore file and reads its key by path", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const filePicker = {
+      openFilePicker: vi.fn(async () => "C:\\keys\\Project One.p12"),
+    };
+    const keystore = await fileAdapter.promptAndroidKeystore({
+      options: { title: "Pick One", fileTypeName: "Type One" },
+      filePicker,
+    });
+    expect(filePicker.openFilePicker).toHaveBeenCalledWith({
+      title: "Pick One",
+      multiple: false,
+      filters: [
+        { name: "Type One", extensions: ["p12", "pfx", "keystore", "jks"] },
+      ],
+    });
+    expect(keystore).toEqual({
+      name: "Project One.p12",
+      path: "C:\\keys\\Project One.p12",
+    });
+
+    const material = { certificateSha256: "a".repeat(64) };
+    mocked.invoke.mockResolvedValueOnce(material);
+    expect(
+      await fileAdapter.readAndroidKeystore({
+        keystore,
+        password: "pass one",
+        alias: "upload",
+      }),
+    ).toBe(material);
+    expect(mocked.invoke).toHaveBeenCalledWith("read_android_keystore", {
+      path: "C:\\keys\\Project One.p12",
+      password: "pass one",
+      alias: "upload",
+    });
+
+    filePicker.openFilePicker.mockResolvedValueOnce(null);
+    expect(
+      await fileAdapter.promptAndroidKeystore({ filePicker }),
+    ).toBeUndefined();
+  });
+
+  it("prompts for an APK with localized dialog copy", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const filePicker = {
+      saveFilePicker: vi.fn(
+        async () => "/exports/Project One-1.2.3-unsigned.apk",
+      ),
+    };
+    await fileAdapter.promptAndroidApkPath({
+      defaultFileName: "Project One-1.2.3-unsigned.apk",
+      filePicker,
+      options: { title: "Save One", fileTypeName: "Type One" },
+    });
+    expect(filePicker.saveFilePicker).toHaveBeenCalledWith({
+      title: "Save One",
+      defaultPath: "Project One-1.2.3-unsigned.apk",
+      filters: [{ name: "Type One", extensions: ["apk"] }],
+    });
+  });
+
+  it("passes the exact Android request using disk paths and a progress channel", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const result = {
+      outputPath: "/exports/project.apk",
+      apkBytes: 10,
+      packageBinBytes: 5,
+      encryptedPayloadBytes: 7,
+      stats: {},
+    };
+    mocked.invoke.mockResolvedValue(result);
+    const onProgress = vi.fn();
+    const projectData = {
+      projectData: { screen: { width: 1080, height: 1920 } },
+    };
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    expect(
+      await fileAdapter.createAndroidApkToPath({
+        projectData,
+        fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
+        outputPath: "/exports/project.apk",
+        applicationName: "Project One",
+        applicationId: "com.example.project_one",
+        versionName: "1.2.3",
+        versionCode: 42,
+        orientation: "portrait",
+        iconFileId: "icon-1",
+        iconBackgroundColor: "#aabbcc",
+        splashBackgroundColor: "#123456",
+        options: { onProgress },
+        getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+      }),
+    ).toBe(result);
+    expect(mocked.invoke).toHaveBeenCalledWith("export_android_apk", {
+      request: {
+        templatePath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.apk",
+        descriptorPath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.json",
+        outputPath: "/exports/project.apk",
+        assets: [
+          {
+            id: "image-1",
+            path: "/projects/project-one/files/image-1",
+            mime: "image/png",
+          },
+        ],
+        instructionsJson: JSON.stringify(projectData),
+        applicationId: "com.example.project_one",
+        applicationName: "Project One",
+        versionName: "1.2.3",
+        versionCode: 42,
+        orientation: "portrait",
+        iconPath: "/projects/project-one/files/icon-1",
+        iconBackgroundColor: "#AABBCC",
+        splashBackgroundColor: "#123456",
+      },
+      onProgress: mocked.channels[0],
+    });
+    const progress = { phase: "writeApk", current: 1, total: 2, elapsedMs: 10 };
+    mocked.channels[0].messageHandler(progress);
+    expect(onProgress).toHaveBeenCalledWith(progress);
+    expect(mocked.readFile).not.toHaveBeenCalled();
+  });
+
+  it("passes optional Android icon paths", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const result = {
+      outputPath: "/exports/project.apk",
+      apkBytes: 10,
+      packageBinBytes: 5,
+      encryptedPayloadBytes: 7,
+      stats: {},
+    };
+    mocked.invoke.mockResolvedValue(result);
+    const onProgress = vi.fn();
+    const projectData = {
+      projectData: { screen: { width: 1080, height: 1920 } },
+    };
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    expect(
+      await fileAdapter.createAndroidApkToPath({
+        projectData,
+        fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
+        outputPath: "/exports/project.apk",
+        applicationName: "Project One",
+        applicationId: "com.example.project_one",
+        versionName: "1.2.3",
+        versionCode: 42,
+        orientation: "portrait",
+        iconFileId: "icon-1",
+        adaptiveIconFileId: "adaptive-1",
+        splashIconFileId: "splash-1",
+        iconBackgroundColor: "#aabbcc",
+        splashBackgroundColor: "#123456",
+        options: { onProgress },
+        getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+      }),
+    ).toBe(result);
+    expect(mocked.invoke).toHaveBeenCalledWith("export_android_apk", {
+      request: {
+        templatePath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.apk",
+        descriptorPath:
+          "/resources/player-templates/android/RouteVNPlayerTemplate.json",
+        outputPath: "/exports/project.apk",
+        assets: [
+          {
+            id: "image-1",
+            path: "/projects/project-one/files/image-1",
+            mime: "image/png",
+          },
+        ],
+        instructionsJson: JSON.stringify(projectData),
+        applicationId: "com.example.project_one",
+        applicationName: "Project One",
+        versionName: "1.2.3",
+        versionCode: 42,
+        orientation: "portrait",
+        iconPath: "/projects/project-one/files/icon-1",
+        adaptiveIconPath: "/projects/project-one/files/adaptive-1",
+        splashIconPath: "/projects/project-one/files/splash-1",
+        iconBackgroundColor: "#AABBCC",
+        splashBackgroundColor: "#123456",
+      },
+      onProgress: mocked.channels[0],
+    });
+    const progress = { phase: "writeApk", current: 1, total: 2, elapsedMs: 10 };
+    mocked.channels[0].messageHandler(progress);
+    expect(onProgress).toHaveBeenCalledWith(progress);
+    expect(mocked.readFile).not.toHaveBeenCalled();
+  });
+
+  it("offers iOS export only on a Mac with the bundled template", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    vi.stubGlobal("navigator", { platform: "Win32" });
+    expect(await fileAdapter.getIosExportAvailability()).toEqual({
+      available: false,
+      hostSupported: false,
+      templateAvailable: false,
+    });
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    expect(await fileAdapter.getIosExportAvailability()).toEqual({
+      available: true,
+      hostSupported: true,
+      templateAvailable: true,
+    });
+    expect(mocked.exists).toHaveBeenCalledWith(
+      "/resources/player-templates/ios/RouteVNPlayerTemplate.app.zip",
+    );
+  });
+
+  it("passes the exact iOS request using disk paths and a progress channel", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    const result = { outputPath: "/exports/project.ipa", uploaded: true };
+    mocked.invoke.mockResolvedValue(result);
+    const onProgress = vi.fn();
+    const projectData = {
+      projectData: { screen: { width: 1920, height: 1080 } },
+    };
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const request = {
+      projectData,
+      fileEntries: [{ fileId: "image-1", mimeType: "image/png" }],
+      outputPath: "/exports/project.ipa",
+      applicationName: " Project One ",
+      bundleIdentifier: "com.example.project-one",
+      version: "1.2.3",
+      buildNumber: "7",
+      orientation: "landscape",
+      iconFileId: "icon-1",
+      teamId: "ABCDE12345",
+      distribution: "appStore",
+      upload: true,
+      options: { onProgress },
+      getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+    };
+    expect(await fileAdapter.exportIosApplication(request)).toBe(result);
+    expect(mocked.invoke).toHaveBeenCalledWith("export_ios_application", {
+      request: {
+        templatePath:
+          "/resources/player-templates/ios/RouteVNPlayerTemplate.app.zip",
+        outputPath: "/exports/project.ipa",
+        installDeviceId: undefined,
+        assets: [
+          {
+            id: "image-1",
+            path: "/projects/project-one/files/image-1",
+            mime: "image/png",
+          },
+        ],
+        instructionsJson: JSON.stringify(projectData),
+        applicationName: "Project One",
+        bundleIdentifier: "com.example.project-one",
+        version: "1.2.3",
+        buildNumber: "7",
+        orientation: "landscape",
+        iconPath: "/projects/project-one/files/icon-1",
+        teamId: "ABCDE12345",
+        distribution: "appStore",
+        upload: true,
+      },
+      onProgress: mocked.channels[0],
+    });
+    const progress = { phase: "signApplication", current: 0, total: 0 };
+    mocked.channels[0].messageHandler(progress);
+    expect(onProgress).toHaveBeenCalledWith(progress);
+
+    // A development build for a device has no output path.
+    mocked.invoke.mockClear();
+    await fileAdapter.exportIosApplication({
+      ...request,
+      outputPath: undefined,
+      installDeviceId: "device-1",
+      distribution: "development",
+      upload: false,
+    });
+    expect(mocked.invoke.mock.calls[0][1].request).toEqual(
+      expect.objectContaining({
+        outputPath: undefined,
+        installDeviceId: "device-1",
+        distribution: "development",
+      }),
+    );
+
+    mocked.invoke.mockClear();
+    await expect(
+      fileAdapter.exportIosApplication({ ...request, teamId: "team" }),
+    ).rejects.toThrow("Invalid Apple team ID.");
+    await expect(
+      fileAdapter.exportIosApplication({ ...request, buildNumber: "0" }),
+    ).rejects.toThrow("Invalid iOS version or build number.");
+    await expect(
+      fileAdapter.exportIosApplication({
+        ...request,
+        bundleIdentifier: "com.example.project_one",
+      }),
+    ).rejects.toThrow("Invalid iOS platform details: ios-identifier-invalid");
+    expect(mocked.invoke).not.toHaveBeenCalled();
+  });
+
+  it("cancels the iOS export, also before the exporter has started", async () => {
+    mocked.resolveResource.mockImplementation(
+      async (path) => `/resources/${path}`,
+    );
+    mocked.exists.mockResolvedValue(true);
+    mocked.invoke.mockResolvedValue(undefined);
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    let cancelling;
+    const request = {
+      projectData: { projectData: { screen: { width: 1920, height: 1080 } } },
+      fileEntries: [],
+      outputPath: "/exports/project.ipa",
+      applicationName: "Project One",
+      bundleIdentifier: "com.example.project-one",
+      version: "1.2.3",
+      buildNumber: "7",
+      orientation: "landscape",
+      iconFileId: "icon-1",
+      teamId: "ABCDE12345",
+      distribution: "development",
+      // The creator cancels while the adapter still resolves files.
+      getCurrentReference: () => {
+        cancelling ??= fileAdapter.cancelIosExport();
+        return { projectPath: "/projects/project-one" };
+      },
+    };
+    await expect(fileAdapter.exportIosApplication(request)).rejects.toEqual({
+      code: "cancelled",
+      message: "The iOS export was cancelled.",
+      ipaSaved: false,
+    });
+    await cancelling;
+    expect(mocked.invoke).toHaveBeenCalledWith("cancel_ios_export");
+    expect(mocked.invoke).not.toHaveBeenCalledWith(
+      "export_ios_application",
+      expect.anything(),
+    );
+
+    // The next export starts: the old request is forgotten.
+    mocked.invoke.mockClear();
+    await fileAdapter.exportIosApplication({
+      ...request,
+      getCurrentReference: () => ({ projectPath: "/projects/project-one" }),
+    });
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "export_ios_application",
+      expect.anything(),
     );
   });
 });

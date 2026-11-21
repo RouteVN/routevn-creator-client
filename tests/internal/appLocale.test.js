@@ -1,7 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
-import { activateAppLocale } from "../../src/internal/ui/appLocale.js";
+import { PROJECT_LANGUAGES } from "../../src/internal/projectLanguage.js";
+import {
+  activateAppLocale,
+  APP_LOCALE_OPTIONS,
+} from "../../src/internal/ui/appLocale.js";
 
 describe("app locale", () => {
+  it("starts with the most used languages, as project languages do, and each is a project language", () => {
+    const appLanguages = APP_LOCALE_OPTIONS.map(
+      (option) => Intl.getCanonicalLocales(option.value)[0],
+    );
+    const mostUsed = ["en", "es", "pt", "ru", "ja", "zh-Hans", "zh-Hant", "ko"];
+
+    expect(appLanguages.slice(0, mostUsed.length)).toEqual(mostUsed);
+    expect(PROJECT_LANGUAGES.slice(0, mostUsed.length)).toEqual(mostUsed);
+    expect(
+      appLanguages.filter((language) => !PROJECT_LANGUAGES.includes(language)),
+    ).toEqual([]);
+  });
+
   it("does not persist a fallback locale as the requested preference", async () => {
     const appService = {
       setUserConfig: vi.fn(),

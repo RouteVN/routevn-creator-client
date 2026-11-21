@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   selectItems as selectItemsBase,
@@ -48,7 +49,11 @@ describe("commandLineActions.store", () => {
       .filter((item) => item.type === "item")
       .map((item) => item.mode);
 
-    expect(modes).toEqual(PRESENTATION_ACTION_MODE_ORDER);
+    expect(modes).toEqual(
+      PRESENTATION_ACTION_MODE_ORDER.filter(
+        (mode) => mode !== "resetStoryAtSection",
+      ),
+    );
   });
 
   it("labels the character action as Character Sprites", () => {
@@ -88,7 +93,7 @@ describe("commandLineActions.store", () => {
     );
 
     expect(iconByMode.nextLine).toBe("settings");
-    expect(iconByMode.resetStoryAtSection).toBe("settings");
+    expect(iconByMode.resetStoryAtSection).toBeUndefined();
     expect(iconByMode.rollbackByOffset).toBe("settings");
     expect(iconByMode.toggleSkipMode).toBe("settings");
     expect(iconByMode.startSkipMode).toBe("settings");
@@ -107,7 +112,27 @@ describe("commandLineActions.store", () => {
     expect(iconByMode.conditional).toBe("settings");
   });
 
-  it("offers resetStoryAtSection in system actions and drops resetStorySession", () => {
+  it.each(["presentation", "system"])(
+    "uses the random icon for the %s random action",
+    (actionsType) => {
+      const randomAction = selectItems({
+        props: {
+          actionsType,
+        },
+      }).find((item) => item.mode === "random");
+
+      expect(randomAction).toMatchObject({
+        id: "31",
+        label: "Random",
+        icon: "random",
+      });
+      expect(existsSync(new URL("../../svg/random.svg", import.meta.url))).toBe(
+        true,
+      );
+    },
+  );
+
+  it("offers sectionTransition without deprecated reset actions", () => {
     const modes = selectItems({
       props: {
         actionsType: "system",
@@ -116,7 +141,8 @@ describe("commandLineActions.store", () => {
       .filter((item) => item.type === "item")
       .map((item) => item.mode);
 
-    expect(modes).toContain("resetStoryAtSection");
+    expect(modes).toContain("sectionTransition");
+    expect(modes).not.toContain("resetStoryAtSection");
     expect(modes).not.toContain("resetStorySession");
   });
 
@@ -171,7 +197,7 @@ describe("commandLineActions.store", () => {
     }
   });
 
-  it("shows conditional actions in the logic section", () => {
+  it("shows random and conditional actions in the logic section", () => {
     const systemItems = selectItems({
       props: {
         actionsType: "system",
@@ -185,16 +211,20 @@ describe("commandLineActions.store", () => {
 
     expect(getSectionModes(systemItems, "Logic")).toEqual([
       "updateVariable",
+      "random",
       "conditional",
     ]);
     expect(getSectionModes(presentationItems, "Logic")).toEqual([
       "updateVariable",
+      "random",
       "conditional",
     ]);
     expect(systemItems.some((item) => item.mode === "conditional")).toBe(true);
     expect(presentationItems.some((item) => item.mode === "conditional")).toBe(
       true,
     );
+    expect(systemItems.some((item) => item.mode === "random")).toBe(true);
+    expect(presentationItems.some((item) => item.mode === "random")).toBe(true);
   });
 
   it("honors explicit hidden modes for conditional actions", () => {
@@ -208,6 +238,22 @@ describe("commandLineActions.store", () => {
 
     expect(getSectionModes(items, "Logic")).toEqual(["updateVariable"]);
     expect(items.some((item) => item.mode === "conditional")).toBe(false);
+  });
+
+  it("honors explicit hidden modes for random actions", () => {
+    const items = selectItems({
+      props: {
+        actionsType: "system",
+        hiddenModes: ["random"],
+        allowedModes: ["conditional", "random", "updateVariable"],
+      },
+    });
+
+    expect(getSectionModes(items, "Logic")).toEqual([
+      "updateVariable",
+      "conditional",
+    ]);
+    expect(items.some((item) => item.mode === "random")).toBe(false);
   });
 
   it("moves dialogue text speed into the dialogue section", () => {
@@ -327,17 +373,14 @@ describe("commandLineActions.store", () => {
       },
     });
 
-    expect(getSectionModes(items, "Story")).toEqual([
-      "sectionTransition",
-      "resetStoryAtSection",
-    ]);
+    expect(getSectionModes(items, "Story")).toEqual(["sectionTransition"]);
     expect(getSectionModes(items, "Logic")).toEqual(["updateVariable"]);
     expect(
       items.filter((item) => item.type === "item").map((item) => item.mode),
-    ).toEqual(["sectionTransition", "resetStoryAtSection", "updateVariable"]);
+    ).toEqual(["sectionTransition", "updateVariable"]);
   });
 
-  it("adds resetStoryAtSection to the navigation presentation section only", () => {
+  it("offers section transitions in the navigation presentation section", () => {
     const items = selectItems({
       props: {
         actionsType: "presentation",
@@ -359,9 +402,11 @@ describe("commandLineActions.store", () => {
         "input",
         "setNextLineConfig",
         "sectionTransition",
-        "resetStoryAtSection",
         "control",
       ]),
+    );
+    expect(items.some((item) => item.mode === "resetStoryAtSection")).toBe(
+      false,
     );
     expect(items.find((item) => item.mode === "input")?.icon).toBe("input");
     expect(

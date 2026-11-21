@@ -70,7 +70,7 @@ describe("audio player view", () => {
 
     expect(desktopBranchStart).toBeGreaterThan(-1);
     expect(desktopBranch).toContain(
-      'rtgl-view w=1fg style="min-width: 0; padding-right: 32px; box-sizing: border-box;"',
+      'rtgl-view w=1fg style="min-width: 0; padding-inline-end: 32px; box-sizing: border-box;"',
     );
     expect(desktopBranch).toContain(
       'rtgl-text w=f ellipsis=true style="min-width: 0;"',
@@ -79,7 +79,7 @@ describe("audio player view", () => {
       'rtgl-view#playPauseBtn pos=abs cur=pointer z=1 style="left: 50%; top: 50%; transform: translate(-50%, -50%);"',
     );
     expect(desktopBranch).toContain(
-      'rtgl-view d=h av=c g=lg w=1fg ah=e style="min-width: 0; padding-left: 32px; box-sizing: border-box;"',
+      'rtgl-view d=h av=c g=lg w=1fg ah=e style="min-width: 0; padding-inline-start: 32px; box-sizing: border-box;"',
     );
     expect(desktopBranch).not.toContain("rtgl-text w=250 ellipsis=true");
     expect(desktopBranch).toContain(

@@ -1,3 +1,7 @@
+import { getProjectOrientation } from "../../../internal/projectResolution.js";
+import { normalizeWebScreenFadeDuration } from "../../../internal/webExport.js";
+import { extractImageThumbnail } from "../../clients/web/fileProcessors.js";
+
 /**
  * Bundle format v4:
  * [version(1)] [manifestLength(4)] [reserved(11)] [manifest(JSON)] [unique chunks...]
@@ -24,6 +28,7 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
     <meta name="apple-mobile-web-app-title" content="__ROUTEVN_WEB_APPLICATION_NAME__" />
     <link rel="manifest" href="./manifest.webmanifest" />
     __ROUTEVN_WEB_ICON_LINK__
+    __ROUTEVN_WEB_MAIN_PRELOAD__
     <title>__ROUTEVN_WEB_TITLE__</title>
     <style>
       html,
@@ -79,6 +84,86 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
 
       #loading.ready {
         cursor: pointer;
+      }
+
+      /* Custom screen backgrounds. The whole image stays visible, so one that
+         matches the project's aspect ratio lines up with the game canvas. */
+      #loading.has-loading-background,
+      #loading.has-start-background {
+        background: #000;
+        /* Artwork dissolves into the first scene instead of cutting to it. */
+        transition:
+          opacity var(--start-fade-duration, 0ms) ease-in-out,
+          visibility 0s var(--start-fade-duration, 0ms);
+      }
+
+      .loading-background {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: center / contain no-repeat;
+      }
+
+      /* The start image fades in over the loading image, which stays in
+         place underneath, so the screen never dips to black in between. */
+      #loading-start-background {
+        opacity: 0;
+        transition: opacity var(--loading-fade-duration, 0ms) ease-in-out;
+      }
+
+      #loading.ready #loading-start-background {
+        opacity: 1;
+      }
+
+      /* A loading background replaces the loading text and progress bar. They
+         stay in the page for assistive technology only. */
+      #loading.has-loading-background .loading-progress {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      /* Without a start background, the prompt sits at the bottom centre of
+         the artwork, at the same place on the image at any window size, on a
+         backing that keeps it readable. */
+      #loading.has-loading-background {
+        --loading-art-height: min(
+          var(--rvn-app-viewport-height, 100vh),
+          calc(100vw / var(--loading-art-ratio, 1.7778))
+        );
+      }
+
+      #loading.has-loading-background:not(.has-start-background) #loading-start {
+        position: absolute;
+        grid-area: auto;
+        left: 50%;
+        bottom: calc(50% - var(--loading-art-height) * 0.42);
+        transform: translateX(-50%);
+        box-sizing: border-box;
+        padding: 14px 18px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.6);
+      }
+
+
+      /* A start background carries its own prompt: the button covers the
+         screen and keeps its label for assistive technology only. */
+      #loading.has-start-background #loading-start {
+        position: absolute;
+        inset: 0;
+        grid-area: auto;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        color: transparent;
+        font-size: 0;
+      }
+
+      #loading.has-start-background #loading-start:focus-visible {
+        outline-offset: -6px;
       }
 
       .loading-progress,
@@ -181,6 +266,8 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
       }
 
       @media (prefers-reduced-motion: reduce) {
+        /* The custom background fades are opacity only and their length is
+           chosen in Platform Details, so they still play here. */
         #loading,
         .loading-progress,
         #loading-start,
@@ -228,9 +315,12 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
         white-space: pre-wrap;
       }
     </style>
+    __ROUTEVN_WEB_SCREEN_BACKGROUND_STYLE__
   </head>
   <body data-player-start="click">
-    <div id="loading">
+    <div id="loading"__ROUTEVN_WEB_LOADING_CLASS__>
+      <div id="loading-background" class="loading-background" aria-hidden="true"></div>
+      <div id="loading-start-background" class="loading-background" aria-hidden="true"></div>
       <div class="loading-progress">
         <div class="loading-labels">
           <span id="loading-label">Loading…</span>
@@ -426,6 +516,76 @@ const BUNDLE_PLAYER_INDEX_HTML_TEMPLATE = `<!doctype html>
 </html>
 `;
 
+// The data URL is written into a stylesheet, so only plain base64 image data
+// may pass.
+const SCREEN_BACKGROUND_DATA_URL_PATTERN =
+  /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+const assertScreenBackgroundDataUrl = (dataUrl) => {
+  if (!dataUrl) {
+    return "";
+  }
+  if (!SCREEN_BACKGROUND_DATA_URL_PATTERN.test(dataUrl)) {
+    throw new Error("The Web screen background is not a supported image.");
+  }
+  return dataUrl;
+};
+
+const createScreenBackgroundStyle = ({
+  loadingBackgroundDataUrl,
+  startBackgroundDataUrl,
+}) => {
+  const rules = [];
+  if (loadingBackgroundDataUrl) {
+    // Without its own image, the start screen keeps the loading one.
+    rules.push(
+      `#loading-background { background-image: url("${loadingBackgroundDataUrl}"); }`,
+    );
+  }
+  if (startBackgroundDataUrl) {
+    rules.push(
+      `#loading-start-background { background-image: url("${startBackgroundDataUrl}"); }`,
+    );
+  }
+  if (rules.length === 0) {
+    return "";
+  }
+  return `<style>\n      ${rules.join("\n      ")}\n    </style>`;
+};
+
+const createLoadingClassAttribute = ({
+  loadingBackgroundDataUrl,
+  startBackgroundDataUrl,
+  loadingBackgroundAspectRatio,
+  loadingFadeDuration,
+  startFadeDuration,
+}) => {
+  const classNames = [];
+  if (loadingBackgroundDataUrl) {
+    classNames.push("has-loading-background");
+  }
+  if (startBackgroundDataUrl) {
+    classNames.push("has-start-background");
+  }
+  if (classNames.length === 0) {
+    return "";
+  }
+  const declarations = [
+    `--loading-fade-duration: ${loadingFadeDuration}ms`,
+    `--start-fade-duration: ${startFadeDuration}ms`,
+  ];
+  if (loadingBackgroundAspectRatio) {
+    declarations.push(`--loading-art-ratio: ${loadingBackgroundAspectRatio}`);
+  }
+  return ` class="${classNames.join(" ")}" style="${declarations.join("; ")}"`;
+};
+
+// Width divided by height, as a plain number for the stylesheet.
+const normalizeScreenBackgroundAspectRatio = (aspectRatio) => {
+  const ratio = Number(aspectRatio);
+  return Number.isFinite(ratio) && ratio > 0 ? Number(ratio.toFixed(4)) : 0;
+};
+
 const normalizeWebApplicationMetadata = (web = {}) => {
   const title = web.title?.trim() || "RouteVN Player";
   return {
@@ -435,6 +595,19 @@ const normalizeWebApplicationMetadata = (web = {}) => {
     iconFileName192: web.iconFileName192?.trim() ?? "",
     iconFileName512:
       web.iconFileName512?.trim() || web.iconFileName?.trim() || "",
+    loadingBackgroundDataUrl: assertScreenBackgroundDataUrl(
+      web.loadingBackgroundDataUrl,
+    ),
+    startBackgroundDataUrl: assertScreenBackgroundDataUrl(
+      web.startBackgroundDataUrl,
+    ),
+    loadingBackgroundAspectRatio: normalizeScreenBackgroundAspectRatio(
+      web.loadingBackgroundAspectRatio,
+    ),
+    loadingFadeDuration: normalizeWebScreenFadeDuration(
+      web.loadingFadeDuration,
+    ),
+    startFadeDuration: normalizeWebScreenFadeDuration(web.startFadeDuration),
   };
 };
 
@@ -472,6 +645,25 @@ export const createBundlePlayerIndexHtml = (web = {}) => {
     metadata.iconFileName512
       ? `<link rel="icon" href="./${escapeHtmlAttribute(metadata.iconFileName512)}" />`
       : "",
+  );
+  const hasScreenBackground =
+    metadata.loadingBackgroundDataUrl || metadata.startBackgroundDataUrl;
+  // Inline images make the page larger; start fetching the player script
+  // without waiting for the rest of the page.
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_MAIN_PRELOAD__",
+    hasScreenBackground ? '<link rel="modulepreload" href="./main.js" />' : "",
+  );
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_SCREEN_BACKGROUND_STYLE__",
+    createScreenBackgroundStyle(metadata),
+  );
+  html = replaceTemplateToken(
+    html,
+    "__ROUTEVN_WEB_LOADING_CLASS__",
+    createLoadingClassAttribute(metadata),
   );
   return replaceTemplateToken(
     html,
@@ -1014,6 +1206,75 @@ export const createBundleRangeReader = async ({
 
   let totalLength;
   let fullBundleBytes;
+  let fullBundleRequest;
+  let headerBytes;
+  let manifestBytes;
+
+  const cacheFullBundle = (bytes) => {
+    if (totalLength !== undefined && bytes.byteLength !== totalLength) {
+      throw new Error(
+        `Full bundle response returned ${bytes.byteLength} bytes, expected ${totalLength}`,
+      );
+    }
+
+    // A cached range can be mislabeled as 200. Validate the entire package
+    // before treating its body as bytes starting at offset zero.
+    if (
+      bytes.byteLength < BUNDLE_HEADER_SIZE ||
+      bytes[0] !== BUNDLE_FORMAT_VERSION_V4
+    ) {
+      throw new Error("Full bundle response is missing a valid bundle header.");
+    }
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const payloadOffset = BUNDLE_HEADER_SIZE + view.getUint32(1, false);
+    if (payloadOffset > bytes.byteLength) {
+      throw new Error("Full bundle response is missing the bundle manifest.");
+    }
+    const manifest = JSON.parse(
+      textDecoder.decode(bytes.subarray(BUNDLE_HEADER_SIZE, payloadOffset)),
+    );
+    let expectedLength = payloadOffset;
+    for (const chunk of Object.values(manifest.chunks)) {
+      expectedLength = Math.max(
+        expectedLength,
+        payloadOffset + chunk.start + chunk.length,
+      );
+    }
+    if (bytes.byteLength !== expectedLength) {
+      throw new Error(
+        `Full bundle response returned ${bytes.byteLength} bytes, expected ${expectedLength}`,
+      );
+    }
+    if (
+      headerBytes?.some((value, index) => bytes[index] !== value) ||
+      manifestBytes?.some(
+        (value, index) => bytes[BUNDLE_HEADER_SIZE + index] !== value,
+      )
+    ) {
+      throw new Error(
+        "Bundle changed while loading. Reload the player to read the updated package.",
+      );
+    }
+    fullBundleBytes = bytes;
+    totalLength = bytes.byteLength;
+  };
+
+  const fetchFullBundle = async () => {
+    if (!fullBundleRequest) {
+      // Bypass the browser's partial-response cache and omit Range. Share
+      // this recovery download between concurrent asset reads.
+      fullBundleRequest = (async () => {
+        const response = await fetchFn(url, { cache: "no-store" });
+        if (response.status !== 200) {
+          throw new Error(
+            `Full bundle request failed: expected 200, received ${response.status}`,
+          );
+        }
+        cacheFullBundle(new Uint8Array(await response.arrayBuffer()));
+      })();
+    }
+    await fullBundleRequest;
+  };
 
   const readCachedRange = (start, length) => {
     if (!fullBundleBytes) {
@@ -1040,6 +1301,10 @@ export const createBundleRangeReader = async ({
     if (cachedBytes) {
       return cachedBytes;
     }
+    if (fullBundleRequest) {
+      await fullBundleRequest;
+      return readCachedRange(start, length);
+    }
 
     const response = await fetchFn(url, {
       headers: {
@@ -1048,8 +1313,14 @@ export const createBundleRangeReader = async ({
     });
 
     if (response.status === 200) {
-      fullBundleBytes = new Uint8Array(await response.arrayBuffer());
-      totalLength = fullBundleBytes.byteLength;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (!fullBundleBytes) {
+        try {
+          cacheFullBundle(bytes);
+        } catch {
+          await fetchFullBundle();
+        }
+      }
       return readCachedRange(start, length);
     }
 
@@ -1076,7 +1347,7 @@ export const createBundleRangeReader = async ({
     return bytes;
   };
 
-  const headerBytes = await readRange(0, BUNDLE_HEADER_SIZE);
+  headerBytes = await readRange(0, BUNDLE_HEADER_SIZE);
   const headerView = new DataView(
     headerBytes.buffer,
     headerBytes.byteOffset,
@@ -1088,7 +1359,7 @@ export const createBundleRangeReader = async ({
   }
 
   const manifestLength = headerView.getUint32(1, false);
-  const manifestBytes = await readRange(BUNDLE_HEADER_SIZE, manifestLength);
+  manifestBytes = await readRange(BUNDLE_HEADER_SIZE, manifestLength);
   const manifest = JSON.parse(textDecoder.decode(manifestBytes));
   const chunkPayloadOffset = BUNDLE_HEADER_SIZE + manifestLength;
 
@@ -1143,7 +1414,67 @@ export const createBundleRangeReader = async ({
   };
 };
 
-const getBundleStaticFiles = async (projectData) => {
+export const WEB_SCREEN_BACKGROUND_MAX_SIZE = 1920;
+
+// Screen backgrounds are inlined into index.html so they show before the
+// player script and package load. Re-encode them to keep the page small.
+const createScreenBackgroundDataUrl = async (blob) => {
+  const { dataUrl, width, height } = await extractImageThumbnail(blob, {
+    maxWidth: WEB_SCREEN_BACKGROUND_MAX_SIZE,
+    maxHeight: WEB_SCREEN_BACKGROUND_MAX_SIZE,
+    preferredFormat: "image/jpeg",
+    quality: 0.85,
+  });
+  return { dataUrl, width, height };
+};
+
+const readScreenBackgroundDataUrls = async ({
+  screenBackgrounds = {},
+  getFileContent,
+  createImageDataUrl,
+}) => {
+  const imageByFileId = new Map();
+  const readImage = async (fileId) => {
+    if (!fileId) {
+      return undefined;
+    }
+    if (!imageByFileId.has(fileId)) {
+      const content = await getFileContent(fileId);
+      try {
+        const response = await fetch(content.url);
+        if (!response.ok) {
+          throw new Error("The Web screen background could not be read.");
+        }
+        imageByFileId.set(
+          fileId,
+          await createImageDataUrl(await response.blob()),
+        );
+      } finally {
+        content.revoke?.();
+      }
+    }
+    return imageByFileId.get(fileId);
+  };
+
+  const loadingImage = await readImage(
+    screenBackgrounds.loadingBackgroundFileId,
+  );
+  const startImage = await readImage(screenBackgrounds.startBackgroundFileId);
+  const result = {
+    loadingBackgroundDataUrl: loadingImage?.dataUrl,
+    startBackgroundDataUrl: startImage?.dataUrl,
+  };
+  if (loadingImage) {
+    result.loadingBackgroundAspectRatio =
+      loadingImage.width / loadingImage.height;
+  }
+  return result;
+};
+
+const getBundleStaticFiles = async (
+  projectData,
+  { screenBackgrounds, getFileContent, createImageDataUrl } = {},
+) => {
   let mainJs;
 
   try {
@@ -1159,6 +1490,11 @@ const getBundleStaticFiles = async (projectData) => {
   // Fetching /bundle/index.html in dev injects /@vite/client, which breaks
   // the exported standalone player.
   const projectMetadata = projectData?.bundleMetadata?.project ?? {};
+  const screenBackgroundImages = await readScreenBackgroundDataUrls({
+    screenBackgrounds,
+    getFileContent,
+    createImageDataUrl,
+  });
   const webMetadata = {
     title: projectMetadata.title,
     iconFileName192: projectMetadata.iconFileId
@@ -1167,6 +1503,12 @@ const getBundleStaticFiles = async (projectData) => {
     iconFileName512: projectMetadata.iconFileId
       ? BUNDLE_WEB_ICON_512_FILE_NAME
       : undefined,
+    loadingBackgroundDataUrl: screenBackgroundImages.loadingBackgroundDataUrl,
+    startBackgroundDataUrl: screenBackgroundImages.startBackgroundDataUrl,
+    loadingBackgroundAspectRatio:
+      screenBackgroundImages.loadingBackgroundAspectRatio,
+    loadingFadeDuration: screenBackgrounds?.loadingFadeDuration,
+    startFadeDuration: screenBackgrounds?.startFadeDuration,
   };
   const staticFiles = {
     indexHtml: createBundlePlayerIndexHtml(webMetadata),
@@ -1185,7 +1527,14 @@ export const createProjectExportService = ({
   filePicker,
   getCurrentReference,
   getFileContent,
+  createImageDataUrl = createScreenBackgroundDataUrl,
 }) => {
+  const getStaticFiles = (projectData, options) =>
+    getBundleStaticFiles(projectData, {
+      screenBackgrounds: options.webScreens,
+      getFileContent,
+      createImageDataUrl,
+    });
   const service = {
     async createDistributionZipStreamed(
       projectData,
@@ -1199,7 +1548,7 @@ export const createProjectExportService = ({
         zipName,
         options,
         filePicker,
-        staticFiles: await getBundleStaticFiles(projectData),
+        staticFiles: await getStaticFiles(projectData, options),
         getCurrentReference,
         getFileContent,
       });
@@ -1225,7 +1574,7 @@ export const createProjectExportService = ({
       fileEntries: normalizeExportFileEntries(fileEntries),
       outputPath,
       options,
-      staticFiles: await getBundleStaticFiles(projectData),
+      staticFiles: await getStaticFiles(projectData, options),
       getCurrentReference,
       getFileContent,
     });
@@ -1361,6 +1710,138 @@ export const createProjectExportService = ({
       getCurrentReference,
     });
   };
+
+  service.getAndroidExportAvailability = async (options = {}) => {
+    if (typeof fileAdapter.getAndroidExportAvailability !== "function") {
+      return { available: false };
+    }
+    return fileAdapter.getAndroidExportAvailability({ options });
+  };
+
+  service.promptAndroidApkPath = async ({ defaultFileName }, options = {}) =>
+    fileAdapter.promptAndroidApkPath({ defaultFileName, options, filePicker });
+
+  const toAndroidExportPayload = (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata,
+    options,
+  ) => ({
+    projectData,
+    fileEntries: normalizeExportFileEntries(fileEntries),
+    outputPath,
+    applicationName: metadata.applicationName,
+    applicationId: metadata.applicationId,
+    versionName: metadata.versionName,
+    versionCode: metadata.versionCode,
+    orientation: getProjectOrientation(projectData.projectData.screen),
+    iconFileId: metadata.iconFileId,
+    adaptiveIconFileId: metadata.adaptiveIconFileId,
+    splashIconFileId: metadata.splashIconFileId,
+    iconBackgroundColor: metadata.iconBackgroundColor,
+    splashBackgroundColor: metadata.splashBackgroundColor,
+    signingKey: metadata.signingKey,
+    options,
+    getCurrentReference,
+  });
+
+  service.createAndroidApkToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.createAndroidApkToPath(
+      toAndroidExportPayload(
+        projectData,
+        fileEntries,
+        outputPath,
+        metadata,
+        options,
+      ),
+    );
+
+  service.promptAndroidBundlePath = async ({ defaultFileName }, options = {}) =>
+    fileAdapter.promptAndroidBundlePath({
+      defaultFileName,
+      options,
+      filePicker,
+    });
+
+  service.createAndroidBundleToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.createAndroidBundleToPath(
+      toAndroidExportPayload(
+        projectData,
+        fileEntries,
+        outputPath,
+        metadata,
+        options,
+      ),
+    );
+
+  service.getIosExportAvailability = async (options = {}) => {
+    if (typeof fileAdapter.getIosExportAvailability !== "function") {
+      return {
+        available: false,
+        hostSupported: false,
+        templateAvailable: false,
+      };
+    }
+    return fileAdapter.getIosExportAvailability({ options });
+  };
+
+  service.getIosExportRequirements = async () =>
+    fileAdapter.getIosExportRequirements();
+
+  service.listIosDevices = async () => fileAdapter.listIosDevices();
+
+  // Stops the running iOS export, which then rejects with `cancelled`.
+  service.cancelIosExport = async () => fileAdapter.cancelIosExport();
+
+  service.promptIosApplicationPath = async (
+    { defaultFileName },
+    options = {},
+  ) =>
+    fileAdapter.promptIosApplicationPath({
+      defaultFileName,
+      options,
+      filePicker,
+    });
+
+  // `outputPath` is absent when a development build only installs on
+  // `metadata.installDeviceId`.
+  service.exportIosApplication = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) =>
+    fileAdapter.exportIosApplication({
+      projectData,
+      fileEntries: normalizeExportFileEntries(fileEntries),
+      outputPath,
+      installDeviceId: metadata.installDeviceId,
+      applicationName: metadata.applicationName,
+      bundleIdentifier: metadata.bundleIdentifier,
+      version: metadata.version,
+      buildNumber: metadata.buildNumber,
+      orientation: getProjectOrientation(projectData.projectData.screen),
+      iconFileId: metadata.iconFileId,
+      teamId: metadata.teamId,
+      distribution: metadata.distribution,
+      upload: metadata.upload,
+      options,
+      getCurrentReference,
+    });
 
   return service;
 };

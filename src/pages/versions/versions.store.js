@@ -1,4 +1,6 @@
+import { ANDROID_EXPORT_RELEASED } from "../../internal/androidExport.js";
 import { formatDate } from "../../internal/dates.js";
+import { IOS_EXPORT_RELEASED } from "../../internal/iosExport.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import {
   buildMobileResourcePageViewData,
@@ -64,21 +66,19 @@ const createDropdownMenuItems = (copy = {}) => [
 
 const formatConfirmationValue = (value) => String(value ?? "").trim();
 
-const getExportConfirmationTitle = (exportType, copy) => {
+// A Windows export that also offers the installer names neither format.
+const getExportConfirmationTitle = (exportType, copy, offersInstaller) => {
   if (exportType === "windows-executable") {
+    if (offersInstaller) return copy.confirmWindowsExportTitle;
     return (
       copy.confirmWindowsExecutableExportTitle ?? "Confirm Windows EXE Export"
-    );
-  }
-  if (exportType === "windows-installer") {
-    return (
-      copy.confirmWindowsInstallerExportTitle ??
-      "Confirm Windows Installer Export"
     );
   }
   if (exportType === "macos-application") {
     return copy.confirmMacosExportTitle ?? "Confirm macOS App Export";
   }
+  if (exportType === "android-apk") return copy.confirmAndroidExportTitle;
+  if (exportType === "ios-application") return copy.confirmIosExportTitle;
   return copy.confirmWebExportTitle ?? "Confirm Web Export";
 };
 
@@ -86,14 +86,11 @@ const getExportConfirmationButtonLabel = (exportType, copy) => {
   if (exportType === "windows-executable") {
     return copy.exportWindowsExecutableButton ?? "Export Windows EXE (Beta)";
   }
-  if (exportType === "windows-installer") {
-    return (
-      copy.exportWindowsInstallerButton ?? "Export Windows Installer (Beta)"
-    );
-  }
   if (exportType === "macos-application") {
     return copy.exportMacosApplicationButton ?? "Export macOS App (Beta)";
   }
+  if (exportType === "android-apk") return copy.exportAndroidButton;
+  if (exportType === "ios-application") return copy.exportIosApplicationButton;
   return copy.exportWebButton ?? "Export Web";
 };
 
@@ -106,18 +103,22 @@ const createMacosExportForm = (copy = {}) => ({
           name: "version",
           type: "input-text",
           label: copy.macosExportVersionLabel ?? "Version",
-          description:
-            copy.macosExportVersionDescription ??
-            "Version shown in Finder and About. Use three numeric components, for example 1.2.0.",
+          tooltip: {
+            content:
+              copy.macosExportVersionDescription ??
+              "Version shown in Finder and About. Use three numeric components, for example 1.2.0.",
+          },
           required: true,
         },
         {
           name: "buildNumber",
           type: "input-text",
           label: copy.macosExportBuildNumberLabel ?? "Build Number",
-          description:
-            copy.macosExportBuildNumberDescription ??
-            "Positive integer identifying this build. Enter it manually for each export.",
+          tooltip: {
+            content:
+              copy.macosExportBuildNumberDescription ??
+              "Positive integer identifying this build. Enter it manually for each export.",
+          },
           required: true,
         },
       ],
@@ -131,6 +132,221 @@ const createMacosExportForm = (copy = {}) => ({
         variant: "pr",
         validate: true,
         label: copy.exportMacosApplicationButton ?? "Export macOS App (Beta)",
+      },
+    ],
+  },
+});
+
+// Rettangoli forms evaluate `$when` against the current values as
+// `formValues`. Without a Format field, the export is an APK.
+const APK = "formValues.format != 'aab'";
+const BUNDLE = "formValues.format == 'aab'";
+
+// APK or App Bundle, for a host that signs and has the bundle template. A
+// bundle is for Google Play, which needs it signed with the upload key.
+const createAndroidFormatField = (copy) => ({
+  name: "format",
+  type: "segmented-control",
+  label: copy.androidFormatLabel,
+  tooltip: { content: copy.androidFormatTooltip },
+  clearable: false,
+  options: [
+    { value: "apk", label: copy.androidApkFormatOption },
+    { value: "aab", label: copy.androidBundleFormatOption },
+  ],
+});
+
+// Signed or Unsigned for an APK, on a host that can sign. The key is the
+// project's; a game without one gets a new key at its first signed export.
+const getAndroidSigningNotice = (copy, signing) => {
+  if (signing.currentKey) return copy.androidSignedWithKeyNotice;
+  if (signing.currentKeyUnusable) return copy.androidSigningKeyUnusable;
+  return copy.androidNewKeyNotice;
+};
+
+const createAndroidSigningFields = (copy, signing) => [
+  {
+    $when: APK,
+    name: "signing",
+    type: "segmented-control",
+    label: copy.androidSigningLabel,
+    tooltip: { content: copy.androidSigningTooltip },
+    clearable: false,
+    options: [
+      { value: "signed", label: copy.androidSignedOption },
+      { value: "unsigned", label: copy.androidUnsignedOption },
+    ],
+  },
+  {
+    $when: `${APK} && formValues.signing == 'unsigned'`,
+    type: "read-only-text",
+    content: copy.androidUnsignedApkNotice,
+  },
+  {
+    $when: BUNDLE,
+    type: "read-only-text",
+    content: copy.androidBundleNotice,
+  },
+  {
+    $when: `${BUNDLE} || formValues.signing == 'signed'`,
+    type: "read-only-text",
+    content: getAndroidSigningNotice(copy, signing),
+  },
+];
+
+const createAndroidExportForm = (copy, signing, canExportBundle) => {
+  const fields = [
+    {
+      type: "row",
+      fields: [
+        {
+          name: "version",
+          type: "input-text",
+          label: copy.androidExportVersionLabel,
+          tooltip: { content: copy.androidExportVersionDescription },
+          required: true,
+        },
+        {
+          name: "buildNumber",
+          type: "input-text",
+          label: copy.androidExportBuildNumberLabel,
+          tooltip: { content: copy.androidExportBuildNumberDescription },
+          required: true,
+        },
+      ],
+    },
+  ];
+  if (signing.supported) {
+    if (canExportBundle) fields.push(createAndroidFormatField(copy));
+    fields.push(...createAndroidSigningFields(copy, signing));
+  }
+  return {
+    fields,
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          validate: true,
+          label: copy.exportAndroidButton,
+        },
+      ],
+    },
+  };
+};
+
+const APP_STORE = "formValues.distribution == 'appStore'";
+const DEVELOPMENT = "formValues.distribution == 'development'";
+
+// The team Xcode signs with: one of the teams from Xcode's accounts, or a
+// typed team ID when Xcode lists none.
+const createIosTeamField = (copy, teams) => {
+  if (teams.length === 0) {
+    return {
+      name: "teamId",
+      type: "input-text",
+      label: copy.iosTeamIdLabel,
+      tooltip: { content: copy.iosTeamIdDescription },
+      required: true,
+    };
+  }
+  return {
+    name: "teamId",
+    type: "select",
+    label: copy.iosTeamLabel,
+    tooltip: { content: copy.iosTeamDescription },
+    clearable: false,
+    required: true,
+    options: teams.map((team) => ({
+      value: team.id,
+      label: formatI18nCopy(
+        team.free ? copy.iosPersonalTeamOption : copy.iosTeamOption,
+        { name: team.name, id: team.id },
+      ),
+    })),
+  };
+};
+
+// The teams come from Xcode's accounts and the devices from the connected
+// iPhones and iPads, read when the dialog opens.
+const createIosExportForm = (copy, { teams, devices }) => ({
+  fields: [
+    {
+      type: "row",
+      fields: [
+        {
+          name: "version",
+          type: "input-text",
+          label: copy.iosExportVersionLabel,
+          tooltip: { content: copy.iosExportVersionDescription },
+          required: true,
+        },
+        {
+          name: "buildNumber",
+          type: "input-text",
+          label: copy.iosExportBuildNumberLabel,
+          tooltip: { content: copy.iosExportBuildNumberDescription },
+          required: true,
+        },
+      ],
+    },
+    createIosTeamField(copy, teams),
+    {
+      name: "distribution",
+      type: "segmented-control",
+      label: copy.iosDistributionLabel,
+      clearable: false,
+      options: [
+        { value: "appStore", label: copy.iosAppStoreOption },
+        { value: "development", label: copy.iosDevelopmentOption },
+      ],
+    },
+    {
+      $when: APP_STORE,
+      type: "read-only-text",
+      content: copy.iosAppStoreNotice,
+    },
+    {
+      $when: APP_STORE,
+      name: "upload",
+      type: "checkbox",
+      content: copy.iosUploadLabel,
+    },
+    {
+      $when: DEVELOPMENT,
+      type: "read-only-text",
+      content: copy.iosDevelopmentNotice,
+    },
+    {
+      $when: DEVELOPMENT,
+      name: "deviceId",
+      type: "select",
+      label: copy.iosInstallOnLabel,
+      tooltip: { content: copy.iosInstallOnDescription },
+      // The form drops the value while App Store is chosen, so no choice
+      // means not installing.
+      placeholder: copy.iosDontInstallOption,
+      clearable: false,
+      options: [
+        { value: "none", label: copy.iosDontInstallOption },
+        ...devices.map((device) => ({
+          value: device.id,
+          label: device.model
+            ? `${device.name} · ${device.model}`
+            : device.name,
+        })),
+      ],
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        validate: true,
+        label: copy.exportIosApplicationButton,
       },
     ],
   },
@@ -163,7 +379,7 @@ const buildExportConfirmationFields = (
   fields.push({
     type: "text",
     label:
-      confirmation.platform === "macos"
+      confirmation.platform === "macos" || confirmation.platform === "ios"
         ? (platformDetailsCopy.macosApplicationIdentifierLabel ??
           "Bundle Identifier")
         : (platformDetailsCopy.applicationIdentifierLabel ??
@@ -209,11 +425,30 @@ export const createInitialState = () => ({
     installerHostSupported: false,
     installerToolAvailable: false,
   },
+  androidExportAvailability: { available: false, bundleAvailable: false },
+  // The open Android export's signing state: whether this host signs, and
+  // the fingerprint of the project's current key, if it has one.
+  // `currentKeyUnusable` is set when the project has keys but no current
+  // key this Creator can sign with.
+  androidSigning: {
+    supported: false,
+    currentKey: undefined,
+    currentKeyUnusable: false,
+  },
+  // The Build Number of the project's last Android export under the open
+  // export's application ID, when there was one.
+  androidLastBuildNumber: undefined,
   macosExportAvailability: {
     application: false,
     templateAvailable: false,
     hostSupported: false,
   },
+  iosExportAvailability: { available: false },
+  // The open iOS export's choices: the Apple teams signed in to Xcode and
+  // the connected devices.
+  iosExportOptions: { teams: [], devices: [] },
+  // Set while an export runs its checks before its dialog opens.
+  exportConfirmationPending: false,
   ...createMobileResourcePageState(),
   isVersionDialogOpen: false,
   editingVersionId: undefined,
@@ -223,6 +458,11 @@ export const createInitialState = () => ({
     y: 0,
     targetVersionId: undefined,
     items: [],
+  },
+  // The dialog that offers the platforms a version can be exported for.
+  exportOptions: {
+    isOpen: false,
+    versionId: undefined,
   },
   exportConfirmation: {
     isOpen: false,
@@ -296,6 +536,43 @@ export const setWindowsExportAvailability = (
     !!availability?.installerToolAvailable;
 };
 
+export const setAndroidExportAvailability = (
+  { state },
+  { availability } = {},
+) => {
+  state.androidExportAvailability.available = !!availability?.available;
+  state.androidExportAvailability.bundleAvailable =
+    !!availability?.available && !!availability?.bundleAvailable;
+};
+
+// Whether the open Android export can make an App Bundle: the host signs
+// and has the bundle template.
+export const selectCanExportAndroidBundle = ({ state }) =>
+  state.androidSigning.supported &&
+  state.androidExportAvailability.bundleAvailable;
+
+export const setAndroidSigningStatus = (
+  { state },
+  { supported, currentKey, currentKeyUnusable } = {},
+) => {
+  state.androidSigning.supported = !!supported;
+  state.androidSigning.currentKey = currentKey;
+  state.androidSigning.currentKeyUnusable = !!currentKeyUnusable;
+};
+
+export const setAndroidLastBuildNumber = ({ state }, { buildNumber } = {}) => {
+  state.androidLastBuildNumber = buildNumber;
+};
+
+export const selectAndroidLastBuildNumber = ({ state }) =>
+  state.androidLastBuildNumber;
+
+export const selectAndroidSigningStatus = ({ state }) => ({
+  supported: state.androidSigning.supported,
+  currentKey: state.androidSigning.currentKey,
+  currentKeyUnusable: state.androidSigning.currentKeyUnusable,
+});
+
 export const setMacosExportAvailability = (
   { state },
   { availability } = {},
@@ -306,6 +583,24 @@ export const setMacosExportAvailability = (
   state.macosExportAvailability.hostSupported = !!availability?.hostSupported;
 };
 
+export const setIosExportAvailability = ({ state }, { availability } = {}) => {
+  state.iosExportAvailability.available = !!availability?.available;
+};
+
+export const setIosExportOptions = ({ state }, { teams, devices } = {}) => {
+  state.iosExportOptions.teams = teams ?? [];
+  state.iosExportOptions.devices = devices ?? [];
+};
+
+export const selectIosExportOptions = ({ state }) => state.iosExportOptions;
+
+export const setExportConfirmationPending = ({ state }, { pending } = {}) => {
+  state.exportConfirmationPending = pending;
+};
+
+export const selectExportConfirmationPending = ({ state }) =>
+  state.exportConfirmationPending;
+
 export const openVersionDialog = ({ state }, { versionId } = {}) => {
   state.isVersionDialogOpen = true;
   state.editingVersionId = versionId;
@@ -314,6 +609,16 @@ export const openVersionDialog = ({ state }, { versionId } = {}) => {
 export const closeVersionDialog = ({ state }, _payload = {}) => {
   state.isVersionDialogOpen = false;
   state.editingVersionId = undefined;
+};
+
+export const openExportOptions = ({ state }, { versionId } = {}) => {
+  state.exportOptions.isOpen = true;
+  state.exportOptions.versionId = versionId;
+};
+
+export const closeExportOptions = ({ state }, _payload = {}) => {
+  state.exportOptions.isOpen = false;
+  state.exportOptions.versionId = undefined;
 };
 
 export const openExportConfirmation = (
@@ -452,6 +757,63 @@ export const selectViewData = ({ state, i18n }) => {
     };
   });
 
+  const canExportAndroidApk =
+    ANDROID_EXPORT_RELEASED &&
+    state.platform !== "web" &&
+    state.androidExportAvailability.available;
+  const canExportIosApplication =
+    IOS_EXPORT_RELEASED &&
+    state.platform === "tauri" &&
+    state.iosExportAvailability.available;
+  const canExportWindowsExecutable = state.platform === "tauri";
+  const canExportWindowsInstaller =
+    state.platform === "tauri" && state.windowsExportAvailability.installer;
+  const canExportMacosApplication =
+    (state.platform === "tauri" &&
+      state.macosExportAvailability.hostSupported) ||
+    state.visualTestMode;
+  const offersWindowsInstaller =
+    state.exportConfirmation.exportType === "windows-executable" &&
+    canExportWindowsInstaller;
+
+  // The platforms this host can export for, in the order the dialog shows.
+  // Every export except Web is in beta, and its box says so.
+  const exportOptions = [
+    { id: "web", icon: "website", label: platformDetailsCopy.webTabLabel },
+  ];
+  if (canExportWindowsExecutable) {
+    exportOptions.push({
+      id: "windows",
+      beta: true,
+      icon: "windows",
+      label: platformDetailsCopy.windowsTabLabel,
+    });
+  }
+  if (canExportMacosApplication) {
+    exportOptions.push({
+      id: "macos",
+      beta: true,
+      icon: "apple",
+      label: platformDetailsCopy.macosTabLabel,
+    });
+  }
+  if (canExportAndroidApk) {
+    exportOptions.push({
+      id: "android",
+      beta: true,
+      icon: "android",
+      label: platformDetailsCopy.androidTabLabel,
+    });
+  }
+  if (canExportIosApplication) {
+    exportOptions.push({
+      id: "ios",
+      beta: true,
+      icon: "apple",
+      label: copy.exportIosOptionLabel,
+    });
+  }
+
   return {
     isVersionsLoading: state.isVersionsLoading,
     versions,
@@ -475,10 +837,18 @@ export const selectViewData = ({ state, i18n }) => {
     platformDetailsDialogApplicationInfo:
       state.platformDetailsDialog.applicationInfo,
     platformDetailsDialogPlatform: state.platformDetailsDialog.platform,
+    isExportOptionsOpen: state.exportOptions.isOpen,
+    exportOptionsVersionId: state.exportOptions.versionId,
+    exportOptions,
+    exportButton: copy.exportButton,
+    exportOptionBetaLabel: copy.exportOptionBetaLabel,
+    exportOptionsTitle: copy.exportOptionsTitle,
     exportConfirmationTitle: getExportConfirmationTitle(
       state.exportConfirmation.exportType,
       copy,
+      offersWindowsInstaller,
     ),
+    showWindowsInstallerButton: offersWindowsInstaller,
     exportConfirmationMessage:
       copy.exportConfirmationMessage ??
       "Review the build information before exporting.",
@@ -495,28 +865,35 @@ export const selectViewData = ({ state, i18n }) => {
       state.exportConfirmation.exportType,
       copy,
     ),
+    showAndroidExportForm:
+      state.exportConfirmation.exportType === "android-apk",
+    androidExportForm: createAndroidExportForm(
+      copy,
+      state.androidSigning,
+      selectCanExportAndroidBundle({ state }),
+    ),
+    // A host that signs shows this notice in the form, for Unsigned only.
+    showAndroidUnsignedNotice: !state.androidSigning.supported,
+    androidUnsignedApkNotice: copy.androidUnsignedApkNotice,
+
+    canExportAndroidApk,
     showMacosExportForm:
       state.exportConfirmation.exportType === "macos-application",
     macosExportForm: createMacosExportForm(copy),
+    showIosExportForm:
+      state.exportConfirmation.exportType === "ios-application",
+    iosExportForm: createIosExportForm(copy, state.iosExportOptions),
+    canExportIosApplication,
     exportConfirmationKey: `${state.exportConfirmation.exportType ?? "none"}-${state.exportConfirmation.versionId ?? "none"}`,
     title: copy.title ?? "Versions",
     createButton: copy.createButton ?? "New Version",
     loadingMessage: copy.loadingMessage ?? "Loading...",
     noVersionsMessage: copy.noVersionsMessage ?? "No versions",
-    exportWebButton: copy.exportWebButton ?? "Export Web",
-    exportWindowsExecutableButton:
-      copy.exportWindowsExecutableButton ?? "Export Windows EXE (Beta)",
     exportWindowsInstallerButton:
       copy.exportWindowsInstallerButton ?? "Export Windows Installer (Beta)",
-    exportMacosApplicationButton:
-      copy.exportMacosApplicationButton ?? "Export macOS App (Beta)",
-    canExportWindowsExecutable: state.platform === "tauri",
-    canExportWindowsInstaller:
-      state.platform === "tauri" && state.windowsExportAvailability.installer,
-    canExportMacosApplication:
-      (state.platform === "tauri" &&
-        state.macosExportAvailability.hostSupported) ||
-      state.visualTestMode,
+    canExportWindowsExecutable,
+    canExportWindowsInstaller,
+    canExportMacosApplication,
     noSelectionLabel: copy.noSelectionLabel ?? "No selection",
     resourceCategory: "releases",
     resourceType: "versions",

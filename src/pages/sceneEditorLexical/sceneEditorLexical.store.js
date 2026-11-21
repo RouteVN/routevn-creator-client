@@ -1,10 +1,13 @@
+import { wouldRemoveAllSections } from "../../internal/sectionRemoval.js";
 import { formatLoadingProgress } from "../../internal/ui/assetLoadingProgress.js";
 import {
   createEditHistory,
   dropEditHistoryStep as dropHistoryStep,
   getEditHistoryStep,
+  isEditHistoryEmpty,
   moveEditHistoryStep as moveHistoryStep,
   recordEditHistoryStep,
+  resumeEditHistory as resumeHistory,
 } from "../../internal/editHistory.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
@@ -23,6 +26,8 @@ import {
 import { cloneTextStyle } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   constructProjectData,
+  createVisualLayoutBuilder,
+  toStoredVisualPresentationState,
   getSectionPresentation,
 } from "../../internal/project/projection.js";
 import {
@@ -55,6 +60,7 @@ import {
   normalizeProjectLanguage,
 } from "../../internal/projectLanguage.js";
 import { isTouchLandscape } from "../../internal/touchLayout.js";
+import { getTextDirection } from "../../internal/textDirection.js";
 
 const INACTIVE_SECTION_EDITOR_SELECTED_LINE_ID = "";
 
@@ -187,7 +193,9 @@ const getSectionLinePresentationState = (state, lineId) => {
     return undefined;
   }
 
-  return toPlainObject(selectedLineEntry.presentationState);
+  return toStoredVisualPresentationState(
+    toPlainObject(selectedLineEntry.presentationState),
+  );
 };
 
 const getPreviousSectionLinePresentationState = (state, lineId) => {
@@ -201,7 +209,9 @@ const getPreviousSectionLinePresentationState = (state, lineId) => {
     return {};
   }
 
-  return toPlainObject(lines[selectedLineIndex - 1].presentationState);
+  return toStoredVisualPresentationState(
+    toPlainObject(lines[selectedLineIndex - 1].presentationState),
+  );
 };
 
 const collectActionTargetSectionIds = (actions) => {
@@ -469,6 +479,18 @@ const getDraftSectionKey = (sceneId, sectionId) => {
 
   return String(sceneId) + ":" + String(sectionId);
 };
+
+// The id of a section's block in the view, which is also its render key, so
+// a section's editor is never reused for another section. View ids may hold
+// only letters and digits, and section ids can hold any character, so every
+// other character, and "x", is written as "x" and its six hex digits.
+const toSectionBlockId = (sectionId) =>
+  "sectionBlock" +
+  Array.from(String(sectionId), (character) =>
+    /^[a-wyzA-Z0-9]$/.test(character)
+      ? character
+      : "x" + character.codePointAt(0).toString(16).padStart(6, "0"),
+  ).join("");
 
 const getDraftSections = (state) => {
   const draftSections = Object.values(state.draftSections || {}).filter(
@@ -740,6 +762,7 @@ export const createInitialState = () => ({
   projectLanguage: DEFAULT_PROJECT_LANGUAGE,
   draftSection: undefined,
   draftSections: {},
+  nextSceneLoads: 0,
   draftSaveTimerId: undefined,
   sceneTextStats: createEmptySceneTextStats(),
   sceneTextStatsRefreshHandle: undefined,
@@ -747,6 +770,20 @@ export const createInitialState = () => ({
   draftSavePendingSinceAt: 0,
   draftFlushInFlight: false,
   previewVisible: false,
+  // The full-screen editor of a visual's layout, over the page. When it
+  // closes, the visual panel opens again, in the visual's edit view when
+  // `returnToEditView` is set.
+  visualLayoutEditor: {
+    isOpen: false,
+    // Edit Layout saved the line and takes the scene for the editor.
+    isOpening: false,
+    sceneId: undefined,
+    sectionId: undefined,
+    lineId: undefined,
+    visualId: undefined,
+    returnToEditView: false,
+    sceneBackdrop: undefined,
+  },
   previewSceneId: undefined,
   previewSectionId: undefined,
   previewLineId: undefined,
@@ -784,7 +821,11 @@ export const createInitialState = () => ({
   warnedAssetFileIds: [],
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
   actionTargetLineId: undefined,
-  // Undo and redo for line edits made since the scene opened. A section's
+  // Pictures of the line's visuals, each alone, by visual id, for the visual
+  // panel: `{ key, url }`, where `key` is the visual's render element as it was
+  // drawn when the picture was taken.
+  visualSnapshots: {},
+  // Undo and redo for line edits, kept when the scene is left. A section's
   // baseline is its lines as of its last recorded edit; until then they are
   // the committed lines. Undo waits while a line action command runs or waits
   // to run.
@@ -803,8 +844,35 @@ export const setSceneId = ({ state }, { sceneId } = {}) => {
   if (sceneId !== state.sceneId) {
     state.editHistory = createEditHistory();
     state.editHistoryBaselines = {};
+    // A saved draft is refreshed from the stored lines only while its scene is
+    // open. Kept across a scene change, it could later show, and then save,
+    // lines that are out of date. Unsaved drafts stay until they are saved.
+    for (const [draftSectionKey, draftSection] of Object.entries(
+      state.draftSections,
+    )) {
+      if (!draftSection.dirty) {
+        delete state.draftSections[draftSectionKey];
+      }
+    }
+    if (!state.draftSection?.dirty) {
+      state.draftSection = undefined;
+    }
   }
   state.sceneId = sceneId;
+};
+
+// Counts the scene switches still loading their scene. A switch that is
+// replaced by a later one ends while the later one still loads.
+export const startNextSceneLoad = ({ state }) => {
+  state.nextSceneLoads += 1;
+};
+
+export const finishNextSceneLoad = ({ state }) => {
+  state.nextSceneLoads -= 1;
+};
+
+export const selectIsNextSceneLoading = ({ state }) => {
+  return state.nextSceneLoads > 0;
 };
 
 // Each section's lines as of its last recorded edit: its baseline, or its
@@ -826,10 +894,13 @@ export const selectLineEditBaselines = ({ state }, { sectionIds } = {}) => {
 };
 
 // Undo and redo wait while a line action command runs, the preview, the
-// actions dialog or a transform editor is open, or text is being composed.
+// layout editor of a visual, the actions dialog or a transform editor is
+// open or opening, or text is being composed.
 export const selectIsEditHistoryBlocked = ({ state }) =>
   state.runningLineCommandCount > 0 ||
   state.previewVisible ||
+  state.visualLayoutEditor.isOpen ||
+  state.visualLayoutEditor.isOpening ||
   state.actionTargetLineId !== undefined ||
   state.backgroundTransformEditor.isOpen ||
   getDraftSections(state).some((draftSection) => draftSection.isComposing);
@@ -856,6 +927,17 @@ export const recordLineEdit = (
 export const resetEditHistory = ({ state }) => {
   state.editHistory = createEditHistory();
   state.editHistoryBaselines = {};
+};
+
+export const selectEditHistory = ({ state }) => state.editHistory;
+
+// Takes back the history kept when the scene was last left. A step restores
+// only the lines it touched, so the history is kept whatever the scene holds
+// now. An edit recorded while the scene was still opening stays instead.
+export const resumeEditHistory = ({ state }, { retainedEditHistory } = {}) => {
+  if (isEditHistoryEmpty(state.editHistory)) {
+    state.editHistory = resumeHistory(retainedEditHistory);
+  }
 };
 
 export const setEditHistoryBaselines = ({ state }, { baselines } = {}) => {
@@ -1087,6 +1169,43 @@ export const showPreviewSceneId = (
   state.previewLineId = lineId;
 };
 
+// Edit Layout has begun: the line is saved, then the scene taken, before the
+// editor opens.
+export const startOpeningVisualLayoutEditor = ({ state }) => {
+  state.visualLayoutEditor.isOpening = true;
+};
+
+// Opens the layout of a visual on a line in the full-screen layout editor,
+// drawn over `sceneBackdrop`, the line's rendered scene.
+export const openVisualLayoutEditor = (
+  { state },
+  {
+    sceneId,
+    sectionId,
+    lineId,
+    visualId,
+    returnToEditView = false,
+    sceneBackdrop,
+  } = {},
+) => {
+  state.visualLayoutEditor = {
+    isOpen: true,
+    isOpening: false,
+    sceneId,
+    sectionId,
+    lineId,
+    visualId,
+    returnToEditView,
+    sceneBackdrop,
+  };
+};
+
+export const closeVisualLayoutEditor = ({ state }) => {
+  state.visualLayoutEditor = createInitialState().visualLayoutEditor;
+};
+
+export const selectVisualLayoutEditor = ({ state }) => state.visualLayoutEditor;
+
 export const hidePreviewScene = ({ state }, _payload = {}) => {
   state.previewVisible = false;
   state.previewSectionId = undefined;
@@ -1101,8 +1220,9 @@ export const selectSkipNextEditorBlurDraftFlush = ({ state }) => {
   return state.skipNextEditorBlurDraftFlush === true;
 };
 
+// The engine's presentation state, with visual layouts in their saved form.
 export const setPresentationState = ({ state }, { presentationState } = {}) => {
-  state.presentationState = presentationState;
+  state.presentationState = toStoredVisualPresentationState(presentationState);
 };
 
 export const setTemporaryPresentationState = (
@@ -1118,6 +1238,34 @@ export const clearTemporaryPresentationState = ({ state }, _payload = {}) => {
 
 export const selectTemporaryPresentationState = ({ state }) => {
   return toPlainObject(state.temporaryPresentationState);
+};
+
+// Layout builders by repository state, which the store replaces instead of
+// changing it, so that a slider dragged in the visual panel builds layouts
+// from the resources it already gathered.
+const visualLayoutBuilders = new WeakMap();
+
+const getVisualLayoutBuilder = (repositoryState) => {
+  let builder = visualLayoutBuilders.get(repositoryState);
+  if (!builder) {
+    builder = createVisualLayoutBuilder(repositoryState, {
+      keepStoredLayouts: true,
+    });
+    visualLayoutBuilders.set(repositoryState, builder);
+  }
+  return builder;
+};
+
+// The temporary presentation state as the engine takes it: visual layouts
+// built from their saved form, with the text styles those layouts add.
+export const selectTemporaryPresentationStateForEngine = ({ state }) => {
+  const built = getVisualLayoutBuilder(state.repositoryState).buildActions(
+    toPlainObject(state.temporaryPresentationState),
+  );
+  return {
+    presentationState: built.actions,
+    textStyles: built.textStyles,
+  };
 };
 
 export const selectEffectivePresentationState = ({ state }) => {
@@ -1344,6 +1492,37 @@ export const selectIsCanvasUnavailable = ({ state }) => {
   return state.isCanvasUnavailable;
 };
 
+// The visuals' pictures are taken while the actions dialog is open, from the
+// canvas.
+export const selectShouldCaptureVisualSnapshots = ({ state }) =>
+  !state.isCanvasUnavailable && state.actionTargetLineId !== undefined;
+
+export const selectVisualSnapshots = ({ state }) => state.visualSnapshots;
+
+export const setVisualSnapshots = ({ state }, { snapshots } = {}) => {
+  state.visualSnapshots = snapshots;
+};
+
+// A picture taken elsewhere, such as by the layout editor, kept until the
+// canvas draws the visual again.
+export const setVisualSnapshot = ({ state }, { visualId, url } = {}) => {
+  state.visualSnapshots[visualId] = { url };
+};
+
+// The visuals' pictures by visual id, for the visual panel. Without a canvas
+// there are none to wait for.
+export const selectVisualSnapshotUrls = ({ state }) => {
+  if (state.isCanvasUnavailable) {
+    return undefined;
+  }
+  return Object.fromEntries(
+    Object.entries(state.visualSnapshots).map(([visualId, { url }]) => [
+      visualId,
+      url,
+    ]),
+  );
+};
+
 export const setSceneAssetLoading = ({ state }, { isLoading } = {}) => {
   state.isSceneAssetLoading = isLoading;
 };
@@ -1371,6 +1550,7 @@ export const selectSectionLineChanges = ({ state }) => {
 export const selectPreviewScene = ({ state }) => {
   return {
     previewVisible: state.previewVisible,
+    visualLayoutEditorOpen: state.visualLayoutEditor.isOpen,
     previewSceneId: state.previewSceneId,
   };
 };
@@ -1718,6 +1898,17 @@ export const selectSectionMoveSceneDialog = ({ state }) => {
   return state.sectionMoveSceneDialog;
 };
 
+// Deleting the sections, or moving them to another scene, would leave the
+// current scene without a section.
+export const selectWouldRemoveAllSections = ({ state }, { sectionIds }) => {
+  const sections =
+    state.repositoryState?.scenes?.items?.[state.sceneId]?.sections;
+  return (
+    Object.keys(sections?.items ?? {}).length <= 1 ||
+    wouldRemoveAllSections(sections, sectionIds)
+  );
+};
+
 export const showSectionDropdownMenu = (
   { state },
   { position, sectionId } = {},
@@ -1756,12 +1947,12 @@ export const showSectionDropdownMenu = (
     { label: "Duplicate", type: "item", value: "duplicate-section" },
   );
 
-  if (
-    sceneOptions.length > 0 &&
-    scene &&
-    scene.sections &&
-    scene.sections.length > 1
-  ) {
+  const canRemoveSection = !selectWouldRemoveAllSections(
+    { state },
+    { sectionIds: [sectionId] },
+  );
+
+  if (sceneOptions.length > 0 && canRemoveSection) {
     items.push({
       label: "Move to scene",
       type: "item",
@@ -1769,8 +1960,7 @@ export const showSectionDropdownMenu = (
     });
   }
 
-  // Only show delete option if there's more than 1 section
-  if (scene && scene.sections && scene.sections.length > 1) {
+  if (canRemoveSection) {
     items.push({ label: "Delete", type: "item", value: "delete-section" });
   }
 
@@ -1971,7 +2161,9 @@ export const selectProjectData = ({ state }) => {
   const sanitizedState = prepareProjectDataSourceStateForPreview(sourceState);
   const sanitizeDurationMs = getSceneEditorTimingDurationMs(sanitizeStartedAt);
   const constructStartedAt = getSceneEditorTimingNow();
-  const projectData = constructProjectData(sanitizedState);
+  const projectData = constructProjectData(sanitizedState, {
+    keepStoredVisualLayouts: true,
+  });
   const constructDurationMs =
     getSceneEditorTimingDurationMs(constructStartedAt);
   const sceneItems = sourceState?.scenes?.items || {};
@@ -2195,6 +2387,8 @@ export const selectViewData = ({ state, i18n }) => {
       documentEditorLines: [],
       documentLineDecorations: [],
       sectionEditorItems: [],
+      hasNoSections: false,
+      isPreviewHidden: state.isCanvasUnavailable,
       textStyles: [],
       mentionTargets: [],
       currentLine: null,
@@ -2312,6 +2506,7 @@ export const selectViewData = ({ state, i18n }) => {
         layouts,
         controls,
         menuSceneId,
+        scenes: repositoryState.scenes,
       }),
     ]),
   );
@@ -2393,6 +2588,7 @@ export const selectViewData = ({ state, i18n }) => {
     : [];
   const selectedDecorationsStartedAt = getSceneEditorTimingNow();
   const documentLineDecorations = buildSceneDocumentLineDecorations({
+    i18n,
     lines: documentEditorLines,
     repositoryState,
     sectionLineChanges: getSectionLineChangesForSection(
@@ -2434,9 +2630,11 @@ export const selectViewData = ({ state, i18n }) => {
       hasNextSectionLine: sections
         .slice(index + 1)
         .some((item) => item.lines?.[0]?.id),
+      blockId: toSectionBlockId(section.id),
       editorKey: `document-${section.id}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
       documentEditorLines: sectionLines,
       documentLineDecorations: buildSceneDocumentLineDecorations({
+        i18n,
         lines: sectionLines,
         repositoryState,
         sectionLineChanges,
@@ -2609,8 +2807,16 @@ export const selectViewData = ({ state, i18n }) => {
     sectionsOverviewItems,
     documentEditorLines,
     sectionEditorItems,
+    hasNoSections: sections.length === 0,
+    // A scene without sections has nothing to preview.
+    isPreviewHidden: state.isCanvasUnavailable || sections.length === 0,
+    emptySectionsMessage: copy.emptySectionsMessage,
+    addSectionLabel: copy.addSectionMenuItem,
     textStyles,
     mentionTargets,
+    // The script is written in the project language, so the text editor
+    // takes its direction, whatever the app language is.
+    scriptTextDirection: getTextDirection(state.projectLanguage),
     documentLineDecorations,
     dropdownMenu: localizeDropdownMenu(state.dropdownMenu, copy),
     popover: state.popover,
@@ -2626,6 +2832,7 @@ export const selectViewData = ({ state, i18n }) => {
     previewSceneId: state.previewSceneId,
     previewSectionId: state.previewSectionId,
     previewLineId: state.previewLineId,
+    visualLayoutEditor: state.visualLayoutEditor,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
     previewCanvasMaxWidth: selectPreviewCanvasMaxWidth({ state }),
     mobilePreviewCanvasMaxWidth: selectMobilePreviewCanvasMaxWidth({ state }),
@@ -2645,6 +2852,7 @@ export const selectViewData = ({ state, i18n }) => {
       state,
       state.selectedLineId,
     ),
+    visualSnapshots: selectVisualSnapshotUrls({ state }),
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
     sectionCreateForm: localizeSceneEditorForm(sectionCreateForm, copy),

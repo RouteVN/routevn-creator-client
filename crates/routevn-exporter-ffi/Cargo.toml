@@ -1,0 +1,24 @@
+[package]
+name = "routevn-exporter-ffi"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97.1"
+description = "C interface to the RouteVN exporters for the iOS Creator app"
+
+[lib]
+name = "routevn_exporter_ffi"
+crate-type = ["staticlib"]
+
+[dependencies]
+routevn-android-export = { path = "../routevn-android-export" }
+routevn-exporter = { path = "../routevn-exporter" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.23.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3

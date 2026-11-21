@@ -1,3 +1,4 @@
+import { FR_I18N } from "../support/i18n.js";
 import { describe, expect, it } from "vitest";
 import { toInspectorValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelViewData.js";
 
@@ -22,8 +23,8 @@ describe("layoutEditPanel action view data", () => {
     expect(values.actions).toContainEqual({
       id: "resetStoryAtSection",
       interactionType: "click",
-      label: "Click: Reset Story At Section",
-      svg: "settings",
+      label: "Click: Section Transition",
+      svg: "action-sectionTransition",
     });
   });
 
@@ -97,3 +98,28 @@ describe("layoutEditPanel action view data", () => {
     });
   });
 });
+
+it.each([false, true])(
+  "labels layout transitions as Section Transition regardless of reset (%s)",
+  (resetStory) => {
+    const values = toInspectorValues({
+      values: {
+        click: {
+          payload: {
+            actions: {
+              sectionTransition: { sectionId: "section-1", resetStory },
+            },
+          },
+        },
+      },
+      firstTextStyleId: "",
+      hiddenActionModes: new Set(),
+      copy: FR_I18N.resourcePages,
+    });
+    expect(values.actions[0].label).toBe(
+      FR_I18N.resourcePages.labelValue
+        .replace("{label}", "Click")
+        .replace("{value}", FR_I18N.resourcePages.actionSectionTransition),
+    );
+  },
+);

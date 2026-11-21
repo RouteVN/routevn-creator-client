@@ -17,7 +17,8 @@
         "fullscreen": false,
         "decorations": true,
         "dragDropEnabled": false,
-        "visible": false
+        "visible": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,AudioServiceOutOfProcess"
       }
     ],
     "security": {

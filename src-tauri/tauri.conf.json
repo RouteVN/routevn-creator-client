@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "RouteVN Creator",
   "mainBinaryName": "routevn-creator",
-  "version": "1.20.0",
+  "version": "1.23.0",
   "identifier": "com.routevn.creator",
   "build": {
     "frontendDist": "../_site",
@@ -65,6 +65,7 @@
           "http://project-file.localhost",
           "blob:"
         ],
+        "frame-src": ["https://www.youtube-nocookie.com"],
         "font-src": ["'self'", "asset:", "http://asset.localhost", "blob:"],
         "script-src": ["'self'", "'unsafe-eval'", "'wasm-unsafe-eval'"],
         "worker-src": ["'self'", "blob:"]
@@ -89,7 +90,12 @@
     "longDescription": "RouteVN Creator. Follow us on social media to stay updated.",
     "resources": {
       "assets/player-templates/windows/RouteVNPlayerTemplate.exe": "player-templates/windows/RouteVNPlayerTemplate.exe",
-      "assets/player-templates/macos/RouteVNPlayerTemplate.app.zip": "player-templates/macos/RouteVNPlayerTemplate.app.zip"
+      "assets/player-templates/macos/RouteVNPlayerTemplate.app.zip": "player-templates/macos/RouteVNPlayerTemplate.app.zip",
+      "assets/player-templates/android/RouteVNPlayerTemplate.apk": "player-templates/android/RouteVNPlayerTemplate.apk",
+      "assets/player-templates/android/RouteVNPlayerTemplate.json": "player-templates/android/RouteVNPlayerTemplate.json",
+      "assets/player-templates/android/RouteVNPlayerTemplate.aab": "player-templates/android/RouteVNPlayerTemplate.aab",
+      "assets/player-templates/android/RouteVNPlayerTemplate.aab.json": "player-templates/android/RouteVNPlayerTemplate.aab.json",
+      "assets/player-templates/ios/RouteVNPlayerTemplate.app.zip": "player-templates/ios/RouteVNPlayerTemplate.app.zip"
     },
     "icon": [
       "icons/32x32.png",

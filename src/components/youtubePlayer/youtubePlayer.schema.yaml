@@ -1,0 +1,16 @@
+componentName: rvn-youtube-player
+propsSchema:
+  type: object
+  properties:
+    youtubeId:
+      type: string
+      description: The YouTube video to play. The player shows while it is set
+    title:
+      type: string
+      description: The video title shown above the player
+events:
+  close:
+    type: object
+methods:
+  type: object
+  properties: {}

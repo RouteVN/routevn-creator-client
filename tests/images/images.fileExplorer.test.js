@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { createResourceFileExplorerHandlers } from "../../src/internal/ui/fileExplorer.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("images file explorer", () => {
   it("creates a child folder and refreshes with it selected", async () => {
     const refresh = vi.fn(async () => {});
     const createImage = vi.fn(async () => "folder-copy");
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -59,6 +61,7 @@ describe("images file explorer", () => {
     const refresh = vi.fn(async () => {});
     const deleteImages = vi.fn(async () => ({ valid: true }));
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },
@@ -115,6 +118,7 @@ describe("images file explorer", () => {
     const refresh = vi.fn(async () => {});
     const moveImage = vi.fn(async () => {});
     const deps = {
+      i18n: EN_I18N,
       projectService: {
         ensureRepository: vi.fn(async () => {}),
         moveImage,

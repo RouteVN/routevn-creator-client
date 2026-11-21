@@ -1,10 +1,12 @@
 import { produce } from "immer";
+import { Subject } from "rxjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as animationEditorStore from "../../src/pages/animationEditor/animationEditor.store.js";
 import {
   handleAddKeyframeFromTimeline,
   handleAddPropertySideMenuItemClick,
   handleAfterMount,
+  handleBeforeMount,
   handleConfirmMaskImageSelection,
   handleEditHistoryShortcutKeyDown,
   handleMaskImageSelected,
@@ -15,12 +17,17 @@ import {
   handleUndoButtonClick,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // The page on its real store, opened on a saved animation, or on a new one
 // with `payload`.
+// `savedData` is what an earlier page saved for the animation, and pages
+// given the same history service are one app session.
 const createPage = async ({
   payload = { an: "animation-1" },
   keyframe = { relative: false },
+  savedData,
+  retainedEditHistoryService = createRetainedEditHistoryService(),
 } = {}) => {
   let state = animationEditorStore.createInitialState();
   const store = new Proxy(
@@ -69,12 +76,19 @@ const createPage = async ({
       },
     },
   };
+  Object.assign(repositoryState.animations.items["animation-1"], savedData);
   const deps = {
     store,
     render: vi.fn(),
     refs: {},
     i18n: EN_I18N,
+    uiConfig: {},
+    windowMetricsClient: { subscribe: () => () => {} },
+    browserEventsClient: { subscribeWindowEvent: () => () => {} },
+    subject: new Subject(),
     appService: {
+      ...retainedEditHistoryService,
+      registerBeforeNavigation: () => () => {},
       getPayload: () => payload,
       setPayload: vi.fn(),
       showAlert: vi.fn(),
@@ -88,6 +102,7 @@ const createPage = async ({
       createAnimation: vi.fn(async () => ({ valid: true })),
     },
   };
+  const cleanup = handleBeforeMount(deps);
   await handleAfterMount(deps);
 
   const keyframes = () => state.tweenBySection.update.x?.keyframes;
@@ -101,7 +116,18 @@ const createPage = async ({
     deps.projectService.updateAnimation.mock.calls.map(
       ([{ data }]) => data.animation.tween.x.keyframes[0].value,
     );
-  return { deps, store, keyframes, view, typeValue, savedValues };
+  const lastSavedData = () =>
+    deps.projectService.updateAnimation.mock.lastCall[0].data;
+  return {
+    deps,
+    store,
+    keyframes,
+    view,
+    typeValue,
+    savedValues,
+    lastSavedData,
+    cleanup,
+  };
 };
 
 const shortcut = (init) => ({
@@ -149,6 +175,51 @@ describe("animation editor undo and redo", () => {
     expect(page.keyframes()[0].value).toBe(120);
     await vi.advanceTimersByTimeAsync(5000);
     expect(page.savedValues()).toEqual([120]);
+  });
+
+  it("keeps undo and redo when the page is left and opened again", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    page.store.setSelectedKeyframe({ side: "update", property: "x", index: 0 });
+    page.typeValue(200);
+    await vi.advanceTimersByTimeAsync(2000);
+    page.typeValue(300);
+    await page.cleanup();
+    expect(page.savedValues().at(-1)).toBe(300);
+
+    const reopened = await createPage({
+      retainedEditHistoryService,
+      savedData: page.lastSavedData(),
+    });
+
+    expect(reopened.view()).toMatchObject({
+      undoDisabled: false,
+      redoDisabled: true,
+    });
+    await handleUndoButtonClick(reopened.deps);
+    expect(reopened.keyframes()[0].value).toBe(200);
+    await handleUndoButtonClick(reopened.deps);
+    expect(reopened.keyframes()[0].value).toBe(100);
+    await handleRedoButtonClick(reopened.deps);
+    expect(reopened.keyframes()[0].value).toBe(200);
+  });
+
+  it("drops the history when the animation changed while the page was closed", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    page.store.setSelectedKeyframe({ side: "update", property: "x", index: 0 });
+    page.typeValue(200);
+    await page.cleanup();
+
+    const reopened = await createPage({
+      retainedEditHistoryService,
+      savedData: { ...page.lastSavedData(), name: "Animation Renamed" },
+    });
+
+    expect(reopened.view()).toMatchObject({
+      undoDisabled: true,
+      redoDisabled: true,
+    });
   });
 
   it("keeps separate edits as separate steps", async () => {

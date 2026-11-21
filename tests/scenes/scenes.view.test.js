@@ -29,7 +29,7 @@ describe("scenes view", () => {
       "utf8",
     );
 
-    expect(scenesView).toContain('style="right: 8px; top: 8px;"');
+    expect(scenesView).toContain('style="inset-inline-end: 8px; top: 8px;"');
     expect(scenesView).toContain(
       'rtgl-button#mobileFileExplorerOpenButton sq pre=hamburger v=ol title="${title}" aria-label="${title}"',
     );

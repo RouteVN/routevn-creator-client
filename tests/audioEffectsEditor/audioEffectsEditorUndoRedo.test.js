@@ -19,6 +19,7 @@ import {
   handleUndoButtonClick,
 } from "../../src/pages/audioEffectsEditor/audioEffectsEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 const keyframe = (value, duration = 1000) => ({
   value,
@@ -43,7 +44,10 @@ const transitionEffect = {
 };
 
 // The page on its real store, opened on a saved audio effect.
-const createPage = async ({ audioEffect = updateEffect } = {}) => {
+const createPage = async ({
+  audioEffect = updateEffect,
+  retainedEditHistoryService = createRetainedEditHistoryService(),
+} = {}) => {
   let state = audioEffectsEditorStore.createInitialState();
   const store = new Proxy(
     {},
@@ -82,7 +86,12 @@ const createPage = async ({ audioEffect = updateEffect } = {}) => {
     render: vi.fn(),
     refs: {},
     i18n: EN_I18N,
+    uiConfig: {},
+    windowMetricsClient: { subscribe: () => () => {} },
+    browserEventsClient: { subscribeWindowEvent: () => () => {} },
     appService: {
+      ...retainedEditHistoryService,
+      registerBeforeNavigation: () => () => {},
       getPayload: () => ({ aef: "effect-1" }),
       navigate: vi.fn(),
       showAlert: vi.fn(),
@@ -94,6 +103,7 @@ const createPage = async ({ audioEffect = updateEffect } = {}) => {
       updateAudioEffect: vi.fn(async () => ({ valid: true })),
     },
   };
+  const cleanup = handleBeforeMount(deps);
   await handleAfterMount(deps);
 
   const definition = () => state.definition;
@@ -108,7 +118,16 @@ const createPage = async ({ audioEffect = updateEffect } = {}) => {
     deps.projectService.updateAudioEffect.mock.calls
       .map(([{ data }]) => data.audioEffect)
       .filter(Boolean);
-  return { deps, store, definition, keyframes, view, typeValue, savedEffects };
+  return {
+    deps,
+    store,
+    definition,
+    keyframes,
+    view,
+    typeValue,
+    savedEffects,
+    cleanup,
+  };
 };
 
 const shortcut = (init) => ({
@@ -166,6 +185,28 @@ describe("audio effects editor undo and redo", () => {
         .savedEffects()
         .map((effect) => effect.tween.volume.keyframes[0].value),
     ).toEqual([65]);
+  });
+
+  it("keeps undo and redo when the page is left and opened again", async () => {
+    const retainedEditHistoryService = createRetainedEditHistoryService();
+    const page = await createPage({ retainedEditHistoryService });
+    page.store.setSelectedKeyframe({
+      side: "update",
+      property: "volume",
+      index: 0,
+    });
+    page.typeValue(65);
+    await page.cleanup();
+
+    const reopened = await createPage({
+      audioEffect: page.savedEffects().at(-1),
+      retainedEditHistoryService,
+    });
+
+    expect(reopened.keyframes()[0].value).toBe(65);
+    expect(reopened.view()).toMatchObject({ undoDisabled: false });
+    handleUndoButtonClick(reopened.deps);
+    expect(reopened.keyframes()[0].value).toBe(50);
   });
 
   it("keeps separate edits as separate steps", async () => {
@@ -455,6 +496,7 @@ describe("audio effects editor undo and redo", () => {
         },
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         ...page.deps.appService,
         registerBeforeNavigation: vi.fn(),
       },

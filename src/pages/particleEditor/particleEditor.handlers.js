@@ -5,6 +5,7 @@ import {
   resolveParticleEditorPayload,
 } from "../../internal/particleEditorRoute.js";
 import { showAssetLoadFailures } from "../../internal/ui/assetLoadFeedback.js";
+import { getEditHistoryOwner } from "../../internal/editHistory.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
@@ -393,6 +394,9 @@ export const handleBeforeMount = (deps) => {
   );
 
   return async () => {
+    // Kept for coming back to this page, before the save below can let the
+    // next page open.
+    appService.retainEditHistory(store.selectRetainedEditHistory());
     unregisterBeforeNavigation();
     cleanupSubscriptions();
     cleanupWindowLayout?.();
@@ -428,6 +432,9 @@ export const handleAfterMount = async (deps) => {
 
   store.loadParticle({
     item,
+    retainedEditHistory: appService.getRetainedEditHistory({
+      owner: getEditHistoryOwner("particle", particleId),
+    }),
     imagesData: repositoryState.images,
   });
   render();

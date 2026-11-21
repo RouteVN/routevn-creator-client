@@ -1,4 +1,8 @@
-import { IMPORT_PACK_SCHEMA_V2 } from "./importPackages.js";
+import {
+  IMPORT_PACK_SCHEMA_V2,
+  IMPORT_PACK_SCHEMA_V3,
+} from "./importPackages.js";
+import { getCharacterSpriteTagScopeKey } from "./project/commands.js";
 import {
   ASSET_PACKAGE_KIND,
   ASSET_PACKAGE_RESOURCE_CONFIGS,
@@ -75,6 +79,56 @@ const sanitizePackageItem = (sourceItem, itemId) => {
   const item = sanitizePackageValue(sourceItem);
   item.id = itemId;
   return item;
+};
+
+// A package leaves tags out, except the ones a character's sprites carry:
+// its sprite groups, each sprite's tags, and the character's own sprite tags
+// they name, as `spriteTags`. They are put back on the sanitized `item` from
+// the project's `sourceItem`.
+const restoreCharacterSpriteTags = ({ item, sourceItem, itemId, tagsData }) => {
+  const scope = tagsData?.[getCharacterSpriteTagScopeKey(itemId)];
+  const tagIds = (scope?.tree ?? [])
+    .map((node) => node.id)
+    .filter((tagId) => scope.items?.[tagId]?.type === "tag");
+  if (tagIds.length === 0) {
+    return;
+  }
+  const knownTagIds = new Set(tagIds);
+  const keepKnownTagIds = (ids) =>
+    (ids ?? []).filter((tagId) => knownTagIds.has(tagId));
+
+  const spriteTags = { items: {}, tree: [] };
+  for (const tagId of tagIds) {
+    const sourceTag = scope.items[tagId];
+    const tag = { id: tagId, type: "tag", name: sourceTag.name };
+    if (sourceTag.color !== undefined) {
+      tag.color = sourceTag.color;
+    }
+    spriteTags.items[tagId] = tag;
+    spriteTags.tree.push({ id: tagId });
+  }
+  item.spriteTags = spriteTags;
+
+  for (const [spriteId, sourceSprite] of Object.entries(
+    sourceItem.sprites?.items ?? {},
+  )) {
+    const spriteTagIds = keepKnownTagIds(sourceSprite.tagIds);
+    if (spriteTagIds.length > 0) {
+      item.sprites.items[spriteId].tagIds = spriteTagIds;
+    }
+  }
+
+  // A group stays only with tags, as the app requires one of each group.
+  const spriteGroups = (sourceItem.spriteGroups ?? [])
+    .map((spriteGroup) => ({
+      id: spriteGroup.id,
+      name: spriteGroup.name,
+      tags: keepKnownTagIds(spriteGroup.tags),
+    }))
+    .filter((spriteGroup) => spriteGroup.tags.length > 0);
+  if (spriteGroups.length > 0) {
+    item.spriteGroups = spriteGroups;
+  }
 };
 
 const appendResourceSubtree = ({ resourceData, sourceNode, items }) => {
@@ -209,6 +263,19 @@ const dropSectionJumpScenes = (value) => {
       .filter(([key]) => !(isSectionJump && key === "sceneId"))
       .map(([key, entry]) => [key, dropSectionJumpScenes(entry)]),
   );
+};
+
+// App versions whose model has no thumbnail source hash on an animation read
+// these package schemas too, and turn the whole package away over that one
+// field. A package leaves it out, and the app that imports the animation
+// draws its thumbnail again.
+const dropAnimationThumbnailSourceHash = (item) => {
+  if (item.type !== "animation" || item.thumbnailSourceHash === undefined) {
+    return item;
+  }
+  const data = { ...item };
+  delete data.thumbnailSourceHash;
+  return data;
 };
 
 // What the picks use, directly or through each other, that is not a pick,
@@ -420,6 +487,7 @@ export const createAssetPackageContents = ({
   selectedFolderIdsByType,
   resourceTypeOrder,
   scenesData,
+  tagsData,
 }) => {
   const pickedIdsByType = collectPickedIdsByType({
     resourceDataByType,
@@ -454,6 +522,21 @@ export const createAssetPackageContents = ({
       collections.push({ items });
     }
   }
+  for (const collection of [
+    repository.characters,
+    packageDependencies.characters,
+  ]) {
+    for (const [itemId, item] of Object.entries(collection?.items ?? {})) {
+      if (item.type === "character") {
+        restoreCharacterSpriteTags({
+          item,
+          sourceItem: resourceDataByType.characters.items[itemId],
+          itemId,
+          tagsData,
+        });
+      }
+    }
+  }
   // Jumps into the story, and layouts opened that the pack does not carry,
   // point at the pack's links instead.
   const resolveLink = (value, fieldName) =>
@@ -473,7 +556,7 @@ export const createAssetPackageContents = ({
       if (item.type === "folder") continue;
       collection.items[itemId] = mapAssetPackageLinks(
         keepAssetPackageCharacterSprites(
-          dropSectionJumpScenes(item),
+          dropSectionJumpScenes(dropAnimationThumbnailSourceHash(item)),
           isNamedCharacterSprite,
         ),
         resolveLink,
@@ -597,8 +680,17 @@ export const createAssetPackageManifest = ({
     );
   }
 
+  // Only a package that carries a character's sprite tags needs the schema
+  // that has them, so every other package stays readable by older apps.
+  const hasCharacterSpriteTags = [repository, dependencies].some((section) =>
+    Object.values(section?.characters?.items ?? {}).some(
+      (item) => item.spriteTags !== undefined,
+    ),
+  );
   const manifest = {
-    schema: IMPORT_PACK_SCHEMA_V2,
+    schema: hasCharacterSpriteTags
+      ? IMPORT_PACK_SCHEMA_V3
+      : IMPORT_PACK_SCHEMA_V2,
     package: { kind: ASSET_PACKAGE_KIND },
     repository: structuredClone(repository),
   };
@@ -640,5 +732,6 @@ export const createSavedAssetPackContents = ({
     selectedFolderIdsByType,
     resourceTypeOrder: resources.map(({ resourceType }) => resourceType),
     scenesData: repositoryState.scenes ?? { items: {}, tree: [] },
+    tagsData: repositoryState.tags,
   });
 };

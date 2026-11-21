@@ -26,3 +26,6 @@ propsSchema:
       type: string
     showCheckerboard:
       type: boolean
+    padding:
+      type: string
+      description: Pixels left around the frame. Defaults to a small margin; 0 makes the frame fill a box that has its shape.

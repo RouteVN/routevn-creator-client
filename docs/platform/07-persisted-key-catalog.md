@@ -45,6 +45,10 @@ Current keys:
     - `iconFileId`
     - `createdAt`
     - `lastOpenedAt`
+- `deviceId`
+  - the app's random device ID, 24 Base58 characters, made on first use
+  - independent of accounts, projects and hardware; sent with update checks
+    and asset store pack views and downloads
 - `userConfig`
   - global app-level user/session/UI config object
   - current nested keys:
@@ -110,6 +114,14 @@ Current keys:
       - purpose: whether the tablet landscape explorer pane (Files or
         Elements) is hidden to its show button
       - scope: global
+    - `app.locale`
+      - purpose: the UI language the user chose; while it is unset the app
+        uses English
+      - scope: global
+    - `app.localeSuggestionDismissed`
+      - purpose: `true` once the "also available in" box on the Projects
+        page was closed; it does not show again
+      - scope: global
 
 Naming rules:
 
@@ -150,6 +162,10 @@ Current keys:
   - current fields:
     - `applicationName`
     - `applicationIdentifier`
+    - `loadingBackgroundFileId` (optional loading screen background image)
+    - `startBackgroundFileId` (optional start screen background image)
+    - `loadingFadeDuration` (ms, fade from the loading to the start background)
+    - `startFadeDuration` (ms, fade from the background to the first scene)
 - `platformDetails.windows`
   - independently customizable Windows release metadata
   - current fields:
@@ -205,6 +221,59 @@ Current keys:
     `releaseInfo.macos` is copied to the matching `platformDetails.*` key when
     first read; obsolete Web icon metadata is removed because Web export uses
     the project-owned icon
+- `platformDetails.android`
+  - independently customizable Android release metadata in the project `app` store
+  - fields: `applicationName`, `iconFileId`, `applicationIdentifier`,
+    `iconBackgroundColor`, `splashBackgroundColor`, optional `adaptiveIconFileId`,
+    `splashIconFileId`
+  - defaults copy the project name and icon, with a blank application identifier,
+    an opaque white icon background (`#FFFFFF`), and an opaque black splash
+    background (`#000000`); colors are normalized to uppercase `#RRGGBB`
+  - created explicitly from Platform Details or export setup; opening or cancelling
+    setup does not persist a record
+  - identifiers must follow Android package-name rules; the template and Creator
+    application identifiers are reserved
+  - Version and Build Number are required per-export inputs and are not persisted
+  - project DB import/export preserves the record on every host; no legacy
+    `releaseInfo.android` key is read because Android has no preview storage key
+- `platformDetails.ios`
+  - independently customizable iOS release metadata in the project `app` store
+  - fields: `applicationName`, `iconFileId`, `applicationIdentifier` (the
+    bundle identifier), and `teamId`
+  - defaults copy the project name and icon, with a blank bundle identifier
+    and a blank `teamId`
+  - created explicitly from Platform Details or export setup, like Android
+  - `teamId` is the Apple Developer team the last iOS export signed with; the
+    Versions page writes it after the export signs and the export dialog
+    selects it first next time
+  - Version and Build Number are required per-export inputs and are not
+    persisted
+  - the icon is cropped to 1024 by 1024 pixels, the App Store icon size
+  - see `16-ios-player-export.md`
+- `androidSigning`
+  - the game's Android signing keys: `keys`, a list of
+    `{ certificateSha256, certificate, privateKey, origin, addedAt }`, and
+    `currentKey`, the fingerprint of the key that signs new builds
+  - `certificateSha256` is 64 lowercase hex digits; `certificate` (DER) and
+    `privateKey` (PKCS #8 DER) are base64; `origin` is `created` or
+    `uploaded`; `addedAt` is milliseconds since the epoch
+  - Creator uses only entries it can read, and `currentKey` only when its key
+    is one of them; writes keep every other entry and field as stored, so a
+    key written by a later version is never lost
+  - a separate key, not a field of `platformDetails.android`: released Creator
+    versions drop Platform Details fields they do not know when they save
+  - written when the first signed export makes a key, and by Create Key,
+    Upload Key, Replace Key, and Use Again in Platform Details; a replaced key
+    stays in the list
+  - the private keys are not encrypted: anyone with a copy of the project
+    folder can sign builds of the game; see `15-android-player-export.md`
+- `androidLastExport`
+  - `{ applicationId, buildNumber }`: the highest Build Number the project
+    exported for Android under that application ID
+  - written after each Android export finishes; the export form starts one
+    above it and asks before exporting a Build Number that is not higher
+  - applies only to exports from this copy of the project, and starts over
+    when the application ID changes
 - `creatorVersion`
   - stored project format version gate for compatibility checks
 - `versions`
@@ -228,6 +297,11 @@ Current keys:
 - `contentPatch.fontWeightMetadata-1-10-0`
   - boolean completion marker for adding weight metadata to legacy TTF, OTF,
     WOFF, and WOFF2 font resources
+  - full execution and collaboration-safety contract:
+    `14-project-content-patches.md`
+- `contentPatch.sectionTransitionResetStory-1-22-0`
+  - boolean completion marker for the one-time rewrite of deprecated
+    `resetStoryAtSection` actions as section transitions that reset the story
   - full execution and collaboration-safety contract:
     `14-project-content-patches.md`
 

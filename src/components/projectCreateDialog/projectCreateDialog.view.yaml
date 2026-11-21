@@ -53,7 +53,7 @@ template:
           - rtgl-view slot=project-path-selector w=f g=xs:
               - rtgl-view d=h w=f g=sm av=c:
                   - rtgl-input#pathInput w=f :value=${projectPathDisplay} disabled=true placeholder=${noFolderSelectedLabel}: null
-                  - rtgl-button#browseButton variant=se: ${browseButtonLabel}
+                  - rtgl-button#browseButton v=se: ${browseButtonLabel}
               - $if validationErrors.projectPath:
                   - rtgl-text s=sm c=de: ${validationErrors.projectPath}
   - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile} :outputSize=${512}: null

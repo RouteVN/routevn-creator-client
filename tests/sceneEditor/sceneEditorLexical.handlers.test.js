@@ -34,16 +34,31 @@ import {
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 import * as storeModule from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 import {
+  handleActionItemRightClick as handleSystemActionsItemRightClick,
+  handleDropdownMenuClickItem as handleSystemActionsDropdownMenuClickItem,
+} from "../../src/components/systemActions/systemActions.handlers.js";
+import {
+  createInitialState as createSystemActionsState,
+  hideDropdownMenu as hideSystemActionsDropdownMenu,
+  selectDropdownMenuActionType as selectSystemActionsDropdownMenuActionType,
+  showDropdownMenu as showSystemActionsDropdownMenu,
+} from "../../src/components/systemActions/systemActions.store.js";
+import {
   EN_I18N,
   ES_I18N,
   FR_I18N,
+  ID_I18N,
+  IT_I18N,
   JA_I18N,
+  PL_I18N,
   PT_I18N,
   RU_I18N,
   TH_I18N,
+  UK_I18N,
   VI_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // The real store module's selectors and actions, bound to a plain state.
 const bindStore = (state) =>
@@ -250,6 +265,7 @@ describe("sceneEditorLexical.handlers navigation preparation", () => {
 describe("sceneEditorLexical.handlers back navigation", () => {
   it("preserves the selected local project path", () => {
     const appService = {
+      ...createRetainedEditHistoryService(),
       getPayload: vi.fn(() => ({
         p: "project-1",
         lp: "/projects/project-one",
@@ -342,6 +358,7 @@ describe("sceneEditorLexical.handlers preview", () => {
         sectionEditor0: linesEditor,
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         blurActiveElement: vi.fn(() => calls.push("app-blur")),
         showAlert: vi.fn(),
       },
@@ -385,6 +402,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
         }),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         saveFilePicker,
         showToast,
       },
@@ -440,6 +458,7 @@ describe("sceneEditorLexical.handlers canvas download", () => {
         extractBase64: vi.fn(async () => undefined),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         saveFilePicker: vi.fn(),
         showToast,
       },
@@ -616,6 +635,8 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       setSceneId: vi.fn(({ sceneId: nextSceneId }) => {
         sceneId = nextSceneId;
       }),
+      selectEditHistory: vi.fn(() => ({ undo: [], redo: [] })),
+      resumeEditHistory: vi.fn(),
       selectScene: vi.fn(() => scenes[sceneId]),
       selectCommittedScene: vi.fn(() => scenes[sceneId]),
       selectSelectedSectionId: vi.fn(() => selectedSectionId),
@@ -649,6 +670,8 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       setRepositoryRevision: vi.fn(),
       setSectionLineChangesBySectionId: vi.fn(),
       setScenePageLoading: vi.fn(),
+      startNextSceneLoad: vi.fn(),
+      finishNextSceneLoad: vi.fn(),
       selectIsScenePageLoading: () => false,
       selectIsSceneAssetLoading: () => false,
       hidePreviewScene: vi.fn(),
@@ -670,6 +693,7 @@ describe("sceneEditorLexical.handlers route payload sync", () => {
       getRepositoryRevision: vi.fn(() => 7),
     };
     const appService = {
+      ...createRetainedEditHistoryService(),
       getPayload: vi.fn(() => ({
         p: "project-1",
         s: "scene-2",
@@ -904,6 +928,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           }),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           blurActiveElement: vi.fn(() => calls.push("app-blur")),
         },
       },
@@ -946,6 +971,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         }),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         blurActiveElement: vi.fn(() => calls.push("app-blur")),
       },
       render: vi.fn(() => calls.push("render")),
@@ -2153,6 +2179,49 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  it("starts the transform editor of a visual without a transform at the screen center", () => {
+    const openBackgroundTransformEditor = vi.fn();
+    const item = { id: "visual-1", layer: 50, layout: { elements: {} } };
+    const action = { items: [item] };
+    const store = {
+      openBackgroundTransformEditor,
+      setTemporaryPresentationState: vi.fn(),
+      selectRepositoryState: vi.fn(() => ({
+        project: { resolution: { width: 1280, height: 720 } },
+        transforms: { items: {} },
+      })),
+      selectSelectedLine: vi.fn(() => ({ actions: { visual: action } })),
+    };
+
+    handleActionTransformCustomize(
+      { store, render: vi.fn(), subject: { dispatch: vi.fn() } },
+      {
+        _event: {
+          stopPropagation: vi.fn(),
+          detail: {
+            targetType: "visual",
+            actionKey: "visual",
+            itemIndex: 0,
+            item,
+            action,
+          },
+        },
+      },
+    );
+
+    expect(
+      openBackgroundTransformEditor.mock.calls[0][0].transform,
+    ).toMatchObject({
+      x: 640,
+      y: 360,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+    });
+  });
+
   it("clears temporary presentation state and refreshes the canvas when the actions dialog closes", () => {
     const store = {
       selectActionTargetLineId: vi.fn(() => "line-2"),
@@ -2210,6 +2279,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         }),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         showAlert: vi.fn(),
       },
     };
@@ -2264,6 +2334,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         updateLineDialogueAction,
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         showAlert: vi.fn(),
       },
     };
@@ -2386,6 +2457,117 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       data: {
         dialogue: { content: [{ text: "Still raining" }] },
         sfx: { channels: [] },
+      },
+      replace: true,
+    });
+  });
+
+  // Deletes one action of a line that holds an Input action among others,
+  // and returns what the page saved.
+  const saveAfterDeleting = async (payload) => {
+    const saveError = new Error("stop after assertion");
+    const updateLineActions = vi.fn(async () => {
+      throw saveError;
+    });
+    const selectedLine = {
+      id: "line-1",
+      actions: {
+        dialogue: { content: [{ text: "What is your name?" }] },
+        form: {
+          resourceId: "layout-input",
+          fields: { name: { variableId: "variable-name" } },
+        },
+        choice: { resourceId: "layout-choice", items: [{ content: "Go on" }] },
+      },
+    };
+    const store = {
+      ...editHistoryStore({ line: selectedLine }),
+      selectSelectedLine: vi.fn(() => selectedLine),
+      selectDraftSection: vi.fn(() => undefined),
+    };
+
+    await expect(
+      handleSystemActionsActionDelete(
+        {
+          store,
+          render: vi.fn(),
+          subject: { dispatch: vi.fn() },
+          projectService: { updateLineActions },
+        },
+        payload,
+      ),
+    ).rejects.toThrow("stop after assertion");
+
+    return { updateLineActions, selectedLine };
+  };
+
+  it("removes the Input action when deleting its presentation card", async () => {
+    const { updateLineActions, selectedLine } = await saveAfterDeleting({
+      _event: { detail: { actionType: "form" } },
+    });
+
+    expect(updateLineActions).toHaveBeenCalledOnce();
+    expect(updateLineActions).toHaveBeenCalledWith({
+      lineId: "line-1",
+      data: {
+        dialogue: { content: [{ text: "What is your name?" }] },
+        choice: { resourceId: "layout-choice", items: [{ content: "Go on" }] },
+      },
+      replace: true,
+    });
+    // The saved actions are a copy; the line itself is left for the refresh.
+    expect(selectedLine.actions.form).toBeDefined();
+  });
+
+  it("removes the Input action through the presentation card's Delete menu", async () => {
+    const menuState = createSystemActionsState();
+    const menuEvents = [];
+    const menuDeps = {
+      store: {
+        showDropdownMenu: (payload) =>
+          showSystemActionsDropdownMenu({ state: menuState }, payload),
+        hideDropdownMenu: () =>
+          hideSystemActionsDropdownMenu({ state: menuState }),
+        selectDropdownMenuActionType: () =>
+          selectSystemActionsDropdownMenuActionType({ state: menuState }),
+      },
+      render: vi.fn(),
+      dispatchEvent: (event) => menuEvents.push(event),
+    };
+    handleSystemActionsItemRightClick(menuDeps, {
+      _event: {
+        preventDefault: vi.fn(),
+        clientX: 0,
+        clientY: 0,
+        currentTarget: { dataset: { mode: "input" } },
+      },
+    });
+    handleSystemActionsDropdownMenuClickItem(menuDeps, {
+      _event: { detail: { item: menuState.dropdownMenu.items[0] } },
+    });
+    expect(menuEvents).toHaveLength(1);
+
+    const { updateLineActions } = await saveAfterDeleting({
+      _event: menuEvents[0],
+    });
+
+    const { data } = updateLineActions.mock.calls[0][0];
+    expect(Object.keys(data)).toEqual(["dialogue", "choice"]);
+  });
+
+  it("keeps the Input action when another presentation card is deleted", async () => {
+    const { updateLineActions } = await saveAfterDeleting({
+      _event: { detail: { actionType: "choice" } },
+    });
+
+    expect(updateLineActions).toHaveBeenCalledWith({
+      lineId: "line-1",
+      data: {
+        dialogue: { content: [{ text: "What is your name?" }] },
+        form: {
+          resourceId: "layout-input",
+          fields: { name: { variableId: "variable-name" } },
+        },
       },
       replace: true,
     });
@@ -2717,10 +2899,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         sectionId: "section-1",
       })),
       selectSceneId: vi.fn(() => "scene-1"),
-      selectCommittedScene: vi.fn(() => ({
-        id: "scene-1",
-        sections: [{ id: "section-1" }],
-      })),
+      selectWouldRemoveAllSections: vi.fn(() => true),
       hideSectionMoveSceneDialog: vi.fn(),
     };
     const moveSectionItem = vi.fn();
@@ -2735,6 +2914,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         moveSectionItem,
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         showAlert: vi.fn(),
       },
     };
@@ -2753,6 +2933,9 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       message: "This scene must keep at least one section.",
       title: "Error",
+    });
+    expect(store.selectWouldRemoveAllSections).toHaveBeenCalledWith({
+      sectionIds: ["section-1"],
     });
     expect(moveSectionItem).not.toHaveBeenCalled();
     expect(store.hideSectionMoveSceneDialog).not.toHaveBeenCalled();
@@ -2786,6 +2969,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         dispatch: vi.fn(),
       },
       appService: {
+        ...createRetainedEditHistoryService(),
         getPayload: vi.fn(() => state.payload),
         setPayload: vi.fn((payload) => {
           state.payload = payload;
@@ -2885,6 +3069,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3001,6 +3186,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3119,6 +3305,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3225,6 +3412,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3322,6 +3510,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
           dispatch: vi.fn(),
         },
         appService: {
+          ...createRetainedEditHistoryService(),
           getPayload: vi.fn(() => state.payload),
           setPayload: vi.fn((payload) => {
             state.payload = payload;
@@ -3616,6 +3805,10 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     ["Portuguese", PT_I18N],
     ["French", FR_I18N],
     ["Vietnamese", VI_I18N],
+    ["Indonesian", ID_I18N],
+    ["Ukrainian", UK_I18N],
+    ["Italian", IT_I18N],
+    ["Polish", PL_I18N],
     ["Simplified Chinese", ZH_HANS_I18N],
   ])(
     "tells the user in %s that a referenced section can't be deleted",
@@ -3759,10 +3952,7 @@ describe("sceneEditorLexical.handlers refused section commands", () => {
     const store = {
       selectSectionMoveSceneDialog: vi.fn(() => ({ sectionId: "section-1" })),
       selectSceneId: vi.fn(() => "scene-1"),
-      selectCommittedScene: vi.fn(() => ({
-        id: "scene-1",
-        sections: [{ id: "section-1" }, { id: "section-2" }],
-      })),
+      selectWouldRemoveAllSections: vi.fn(() => false),
       hideSectionMoveSceneDialog: vi.fn(),
       setSelectedSectionId: vi.fn(),
     };

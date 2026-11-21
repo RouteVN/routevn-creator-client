@@ -1,0 +1,30 @@
+componentName: rvn-image-usage
+propsSchema:
+  type: object
+  properties:
+    imageId:
+      type: string
+      description: The image whose usage is shown
+    imageName:
+      type: string
+      description: The image's name, for the dialog title
+    folderId:
+      type: string
+      description: >-
+        The folder whose used images are shown, in blocked-folder-delete mode
+    folderName:
+      type: string
+      description: The folder's name, for the dialog title
+    mode:
+      type: string
+      description: >-
+        panel lists the usage in a detail panel and opens the full list in a
+        dialog. blocked-delete shows only the dialog, explaining that the
+        image cannot be deleted while it is used. blocked-folder-delete shows
+        only the dialog, listing the images that keep the folder from being
+        deleted and where each is used.
+      enum: [panel, blocked-delete, blocked-folder-delete]
+      default: panel
+events:
+  close:
+    type: object

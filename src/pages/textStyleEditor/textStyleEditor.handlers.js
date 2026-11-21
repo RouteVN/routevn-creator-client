@@ -7,6 +7,7 @@ import {
   isStrictFontMimeType,
 } from "../../internal/fontCapabilities.js";
 import { normalizeFontFileType } from "../../internal/fileTypes.js";
+import { nameFromFileName } from "../../internal/files.js";
 import { generateId } from "../../internal/id.js";
 import {
   createTextStyleEditorPayload,
@@ -14,6 +15,7 @@ import {
   resolveTextStyleEditorPayload,
 } from "../../internal/textStyleEditorRoute.js";
 import { showAssetLoadFailures } from "../../internal/ui/assetLoadFeedback.js";
+import { getEditHistoryOwner } from "../../internal/editHistory.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import { getMediaPageData } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { forwardFormSubmitOnEnter } from "../../internal/ui/resourcePages/formSubmitKeyDown.js";
@@ -281,6 +283,9 @@ export const handleBeforeMount = (deps) => {
   );
 
   return async () => {
+    // Kept for coming back to this page, before the save below can let the
+    // next page open.
+    appService.retainEditHistory(store.selectRetainedEditHistory());
     unregisterBeforeNavigation();
     cleanupSubscriptions();
     cleanupWindowLayout?.();
@@ -314,6 +319,9 @@ export const handleAfterMount = async (deps) => {
 
   store.loadTextStyle({
     item,
+    retainedEditHistory: appService.getRetainedEditHistory({
+      owner: getEditHistoryOwner("textStyle", textStyleId),
+    }),
     ...selectResourceData(repositoryState),
   });
   render();
@@ -608,7 +616,7 @@ export const handleFontFileSelected = async (deps, payload) => {
   const [uploadResult] = uploadResults;
   uploadResult.fontCapabilities = fontCapabilities;
   store.setSelectedFontFile({
-    fileName: file.name.replace(/\.(ttf|otf|woff2)$/i, ""),
+    fileName: nameFromFileName(file.name, /\.(ttf|otf|woff2)$/i),
     uploadResult,
   });
   render();

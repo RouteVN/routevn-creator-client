@@ -3,6 +3,15 @@ const isObjectRecord = (value) =>
 
 const EMPTY_SECTION_LINE_ID = "__empty__";
 
+// Route Engine starts a scene at its first section, so a scene needs at least
+// one of these to be shown.
+export const getRouteEngineSectionIds = (scene) => {
+  const sections = isObjectRecord(scene?.sections) ? scene.sections : {};
+  return Object.entries(sections)
+    .filter(([, section]) => isObjectRecord(section))
+    .map(([sectionId]) => sectionId);
+};
+
 export const summarizeProjectDataForRouteEngine = (projectData) => {
   const story = isObjectRecord(projectData?.story) ? projectData.story : {};
   const scenes = isObjectRecord(story.scenes) ? story.scenes : {};
@@ -34,8 +43,10 @@ export const summarizeProjectDataForRouteEngine = (projectData) => {
   };
 };
 
+// Fixes the given project data in place. Callers pass their own copy, so a
+// second copy of the whole story here only added memory to every render.
 export const sanitizeProjectDataForRouteEngine = (projectData) => {
-  const safeProjectData = structuredClone(projectData || {});
+  const safeProjectData = projectData ?? {};
   const changes = [];
   const story = isObjectRecord(safeProjectData.story)
     ? safeProjectData.story
@@ -60,9 +71,7 @@ export const sanitizeProjectDataForRouteEngine = (projectData) => {
   for (const sceneId of validSceneIds) {
     const scene = scenes[sceneId];
     const sections = isObjectRecord(scene?.sections) ? scene.sections : {};
-    const validSectionIds = Object.entries(sections)
-      .filter(([, section]) => isObjectRecord(section))
-      .map(([sectionId]) => sectionId);
+    const validSectionIds = getRouteEngineSectionIds(scene);
 
     if (!validSectionIds.includes(scene.initialSectionId)) {
       if (scene.initialSectionId !== validSectionIds[0]) {

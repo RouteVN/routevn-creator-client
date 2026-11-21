@@ -1,13 +1,30 @@
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { USE_PACK_DEPENDENCY } from "../../internal/assetImportPlan.js";
-import { formatCalendarDate, formatPercent } from "../../internal/dates.js";
+import {
+  formatCalendarDate,
+  formatList,
+  formatPercent,
+} from "../../internal/dates.js";
 import { generateId } from "../../internal/id.js";
 
 const STORE_STEP = "store";
 const PACK_STEP = "pack";
 const CREATOR_STEP = "creator";
+// Asks for a package's URL, for a dialog opened on the "url" source.
+const URL_STEP = "url";
+// A package from a file or a URL is being read, before its selection opens.
+const LOADING_STEP = "loading";
 const SELECTION_STEP = "selection";
 const PROGRESS_STEP = "progress";
+
+// What a dialog imports from: the asset store, a package ZIP file picked from
+// this device, or a URL typed in the dialog. Each opens on its own step.
+const STORE_SOURCE = "store";
+const FIRST_STEP_BY_SOURCE = Object.freeze({
+  [STORE_SOURCE]: STORE_STEP,
+  zip: LOADING_STEP,
+  url: URL_STEP,
+});
 
 const createCatalogState = () => ({
   status: "idle",
@@ -240,7 +257,7 @@ const listImportedResources = ({ plan, values }) => {
 
 // A select for each link the selection jumps through or opens, which must be
 // chosen: where it goes in this project.
-const createLinkFields = ({ plan, values, copy, projectTargets }) => {
+const createLinkFields = ({ plan, values, copy, dateTime, projectTargets }) => {
   if (!plan || (plan.links ?? []).length === 0) return [];
   const importedResources = listImportedResources({ plan, values });
   return plan.links.flatMap((link, index) => {
@@ -255,7 +272,10 @@ const createLinkFields = ({ plan, values, copy, projectTargets }) => {
         type: "select",
         label: formatLinkLabel({ copy, ...link }),
         description: formatI18nCopy(copy.linkUsedBy ?? "Used by {names}", {
-          names: users.map((resource) => resource.name).join(", "),
+          names: formatList(
+            users.map((resource) => resource.name),
+            dateTime,
+          ),
         }),
         placeholder: copy.chooseOption ?? "Choose",
         required: {
@@ -266,6 +286,54 @@ const createLinkFields = ({ plan, values, copy, projectTargets }) => {
       },
     ];
   });
+};
+
+// The URL step's form: the package's URL, with what it may link to in the
+// label's hint.
+const urlForm = ({ copy }) => ({
+  fields: [
+    {
+      name: "url",
+      type: "input-text",
+      label: copy.urlFieldLabel ?? "Package URL",
+      tooltip: {
+        content:
+          copy.urlFieldHint ??
+          "A link to an asset package zip file, or to its asset-package.json manifest. The link must use HTTPS.",
+      },
+      placeholder: "https://",
+      required: {
+        message: copy.urlRequired ?? "Enter the package URL.",
+      },
+    },
+  ],
+  actions: {
+    buttons: [
+      {
+        id: "cancel",
+        variant: "se",
+        label: copy.urlCancelButton ?? "Cancel",
+      },
+      {
+        id: "import-url",
+        variant: "pr",
+        label: copy.importButton ?? "Import",
+        type: "submit",
+        validate: true,
+      },
+    ],
+  },
+});
+
+// The header names what the dialog imports from.
+const getDialogTitle = ({ state, copy }) => {
+  if (state.source === "zip") {
+    return copy.importFromZipMenuItem ?? "Import from Zip File";
+  }
+  if (state.source === "url") {
+    return copy.importFromUrlMenuItem ?? "Import from URL";
+  }
+  return copy.storeTitle ?? "Asset Store";
 };
 
 // The title and Back are in the selection-header slot, so they scroll with
@@ -325,12 +393,27 @@ const createProjectTargets = () => ({
   resourcesByType: {},
 });
 
+// On phones the store's search opens in a popover under the header's search
+// button; its input takes focus once the popover is placed.
+const createSearchPopoverState = () => ({
+  isOpen: false,
+  focusPending: false,
+  position: { x: 0, y: 0 },
+});
+
 export const createInitialState = () => ({
   // Tells this dialog's search events apart from another mounted dialog's.
   instanceId: generateId(),
   open: false,
+  source: STORE_SOURCE,
   step: STORE_STEP,
+  // What a package from a file or a URL is called when its manifest has no
+  // name: the file's name, or the last part of the URL.
+  sourceName: undefined,
+  // The URL typed on the URL step, kept when the step shows again.
+  urlValue: "",
   searchText: "",
+  searchPopover: createSearchPopoverState(),
   catalog: createCatalogState(),
   planPackId: undefined,
   pack: undefined,
@@ -359,8 +442,15 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
   state.open = props.open === true;
 
   if (reset || (!wasOpen && state.open)) {
-    state.step = STORE_STEP;
+    state.source =
+      FIRST_STEP_BY_SOURCE[props.source] === undefined
+        ? STORE_SOURCE
+        : props.source;
+    state.step = FIRST_STEP_BY_SOURCE[state.source];
+    state.sourceName = undefined;
+    state.urlValue = "";
     state.searchText = "";
+    state.searchPopover = createSearchPopoverState();
     state.catalog = createCatalogState();
     state.planPackId = undefined;
     state.pack = undefined;
@@ -381,6 +471,21 @@ export const syncFromProps = ({ state }, { props, reset = false } = {}) => {
 
 export const setSearchText = ({ state }, { value } = {}) => {
   state.searchText = value;
+};
+
+export const openSearchPopover = ({ state }, { position } = {}) => {
+  state.searchPopover.isOpen = true;
+  state.searchPopover.focusPending = true;
+  state.searchPopover.position = position;
+};
+
+export const closeSearchPopover = ({ state }) => {
+  state.searchPopover.isOpen = false;
+  state.searchPopover.focusPending = false;
+};
+
+export const clearSearchPopoverFocusPending = ({ state }) => {
+  state.searchPopover.focusPending = false;
 };
 
 // A new query reloads the store from its first page.
@@ -479,6 +584,29 @@ export const setPackLoadError = ({ state }, { error } = {}) => {
   state.packStatus = "failed";
 };
 
+// A package from a file or a URL is read before anything of it shows.
+export const startLoadingPackage = (
+  { state },
+  { operationId, sourceName, url } = {},
+) => {
+  state.step = LOADING_STEP;
+  state.operationId = operationId;
+  state.sourceName = sourceName;
+  state.urlValue = url ?? state.urlValue;
+  state.error = undefined;
+};
+
+// The URL step shows again with what was typed: under `error` when its
+// package could not be read, or without one when reading it was cancelled.
+export const openUrlStep = ({ state }, { error, url } = {}) => {
+  state.step = URL_STEP;
+  state.operationId = undefined;
+  state.urlValue = url ?? state.urlValue;
+  state.error = error;
+  state.formKey += 1;
+};
+
+// A package from a file or a URL opens on its selection once it is read.
 export const setPlan = ({ state }, { plan, projectTargets } = {}) => {
   state.plan = plan;
   state.projectTargets = projectTargets ?? createProjectTargets();
@@ -685,11 +813,16 @@ export const setError = ({ state }, { error, step } = {}) => {
 };
 
 export const selectPlan = ({ state }) => state.plan;
+export const selectSource = ({ state }) => state.source;
+export const selectUrlValue = ({ state }) => state.urlValue;
 export const selectPlanPackId = ({ state }) => state.planPackId;
 export const selectStep = ({ state }) => state.step;
 export const selectOperationId = ({ state }) => state.operationId;
 export const selectReviewValues = ({ state }) => state.reviewValues;
 export const selectInstanceId = ({ state }) => state.instanceId;
+export const selectSearchText = ({ state }) => state.searchText;
+export const selectSearchPopoverFocusPending = ({ state }) =>
+  state.searchPopover.isOpen && state.searchPopover.focusPending;
 export const selectCatalogQuery = ({ state }) => state.catalog.query;
 export const selectCatalogRequestId = ({ state }) => state.catalog.requestId;
 export const selectCatalogNextCursor = ({ state }) => state.catalog.nextCursor;
@@ -746,6 +879,12 @@ const getCatalogViewData = ({ state, copy }) => {
     searchTitle: copy.searchTitle ?? "Search",
     searchLabel: copy.searchPlaceholder ?? "Search asset packs",
     searchText: state.searchText,
+    // The phone search button and popover work like the resource pages'
+    // filter: the button is filled while a search narrows the list, and
+    // Clear is off when there is nothing to clear.
+    searchButtonVariant: isFiltered ? "pr" : "ol",
+    clearSearchLabel: copy.clearButton ?? "Clear",
+    clearSearchDisabled: state.searchText === "" && !isFiltered,
     isCatalogEmpty:
       catalog.status === "ready" && catalog.packs.length === 0 && !isFiltered,
     isNoResults:
@@ -870,6 +1009,13 @@ export const selectViewData = ({ state, i18n = {} }) => {
     complete: copy.completeLabel ?? "Import complete",
   };
   const isSelectionStep = state.step === SELECTION_STEP;
+  const isUrlStep = state.step === URL_STEP;
+  // A package from a file or a URL is named by its manifest, or else by its
+  // file or link; a store pack's name shows on its pack page.
+  const manifestName = plan?.package?.name?.trim();
+  const fallbackName =
+    plan && state.source !== STORE_SOURCE ? state.sourceName : undefined;
+  const packageName = manifestName ? manifestName : fallbackName;
   const allResourcesSelected =
     (plan?.resources.length ?? 0) > 0 &&
     plan.resources.every(
@@ -944,7 +1090,14 @@ export const selectViewData = ({ state, i18n = {} }) => {
   return {
     open: state.open,
     step: state.step,
+    dialogTitle: getDialogTitle({ state, copy }),
     isStoreStep: state.step === STORE_STEP,
+    isUrlStep,
+    urlForm: isUrlStep ? urlForm({ copy }) : undefined,
+    urlDefaultValues: { url: state.urlValue },
+    isLoadingStep: state.step === LOADING_STEP,
+    loadingLabel: copy.packageLoading ?? "Reading the asset package",
+    loadingCancelLabel: copy.urlCancelButton ?? "Cancel",
     isPackStep: state.step === PACK_STEP,
     isCreatorStep: state.step === CREATOR_STEP,
     creator: getCreatorViewData({ state, copy }),
@@ -969,6 +1122,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
             plan,
             values: state.reviewValues,
             copy,
+            dateTime: i18n.dateTime,
             projectTargets: state.projectTargets,
           }),
         })
@@ -985,6 +1139,7 @@ export const selectViewData = ({ state, i18n = {} }) => {
     formContext: state.reviewValues,
     errorMessage: state.error?.message,
     catalog: getCatalogViewData({ state, copy }),
+    searchPopover: state.searchPopover,
     pack: getPackViewData({ state, copy, dateTime: i18n.dateTime }),
     isAssetPreviewOpen: previewResource !== undefined,
     assetPreview: previewResource && {
@@ -997,8 +1152,8 @@ export const selectViewData = ({ state, i18n = {} }) => {
     },
     selectionTitle: copy.selectResourcesTitle ?? "Choose Resources",
     selectionBackLabel: copy.backButton ?? "Back",
-    packageName: plan?.package?.name,
-    hasPackageMetadata: hasPackageMetadata(plan),
+    packageName,
+    hasPackageMetadata: hasPackageMetadata(plan) || packageName !== undefined,
     planId: plan?.planId,
     packagePublisher: plan?.package?.publisher,
     packagePublisherText: formatI18nCopy(

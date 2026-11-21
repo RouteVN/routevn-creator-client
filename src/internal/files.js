@@ -41,3 +41,15 @@ export const formatFileSize = (bytes, dateTime = {}) => {
     () => value,
   );
 };
+
+/**
+ * The name of a file without its extension, for the resource made from it.
+ * macOS can report names in decomposed Unicode (NFD), where "한" is three
+ * jamo and "é" is "e" plus an accent. The name is composed (NFC), so it
+ * matches typed search text and sorts with the other names.
+ * @param {string} fileName - File name, such as "배경.png"
+ * @param {RegExp} [extensionPattern] - The extension to remove
+ * @returns {string} The composed name without the extension
+ */
+export const nameFromFileName = (fileName, extensionPattern = /\.[^.]+$/) =>
+  fileName.normalize("NFC").replace(extensionPattern, "");

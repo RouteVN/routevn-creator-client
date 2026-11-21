@@ -395,44 +395,6 @@ export const handleBranchContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleBranchMenuButtonClick = (deps, payload) => {
-  payload._event.stopPropagation();
-  const { store, render } = deps;
-  const branchId = payload._event.currentTarget.dataset.branchId;
-  const rect = payload._event.currentTarget.getBoundingClientRect();
-
-  store.showDropdownMenu({
-    position: { x: rect.right, y: rect.bottom },
-    branchId,
-  });
-  render();
-};
-
-export const handleBranchMenuButtonKeyDown = (deps, payload) => {
-  const key = payload._event.key;
-  const directionByKey = {
-    ArrowUp: "up",
-    ArrowDown: "down",
-  };
-  const direction = directionByKey[key];
-  const shouldDelete = key === "Delete";
-  if (!direction && !shouldDelete) {
-    return;
-  }
-
-  payload._event.preventDefault();
-  payload._event.stopPropagation();
-  const { store, render } = deps;
-  const branchId = payload._event.currentTarget.dataset.branchId;
-
-  if (shouldDelete) {
-    store.deleteBranch({ branchId });
-  } else {
-    store.moveBranch({ branchId, direction });
-  }
-  render();
-};
-
 export const handleVariableSelectChange = (deps, payload) => {
   const { store, render } = deps;
   const variableId =

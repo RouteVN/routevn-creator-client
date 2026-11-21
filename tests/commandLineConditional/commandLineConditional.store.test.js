@@ -18,6 +18,43 @@ import {
 } from "../support/i18n.js";
 
 describe("commandLineConditional.store", () => {
+  it("says that a branch with no actions moves to the next line", () => {
+    const state = createInitialState();
+    setBranches(
+      { state },
+      {
+        branches: [
+          {
+            id: "branch-1",
+            when: { eq: [{ var: "variables.trust" }, 1] },
+            actions: {},
+          },
+          { id: "branch-2", actions: {} },
+        ],
+      },
+    );
+    setTempBranch({ state }, { actions: {} });
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.branches[0].actionsSummary).toBe(
+      "No actions (move to next line)",
+    );
+    expect(viewData.defaultBranch.actionsSummary).toBe(
+      "No actions (move to next line)",
+    );
+    expect(viewData.branchActionsSummary).toBe(
+      "No actions (move to next line)",
+    );
+
+    const japanese = selectViewData({ state, i18n: JA_I18N });
+    const label = JA_I18N.commandLinePage["No actions (move to next line)"];
+    expect(label).toBe("アクションなし（次の行へ進む）");
+    expect(japanese.branches[0].actionsSummary).toBe(label);
+    expect(japanese.defaultBranch.actionsSummary).toBe(label);
+    expect(japanese.branchActionsSummary).toBe(label);
+  });
+
   it("shows boolean values with the True and False labels of the value select", () => {
     const state = createInitialState();
 
@@ -177,7 +214,6 @@ describe("commandLineConditional.store", () => {
     ]);
     expect(viewData.branchActionAllowedModes).toEqual([
       "sectionTransition",
-      "resetStoryAtSection",
       "updateVariable",
     ]);
   });
@@ -285,13 +321,10 @@ describe("commandLineConditional.store", () => {
     expect(viewData.oneOfValues).toEqual(["happy", "neutral"]);
     expect(viewData.oneOfRemoveButtonStyle).toBe("");
     expect(viewData.addValueButton).toBe("Add Value");
-    expect(viewData.branchMenuButtonLabel).toBe("Branch Menu");
     const jaViewData = selectViewData({ state, i18n: JA_I18N });
     expect(jaViewData.addValueButton).toBe("値を追加");
-    expect(jaViewData.branchMenuButtonLabel).toBe("分岐メニュー");
     const zhHansViewData = selectViewData({ state, i18n: ZH_HANS_I18N });
     expect(zhHansViewData.addValueButton).toBe("添加值");
-    expect(zhHansViewData.branchMenuButtonLabel).toBe("分支菜单");
     expect(viewData.canSaveBranch).toBe(true);
 
     setTempBranch({ state }, { value: ["happy"] });
@@ -460,12 +493,11 @@ describe("commandLineConditional.store", () => {
     );
 
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    expect(viewData.branches.map((branch) => branch.menuKeyShortcuts)).toEqual([
-      "ArrowDown Delete",
-      "ArrowUp ArrowDown Delete",
-      "ArrowUp Delete",
+    expect(viewData.branches.map((branch) => branch.id)).toEqual([
+      "branch-1",
+      "branch-2",
+      "branch-3",
     ]);
-    expect(viewData.defaultBranch.menuKeyShortcuts).toBe("Delete");
 
     showDropdownMenu(
       { state },

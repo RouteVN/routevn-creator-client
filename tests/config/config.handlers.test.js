@@ -6,6 +6,10 @@ import {
   handleChangeProjectFolder,
   handleLanguageChange,
   handleHelpButtonChange,
+  handleImportComplete,
+  handleImportDialogClose,
+  handleImportPackageUrlClick,
+  handleImportPackageZipClick,
   handleThemeCardClick,
 } from "../../src/pages/config/config.handlers.js";
 import * as storeModule from "../../src/pages/config/config.store.js";
@@ -32,6 +36,14 @@ const createDeps = () => {
       configured: true,
       folder: { displayPath: "On My iPhone/My Projects" },
     })),
+    showFormDialog: vi.fn(async () => ({ actionId: "choose" })),
+    pickProjectFolderSetup: vi.fn(async () => ({
+      uri: "routevn-folder://selected/folder-2",
+    })),
+    confirmProjectFolderSetup: vi.fn(async () => ({
+      configured: true,
+      folder: { displayPath: "On My iPhone/Other Projects" },
+    })),
     navigate: vi.fn(),
     getTheme: vi.fn(() => "dark"),
     setTheme: vi.fn((theme) => theme),
@@ -50,6 +62,10 @@ const createDeps = () => {
       "pt",
       "fr",
       "vi",
+      "id",
+      "uk",
+      "it",
+      "pl",
     ]),
     current: vi.fn(() => currentLocale),
     set: vi.fn(async (nextLocale) => {
@@ -68,7 +84,7 @@ const createDeps = () => {
 };
 
 describe("config handlers", () => {
-  it("loads the configured iOS folder and reopens setup without changing it", () => {
+  it("shows the configured iOS folder and changes it from a dialog", async () => {
     const deps = createDeps();
     deps.appService.getPlatform.mockReturnValue("ios");
     handleBeforeMount(deps);
@@ -76,21 +92,34 @@ describe("config handlers", () => {
       visible: true,
       path: "On My iPhone/My Projects",
     });
-    handleChangeProjectFolder(deps);
-    expect(deps.appService.navigate).toHaveBeenCalledExactlyOnceWith(
-      "/project-folder-setup",
-      { from: "config" },
-    );
-    // Remounting Config reads the latest confirmed folder.
-    deps.appService.getProjectFolderSetup.mockReturnValue({
-      configured: true,
-      folder: { displayPath: "On My iPhone/Other Projects" },
+
+    // Dismissing the dialog keeps the folder.
+    deps.appService.showFormDialog.mockResolvedValueOnce(null);
+    await handleChangeProjectFolder(deps);
+    expect(deps.appService.showFormDialog).toHaveBeenCalledWith({
+      size: "sm",
+      form: {
+        title: "Change Folder",
+        description:
+          "All your RouteVN projects are kept in one folder. Every project you create or import is saved there. Choose “On My iPhone” or an existing projects folder.",
+        fields: [],
+        actions: {
+          buttons: [{ id: "choose", label: "Choose Folder", variant: "pr" }],
+        },
+      },
     });
-    handleBeforeMount(deps);
+    expect(deps.appService.pickProjectFolderSetup).not.toHaveBeenCalled();
+    expect(deps.store.setProjectFolder).toHaveBeenCalledOnce();
+
+    await handleChangeProjectFolder(deps);
+    expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledWith({
+      uri: "routevn-folder://selected/folder-2",
+    });
     expect(deps.store.setProjectFolder).toHaveBeenLastCalledWith({
       visible: true,
       path: "On My iPhone/Other Projects",
     });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
   it.each(["web", "android", "tauri"])(
@@ -105,7 +134,7 @@ describe("config handlers", () => {
         path: undefined,
       });
       expect(deps.appService.getProjectFolderSetup).not.toHaveBeenCalled();
-      expect(deps.appService.navigate).not.toHaveBeenCalled();
+      expect(deps.appService.showFormDialog).not.toHaveBeenCalled();
     },
   );
 
@@ -302,5 +331,95 @@ describe("config handlers", () => {
       message: "Could not change the language. Please try again.",
     });
     expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("config asset package import", () => {
+  it("opens the import dialog on a picked zip file", async () => {
+    const deps = createDeps();
+    const file = new File(["zip"], "Project One.zip");
+    deps.appService.pickFiles = vi.fn(async () => file);
+
+    await handleImportPackageZipClick(deps);
+
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: ".zip,application/zip",
+      multiple: false,
+    });
+    expect(deps.store.openImportDialog).toHaveBeenCalledWith({
+      source: "zip",
+      file,
+    });
+    expect(deps.store.selectViewData().importDialog).toEqual({
+      isOpen: true,
+      source: "zip",
+      file,
+    });
+  });
+
+  it("does nothing when the file pick is cancelled", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles = vi.fn(async () => undefined);
+
+    await handleImportPackageZipClick(deps);
+
+    expect(deps.store.openImportDialog).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+  });
+
+  it("says so when the file cannot be picked", async () => {
+    const deps = createDeps();
+    deps.appService.pickFiles = vi.fn(async () => {
+      throw new Error("picker failed");
+    });
+
+    await handleImportPackageZipClick(deps);
+
+    expect(deps.store.openImportDialog).not.toHaveBeenCalled();
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: EN_I18N.resourceImport.zipPickFailed,
+      status: "error",
+    });
+  });
+
+  it("opens the import dialog on its URL form", () => {
+    const deps = createDeps();
+
+    handleImportPackageUrlClick(deps);
+
+    expect(deps.store.selectViewData().importDialog).toEqual({
+      isOpen: true,
+      source: "url",
+      file: undefined,
+    });
+  });
+
+  it("closes the dialog and lets the picked file go", () => {
+    const deps = createDeps();
+    deps.store.openImportDialog({
+      source: "zip",
+      file: new File(["zip"], "Project One.zip"),
+    });
+
+    handleImportDialogClose(deps);
+
+    expect(deps.store.selectViewData().importDialog).toEqual({
+      isOpen: false,
+      source: "zip",
+      file: undefined,
+    });
+  });
+
+  it("closes the dialog and reports the imported resources", () => {
+    const deps = createDeps();
+    deps.store.openImportDialog({ source: "url" });
+
+    handleImportComplete(deps, { _event: { detail: { importedCount: 3 } } });
+
+    expect(deps.store.selectViewData().importDialog.isOpen).toBe(false);
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Imported 3 resources from the asset pack.",
+      status: "success",
+    });
   });
 });

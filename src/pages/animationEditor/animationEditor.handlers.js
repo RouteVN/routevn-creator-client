@@ -20,6 +20,7 @@ import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourc
 import {
   areEditHistoryValuesEqual,
   getEditHistoryChangeKey,
+  getEditHistoryOwner,
 } from "../../internal/editHistory.js";
 import { resolveEditHistoryShortcut } from "../../internal/ui/editHistory.js";
 import {
@@ -837,6 +838,21 @@ const recordAnimationEditorEdit = (deps) => {
   });
 };
 
+// Keeps the history for coming back to this animation. A new animation that
+// was never saved has no id to come back to.
+const retainAnimationEditorHistory = (deps) => {
+  const { appService, store } = deps;
+  const animationId = store.selectEditItemId();
+  if (!animationId) {
+    return;
+  }
+  appService.retainEditHistory({
+    owner: getEditHistoryOwner("animation", animationId),
+    history: store.selectEditHistory(),
+    content: getAnimationEditorEditFingerprint(deps),
+  });
+};
+
 // Every saved edit passes here, so this is where it enters the undo history.
 const queueEditorAutosave = ({ deps } = {}) => {
   recordAnimationEditorEdit(deps);
@@ -1004,6 +1020,14 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     });
   }
   setAnimationEditorHistoryBaseline(deps);
+  if (animationId) {
+    store.resumeEditHistory({
+      retainedEditHistory: appService.getRetainedEditHistory({
+        owner: getEditHistoryOwner("animation", animationId),
+      }),
+      content: store.selectEditHistoryBaselineFingerprint(),
+    });
+  }
 
   render();
   await initializePreview({ deps });
@@ -1238,7 +1262,14 @@ export const handlePreviewPlaybackShortcutKeyDown = (deps, payload) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { appService, render, store, uiConfig, windowMetricsClient } = deps;
+  const {
+    appService,
+    projectService,
+    render,
+    store,
+    uiConfig,
+    windowMetricsClient,
+  } = deps;
   store.setUiConfig({ uiConfig });
   const cleanupTimelinePanSubscriptions = mountTimelinePanSubscriptions(deps);
   // Phones and tablets place the tabs and the navbar's buttons differently.
@@ -1247,8 +1278,11 @@ export const handleBeforeMount = (deps) => {
     store,
     render,
   });
+  // Leaving saves waiting changes, then has the thumbnail brought up to date
+  // in the background, so leaving waits only for the save. A backup, the app
+  // going to the background, or quitting only saves.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
-    async () => {
+    async ({ reason } = {}) => {
       const autosaveAttempt = await flushQueuedAutosave({
         deps,
         force: true,
@@ -1256,10 +1290,18 @@ export const handleBeforeMount = (deps) => {
       if (!autosaveAttempt.ok) {
         throw new Error("Failed to save animation changes before navigation.");
       }
+      const animationId = store.selectEditItemId();
+      if (animationId && !reason) {
+        void projectService.requestAnimationThumbnails({
+          animationIds: [animationId],
+        });
+      }
     },
   );
 
   return async () => {
+    // Before the save below can let the next page open.
+    retainAnimationEditorHistory(deps);
     unregisterBeforeNavigation();
     cleanupTimelinePanSubscriptions();
     cleanupWindowLayout?.();

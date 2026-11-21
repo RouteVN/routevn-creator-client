@@ -329,12 +329,32 @@ const createLayoutEditorPreviewCharacterSprite = ({
   return resolveLayoutReferences(elements, { resources })[0];
 };
 
+const isHiddenLoopItem = (element) =>
+  !!element &&
+  typeof element === "object" &&
+  !Array.isArray(element) &&
+  Object.keys(element).length === 0;
+
+// jempl renders each item of a repeated element whose `$when` is false, such
+// as a hidden Save/Load Slot, as {}. Route Graphics cannot parse that, and the
+// parent container then fails with "Width or height is missing".
+const removeHiddenLoopItems = (elements) =>
+  elements
+    .filter((element) => !isHiddenLoopItem(element))
+    .map((element) =>
+      Array.isArray(element?.children)
+        ? { ...element, children: removeHiddenLoopItems(element.children) }
+        : element,
+    );
+
 const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   const normalizedPreviewData = normalizeLayoutEditorPreviewData(previewData);
-  const renderedElements = toElementList(
-    parseAndRender(toElementList(elements), normalizedPreviewData, {
-      functions: jemplFunctions,
-    }),
+  const renderedElements = removeHiddenLoopItems(
+    toElementList(
+      parseAndRender(toElementList(elements), normalizedPreviewData, {
+        functions: jemplFunctions,
+      }),
+    ),
   );
 
   return applyInputPreviewValues(
@@ -350,6 +370,7 @@ export const createLayoutPreviewRenderState = ({
   layoutState,
   repositoryState,
   mapElement,
+  videoRenderMode,
 } = {}) => {
   const imageItems = repositoryState?.images?.items || {};
   const spritesheetsData = repositoryState?.spritesheets || {
@@ -383,6 +404,8 @@ export const createLayoutPreviewRenderState = ({
       filesData: repositoryState?.files,
       soundsData,
       particlesData,
+      videosData: repositoryState?.videos,
+      videoRenderMode,
       spritesheetsData,
       layoutsData: repositoryState?.layouts?.items || {},
       mapElement,
@@ -406,11 +429,13 @@ export const createLayoutPreviewElements = ({
   resolution,
   mapElement,
   sampleText,
+  videoRenderMode,
 } = {}) => {
   const { renderStateElements, resources } = createLayoutPreviewRenderState({
     layoutState,
     repositoryState,
     mapElement,
+    videoRenderMode,
   });
   const normalizedPreviewData = normalizeLayoutEditorPreviewData(
     previewData,
@@ -461,6 +486,40 @@ const showFullText = (elements) =>
     return nextElement;
   });
 
+// A still picture shows a video as its thumbnail image, so the capture does
+// not wait for a video frame and plays no sound.
+const replaceVideosWithThumbnails = (elements, repositoryState) =>
+  elements.map((element) => {
+    let nextElement = { ...element };
+    if (element.type === "video") {
+      const {
+        src,
+        fileType: _fileType,
+        loop: _loop,
+        volume: _volume,
+        ...common
+      } = element;
+      const video = Object.values(repositoryState.videos?.items ?? {}).find(
+        (item) => item.type === "video" && item.fileId === src,
+      );
+      nextElement = { ...common, type: "container" };
+      if (video?.thumbnailFileId) {
+        nextElement.type = "sprite";
+        nextElement.src = video.thumbnailFileId;
+        nextElement.fileType =
+          repositoryState.files?.items?.[video.thumbnailFileId]?.mimeType ??
+          "image/jpeg";
+      }
+    }
+    if (Array.isArray(nextElement.children)) {
+      nextElement.children = replaceVideosWithThumbnails(
+        nextElement.children,
+        repositoryState,
+      );
+    }
+    return nextElement;
+  });
+
 const collectElementsOfType = (elements, type) =>
   elements.flatMap((element) => [
     ...(element.type === type ? [element] : []),
@@ -501,8 +560,11 @@ export const createLayoutThumbnailSource = ({ item, repositoryState }) => {
       }),
       resolution,
     });
-  const renderedElements = showFullText(
-    [backgroundElement, ...elements, characterSprite].filter(Boolean),
+  const renderedElements = replaceVideosWithThumbnails(
+    showFullText(
+      [backgroundElement, ...elements, characterSprite].filter(Boolean),
+    ),
+    repositoryState,
   );
   const fontAssets = createFontAssetMetadataByFileId(
     repositoryState.fonts?.items,

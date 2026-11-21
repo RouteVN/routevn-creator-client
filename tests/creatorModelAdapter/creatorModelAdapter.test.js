@@ -4,6 +4,7 @@ import {
   toCreatorModelState,
   validateClientModelExtensionCommand,
 } from "../../src/internal/creatorModelAdapter.js";
+import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
 
 const createSpritesheetSprite = () => ({
   type: "spritesheet",
@@ -61,6 +62,84 @@ const createSpriteUpdateCommand = (data) => ({
 });
 
 describe("creatorModelAdapter", () => {
+  it("saves an animation's thumbnail with its source hash, and keeps both through the editor's save", () => {
+    const file = (id) => ({
+      id,
+      type: "image",
+      mimeType: "image/jpeg",
+      size: 1,
+      sha256: `${id}-sha256`,
+    });
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.files = {
+      items: { "thumb-1": file("thumb-1"), "thumb-2": file("thumb-2") },
+      tree: [{ id: "thumb-1" }, { id: "thumb-2" }],
+    };
+    repositoryState.animations = {
+      items: {
+        "animation-1": {
+          id: "animation-1",
+          type: "animation",
+          name: "Animation One",
+          // Saved before thumbnails had a hash.
+          thumbnailFileId: "thumb-1",
+          animation: {
+            type: "update",
+            tween: { alpha: { keyframes: [{ duration: 100, value: 1 }] } },
+          },
+        },
+      },
+      tree: [{ id: "animation-1" }],
+    };
+    const update = (state, data) =>
+      applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: state,
+        command: {
+          type: "animation.update",
+          payload: { animationId: "animation-1", data },
+        },
+      });
+
+    const saved = update(repositoryState, {
+      thumbnailFileId: "thumb-2",
+      thumbnailSourceHash: "hash-2",
+    });
+
+    expect(saved.error).toBeUndefined();
+    expect(saved.valid).toBe(true);
+    expect(saved.repositoryState.animations.items["animation-1"]).toMatchObject(
+      { thumbnailFileId: "thumb-2", thumbnailSourceHash: "hash-2" },
+    );
+    expect(
+      toCreatorModelState(saved.repositoryState).animations.items[
+        "animation-1"
+      ],
+    ).toMatchObject({
+      thumbnailFileId: "thumb-2",
+      thumbnailSourceHash: "hash-2",
+    });
+
+    // The editor saves the whole animation, without its thumbnail.
+    const edited = update(saved.repositoryState, {
+      name: "Animation Two",
+      description: "",
+      animation: {
+        type: "update",
+        tween: { alpha: { keyframes: [{ duration: 300, value: 0 }] } },
+      },
+      cameraTracks: undefined,
+    });
+
+    expect(edited.valid).toBe(true);
+    expect(
+      edited.repositoryState.animations.items["animation-1"],
+    ).toMatchObject({
+      name: "Animation Two",
+      thumbnailFileId: "thumb-2",
+      thumbnailSourceHash: "hash-2",
+    });
+  });
+
   it("normalizes legacy stored number variables without defaults to zero", () => {
     const state = {
       variables: {
@@ -227,5 +306,182 @@ describe("creatorModelAdapter", () => {
     expect(result.error.message).toBe(
       "payload.data.width must be a finite number when provided",
     );
+  });
+
+  describe("character spritesheet frame sources", () => {
+    const frameFile = (id) => ({
+      id,
+      type: "image",
+      mimeType: "image/png",
+      size: 64,
+    });
+
+    const createFramedState = () => {
+      const state = createSpritesheetRepositoryState();
+      for (const id of ["frame-a", "frame-b", "sheet-file-2"]) {
+        state.files.items[id] = frameFile(id);
+        state.files.tree.push({ id });
+      }
+      Object.assign(
+        state.characters.items["character-1"].sprites.items["spritesheet-1"],
+        {
+          animations: { default: { frames: [0, 1, 1], fps: 12 } },
+          frameSource: {
+            frameWidth: 64,
+            frameHeight: 64,
+            frames: [{ fileId: "frame-a" }, { fileId: "frame-b" }],
+          },
+        },
+      );
+      return state;
+    };
+
+    const getSprite = (result) =>
+      result.repositoryState.characters.items["character-1"].sprites.items[
+        "spritesheet-1"
+      ];
+
+    it("keeps frames on a created spritesheet sprite", () => {
+      const state = createSpritesheetRepositoryState();
+      state.files.items["frame-a"] = frameFile("frame-a");
+      state.files.tree.push({ id: "frame-a" });
+      const sprite = createSpritesheetSprite();
+      sprite.animations = { default: { frames: [0], fps: 12 } };
+      sprite.frameSource = {
+        frameWidth: 64,
+        frameHeight: 64,
+        frames: [{ fileId: "frame-a" }],
+      };
+
+      const result = applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: state,
+        command: {
+          type: "character.sprite.create",
+          payload: {
+            characterId: "character-1",
+            spriteId: "spritesheet-2",
+            data: sprite,
+            position: "last",
+          },
+        },
+      });
+
+      expect(result.valid).toBe(true);
+      expect(
+        result.repositoryState.characters.items["character-1"].sprites.items[
+          "spritesheet-2"
+        ].frameSource,
+      ).toEqual(sprite.frameSource);
+    });
+
+    it("rejects frames whose picture file does not exist", () => {
+      const state = createSpritesheetRepositoryState();
+      const sprite = createSpritesheetSprite();
+      sprite.frameSource = {
+        frameWidth: 64,
+        frameHeight: 64,
+        frames: [{ fileId: "missing-file" }],
+      };
+
+      const result = applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: state,
+        command: {
+          type: "character.sprite.create",
+          payload: {
+            characterId: "character-1",
+            spriteId: "spritesheet-2",
+            data: sprite,
+            position: "last",
+          },
+        },
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.error.message).toBe(
+        "payload.data.frameSource.frames.0.fileId must reference an existing file",
+      );
+    });
+
+    it("rejects an animation frame that has no picture", () => {
+      const result = applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: createFramedState(),
+        command: createSpriteUpdateCommand({
+          animations: { default: { frames: [0, 2], fps: 12 } },
+        }),
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.error.message).toBe(
+        "payload.data.animations.default.frames.1 must be less than the frameSource.frames length",
+      );
+    });
+
+    it("rejects a new sheet file that does not say what happens to the frames", () => {
+      const result = applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: createFramedState(),
+        command: createSpriteUpdateCommand({
+          fileId: "sheet-file-2",
+          jsonData: {},
+        }),
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.error.message).toContain(
+        "payload.data.frameSource must be provided, or null to clear it",
+      );
+    });
+
+    it("clears the frames when an update sends null with a new sheet", () => {
+      const result = applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: createFramedState(),
+        command: createSpriteUpdateCommand({
+          fileId: "sheet-file-2",
+          jsonData: {},
+          animations: { default: { frames: [0, 3], fps: 12 } },
+          frameSource: null,
+        }),
+      });
+
+      expect(result.valid).toBe(true);
+      expect(getSprite(result)).not.toHaveProperty("frameSource");
+      expect(getSprite(result).fileId).toBe("sheet-file-2");
+    });
+
+    it("keeps unchanged frames when an edit resends the current sheet", () => {
+      const state = createFramedState();
+      const { frameSource } =
+        state.characters.items["character-1"].sprites.items["spritesheet-1"];
+
+      const result = applyCommandToRepositoryStateWithCreatorModel({
+        repositoryState: state,
+        command: createSpriteUpdateCommand({
+          name: "Blink",
+          fileId: "sheet-file",
+          jsonData: {},
+          frameSource,
+        }),
+      });
+
+      expect(result.valid).toBe(true);
+      expect(getSprite(result).frameSource).toEqual(frameSource);
+      expect(getSprite(result).name).toBe("Blink");
+    });
+
+    it("rejects frames with an unknown field", () => {
+      const result = validateClientModelExtensionCommand({
+        command: createSpriteUpdateCommand({
+          frameSource: {
+            frameWidth: 64,
+            frameHeight: 64,
+            frames: [{ fileId: "frame-a", name: "a" }],
+          },
+        }),
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.error.message).toBe(
+        "payload.data.frameSource.frames.0.name is not supported",
+      );
+    });
   });
 });

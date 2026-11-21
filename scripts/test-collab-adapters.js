@@ -57,6 +57,7 @@ const createCommandApiHarness = ({
     getState: () => structuredClone(repositoryState),
     getContextState: async () => structuredClone(repositoryState),
     flushMainCheckpoint: async () => {},
+    isHistoryLoadPending: () => false,
     async addEvents(repositoryEvents) {
       const commands = (repositoryEvents || []).map((repositoryEvent) =>
         repositoryEventToCommand(repositoryEvent),

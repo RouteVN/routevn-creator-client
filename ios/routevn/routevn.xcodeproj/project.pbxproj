@@ -22,12 +22,15 @@
 		2A000001000000000000000D /* NativeCrashReporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000001D /* NativeCrashReporting.swift */; };
 		2A000001000000000000000F /* NativeDeviceIdReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000002B /* NativeDeviceIdReader.swift */; };
 		2A000001000000000000000E /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 2A00000100000000000000A2 /* ZIPFoundation */; };
+		2A000001000000000000002F /* ByteRangeResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000002E /* ByteRangeResponse.swift */; };
 		2A0000010000000000000024 /* TempFolders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000021 /* TempFolders.swift */; };
 		2A0000010000000000000025 /* ImportArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000022 /* ImportArchive.swift */; };
 		2A0000010000000000000026 /* FileDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000023 /* FileDownloader.swift */; };
 		2A0000010000000000000028 /* CodedError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000027 /* CodedError.swift */; };
 		2A000001000000000000002A /* TransferProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000010000000000000029 /* TransferProgress.swift */; };
 		2A000001000000000000002D /* RendererLossGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000001000000000000002C /* RendererLossGuard.swift */; };
+		2A00000100000000000000D0 /* AndroidApkExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A00000100000000000000D2 /* AndroidApkExport.swift */; };
+		2A00000100000000000000D1 /* RouteVNExporterFFI.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A00000100000000000000D3 /* RouteVNExporterFFI.xcframework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,12 +49,15 @@
 		2A000001000000000000001C /* AppDeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDeviceInfo.swift; sourceTree = "<group>"; };
 		2A000001000000000000001D /* NativeCrashReporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCrashReporting.swift; sourceTree = "<group>"; };
 		2A000001000000000000002B /* NativeDeviceIdReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeDeviceIdReader.swift; sourceTree = "<group>"; };
+		2A000001000000000000002E /* ByteRangeResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ByteRangeResponse.swift; sourceTree = "<group>"; };
 		2A0000010000000000000021 /* TempFolders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempFolders.swift; sourceTree = "<group>"; };
 		2A0000010000000000000022 /* ImportArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportArchive.swift; sourceTree = "<group>"; };
 		2A0000010000000000000023 /* FileDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDownloader.swift; sourceTree = "<group>"; };
 		2A0000010000000000000027 /* CodedError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodedError.swift; sourceTree = "<group>"; };
 		2A0000010000000000000029 /* TransferProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferProgress.swift; sourceTree = "<group>"; };
 		2A000001000000000000002C /* RendererLossGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererLossGuard.swift; sourceTree = "<group>"; };
+		2A00000100000000000000D2 /* AndroidApkExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidApkExport.swift; sourceTree = "<group>"; };
+		2A00000100000000000000D3 /* RouteVNExporterFFI.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = RouteVNExporterFFI.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,6 +67,7 @@
 			files = (
 				2A000001000000000000000C /* Sentry in Frameworks */,
 				2A000001000000000000000E /* ZIPFoundation in Frameworks */,
+				2A00000100000000000000D1 /* RouteVNExporterFFI.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,6 +79,7 @@
 			children = (
 				2A0000010000000000000031 /* routevn */,
 				2A0000010000000000000032 /* Products */,
+				2A00000100000000000000D4 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -79,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				2A0000010000000000000011 /* RouteVNApp.swift */,
+				2A00000100000000000000D2 /* AndroidApkExport.swift */,
 				2A000001000000000000001C /* AppDeviceInfo.swift */,
 				2A000001000000000000001D /* NativeCrashReporting.swift */,
 				2A000001000000000000002B /* NativeDeviceIdReader.swift */,
@@ -87,6 +96,7 @@
 				2A0000010000000000000018 /* SaveFileDestinations.swift */,
 				2A0000010000000000000019 /* ProjectDatabaseReader.swift */,
 				2A00000100000000000000C1 /* ProjectIdentityRewrite.swift */,
+				2A000001000000000000002E /* ByteRangeResponse.swift */,
 				2A0000010000000000000021 /* TempFolders.swift */,
 				2A0000010000000000000022 /* ImportArchive.swift */,
 				2A0000010000000000000023 /* FileDownloader.swift */,
@@ -108,6 +118,14 @@
 				2A0000010000000000000010 /* routevn.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2A00000100000000000000D4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2A00000100000000000000D3 /* RouteVNExporterFFI.xcframework */,
+			);
+			path = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -214,6 +232,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A0000010000000000000001 /* RouteVNApp.swift in Sources */,
+				2A00000100000000000000D0 /* AndroidApkExport.swift in Sources */,
 				2A000001000000000000000B /* AppDeviceInfo.swift in Sources */,
 				2A000001000000000000000D /* NativeCrashReporting.swift in Sources */,
 				2A000001000000000000000F /* NativeDeviceIdReader.swift in Sources */,
@@ -222,6 +241,7 @@
 				2A0000010000000000000007 /* SaveFileDestinations.swift in Sources */,
 				2A0000010000000000000008 /* ProjectDatabaseReader.swift in Sources */,
 				2A00000100000000000000C0 /* ProjectIdentityRewrite.swift in Sources */,
+				2A000001000000000000002F /* ByteRangeResponse.swift in Sources */,
 				2A0000010000000000000024 /* TempFolders.swift in Sources */,
 				2A0000010000000000000025 /* ImportArchive.swift in Sources */,
 				2A0000010000000000000026 /* FileDownloader.swift in Sources */,
@@ -345,13 +365,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/RouteVN-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.20.0;
+				MARKETING_VERSION = 1.23.0;
 				OTHER_LDFLAGS = "-lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.routevn.creator;
 				PRODUCT_NAME = routevn;
@@ -369,13 +389,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = 9ZKJX756AW;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "$(DERIVED_FILE_DIR)/RouteVN-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
-				MARKETING_VERSION = 1.20.0;
+				MARKETING_VERSION = 1.23.0;
 				OTHER_LDFLAGS = "-lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.routevn.creator;
 				PRODUCT_NAME = routevn;

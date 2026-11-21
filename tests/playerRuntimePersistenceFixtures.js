@@ -69,7 +69,7 @@ export const createSaveSlot = (
               randomOutcomeVersion: 1,
               randomOutcomes: [
                 {
-                  path: "random",
+                  path: "updateVariable.operations.0",
                   ordinal: 0,
                   type: "integer",
                   result: { type: "integer", value: 2 },

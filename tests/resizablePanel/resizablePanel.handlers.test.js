@@ -150,6 +150,7 @@ describe("resizablePanel.handlers", () => {
         },
         appService: {
           setUserConfig: vi.fn(),
+          getDocumentDirection: () => "ltr",
         },
         subject: {
           dispatch: vi.fn(),
@@ -176,6 +177,58 @@ describe("resizablePanel.handlers", () => {
       maxWidth: 500,
     });
   });
+
+  it.each([
+    ["right", "ltr", 340],
+    ["right", "rtl", 260],
+    ["left", "ltr", 260],
+    ["left", "rtl", 340],
+  ])(
+    "sizes a resize-side=%s panel from a drag to the right under %s",
+    (resizeSide, direction, width) => {
+      const store = {
+        selectPanelWidth: vi.fn(() => 300),
+        selectIsResizing: vi.fn(() => true),
+        selectStartX: vi.fn(() => 100),
+        selectStartWidth: vi.fn(() => 300),
+        startResize: vi.fn(),
+        setPanelWidth: vi.fn(),
+        setIsResizing: vi.fn(),
+      };
+      const panelElement = {
+        getBoundingClientRect: vi.fn(() => ({ width: 300 })),
+      };
+
+      handleResizeStart(
+        {
+          store,
+          render: vi.fn(),
+          props: { minW: 100, maxW: 500, resizeSide },
+          appService: {
+            setUserConfig: vi.fn(),
+            getDocumentDirection: () => direction,
+          },
+          subject: { dispatch: vi.fn() },
+        },
+        {
+          _event: {
+            preventDefault: vi.fn(),
+            clientX: 100,
+            currentTarget: { parentElement: panelElement },
+          },
+        },
+      );
+
+      // Drag 40px to the right.
+      globalThis.__resizablePanelListeners.get("mousemove")({ clientX: 140 });
+
+      expect(store.setPanelWidth).toHaveBeenCalledWith({
+        width,
+        minWidth: 100,
+        maxWidth: 500,
+      });
+    },
+  );
 
   it("persists resized panel widths as numbers", () => {
     const store = {

@@ -77,7 +77,8 @@ describe("Android WebView security boundary", () => {
     expect(html).toContain(
       "font-src 'self' data: blob: https://appassets.androidplatform.net",
     );
-    expect(html).toContain("frame-src 'none'");
+    // The Tutorials page plays YouTube videos and embeds no other page.
+    expect(html).toContain("frame-src https://www.youtube-nocookie.com;");
     expect(html).toContain("object-src 'none'");
     expect(html).toContain('src="/public/android-env.js"');
     expect(html).not.toMatch(/<script(?:\s[^>]*)?>\s*[^<\s]/);

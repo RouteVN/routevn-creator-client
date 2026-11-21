@@ -1,3 +1,5 @@
+import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
+import { normalizeWebScreenFadeDuration } from "../../../internal/webExport.js";
 import {
   assertSupportedProjectState,
   createProjectRepository,
@@ -8,7 +10,9 @@ import {
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
+  SKIPPED_DRAFTS_VIEW_NAME,
 } from "./projectRepositoryViews/shared.js";
+import { normalizeRepositoryStateWithCreatorModel } from "../../../internal/creatorModelAdapter.js";
 import { loadProjectionGap } from "./collab/projectionGapState.js";
 import { loadRepositoryEventsFromClientStore } from "./collab/clientStoreHistory.js";
 import { UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE } from "../../../internal/projectOpenErrors.js";
@@ -33,6 +37,79 @@ const discardReusableMainCheckpoint = async (store) => {
     viewName: MAIN_VIEW_NAME,
     partition: MAIN_PARTITION,
   });
+};
+
+// Keep the old main checkpoint until replay has validated. An unfinished
+// skipped-draft record must stay unfinished until the new main state is saved.
+const createRecoveryStore = (store) => {
+  let mainCheckpoint;
+  let finishedDraftRecord;
+  let recovering = true;
+  let recoveryWriteError;
+  const isMain = (key) =>
+    key.viewName === MAIN_VIEW_NAME && key.partition === MAIN_PARTITION;
+  return {
+    store: {
+      ...store,
+      loadMaterializedViewCheckpoint: (key) =>
+        recovering && isMain(key)
+          ? Promise.resolve(mainCheckpoint)
+          : store.loadMaterializedViewCheckpoint(key),
+      saveMaterializedViewCheckpoint: async (checkpoint) => {
+        if (recovering && isMain(checkpoint)) {
+          mainCheckpoint = checkpoint;
+        } else if (
+          recovering &&
+          checkpoint.viewName === SKIPPED_DRAFTS_VIEW_NAME &&
+          checkpoint.value.rebuilt
+        ) {
+          finishedDraftRecord = checkpoint;
+        } else {
+          try {
+            await store.saveMaterializedViewCheckpoint(checkpoint);
+          } catch (error) {
+            if (recovering) recoveryWriteError ??= error;
+            throw error;
+          }
+        }
+      },
+      deleteMaterializedViewCheckpoint: async (key) => {
+        if (recovering && isMain(key)) {
+          mainCheckpoint = undefined;
+        } else if (recovering && key.viewName === SKIPPED_DRAFTS_VIEW_NAME) {
+          finishedDraftRecord = key;
+        } else {
+          try {
+            await store.deleteMaterializedViewCheckpoint(key);
+          } catch (error) {
+            if (recovering) recoveryWriteError ??= error;
+            throw error;
+          }
+        }
+      },
+    },
+    commit: async () => {
+      if (recoveryWriteError) throw recoveryWriteError;
+      if (mainCheckpoint) {
+        await store.saveMaterializedViewCheckpoint(mainCheckpoint);
+      }
+      if (finishedDraftRecord) {
+        try {
+          if (finishedDraftRecord.value) {
+            await store.saveMaterializedViewCheckpoint(finishedDraftRecord);
+          } else {
+            await store.deleteMaterializedViewCheckpoint(finishedDraftRecord);
+          }
+        } catch (error) {
+          console.warn(
+            "Failed to finish skipped-draft checkpoint recovery",
+            error,
+          );
+        }
+      }
+      recovering = false;
+    },
+  };
 };
 
 const summarizeCheckpointValue = (value = {}) => {
@@ -61,11 +138,31 @@ export const createProjectRepositoryService = ({
   const CREATOR_VERSION_KEY = "creatorVersion";
   const PROJECT_INFO_KEY = "projectInfo";
   const ASSET_PACKAGE_KEY = "assetPackage";
+  // The project's signing keys. A separate key, not a field of
+  // platformDetails.android: released Creator versions drop Platform Details
+  // fields they do not know when they save. The project app store stays in
+  // the project database; it is not part of the shared project state.
+  const ANDROID_SIGNING_KEY = "androidSigning";
+  // The Build Number of the project's last Android export, so the next export
+  // can start above it. A separate key for the same reason.
+  const ANDROID_LAST_EXPORT_KEY = "androidLastExport";
   const PLATFORM_DETAILS_KEYS = {
     web: "platformDetails.web",
     windows: "platformDetails.windows",
     macos: "platformDetails.macos",
+    android: "platformDetails.android",
+    ios: "platformDetails.ios",
   };
+  // Taken from a patch as given: optional images stay undefined when unset,
+  // and fade durations are normalized with the rest of the record.
+  const RAW_PLATFORM_DETAILS_PATCH_KEYS = [
+    "adaptiveIconFileId",
+    "splashIconFileId",
+    "loadingBackgroundFileId",
+    "startBackgroundFileId",
+    "loadingFadeDuration",
+    "startFadeDuration",
+  ];
   const LEGACY_PLATFORM_DETAILS_KEYS = {
     web: "releaseInfo.web",
     windows: "releaseInfo.windows",
@@ -196,10 +293,39 @@ export const createProjectRepositoryService = ({
       platformDetails.iconFileId = sourceInfo?.iconFileId ?? null;
     }
 
+    if (platform === "web") {
+      platformDetails.loadingBackgroundFileId =
+        sourceInfo?.loadingBackgroundFileId;
+      platformDetails.startBackgroundFileId = sourceInfo?.startBackgroundFileId;
+      platformDetails.loadingFadeDuration = normalizeWebScreenFadeDuration(
+        sourceInfo?.loadingFadeDuration,
+      );
+      platformDetails.startFadeDuration = normalizeWebScreenFadeDuration(
+        sourceInfo?.startFadeDuration,
+      );
+    }
+
+    if (platform === "android") {
+      platformDetails.iconFileId = sourceInfo?.iconFileId ?? undefined;
+      platformDetails.adaptiveIconFileId = sourceInfo?.adaptiveIconFileId;
+      platformDetails.splashIconFileId = sourceInfo?.splashIconFileId;
+      platformDetails.iconBackgroundColor = normalizeAndroidBackgroundColor(
+        sourceInfo?.iconBackgroundColor ?? "#FFFFFF",
+      );
+      platformDetails.splashBackgroundColor = normalizeAndroidBackgroundColor(
+        sourceInfo?.splashBackgroundColor ?? "#000000",
+      );
+    }
+
     if (platform === "windows") {
       platformDetails.publisher = "";
       platformDetails.description = "";
       platformDetails.copyright = "";
+    }
+
+    // The Apple team the last iOS export used. The export dialog sets it.
+    if (platform === "ios") {
+      platformDetails.teamId = sourceInfo?.teamId ?? "";
     }
 
     return platformDetails;
@@ -313,8 +439,12 @@ export const createProjectRepositoryService = ({
       if (!Object.hasOwn(patch, key)) {
         continue;
       }
-      nextPlatformDetails[key] =
-        key === "iconFileId" ? (patch[key] ?? null) : (patch[key] ?? "");
+      if (RAW_PLATFORM_DETAILS_PATCH_KEYS.includes(key)) {
+        nextPlatformDetails[key] = patch[key];
+      } else {
+        nextPlatformDetails[key] =
+          key === "iconFileId" ? (patch[key] ?? null) : (patch[key] ?? "");
+      }
     }
 
     return normalizePlatformDetails(platform, nextPlatformDetails);
@@ -496,7 +626,6 @@ export const createProjectRepositoryService = ({
       checkpointHistoryStats &&
       typeof checkpointHistoryStats === "object" &&
       !Array.isArray(checkpointHistoryStats);
-
     if (hasCheckpointHistoryStats) {
       if (
         !store.isRepositoryHistoryStatsEqual(
@@ -532,21 +661,41 @@ export const createProjectRepositoryService = ({
         await discardReusableMainCheckpoint(store);
         return undefined;
       }
+    }
 
+    let checkpointStateValid = true;
+    if (
+      !hasCheckpointHistoryStats ||
+      checkpointRevision > currentHistoryLength
+    ) {
+      try {
+        assertSupportedProjectState(
+          normalizeRepositoryStateWithCreatorModel(
+            structuredClone(checkpoint.value),
+          ),
+        );
+      } catch {
+        checkpointStateValid = false;
+      }
+    }
+
+    if (!hasCheckpointHistoryStats) {
       emitRepositoryLoadStage(onLoadStage, {
         stage: "backfill_main_checkpoint_metadata",
         label: "Updating project state checkpoint...",
         cacheKey,
         revision: checkpointRevision,
       });
-      await store.saveMaterializedViewCheckpoint({
-        viewName: MAIN_VIEW_NAME,
-        partition: MAIN_PARTITION,
-        viewVersion: checkpoint.viewVersion,
-        lastCommittedId: checkpointRevision,
-        value: checkpoint.value,
-        updatedAt: checkpoint.updatedAt || Date.now(),
-      });
+      if (checkpointStateValid) {
+        await store.saveMaterializedViewCheckpoint({
+          viewName: MAIN_VIEW_NAME,
+          partition: MAIN_PARTITION,
+          viewVersion: checkpoint.viewVersion,
+          lastCommittedId: checkpointRevision,
+          value: checkpoint.value,
+          updatedAt: checkpoint.updatedAt || Date.now(),
+        });
+      }
     }
 
     // Older versions could save a revision past the history length when an
@@ -554,7 +703,7 @@ export const createProjectRepositoryService = ({
     // from it. The checkpoint still matches its history, so keep its state
     // and correct its revision to the history length that events are
     // numbered by.
-    if (checkpointRevision > currentHistoryLength) {
+    if (checkpointStateValid && checkpointRevision > currentHistoryLength) {
       console.warn(
         "Correcting project repository checkpoint revision past its history",
         {
@@ -825,7 +974,10 @@ export const createProjectRepositoryService = ({
     let storedPlatformDetails = await store.app.get(key);
     let shouldPersist = false;
 
-    if (!hasStoredPlatformDetails(storedPlatformDetails)) {
+    if (
+      !hasStoredPlatformDetails(storedPlatformDetails) &&
+      LEGACY_PLATFORM_DETAILS_KEYS[platform]
+    ) {
       storedPlatformDetails = await store.app.get(
         LEGACY_PLATFORM_DETAILS_KEYS[platform],
       );
@@ -991,6 +1143,32 @@ export const createProjectRepositoryService = ({
     }
 
     return updateAssetPackageByProjectId(projectId, assetPackage);
+  };
+
+  // The stored `androidSigning` record as written, including entries this
+  // version cannot read; callers decide which keys are usable.
+  const getAndroidSigningByProjectId = async (projectId) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    return await store.app.get(ANDROID_SIGNING_KEY);
+  };
+
+  const setAndroidSigningByProjectId = async (projectId, signing) => {
+    const store = await getStoreByProject(projectId);
+    await ensureStoreOpenCompatible(store);
+    await store.app.set(ANDROID_SIGNING_KEY, signing);
+  };
+
+  const getAndroidLastExportByProjectId = async (projectId) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    return await store.app.get(ANDROID_LAST_EXPORT_KEY);
+  };
+
+  const setAndroidLastExportByProjectId = async (projectId, lastExport) => {
+    const store = await getStoreByProject(projectId);
+    await ensureStoreOpenCompatible(store);
+    await store.app.set(ANDROID_LAST_EXPORT_KEY, lastExport);
   };
 
   const getPlatformDetailsByProjectId = async (projectId, platform) => {
@@ -1187,28 +1365,151 @@ export const createProjectRepositoryService = ({
                 ? events.length
                 : initialRevision,
             });
-            const repository = await createProjectRepository({
-              projectId: reference.repositoryProjectId,
-              store,
-              events,
-              historyLoaded: Array.isArray(events),
-              initialRevision,
-              historyStats: currentHistoryStats,
-              loadEvents: async ({ onSkippedDraft } = {}) =>
-                loadRepositoryEventsFromClientStore({
-                  store,
-                  projectId: reference.repositoryProjectId,
-                  onProgress: onEventLoadProgress,
-                  onSkippedDraft,
-                }),
-              onHydrationProgress,
-            });
-            emitRepositoryLoadStage(onLoadStage, {
-              stage: "validate_repository_state",
-              label: "Validating project state...",
-              cacheKey: reference.cacheKey,
-            });
-            assertSupportedProjectState(repository.getState());
+            let validationError;
+            const openRepository = async (
+              repositoryStore,
+              recovery = false,
+            ) => {
+              let committedCount = 0;
+              let latestCommittedId = 0;
+              let draftCount = 0;
+              const historyStore = recovery
+                ? {
+                    ...repositoryStore,
+                    listCommittedAfter: async (options) => {
+                      const batch =
+                        await repositoryStore.listCommittedAfter(options);
+                      committedCount += batch.length;
+                      if (batch.length)
+                        latestCommittedId = Number(batch.at(-1).committedId);
+                      return batch;
+                    },
+                    listDraftsOrdered: async () => {
+                      const drafts = await repositoryStore.listDraftsOrdered();
+                      draftCount = drafts.length;
+                      return drafts;
+                    },
+                  }
+                : repositoryStore;
+              const repository = await createProjectRepository({
+                projectId: reference.repositoryProjectId,
+                store: repositoryStore,
+                events: recovery ? undefined : events,
+                historyLoaded: recovery ? false : Array.isArray(events),
+                initialRevision: recovery
+                  ? Number(currentHistoryStats?.committedCount ?? 0) +
+                    Number(currentHistoryStats?.draftCount ?? 0)
+                  : initialRevision,
+                historyStats: currentHistoryStats,
+                loadEvents: async ({ onSkippedDraft } = {}) => {
+                  const loaded = await loadRepositoryEventsFromClientStore({
+                    store: historyStore,
+                    projectId: reference.repositoryProjectId,
+                    onProgress: onEventLoadProgress,
+                    onSkippedDraft,
+                  });
+                  if (
+                    recovery &&
+                    (loaded[0]?.type !== "project.create" ||
+                      committedCount !==
+                        Number(currentHistoryStats.committedCount) ||
+                      latestCommittedId !==
+                        Number(currentHistoryStats.latestCommittedId) ||
+                      draftCount !== Number(currentHistoryStats.draftCount))
+                  ) {
+                    throw new Error(
+                      "Project history changed during checkpoint recovery",
+                    );
+                  }
+                  return loaded;
+                },
+                onHydrationProgress,
+                forceHistoryLoad: recovery,
+                onInitialStateValidationError: (error) => {
+                  validationError = error;
+                },
+              });
+              emitRepositoryLoadStage(onLoadStage, {
+                stage: "validate_repository_state",
+                label: "Validating project state...",
+                cacheKey: reference.cacheKey,
+              });
+              try {
+                assertSupportedProjectState(repository.getState());
+              } catch (error) {
+                validationError = error;
+                throw error;
+              }
+              return repository;
+            };
+            let repository;
+            let recovered = false;
+            try {
+              repository = await openRepository(store);
+            } catch (error) {
+              if (error !== validationError || !reusableMainCheckpoint) {
+                throw error;
+              }
+              let firstEvent;
+              try {
+                const firstCommitted = await store.listCommittedAfter({
+                  sinceCommittedId: 0,
+                  limit: 1,
+                });
+                firstEvent =
+                  firstCommitted[0] ?? (await store.listDraftsOrdered())[0];
+              } catch {
+                throw error;
+              }
+              if (firstEvent?.type !== "project.create") {
+                throw error;
+              }
+              console.warn(
+                "Rebuilding project state from history after checkpoint validation failed",
+              );
+              const recovery = createRecoveryStore(store);
+              try {
+                currentHistoryStats = await store.getRepositoryHistoryStats();
+                repository = await openRepository(recovery.store, true);
+                await flushRepositoryMainCheckpoint(repository);
+                const beforeCommitStats =
+                  await store.getRepositoryHistoryStats();
+                if (
+                  !store.isRepositoryHistoryStatsEqual(
+                    currentHistoryStats,
+                    beforeCommitStats,
+                  )
+                ) {
+                  throw new Error(
+                    "Project history changed during checkpoint recovery",
+                  );
+                }
+                await recovery.commit();
+                // The store stamps the checkpoint with the history it reads
+                // while saving. If that changed, the stamp may include events
+                // the rebuilt state does not, so drop the checkpoint and fail
+                // this open; the next one rebuilds from the full history.
+                const afterCommitStats =
+                  await store.getRepositoryHistoryStats();
+                if (
+                  !store.isRepositoryHistoryStatsEqual(
+                    currentHistoryStats,
+                    afterCommitStats,
+                  )
+                ) {
+                  console.warn(
+                    "Discarding recovered project repository checkpoint after history changed",
+                  );
+                  await discardReusableMainCheckpoint(store);
+                  throw new Error(
+                    "Project history changed during checkpoint recovery",
+                  );
+                }
+                recovered = true;
+              } catch {
+                throw error;
+              }
+            }
 
             if (reference.projectId) {
               storesByProject.set(reference.projectId, store);
@@ -1228,7 +1529,10 @@ export const createProjectRepositoryService = ({
             });
 
             try {
-              await flushRepositoryMainCheckpoint(repository);
+              // A recovery has just saved the main checkpoint.
+              if (!recovered) {
+                await flushRepositoryMainCheckpoint(repository);
+              }
             } catch (error) {
               console.warn("Failed to flush project repository checkpoint", {
                 cacheKey: reference.cacheKey,
@@ -1508,6 +1812,10 @@ export const createProjectRepositoryService = ({
     updateCurrentAssetPackage,
     getAssetPackageByProjectId,
     updateAssetPackageByProjectId,
+    getAndroidSigningByProjectId,
+    setAndroidSigningByProjectId,
+    getAndroidLastExportByProjectId,
+    setAndroidLastExportByProjectId,
     getCurrentPlatformDetails,
     getCurrentPlatformDetailsDefaults,
     createCurrentPlatformDetails,

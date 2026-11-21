@@ -6,12 +6,25 @@ const capitalizeFirst = (text, intlLocale) =>
  * @param {string} isoDateString - ISO date string like "2025-10-20T04:23:52.636Z"
  * @param {Object} [options] - The `dateTime` catalog of the active locale
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
+ * @param {"long"|"short"|"narrow"} [options.relativeTimeStyle] - Style of
+ *   relative times, such as "5 min. ago" for short or "5 minutes ago" for long
+ * @param {"short"|"2-digit"} [options.monthStyle] - How older dates show the
+ *   month, such as "Oct 18, 2026" for short or "18.10.2026" in Polish for 2-digit
+ * @param {"2-digit"|"numeric"} [options.hourStyle] - How older dates show the
+ *   hour, such as "02:05 PM" for 2-digit or "下午2:05" in Traditional Chinese
+ *   for numeric
  * @param {string} [options.justNow] - Label for dates less than a minute old
  * @returns {string} Formatted date string
  */
 export const formatDate = (
   isoDateString,
-  { intlLocale = "en-US", justNow = "Just now" } = {},
+  {
+    intlLocale = "en-US",
+    relativeTimeStyle = "short",
+    monthStyle = "short",
+    hourStyle = "2-digit",
+    justNow = "Just now",
+  } = {},
 ) => {
   if (!isoDateString) return "";
 
@@ -30,7 +43,7 @@ export const formatDate = (
 
     const relativeTime = new Intl.RelativeTimeFormat(intlLocale, {
       numeric: "auto",
-      style: "short",
+      style: relativeTimeStyle,
     });
     let text;
     if (diffDays !== 0) {
@@ -46,9 +59,9 @@ export const formatDate = (
   // For older dates, show readable date format
   const options = {
     year: "numeric",
-    month: "short",
+    month: monthStyle,
     day: "numeric",
-    hour: "2-digit",
+    hour: hourStyle,
     minute: "2-digit",
   };
   return date.toLocaleDateString(intlLocale, options);
@@ -61,30 +74,37 @@ export const formatDate = (
  * @param {number} epochMs - Milliseconds since the Unix epoch
  * @param {Object} [options] - The `dateTime` catalog of the active locale
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
+ * @param {"short"|"2-digit"} [options.monthStyle] - How the month is shown
  * @returns {string} Formatted date, such as "Aug 12, 2026"
  */
-export const formatCalendarDate = (epochMs, { intlLocale = "en-US" } = {}) =>
+export const formatCalendarDate = (
+  epochMs,
+  { intlLocale = "en-US", monthStyle = "short" } = {},
+) =>
   new Date(epochMs).toLocaleDateString(intlLocale, {
     year: "numeric",
-    month: "short",
+    month: monthStyle,
     day: "numeric",
     timeZone: "UTC",
   });
 
 /**
  * Format a timestamp as a date and time with seconds, in 24-hour time.
+ * The day is padded only when the month is a number, as in "05.10.2026";
+ * next to a month name it is not, as in "Oct 5, 2026" or "2026년 10월 5일".
  * @param {string} value - ISO date string
  * @param {Object} [options] - The `dateTime` catalog of the active locale
  * @param {string} [options.intlLocale] - BCP 47 tag used for Intl formatting
+ * @param {"short"|"2-digit"} [options.monthStyle] - How the month is shown
  * @returns {string} Formatted date and time
  */
 export const formatDateTimeWithSeconds = (
   value,
-  { intlLocale = "en-US" } = {},
+  { intlLocale = "en-US", monthStyle = "short" } = {},
 ) =>
   new Intl.DateTimeFormat(intlLocale, {
-    day: "2-digit",
-    month: "short",
+    day: monthStyle === "2-digit" ? "2-digit" : "numeric",
+    month: monthStyle,
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
@@ -198,6 +218,18 @@ export const formatNumber = (value, { intlLocale = "en-US" } = {}) => {
   // Intl writes -0 as "-0", where String writes "0".
   return numberFormats.get(intlLocale).format(value === 0 ? 0 : value);
 };
+
+/**
+ * Join list items with the locale's separator, such as "A, B" or "A、B" in
+ * Chinese and Japanese. App lists have no "and" before the last item, so one
+ * can end with a count such as "3 more".
+ * @param {string[]} items - The items, already in display order
+ * @param {Object} [dateTime] - The `dateTime` catalog of the active locale
+ * @param {string} [dateTime.listSeparator] - Text between two items
+ * @returns {string} The joined list
+ */
+export const formatList = (items, { listSeparator = ", " } = {}) =>
+  items.join(listSeparator);
 
 // The English unit templates. Seconds keep the space here that the compact
 // `durationSeconds` of timeline labels leaves out.

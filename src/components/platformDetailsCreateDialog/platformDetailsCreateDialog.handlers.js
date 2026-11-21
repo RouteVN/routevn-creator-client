@@ -10,8 +10,11 @@ const propsChanged = (oldProps = {}, newProps = {}) =>
   oldProps.applicationInfo !== newProps.applicationInfo;
 
 export const handleBeforeMount = (deps) => {
-  const { store, props } = deps;
+  const { projectService, store, props } = deps;
   store.syncFromProps({ props });
+  store.setProjectResolution({
+    projectResolution: projectService.getRepositoryState().project?.resolution,
+  });
 };
 
 export const handleOnUpdate = (deps, payload = {}) => {
@@ -38,6 +41,10 @@ export const handleFormAction = async (deps, payload) => {
     platform,
     values,
     iconFileId: store.selectIconFileId(),
+    adaptiveIconFileId: store.selectAdaptiveIconFileId(),
+    splashIconFileId: store.selectSplashIconFileId(),
+    loadingBackgroundFileId: store.selectLoadingBackgroundFileId(),
+    startBackgroundFileId: store.selectStartBackgroundFileId(),
   });
   const validation = validatePlatformDetails({
     platform,
@@ -72,7 +79,7 @@ export const handleFormAction = async (deps, payload) => {
   );
 };
 
-export const handleIconClick = async (deps) => {
+export const handleIconClick = async (deps, { target = "icon" } = {}) => {
   const { appService, i18n, render, store } = deps;
   const copy = i18n.platformDetailsPage;
   let file;
@@ -95,7 +102,89 @@ export const handleIconClick = async (deps) => {
     return;
   }
 
-  store.openIconCropDialog({ file });
+  store.openIconCropDialog({ file, target });
+  render();
+};
+
+// Screen backgrounds must have the project's shape, so they line up with the
+// game and need no cropping.
+export const handleScreenBackgroundClick = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { target } = payload;
+  const copy = i18n.platformDetailsPage;
+  const projectResolution = store.selectProjectResolution();
+  let file;
+
+  try {
+    file = await appService.pickFiles({
+      accept: "image/png,image/jpeg,image/webp",
+      multiple: false,
+      upload: true,
+      validations: [
+        {
+          type: "image-aspect-ratio",
+          width: projectResolution.width,
+          height: projectResolution.height,
+        },
+      ],
+    });
+  } catch {
+    appService.showAlert({
+      message: copy.failedSelectBackground,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  if (!file) {
+    return;
+  }
+
+  if (!file.uploadSucessful || !file.uploadResult?.fileId) {
+    appService.showAlert({
+      message: copy.failedUploadBackground,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  store.setScreenBackgroundFileId({
+    target,
+    fileId: file.uploadResult.fileId,
+  });
+  render();
+};
+
+export const handleScreenBackgroundRightClick = async (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { _event: event, target } = payload;
+  const copy = i18n.platformDetailsPage;
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (!store.selectScreenBackgroundFileId({ target })) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items: [{ type: "item", label: copy.removeIconButton, key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
+  store.setScreenBackgroundFileId({ target, fileId: undefined });
+  render();
+};
+
+export const handleRemoveOptionalIcon = (deps, payload) => {
+  const { store, render } = deps;
+  const { target } = payload;
+  store.setOptionalIconFileId({ target, fileId: undefined });
   render();
 };
 
@@ -145,7 +234,19 @@ export const handleIconCropDialogConfirm = async (deps) => {
     return;
   }
 
-  store.setIconFileId({ iconFileId: uploadResult.fileId });
+  const target = store.selectIconCropTarget();
+  if (target === "icon")
+    store.setIconFileId({ iconFileId: uploadResult.fileId });
+  else store.setOptionalIconFileId({ target, fileId: uploadResult.fileId });
   store.closeIconCropDialog();
+  render();
+};
+
+export const handleFormChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { name, value } = payload._event.detail;
+  if (name !== "iconBackgroundColor" && name !== "splashBackgroundColor")
+    return;
+  store.setBackgroundColor({ name, value });
   render();
 };
