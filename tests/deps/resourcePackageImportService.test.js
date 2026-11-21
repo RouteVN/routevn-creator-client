@@ -956,9 +956,93 @@ describe("resourcePackageImportService", () => {
     expect(source.readFile).toHaveBeenCalledWith({
       descriptor:
         assetManifest().repository.files.items["file.video-thumbnail"],
+      fileId: "file.video-thumbnail",
       signal: expect.any(AbortSignal),
     });
     expect(importClient.downloadFile).not.toHaveBeenCalled();
+  });
+
+  // An asset store pack's review reads its media from their own URLs; its
+  // import opens the pack's package once, when it starts, and reads every
+  // file it still needs from there.
+  const createAssetPackService = () => {
+    const context = createService();
+    const readBytes = async ({ descriptor }) => ({
+      bytes: new Uint8Array([1, 2, 3]),
+      byteLength: 3,
+      contentType: descriptor.mimeType,
+    });
+    const packageSource = { readFile: vi.fn(readBytes) };
+    const source = {
+      readManifest: vi.fn(async () => ({
+        manifest: assetManifest(),
+        manifestUrl: "asset-store:///AsPkPackOne00001",
+      })),
+      readFile: vi.fn(readBytes),
+      openImport: vi.fn(async () => packageSource),
+    };
+    context.importClient.openPackage.mockReturnValue(source);
+    const assetPack = {
+      id: "AsPkPackOne00001",
+      manifest: assetManifest(),
+      fileUrls: {},
+      getZip: vi.fn(),
+    };
+    return { ...context, assetPack, source, packageSource };
+  };
+
+  it("imports an asset store pack's files from the package its import opens, once", async () => {
+    const { service, importClient, assetPack, source, packageSource } =
+      createAssetPackService();
+    const planned = await service.createResourceImportPlan({ assetPack });
+    expect(importClient.openPackage).toHaveBeenCalledWith(
+      expect.objectContaining({ assetPack }),
+    );
+    const [image] = planned.plan.resources;
+    await service.loadResourceImportPreview({
+      planId: planned.plan.planId,
+      sourceFileId: image.largePreviewSourceId,
+    });
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+    });
+
+    expect(result).toMatchObject({ valid: true, importedCount: 3 });
+    expect(source.openImport).toHaveBeenCalledOnce();
+    expect(source.openImport).toHaveBeenCalledWith({
+      signal: expect.any(AbortSignal),
+    });
+    // The image read for its preview is not read again.
+    expect(source.readFile.mock.calls.map(([call]) => call.fileId)).toEqual([
+      "file.image",
+    ]);
+    expect(
+      packageSource.readFile.mock.calls.map(([call]) => call.fileId).sort(),
+    ).toEqual(["file.sound", "file.video", "file.video-thumbnail"]);
+  });
+
+  it("stops an asset store pack's import whose package can't be opened, saving nothing", async () => {
+    const { service, assetPack, source, assetService, commandApi } =
+      createAssetPackService();
+    source.openImport.mockRejectedValue(
+      new ImportPackageClientError(
+        "package_changed",
+        "This pack has changed since it was opened. Open it again.",
+      ),
+    );
+    const planned = await service.createResourceImportPlan({ assetPack });
+
+    const result = await service.executeResourceImportPlan({
+      planId: planned.plan.planId,
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: { code: "package_changed" },
+    });
+    expect(assetService.stageResourceImportFile).not.toHaveBeenCalled();
+    expect(commandApi.commitAssetImportPackage).not.toHaveBeenCalled();
   });
 
   it("loads a sound's audio for its full-screen preview", async () => {

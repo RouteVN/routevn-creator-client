@@ -284,13 +284,14 @@ export const handleLoadMorePacks = (deps) => {
 };
 
 // Opens the pack page at once from the pack's card, then loads the pack's
-// details, with its description, and, from the manifest inside its published
-// package, the import plan whose assets the page lists. Reopening the pack
-// whose plan is loaded, from its creator's page, keeps the choices made for
-// it; opening another pack leaves this one. A response for a pack the user
-// has left is dropped, and a plan made for it is freed. The details read
-// counts one view of the pack; showing it again without that read counts
-// none.
+// details, with its description, and, from its package's manifest, the
+// import plan whose assets the page lists; the page shows the package's
+// media from their own URLs, and only an import reads the package. Reopening
+// the pack whose plan is loaded, from its creator's page, keeps the choices
+// made for it; opening another pack leaves this one. A response for a pack
+// the user has left is dropped, and a plan made for it is freed. The details
+// read counts one view of the pack; showing it again without that read
+// counts none. Each import started counts one download.
 const openPack = async (deps, packId) => {
   const { appService, projectService, store, render } = deps;
   if (store.selectPlan() && store.selectPlanPackId() === packId) {
@@ -308,10 +309,7 @@ const openPack = async (deps, packId) => {
   render();
   let pack;
   try {
-    pack = await appService.getAssetStorePack({
-      assetPackId: packId,
-      view: true,
-    });
+    pack = await appService.getAssetStorePack({ assetPackId: packId });
   } catch (error) {
     if (store.selectOperationId() !== operationId) return;
     store.setPackLoadError({
@@ -325,7 +323,16 @@ const openPack = async (deps, packId) => {
   render();
 
   const result = await projectService.createResourceImportPlan({
-    zip: pack.package,
+    assetPack: {
+      id: packId,
+      manifest: pack.manifest,
+      fileUrls: pack.mediaFileUrls,
+      getZip: ({ importing = false } = {}) =>
+        appService.getAssetStorePackDownload({
+          assetPackId: packId,
+          countDownload: importing,
+        }),
+    },
     operationId,
     dependencyFolderName: pack.title,
   });
@@ -551,7 +558,7 @@ const mergeReviewValues = (store, values) => {
 };
 
 const handleReviewSubmit = async (deps, values) => {
-  const { appService, dispatchEvent, projectService, store, render } = deps;
+  const { dispatchEvent, projectService, store, render } = deps;
   store.saveReviewValues({ values });
   const plan = store.selectPlan();
   const choices = buildReviewPayload({ plan, values });
@@ -571,11 +578,6 @@ const handleReviewSubmit = async (deps, values) => {
   const operationId = generateId();
   store.startExecution({ values, operationId });
   render();
-  // Each import started is one download of the pack. The import doesn't wait
-  // for it.
-  appService.sendAssetStorePackDownload({
-    assetPackId: store.selectPlanPackId(),
-  });
   const result = await projectService.executeResourceImportPlan({
     planId: plan.planId,
     operationId,

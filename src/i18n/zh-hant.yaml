@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "請輸入有效的匯入網址。"
     asset_store_unavailable: "無法載入素材商店。請檢查網路連線，然後再試一次。"
     asset_pack_not_found: "此素材包已不再提供。"
+    package_changed: "此素材包在開啟後已更新。請重新開啟以匯入。"
+    package_unavailable: "無法下載素材包。請檢查網路連線後再試一次。"
     asset_creator_not_found: "找不到這位創作者。"
     unsupported_protocol: "匯入連結必須使用 HTTPS。HTTP 僅限用於 localhost 測試。"
     authorization_required: "此素材包需要授權。"

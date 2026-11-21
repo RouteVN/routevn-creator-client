@@ -293,6 +293,61 @@ const isJsonContentType = (contentType) =>
 const invalidPackage = () =>
   createClientError("package_invalid", "The asset package could not be read.");
 
+const packageChanged = () =>
+  createClientError(
+    "package_changed",
+    "This pack has changed since it was opened. Open it again.",
+  );
+
+// A signed package URL is used as if it lasts at least this long and at most
+// this long, whatever this device's clock says of its `expiresAt`, and is
+// replaced this long before then.
+const SIGNED_URL_MIN_LIFETIME_MS = 60_000;
+const SIGNED_URL_MAX_LIFETIME_MS = 10 * 60_000;
+const SIGNED_URL_RENEW_EARLY_MS = 30_000;
+
+// A signed package ZIP from `getZip()`. A failure keeps its code, such as
+// the asset store's, so the importer can say what went wrong.
+const requestZip = async (getZip) => {
+  try {
+    return await getZip();
+  } catch (error) {
+    throw createClientError(
+      error?.code ?? "package_unavailable",
+      "The asset package could not be loaded.",
+      { retryable: true, cause: error },
+    );
+  }
+};
+
+// Whether two parsed JSON values are the same, whatever their keys' order.
+const isSameJson = (left, right) => {
+  if (left === right) return true;
+  if (Array.isArray(left)) {
+    return (
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => isSameJson(value, right[index]))
+    );
+  }
+  if (
+    left === null ||
+    right === null ||
+    typeof left !== "object" ||
+    typeof right !== "object" ||
+    Array.isArray(right)
+  ) {
+    return false;
+  }
+  const keys = Object.keys(left);
+  return (
+    keys.length === Object.keys(right).length &&
+    keys.every(
+      (key) => Object.hasOwn(right, key) && isSameJson(left[key], right[key]),
+    )
+  );
+};
+
 const cancelled = () => createClientError("cancelled", "Import cancelled.");
 
 // A ZIP's first bytes: the signature of its first entry's local header.
@@ -615,6 +670,101 @@ export const createImportPackageClient = ({
     });
   };
 
+  // A published package ZIP at a signed URL that stops working: `getZip()`
+  // gives `{url, expiresAt, size, directoryOffset, directorySize}`, and is
+  // asked again for a fresh URL shortly before `expiresAt`, or when the
+  // server refuses the URL. A fresh URL must name the same package.
+  const createSignedRangeReader = ({ zip, getZip }) => {
+    let current;
+    let renewing;
+    const use = (next) => {
+      const lifetime = Math.min(
+        Math.max(next.expiresAt - Date.now(), SIGNED_URL_MIN_LIFETIME_MS),
+        SIGNED_URL_MAX_LIFETIME_MS,
+      );
+      current = {
+        url: resolveImportUrl(next.url),
+        staleAt: Date.now() + lifetime - SIGNED_URL_RENEW_EARLY_MS,
+      };
+    };
+    const renew = () => {
+      renewing ??= (async () => {
+        try {
+          const next = await requestZip(getZip);
+          if (
+            next.size !== zip.size ||
+            next.directoryOffset !== zip.directoryOffset ||
+            next.directorySize !== zip.directorySize
+          ) {
+            throw packageChanged();
+          }
+          use(next);
+        } finally {
+          renewing = undefined;
+        }
+      })();
+      return renewing;
+    };
+    use(zip);
+    const read = async (start, end, { signal, kind } = {}) => {
+      if (Date.now() >= current.staleAt) await renew();
+      try {
+        return await readRange({ url: current.url, start, end, kind, signal });
+      } catch (error) {
+        if (error?.code !== "authorization_required") throw error;
+        await renew();
+        return readRange({ url: current.url, start, end, kind, signal });
+      }
+    };
+    return { size: zip.size, read };
+  };
+
+  // An asset store pack, whose manifest and media the caller already has:
+  // `manifest`, and `fileUrls`, the public URL of each media file a review
+  // shows (`{ [fileId]: url }`), each fetched whole. An import reads its
+  // files from its package ZIP instead: `getZip({ importing: true })` is
+  // asked once when an import starts, and `getZip()` for a fresh URL (see
+  // `createSignedRangeReader`). The ZIP's manifest must be the one the review
+  // showed, or the pack has changed since.
+  const createAssetPackSource = ({ id, manifest, fileUrls, getZip }) => {
+    const manifestUrl = `asset-store:///${encodeURIComponent(id)}`;
+    return {
+      async readManifest() {
+        return { manifest: structuredClone(manifest), manifestUrl };
+      },
+      async readFile({ descriptor, fileId, signal } = {}) {
+        const url = fileUrls[fileId];
+        if (!url) {
+          throw createClientError(
+            "file_not_found",
+            "A package file was not found.",
+          );
+        }
+        return client.downloadFile({
+          descriptor: { ...descriptor, source: { url } },
+          signal,
+        });
+      },
+      async openImport({ signal } = {}) {
+        const zip = await requestZip(() => getZip({ importing: true }));
+        const reader = createSignedRangeReader({ zip, getZip });
+        const source = createZipPackageSource({
+          client,
+          cryptoImpl,
+          manifestUrl,
+          locate: async () => ({
+            reader,
+            directoryOffset: zip.directoryOffset,
+            directorySize: zip.directorySize,
+          }),
+        });
+        const result = await source.readManifest({ signal });
+        if (!isSameJson(result.manifest, manifest)) throw packageChanged();
+        return source;
+      },
+    };
+  };
+
   const client = {
     limits: resolvedLimits,
 
@@ -744,12 +894,17 @@ export const createImportPackageClient = ({
      *     found by reading it (see `probePackage`);
      *   - `{file}` is a ZIP file on this device, a `File` or `Blob`, read
      *     without any request.
+     * - `assetPack` is an asset store pack, `{id, manifest, fileUrls,
+     *   getZip}`: its manifest and media come from the asset store, and an
+     *   import reads its files from its signed package ZIP after
+     *   `openImport()` (see `createAssetPackSource`).
      * - `link` is a URL to either a package ZIP or a manifest. Which one is
      *   decided by what the link returns, not by how it is written, as a
      *   download link often has no file extension: a body that starts as a
      *   ZIP is read as `zip: {url}`, and anything else as `url`.
      */
-    openPackage({ url, zip, link } = {}) {
+    openPackage({ url, zip, link, assetPack } = {}) {
+      if (assetPack !== undefined) return createAssetPackSource(assetPack);
       if (link !== undefined) {
         return createLinkedPackageSource({
           url: resolveImportUrl(link),

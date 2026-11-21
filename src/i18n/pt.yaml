@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "Escreva um endereço de importação válido."
     asset_store_unavailable: "Não foi possível carregar a loja de recursos. Tente novamente."
     asset_pack_not_found: "Este pacote de recursos já não está disponível."
+    package_changed: "Este pacote foi atualizado depois de o abrir. Abra-o novamente para o importar."
+    package_unavailable: "Não foi possível transferir o pacote. Verifique a ligação e tente novamente."
     asset_creator_not_found: "Este criador já não está disponível."
     unsupported_protocol: "Os links de importação devem usar HTTPS. O HTTP só é permitido em testes com localhost."
     authorization_required: "Este pacote requer autorização."

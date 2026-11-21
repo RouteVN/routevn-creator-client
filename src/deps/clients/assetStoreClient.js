@@ -5,6 +5,9 @@ const PRODUCTION_RPC_URL = `https://api1.routevn.com${ASSET_STORE_RPC_PATH}`;
 // Development builds call a local API that serves the asset store methods.
 const LOCAL_RPC_URL = `http://127.0.0.1:3100${ASSET_STORE_RPC_PATH}`;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
+// A pack's details carry its package's manifest, up to 2 MiB, and a URL for
+// each of its media files.
+const MAX_PACK_RESPONSE_BYTES = 4 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 15_000;
 const PAGE_LIMIT = 20;
 const MAX_QUERY_LENGTH = 100;
@@ -152,23 +155,16 @@ const readFileUrls = (files) => {
   return urls;
 };
 
-// The published package Import reads in place: its ZIP's URL, its size, and
-// where its central directory is. Undefined when any of them is missing.
-const readPackage = (data, fileUrls) => {
-  if (!isObject(data)) return undefined;
-  const url = fileUrls.get(data.fileId);
-  const { size, directoryOffset, directorySize } = data;
-  if (
-    !url ||
-    !isByteCount(size) ||
-    !isByteCount(directoryOffset) ||
-    !isByteCount(directorySize) ||
-    directorySize === 0 ||
-    directoryOffset + directorySize > size
-  ) {
-    return undefined;
+// The package's media files a pack page shows, each at its own public URL:
+// `{ [fileId]: url }`, by the manifest's file ids.
+const readMediaFileUrls = (mediaFiles) => {
+  const urls = {};
+  for (const file of mediaFiles) {
+    if (isObject(file) && isText(file.id) && isWebUrl(file.url)) {
+      urls[file.id] = file.url;
+    }
   }
-  return { url, size, directoryOffset, directorySize };
+  return urls;
 };
 
 const readCreator = (creator, fileUrls) => {
@@ -244,7 +240,11 @@ export const createAssetStoreClient = ({
   // The device a view or a download is made on: its ID and facts.
   getDevice = async () => undefined,
 } = {}) => {
-  const call = async (method, params, { notFound = packNotFound } = {}) => {
+  const call = async (
+    method,
+    params,
+    { notFound = packNotFound, maxBytes = MAX_RESPONSE_BYTES } = {},
+  ) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     let text;
@@ -264,7 +264,7 @@ export const createAssetStoreClient = ({
       if (!response.ok) {
         throw new Error(`Asset store request failed with ${response.status}.`);
       }
-      if (Number(response.headers.get("Content-Length")) > MAX_RESPONSE_BYTES) {
+      if (Number(response.headers.get("Content-Length")) > maxBytes) {
         throw new Error("Asset store response is too large.");
       }
       text = await response.text();
@@ -273,7 +273,7 @@ export const createAssetStoreClient = ({
     } finally {
       clearTimeout(timeout);
     }
-    if (text.length > MAX_RESPONSE_BYTES) {
+    if (text.length > maxBytes) {
       throw unavailable(new Error("Asset store response is too large."));
     }
     let body;
@@ -324,27 +324,24 @@ export const createAssetStoreClient = ({
       };
     },
 
-    // `view` is set when a person opens the pack's page, and counts one view
-    // of it, made on this device; `download` is set when a person starts
-    // importing it, and counts one download. Every other read leaves both
-    // out. A device that can't be read leaves the read unflagged, so the pack
-    // still loads. The answer is the same either way.
-    async getAssetPackById({
-      assetPackId,
-      view = false,
-      download = false,
-    } = {}) {
+    // A person opening the pack's page: the pack, its package's manifest
+    // and the public URLs of its media files, which the page shows without
+    // reading the package. The read is sent with this device's ID and facts,
+    // so it counts one view of the pack; a device that can't be read leaves
+    // them out, and the pack still loads.
+    async getAssetPackById({ assetPackId } = {}) {
       const params = { assetPackId };
-      if (view || download) {
-        const device = await readDevice();
-        if (device) {
-          if (view) params.view = true;
-          if (download) params.download = true;
-          params.device = device;
-        }
-      }
-      const result = await call("assetStore.getAssetPackById", params);
-      if (!isObject(result.assetPack) || !Array.isArray(result.files)) {
+      const device = await readDevice();
+      if (device) params.device = device;
+      const result = await call("assetStore.getAssetPackById", params, {
+        maxBytes: MAX_PACK_RESPONSE_BYTES,
+      });
+      if (
+        !isObject(result.assetPack) ||
+        !Array.isArray(result.files) ||
+        !isObject(result.manifest) ||
+        !Array.isArray(result.mediaFiles)
+      ) {
         throw unavailable(new Error("Invalid asset pack."));
       }
       const fileUrls = readFileUrls(result.files);
@@ -360,11 +357,43 @@ export const createAssetStoreClient = ({
       pack.updatedAt = isTimestamp(data.lastUpdatedAt)
         ? data.lastUpdatedAt
         : undefined;
-      pack.package = readPackage(data.package, fileUrls);
-      if (!pack.package) {
-        throw unavailable(new Error("The asset pack has no package."));
-      }
+      pack.manifest = result.manifest;
+      pack.mediaFileUrls = readMediaFileUrls(result.mediaFiles);
       return pack;
+    },
+
+    // The pack's package ZIP, which an import reads in place with byte
+    // ranges: its signed URL, which stops working at `expiresAt`, its size,
+    // and where its central directory is. With `countDownload`, the read is
+    // sent with this device's ID and facts and counts one download of the
+    // pack; without it, as when only a fresh URL is needed, it counts none.
+    async getAssetPackDownload({ assetPackId, countDownload = false } = {}) {
+      const params = { assetPackId };
+      if (countDownload) {
+        const device = await readDevice();
+        if (device) params.device = device;
+      }
+      const result = await call("assetStore.getAssetPackDownloadUrl", params);
+      const { downloadUrl, expiresAt, size, directoryOffset, directorySize } =
+        result;
+      if (
+        !isWebUrl(downloadUrl) ||
+        !isTimestamp(expiresAt) ||
+        !isByteCount(size) ||
+        !isByteCount(directoryOffset) ||
+        !isByteCount(directorySize) ||
+        directorySize === 0 ||
+        directoryOffset + directorySize > size
+      ) {
+        throw unavailable(new Error("Invalid asset pack download."));
+      }
+      return {
+        url: downloadUrl,
+        expiresAt,
+        size,
+        directoryOffset,
+        directorySize,
+      };
     },
 
     // A creator's profile and packs. The API sends up to 100 of the creator's

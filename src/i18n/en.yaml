@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "Enter a valid import URL."
     asset_store_unavailable: "The asset store could not be loaded. Check your connection and try again."
     asset_pack_not_found: "This asset pack is no longer available."
+    package_changed: "This pack was updated after you opened it. Open it again to import it."
+    package_unavailable: "The pack could not be downloaded. Check your connection and try again."
     asset_creator_not_found: "This creator is no longer available."
     unsupported_protocol: "Import links must use HTTPS. HTTP is allowed only for localhost testing."
     authorization_required: "This pack requires authorization."

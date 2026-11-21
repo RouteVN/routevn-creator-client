@@ -177,21 +177,17 @@ export const createAppServiceCore = ({
       return assetStore.getCreatorById({ creatorId });
     },
 
-    // One free pack, with the import link the resource importer reads.
-    // `view` is set when a person opens the pack's page.
-    getAssetStorePack({ assetPackId, view } = {}) {
-      return assetStore.getAssetPackById({ assetPackId, view });
+    // One free pack, with its package's manifest and the URLs of its media
+    // files. Each read counts one view of the pack.
+    getAssetStorePack({ assetPackId } = {}) {
+      return assetStore.getAssetPackById({ assetPackId });
     },
 
-    // Starting an import of a pack counts one download of it, however many
-    // of its files the import reads. The import doesn't wait for the answer,
-    // and a failed read never stops it, so this never rejects.
-    async sendAssetStorePackDownload({ assetPackId } = {}) {
-      try {
-        await assetStore.getAssetPackById({ assetPackId, download: true });
-      } catch {
-        // The import goes on without it.
-      }
+    // The signed URL of a pack's package ZIP, which an import reads. With
+    // `countDownload`, set when an import starts, it counts one download of
+    // the pack.
+    getAssetStorePackDownload({ assetPackId, countDownload } = {}) {
+      return assetStore.getAssetPackDownload({ assetPackId, countDownload });
     },
 
     getFileDisplayPath(path) {

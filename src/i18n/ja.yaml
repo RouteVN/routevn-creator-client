@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "有効な取り込み用URLを入力してください。"
     asset_store_unavailable: "素材ストアを読み込めませんでした。接続を確認して、もう一度お試しください。"
     asset_pack_not_found: "この素材パッケージは利用できなくなりました。"
+    package_changed: "このパッケージは開いた後に更新されました。インポートするにはもう一度開いてください。"
+    package_unavailable: "パッケージをダウンロードできませんでした。接続を確認して、もう一度お試しください。"
     asset_creator_not_found: "このクリエイターは利用できなくなりました。"
     unsupported_protocol: "取り込み用リンクにはHTTPSを使用してください。HTTPはローカルホストでのテスト時のみ使用できます。"
     authorization_required: "このパッケージには認証が必要です。"

@@ -425,8 +425,8 @@ while the page scrolls; narrower windows show the panel above the description.
 The page opens at once with what the pack's card carries: title, summary,
 cover, creator and release date. The pack's details then replace what the card
 showed, adding the description, version, release notes and last update. The
-assets come last, once its manifest is
-read; Import waits for them. Back while
+assets come last, from the package's manifest, which the details carry; Import
+waits for them. Back while
 the page loads cancels its requests. Clicking an asset previews it full screen,
 with its whole description, using its full-size preview file when the pack has
 one. The pack's creator opens the creator page: avatar, name, bio, profile
@@ -446,25 +446,27 @@ purchases, so it requests and shows free packs only; the creator page leaves out
 the creator's other packs, and a creator with none free shows that they have no
 packs yet.
 
-The client calls three JSON-RPC methods at `https://api1.routevn.com/asset-store/rpc`,
+The client calls four JSON-RPC methods at `https://api1.routevn.com/asset-store/rpc`,
 with the `X-RouteVN-RPC: 1` header and no credentials:
 
-| Method                        | Params                                                            | Used for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ----------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `assetStore.listAssetPacks`   | `{query, pricingType: "FREE", assetTypes, page: {cursor, limit}}` | Pack cards. Each item carries `data`, with the title, `summary` (one line of 0 to 300 characters, trimmed; `""` when missing or not text), cover, pricing, `assetCounts` and listing date, and its `creator`; `files` maps cover and avatar IDs to URLs. `assetTypes` is `null` or a list of asset types, such as `IMAGES`. `assetCounts` maps each asset type the pack has to its count, such as `{"IMAGES": 30, "SOUNDS": 20}`; types the app does not know and counts that are not positive are left out. |
-| `assetStore.getAssetPackById` | `{assetPackId}`                                                   | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update, and `data.package`: `{fileId, size, directoryOffset, directorySize}`, the published package's ZIP (its `files` URL), its byte size, and where its central directory starts and how long it is. The description shows as plain paragraphs and its images, each by its `files` URL; a malformed block is left out.                                       |
-| `assetStore.getCreatorById`   | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                           |
+| Method                               | Params                                                            | Used for                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assetStore.listAssetPacks`          | `{query, pricingType: "FREE", assetTypes, page: {cursor, limit}}` | Pack cards. Each item carries `data`, with the title, `summary` (one line of 0 to 300 characters, trimmed; `""` when missing or not text), cover, pricing, `assetCounts` and listing date, and its `creator`; `files` maps cover and avatar IDs to URLs. `assetTypes` is `null` or a list of asset types, such as `IMAGES`. `assetCounts` maps each asset type the pack has to its count, such as `{"IMAGES": 30, "SOUNDS": 20}`; types the app does not know and counts that are not positive are left out.                                                                        |
+| `assetStore.getAssetPackById`        | `{assetPackId, device}`                                           | The pack page's details: the card fields, including `summary`, the rich-text description, the version, its plain-text `releaseNotes` and last update; `manifest`, the package's `asset-package.json`; and `mediaFiles`, `[{id, url}]`, a public URL for each of the package's image, audio and video files, by its ID in the manifest. The description shows as plain paragraphs and its images, each by its `files` URL; a malformed block is left out. The answer may be up to 4 MiB. It also carries `data.package` for older versions of the app, which this one does not read. |
+| `assetStore.getAssetPackDownloadUrl` | `{assetPackId, device}`                                           | Import: `downloadUrl`, a signed URL of the package's ZIP that allows byte ranges and stops working at `expiresAt`; `size`, its byte size; `directoryOffset` and `directorySize`, where its central directory starts and how long it is; and `versionName`.                                                                                                                                                                                                                                                                                                                          |
+| `assetStore.getCreatorById`          | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                                                                                                  |
 
-Opening a pack's page adds `view: true` and `device` to its
+A read that carries `device` counts, and one without it counts nothing; the
+API answers the same either way. Opening a pack's page sends `device` with its
 `assetStore.getAssetPackById` read, which counts one view of the pack. Starting
-an import, once the chosen resources pass their checks, reads the pack again
-with `download: true` and `device`, which counts one download, however many of
-the pack's files the import reads; each import started is one download. The
-import does not wait for that read, and a failed one does not stop it. The API
-answers the same with or without the flags. Every other read leaves them out,
-and so does showing a pack page again without reading the pack, such as
-reopening it from its creator's page. `device` says what the view or download
-was made on:
+an import, once the chosen resources pass their checks, sends `device` with
+`assetStore.getAssetPackDownloadUrl`, which counts one download, however many
+of the pack's files the import reads; each import started is one download. The
+import reads the package from the URL it answers, so it waits for it, and a
+failed one stops the import with a message. The pack list, creator pages and a
+fresh package URL during an import leave `device` out, and so does showing a
+pack page again without reading the pack, such as reopening it from its
+creator's page. `device` says what the view or download was made on:
 
 | Field        | Value                                                                                                                                                                  |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -479,8 +481,7 @@ was made on:
 | `appVersion` | The app's version, such as `1.22.1`.                                                                                                                                   |
 
 A fact that can't be read is left out. When the device ID can't be read, the
-read goes out without the flag and `device`, and the page or the import goes
-on as usual. Neither sends `source`: nothing outside the app leads to a pack's
+read goes out without `device`, and the page or the import goes on as usual. Neither sends `source`: nothing outside the app leads to a pack's
 page.
 
 Development builds call `http://127.0.0.1:3100/asset-store/rpc` instead. Set
@@ -492,19 +493,29 @@ map to a usable URL are left out.
 ## Reading a published package
 
 The asset store publishes each pack's package as the ZIP its publisher
-uploaded, and the app reads it in place: never downloading it whole and never
-unpacking it on a server. Every entry is stored (uncompressed); the API refuses
-anything else at upload. The app reads:
+uploaded. A pack page reads nothing from it: the pack's details carry its
+manifest and a public URL for each image, audio and video file, and a preview
+fetches its file whole from that URL as its card scrolls into view or its asset
+opens full screen. Import reads the ZIP in place, never downloading it whole,
+from the signed URL `assetStore.getAssetPackDownloadUrl` answers. Every entry
+is stored (uncompressed); the API refuses anything else at upload. Import
+reads:
 
 1. the central directory, the ZIP's table of contents, with one byte range at
    the `directoryOffset` and `directorySize` the API sends;
 2. `asset-package.json`, the manifest, as one more range: its local header and
-   data;
-3. each file it needs, a preview as its card scrolls into view or a file Import
-   downloads, as one range per file: the entry named by the file's
-   `source.url` without its leading `./`, such as `files/<id>`. A second range
-   follows only when an entry's local header is longer than its directory
-   record says.
+   data. It must be the manifest the pack page showed; otherwise the pack was
+   updated since, and the import stops and asks to open the pack again;
+3. each file it needs that a preview has not already fetched, as one range per
+   file: the entry named by the file's `source.url` without its leading `./`,
+   such as `files/<id>`. A second range follows only when an entry's local
+   header is longer than its directory record says.
+
+A signed URL stops working at `expiresAt`. Import asks for a fresh one, without
+`device`, 30 seconds before then, and when the server refuses the URL it has.
+It takes a URL to last at least one minute and at most ten, whatever the
+device's clock says of `expiresAt`. A fresh URL must name a package of the same
+size and directory place, or the import stops as when the manifest differs.
 
 Every request names both ends of its range (`Range: bytes=<start>-<end>`), so a
 cross-origin read needs no CORS preflight, and nothing depends on reading the

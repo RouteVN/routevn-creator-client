@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "Nhập URL hợp lệ của gói."
     asset_store_unavailable: "Không tải được cửa hàng tài nguyên. Hãy kiểm tra kết nối rồi thử lại."
     asset_pack_not_found: "Gói tài nguyên này không còn nữa."
+    package_changed: "Gói này đã được cập nhật sau khi bạn mở. Hãy mở lại để nhập."
+    package_unavailable: "Không thể tải gói xuống. Hãy kiểm tra kết nối và thử lại."
     asset_creator_not_found: "Người tạo này không còn nữa."
     unsupported_protocol: "URL của gói phải bắt đầu bằng “https://”. Chỉ được dùng “http://” khi thử nghiệm trên localhost."
     authorization_required: "Cần có quyền truy cập để nhập gói này. Hãy liên hệ nhà phát hành gói."

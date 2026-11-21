@@ -3362,6 +3362,8 @@ resourceImportErrors:
     invalid_url: "Masukkan URL impor yang valid."
     asset_store_unavailable: "Gagal memuat toko aset. Periksa koneksi internet, lalu coba lagi."
     asset_pack_not_found: "Paket aset ini sudah tidak tersedia."
+    package_changed: "Paket ini diperbarui setelah Anda membukanya. Buka lagi untuk mengimpornya."
+    package_unavailable: "Paket tidak dapat diunduh. Periksa koneksi Anda lalu coba lagi."
     asset_creator_not_found: "Kreator ini sudah tidak tersedia."
     unsupported_protocol: "Tautan impor harus menggunakan HTTPS. HTTP hanya diizinkan untuk pengujian di localhost."
     authorization_required: "Paket ini memerlukan otorisasi."

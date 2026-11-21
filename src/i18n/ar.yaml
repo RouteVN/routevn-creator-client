@@ -3430,6 +3430,8 @@ resourceImportErrors:
   invalid_url: "يُرجى إدخال رابط استيراد صالح."
   asset_store_unavailable: "تعذّر تحميل متجر الموارد. يُرجى التحقق من الاتصال والمحاولة مرة أخرى."
   asset_pack_not_found: "حزمة الموارد هذه لم تعد متاحة."
+  package_changed: "تم تحديث هذه الحزمة بعد فتحها. افتحها مرة أخرى لاستيرادها."
+  package_unavailable: "تعذر تنزيل الحزمة. تحقق من اتصالك وحاول مرة أخرى."
   asset_creator_not_found: "هذا المنشئ لم يعد متاحًا."
   unsupported_protocol: "يجب أن تستخدم روابط الاستيراد HTTPS. لا يُسمح باستخدام HTTP إلا للاختبار على localhost."
   authorization_required: "تتطلب هذه الحزمة إذنًا بالوصول."
