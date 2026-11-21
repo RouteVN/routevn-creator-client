@@ -16,4 +16,4 @@ propsSchema:
 events:
   close:
     type: object
-    description: Done, once the layout is saved. `snapshotUrl` is a picture of the layout alone, framed as the whole screen, when it could be taken.
+    description: Done, once the layout is saved, or Cancel, once the layout is back as it was when the editor opened. With Done, `snapshotUrl` is a picture of the layout alone, framed as the whole screen, when it could be taken.

@@ -1185,8 +1185,10 @@ actionTransformEditor:
   unnamedTarget: "العنصر الحالي"
   visualTarget: "عنصر مرئي"
 visualLayoutEditor:
+  cancelButton: "إلغاء"
   cannotEditLayout: "لا يمكن تعديل تخطيط هذا العنصر المرئي. يُرجى إضافة العنصر المرئي مرة أخرى لتعديل تخطيطه."
   doneButton: "تم"
+  failedDiscardChanges: "تعذّر تجاهل تغييراتك على تخطيط هذا العنصر المرئي، لذا ما زالت موجودة. يُرجى المحاولة مرة أخرى."
   failedSaveChanges: "تعذّر حفظ آخر التغييرات في تخطيط هذا العنصر المرئي، وتم إزالتها. يُرجى إدخالها مرة أخرى."
   title: "تعديل التخطيط"
 vnPreview:
@@ -3168,7 +3170,6 @@ commandLinePage:
   "No waveform": "لا يوجد شكل موجة"
   "+ Add Choice": "+ إضافة اختيار"
   "Save Choice": "حفظ الاختيار"
-  "Save Visual": "حفظ العنصر المرئي"
   popOverlayDescription: "إغلاق الطبقة العلوية الحالية والعودة إلى العرض السابق."
   "Set Dialogue Text Speed": "تعيين سرعة نص الحوار"
   "Set Auto Forward Delay": "تعيين مهلة الوضع التلقائي"

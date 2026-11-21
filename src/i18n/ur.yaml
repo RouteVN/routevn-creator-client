@@ -1185,8 +1185,10 @@ actionTransformEditor:
   unnamedTarget: "موجودہ آئٹم"
   visualTarget: "بصری عنصر"
 visualLayoutEditor:
+  cancelButton: "منسوخ کریں"
   cannotEditLayout: "اس بصری عنصر کے لے آؤٹ میں ترمیم نہیں کی جا سکتی۔ لے آؤٹ میں ترمیم کرنے کے لیے بصری عنصر دوبارہ شامل کریں۔"
   doneButton: "ہو گیا"
+  failedDiscardChanges: "اس بصری عنصر کے لے آؤٹ میں آپ کی تبدیلیاں منسوخ نہیں ہو سکیں، اس لیے وہ اب بھی موجود ہیں۔ دوبارہ کوشش کریں۔"
   failedSaveChanges: "اس بصری عنصر کے لے آؤٹ میں آپ کی تازہ ترین تبدیلیاں محفوظ نہیں ہو سکیں اور ہٹا دی گئیں۔ انہیں دوبارہ درج کریں۔"
   title: "لے آؤٹ میں ترمیم کریں"
 vnPreview:
@@ -3104,7 +3106,6 @@ commandLinePage:
   "No waveform": "کوئی ویو فارم نہیں"
   "+ Add Choice": "+ انتخاب شامل کریں"
   "Save Choice": "انتخاب محفوظ کریں"
-  "Save Visual": "بصری عنصر محفوظ کریں"
   popOverlayDescription: "موجودہ اوورلے بند کریں اور پچھلی اسکرین پر واپس جائیں۔"
   "Set Dialogue Text Speed": "مکالمے کے متن کی رفتار سیٹ کریں"
   "Set Auto Forward Delay": "آٹو سے پہلے وقفہ سیٹ کریں"

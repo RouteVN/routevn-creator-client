@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Current item"
   visualTarget: "Visual"
 visualLayoutEditor:
+  cancelButton: "Cancel"
   cannotEditLayout: "This visual's layout can't be edited. Add the visual again to edit its layout."
   doneButton: "Done"
+  failedDiscardChanges: "Your changes to this visual's layout could not be discarded, so they are still there. Please try again."
   failedSaveChanges: "Your latest changes to this visual's layout could not be saved and were removed. Please enter them again."
   title: "Edit Layout"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "No waveform"
   "+ Add Choice": "+ Add Choice"
   "Save Choice": "Save Choice"
-  "Save Visual": "Save Visual"
   popOverlayDescription: "Pop the current overlay and return to the previous view."
   "Set Dialogue Text Speed": "Set Dialogue Text Speed"
   "Set Auto Forward Delay": "Set Auto Forward Delay"

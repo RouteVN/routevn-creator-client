@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "รายการปัจจุบัน"
   visualTarget: "องค์ประกอบภาพ"
 visualLayoutEditor:
+  cancelButton: "ยกเลิก"
   cannotEditLayout: "ไม่สามารถแก้ไขเลย์เอาต์ของภาพนี้ได้ เพิ่มภาพนี้อีกครั้งเพื่อแก้ไขเลย์เอาต์"
   doneButton: "เสร็จสิ้น"
+  failedDiscardChanges: "ไม่สามารถยกเลิกการเปลี่ยนแปลงในเลย์เอาต์ของภาพนี้ได้ การเปลี่ยนแปลงจึงยังคงอยู่ กรุณาลองอีกครั้ง"
   failedSaveChanges: "ไม่สามารถบันทึกการเปลี่ยนแปลงล่าสุดในเลย์เอาต์ของภาพนี้ได้ จึงยกเลิกการเปลี่ยนแปลงนั้นแล้ว กรุณาป้อนใหม่อีกครั้ง"
   title: "แก้ไขเลย์เอาต์"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "ไม่มีรูปคลื่นเสียง"
   "+ Add Choice": "+ เพิ่มตัวเลือก"
   "Save Choice": "บันทึกตัวเลือก"
-  "Save Visual": "บันทึกองค์ประกอบภาพ"
   popOverlayDescription: "ปิดโอเวอร์เลย์ปัจจุบันและกลับไปยังมุมมองก่อนหน้า"
   "Set Dialogue Text Speed": "ตั้งค่าความเร็วข้อความ"
   "Set Auto Forward Delay": "ตั้งค่าการหน่วงเวลาโหมดอัตโนมัติ"

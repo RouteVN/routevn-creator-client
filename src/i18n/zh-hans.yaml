@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "当前项"
   visualTarget: "视觉素材"
 visualLayoutEditor:
+  cancelButton: "取消"
   cannotEditLayout: "无法编辑此视觉元素的布局。请重新添加该视觉元素后再编辑其布局。"
   doneButton: "完成"
+  failedDiscardChanges: "无法放弃此视觉元素布局的更改，这些更改仍然保留。请重试。"
   failedSaveChanges: "无法保存此视觉元素布局的最新更改，这些更改已丢弃。请重新输入。"
   title: "编辑布局"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "无波形"
   "+ Add Choice": "+ 添加选项"
   "Save Choice": "保存选项"
-  "Save Visual": "保存视觉素材"
   popOverlayDescription: "关闭当前覆盖层并返回上一个界面。"
   "Set Dialogue Text Speed": "设置文本显示速度"
   "Set Auto Forward Delay": "设置自动前进延迟"

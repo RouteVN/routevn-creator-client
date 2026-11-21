@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Bieżący element"
   visualTarget: "Element graficzny"
 visualLayoutEditor:
+  cancelButton: "Anuluj"
   cannotEditLayout: "Nie można edytować układu tego elementu wizualnego. Dodaj element wizualny ponownie, aby edytować jego układ."
   doneButton: "Gotowe"
+  failedDiscardChanges: "Nie udało się odrzucić zmian układu tego elementu wizualnego, więc nadal są widoczne. Spróbuj ponownie."
   failedSaveChanges: "Nie udało się zapisać ostatnich zmian układu tego elementu wizualnego, więc je usunięto. Wprowadź je ponownie."
   title: "Edytuj układ"
 vnPreview:
@@ -3140,7 +3142,6 @@ commandLinePage:
   "No waveform": "Brak kształtu fali"
   "+ Add Choice": "+ Dodaj opcję"
   "Save Choice": "Zapisz opcję"
-  "Save Visual": "Zapisz element graficzny"
   popOverlayDescription: "Zamyka bieżącą nakładkę i wraca do poprzedniego widoku."
   "Set Dialogue Text Speed": "Ustaw szybkość tekstu"
   "Set Auto Forward Delay": "Ustaw opóźnienie trybu automatycznego"

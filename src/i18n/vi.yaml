@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Mục hiện tại"
   visualTarget: "Thành phần hình ảnh"
 visualLayoutEditor:
+  cancelButton: "Hủy"
   cannotEditLayout: "Không thể chỉnh sửa bố cục của hình ảnh này. Hãy thêm lại hình ảnh để chỉnh sửa bố cục."
   doneButton: "Xong"
+  failedDiscardChanges: "Không thể hủy các thay đổi của bố cục hình ảnh này nên các thay đổi vẫn còn. Hãy thử lại."
   failedSaveChanges: "Không lưu được các thay đổi mới nhất của bố cục hình ảnh này nên các thay đổi đã bị xóa. Hãy nhập lại các thay đổi đó."
   title: "Chỉnh sửa bố cục"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "Không có dạng sóng"
   "+ Add Choice": "+ Thêm lựa chọn"
   "Save Choice": "Lưu lựa chọn"
-  "Save Visual": "Lưu thành phần hình ảnh"
   popOverlayDescription: "Đóng lớp phủ hiện tại và quay lại màn hình trước đó."
   "Set Dialogue Text Speed": "Đặt tốc độ chữ"
   "Set Auto Forward Delay": "Đặt thời gian chờ tự động"

@@ -6,6 +6,7 @@ import {
   handleAfterMount,
   handleBeforeMount,
   handleCanvasDragUpdate,
+  handleCancelClick,
   handleDoneClick,
   handleFileExplorerAction,
 } from "../../src/components/visualLayoutEditor/visualLayoutEditor.handlers.js";
@@ -235,7 +236,12 @@ const createRepositoryState = () => ({
   },
 });
 
-// The editor on its real store, over a project whose saves are given.
+const findSavedElements = (repositoryState) =>
+  repositoryState.scenes.items["scene-1"].sections.items["section-1"].lines
+    .items["line-1"].actions.visual.items[0].layout.elements;
+
+// The editor on its real store, over a project that keeps what is saved, or
+// whose saves are given.
 const createEditor = ({ updateVisualLayoutElements } = {}) => {
   let state = editorStore.createInitialState();
   const store = new Proxy(
@@ -279,12 +285,19 @@ const createEditor = ({ updateVisualLayoutElements } = {}) => {
     projectService: {
       getRepositoryState: vi.fn(() => repositoryState),
       updateVisualLayoutElements:
-        updateVisualLayoutElements ?? vi.fn(async () => ({ valid: true })),
+        updateVisualLayoutElements ??
+        vi.fn(async ({ elements }) => {
+          const { layout } =
+            repositoryState.scenes.items["scene-1"].sections.items["section-1"]
+              .lines.items["line-1"].actions.visual.items[0];
+          layout.elements = structuredClone(elements);
+          return { valid: true };
+        }),
     },
   };
   const cleanup = handleBeforeMount(deps);
   handleAfterMount(deps);
-  return { cleanup, deps, store };
+  return { cleanup, deps, repositoryState, store };
 };
 
 const rename = (deps, itemId, newName) =>
@@ -525,6 +538,115 @@ describe("the layout editor of a visual", () => {
         ),
       }),
     );
+  });
+
+  it("puts back the layout it opened with on Cancel, then closes without a picture", async () => {
+    const { cleanup, deps, repositoryState, store } = createEditor();
+    const { updateVisualLayoutElements } = deps.projectService;
+
+    await rename(deps, "title", "Heading");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(findSavedElements(repositoryState).items.title.name).toBe("Heading");
+    handleFileExplorerAction(deps, {
+      _event: { detail: { value: "delete-item", itemId: "title" } },
+    });
+
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(updateVisualLayoutElements).toHaveBeenCalledTimes(2);
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
+    expect(store.selectLayoutElements()).toEqual(createElements());
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    const [closeEvent] = deps.dispatchEvent.mock.calls[0];
+    expect(closeEvent.type).toBe("close");
+    expect(closeEvent.detail).toEqual({});
+
+    // The delete waiting for a pause, and closing, save nothing after it.
+    await vi.advanceTimersByTimeAsync(400);
+    await cleanup();
+    expect(updateVisualLayoutElements).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes on Cancel without saving when nothing was saved, dropping edits waiting for a pause", async () => {
+    const { cleanup, deps, repositoryState } = createEditor();
+    const { updateVisualLayoutElements } = deps.projectService;
+
+    await rename(deps, "title", "Heading");
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(400);
+    await cleanup();
+
+    expect(updateVisualLayoutElements).not.toHaveBeenCalled();
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays open on the saved layout when Cancel cannot put it back, and can try again", async () => {
+    const { deps, repositoryState, store } = createEditor();
+    const keepSave = deps.projectService.updateVisualLayoutElements;
+    await rename(deps, "title", "Heading");
+    await vi.advanceTimersByTimeAsync(400);
+
+    deps.projectService.updateVisualLayoutElements = vi.fn(async () => {
+      throw new Error("disk full");
+    });
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+    expect(store.selectItemById({ itemId: "title" }).name).toBe("Heading");
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          EN_I18N.visualLayoutEditor.failedDiscardChanges,
+        ),
+      }),
+    );
+
+    // Still open, it saves edits again.
+    deps.projectService.updateVisualLayoutElements = keepSave;
+    await rename(deps, "door", "Gate");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(findSavedElements(repositoryState).items.door.name).toBe("Gate");
+
+    // The layout it opened with is kept through the reload.
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves no edit made while Cancel puts the layout back, also not when it closes", async () => {
+    const { cleanup, deps, repositoryState } = createEditor();
+    const keepSave = deps.projectService.updateVisualLayoutElements;
+    await rename(deps, "title", "Heading");
+    await vi.advanceTimersByTimeAsync(400);
+
+    let finishCancelSave;
+    const slowSave = vi.fn(async (payload) => {
+      await new Promise((resolve) => {
+        finishCancelSave = resolve;
+      });
+      return keepSave(payload);
+    });
+    deps.projectService.updateVisualLayoutElements = slowSave;
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(slowSave).toHaveBeenCalledTimes(1);
+    // An element the canvas was moving goes back too.
+    expect(
+      deps.refs.layoutEditorCanvas.discardPendingUpdate,
+    ).toHaveBeenCalled();
+
+    await rename(deps, "door", "Gate");
+    finishCancelSave();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    await cleanup();
+
+    expect(slowSave).toHaveBeenCalledTimes(1);
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
   });
 
   it("saves what is left when it closes some other way", async () => {
