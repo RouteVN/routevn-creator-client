@@ -10,6 +10,7 @@ import {
   handleCreatorRetry,
   handleDialogClose,
   handleFormAction,
+  handleFormChange,
   handleSelectionBack,
   handleLoadMorePacks,
   handleLoadingCancel,
@@ -1001,6 +1002,65 @@ describe("resource-import-dialog asset store", () => {
       [{ assetPackId: "pack-1" }],
       [{ assetPackId: "pack-1" }],
     ]);
+  });
+
+  it("keeps each dependency and link choice through Back, and reopens the selection with it", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    deps.appService.getAssetStorePack.mockResolvedValue({
+      ...storePack("pack-1"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
+    });
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: {
+        planId: "plan-1",
+        package: {},
+        resources: [
+          {
+            sourceId: "text-style.source",
+            name: "Text Style One",
+            packageDependencySourceIds: ["font.source"],
+          },
+        ],
+        dependencies: [
+          { sourceId: "font.source", resourceType: "fonts", name: "Font One" },
+        ],
+      },
+    });
+    openDialog(deps);
+    await settle();
+    await clickPack(deps, "pack-1");
+    handlePackImport(deps);
+    expect(state.reviewValues.dependency_0).toBe("");
+
+    handleFormChange(deps, {
+      _event: {
+        detail: { name: "dependency_0", value: "pack", values: {} },
+      },
+    });
+    handleSelectionBack(deps);
+    deps.appService.getAssetStoreCreator.mockResolvedValue({
+      creator: {
+        id: "creator-1",
+        name: "Creator One",
+        description: [],
+        links: [],
+      },
+      packs: [storePack("pack-1")],
+    });
+    await handlePackCreatorClick(deps);
+    handleCreatorBack(deps);
+    const formKey = state.formKey;
+    handlePackImport(deps);
+
+    // The form opens again with the choice as its starting value.
+    expect(state.step).toBe("selection");
+    expect(state.formKey).toBeGreaterThan(formKey);
+    expect(state.reviewValues.dependency_0).toBe("pack");
   });
 
   it("shows a localized message when a pack is no longer available", async () => {
