@@ -773,11 +773,18 @@ const buildSpritesheetPayload = ({
     description: values?.description ?? "",
     tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
     fileId: uploadResult?.fileId ?? existingItem?.fileId,
-    width,
-    height,
     jsonData: importData?.jsonData ?? existingItem?.jsonData ?? {},
     animations,
   };
+
+  // An empty size field is left out; an update that clears a saved size sets
+  // it to null itself.
+  if (width !== undefined) {
+    payload.width = width;
+  }
+  if (height !== undefined) {
+    payload.height = height;
+  }
 
   const thumbnailFileId =
     uploadResult?.thumbnailFileId ?? existingItem?.thumbnailFileId;

@@ -150,6 +150,9 @@ describe("spritesheets dialog form action", () => {
     const [{ data }] = deps.projectService.updateSpritesheet.mock.calls[0];
     expect(data.width).toBeUndefined();
     expect(data.height).toBeUndefined();
+    // An undefined field is not a saved change, so the key must be absent.
+    expect(Object.hasOwn(data, "width")).toBe(false);
+    expect(Object.hasOwn(data, "height")).toBe(false);
   });
 
   it("does not send null sizes when creating with empty size fields", async () => {
@@ -176,6 +179,8 @@ describe("spritesheets dialog form action", () => {
     expect(data.fileId).toBe("walk.png-file");
     expect(data.width).toBeUndefined();
     expect(data.height).toBeUndefined();
+    expect(Object.hasOwn(data, "width")).toBe(false);
+    expect(Object.hasOwn(data, "height")).toBe(false);
   });
 
   it("creates an empty spritesheet with no sheet file", async () => {
