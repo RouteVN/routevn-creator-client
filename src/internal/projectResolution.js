@@ -397,3 +397,9 @@ export const resolveProjectResolution = ({ preset, width, height } = {}) => {
 
   return resolveProjectResolutionPreset(preset);
 };
+
+// Portrait when the screen is taller than it is wide, else landscape.
+export const getProjectOrientation = (resolution) => {
+  const { width, height } = requireProjectResolution(resolution);
+  return height > width ? "portrait" : "landscape";
+};

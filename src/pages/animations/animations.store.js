@@ -9,11 +9,6 @@ import {
 } from "../../internal/projectResolution.js";
 import { formatDurationLabel } from "../../internal/dates.js";
 import { toAnimationDisplayItem } from "../../internal/animationDisplay.js";
-import { normalizeTransitionMaskForEditor } from "../../internal/animationMasks.js";
-import {
-  createDefaultInitialValuesByProperty,
-  createPropertyFieldConfig,
-} from "../../internal/animationPreview.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import { selectAnimationsPageCopy } from "./support/animationsPageCopy.js";
 
@@ -23,8 +18,6 @@ const EMPTY_TREE = {
   items: {},
   tree: [],
 };
-
-const MASK_PROGRESS_PROPERTY = "progress";
 
 const getAnimationTypeLabel = (animationType, copy = {}) => {
   return animationType === "transition"
@@ -148,56 +141,14 @@ const createAnimationCenterItemContextMenuItems = (copy = {}) => [
   },
 ];
 
-const createMaskTimelineRows = (item, imagesData, copy = {}) => {
-  const sourceMask = item?.animation?.mask;
-  const masks = Array.isArray(sourceMask)
-    ? sourceMask
-    : sourceMask
-      ? [sourceMask]
-      : [];
-  const imageItems = imagesData?.items ?? {};
-
-  return masks
-    .map((mask, index) => {
-      const normalizedMask = normalizeTransitionMaskForEditor(mask, imageItems);
-      if (!normalizedMask?.progress) {
-        return undefined;
-      }
-
-      const maskLabel = copy.maskTitle ?? "Mask";
-      const imageId = normalizedMask.imageId;
-      const imageItem = imageItems[imageId];
-      return {
-        label: masks.length > 1 ? `${maskLabel} ${index + 1}` : maskLabel,
-        properties: {
-          [MASK_PROGRESS_PROPERTY]: {
-            ...normalizedMask.progress,
-            thumbnail: true,
-            thumbnailBorderColor: "bo",
-            thumbnailFileId: imageItem?.thumbnailFileId ?? imageItem?.fileId,
-            thumbnailName: imageItem?.name ?? imageId ?? maskLabel,
-          },
-        },
-      };
-    })
-    .filter(Boolean);
-};
-
-const buildCatalogItem = (item, { copy = {}, state, i18n } = {}) => {
-  const displayItem = toAnimationDisplayItem(item, {
-    cameraLabel: copy.cameraPropertyLabel,
-    dateTime: i18n.dateTime,
-  });
-  return {
-    ...displayItem,
-    animationTypeLabel: getAnimationTypeLabel(displayItem.animationType, copy),
-    maskTimelineRows: createMaskTimelineRows(item, state.imagesData, copy),
-    maskTimelineDefaultValues: { [MASK_PROGRESS_PROPERTY]: 0 },
-    timelineDefaultValues: createDefaultInitialValuesByProperty(
-      createPropertyFieldConfig(state.projectResolution),
-    ),
-  };
-};
+const buildCatalogItem = (item, { copy = {} } = {}) => ({
+  id: item.id,
+  name: item.name,
+  cardKind: "layout",
+  cardVariant: "thumbnail",
+  previewFileId: item.thumbnailFileId,
+  typeInfo: getAnimationTypeLabel(item.animation?.type, copy),
+});
 
 const matchesSearch = matchesTagAwareSearch;
 

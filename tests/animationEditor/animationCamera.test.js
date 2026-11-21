@@ -23,7 +23,7 @@ import {
   expandCameraTrack,
   groupCameraTrack,
   roundCameraPose,
-} from "../../src/internal/animationCamera.js";
+} from "../../src/pages/animationEditor/support/animationCamera.js";
 import { EN_I18N } from "../support/i18n.js";
 import { renderViewYaml } from "../support/renderView.js";
 

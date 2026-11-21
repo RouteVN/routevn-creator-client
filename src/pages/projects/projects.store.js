@@ -1,5 +1,5 @@
 import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
-import { APP_LOCALE_OPTIONS } from "../../internal/ui/appLocale.js";
+import { APP_LOCALE_SELECT_OPTIONS } from "../../internal/ui/appLocale.js";
 import {
   formatProjectsPageCopy,
   selectProjectsPageCopy,
@@ -865,7 +865,7 @@ export const selectViewData = ({ state, i18n }) => {
         label: copy.languageLabel,
         required: true,
         clearable: false,
-        options: APP_LOCALE_OPTIONS,
+        options: APP_LOCALE_SELECT_OPTIONS,
       },
     ],
     actions: {

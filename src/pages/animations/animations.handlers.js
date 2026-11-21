@@ -209,8 +209,11 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+// Missing and out-of-date thumbnails are drawn in the background.
 export const handleAfterMount = (deps) => {
+  const { projectService } = deps;
   handleAfterMountBase(deps);
+  void projectService.requestAnimationThumbnails();
   void renderSelectedAnimationPreview(deps, {
     forceInit: true,
   });

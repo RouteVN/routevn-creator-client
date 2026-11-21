@@ -1,9 +1,11 @@
+import { subscribeCharacterAvatarOptions } from "../../internal/ui/characterAvatarOptions.js";
 import {
   getInteractionActions,
   getInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
 import {
   buildVisibilityConditionExpression,
+  getVisibilityConditionOperators,
   mergeWhenExpressions,
   splitVisibilityConditionFromWhen,
 } from "../../internal/layoutConditions.js";
@@ -19,6 +21,8 @@ import {
   findConditionalOverrideRuleIndex,
   getAvailableChildInteractionItems,
   getConditionalOverrideAttributeOptions,
+  getConditionPresetFormDefaults,
+  resolveConditionPresetValue,
 } from "./support/layoutEditPanelFeatures.js";
 import { createSpriteBlurFromDialogValues } from "./support/layoutEditPanelBlur.js";
 import {
@@ -29,7 +33,10 @@ import {
   getTextRevealIndicatorStateNameFromItemName,
   isTextRevealIndicatorItemName,
 } from "./support/layoutEditPanelTextRevealIndicator.js";
-import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import {
+  getLayoutEditorElementDefinition,
+  isLayoutEditorVerticalTextItem,
+} from "../../internal/layoutEditorElementRegistry.js";
 import {
   parseSpritesheetAnimationSelectionValue,
   toSpritesheetAnimationSelectionValue,
@@ -58,6 +65,7 @@ const ACTION_INTERACTION_TYPES = [
   "change",
 ];
 const DEFAULT_TEXT_FIXED_WIDTH = 300;
+const DEFAULT_TEXT_FIXED_COLUMN_LENGTH = 300;
 const EMPTY_TREE = { items: {}, tree: [] };
 const INTEGER_ONLY_FIELDS = new Set([
   "x",
@@ -452,23 +460,44 @@ const isDirectedContainerSizeMode = (deps) => {
   );
 };
 
+const getTextFixedColumnLengthFallback = ({ props } = {}) => {
+  const projectHeight = getPositiveRoundedNumber(
+    props?.projectResolution?.height,
+  );
+  if (projectHeight !== undefined) {
+    return Math.min(projectHeight, DEFAULT_TEXT_FIXED_COLUMN_LENGTH);
+  }
+
+  return DEFAULT_TEXT_FIXED_COLUMN_LENGTH;
+};
+
 const applySizeModeUpdate = (deps, { name, value } = {}) => {
   const { props, store } = deps;
+  const values = store.selectValues();
   const fieldName = name === "heightMode" ? "height" : "width";
-  const isTextWidthMode =
-    fieldName === "width" && props.itemType?.startsWith("text") === true;
+  // Text sets the side it wraps at, its width or, written vertically, its
+  // column length, and measures the other.
+  const textSizeFieldName = isLayoutEditorVerticalTextItem({
+    type: props.itemType,
+    writingMode: values.writingMode,
+  })
+    ? "height"
+    : "width";
+  const isTextSizeMode =
+    props.itemType?.startsWith("text") === true &&
+    fieldName === textSizeFieldName;
   const usesDirectedContainerAutoSize = isDirectedContainerSizeMode(deps);
   const selectedElementMetrics =
     store.selectSelectedElementMetrics?.() ?? props.selectedElementMetrics;
 
-  if (!isTextWidthMode && !usesDirectedContainerAutoSize) {
+  if (!isTextSizeMode && !usesDirectedContainerAutoSize) {
     return;
   }
 
   if (value === "auto") {
     applyPanelValueUpdate(deps, {
       name: fieldName,
-      value: isTextWidthMode ? undefined : 0,
+      value: isTextSizeMode ? undefined : 0,
     });
     return;
   }
@@ -477,14 +506,17 @@ const applySizeModeUpdate = (deps, { name, value } = {}) => {
     return;
   }
 
-  const values = store.selectValues();
   const currentSize = Number(values[fieldName]);
-  const nextSize = isTextWidthMode
-    ? (getMeasuredTextWidth(selectedElementMetrics) ??
+  const nextSize = isTextSizeMode
+    ? ((fieldName === "width"
+        ? getMeasuredTextWidth(selectedElementMetrics)
+        : getMeasuredDimension(selectedElementMetrics, fieldName)) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
         : undefined) ??
-      getTextFixedWidthFallback({ props, values }))
+      (fieldName === "width"
+        ? getTextFixedWidthFallback({ props, values })
+        : getTextFixedColumnLengthFallback({ props })))
     : (getMeasuredDimension(selectedElementMetrics, fieldName) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
@@ -503,6 +535,9 @@ const normalizePanelValue = (name, value) => {
       ? Math.round(Number(value))
       : value;
 
+  if (name === "volume" && Number.isFinite(Number(normalizedValue))) {
+    return Math.min(100, Math.max(0, Number(normalizedValue)));
+  }
   if (name === "rotation" && Number.isFinite(Number(normalizedValue))) {
     return normalizeLayoutRotation(Number(normalizedValue));
   }
@@ -787,6 +822,7 @@ export const handleBeforeMount = (deps) => {
   store.setParticlesData({
     particlesData: props.particlesData || EMPTY_TREE,
   });
+  store.setVideosData({ videosData: props.videosData || EMPTY_TREE });
   store.setTextStylesData({
     textStylesData: props.textStylesData || EMPTY_TREE,
   });
@@ -796,6 +832,11 @@ export const handleBeforeMount = (deps) => {
   store.setSelectedElementMetrics?.({
     metrics: props.selectedElementMetrics,
   });
+  // Only an element's conditions list characters; a transform has none.
+  if (props.mode === "transform") {
+    return undefined;
+  }
+  return subscribeCharacterAvatarOptions(deps);
 };
 
 export const handleAfterMount = () => {};
@@ -845,6 +886,7 @@ export const handleOnUpdate = (deps, payload) => {
     oldProps?.soundsData === newProps?.soundsData &&
     oldProps?.spritesheetsData === newProps?.spritesheetsData &&
     oldProps?.particlesData === newProps?.particlesData &&
+    oldProps?.videosData === newProps?.videosData &&
     oldProps?.variablesData === newProps?.variablesData &&
     oldProps?.textStylesData === newProps?.textStylesData &&
     oldProps?.selectedElementMetrics === newProps?.selectedElementMetrics
@@ -871,6 +913,7 @@ export const handleOnUpdate = (deps, payload) => {
   store.setParticlesData({
     particlesData: newProps.particlesData || EMPTY_TREE,
   });
+  store.setVideosData({ videosData: newProps.videosData || EMPTY_TREE });
   store.setTextStylesData({
     textStylesData: newProps.textStylesData || EMPTY_TREE,
   });
@@ -994,25 +1037,6 @@ export const handleGroupItemWheel = (deps, payload) => {
 
 export const handleVisibilityConditionItemClick = (deps) => {
   const { render, store } = deps;
-  const targetTypeByTarget =
-    store.selectVisibilityConditionTargetTypeByTarget();
-  const targetValueKindByTarget =
-    store.selectVisibilityConditionTargetValueKindByTarget();
-  const currentVisibilityCondition = splitVisibilityConditionFromWhen(
-    store.selectValues()["$when"],
-  ).visibilityCondition;
-  const target = currentVisibilityCondition?.target;
-
-  store.setVisibilityConditionDialogSelectedVariableType({
-    selectedVariableType: target
-      ? (targetTypeByTarget?.[target] ?? "string")
-      : undefined,
-    selectedValueKind: target
-      ? (targetValueKindByTarget?.[target] ??
-        targetTypeByTarget?.[target] ??
-        "string")
-      : undefined,
-  });
   store.openVisibilityConditionDialog();
   render();
 };
@@ -1175,16 +1199,36 @@ const selectConditionTargetKinds = (store, target) => {
   return { selectedVariableType, selectedValueKind };
 };
 
-// A picked target starts at Equals, and a Boolean target at True, whichever
-// target came before. Undefined when the form already has them.
-const getConditionTargetDefaults = (values, selectedVariableType) => {
+// Keep a compatible operation when switching targets. Default to Equals
+// and, for a new Boolean value, True.
+const getConditionTargetDefaults = (
+  values,
+  { selectedVariableType, selectedValueKind },
+  allowedOperators = ["eq"],
+  enumOptions,
+) => {
   if (!values.target) {
     return undefined;
   }
 
   const nextValues = { ...values };
   let hasDefaults = false;
-  if (values.op === undefined) {
+  const presetDefaults = getConditionPresetFormDefaults(
+    selectedValueKind,
+    values,
+  );
+  if (presetDefaults) {
+    Object.assign(nextValues, presetDefaults);
+    hasDefaults = true;
+  }
+  if (
+    enumOptions?.length &&
+    !enumOptions.some(({ value }) => value === values.stringValue)
+  ) {
+    nextValues.stringValue = enumOptions[0].value;
+    hasDefaults = true;
+  }
+  if (!allowedOperators.includes(values.op)) {
     nextValues.op = "eq";
     hasDefaults = true;
   }
@@ -1202,12 +1246,14 @@ export const handleVisibilityConditionFormChange = (deps, payload) => {
   const values = payload._event.detail?.values ?? {};
   const kinds = selectConditionTargetKinds(store, values.target);
 
-  store.setVisibilityConditionDialogSelectedVariableType(kinds);
+  store.setVisibilityConditionDialogTarget({ target: values.target });
   render();
 
   const defaults = getConditionTargetDefaults(
     values,
-    kinds.selectedVariableType,
+    kinds,
+    getVisibilityConditionOperators(kinds.selectedVariableType),
+    store.selectVisibilityConditionEnumOptions({ target: values.target }),
   );
   if (defaults) {
     refs.visibilityConditionForm.setValues({ values: defaults });
@@ -1272,10 +1318,7 @@ export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
   store.setConditionalOverrideConditionDialogSelectedVariableType(kinds);
   render();
 
-  const defaults = getConditionTargetDefaults(
-    values,
-    kinds.selectedVariableType,
-  );
+  const defaults = getConditionTargetDefaults(values, kinds);
   if (defaults) {
     refs.conditionalOverrideConditionForm.setValues({ values: defaults });
   }
@@ -1289,6 +1332,13 @@ export const handleOptionSelected = (deps, payload) => {
 
   if (name === "widthMode" || name === "heightMode") {
     applySizeModeUpdate(deps, { name, value });
+    return;
+  }
+
+  if (name === "textDirection") {
+    store.setTextDirection({ textDirection: value });
+    render();
+    emitPanelUpdate(deps, { name, value });
     return;
   }
 
@@ -1710,6 +1760,9 @@ export const handleVisibilityConditionFormAction = (deps, payload) => {
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
   } else if (targetValueKind === "character") {
     conditionValue = values.characterValue ?? "";
+  } else {
+    conditionValue =
+      resolveConditionPresetValue(targetValueKind, values) ?? conditionValue;
   }
 
   const nextVisibilityWhen = buildVisibilityConditionExpression({
@@ -2181,6 +2234,9 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
   } else if (targetValueKind === "character") {
     conditionValue = values.characterValue ?? "";
+  } else {
+    conditionValue =
+      resolveConditionPresetValue(targetValueKind, values) ?? conditionValue;
   }
 
   const nextRule = {

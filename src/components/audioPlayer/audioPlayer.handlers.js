@@ -1,3 +1,8 @@
+import {
+  isAudioAvailable,
+  isAudioUnavailableError,
+} from "../../deps/clients/audioAvailability.js";
+import { warnIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
 
 const OPEN_DIALOG_SELECTOR = "dialog[open], rtgl-dialog[open]";
@@ -38,7 +43,13 @@ export const handleBeforeMount = (deps) => {
     return;
   }
 
-  const releaseAudioService = audioService.acquire();
+  let releaseAudioService;
+  try {
+    releaseAudioService = audioService.acquire();
+  } catch (error) {
+    if (!isAudioUnavailableError(error)) throw error;
+    return;
+  }
 
   const handleTimeUpdate = (currentTime) => {
     store.setCurrentTime({ currentTime: currentTime });
@@ -131,6 +142,7 @@ const getAudioUrl = async ({ projectService, props }) =>
 export const handleAfterMount = async (deps) => {
   const { store, props: attrs, render, audioService } = deps;
   const { autoPlay } = attrs;
+  if (!isAudioAvailable()) return;
   try {
     store.setLoading({ isLoading: true });
     render();
@@ -155,6 +167,7 @@ export const handleOnUpdate = async (deps, changes) => {
   const { oldProps } = changes;
   const { store, props: attrs, render, audioService } = deps;
   const { fileId, src, autoPlay } = attrs;
+  if (!isAudioAvailable()) return;
 
   if (oldProps.fileId === fileId && oldProps.src === src) {
     return;
@@ -185,6 +198,7 @@ export const handleOnUpdate = async (deps, changes) => {
 export const handlePlayPause = async (deps, payload) => {
   payload._event.preventDefault();
   const { audioService } = deps;
+  if (warnIfAudioUnavailable(deps)) return;
 
   if (audioService.isPlaying()) {
     audioService.pause();

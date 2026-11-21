@@ -12,6 +12,7 @@ import {
   updateVisualAnimationPlaybackContinuity,
   updateVisualAnimationPlaybackLoop,
   updateVisualAnimationPlaybackSpeed,
+  selectLayoutVisualItem,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 import { handleSubmitClick as handleVisualSubmit } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
 import {
@@ -57,11 +58,7 @@ import {
   selectViewData as selectSectionTransitionViewData,
   setFormValues as setSectionTransitionFormValues,
 } from "../../src/components/commandLineSectionTransition/commandLineSectionTransition.store.js";
-import {
-  createInitialState as createResetStoryState,
-  selectViewData as selectResetStoryViewData,
-  setFormValues as setResetStoryFormValues,
-} from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.store.js";
+
 import { EN_I18N } from "../support/i18n.js";
 
 const findFormField = (fields = [], name) => {
@@ -203,6 +200,8 @@ describe("command line animation playback", () => {
       dispatchEvent,
       store: {
         selectSelectedVisuals: () => state.selectedVisuals,
+        selectLayoutVisualItem: (payload) =>
+          selectLayoutVisualItem({ state }, payload),
       },
     });
     expect(
@@ -455,29 +454,6 @@ describe("command line animation playback", () => {
       initialSectionTransitionView.formKey,
     );
     expect(selectedSectionTransitionView.defaultValues).toMatchObject({
-      playbackSpeed: 1,
-      playbackContinuity: "render",
-    });
-
-    const resetStoryState = createResetStoryState();
-    const initialResetStoryView = selectResetStoryViewData({
-      state: resetStoryState,
-      props: {},
-      i18n: EN_I18N,
-    });
-    setResetStoryFormValues(
-      { state: resetStoryState },
-      { values: { transitionAnimationId: "fade-transition" } },
-    );
-    const selectedResetStoryView = selectResetStoryViewData({
-      state: resetStoryState,
-      props: {},
-      i18n: EN_I18N,
-    });
-    expect(selectedResetStoryView.formKey).not.toBe(
-      initialResetStoryView.formKey,
-    );
-    expect(selectedResetStoryView.defaultValues).toMatchObject({
       playbackSpeed: 1,
       playbackContinuity: "render",
     });

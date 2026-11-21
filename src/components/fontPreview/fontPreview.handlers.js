@@ -1,3 +1,5 @@
+import { createAssetLoadSessionGuard } from "../../internal/ui/assetLoadSessionGuard.js";
+
 const getFontLoadKey = (attrs = {}) => {
   const {
     fileId,
@@ -50,6 +52,7 @@ const loadPreviewFont = async (deps, attrs = {}) => {
     : attrs.fontWeightDescriptor && attrs.fontWeightDescriptor !== "undefined"
       ? [attrs.fontWeightDescriptor]
       : [];
+  const isCurrent = createAssetLoadSessionGuard({ projectService });
   const key = getFontLoadKey(attrs);
 
   store.startFontLoad({ key });
@@ -67,6 +70,7 @@ const loadPreviewFont = async (deps, attrs = {}) => {
       }
     }),
   );
+  if (!isCurrent()) return;
   const failures = results.flatMap((result, index) =>
     result.status === "rejected"
       ? [{ fileId: fileIds[index], error: result.reason }]

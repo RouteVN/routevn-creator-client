@@ -120,12 +120,12 @@ describe("sceneEditorLexical view", () => {
         "rvn-scene-editor-preview-canvas#previewCanvasHost",
       );
     }
-    const [controls] = findBranches(template, "$if !isCanvasUnavailable");
+    const [controls] = findBranches(template, "$if !isPreviewHidden");
     expect(JSON.stringify(controls)).toContain("rtgl-button#previewButton");
     expect(JSON.stringify(controls)).toContain(
       "rtgl-button#downloadCanvasButton",
     );
-    expect(source).toContain(":previewHidden=${isCanvasUnavailable}");
+    expect(source).toContain(":previewHidden=${isPreviewHidden}");
   });
 
   it("renders the mobile preview canvas without wrapper padding", () => {

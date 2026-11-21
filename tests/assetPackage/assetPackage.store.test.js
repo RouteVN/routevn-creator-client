@@ -26,6 +26,7 @@ import {
   setAssetPackage,
   setResourceData,
   setScenesData,
+  setTagsData,
   setUiConfig,
   toggleFolder,
 } from "../../src/pages/assetPackage/assetPackage.store.js";
@@ -1238,6 +1239,103 @@ describe("asset package store", () => {
         "file-character-sprite": expect.any(Object),
       }),
     );
+  });
+
+  it("carries a character's sprite tags, its sprites' tags and its sprite groups, as v3", () => {
+    const resourceDataByType = createResourceDataByType();
+    resourceDataByType.characters.items["character-1"].spriteGroups = [
+      { id: "group-1", name: "Pose", tags: ["tag-sprite"] },
+      // Its tag was deleted, so the group has none left.
+      { id: "group-2", name: "Gone", tags: ["tag-deleted"] },
+    ];
+    const tagsData = {
+      characters: {
+        items: {
+          "tag-character": { id: "tag-character", type: "tag", name: "Cast" },
+        },
+        tree: [{ id: "tag-character" }],
+      },
+      "characterSprites:character-1": {
+        items: {
+          "tag-sprite": {
+            id: "tag-sprite",
+            type: "tag",
+            name: "Pose",
+            color: "#112233",
+          },
+          "tag-spare": { id: "tag-spare", type: "tag", name: "Spare" },
+        },
+        tree: [{ id: "tag-sprite" }, { id: "tag-spare" }],
+      },
+      "characterSprites:character-other": {
+        items: {
+          "tag-other": { id: "tag-other", type: "tag", name: "Other" },
+        },
+        tree: [{ id: "tag-other" }],
+      },
+    };
+    const state = createInitialState();
+    setFilesData({ state }, { filesData: FILES_DATA });
+    setResourceData({ state }, { resourceDataByType });
+    state.selectedFolderIdsByType.characters = ["character-folder"];
+
+    // Without the project's tags there are none to carry.
+    expect(
+      createAssetPackageManifest(selectAssetPackageData({ state })).schema,
+    ).toBe("routevn.import-pack.v2");
+
+    setTagsData({ state }, { tagsData });
+    const contents = selectAssetPackageData({ state });
+    const character = contents.repository.characters.items["character-1"];
+
+    expect(character.spriteTags).toEqual({
+      items: {
+        "tag-sprite": {
+          id: "tag-sprite",
+          type: "tag",
+          name: "Pose",
+          color: "#112233",
+        },
+        "tag-spare": { id: "tag-spare", type: "tag", name: "Spare" },
+      },
+      tree: [{ id: "tag-sprite" }, { id: "tag-spare" }],
+    });
+    expect(character.sprites.items["sprite-1"].tagIds).toEqual(["tag-sprite"]);
+    expect(character.spriteGroups).toEqual([
+      { id: "group-1", name: "Pose", tags: ["tag-sprite"] },
+    ]);
+    // The character's own tags are still left out.
+    expect(character).not.toHaveProperty("tagIds");
+    expect(createAssetPackageManifest(contents).schema).toBe(
+      "routevn.import-pack.v3",
+    );
+    // The list page exports the saved pack with the same tags.
+    expect(
+      createSavedAssetPackContents({
+        repositoryState: {
+          ...structuredClone(resourceDataByType),
+          files: FILES_DATA,
+          tags: tagsData,
+          assetPacks: {
+            items: {
+              "pack-1": {
+                id: "pack-1",
+                type: "assetPack",
+                name: "Pack",
+                resources: [
+                  {
+                    resourceType: "characters",
+                    folderIds: ["character-folder"],
+                  },
+                ],
+              },
+            },
+            tree: [{ id: "pack-1" }],
+          },
+        },
+        assetPackId: "pack-1",
+      }),
+    ).toEqual(contents);
   });
 
   it("exports a nested pick as a top-level folder, and a pick inside another once", () => {

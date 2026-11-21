@@ -34,7 +34,14 @@ const isCheckerboardVisible = (value) => {
   return true;
 };
 
-const resolvePreviewPadding = (canvas) => {
+// The space left around the frame. A preview whose box already has the
+// frame's shape sets `padding` to 0, so the frame fills the box exactly.
+const resolvePreviewPadding = (canvas, props = {}) => {
+  const explicitPadding = Number(props.padding);
+  if (props.padding !== undefined && explicitPadding >= 0) {
+    return explicitPadding;
+  }
+
   const minDimension = Math.min(canvas.width, canvas.height);
   if (minDimension <= 0) {
     return 0;
@@ -188,7 +195,7 @@ const drawFrame = (deps, { frameOffset = 0 } = {}) => {
   const outputHeight =
     sourceSize?.h ?? sourceFrame?.h ?? sourceImage.naturalHeight;
 
-  const previewPadding = resolvePreviewPadding(canvas);
+  const previewPadding = resolvePreviewPadding(canvas, props);
   const availableWidth = Math.max(1, canvas.width - previewPadding * 2);
   const availableHeight = Math.max(1, canvas.height - previewPadding * 2);
   const scale = Math.min(

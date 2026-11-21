@@ -1,7 +1,10 @@
 import createRouteGraphics, { textPlugin } from "route-graphics";
 import { createAnimationResourcePreviewStates } from "../../../internal/animationPreview.js";
 import { createFontPreviewGlyphText } from "../../../internal/fontPreviewGlyphs.js";
-import { createParticlePreviewState } from "../../../internal/particlePreview.js";
+import {
+  createParticlePreviewState,
+  getParticleVideoTiming,
+} from "../../../internal/particlePreview.js";
 import { createRenderableParticleData } from "../../../internal/particles.js";
 import { requireProjectResolution } from "../../../internal/projectResolution.js";
 import { createRouteGraphicsTextPreviewState } from "../../../internal/routeGraphicsTextPreview.js";
@@ -27,9 +30,11 @@ const FULL_TEXT_STYLE_PREVIEW_HEIGHT = FULL_IMAGE_PREVIEW_HEIGHT / 4;
 const ANIMATION_PREVIEW_BACKGROUND_COLOR = "#000000";
 const STATIC_ANIMATION_PREVIEW_DURATION_MS = 1000;
 const ANIMATION_PREVIEW_RECORDING_ATTEMPTS = 2;
-const ANIMATION_THUMBNAIL_LOAD_TIMEOUT_MS = 10000;
-const ANIMATION_THUMBNAIL_PLAYBACK_GRACE_MS = 5000;
-const PARTICLE_PREVIEW_DURATION_MS = 3000;
+const PARTICLE_PREVIEW_DURATION_MS = 5000;
+const PARTICLE_PREVIEW_SETTLE_MS = 3000;
+const PARTICLE_BLANK_CHECK_INTERVAL_MS = 100;
+const PARTICLE_BLANK_STOP_MS = 500;
+const PARTICLE_BLANK_CHANNEL_MAX = 8;
 const SPRITESHEET_PREVIEW_PADDING = 16;
 const CHECKERBOARD_CELL_SIZE = 12;
 const CHECKERBOARD_LIGHT_COLOR = "#eef2f7";
@@ -51,6 +56,18 @@ const waitForPaint = () =>
     );
   });
 
+// Resolves once the frame being drawn has rendered, before it is shown. A
+// graphics canvas can only be copied then: after a frame is shown its pixels
+// are cleared, and a copy of it comes out black.
+const waitForRenderedFrame = () =>
+  new Promise((resolve) => {
+    if (typeof globalThis.requestAnimationFrame !== "function") {
+      globalThis.setTimeout(resolve, 16);
+      return;
+    }
+    globalThis.requestAnimationFrame(resolve);
+  });
+
 const isEmptyCanvasVideoRecordingError = (error) =>
   error?.message === "Canvas video recording is empty.";
 
@@ -66,6 +83,10 @@ const createThumbnailCanvas = (sourceCanvas) => {
   return canvas;
 };
 
+// Records the source canvas at full size and, alongside it, a small copy for
+// the thumbnail. The copy is drawn from the canvas itself, not from the
+// finished video played back: a canvas a video was drawn on can count as
+// cross-origin, and the browser then records no frames from it.
 const startDualVideoRecording = ({ sourceCanvas, startFullRecording }) => {
   if (!sourceCanvas) {
     throw new Error("The preview canvas is unavailable.");
@@ -135,190 +156,15 @@ const startDualVideoRecording = ({ sourceCanvas, startFullRecording }) => {
     thumbnailCanvas.remove();
   };
 
-  return { cancel, drawThumbnail, stop };
-};
-
-const waitForVideoFrameData = (video) => {
-  if (video.readyState >= 2) {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve, reject) => {
-    const timeoutId = globalThis.setTimeout(() => {
-      cleanup();
-      reject(new Error("Timed out while loading the animation preview video."));
-    }, ANIMATION_THUMBNAIL_LOAD_TIMEOUT_MS);
-    const cleanup = () => {
-      globalThis.clearTimeout(timeoutId);
-      video.removeEventListener("loadeddata", handleLoadedData);
-      video.removeEventListener("error", handleError);
-    };
-    const handleLoadedData = () => {
-      cleanup();
-      resolve();
-    };
-    const handleError = () => {
-      cleanup();
-      reject(new Error("Could not load the animation preview video."));
-    };
-
-    video.addEventListener("loadeddata", handleLoadedData);
-    video.addEventListener("error", handleError);
-  });
-};
-
-const createAnimationThumbnailCanvas = (video) => {
-  if (!(video.videoWidth > 0) || !(video.videoHeight > 0)) {
-    throw new Error("The animation preview video dimensions are unavailable.");
-  }
-
-  const scale = Math.min(
-    PREVIEW_WIDTH / video.videoWidth,
-    PREVIEW_HEIGHT / video.videoHeight,
-    1,
-  );
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
-  canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
-  return canvas;
-};
-
-const playVideoIntoCanvas = ({ video, drawFrame, expectedDurationMs }) =>
-  new Promise((resolve, reject) => {
-    let frameCallbackId;
-    let frameTimerId;
-    const mediaDurationMs = Number.isFinite(video.duration)
-      ? Math.max(0, video.duration * 1000)
-      : 0;
-    const durationMs = Math.max(mediaDurationMs, expectedDurationMs ?? 0);
-    const timeoutId = globalThis.setTimeout(
-      () => {
-        cleanup();
-        reject(
-          new Error(
-            "Timed out while generating the animation thumbnail video.",
-          ),
-        );
-      },
-      durationMs * 2 + ANIMATION_THUMBNAIL_PLAYBACK_GRACE_MS,
+  const readThumbnail = () =>
+    thumbnailContext.getImageData(
+      0,
+      0,
+      thumbnailCanvas.width,
+      thumbnailCanvas.height,
     );
-    const cleanup = () => {
-      globalThis.clearTimeout(timeoutId);
-      globalThis.clearTimeout(frameTimerId);
-      video.removeEventListener("ended", handleEnded);
-      video.removeEventListener("error", handleError);
-      if (
-        frameCallbackId !== undefined &&
-        typeof video.cancelVideoFrameCallback === "function"
-      ) {
-        video.cancelVideoFrameCallback(frameCallbackId);
-      }
-    };
-    const handleEnded = () => {
-      drawFrame();
-      cleanup();
-      resolve();
-    };
-    const handleError = () => {
-      cleanup();
-      reject(new Error("Animation thumbnail video playback failed."));
-    };
-    const requestNextFrame = () => {
-      if (video.ended) {
-        return;
-      }
-      if (typeof video.requestVideoFrameCallback === "function") {
-        frameCallbackId = video.requestVideoFrameCallback(() => {
-          frameCallbackId = undefined;
-          drawFrame();
-          requestNextFrame();
-        });
-        return;
-      }
-      frameTimerId = globalThis.setTimeout(() => {
-        drawFrame();
-        requestNextFrame();
-      }, 16);
-    };
 
-    video.addEventListener("ended", handleEnded);
-    video.addEventListener("error", handleError);
-    drawFrame();
-    requestNextFrame();
-    try {
-      Promise.resolve(video.play()).catch((error) => {
-        cleanup();
-        reject(error);
-      });
-    } catch (error) {
-      cleanup();
-      reject(error);
-    }
-  });
-
-const renderAnimationThumbnailVideoOnce = async ({
-  previewBlob,
-  expectedDurationMs,
-}) => {
-  const video = document.createElement("video");
-  video.preload = "auto";
-  video.muted = true;
-  video.playsInline = true;
-  const objectUrl = URL.createObjectURL(previewBlob);
-  let canvas;
-  let recording;
-
-  try {
-    video.src = objectUrl;
-    video.load();
-    await waitForVideoFrameData(video);
-    canvas = createAnimationThumbnailCanvas(video);
-    const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("The animation thumbnail canvas is unavailable.");
-    }
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    const drawFrame = () => {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    };
-
-    recording = startCanvasVideoRecording({ canvas, frameRate: 60 });
-    await playVideoIntoCanvas({ video, drawFrame, expectedDurationMs });
-    await waitForPaint();
-    const activeRecording = recording;
-    recording = undefined;
-    return await activeRecording.stop();
-  } finally {
-    await recording?.stop().catch(() => undefined);
-    video.pause();
-    video.removeAttribute("src");
-    video.load();
-    URL.revokeObjectURL(objectUrl);
-    video.remove();
-    canvas?.remove();
-  }
-};
-
-export const renderAnimationThumbnailVideo = async (options) => {
-  for (
-    let attempt = 1;
-    attempt <= ANIMATION_PREVIEW_RECORDING_ATTEMPTS;
-    attempt += 1
-  ) {
-    try {
-      return await renderAnimationThumbnailVideoOnce(options);
-    } catch (error) {
-      if (
-        !isEmptyCanvasVideoRecordingError(error) ||
-        attempt === ANIMATION_PREVIEW_RECORDING_ATTEMPTS
-      ) {
-        throw error;
-      }
-      await waitForPaint();
-    }
-  }
+  return { cancel, drawThumbnail, readThumbnail, stop };
 };
 
 const dataUrlToBlob = (value) => {
@@ -886,25 +732,29 @@ const recordAnimationPreviewVideoOnce = async ({
       await waitForPaint();
     }
 
-    recording = graphicsService.startCanvasVideoRecording({ frameRate: 60 });
+    recording = startDualVideoRecording({
+      sourceCanvas: graphicsService.getCanvas(),
+      startFullRecording: () =>
+        graphicsService.startCanvasVideoRecording({ frameRate: 60 }),
+    });
     const startedAtMs = performance.now();
     let elapsedMs = 0;
     while (elapsedMs < recordingDurationMs) {
+      // Setting the time renders the frame, so the copy is drawn right after.
       graphicsService.setAnimationTime(elapsedMs);
+      recording.drawThumbnail();
       await wait(Math.min(16, recordingDurationMs - elapsedMs));
       elapsedMs = Math.max(0, performance.now() - startedAtMs);
     }
     graphicsService.setAnimationTime(recordingDurationMs);
+    recording.drawThumbnail();
     await waitForPaint();
 
     const activeRecording = recording;
     recording = undefined;
-    return {
-      durationMs: recordingDurationMs,
-      previewBlob: await activeRecording.stop(),
-    };
+    return await activeRecording.stop();
   } finally {
-    await recording?.stop().catch(() => undefined);
+    await recording?.cancel();
   }
 };
 
@@ -932,7 +782,6 @@ export const renderAnimationPreviewVideos = async ({
   animations,
   imagesData,
   projectResolution,
-  renderThumbnailVideo = renderAnimationThumbnailVideo,
 }) => {
   if (animations.length === 0) {
     return [];
@@ -965,16 +814,13 @@ export const renderAnimationPreviewVideos = async ({
     const previews = [];
     for (const { animationId, animation } of animations) {
       try {
-        const { durationMs, previewBlob } = await recordAnimationPreviewVideo({
-          animation,
-          imagesData,
-          graphicsService,
-          projectResolution,
-        });
-        const thumbnailBlob = await renderThumbnailVideo({
-          expectedDurationMs: durationMs,
-          previewBlob,
-        });
+        const { previewBlob, thumbnailBlob } =
+          await recordAnimationPreviewVideo({
+            animation,
+            imagesData,
+            graphicsService,
+            projectResolution,
+          });
         previews.push({
           animationId,
           previewBlob,
@@ -1006,21 +852,40 @@ export const renderAnimationPreviewVideo = async (options) => {
     ],
     imagesData: options.imagesData,
     projectResolution: options.projectResolution,
-    renderThumbnailVideo: options.renderThumbnailVideo,
   });
   return preview;
 };
 
-export const renderParticlePreviewVideo = async ({
-  particle,
-  imageItems,
-  imageAssets,
-}) => {
+// A particle preview draws on black, so a frame with no particle left in it
+// is black all over.
+const isBlankParticleFrame = ({ data }) => {
+  for (let index = 0; index < data.length; index += 4) {
+    if (
+      data[index] > PARTICLE_BLANK_CHANNEL_MAX ||
+      data[index + 1] > PARTICLE_BLANK_CHANNEL_MAX ||
+      data[index + 2] > PARTICLE_BLANK_CHANNEL_MAX
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const recordParticlePreview = async ({ particle, imageItems, imageAssets }) => {
   const renderableParticle = createRenderableParticleData(particle, imageItems);
   const width = Math.max(1, Math.round(Number(renderableParticle.width) || 1));
   const height = Math.max(
     1,
     Math.round(Number(renderableParticle.height) || 1),
+  );
+  // A preview rests a third of the way through its video until it is
+  // hovered, so a running effect fills out before the recording starts.
+  const { settleMs, videoMs, minVideoMs } = getParticleVideoTiming(
+    renderableParticle.modules,
+    {
+      runningSettleMs: PARTICLE_PREVIEW_SETTLE_MS,
+      maxVideoMs: PARTICLE_PREVIEW_DURATION_MS,
+    },
   );
   const host = document.createElement("div");
   const graphicsService = await createGraphicsService();
@@ -1039,6 +904,9 @@ export const renderParticlePreviewVideo = async ({
       createParticlePreviewState(renderableParticle),
     );
     await waitForPaint();
+    await wait(settleMs);
+    // The thumbnail opens on a drawn frame, not on its empty canvas.
+    await waitForRenderedFrame();
     recording = startDualVideoRecording({
       sourceCanvas: graphicsService.getCanvas(),
       startFullRecording: () =>
@@ -1047,10 +915,37 @@ export const renderParticlePreviewVideo = async ({
     recording.drawThumbnail();
     const startedAtMs = performance.now();
     let elapsedMs = 0;
-    while (elapsedMs < PARTICLE_PREVIEW_DURATION_MS) {
-      await wait(Math.min(16, PARTICLE_PREVIEW_DURATION_MS - elapsedMs));
+    let lastCheckedAtMs = 0;
+    let hasShownParticles = false;
+    let blankSinceMs;
+    while (elapsedMs < videoMs) {
+      await waitForRenderedFrame();
       recording.drawThumbnail();
       elapsedMs = Math.max(0, performance.now() - startedAtMs);
+      if (
+        minVideoMs === undefined ||
+        elapsedMs - lastCheckedAtMs < PARTICLE_BLANK_CHECK_INTERVAL_MS
+      ) {
+        continue;
+      }
+      lastCheckedAtMs = elapsedMs;
+      if (!isBlankParticleFrame(recording.readThumbnail())) {
+        hasShownParticles = true;
+        blankSinceMs = undefined;
+        continue;
+      }
+      if (!hasShownParticles) {
+        continue;
+      }
+      blankSinceMs ??= elapsedMs;
+      // The effect has stopped emitting and its particles are gone before
+      // their life ended, such as ones that left its bounds.
+      if (
+        elapsedMs >= minVideoMs &&
+        elapsedMs - blankSinceMs >= PARTICLE_BLANK_STOP_MS
+      ) {
+        break;
+      }
     }
     const videos = await recording.stop();
     recording = undefined;
@@ -1061,6 +956,36 @@ export const renderParticlePreviewVideo = async ({
     objectUrls.forEach((url) => URL.revokeObjectURL(url));
     host.remove();
   }
+};
+
+// Records particles one after another, each in its own graphics context.
+// Freeing a context frees the textures it loaded, which another context that
+// drew the same image would lose, so only one is alive at a time.
+export const renderParticlePreviewVideos = async ({
+  particles,
+  imageItems,
+}) => {
+  const previews = [];
+  for (const { particleId, particle, imageAssets } of particles) {
+    try {
+      const videos = await recordParticlePreview({
+        particle,
+        imageItems,
+        imageAssets,
+      });
+      previews.push({
+        particleId,
+        previewBlob: videos.previewBlob,
+        thumbnailBlob: videos.thumbnailBlob,
+      });
+    } catch (error) {
+      throw new Error(
+        `Could not generate preview for particle '${particle.name}' (${particleId}): ${error.message ?? "Unknown error"}`,
+        { cause: error },
+      );
+    }
+  }
+  return previews;
 };
 
 // Draws layouts one after another at the project's resolution, and returns

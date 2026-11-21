@@ -5,6 +5,9 @@ propsSchema:
     file:
       type: object
       description: The selected source image file to crop
+    guideCircle:
+      type: number
+      description: Optional guide circle diameter as a fraction of the crop width
     outputSize:
       type: number
       description: Optional fixed pixel size for the cropped square output

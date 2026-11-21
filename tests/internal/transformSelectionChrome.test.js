@@ -42,4 +42,27 @@ describe("transformSelectionChrome", () => {
       hover: { cursor: "ew-resize" },
     });
   });
+
+  it("points the resize cursor the way a rotated edge moves", () => {
+    const cursorFor = (edge, rotation) =>
+      createTransformSelectionResizeHandle({
+        id: edge,
+        width: 200,
+        height: 100,
+        edge,
+        size: 12,
+        fill: { alpha: 0 },
+        rotation,
+      }).hover.cursor;
+
+    expect(cursorFor("right", 0)).toBe("ew-resize");
+    expect(cursorFor("bottom", 0)).toBe("ns-resize");
+    expect(cursorFor("right", 90)).toBe("ns-resize");
+    expect(cursorFor("left", -90)).toBe("ns-resize");
+    expect(cursorFor("top", 90)).toBe("ew-resize");
+    expect(cursorFor("right", 45)).toBe("nwse-resize");
+    expect(cursorFor("right", 135)).toBe("nesw-resize");
+    expect(cursorFor("bottom", 40)).toBe("nesw-resize");
+    expect(cursorFor("right", 200)).toBe("ew-resize");
+  });
 });

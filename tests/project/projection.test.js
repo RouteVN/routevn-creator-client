@@ -2200,3 +2200,91 @@ describe("constructProjectData", () => {
     ]);
   });
 });
+
+it("retains a video used by a reachable layout and reports its usage", async () => {
+  const { recursivelyCheckResource } = await import(
+    "../../src/internal/project/projection.js"
+  );
+  const layout = {
+    id: "layout-one",
+    type: "layout",
+    name: "Layout One",
+    layoutType: "normal",
+    elements: {
+      items: {
+        node: {
+          id: "node",
+          type: "video",
+          videoId: "video-one",
+          width: 640,
+          height: 360,
+        },
+      },
+      tree: [{ id: "node" }],
+    },
+  };
+  const state = createExportRepositoryState({
+    files: createTreeCollection({
+      "file-one": { id: "file-one", mimeType: "video/webm" },
+    }),
+    videos: createTreeCollection(
+      {
+        "video-one": {
+          id: "video-one",
+          type: "video",
+          name: "Video One",
+          fileId: "file-one",
+        },
+      },
+      [{ id: "video-one" }],
+    ),
+    layouts: createTreeCollection({ "layout-one": layout }, [
+      { id: "layout-one" },
+    ]),
+    scenes: createTreeCollection(
+      {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          sections: {
+            items: {
+              section: {
+                id: "section",
+                lines: {
+                  items: {
+                    line: {
+                      id: "line",
+                      actions: {
+                        dialogue: { ui: { resourceId: "layout-one" } },
+                      },
+                    },
+                  },
+                  tree: [{ id: "line" }],
+                },
+              },
+            },
+            tree: [{ id: "section" }],
+          },
+        },
+      },
+      [{ id: "scene-1" }],
+    ),
+  });
+  const usage = collectUsedResourcesForExport(state);
+  expect(usage.usedIds.videos).toContain("video-one");
+  const filtered = buildFilteredStateForExport(state, usage);
+  expect(filtered.files.items["file-one"]).toBeDefined();
+  expect(
+    constructProjectData(filtered).resources.layouts["layout-one"].elements[0],
+  ).toMatchObject({ type: "video", src: "file-one", fileType: "video/webm" });
+  const domain = projectRepositoryStateToDomainState({
+    repositoryState: state,
+  });
+  expect(
+    recursivelyCheckResource({
+      state: domain,
+      itemId: "video-one",
+      checkTargets: ["layouts"],
+    }).isUsed,
+  ).toBe(true);
+});

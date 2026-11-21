@@ -1,7 +1,8 @@
 import { createTreeCollection } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
+import { createLayoutElementDuplicatePlan } from "../../../../internal/project/layout.js";
 
-export const createControlCommandApi = (shared) => ({
+const createControlItemCommandApi = (shared) => ({
   async createControlItem({
     controlId,
     name,
@@ -268,3 +269,38 @@ export const createControlCommandApi = (shared) => ({
     });
   },
 });
+
+// Copies an element with everything inside it. If one of the copies cannot
+// be created, the ones already made are removed again.
+export const createControlCommandApi = (shared) => {
+  const api = createControlItemCommandApi(shared);
+
+  api.duplicateControlElement = async ({ controlId, elementId }) => {
+    const context = await shared.ensureCommandContext();
+    const plan = createLayoutElementDuplicatePlan(
+      context.state?.controls?.items?.[controlId]?.elements,
+      elementId,
+      shared.createId,
+    );
+    if (plan.length === 0) {
+      return { valid: false, error: { message: "Element not found." } };
+    }
+
+    for (const [index, step] of plan.entries()) {
+      const result = await api.createControlElement({ controlId, ...step });
+      if (result?.valid === false) {
+        if (index > 0) {
+          await api.deleteControlElement({
+            controlId,
+            elementIds: [plan[0].elementId],
+          });
+        }
+        return result;
+      }
+    }
+
+    return plan[0].elementId;
+  };
+
+  return api;
+};

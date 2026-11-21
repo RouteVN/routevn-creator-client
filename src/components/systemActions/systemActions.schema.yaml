@@ -16,6 +16,10 @@ propsSchema:
       type: object
     hasPreviousPresentationStateContext:
       type: boolean
+    # Pictures of the line's visuals, each alone, by visual id, for the visual
+    # panel. Left out where they are not taken.
+    visualSnapshots:
+      type: object
     backgroundTransformEditor:
       type: object
     actionType:

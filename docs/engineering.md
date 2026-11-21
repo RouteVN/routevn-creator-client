@@ -87,6 +87,18 @@ For Simplified Chinese localization, follow the RouteVN Simplified Chinese
 translation style guide. Use it as the terminology and tone reference for
 RouteVN `zh-hans` UI and docs copy.
 
+For Traditional Chinese localization, follow the RouteVN Traditional Chinese
+translation style guide. The `zh-hant` catalog uses Taiwan usage for Taiwan,
+Hong Kong, and Macau. Translate it from English, not by converting the
+`zh-hans` catalog, because many software words differ between the two.
+
+For Korean localization, follow the RouteVN Korean translation style guide.
+The `ko` catalog writes messages in polite 해요체. Some particles, such as
+`을` and `를`, change with the last sound of the word before them, so a
+placeholder whose text is unknown is followed by a noun or a particle that
+does not change; the guide lists the forms. Lines in Korean break at spaces
+(`word-break: keep-all` for `:lang(ko)` in `static/public/theme.css`).
+
 For Russian localization, follow the RouteVN Russian translation style guide.
 Use it as the terminology and tone reference for RouteVN `ru` UI copy.
 
@@ -105,6 +117,38 @@ with tone marks on the first vowel of open `oa`, `oe`, and `uy` syllables
 (`xóa`, `hủy`) and `y` instead of `i` after `h`, `k`, `l`, `m`, and `t` where
 both spellings are accepted (`lý`, `kỹ`). Vietnamese nouns do not change form after a number, so both keys of a count
 family hold the same text.
+
+For Indonesian localization, follow the RouteVN Indonesian translation style
+guide. Indonesian nouns do not change form after a number, so both keys of a
+count family hold the same text. The `id` catalog separates two numbers in one
+value with a semicolon, as in `{x}; {y}`, because Indonesian writes decimals
+with a comma.
+
+For Ukrainian localization, follow the RouteVN Ukrainian translation style
+guide. The `uk` catalog uses the 2019 spelling (`проєкт`) and writes the
+apostrophe as `’` (U+2019), as in `ім’я`. Every count family has `_one`,
+`_few`, `_many`, and `_other` keys, with the genitive singular in `_other`
+(`{count} рядка`), and coordinates use `{x}; {y}` because `uk` writes decimals
+with a comma.
+
+For Italian localization, follow the RouteVN Italian translation style guide.
+Translations in the `it` catalog use curly double quotes (“ ”) and the
+apostrophe ’ (U+2019), never straight `"` or `'`. Italian writes decimals with
+a comma, so coordinates use `{x}; {y}`.
+
+For Polish localization, follow the RouteVN Polish translation style guide.
+Polish plural rules select `one`, `few`, and `many` for whole numbers and
+`other` for fractions, so every count family in the `pl` catalog has `_one`,
+`_few`, `_many`, and `_other` keys (`1 akcja`, `2 akcje`, `5 akcji`). `pl`
+writes decimals with a comma, so coordinates use `{x}; {y}`.
+
+The iOS Files location that local projects live in comes from
+`appPage.iosOnMyIphoneLocation` and `appPage.iosOnMyIpadLocation`, one label
+per device. The projects-folder setup messages insert it as `{location}`, and
+the projects folder path, which native code writes as `On My iPhone/…`, shows
+it in place of the English prefix. The app does not insert a device name into
+a sentence, so a language can decline it, as Polish does in `Na moim iPhonie`
+and `Na moim iPadzie`.
 
 Rettangoli UI form validation errors, such as the required-field message, come
 from the `formValidation` catalog namespace, and the text Rettangoli UI
@@ -132,14 +176,26 @@ from `src/internal/ui/i18nCopy.js`, which applies `Intl.PluralRules` for
 `bun run check:i18n` requires every category a locale's rules select for
 numbers below 200 and rejects categories they never select. A category used
 only for larger numbers, such as French `many` for exact millions, is
-optional. French uses the singular for 0, so `fr` shows `0 ligne`. `pt` sets
+optional. A category that only one count selects, such as Arabic `zero`,
+`one`, and `two`, may spell out its number instead of showing the count
+placeholder, as in `سطران` (two lines); every other form keeps the English
+placeholders. French uses the singular for 0, so `fr` shows `0 ligne`. `pt` sets
 `pt-PT` so that 0 keeps the plural as its guide asks, because CLDR's `pt` rule
 makes 0 singular.
 
 Do not join a number and a unit in code. `formatFileSize`,
 `formatDurationLabel`, `formatMilliseconds`, and `formatElapsedSeconds` take
 the unit from `dateTime` catalog templates such as `fileSizeMegabytes` and
-`durationSeconds`, so a locale can write `2,45 Mo` or `250 ms`.
+`durationSeconds`, so a locale can write `2,45 Mo` or `250 ms`. `formatDate`
+writes a date less than a week old as a relative time, such as `5 min. ago`, in
+the `Intl.RelativeTimeFormat` style that `dateTime.relativeTimeStyle` sets:
+`short` in most catalogs, and `long` in `id`, whose short style writes
+`3 h lalu` for three days ago, and in `it`, where `3 giorni fa` reads more
+naturally than `3 gg fa`. Older dates, store dates, and backup times show the
+month in the `Intl.DateTimeFormat` style that `dateTime.monthStyle` sets:
+`short` in most catalogs (`Oct 18, 2026`), and `2-digit` in `pl`, which writes
+`18.10.2026` because CLDR's short Polish month names lack the period that
+Polish abbreviations take.
 
 Do not join a number and `%` in code either. `formatPercent` takes the sign
 from `dateTime.percent`, so French and Russian write `42 %` with a
@@ -157,6 +213,55 @@ French can put non-breaking spaces around `×`.
 Do not join a label and a value with `: ` in code either. French puts a
 non-breaking space before the colon, so use a catalog template such as
 `labelValue: "{label}: {value}"` in `resourcePages` or `resourceImport`.
+
+Do not join list items with `", "` in code either. `formatList` in
+`src/internal/dates.js` joins them with `dateTime.listSeparator`: `, ` in most
+catalogs, and the enumeration comma `、` in `ja`, `zh-hans`, and `zh-hant`.
+App lists have no "and" before the last item, so a list can end with a count
+from the catalog, such as `usedByMore`.
+
+### Right-to-left languages
+
+Arabic (`ar`) and Urdu (`ur`) are right-to-left languages, shown as
+`العربية (Beta)` and `اردو (Beta)`. The `ar` catalog writes all six plural
+categories, with `_one` and `_two` spelling out the number, as in `إجراء واحد`
+and `إجراءان`, and sets `intlLocale` to `ar-u-nu-latn` so numbers keep the
+digits 0–9 used in inputs.
+
+`appService.setDocumentLanguage` sets `<html dir>` from the locale with
+`getTextDirection` in `src/internal/textDirection.js`, and Rettangoli UI lays
+out right to left under `dir="rtl"`: in attributes such as `ml`, `pr`, `ah=e`,
+and `edge=l`, `l` and `r` mean the inline start and end. App styles follow the
+same rule:
+
+- Use logical properties for one-sided spacing and positions, such as
+  `padding-inline-start` for an indent or `inset-inline-end` for a corner
+  badge. Physical `left` and `right` are fine in pairs (`left: 0; right: 0`),
+  for centering (`left: 50%` with `translateX(-50%)`), and for coordinates.
+- `resize-side="left"` and `"right"` on `rvn-resizable-panel` name the inline
+  start and end. Handlers that compare pointer positions read the direction
+  with `appService.getDocumentDirection()`.
+- Mirror icons that point along the line, such as a back chevron or a closed
+  folder's arrow, with a `:dir(rtl)` rule in the component's `styles`
+  (`transform: scaleX(-1)`). Rettangoli UI does not mirror `pre` and `suf`
+  icons on buttons.
+- Keep surfaces with their own coordinates left to right with `dir=ltr`:
+  keyframe timelines and the timeline editors. The scene map, layout editor
+  canvas, and previews position content with physical coordinates and are
+  unaffected.
+- The scene text editor takes its direction from the project language, not the
+  app language, because the script is written in the project language: an
+  Arabic, Persian, or Urdu project is right to left even in the English app,
+  and an English project is left to right in the Arabic app. Line numbers sit
+  at the inline start and previews at the inline end. Lexical sets `dir` on
+  each line from its first letter, and the editor overrides it so every line
+  follows the project, even one that starts with a name in Latin letters.
+  Left and Right move the caret toward the end and start of the line in a
+  right-to-left project, including across mentions, which the editor moves
+  over itself. The browser moves the caret in logical order, so inside Latin
+  text in a right-to-left line, Left moves to the right.
+- In the file explorer, Left opens a folder and Right closes it under
+  right-to-left layouts; `h` and `l` keep their meaning.
 
 ## Code Style
 
@@ -605,10 +710,10 @@ workflows.
 
 ### Animation Camera Presentation
 
-`src/internal/animationCamera.js` shares Camera grouping and timeline presentation
-between the animation editor and animation catalog. Only sides explicitly listed
-in `cameraTracks` are grouped; stored/runtime animation tracks remain numeric.
-Editor-only preview artwork stays in `src/pages/animationEditor/support/`.
+`src/pages/animationEditor/support/animationCamera.js` holds the animation
+editor's Camera grouping, timeline presentation, and preview artwork. Only
+sides explicitly listed in `cameraTracks` are grouped; stored/runtime animation
+tracks remain numeric.
 
 ## Code Placement
 
@@ -822,8 +927,87 @@ The canonical implementation points are:
 - bundle-page export path: `src/pages/versions/versions.handlers.js`
 - reader: `scripts/main.js`
 
+The shared bundle range reader validates an HTTP `200` body's header,
+manifest, and complete byte length before caching it as the full package.
+An incomplete or mislabeled range response triggers one shared full download
+without a Range header and with browser caching bypassed. Concurrent asset
+reads share that recovery. The recovered header and manifest must match any
+metadata already read, so a same-size replacement cannot mix new payloads with
+old asset offsets. An invalid or changed recovery response fails visibly.
+Normal `206` responses retain range loading. Regression coverage lives in
+`tests/services/bundleRangeReader.test.js` and
+`node tests/services/bundleRangeReader.browser.mjs` (Chromium and WebKit).
+
 If the bundle contract changes, update the smoke test in
 `scripts/test-smoke.js` in the same PR.
+
+### Player Asset Lookahead
+
+The exported player on every platform runs `scripts/main.js`. It loads a
+picture or sound from the package the first time a screen needs it, and holds
+that screen back until the load ends. To keep the line that shows a new picture
+from appearing late, the player loads ahead of the story:
+
+- After screens are drawn, `createLookaheadPlan` in
+  `scripts/playerAssetLookahead.js` lists the pictures and sounds of the next
+  30 lines the story leads to. A jump among a line's own actions
+  (`sectionTransition`, `resetStoryAtSection`, `jumpToLine`) is always taken,
+  so the plan follows it to its target and leaves out the lines behind it. The
+  plan ends at such a jump when its target is unknown. A jump inside a choice
+  item, an event, a conditional branch, or a random outcome may not be taken,
+  so the plan adds the first 5 lines of every such target, because the
+  player's pick or the draw is unknown. The same goes for the buttons of a layout or control the line
+  shows, such as the Start button of a title screen. `jumpToLine` targets
+  start at the line it names, and a jump that names only a scene starts at the
+  scene's initial section.
+- The plan starts at the line the engine last entered. The engine announces
+  each line in a `handleLineActions` effect that carries the position;
+  `watchLineEntries` reads it from there, because `selectSystemState()` copies
+  the whole engine state. That selector is read once at most, when no line
+  has been announced yet.
+- Reading the assets of a line is slow, so one pass reads lines for 4 ms
+  (`LINE_SCAN_BUDGET_MS` in `scripts/main.js`) and the plan grows over the
+  next passes. Nothing is freed while the plan is short. A pass that fails is
+  run again twice and its screens are kept for the next pass.
+- `scripts/playerAssetPreloader.js` loads that list in the background, one
+  asset at a time, and starts nothing while a screen waits for its own assets.
+  A screen that needs an asset right away loads it directly, as before. A
+  background load that fails is tried again by a later plan and dropped after
+  3 failures in a row. A screen that needs an asset while its background load
+  is under way waits for that load, and loads the asset once more itself if
+  the background load fails.
+- Loaded pictures may hold 160 MB of decoded pixels
+  (`MAX_LOADED_IMAGE_BYTES`), and the plan may claim half of that. A picture
+  that does not fit in what is left of the plan is left out and the plan goes
+  on with the lines after it. `createAssetSizeLookup` counts four bytes per
+  pixel, takes a spritesheet as the whole sheet, and assumes 16 to 1
+  compression for a picture of unknown pixel size. Sounds count for nothing:
+  they are loaded ahead but not freed.
+- Whether a file is a picture or a sound comes from the type the package
+  lists. A file listed under another type is looked up in the project's
+  pictures and sounds (`createAssetKindLookup`), and once loaded, the type
+  found in its bytes decides.
+- Past the limit, the pictures used longest ago are freed with
+  `routeGraphics.unloadAssets`. Pictures on the current screen, the screen
+  before it, every screen drawn since the last pass, screens waiting to be
+  drawn, and the plan are never freed. A screen is the same screen as the one
+  before when the story did not enter a line for it, such as a hovered or
+  toggled button, or when it only adds or removes pictures. A freed picture
+  loads again when the story returns to it.
+- `scripts/playerBundleAssetLoader.js` tracks which assets are loaded. An
+  asset counts as missing from the moment it is freed, and a reload waits for
+  the graphics engine to finish freeing it.
+
+`tests/services/playerAssetLookahead.test.js` covers the plan, the sizes, the
+position tracking and the freeing rules, including random stories;
+`tests/services/playerAssetPreloader.test.js` and
+`tests/services/playerBundleAssetLoader.test.js` cover the background queue
+and the loader. `bun run test:player-lookahead` plays a generated story of two
+sections with music in the built player in Chromium and WebKit: it stops
+answering package reads and checks that the next pictures, across the jump to
+the second section, still appear, then plays past the memory limit and checks
+that freed pictures are read again and shown, and runs skip mode through the
+story and checks that it continues in order.
 
 Service boundary test:
 
@@ -1075,6 +1259,21 @@ save-data identity; older stored Web records are backfilled once from
 both required and editable. Changing the macOS identifier changes the exported
 app and save-data identity, so builds using different identifiers do not share
 saves.
+The Web record may also name two optional project files,
+`loadingBackgroundFileId` and `startBackgroundFileId`. Web export re-encodes
+them and inlines them into the exported `index.html`, so they show before the
+player script and package load. Each image must have the project's aspect
+ratio; the picker rejects any other shape, so the image lines up with the game
+canvas. A
+loading background replaces the loading text and progress bar, which stay in
+the page for assistive technology only. A start background fades in over the
+loading image and replaces the start prompt text; `loadingFadeDuration` and
+`startFadeDuration` set, in milliseconds, how long that fade and the fade into
+the first scene take: 0 to 2000 in steps of 100, picked from a list, and 0
+(no fade) by default. Without a start
+background, the start screen
+keeps the loading background and the prompt. Creator versions that do not know
+these fields drop them when they save Web platform details.
 Preview records stored under the former
 `releaseInfo.<platform>` keys are copied into the `platformDetails.<platform>`
 namespace when read. A later project icon update fills an existing macOS
@@ -1317,7 +1516,7 @@ cancel them: macOS WebKit hides the cursor until the mouse moves after every
 key press a page handles, which hides the hand and makes it flicker through a
 drag. Instead focus moves to the pan layer, so Space's default action (scrolling
 from the focused or last clicked element, or pressing a focused button) has
-nothing to do. The middle mouse button pans anywhere. The wheel never pans: over the empty workspace it zooms 10% per
+nothing to do. The middle mouse button pans anywhere, as on the scene map. The wheel never pans: over the empty workspace it zooms 10% per
 step around the pointer, as on the scene map, and over the canvas it reaches the
 canvas unchanged. ctrl + wheel (a trackpad pinch) zooms anywhere. One finger
 on the canvas still edits; a first finger that already touched it gets a
@@ -1397,12 +1596,40 @@ steps, range, bounds, default, presets, and unit, and the shared
 `src/internal/ui/sliderPopover.js` turns those into the slider's range, the
 step buttons, a stepped value, and the Presets menu's items for both popovers.
 
-The layout editor has undo and redo for element edits made since the page
-opened: canvas moves, resizes, rotations and nudges, edit panel fields, show and
+An editor page's undo history outlives the page. Each editor keeps its
+history in its page store while it is open and hands it to
+`appService.retainEditHistory` as it is left, and takes it back with
+`appService.getRetainedEditHistory` when the same item is opened again, so
+leaving an editor and coming back keeps undo and redo. Only one history is
+kept, in memory (`src/deps/services/shared/retainedEditHistoryService.js`): it
+belongs to the last editor and item an edit was recorded in
+(`getEditHistoryOwner`, such as one layout, one scene, or one transform), and
+it is dropped when another editor, or the same editor on another item, is left
+with steps of its own. An editor left without an edit keeps the history that
+was there. The history belongs to one project and is dropped when an editor
+opens in another, since copies of a project share item ids. A step can refer to other items,
+such as a text style's font, and the project refuses a save that refers to an
+item that is gone, so the history is also dropped when any item the project
+held as the page was left has been deleted since (scene lines and layout
+elements apart, which only their own editor changes). The scene editor does the same when it switches scenes without
+leaving. Editors whose steps hold the whole item (animation, audio effect,
+transform, particle, text style) also keep the item as they left it, and
+`resumeEditHistory` uses the kept history only while the item still matches,
+so undo never puts an old version over a change made somewhere else. Layout
+and scene steps restore only the elements or lines they touched and are
+dropped when they no longer apply, so their history is kept whatever the item
+holds. The spritesheet editor's steps hold pictures it has only while it is
+open, so its history is not kept; its edits still end the history kept for
+another editor (`appService.clearRetainedEditHistory`). An editor opened
+inside another page, such as a visual's layout editor in the scene editor,
+is not part of this: a history it has lasts only while it is open and never
+replaces the kept one.
+
+The layout editor has undo and redo for element edits: canvas moves, resizes,
+rotations and nudges, edit panel fields, show and
 hide, and the explorer's create, rename, delete and reorder. The history lives
 in the page store (`src/internal/editHistory.js` for the steps,
-`src/internal/project/layout.js` for element snapshots), so leaving the page
-drops it. Each step holds snapshots of the elements an edit touched, from the
+`src/internal/project/layout.js` for element snapshots). Each step holds snapshots of the elements an edit touched, from the
 page's own data before and after; edits to one element less than a second apart
 are one step. Undo and redo behave like an edit: the page applies the restored
 elements at once, then saves them. A step that only changes element data goes
@@ -1452,8 +1679,7 @@ font family names. Leaving the layout editor requests the layout's thumbnail
 below); the layouts page
 requests every layout's when it opens and a new layout's after Add.
 
-The animation editor has undo and redo the same way, for edits made since the
-page opened. Its autosave saves the whole animation, so a step holds the page's
+The animation editor has undo and redo the same way. Its autosave saves the whole animation, so a step holds the page's
 animation (tracks and keyframes per side, masks, and whether camera tracks are
 authored) before and after an edit, recorded where every saved edit queues the
 autosave (`queueEditorAutosave`). Edits that change the same values less than a
@@ -1483,6 +1709,25 @@ playhead are not part of the history, and undo and redo are off while a video
 export runs. The shortcuts step aside only for text fields, so they still work
 after a slider, checkbox, or select change.
 
+The animations page is a grid of thumbnail cards; selecting one plays its
+preview in the detail panel. Animation thumbnails are drawn in the background
+as transforms' are (`projectService.requestAnimationThumbnails`,
+`createAnimationThumbnailSource` and `ANIMATION_THUMBNAIL_VERSION` in
+`src/internal/animationPreview.js`). A thumbnail is one frame of the preview
+the detail panel plays, from the saved animation and its saved preview images,
+halfway through its duration. The source carries an `animationFrame`: the
+off-screen renderer draws the start state, then the animation, holds it at
+that time in manual playback, and captures (a transition is prepared twice, as
+the detail panel does). The frame is part of the `thumbnailSourceHash` saved
+with the thumbnail, so a change to the animation, to its preview images, or to
+the time the frame is held at draws it again. The animations page requests
+every animation's when it opens, and leaving the animation editor requests
+that animation's. A hash on an animation needs `@routevn/creator-model` 1.21.0
+(schema 21). Opening the animations page saves thumbnails, so it writes to the
+project like an edit does: an older app version then asks to update before
+opening that project. An asset package leaves the hash out of its animations,
+so those app versions still import it (see `docs/import-packages.md`).
+
 The audio effects editor has undo and redo the same way. It keeps edits on the
 page and saves the whole audio effect when the page is left, so a step holds
 the audio effect (tracks and keyframes per side) before and after an edit,
@@ -1494,7 +1739,7 @@ saves nothing. Picked preview sounds save with the audio effect on leaving,
 in the same `audioEffect.update`, when they differ from what is saved; they and
 view state such as the tab and zoom are not part of the history.
 
-The scene editor has undo and redo for line edits made since the scene opened:
+The scene editor has undo and redo for line edits:
 text, new, split, merged, moved, and deleted lines, and line action edits.
 Section operations are not part of the history; a step whose section is gone
 is dropped. A step holds, for each line it touched, its section, index, and
@@ -1908,7 +2153,8 @@ avoids inserting every intermediate text version into `local_drafts`.
 A section save that fails, refused with `{ valid: false }` or thrown, fails
 fast. It is not submitted again, because its commands may be partly stored
 already. Only that section's unsaved changes are dropped: its draft and the
-editor showing it go back to the stored lines, undo history is reset, and the
+editor showing it go back to the stored lines, undo history is reset (and the
+history kept for that scene dropped), and the
 user is told at once, by an alert naming the section and scene, that the
 changes were removed. Other sections still save and the flush completes, so
 navigation, backup and cleanup carry on and the user does not keep building on

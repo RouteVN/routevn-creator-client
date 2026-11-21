@@ -1,0 +1,78 @@
+refs:
+  breadcrumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcrumbClick
+  addOutcomeButton:
+    eventListeners:
+      click:
+        handler: handleAddOutcomeClick
+  randomOutcome*:
+    eventListeners:
+      click:
+        handler: handleOutcomeClick
+      contextmenu:
+        handler: handleOutcomeContextMenu
+  weightSelect:
+    eventListeners:
+      value-change:
+        handler: handleWeightSelectChange
+  outcomeActionsEditor:
+    eventListeners:
+      actions-change:
+        handler: handleOutcomeActionsChange
+      action-delete:
+        handler: handleOutcomeActionsDelete
+      close:
+        handler: handleNestedActionsClose
+  saveOutcomeButton:
+    eventListeners:
+      click:
+        handler: handleSaveOutcomeClick
+  submitButton:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+  dropdownMenu:
+    eventListeners:
+      close:
+        handler: handleDropdownMenuClose
+      item-click:
+        handler: handleDropdownMenuClickItem
+template:
+  - rtgl-view w=f h=f pv=md:
+      - $if mode == 'current':
+          - rtgl-view w=f h=24 av=c ph=md mb=md:
+              - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-view g=md mt=md w=f p=md ph=md:
+                  - $if isDistributionSupported:
+                      - rtgl-text s=sm c=mu-fg: ${outcomesLabel}
+                      - $for outcome in outcomes:
+                          - rtgl-view#randomOutcome${outcome.id} data-outcome-id=${outcome.id} cur=pointer d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f:
+                              - rtgl-view d=v w=1fg:
+                                  - rtgl-text s=sm: ${outcome.summary}
+                                  - rtgl-text s=xs c=mu-fg: ${outcome.actionsSummary}
+                      - rtgl-button#addOutcomeButton v=ol w=f mt=md: ${addOutcomeButton}
+                  - $if !isDistributionSupported:
+                      - rtgl-text#unsupportedDistributionNotice s=sm c=mu-fg: ${unsupportedDistributionLabel}
+          - $if isDistributionSupported:
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+                  - rtgl-button#submitButton: ${submitButton}
+      - $if mode == 'editOutcome':
+          - rtgl-view w=f h=24 av=c ph=md mb=md:
+              - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-view g=md mt=md w=f p=md ph=md:
+                  - rtgl-view g=md w=f:
+                      - rtgl-text s=sm c=mu-fg: ${weightLabel}
+                      - rtgl-select#weightSelect w=f no-clear :selectedValue=${tempOutcome.weight} :options=${weightOptions} :ariaLabel=${weightLabel}: null
+                      - rtgl-text s=sm c=mu-fg mt=md: ${chanceLabel}
+                      - rtgl-text#outcomeChance s=sm: ${tempOutcome.chance}
+                  - rtgl-view w=f h=1 bgc=mu mt=lg mb=sm: null
+                  - rtgl-view g=md w=f:
+                      - rtgl-text s=sm c=mu-fg: ${actionsLabel}
+                      - rvn-system-actions#outcomeActionsEditor :showSelected=${true} :actions=${outcomeActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${outcomeActionAllowedModes} :showEmbeddedClose=${false}: null
+          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+              - rtgl-button#saveOutcomeButton: ${saveOutcomeButton}
+  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

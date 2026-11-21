@@ -32,6 +32,8 @@ template:
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=sm c=mu-fg: ${loadingLabel}
+          - $if guideCircle:
+              - 'div aria-hidden=true style="position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); border-radius:50%; box-sizing:border-box; border:2px solid white; box-shadow:0 0 0 1000px rgba(0,0,0,.45); pointer-events:none; ${guideStyle}"': null
           - 'rtgl-view pos=abs bw=sm bc=pr br=lg style="inset: 0; pointer-events: none;"': null
       - rtgl-view d=h w=f ah=c av=c g=sm:
           - rtgl-button#zoomOutButton sq v=gh s=sm: '-'

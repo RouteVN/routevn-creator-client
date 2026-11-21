@@ -1,3 +1,5 @@
+import { upgradeResetStoryActions } from "../../src/internal/navigationActions.js";
+import { findSceneIdBySectionId } from "../../src/internal/project/projection.js";
 // Imports every committed reference package in tests/compat/asset-package/
 // through the app's import path (plan, review choices, commit) into a real
 // project, and exports the imported resources again. The packages are read
@@ -62,12 +64,31 @@ const readPackage = (dir) => {
   return { manifest, files };
 };
 
-// The package as the asset store publishes it: a stored ZIP read in place
-// with byte ranges, which is how the import dialog opens a pack.
-const publishPackage = async (files) => {
+// The package as a stored ZIP, the way the app exports one, and each way the
+// import dialog opens it:
+// - "store": as the asset store publishes it, read in place with byte
+//   ranges at the size and directory place the store names;
+// - "file": a ZIP file picked from this device, read without any request;
+// - "link": a link to the ZIP on a server that ignores byte ranges, so the
+//   ZIP is downloaded whole.
+const publishPackage = async (files, from = "store") => {
   const zip = new JSZip();
   for (const [path, bytes] of files) zip.file(path, bytes);
   const bytes = await zip.generateAsync({ type: "uint8array" });
+  if (from === "file") {
+    return {
+      fetchImpl: async () => {
+        throw new Error("A package file is read without requests.");
+      },
+      source: { zip: { file: new Blob([bytes]) } },
+    };
+  }
+  if (from === "link") {
+    return {
+      fetchImpl: async () => new Response(bytes, { status: 200 }),
+      source: { link: "https://packages.test/download?id=package-one" },
+    };
+  }
   const end = new DataView(bytes.buffer, bytes.byteOffset + bytes.length - 22);
   return {
     fetchImpl: async (_url, { headers }) => {
@@ -76,11 +97,13 @@ const publishPackage = async (files) => {
         status: 206,
       });
     },
-    zip: {
-      url: "https://packages.test/package-one.zip",
-      size: bytes.length,
-      directorySize: end.getUint32(12, true),
-      directoryOffset: end.getUint32(16, true),
+    source: {
+      zip: {
+        url: "https://packages.test/package-one.zip",
+        size: bytes.length,
+        directorySize: end.getUint32(12, true),
+        directoryOffset: end.getUint32(16, true),
+      },
     },
   };
 };
@@ -208,7 +231,7 @@ const importPackage = async ({
   });
 
   const planResult = await service.createResourceImportPlan({
-    zip: published.zip,
+    ...published.source,
     dependencyFolderName: DEPENDENCY_FOLDER_NAME,
   });
   expect(planResult.error).toBeUndefined();
@@ -289,10 +312,14 @@ const translateIds = (value, idMap) => {
     return value.map((entry) => translateIds(entry, idMap));
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [
-        idMap.get(key) ?? key,
-        translateIds(entry, idMap),
-      ]),
+      Object.entries(value)
+        .filter(
+          ([key, entry]) => !(key === "sceneId" && entry === "resolved-scene"),
+        )
+        .map(([key, entry]) => [
+          idMap.get(key) ?? key,
+          translateIds(entry, idMap),
+        ]),
     );
   }
   if (typeof value !== "string") return value;
@@ -312,7 +339,14 @@ const withoutKeys = (value, keys) =>
     Object.entries(value).filter(([key]) => !keys.includes(key)),
   );
 
-// Every id a package gives a resource, folder, file or link.
+// The package's characters, picks and dependencies, by id.
+const listPackageCharacters = (manifest) =>
+  [
+    ...Object.entries(manifest.repository.characters?.items ?? {}),
+    ...Object.entries(manifest.dependencies?.characters?.items ?? {}),
+  ].filter(([, item]) => item.type === "character");
+
+// Every id a package gives a resource, folder, file, link or sprite tag.
 const listPackageIds = (manifest) => [
   ...Object.keys(manifest.repository.files.items),
   ...ASSET_PACKAGE_RESOURCE_TYPES.flatMap((type) => [
@@ -320,6 +354,9 @@ const listPackageIds = (manifest) => [
     ...Object.keys(manifest.dependencies?.[type]?.items ?? {}),
   ]),
   ...Object.keys(manifest.links?.items ?? {}),
+  ...listPackageCharacters(manifest).flatMap(([, character]) =>
+    Object.keys(character.spriteTags?.items ?? {}),
+  ),
 ];
 
 // The strings and keys of `value` that are, or contain, a package id.
@@ -352,7 +389,8 @@ const findPackageIds = (value, packageIds, found = []) => {
 
 // The package with each id replaced by a name for its place: a resource or
 // folder by its type and folder path, a dependency by its type and name, a
-// link by what it names, and a file by its hash. Two packages of the same
+// link by what it names, a file by its hash, and a character's sprite tag by
+// its character and name. Two packages of the same
 // resources then compare equal whatever ids they use.
 const normalizePackage = (manifest) => {
   const labels = new Map();
@@ -378,6 +416,11 @@ const normalizePackage = (manifest) => {
   }
   for (const [id, link] of Object.entries(manifest.links?.items ?? {})) {
     addLabel(id, `link:${link.kind}:${link.sceneName ?? ""}/${link.name}`);
+  }
+  for (const [characterId, character] of listPackageCharacters(manifest)) {
+    for (const [id, tag] of Object.entries(character.spriteTags?.items ?? {})) {
+      addLabel(id, `spriteTag:${labels.get(characterId)}/${tag.name}`);
+    }
   }
   const files = {};
   for (const [id, descriptor] of Object.entries(
@@ -423,7 +466,13 @@ const normalizePackage = (manifest) => {
       };
     }
   }
-  return translateIds(normalized, labels);
+  const upgraded = upgradeResetStoryActions(normalized, {
+    resolveSceneId: (sectionId) =>
+      manifest.links?.items?.[sectionId]?.kind === "section"
+        ? "resolved-scene"
+        : undefined,
+  });
+  return translateIds(upgraded, labels);
 };
 
 describe.each(PACKAGE_DIRS)(
@@ -462,7 +511,19 @@ describe.each(PACKAGE_DIRS)(
         scenario: "into a project that has same-named resources",
         replaceDependencies: true,
       },
-    ])("$scenario", ({ replaceDependencies }) => {
+      // The same package from the other two places an import can read it,
+      // with the same result.
+      {
+        scenario: "into a new project, from a zip file",
+        replaceDependencies: false,
+        from: "file",
+      },
+      {
+        scenario: "into a new project, from a link to a zip",
+        replaceDependencies: false,
+        from: "link",
+      },
+    ])("$scenario", ({ replaceDependencies, from }) => {
       let target;
       let imported;
       let linkTargets;
@@ -474,7 +535,7 @@ describe.each(PACKAGE_DIRS)(
       const importedItems = [];
 
       beforeAll(async () => {
-        const published = await publishPackage(files);
+        const published = await publishPackage(files, from);
         target = await createTarget(
           replaceDependencies ? "existing-project" : "new-project",
         );
@@ -541,6 +602,21 @@ describe.each(PACKAGE_DIRS)(
                 pick: Boolean(picks?.items[packageId]),
               });
             }
+          }
+        }
+        // A character's sprite tags are imported under new ids, in its own
+        // tags, and are told apart by name.
+        for (const { type, packageId, item } of importedItems) {
+          if (type !== "characters") continue;
+          const importedTags =
+            imported.state.tags[`characterSprites:${idMap.get(packageId)}`];
+          for (const [tagId, tag] of Object.entries(
+            item.spriteTags?.items ?? {},
+          )) {
+            const [importedTagId] = Object.entries(importedTags.items).find(
+              ([, importedTag]) => importedTag.name === tag.name,
+            );
+            idMap.set(tagId, importedTagId);
           }
         }
       });
@@ -618,10 +694,15 @@ describe.each(PACKAGE_DIRS)(
       it("points every reference at what the project has: imports, replaced dependencies, files and chosen links", () => {
         expect(importedItems.length).toBeGreaterThan(0);
         for (const { type, packageId, item, pick } of importedItems) {
-          const expected = translateIds(
-            withoutKeys(item, ["id", ...PREVIEW_FIELDS]),
+          // A character's sprite tags go into the project's tags.
+          let expected = translateIds(
+            withoutKeys(item, ["id", "spriteTags", ...PREVIEW_FIELDS]),
             idMap,
           );
+          expected = upgradeResetStoryActions(expected, {
+            resolveSceneId: (sectionId) =>
+              findSceneIdBySectionId(imported.state.scenes, sectionId),
+          });
           // The import dialog sends each pick's description, empty when it
           // had none.
           if (pick) expected.description = item.description ?? "";
@@ -630,6 +711,51 @@ describe.each(PACKAGE_DIRS)(
           expect(withoutKeys(actual, ["id"]), `${type} ${packageId}`).toEqual(
             expected,
           );
+        }
+      });
+
+      it("rewrites deprecated reset actions at every imported depth", () => {
+        const check = (value) => {
+          if (!value || typeof value !== "object") return;
+          if (value.sectionTransition?.resetStory === true) {
+            expect(value.sectionTransition.sceneId).toBe(
+              findSceneIdBySectionId(
+                imported.state.scenes,
+                value.sectionTransition.sectionId,
+              ),
+            );
+          }
+          expect(value).not.toHaveProperty("resetStoryAtSection");
+          Object.values(value).forEach(check);
+        };
+        for (const { type, packageId } of importedItems) {
+          check(imported.state[type].items[idMap.get(packageId)]);
+        }
+      });
+
+      it("imports each character's sprite tags under new ids, with its sprite groups as they were", () => {
+        for (const { type, packageId, item } of importedItems) {
+          if (type !== "characters") continue;
+          const characterId = idMap.get(packageId);
+          const packageTags = item.spriteTags ?? { items: {}, tree: [] };
+          const importedTags = imported.state.tags[
+            `characterSprites:${characterId}`
+          ] ?? { items: {}, tree: [] };
+
+          expect(importedTags.tree, packageId).toEqual(
+            packageTags.tree.map(({ id }) => ({ id: idMap.get(id) })),
+          );
+          expect(importedTags.items, packageId).toEqual(
+            translateIds(packageTags.items, idMap),
+          );
+          for (const tagId of Object.keys(packageTags.items)) {
+            expect(idMap.get(tagId), tagId).not.toBe(tagId);
+          }
+          // The groups keep their ids, which previews pick sprites by.
+          expect(
+            imported.state.characters.items[characterId].spriteGroups,
+            packageId,
+          ).toEqual(translateIds(item.spriteGroups, idMap));
         }
       });
 

@@ -4,8 +4,12 @@ import { selectRuntimeFieldTexts } from "../../src/internal/ui/runtimeFieldCopy.
 import {
   EN_I18N,
   FR_I18N,
+  ID_I18N,
+  IT_I18N,
   JA_I18N,
+  PL_I18N,
   PT_I18N,
+  UK_I18N,
   VI_I18N,
 } from "../support/i18n.js";
 
@@ -26,6 +30,10 @@ describe("runtimeFieldCopy", () => {
     ["pt", PT_I18N],
     ["fr", FR_I18N],
     ["vi", VI_I18N],
+    ["id", ID_I18N],
+    ["uk", UK_I18N],
+    ["it", IT_I18N],
+    ["pl", PL_I18N],
   ])(
     "translates every runtime field's name and description in %s",
     (_, i18n) => {

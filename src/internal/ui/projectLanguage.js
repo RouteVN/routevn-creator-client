@@ -51,6 +51,7 @@ export const createProjectLanguageOptions = (i18n) => {
   return PROJECT_LANGUAGES.map((language) => ({
     value: language,
     label: copy[OPTION_KEY_BY_LANGUAGE[language]],
+    suffixText: language,
   }));
 };
 

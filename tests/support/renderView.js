@@ -39,16 +39,32 @@ export const loadViewTemplate = (relativePath) => {
   return parsed?.template ?? parsed;
 };
 
-export const renderViewYaml = (relativePath, viewData = {}, options = {}) => {
-  const template = jemplParse(loadViewTemplate(relativePath));
-  const vdom = parseView({
+/**
+ * Renders a component's `.view.yaml` like renderViewYaml, and returns the
+ * snabbdom tree instead of HTML. HTML writes a `:prop=${value}` binding as an
+ * attribute, so an object shows as "[object Object]"; the tree keeps it in
+ * `data.props`.
+ */
+export const renderViewTree = (relativePath, viewData = {}, options = {}) =>
+  parseView({
     h,
-    template,
+    template: jemplParse(loadViewTemplate(relativePath)),
     viewData,
     refs: options.refs ?? {},
     handlers: options.handlers ?? {},
   });
-  return toHTML(vdom);
+
+export const renderViewYaml = (relativePath, viewData = {}, options = {}) =>
+  toHTML(renderViewTree(relativePath, viewData, options));
+
+/**
+ * Every element of a rendered tree, in document order.
+ */
+export const viewElements = (node) => {
+  if (typeof node !== "object" || node === null || node.sel === undefined) {
+    return [];
+  }
+  return [node, ...(node.children ?? []).flatMap(viewElements)];
 };
 
 /**

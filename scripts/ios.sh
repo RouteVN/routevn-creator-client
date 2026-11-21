@@ -133,6 +133,7 @@ build_app() {
       exit 1
     fi
     bun run build:ios
+    bun run ios:rust
     xcodebuild -project "${IOS_DIR}/routevn.xcodeproj" -scheme "$SCHEME" \
       -configuration "$CONFIGURATION" -sdk iphoneos -destination 'generic/platform=iOS' \
       -derivedDataPath "${IOS_DIR}/build" \
@@ -142,6 +143,7 @@ build_app() {
   local udid
   udid=$(find_simulator_udid)
   bun run build:ios
+  bun run ios:rust
   cd "$IOS_DIR"
   xcodebuild \
     -project routevn.xcodeproj \

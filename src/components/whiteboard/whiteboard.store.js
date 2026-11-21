@@ -92,6 +92,8 @@ export const createInitialState = () => ({
   isPinnedPanMode: false,
   isKeyboardPanMode: false,
   isPanning: false,
+  // The mouse button that started the pan, whose release ends it.
+  panButton: undefined,
   panAnimationFrameId: undefined,
   panX: 0,
   panY: 0,
@@ -200,8 +202,9 @@ export const setKeyboardPanMode = ({ state }, { isPanMode } = {}) => {
   state.isKeyboardPanMode = isPanMode;
 };
 
-export const startPanning = ({ state }, { mouseX, mouseY } = {}) => {
+export const startPanning = ({ state }, { mouseX, mouseY, button } = {}) => {
   state.isPanning = true;
+  state.panButton = button;
   state.panStartX = state.panX;
   state.panStartY = state.panY;
   state.panStartMouseX = mouseX;
@@ -599,6 +602,7 @@ export const selectIsPanMode = ({ state }) =>
 export const selectIsPinnedPanMode = ({ state }) => state.isPinnedPanMode;
 export const selectIsKeyboardPanMode = ({ state }) => state.isKeyboardPanMode;
 export const selectIsPanning = ({ state }) => state.isPanning;
+export const selectPanButton = ({ state }) => state.panButton;
 export const setPanAnimationFrameId = ({ state }, { frameId } = {}) => {
   state.panAnimationFrameId = frameId;
 };
@@ -639,18 +643,6 @@ export const setInitialZoomAndPan = (
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-
-const normalizeCursorValue = (cursor) => {
-  if (!cursor) {
-    return undefined;
-  }
-
-  if (typeof CSS === "undefined" || typeof CSS.supports !== "function") {
-    return cursor;
-  }
-
-  return CSS.supports("cursor", cursor) ? cursor : undefined;
-};
 
 const getVisibleViewportAxis = (start, end, limit) => {
   const clippedStart = clamp(start, 0, limit);
@@ -825,8 +817,9 @@ export const selectViewData = ({ state, props, i18n = {} }) => {
     borderWidth: "sm",
   }));
 
-  const containerCursor = normalizeCursorValue(props.cursor);
-  const itemCursor = normalizeCursorValue(props.cursor) || "move";
+  // Callers pass a CSS cursor keyword, such as "crosshair".
+  const containerCursor = props.cursor || undefined;
+  const itemCursor = props.cursor || "move";
   const minimapViewportCursor = state.isDraggingMinimapViewport
     ? "grabbing"
     : "grab";

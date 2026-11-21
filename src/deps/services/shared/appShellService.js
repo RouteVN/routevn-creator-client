@@ -9,6 +9,8 @@ import {
   isDarkTheme,
   normalizeTheme,
 } from "../../../internal/theme.js";
+import { getDeviceLanguages } from "../../clients/deviceLanguages.js";
+import { getTextDirection } from "../../../internal/textDirection.js";
 
 const createNoopUpdater = () => ({
   checkForUpdates: async () => null,
@@ -54,6 +56,9 @@ const applyLanguageToDocument = (
 ) => {
   if (root?.documentElement) {
     root.documentElement.lang = language;
+    // Rettangoli UI lays out right to left under dir="rtl". The Rettangoli
+    // runtime sets it too, but only from FE 2.2.
+    root.documentElement.dir = getTextDirection(language);
   }
 };
 
@@ -97,6 +102,7 @@ export const createAppShellService = ({
   distribution = "direct",
   updatesEnabled = false,
   updater,
+  youtubeEmbedsSupported = false,
   audioService,
   triggerTestCrash,
 }) => {
@@ -195,6 +201,8 @@ export const createAppShellService = ({
     },
 
     getAppLocaleUsage,
+
+    getDeviceLanguages,
 
     registerBeforeNavigation(handler) {
       beforeNavigationHandlers.add(handler);
@@ -357,6 +365,11 @@ export const createAppShellService = ({
       applyLanguageToDocument(language);
     },
 
+    // "rtl" when the app language is written right to left, otherwise "ltr".
+    getDocumentDirection() {
+      return document.documentElement.dir === "rtl" ? "rtl" : "ltr";
+    },
+
     // Rettangoli UI forms use these as their default validation messages; a
     // field's own message still takes precedence. window.rtgl comes from the
     // Rettangoli UI script, which loads before the app.
@@ -396,6 +409,11 @@ export const createAppShellService = ({
 
     areUpdatesEnabled() {
       return Boolean(updatesEnabled);
+    },
+
+    // Whether YouTube's player can play inside the app on this platform.
+    canEmbedYouTube() {
+      return youtubeEmbedsSupported;
     },
 
     checkForUpdates(silent, options = {}) {

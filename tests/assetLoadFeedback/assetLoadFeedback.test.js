@@ -160,3 +160,21 @@ it("preserves dimensions through progress-wrapped graphics failures", () => {
   expect(message(deps)).toContain("4096");
   expect(deps.appService.showAlert).toHaveBeenCalledOnce();
 });
+
+it("drops feedback when the repository has closed", () => {
+  const deps = createDeps();
+  const error = new Error("Repository not initialized");
+  const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+  deps.projectService.getRepositoryState = () => {
+    throw error;
+  };
+  expect(() =>
+    showAssetLoadFailures(deps, [{ fileId: "image", error: new Error() }]),
+  ).not.toThrow();
+  expect(warning).toHaveBeenCalledWith(
+    "[assetLoadFeedback] Failed to read project assets",
+    error,
+  );
+  expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  warning.mockRestore();
+});

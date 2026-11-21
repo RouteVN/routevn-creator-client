@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearSearchPopoverFocusPending,
   closeAssetPreview,
+  closeSearchPopover,
+  openSearchPopover,
   returnFromCreatorPage,
+  selectSearchPopoverFocusPending,
   setCreatorError,
   setCreatorPage,
   startCreatorLoad,
@@ -20,12 +24,16 @@ import {
   setPackLoadError,
   setPackPage,
   setResourceSelected,
+  setSearchText,
   togglePackGroup,
   setPlan,
   startCatalogLoad,
+  startLoadingPackage,
   startOpeningPack,
+  openUrlStep,
   syncFromProps,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
+import { JA_I18N } from "../support/i18n.js";
 
 const createMultiResourcePlan = () => ({
   planId: "plan-1",
@@ -208,6 +216,50 @@ describe("resource-import-dialog.store", () => {
       isCatalogEmpty: true,
       isNoResults: false,
     });
+  });
+
+  it("opens the phone search popover under its button and focuses it once", () => {
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true } });
+    expect(selectViewData({ state, i18n: {} }).catalog).toMatchObject({
+      searchButtonVariant: "ol",
+      clearSearchLabel: "Clear",
+      clearSearchDisabled: true,
+    });
+    setSearchText({ state }, { value: "fo" });
+    expect(
+      selectViewData({
+        state,
+        i18n: { resourceImport: { clearButton: "Effacer" } },
+      }).catalog,
+    ).toMatchObject({
+      clearSearchLabel: "Effacer",
+      clearSearchDisabled: false,
+    });
+
+    openSearchPopover({ state }, { position: { x: 340, y: 56 } });
+    expect(selectViewData({ state, i18n: {} }).searchPopover).toEqual({
+      isOpen: true,
+      focusPending: true,
+      position: { x: 340, y: 56 },
+    });
+    expect(selectSearchPopoverFocusPending({ state })).toBe(true);
+    clearSearchPopoverFocusPending({ state });
+    expect(selectSearchPopoverFocusPending({ state })).toBe(false);
+
+    // The button stays filled while a search narrows the list.
+    setCatalogQuery({ state }, { query: "forest" });
+    closeSearchPopover({ state });
+    expect(selectViewData({ state, i18n: {} })).toMatchObject({
+      searchPopover: { isOpen: false, focusPending: false },
+      catalog: { searchButtonVariant: "pr" },
+    });
+
+    // Reopening the dialog starts with the popover closed.
+    openSearchPopover({ state }, { position: { x: 340, y: 56 } });
+    syncFromProps({ state }, { props: { open: false } });
+    syncFromProps({ state }, { props: { open: true } });
+    expect(state.searchPopover.isOpen).toBe(false);
   });
 
   it("groups the pack's assets by folder, labelled with their path, and collapses a group", () => {
@@ -972,5 +1024,108 @@ describe("resource-import-dialog.store", () => {
       slot: "resource-selection-grid",
     });
     expect(view.form.actions.buttons.at(-1).id).toBe("import");
+  });
+});
+
+describe("resource-import-dialog.store sources", () => {
+  it.each([
+    [undefined, "store", "store", "Asset Store"],
+    ["store", "store", "store", "Asset Store"],
+    ["zip", "zip", "loading", "Import from Zip File"],
+    ["url", "url", "url", "Import from URL"],
+    ["elsewhere", "store", "store", "Asset Store"],
+  ])(
+    "opens a dialog given source %s on its first step",
+    (given, source, step, title) => {
+      const state = createInitialState();
+      syncFromProps({ state }, { props: { open: true, source: given } });
+
+      expect(state).toMatchObject({ source, step });
+      expect(selectViewData({ state, i18n: {} })).toMatchObject({
+        dialogTitle: title,
+        isStoreStep: step === "store",
+        isUrlStep: step === "url",
+        isLoadingStep: step === "loading",
+        isSelectionStep: false,
+      });
+    },
+  );
+
+  it("starts each opening from its own source, without the last one's URL or name", () => {
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true, source: "url" } });
+    startLoadingPackage(
+      { state },
+      {
+        operationId: "operation-1",
+        sourceName: "Pack One",
+        url: "https://assets.example/pack.zip",
+      },
+    );
+    openUrlStep({ state }, { error: { message: "Not a package." } });
+    expect(state).toMatchObject({
+      step: "url",
+      urlValue: "https://assets.example/pack.zip",
+      operationId: undefined,
+      error: { message: "Not a package." },
+    });
+
+    syncFromProps({ state }, { props: { open: false } });
+    syncFromProps({ state }, { props: { open: true } });
+
+    expect(state).toMatchObject({
+      source: "store",
+      step: "store",
+      urlValue: "",
+      sourceName: undefined,
+      error: undefined,
+    });
+  });
+
+  it("localizes the URL form, the loading status and the titles", () => {
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true, source: "url" } });
+
+    const view = selectViewData({ state, i18n: JA_I18N });
+
+    expect(view.dialogTitle).toBe("URLから取り込む");
+    expect(view.urlForm.fields[0]).toMatchObject({
+      label: "パッケージのURL",
+      required: { message: "パッケージのURLを入力してください。" },
+    });
+    expect(view.urlForm.actions.buttons.map((button) => button.label)).toEqual([
+      "キャンセル",
+      "取り込む",
+    ]);
+    expect(view.loadingLabel).toBe("素材パッケージを読み込んでいます");
+  });
+
+  it("names a file's package by its manifest, or else by its file, and never a store pack by a file", () => {
+    const plan = { ...createMultiResourcePlan(), package: {} };
+    const state = createInitialState();
+    syncFromProps({ state }, { props: { open: true, source: "zip" } });
+    startLoadingPackage(
+      { state },
+      { operationId: "operation-1", sourceName: "Pack One" },
+    );
+    setPlan({ state }, { plan });
+    expect(selectViewData({ state, i18n: {} })).toMatchObject({
+      isSelectionStep: true,
+      packageName: "Pack One",
+      hasPackageMetadata: true,
+      pack: undefined,
+    });
+
+    setPlan({ state }, { plan: { ...plan, package: { name: "Fantasy UI" } } });
+    expect(selectViewData({ state, i18n: {} }).packageName).toBe("Fantasy UI");
+
+    const storeState = createInitialState();
+    syncFromProps({ state: storeState }, { props: { open: true } });
+    storeState.sourceName = "Pack One";
+    setPlan({ state: storeState }, { plan });
+    expect(selectViewData({ state: storeState, i18n: {} })).toMatchObject({
+      packageName: undefined,
+      hasPackageMetadata: false,
+    });
   });
 });

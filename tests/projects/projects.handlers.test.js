@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAppVersionClick,
+  handleLocaleSuggestionChange,
   handleAppVersionMenuClickItem,
   handleAppVersionMenuClose,
   handleAppearanceDialogClose,
@@ -47,6 +48,7 @@ const createDeps = ({
   };
   const appService = {
     getPlatform: vi.fn(() => platform),
+    getProjectFolderSetup: vi.fn(() => ({ configured: true })),
     getAppVersion: vi.fn(() => "1.0.0"),
     openFolderPicker: vi.fn(),
     openArchivePicker: vi.fn(),
@@ -477,10 +479,10 @@ describe("projects.handleProjectsClick", () => {
 });
 
 describe("projects create dialog", () => {
-  it("opens the page-owned create dialog", () => {
+  it("opens the page-owned create dialog", async () => {
     const deps = createDeps();
 
-    handleCreateButtonClick(deps);
+    await handleCreateButtonClick(deps);
 
     expect(deps.store.openCreateDialog).toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalled();
@@ -650,6 +652,19 @@ describe("projects create dialog", () => {
   });
 });
 
+describe("projects language suggestion", () => {
+  it("keeps the page's language when the box switches it", () => {
+    const deps = createDeps();
+
+    handleLocaleSuggestionChange(deps, {
+      _event: { detail: { locale: "ja" } },
+    });
+
+    expect(deps.store.setCurrentLocale).toHaveBeenCalledWith({ locale: "ja" });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("projects app version menu", () => {
   it("opens the app version dropdown from the footer label", () => {
     const deps = createDeps();
@@ -674,21 +689,25 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.checkUpdateMenuItem,
           type: "item",
           value: "check-update",
+          icon: "download",
         },
         {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
+          icon: "translate",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
           type: "item",
           value: "appearance",
+          icon: "sun",
         },
         {
           label: EN_I18N.projectsPage.contactMenuItem,
           type: "item",
           value: "contact",
+          icon: "chat",
         },
       ],
     });
@@ -718,16 +737,19 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
+          icon: "translate",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
           type: "item",
           value: "appearance",
+          icon: "sun",
         },
         {
           label: EN_I18N.projectsPage.contactMenuItem,
           type: "item",
           value: "contact",
+          icon: "chat",
         },
       ],
     });
@@ -758,16 +780,19 @@ describe("projects app version menu", () => {
           label: EN_I18N.projectsPage.languageMenuItem,
           type: "item",
           value: "language",
+          icon: "translate",
         },
         {
           label: EN_I18N.projectsPage.appearanceMenuItem,
           type: "item",
           value: "appearance",
+          icon: "sun",
         },
         {
           label: EN_I18N.projectsPage.contactMenuItem,
           type: "item",
           value: "contact",
+          icon: "chat",
         },
       ],
     });

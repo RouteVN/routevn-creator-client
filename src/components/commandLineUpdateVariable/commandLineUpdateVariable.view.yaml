@@ -45,6 +45,52 @@ refs:
     eventListeners:
       value-change:
         handler: handleEnumValueSelectChange
+  randomTypeControl:
+    eventListeners:
+      value-change:
+        handler: handleRandomTypeChange
+  randomMinInput:
+    eventListeners:
+      value-input:
+        handler: handleRandomMinInputChange
+      value-change:
+        handler: handleRandomMinInputChange
+  randomMaxInput:
+    eventListeners:
+      value-input:
+        handler: handleRandomMaxInputChange
+      value-change:
+        handler: handleRandomMaxInputChange
+  randomNumberInput*:
+    eventListeners:
+      value-input:
+        handler: handleRandomNumberValueChange
+      value-change:
+        handler: handleRandomNumberValueChange
+  randomTextInput*:
+    eventListeners:
+      value-input:
+        handler: handleRandomTextValueChange
+  randomBooleanSelect*:
+    eventListeners:
+      value-change:
+        handler: handleRandomBooleanValueChange
+  randomEnumSelect*:
+    eventListeners:
+      value-change:
+        handler: handleRandomEnumValueChange
+  randomWeightSelect*:
+    eventListeners:
+      value-change:
+        handler: handleRandomWeightSelectChange
+  removeRandomValueButton*:
+    eventListeners:
+      click:
+        handler: handleRemoveRandomValueClick
+  addRandomValueButton:
+    eventListeners:
+      click:
+        handler: handleAddRandomValueClick
   dropdownMenu:
     eventListeners:
       close:
@@ -72,26 +118,71 @@ template:
               - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-view g=md mt=md w=f p=md ph=md:
-                  - rtgl-text s=sm c=mu-fg mb=sm: ${variableLabel}
-                  - rtgl-select#variableSelect w=f :selectedValue=${tempOperation.variableId} :options=${variableOptions} placeholder="${variablePlaceholder}": null
-                  - $if tempOperation.variableId:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${operationLabel}
-                      - rtgl-select#operationSelect w=f :selectedValue=${tempOperation.op} :options=${operationOptions} placeholder="${operationPlaceholder}": null
-                  - $if showValueField && valueInputType == 'number':
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
-                      - rtgl-input#valueInput type=number w=f placeholder="${valueNumberPlaceholder}" value=${tempOperation.value}: null
-                  - $if showRoundToField:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${decimalPlacesLabel}
-                      - rtgl-input#roundToInput type=number min=0 max=12 step=1 w=f value=${tempOperation.roundToValue}: null
-                  - $if showValueField && valueInputType == 'boolean':
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
-                      - rtgl-select#booleanSelect w=f :selectedValue=${tempOperation.booleanValue} :options=${booleanOptions}: null
-                  - $if showValueField && showEnumValueSelect:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
-                      - rtgl-select#enumValueSelect w=f :selectedValue=${tempOperation.value} :options=${enumValueOptions} placeholder="${valueSelectPlaceholder}": null
-                  - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
-                      - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
-                      - rtgl-input#valueInput w=f placeholder="${valueTextPlaceholder}" value=${tempOperation.value}: null
-          - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
-              - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: ${saveOperationButton}
+                  - $if isEditingUnsupportedRandom:
+                      - rtgl-text#unsupportedRandomNotice s=sm c=mu-fg: ${unsupportedRandomLabel}
+                  - $if !isEditingUnsupportedRandom:
+                      - rtgl-text s=sm c=mu-fg mb=sm: ${variableLabel}
+                      - rtgl-select#variableSelect w=f :selectedValue=${tempOperation.variableId} :options=${variableOptions} placeholder="${variablePlaceholder}": null
+                      - $if tempOperation.variableId:
+                          - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${operationLabel}
+                          - rtgl-select#operationSelect w=f :selectedValue=${tempOperation.op} :options=${operationOptions} placeholder="${operationPlaceholder}": null
+                      - $if showValueField && valueInputType == 'number':
+                          - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
+                          - rtgl-input#valueInput type=number w=f placeholder="${valueNumberPlaceholder}" value=${tempOperation.value}: null
+                      - $if showRoundToField:
+                          - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${decimalPlacesLabel}
+                          - rtgl-input#roundToInput type=number min=0 max=12 step=1 w=f value=${tempOperation.roundToValue}: null
+                      - $if showValueField && valueInputType == 'boolean':
+                          - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
+                          - rtgl-select#booleanSelect w=f :selectedValue=${tempOperation.booleanValue} :options=${booleanOptions}: null
+                      - $if showValueField && showEnumValueSelect:
+                          - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
+                          - rtgl-select#enumValueSelect w=f :selectedValue=${tempOperation.value} :options=${enumValueOptions} placeholder="${valueSelectPlaceholder}": null
+                      - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
+                          - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valueLabel}
+                          - rtgl-input#valueInput w=f placeholder="${valueTextPlaceholder}" value=${tempOperation.value}: null
+                      - $if showRandomFields:
+                          - rtgl-text s=sm c=mu-fg mt=lg mb=sm: ${valuesLabel}
+                          - $if showRandomTypeControl:
+                              - rtgl-segmented-control#randomTypeControl w=f no-clear :selectedValue=${tempRandom.type} :options=${randomTypeOptions} :ariaLabel=${valuesLabel}: null
+                          - $if tempRandom.type == 'integer':
+                              # Minimum and Maximum share a row when the panel
+                              # has room for both, and stack when it does not.
+                              - rtgl-view#randomRangeRow d=h wrap g=md w=f mt=md:
+                                  - 'rtgl-view style="flex: 1 1 160px; min-width: 0;"':
+                                      - rtgl-text s=sm c=mu-fg mb=sm: ${minimumLabel}
+                                      - 'rtgl-input-number#randomMinInput w=f step=1 value="${tempRandom.min}" aria-label="${minimumLabel}"': null
+                                  - 'rtgl-view style="flex: 1 1 160px; min-width: 0;"':
+                                      - rtgl-text s=sm c=mu-fg mb=sm: ${maximumLabel}
+                                      - 'rtgl-input-number#randomMaxInput w=f step=1 value="${tempRandom.max}" aria-label="${maximumLabel}"': null
+                          - $if tempRandom.type == 'weighted':
+                              - rtgl-view g=sm w=f mt=md:
+                                  - rtgl-view d=h av=c g=sm w=f:
+                                      - rtgl-view w=1fg:
+                                          - rtgl-text s=xs c=mu-fg: ${valueLabel}
+                                      - 'rtgl-view w=80 style="flex: 0 0 80px;"':
+                                          - rtgl-text s=xs c=mu-fg: ${weightLabel}
+                                      - 'rtgl-view w=56 style="flex: 0 0 56px;"':
+                                          - rtgl-text s=xs c=mu-fg: ${chanceLabel}
+                                      - 'rtgl-view w=24 style="flex: 0 0 24px;"': null
+                                  - $for entry in tempRandom.values:
+                                      - rtgl-view#randomValue${entry.id} d=h av=c g=sm w=f:
+                                          - rtgl-view w=1fg:
+                                              - $if randomValueInputType == 'number':
+                                                  - 'rtgl-input-number#randomNumberInput${entry.id} data-value-id=${entry.id} w=f value="${entry.value}" placeholder="${valueNumberPlaceholder}" aria-label="${valueLabel}"': null
+                                              - $if randomValueInputType == 'boolean':
+                                                  - rtgl-select#randomBooleanSelect${entry.id} data-value-id=${entry.id} w=f no-clear :selectedValue=${entry.booleanValue} :options=${booleanOptions} :ariaLabel=${valueLabel}: null
+                                              - $if randomValueInputType == 'enum':
+                                                  - rtgl-select#randomEnumSelect${entry.id} data-value-id=${entry.id} w=f :selectedValue=${entry.value} :options=${enumValueOptions} :ariaLabel=${valueLabel} placeholder="${valueSelectPlaceholder}": null
+                                              - $if randomValueInputType == 'text':
+                                                  - 'rtgl-input#randomTextInput${entry.id} data-value-id=${entry.id} w=f value="${entry.value}" placeholder="${valueTextPlaceholder}" aria-label="${valueLabel}"': null
+                                          - 'rtgl-view w=80 style="flex: 0 0 80px;"':
+                                              - rtgl-select#randomWeightSelect${entry.id} data-value-id=${entry.id} w=f no-clear :selectedValue=${entry.weight} :options=${entry.weightOptions} :ariaLabel=${weightLabel}: null
+                                          - 'rtgl-view style="flex: 0 0 auto; min-width: 56px;"':
+                                              - rtgl-text#randomChance${entry.id} s=sm: ${entry.chance}
+                                          - 'rtgl-button#removeRandomValueButton${entry.id} data-value-id=${entry.id} sq s=sm v=gh pre=x title="${removeRandomValueLabel}" aria-label="${removeRandomValueLabel}"': null
+                              - rtgl-button#addRandomValueButton v=ol w=f mt=md: ${addRandomValueButton}
+          - $if !isEditingUnsupportedRandom:
+              - 'rtgl-view d=h av=c ah=e w=f g=lg ph=md pt=md style="flex: 0 0 auto;"':
+                  - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: ${saveOperationButton}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

@@ -644,6 +644,8 @@ export const createProjectRepository = async ({
   historyStats,
   loadEvents,
   onHydrationProgress,
+  forceHistoryLoad,
+  onInitialStateValidationError,
 }) =>
   createProjectRepositoryRuntime({
     projectId,
@@ -680,6 +682,8 @@ export const createProjectRepository = async ({
     normalizeState: normalizeRepositoryStateWithCreatorModel,
     assertState: assertSupportedProjectState,
     onHydrationProgress,
+    forceHistoryLoad,
+    onInitialStateValidationError,
   });
 
 export const applyCommandToRepository = async ({

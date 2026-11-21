@@ -1,4 +1,10 @@
-import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifier.js";
+import { isValidAndroidApplicationId } from "./androidApplicationId.js";
+import { isValidAndroidBackgroundColor } from "./androidExport.js";
+import { isValidIosBundleIdentifier } from "./iosExport.js";
+import {
+  isValidNativeApplicationIdentifier,
+  isValidWindowsApplicationIdentifier,
+} from "./nativeApplicationIdentifier.js";
 
 const WEB_APPLICATION_IDENTIFIER_PATTERN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9.-]+$/;
 
@@ -34,7 +40,9 @@ export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
       return { valid: false, code: "windows-identifier-required" };
     }
     if (
-      !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
+      !isValidWindowsApplicationIdentifier(
+        applicationInfo.applicationIdentifier,
+      )
     ) {
       return { valid: false, code: "windows-identifier-invalid" };
     }
@@ -48,6 +56,36 @@ export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
       !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
     ) {
       return { valid: false, code: "macos-identifier-invalid" };
+    }
+  }
+
+  if (platform === "ios") {
+    if (!applicationInfo.iconFileId) {
+      return { valid: false, code: "ios-icon-required" };
+    }
+    if (!applicationInfo.applicationIdentifier) {
+      return { valid: false, code: "ios-identifier-required" };
+    }
+    if (!isValidIosBundleIdentifier(applicationInfo.applicationIdentifier)) {
+      return { valid: false, code: "ios-identifier-invalid" };
+    }
+  }
+
+  if (platform === "android") {
+    if (!applicationInfo.iconFileId) {
+      return { valid: false, code: "android-icon-required" };
+    }
+    if (!applicationInfo.applicationIdentifier) {
+      return { valid: false, code: "android-identifier-required" };
+    }
+    if (!isValidAndroidApplicationId(applicationInfo.applicationIdentifier)) {
+      return { valid: false, code: "android-identifier-invalid" };
+    }
+    if (
+      !isValidAndroidBackgroundColor(applicationInfo.iconBackgroundColor) ||
+      !isValidAndroidBackgroundColor(applicationInfo.splashBackgroundColor)
+    ) {
+      return { valid: false, code: "android-color-invalid" };
     }
   }
 

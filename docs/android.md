@@ -313,6 +313,27 @@ exact single-type filters through `ACTION_PICK`. File picker uses
 spritesheet PNG plus JSON) go directly to the file picker. Both sources share
 the existing result import and cancellation flow.
 
+### Android APK Export
+
+The Creator exports unsigned Android APKs on device (see
+`docs/platform/15-android-player-export.md`). `bun run build:android` copies
+the committed player template from `src-tauri/assets/player-templates/android/`
+into the app assets under `player-templates/android/`. On first use, and after
+an update that changes the template, `MainActivity` copies the template and its
+descriptor to `noBackupFilesDir/player-templates/android/`, because the
+exporter reads the template by path.
+
+- `getAndroidExportAvailability` reports whether this build has a template the
+  exporter accepts.
+- `exportAndroidApkToUri` runs `NativeExporter.exportAndroidApk` (the
+  `routevn_exporter_jni` library) on its own executor, writes the APK under
+  `cacheDir/distribution-exports/apk-<exportId>/`, copies it to the Storage
+  Access Framework destination, checks the saved size, and removes the work
+  folder. A failed export deletes the destination document it created.
+- Progress reaches JavaScript through
+  `window.__routeVNApkExportProgress({ exportId, phase, current, total,
+elapsedMs })`, at most every 100 ms except for phase changes.
+
 ## Private Storage Layout
 
 The global app database uses Android's standard database directory, while every

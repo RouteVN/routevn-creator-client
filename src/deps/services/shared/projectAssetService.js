@@ -22,6 +22,7 @@ import {
   normalizeFontFileType,
 } from "../../../internal/fileTypes.js";
 import { verifyFileIntegrity } from "../../../internal/fileIntegrity.js";
+import { nameFromFileName } from "../../../internal/files.js";
 import {
   createFontAssetError,
   isFontAssetError,
@@ -495,7 +496,10 @@ export const createProjectAssetService = ({
     }
 
     if (fileType === "font") {
-      const fontName = file.name.replace(/\.(ttf|otf|woff|woff2|ttc)$/i, "");
+      const fontName = nameFromFileName(
+        file.name,
+        /\.(ttf|otf|woff|woff2|ttc)$/i,
+      );
       const fontUrl = URL.createObjectURL(file);
 
       try {
@@ -572,7 +576,7 @@ export const createProjectAssetService = ({
         if (!fontType) {
           throw new Error("Unable to identify font file.");
         }
-        const fontName = file.name.replace(/\.(ttf|otf|woff2)$/i, "");
+        const fontName = nameFromFileName(file.name, /\.(ttf|otf|woff2)$/i);
         const fontUrl = URL.createObjectURL(file);
         try {
           await loadFont(fontName, fontUrl, { cache: false });
@@ -620,7 +624,7 @@ export const createProjectAssetService = ({
             return {
               success: true,
               file,
-              displayName: file.name.replace(/\.[^.]+$/, ""),
+              displayName: nameFromFileName(file.name),
               ...result,
             };
           } catch (error) {
@@ -680,7 +684,7 @@ export const createProjectAssetService = ({
         const staged = {
           success: true,
           file,
-          displayName: file.name.replace(/\.[^.]+$/, ""),
+          displayName: nameFromFileName(file.name),
           ...result,
         };
         for (const record of staged.fileRecords ?? []) {
@@ -700,7 +704,7 @@ export const createProjectAssetService = ({
       const staged = {
         success: true,
         file,
-        displayName: file.name.replace(/\.[^.]+$/, ""),
+        displayName: nameFromFileName(file.name),
         ...stored,
         type: "generic",
         fileRecords: [stored.fileRecord],

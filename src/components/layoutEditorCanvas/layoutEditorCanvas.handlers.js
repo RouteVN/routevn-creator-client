@@ -1,4 +1,8 @@
-import { loadAvailableLayoutEditorAssets } from "./support/layoutEditorAssetFeedback.js";
+import {
+  hasPendingLayoutEditorVideos,
+  loadAvailableLayoutEditorAssets,
+  waitForLayoutEditorVideos,
+} from "./support/layoutEditorAssetFeedback.js";
 import { debounceTime, filter, fromEvent, tap } from "rxjs";
 import {
   DEFAULT_PROJECT_RESOLUTION,
@@ -31,6 +35,7 @@ import {
   calculateLayoutEditorRotationDragUpdate,
   createLayoutEditorRotationDragStart,
   LAYOUT_EDITOR_ROTATION_TARGET_ID,
+  resolveLayoutEditorAxisRotationFromBounds,
   resolveLayoutEditorRotationPivotFromBounds,
 } from "./support/layoutEditorCanvasRotation.js";
 
@@ -187,6 +192,8 @@ const canResizeCanvasItemForEdge = (item = {}, resizeEdge) => {
   return false;
 };
 
+const toRadians = (degrees) => (degrees * Math.PI) / 180;
+
 const clampResizeDimension = (value, min = MIN_LAYOUT_EDITOR_ITEM_SIZE) => {
   if (!Number.isFinite(value)) {
     return min;
@@ -207,19 +214,43 @@ export const applyCanvasItemResizeChange = ({
     !dragStartPosition ||
     typeof resizeEdge !== "string" ||
     typeof x !== "number" ||
-    typeof y !== "number" ||
-    typeof dragStartPosition.itemStartWidth !== "number" ||
-    typeof dragStartPosition.itemStartHeight !== "number"
+    typeof y !== "number"
   ) {
     return item;
   }
 
-  const deltaX = x - dragStartPosition.x;
-  const deltaY = y - dragStartPosition.y;
+  // Only the sides that change need a start size. Text sets only the side it
+  // wraps at, its width or, written vertically, its height, and measures the
+  // other.
+  const aspectRatioLock = getAspectRatioLock(item);
+  const keepsAspectRatio = aspectRatioLock !== undefined;
+  const resizesWidth =
+    resizeEdge === "left" || resizeEdge === "right" || keepsAspectRatio;
+  const resizesHeight =
+    resizeEdge === "top" || resizeEdge === "bottom" || keepsAspectRatio;
+  if (
+    (resizesWidth && typeof dragStartPosition.itemStartWidth !== "number") ||
+    (resizesHeight && typeof dragStartPosition.itemStartHeight !== "number")
+  ) {
+    return item;
+  }
+
+  const pointerDeltaX = x - dragStartPosition.x;
+  const pointerDeltaY = y - dragStartPosition.y;
+  // The handles turn with the element, so the pointer movement is measured
+  // along the element's own axes as they appear on the canvas.
+  const axisRadians = toRadians(
+    dragStartPosition.axisRotation ?? item.rotation ?? 0,
+  );
+  const deltaX =
+    pointerDeltaX * Math.cos(axisRadians) +
+    pointerDeltaY * Math.sin(axisRadians);
+  const deltaY =
+    pointerDeltaY * Math.cos(axisRadians) -
+    pointerDeltaX * Math.sin(axisRadians);
   const nextItem = {
     ...item,
   };
-  const aspectRatioLock = getAspectRatioLock(item);
   // While the aspect ratio is fixed, the pair stops shrinking when the
   // shorter side reaches its least size.
   const minWidth = getMinLayoutEditorItemSize({
@@ -240,9 +271,6 @@ export const applyCanvasItemResizeChange = ({
       dragStartPosition.itemStartWidth - deltaX,
       minWidth,
     );
-    nextItem.x =
-      dragStartPosition.itemStartX +
-      (dragStartPosition.itemStartWidth - nextItem.width);
     if (aspectRatioLock) {
       nextItem.height = clampResizeDimension(nextItem.width / aspectRatioLock);
     }
@@ -259,9 +287,6 @@ export const applyCanvasItemResizeChange = ({
       dragStartPosition.itemStartHeight - deltaY,
       minHeight,
     );
-    nextItem.y =
-      dragStartPosition.itemStartY +
-      (dragStartPosition.itemStartHeight - nextItem.height);
     if (aspectRatioLock) {
       nextItem.width = clampResizeDimension(nextItem.height * aspectRatioLock);
     }
@@ -274,6 +299,28 @@ export const applyCanvasItemResizeChange = ({
       nextItem.width = clampResizeDimension(nextItem.height * aspectRatioLock);
     }
   }
+
+  // The position is the anchor point, and the element turns around it. Move
+  // it so the side opposite the dragged one stays where it was: the right and
+  // bottom sides for the left and top handles, the left and top sides
+  // otherwise.
+  const widthChange = resizesWidth
+    ? nextItem.width - dragStartPosition.itemStartWidth
+    : 0;
+  const heightChange = resizesHeight
+    ? nextItem.height - dragStartPosition.itemStartHeight
+    : 0;
+  const shiftX =
+    ((item.anchorX ?? 0) - (resizeEdge === "left" ? 1 : 0)) * widthChange;
+  const shiftY =
+    ((item.anchorY ?? 0) - (resizeEdge === "top" ? 1 : 0)) * heightChange;
+  const itemRadians = toRadians(item.rotation ?? 0);
+  nextItem.x =
+    dragStartPosition.itemStartX +
+    Math.round(shiftX * Math.cos(itemRadians) - shiftY * Math.sin(itemRadians));
+  nextItem.y =
+    dragStartPosition.itemStartY +
+    Math.round(shiftX * Math.sin(itemRadians) + shiftY * Math.cos(itemRadians));
 
   return nextItem;
 };
@@ -355,6 +402,21 @@ const resolveRotationDragPivot = (
     x: payload.rotationPivotX,
     y: payload.rotationPivotY,
   };
+};
+
+// The handle is drawn inside every rotated ancestor of the element, so its
+// drawn bounds give the direction of the element's axes on the canvas.
+const resolveResizeAxisRotation = (deps, payload, dragMode) => {
+  if (dragMode === "move" || dragMode === "rotate") {
+    return undefined;
+  }
+
+  return resolveLayoutEditorAxisRotationFromBounds({
+    bounds: findCanvasTargetBounds(deps, {
+      targetId: payload.targetId,
+      position: deps.store.selectLastPointerPosition(),
+    }),
+  });
 };
 
 const startCanvasRotationDrag = (
@@ -696,6 +758,31 @@ const createTransientCanvasItemUpdater = ({ updatedItem, dragging } = {}) => {
     if (deltaHeight !== 0 && Number.isFinite(element.height)) {
       nextElement.height = element.height + deltaHeight;
     }
+    // A parsed element is placed by its top left corner, with the anchor
+    // point kept as an origin inside it. The origin grows with the size, so
+    // the corner moves back by as much.
+    if (
+      deltaWidth !== 0 &&
+      Number.isFinite(element.originX) &&
+      element.width > 0
+    ) {
+      nextElement.originX = Math.round(
+        (element.originX / element.width) * nextElement.width,
+      );
+      nextElement.x =
+        (nextElement.x ?? 0) - (nextElement.originX - element.originX);
+    }
+    if (
+      deltaHeight !== 0 &&
+      Number.isFinite(element.originY) &&
+      element.height > 0
+    ) {
+      nextElement.originY = Math.round(
+        (element.originY / element.height) * nextElement.height,
+      );
+      nextElement.y =
+        (nextElement.y ?? 0) - (nextElement.originY - element.originY);
+    }
     if (rotationDelta !== 0) {
       nextElement.rotation =
         (Number.isFinite(element.rotation) ? element.rotation : 0) +
@@ -1010,6 +1097,7 @@ const prefetchLayoutEditorAssets = async (
       previewData: props.previewData,
       resolution: props.resolution,
       sampleText: selectLayoutPreviewSampleText(deps.i18n),
+      sceneBackdrop: props.sceneBackdrop,
     });
 
     if (fileReferences.length === 0) {
@@ -1032,9 +1120,11 @@ const renderLayoutEditorCanvas = async (
   { clearFirst = false, updatedItem } = {},
 ) => {
   const renderRequestId = generateId();
+  const wasVideoLoading = deps.store.selectIsVideoLoading();
   deps.store.setActiveRenderRequestId({
     requestId: renderRequestId,
   });
+  if (wasVideoLoading) deps.render();
   if (!deps.store.selectIsGraphicsReady()) {
     return;
   }
@@ -1080,6 +1170,7 @@ const renderLayoutEditorCanvas = async (
       canvasUnitsPerCssPixel,
       graphicsService: deps.graphicsService,
       sampleText: selectLayoutPreviewSampleText(deps.i18n),
+      sceneBackdrop: props.sceneBackdrop,
     });
     if (finishStaleCanvasRender(deps, renderRequestId)) {
       return;
@@ -1090,6 +1181,37 @@ const renderLayoutEditorCanvas = async (
       metrics: selectedElementMetrics,
     });
 
+    // Show the loading state while a video's first frame is on its way.
+    const showVideoLoading = () => {
+      if (
+        isCanvasRenderRequestStale(deps, renderRequestId) ||
+        deps.store.selectIsVideoLoading()
+      ) {
+        return;
+      }
+      deps.store.setVideoLoading({ requestId: renderRequestId, value: true });
+      deps.render();
+    };
+    if (hasPendingLayoutEditorVideos(deps, fileReferences)) {
+      showVideoLoading();
+    }
+    const failedFileIds = await loadAvailableLayoutEditorAssets(
+      deps,
+      fileReferences,
+      repositoryState,
+    );
+    if (finishStaleCanvasRender(deps, renderRequestId)) return;
+    const videoFailures = await waitForLayoutEditorVideos(deps, {
+      fileReferences,
+      failedFileIds,
+      isRenderCurrent: () => !isCanvasRenderRequestStale(deps, renderRequestId),
+      onWaitStart: showVideoLoading,
+    });
+    if (finishStaleCanvasRender(deps, renderRequestId)) return;
+    const wasWaitingForVideo = deps.store.selectIsVideoLoading();
+    deps.store.setVideoLoading({ requestId: renderRequestId, value: false });
+    if (wasWaitingForVideo) deps.render();
+    failedFileIds.push(...videoFailures);
     if (clearFirst) {
       deps.graphicsService.render({
         id: generatePrefixedId("layout-editor-preview-clear-"),
@@ -1098,12 +1220,6 @@ const renderLayoutEditorCanvas = async (
       });
     }
 
-    const failedFileIds = await loadAvailableLayoutEditorAssets(
-      deps,
-      fileReferences,
-      repositoryState,
-    );
-    if (finishStaleCanvasRender(deps, renderRequestId)) return;
     const availableElements = omitUnavailableLayoutElements(
       elements,
       failedFileIds,
@@ -1113,6 +1229,12 @@ const renderLayoutEditorCanvas = async (
       elements: availableElements,
       animations: [],
     });
+    // The canvas mounts before the page passes in its layout; only a draw of
+    // that layout ends the first loading state.
+    if (layoutState.id !== undefined && !deps.store.selectHasDrawnLayout()) {
+      deps.store.markLayoutDrawn();
+      deps.render();
+    }
     deps.store.setCanvasRenderState({
       elements: availableElements,
       baseElements: omitUnavailableLayoutElements(baseElements, failedFileIds),
@@ -1128,6 +1250,13 @@ const renderLayoutEditorCanvas = async (
     });
     restoreCanvasHoverAfterRender(deps);
   } catch (error) {
+    if (
+      !isCanvasRenderRequestStale(deps, renderRequestId) &&
+      deps.store.selectIsVideoLoading()
+    ) {
+      deps.store.setVideoLoading({ requestId: renderRequestId, value: false });
+      deps.render();
+    }
     console.error("[layoutEditorCanvas] Failed to render canvas", error);
   }
 };
@@ -1446,7 +1575,10 @@ const handleBorderDragStart = (deps, payload = {}) => {
     return;
   }
 
-  deps.store.startDragging({ dragMode });
+  deps.store.startDragging({
+    dragMode,
+    axisRotation: resolveResizeAxisRotation(deps, payload, dragMode),
+  });
   if (dragMode === "rotate") {
     startCanvasRotationDrag(deps, {
       currentItem,
@@ -1492,6 +1624,7 @@ const handleBorderDragMove = async (deps, payload = {}) => {
       itemStartY: currentItem.y,
       itemStartWidth: currentItem.width,
       itemStartHeight: currentItem.height,
+      axisRotation: dragging.axisRotation,
     });
     return;
   }
@@ -1715,13 +1848,20 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  await initCanvasGraphics(deps);
-  await prefetchLayoutEditorAssets(deps, deps.props, {
-    reason: "after-mount",
-  });
-  await renderLayoutEditorCanvas(deps, deps.props, {
-    reason: "after-mount",
-  });
+  try {
+    await initCanvasGraphics(deps);
+    await prefetchLayoutEditorAssets(deps, deps.props, {
+      reason: "after-mount",
+    });
+    await renderLayoutEditorCanvas(deps, deps.props, {
+      reason: "after-mount",
+    });
+  } catch (error) {
+    // Graphics that fail to start must not leave the canvas loading forever.
+    deps.store.markLayoutDrawn();
+    deps.render();
+    throw error;
+  }
 };
 
 export const prefetchAssets = async (
@@ -1751,6 +1891,7 @@ export const handleOnUpdate = async (deps, changes) => {
     didResolutionChange ||
     oldProps.selectedItemId !== newProps.selectedItemId ||
     oldProps.previewData !== newProps.previewData ||
+    oldProps.sceneBackdrop !== newProps.sceneBackdrop ||
     oldProps.disableMoveDrag !== newProps.disableMoveDrag ||
     oldProps.disableInteraction !== newProps.disableInteraction ||
     !areCanvasLayoutStatesEquivalent(

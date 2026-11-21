@@ -65,6 +65,18 @@ afterEach(async () => {
 });
 
 describe("Android audio lifecycle", () => {
+  it("creates the runtime without Web Audio and reports a recognisable error on use", async () => {
+    const { runtime, windowTarget } = createHarness();
+    delete windowTarget.AudioContext;
+    expect(runtime.graphicsRuntime).toBeDefined();
+    expect(() => runtime.createAudioContext()).toThrowError(
+      expect.objectContaining({ name: "AudioUnavailableError" }),
+    );
+    expect(() => runtime.graphicsRuntime.context).toThrowError(
+      expect.objectContaining({ name: "AudioUnavailableError" }),
+    );
+  });
+
   it("freezes both preview and sound-player contexts until the app is visible", async () => {
     const { runtime, windowTarget, setHidden } = createHarness();
     const preview = runtime.graphicsRuntime.context;

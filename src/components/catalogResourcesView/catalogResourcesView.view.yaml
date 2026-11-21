@@ -210,20 +210,21 @@ template:
                                                   - rtgl-text s=h4 mb=md: ${item.name}
                                                   - rtgl-text s=xs c=mu-fg mb=md: ${item.animationTypeSummary}
                                                   - $if item.animationType == 'transition':
-                                                      - rtgl-view d=v w=f g=md:
-                                                          - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
+                                                      # Labelled timelines, laid out left to right like the timeline.
+                                                      - rtgl-view d=v w=f g=md dir=ltr:
+                                                          - rvn-keyframe-timeline ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: ${item.transitionOutgoingLabel}
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties} :defaultValues=${item.timelineDefaultValues}: null
+                                                              - rvn-keyframe-timeline ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: ${item.transitionIncomingLabel}
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties} :defaultValues=${item.timelineDefaultValues}: null
+                                                              - rvn-keyframe-timeline ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties} :defaultValues=${item.timelineDefaultValues}: null
                                                           - $for maskTimelineRow in item.maskTimelineRows:
                                                               - rtgl-view d=v w=f g=xs:
                                                                   - rtgl-text s=xs c=mu-fg: ${maskTimelineRow.label}
-                                                                  - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${maskTimelineRow.properties} :defaultValues=${item.maskTimelineDefaultValues}: null
+                                                                  - rvn-keyframe-timeline ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${maskTimelineRow.properties} :defaultValues=${item.maskTimelineDefaultValues}: null
                                                     $else:
-                                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties} :defaultValues=${item.timelineDefaultValues}: null
+                                                      - rvn-keyframe-timeline ?showRuler=true :properties=${item.updateProperties} :defaultValues=${item.timelineDefaultValues}: null
                                             $else:
                                               - rtgl-view w=${item.catalogTextWidth} h=152 d=v ah=c av=c br=md p=md g=sm:
                                                   - rtgl-text s=md ellipsis w=f: ${item.name}

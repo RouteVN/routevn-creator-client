@@ -384,13 +384,55 @@ describe("vnPreview.handlers", () => {
       {
         code: "routing_cycle",
         pointer: { sectionId: "section-one", lineId: "line-one" },
+        cycle: [
+          { sectionId: "section-one", lineId: "line-one" },
+          { sectionId: "section-two", lineId: "line-two" },
+        ],
       },
     );
     const loopAlert = {
       title: "Preview stopped",
       message:
-        "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop.",
+        "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop.\n\nLines in the loop:\n• Scene One → Section One → line 1\n• Scene One → Section Two → line 1",
     };
+    // Two sections whose first lines send the story to each other, in the
+    // project data the engine is given to play.
+    beforeEach(() => {
+      constructProjectDataMock.mockReturnValue({
+        screen: { width: 1280, height: 720 },
+        story: {
+          scenes: {
+            "scene-one": {
+              name: "Scene One",
+              sections: {
+                "section-one": {
+                  name: "Section One",
+                  lines: [
+                    {
+                      id: "line-one",
+                      actions: {
+                        sectionTransition: { sectionId: "section-two" },
+                      },
+                    },
+                  ],
+                },
+                "section-two": {
+                  name: "Section Two",
+                  lines: [
+                    {
+                      id: "line-two",
+                      actions: {
+                        sectionTransition: { sectionId: "section-one" },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      });
+    });
 
     const createPlaybackDeps = (graphicsService) => ({
       projectService: {
@@ -833,6 +875,11 @@ describe("vnPreview.handlers", () => {
         selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
+        setViewportSize: vi.fn(),
+      },
+      browserEventsClient: {
+        getViewportWidth: () => 390,
+        getViewportHeight: () => 844,
       },
       uiConfig: {
         inputMode: "touch",
@@ -843,6 +890,10 @@ describe("vnPreview.handlers", () => {
 
     expect(deps.store.setUiConfig).toHaveBeenCalledWith({
       uiConfig: deps.uiConfig,
+    });
+    expect(deps.store.setViewportSize).toHaveBeenCalledWith({
+      width: 390,
+      height: 844,
     });
 
     const enterEvent = {
@@ -1018,6 +1069,11 @@ describe("vnPreview.handlers", () => {
         selectLoadingDescription: vi.fn(() => "Opening project..."),
         setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
+        setViewportSize: vi.fn(),
+      },
+      browserEventsClient: {
+        getViewportWidth: () => 390,
+        getViewportHeight: () => 844,
       },
       uiConfig: {
         inputMode: "touch",

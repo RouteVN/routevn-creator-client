@@ -1,3 +1,7 @@
+import {
+  ANIMATION_THUMBNAIL_VERSION,
+  createAnimationThumbnailSource,
+} from "../../../internal/animationPreview.js";
 import { dataUrlToBlob } from "../../../internal/dataUrl.js";
 import {
   createLayoutThumbnailSource,
@@ -45,6 +49,7 @@ export const createEditorThumbnailService = ({
   updateTransform,
   updateParticle,
   updateLayout,
+  updateAnimation,
   renderThumbnail = renderDefaultThumbnail,
   releaseRenderer = releaseDefaultRenderer,
   waitUntilIdle = waitForIdle,
@@ -73,6 +78,13 @@ export const createEditorThumbnailService = ({
       save: ({ id, data, fileRecords }) =>
         updateLayout({ layoutId: id, data, fileRecords }),
     },
+    animation: {
+      collection: "animations",
+      version: ANIMATION_THUMBNAIL_VERSION,
+      createSource: createAnimationThumbnailSource,
+      save: ({ id, data, fileRecords }) =>
+        updateAnimation({ animationId: id, data, fileRecords }),
+    },
   };
   const pendingJobs = new Map();
   let running;
@@ -94,6 +106,7 @@ export const createEditorThumbnailService = ({
     const thumbnailSourceHash = await createThumbnailSourceHash({
       version,
       renderState: source.renderState,
+      animationFrame: source.animationFrame,
     });
     return item.thumbnailSourceHash === thumbnailSourceHash
       ? undefined
@@ -108,6 +121,7 @@ export const createEditorThumbnailService = ({
     renderState,
     assets,
     settleMs,
+    animationFrame,
   }) => {
     const contents = [];
     try {
@@ -135,6 +149,7 @@ export const createEditorThumbnailService = ({
         renderState,
         assets: assetsByFileId,
         settleMs,
+        animationFrame,
       });
     } finally {
       contents.forEach((content) => content.revoke?.());
@@ -256,6 +271,9 @@ export const createEditorThumbnailService = ({
     },
     requestLayoutThumbnails({ layoutIds } = {}) {
       return requestThumbnails("layout", layoutIds);
+    },
+    requestAnimationThumbnails({ animationIds } = {}) {
+      return requestThumbnails("animation", animationIds);
     },
   };
 };

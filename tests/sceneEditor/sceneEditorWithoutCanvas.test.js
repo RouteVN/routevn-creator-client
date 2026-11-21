@@ -20,6 +20,7 @@ import {
 import { createGraphicsUnavailableNotifier } from "../../src/deps/services/shared/graphicsUnavailableNotice.js";
 import Subject from "../../src/deps/subject.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // What Pixi throws when the device has no WebGL at all.
 const NO_WEBGL_MESSAGE =
@@ -134,6 +135,7 @@ const createPage = () => {
     repositoryState.scenes.items["scene-1"].sections.items["section-1"];
   let payload = { p: "project-1", s: "scene-1" };
   const appService = {
+    ...createRetainedEditHistoryService(),
     getPayload: () => payload,
     setPayload: vi.fn((nextPayload) => {
       payload = nextPayload;

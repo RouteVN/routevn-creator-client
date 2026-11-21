@@ -3,10 +3,25 @@ import {
   createProjectResolutionFormValues,
   formatCanvasMaxWidth,
   formatHalfViewportCanvasMaxWidth,
+  getProjectOrientation,
   PROJECT_RESOLUTION_OPTIONS,
   resolveProjectResolution,
   scaleTemplateProjectStateForResolution,
 } from "../../src/internal/projectResolution.js";
+
+describe("project orientation", () => {
+  it.each([
+    [1920, 1080, "landscape"],
+    [1080, 1920, "portrait"],
+    [512, 512, "landscape"],
+  ])("derives orientation from %s × %s", (width, height, orientation) => {
+    expect(getProjectOrientation({ width, height })).toBe(orientation);
+  });
+
+  it("refuses a missing project resolution", () => {
+    expect(() => getProjectOrientation()).toThrow("Project resolution");
+  });
+});
 
 describe("project resolution presets", () => {
   it("limits a canvas to half the viewport height for its aspect ratio", () => {

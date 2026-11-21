@@ -202,4 +202,37 @@ describe("keyboard projection", () => {
       },
     });
   });
+  it("normalizes projected keyboard and nested element actions once", () => {
+    const action = { updateVariable: { id: "a-b", operations: [] } };
+    const interaction = { payload: { actions: action } };
+    const projectData = constructProjectData({
+      project: { resolution: { width: 1920, height: 1080 } },
+      story: {},
+      controls: {
+        items: {
+          control: {
+            id: "control",
+            type: "control",
+            keyboard: { enter: interaction },
+            elements: {
+              items: {
+                parent: { id: "parent", type: "container" },
+                child: { id: "child", type: "container", click: interaction },
+              },
+              tree: [{ id: "parent", children: [{ id: "child" }] }],
+            },
+          },
+        },
+        tree: [{ id: "control" }],
+      },
+    });
+    const control = projectData.resources.controls.control;
+    expect(control.keyboard.enter.actions.updateVariable.id).toBe(
+      "uv0061002d0062",
+    );
+    expect(
+      control.elements[0].children[0].click.payload.actions.updateVariable.id,
+    ).toBe("uv0061002d0062");
+    expect(action.updateVariable.id).toBe("a-b");
+  });
 });

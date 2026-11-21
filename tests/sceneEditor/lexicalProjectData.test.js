@@ -194,9 +194,8 @@ describe("sceneEditorLexical.store selectProjectData", () => {
       projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
         .dialogue.content;
     const conditionalTextStyleId =
-      projectData.resources.layouts["layout-1"].elements[0][
-        "$if runtime.skipMode == false"
-      ].textStyleId;
+      projectData.resources.layouts["layout-1"].elements[0]["$if 1"]
+        .textStyleId;
 
     expect(dialogueContent[0]).toEqual({
       text: "Styled dialogue",

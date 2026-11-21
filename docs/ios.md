@@ -217,7 +217,8 @@ source snapshot so the shared `_site` output is not replaced underneath watch:
 
 ```bash
 bun run build:ios
-release_dir=".artifacts/ios-release/1.20.0-18"
+bun run ios:rust
+release_dir=".artifacts/ios-release/1.23.0-22"
 mkdir -p "$release_dir"
 xcodebuild -project ios/routevn/routevn.xcodeproj -scheme routevn \
   -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
@@ -308,23 +309,34 @@ JavaScript alone cannot add them.
 
 ### Project Folder Setup And Storage
 
-Startup opens `/project-folder-setup` when no usable library is saved; otherwise
-the normal initial route is `/projects`. Config's Change Folder action reopens
-setup without loading a project repository. Continue returns to Config when
-opened from there, or to Projects on first setup. Bottom navigation must render
-without a loaded repository; recent scene details appear only when one exists.
-The app shell waits for startup routing before mounting a page, so missing folder
-setup never triggers project discovery or a project-loading error. After
-`build:ios`, run `node tests/ios/startup.browser.mjs` to check first setup,
+iOS has no folder setup page; every start opens `/projects`, and the projects
+folder is chosen from dialogs (`src/internal/ui/projectFolderSetupFlow.js`):
+
+- **New install.** Projects shows an empty list. The first time the user creates
+  or imports a project, a dialog explains that one folder holds all RouteVN
+  projects; **Choose Folder** opens the Files directory picker, and the create
+  dialog or the import continues once the folder is saved.
+- **Saved folder that can no longer be opened.** Projects shows the same dialog
+  as soon as it opens, asking the user to select the existing folder again. It
+  never recreates the folder or falls back to internal storage. If the user
+  dismisses it, the list stays empty and Create or Import asks again.
+- **Config's Change Folder.** The dialog opens on Config and the shown path
+  updates once the new folder is saved. The open project stays open.
+
+The dialog has one button and is dismissed by tapping outside it. Dismissing it,
+cancelling the picker, or choosing a folder that is rejected keeps the previous
+choice; a rejected folder shows a localized toast. Until a
+folder can be read, the Projects page does not ask native for a folder listing,
+so a missing folder never triggers project discovery or a project-loading
+error, and startup resets any restored project route to `/projects`. After
+`build:ios`, run `node tests/ios/startup.browser.mjs` to check a new install,
 reconnection, and configured-folder loading in Chromium and WebKit.
 
-Setup uses the native Files directory picker with the **Open** action. Choosing
-`On My iPhone` or `On My iPad` creates `RouteVN Projects` only if absent and
-reuses an existing directory without changing its contents. Choosing another
-folder uses that folder directly. Selection checks access and saves a bookmark
-immediately; there is no separate Confirm button. Cancellation and failed
-selection preserve the previous choice. Lost access requests reconnection
-without recreating the folder or falling back to internal storage.
+The picker is the native Files directory picker with the **Open** action.
+Choosing `On My iPhone` or `On My iPad` creates `RouteVN Projects` only if
+absent and reuses an existing directory without changing its contents. Choosing
+another folder uses that folder directly. Selection checks access and saves a
+bookmark immediately; there is no separate Confirm step.
 
 `ProjectFolderSetup.swift` accepts the system local Files provider and rejects
 app-owned containers and cloud/unknown providers. URLs must come from the picker;
@@ -401,6 +413,54 @@ suffix. Readable success messages do not rename files.
 Shared `Documents/RouteVN Creator` and `Exports` folders are created only when a
 download/export needs them. Startup creates only private app storage.
 See Apple's [directory-access guidance](https://developer.apple.com/documentation/uikit/providing-access-to-directories).
+
+### Android APK Export
+
+Android APK export links the Rust static library from
+`crates/routevn-exporter-ffi` through the generated
+`ios/routevn/Frameworks/RouteVNExporterFFI.xcframework`. It is linked into the
+app, without embedding a dynamic framework. Install Rust with rustup on the Mac,
+then run:
+
+```bash
+bun run ios:rust
+```
+
+This requires a full Xcode installation with the iOS and Simulator SDKs. The
+script installs missing `aarch64-apple-ios`, `aarch64-apple-ios-sim`, and
+`x86_64-apple-ios` Rust targets, builds with the committed lockfile, combines
+the simulator libraries with `lipo`, and creates the XCFramework. Set
+`IOS_RUST_AUTO_INSTALL_TARGETS=0` to require targets to be installed beforehand.
+Intermediate output lives in `.artifacts/ios-rust`; the XCFramework is ignored
+by Git. Its deployment target follows the Xcode project's iOS deployment target.
+`ios:build` and `ios:run` build it before invoking `xcodebuild`. For direct
+`xcodebuild` or archive commands, run `ios:rust` first.
+
+`build-ios-assets.js` copies `RouteVNPlayerTemplate.apk` and its JSON descriptor
+from `src-tauri/assets/player-templates/android/` into the bundled
+`web/player-templates/android/` folder. The template is inert data on iOS;
+Rust reads it in place without loading or executing it.
+
+The `getAndroidExportAvailability` and `exportAndroidApkToUri` bridge methods
+run on the background bridge queue. Swift resolves project file IDs and MIME
+types, passes local paths to Rust, verifies the APK's byte count, and publishes
+it through the same `SaveFileDestinations` flow as ZIP export. Temporary APKs,
+intermediate files, and partial copies are removed on success or failure.
+Exporter failures preserve their error code and message. The iOS project
+adapter exposes availability, the APK save picker, and export through the shared
+mobile APK export adapter.
+
+Progress reaches `window.__routeVNApkExportProgress` on the main thread as
+JSON containing `exportId`, `phase`, `current`, `total`, and `elapsedMs`.
+Concurrent native callbacks are synchronized, updates within a phase are limited
+to one per 100 ms, and phase changes always pass through. JavaScript subscribes
+for the active export and unsubscribes on success or failure.
+
+Device verification is pending. On macOS, verify the device and both Simulator
+architectures build and link. On a physical iPhone, verify availability, export
+progress, cancellation, filename collisions, failure cleanup, and a large
+project export. Check that the saved APK has the reported size and can be
+opened by Android APK tooling.
 
 ### Audio Playback
 
@@ -602,7 +662,7 @@ With `watch:ios` running, run the relevant browser script with `node`:
 
 | Script                                                    | Regression coverage                                                                  |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `tests/ios/projectFolderSetup.browser.mjs`                | Setup, cancellation/errors, Config return, readable paths, Projects clicks/scrolling |
+| `tests/ios/projectFolderSetup.browser.mjs`                | Setup dialog, cancellation/errors, Config Change Folder, Projects clicks/scrolling   |
 | `tests/ios/projectCreation.browser.mjs`                   | Destination preview, sanitized names, stable typing                                  |
 | `tests/ios/mobileNavigation.browser.mjs`                  | Menus without a loaded repository, backdrop dismissal                                |
 | `tests/ios/appWidth.browser.mjs`                          | App and Projects width as containers resize                                          |
@@ -623,6 +683,8 @@ Native filesystem checks use disposable fixtures on macOS and require access to
 the host file coordination service:
 
 ```bash
+swiftc -module-cache-path /tmp/routevn-range-swift-cache ios/routevn/routevn/ByteRangeResponse.swift tests/ios/byteRangeResponseNative.swift -o /tmp/routevn-byte-range-tests
+/tmp/routevn-byte-range-tests
 swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift tests/ios/projectFolderSetupNative.swift -o /tmp/routevn-folder-native-tests
 /tmp/routevn-folder-native-tests
 swiftc -module-cache-path /tmp/routevn-folder-swift-cache ios/routevn/routevn/ProjectFolderSetup.swift ios/routevn/routevn/ProjectStoragePaths.swift ios/routevn/routevn/TempFolders.swift ios/routevn/routevn/CodedError.swift tests/ios/projectStoragePathsNative.swift -o /tmp/routevn-storage-native-tests

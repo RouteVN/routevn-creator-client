@@ -12,6 +12,7 @@ import {
   handleFormAction,
   handleSelectionBack,
   handleLoadMorePacks,
+  handleLoadingCancel,
   handleOnUpdate,
   handlePackAssetClick,
   handlePackAssetKeyDown,
@@ -25,17 +26,20 @@ import {
   handleResourceSelectionKeyDown,
   handleResourceSelectionToggle,
   handleSelectionToggleAll,
+  handleStoreSearchButtonClick,
+  handleStoreSearchClear,
   handleStoreSearchInput,
+  handleStoreSearchPopoverKeyDown,
+  handleStoreSearchPopoverPositioned,
+  handleStoreSearchSubmit,
+  handleUrlFormAction,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 import * as dialogStore from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
 
-// A pack's published package, as the store client reads it.
-const packagePlace = (url) => ({
-  url,
-  size: 1000,
-  directoryOffset: 900,
-  directorySize: 100,
-});
+// A pack's package manifest and the URLs of its media, as the store client
+// reads them with the pack.
+const packManifest = { schema: "routevn.import-pack.v3" };
+const packMediaFileUrls = { image: "https://files.example/pack-1/image" };
 
 const createDeps = () => {
   const plan = {
@@ -55,6 +59,7 @@ const createDeps = () => {
       store: {
         selectStep: vi.fn(() => "selection"),
         selectPlan: vi.fn(() => plan),
+        selectPlanPackId: vi.fn(() => "pack-1"),
         selectReviewValues: vi.fn(() => ({})),
         selectChoiceFieldValues: vi.fn(() => ({})),
         openPackStep: vi.fn(),
@@ -371,7 +376,52 @@ describe("resource-import-dialog.handlers", () => {
       step: "selection",
     });
   });
+
+  it("reports the import's progress as its files are read", async () => {
+    const { deps } = createDeps();
+    deps.projectService.executeResourceImportPlan.mockImplementation(
+      async ({ onProgress }) => {
+        for (const completed of [1, 2, 3]) {
+          onProgress({ completed, total: 3 });
+        }
+        return { valid: true };
+      },
+    );
+
+    await importChecked(deps);
+
+    expect(deps.store.setProgress).toHaveBeenCalledTimes(3);
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "import-complete" }),
+    );
+  });
+
+  it("starts no import when the choices are refused", async () => {
+    const { deps } = createDeps();
+    deps.projectService.validateResourceImportPlan.mockReturnValue({
+      valid: false,
+      error: { code: "invalid_choice" },
+    });
+
+    await importChecked(deps);
+
+    expect(
+      deps.projectService.executeResourceImportPlan,
+    ).not.toHaveBeenCalled();
+  });
 });
+
+// Import from the selection page with the plan's one resource checked.
+const importChecked = (deps) =>
+  handleFormAction(deps, {
+    _event: {
+      detail: {
+        actionId: "import",
+        values: { resource_0_include: true },
+        valid: true,
+      },
+    },
+  });
 
 // The dialog's real store, driven the way the component drives it.
 const createStoreDeps = () => {
@@ -392,11 +442,14 @@ const createStoreDeps = () => {
     appService: {
       listAssetStorePacks: vi.fn(),
       getAssetStorePack: vi.fn(),
+      getAssetStorePackDownload: vi.fn(),
       getAssetStoreCreator: vi.fn(),
       openUrl: vi.fn(),
       getPath: vi.fn(() => "/project/scenes"),
+      showToast: vi.fn(),
     },
     projectService: {
+      validateResourceImportUrl: vi.fn(() => ({ valid: true })),
       createResourceImportPlan: vi.fn(),
       cancelResourceImport: vi.fn(),
       discardResourceImportPlan: vi.fn(),
@@ -470,6 +523,110 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.render).toHaveBeenCalledTimes(2);
   });
 
+  it("opens the phone search popover under its button and focuses it once", () => {
+    const { state, deps } = createStoreDeps();
+    deps.refs = {
+      storeSearchButton: {
+        getBoundingClientRect: () => ({ right: 339.6, bottom: 56.2 }),
+      },
+      storeSearchPopoverInput: { focus: vi.fn() },
+    };
+    const stopPropagation = vi.fn();
+
+    handleStoreSearchButtonClick(deps, { _event: { stopPropagation } });
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(state.searchPopover).toEqual({
+      isOpen: true,
+      focusPending: true,
+      position: { x: 340, y: 56 },
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    handleStoreSearchPopoverPositioned(deps);
+    handleStoreSearchPopoverPositioned(deps);
+    expect(deps.refs.storeSearchPopoverInput.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches at once from the popover's Search button or Enter, and closes it", async () => {
+    vi.useFakeTimers();
+    try {
+      const { state, deps } = createStoreDeps();
+      deps.appService.listAssetStorePacks.mockResolvedValue({ packs: [] });
+      const cleanup = handleBeforeMount(deps);
+      openDialog(deps);
+      await vi.runAllTimersAsync();
+      deps.appService.listAssetStorePacks.mockClear();
+      const open = () =>
+        dialogStore.openSearchPopover(
+          { state },
+          { position: { x: 340, y: 56 } },
+        );
+      const type = (value) =>
+        handleStoreSearchInput(deps, { _event: { detail: { value } } });
+
+      open();
+      type("forest ");
+      handleStoreSearchSubmit(deps);
+      expect(state.searchPopover.isOpen).toBe(false);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
+        cursor: undefined,
+        query: "forest",
+      });
+      // The search waiting for typing to settle never runs.
+      await vi.advanceTimersByTimeAsync(300);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+
+      open();
+      type("dragon");
+      const press = (event) => {
+        const preventDefault = vi.fn();
+        handleStoreSearchPopoverKeyDown(deps, {
+          _event: { preventDefault, ...event },
+        });
+        return preventDefault;
+      };
+      expect(press({ key: "a" })).not.toHaveBeenCalled();
+      expect(state.searchPopover.isOpen).toBe(true);
+      // An Enter that ends an input method composition only picks the text.
+      expect(press({ key: "Enter", isComposing: true })).not.toHaveBeenCalled();
+      expect(press({ key: "Enter", keyCode: 229 })).not.toHaveBeenCalled();
+      expect(state.searchPopover.isOpen).toBe(true);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+      // Enter is kept from the search button that takes focus once the
+      // popover closes, so it can't open the popover again.
+      expect(press({ key: "Enter" })).toHaveBeenCalled();
+      expect(state.searchPopover.isOpen).toBe(false);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
+        cursor: undefined,
+        query: "dragon",
+      });
+
+      // Submitting the search already shown only closes the popover.
+      open();
+      handleStoreSearchSubmit(deps);
+      expect(state.searchPopover.isOpen).toBe(false);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(2);
+
+      // Clear shows every pack at once and keeps the popover open.
+      open();
+      type("dragons");
+      handleStoreSearchClear(deps);
+      expect(state.searchText).toBe("");
+      expect(state.searchPopover.isOpen).toBe(true);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
+        cursor: undefined,
+        query: "",
+      });
+      await vi.advanceTimersByTimeAsync(300);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(3);
+      cleanup();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("appends the next page and retries a failed page with its cursor", async () => {
     const { state, deps } = createStoreDeps();
     deps.appService.listAssetStorePacks
@@ -517,14 +674,15 @@ describe("resource-import-dialog asset store", () => {
     expect(state.catalog.packs.map((pack) => pack.id)).toEqual(["fresh"]);
   });
 
-  it("opens a pack's page at once, then loads its details and its assets through its import link", async () => {
+  it("opens a pack's page at once, then loads its details and plans its assets from its manifest", async () => {
     const { state, deps } = createStoreDeps();
     const plan = { planId: "plan-1", package: {}, resources: [] };
     const detail = {
       ...storePack("pack-1"),
       description: [{ text: "About the pack." }],
       versionName: "1.0.0",
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     };
     const details = deferred();
     const planned = deferred();
@@ -569,12 +727,29 @@ describe("resource-import-dialog asset store", () => {
       description: [{ text: "About the pack." }],
       versionName: "1.0.0",
     });
+    // The plan comes from the pack's manifest; the page's media from their
+    // own URLs.
     expect(deps.projectService.createResourceImportPlan).toHaveBeenCalledWith({
-      zip: packagePlace("https://files.example/pack.zip"),
+      assetPack: {
+        id: "pack-1",
+        manifest: packManifest,
+        fileUrls: packMediaFileUrls,
+        getZip: expect.any(Function),
+      },
       operationId: state.operationId,
       // The pack's dependencies go into a folder named after it.
       dependencyFolderName: expect.any(String),
     });
+    // Only an import reads the pack's package: asking for it as an import
+    // starts counts one download, and a fresh URL counts none.
+    const [{ assetPack }] =
+      deps.projectService.createResourceImportPlan.mock.calls[0];
+    assetPack.getZip({ importing: true });
+    assetPack.getZip();
+    expect(deps.appService.getAssetStorePackDownload.mock.calls).toEqual([
+      [{ assetPackId: "pack-1", countDownload: true }],
+      [{ assetPackId: "pack-1", countDownload: false }],
+    ]);
 
     planned.resolve({ valid: true, plan });
     await opening;
@@ -611,7 +786,8 @@ describe("resource-import-dialog asset store", () => {
 
     details.resolve({
       ...storePack("pack-1"),
-      package: packagePlace("https://x.test/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     await opening;
     expect(state.step).toBe("store");
@@ -626,7 +802,8 @@ describe("resource-import-dialog asset store", () => {
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockReturnValue(
       planned.promise,
@@ -660,7 +837,8 @@ describe("resource-import-dialog asset store", () => {
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,
@@ -709,7 +887,8 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
       description: [],
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.appService.getAssetStoreCreator.mockResolvedValue({
       creator: {
@@ -746,7 +925,8 @@ describe("resource-import-dialog asset store", () => {
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack("pack-1"),
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,
@@ -774,6 +954,53 @@ describe("resource-import-dialog asset store", () => {
     expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
       1,
     );
+  });
+
+  it("reads the pack, counting one view, each time its page opens, and not when it shows again", async () => {
+    const { deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({
+      packs: [storePack("pack-1")],
+    });
+    deps.appService.getAssetStorePack.mockResolvedValue({
+      ...storePack("pack-1"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
+    });
+    deps.appService.getAssetStoreCreator.mockResolvedValue({
+      creator: {
+        id: "creator-1",
+        name: "Creator One",
+        description: [],
+        links: [],
+      },
+      packs: [storePack("pack-1")],
+    });
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: { planId: "plan-1", package: {}, resources: [] },
+    });
+    openDialog(deps);
+    await settle();
+
+    await clickPack(deps, "pack-1");
+    // Its creator's page, and the pack again from there, keep the pack
+    // loaded, so nothing is read.
+    await handlePackCreatorClick(deps);
+    await clickPack(deps, "pack-1");
+    handlePackImport(deps);
+    handleSelectionBack(deps);
+    expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
+      [{ assetPackId: "pack-1" }],
+    ]);
+
+    // Back to the list, then the pack again: a second opening.
+    handlePackBack(deps);
+    handleCreatorBack(deps);
+    await clickPack(deps, "pack-1");
+    expect(deps.appService.getAssetStorePack.mock.calls).toEqual([
+      [{ assetPackId: "pack-1" }],
+      [{ assetPackId: "pack-1" }],
+    ]);
   });
 
   it("shows a localized message when a pack is no longer available", async () => {
@@ -812,7 +1039,8 @@ describe("resource-import-dialog asset store", () => {
       packs: [storePack("pack-1")],
     });
     deps.appService.getAssetStorePack.mockResolvedValue({
-      package: packagePlace("https://files.example/pack.zip"),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: false,
@@ -1039,7 +1267,8 @@ describe("resource-import-dialog asset store", () => {
     deps.appService.getAssetStorePack.mockResolvedValue({
       ...storePack(packId),
       description: [],
-      package: packagePlace(`https://files.example/${packId}.zip`),
+      manifest: packManifest,
+      mediaFileUrls: packMediaFileUrls,
     });
     deps.projectService.createResourceImportPlan.mockResolvedValue({
       valid: true,
@@ -1299,5 +1528,464 @@ describe("resource-import-dialog asset store", () => {
 
     expect(deps.appService.openUrl).toHaveBeenCalledTimes(1);
     expect(deps.appService.openUrl).toHaveBeenCalledWith("https://x.example");
+  });
+});
+
+// A dialog opened on a package ZIP file or on a URL, with no store pages.
+const openDialogOn = (deps, props) =>
+  handleOnUpdate(deps, {
+    oldProps: { open: false },
+    newProps: { open: true, ...props },
+  });
+
+const packageFile = (name = "Pack One.zip") => new File(["zip"], name);
+
+const packagePlan = (packageInfo = {}) => ({
+  planId: "plan-1",
+  package: packageInfo,
+  resources: [{ sourceId: "images:image-1", name: "City" }],
+});
+
+const submitUrl = (deps, url) =>
+  handleUrlFormAction(deps, {
+    _event: {
+      detail: { actionId: "import-url", values: { url }, valid: true },
+    },
+  });
+
+const cancelledEvents = (deps) =>
+  deps.dispatchEvent.mock.calls.filter(
+    ([event]) => event.type === "import-cancelled",
+  );
+
+describe("resource-import-dialog from a zip file", () => {
+  it("reads the package while showing that it loads, then opens its selection", async () => {
+    const { state, deps } = createStoreDeps();
+    const file = packageFile();
+    const planned = deferred();
+    deps.projectService.createResourceImportPlan.mockReturnValue(
+      planned.promise,
+    );
+
+    const opening = openDialogOn(deps, { source: "zip", file });
+
+    expect(state).toMatchObject({ source: "zip", step: "loading" });
+    expect(dialogStore.selectViewData({ state })).toMatchObject({
+      dialogTitle: "Import from Zip File",
+      isLoadingStep: true,
+      isStoreStep: false,
+      loadingLabel: "Reading the asset package",
+    });
+    expect(deps.projectService.createResourceImportPlan).toHaveBeenCalledWith({
+      zip: { file },
+      link: undefined,
+      operationId: state.operationId,
+      fallbackDependencyFolderName: "Pack One",
+    });
+    expect(deps.appService.listAssetStorePacks).not.toHaveBeenCalled();
+
+    planned.resolve({ valid: true, plan: packagePlan() });
+    await opening;
+
+    expect(state).toMatchObject({
+      step: "selection",
+      plan: { planId: "plan-1" },
+      operationId: undefined,
+    });
+    // An exported package has no name of its own, so the file's shows.
+    expect(dialogStore.selectViewData({ state })).toMatchObject({
+      isSelectionStep: true,
+      isLoadingStep: false,
+      packageName: "Pack One",
+      hasPackageMetadata: true,
+      pack: undefined,
+    });
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+  });
+
+  it("shows the package's own name when its manifest has one", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: packagePlan({ name: "Fantasy UI" }),
+    });
+
+    await openDialogOn(deps, { source: "zip", file: packageFile() });
+
+    expect(dialogStore.selectViewData({ state }).packageName).toBe(
+      "Fantasy UI",
+    );
+  });
+
+  it("opens with the dialog already open when it mounts", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.props = { open: true, source: "zip", file: packageFile() };
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: packagePlan(),
+    });
+
+    const cleanup = handleBeforeMount(deps);
+    await settle();
+
+    expect(state).toMatchObject({ step: "selection", source: "zip" });
+    cleanup();
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
+    });
+  });
+
+  it("closes with a toast that says why when the file is not a package", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.i18n = {
+      resourceImportErrors: { package_invalid: "That is not a package." },
+    };
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: false,
+      error: { code: "package_invalid", message: "raw text" },
+    });
+
+    await openDialogOn(deps, { source: "zip", file: packageFile() });
+
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "That is not a package.",
+      status: "error",
+    });
+    expect(cancelledEvents(deps)).toHaveLength(1);
+    expect(state).toMatchObject({ plan: undefined, operationId: undefined });
+    expect(
+      deps.projectService.discardResourceImportPlan,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("closes from Back on the selection, freeing the plan once", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: packagePlan(),
+    });
+    await openDialogOn(deps, { source: "zip", file: packageFile() });
+
+    handleSelectionBack(deps);
+
+    expect(cancelledEvents(deps)).toHaveLength(1);
+    expect(state.plan).toBeUndefined();
+    closeDialog(deps);
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
+    });
+  });
+
+  it("frees the plan when the dialog closes from its close button", async () => {
+    const { deps } = createStoreDeps();
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: packagePlan(),
+    });
+    await openDialogOn(deps, { source: "zip", file: packageFile() });
+
+    handleDialogClose(deps);
+
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
+    });
+    expect(cancelledEvents(deps)).toHaveLength(1);
+  });
+
+  it("stops reading when the dialog closes, and frees a plan that still arrives", async () => {
+    const { state, deps } = createStoreDeps();
+    const planned = deferred();
+    deps.projectService.createResourceImportPlan.mockReturnValue(
+      planned.promise,
+    );
+    const opening = openDialogOn(deps, { source: "zip", file: packageFile() });
+    const { operationId } = state;
+
+    handleLoadingCancel(deps);
+    closeDialog(deps);
+
+    expect(deps.projectService.cancelResourceImport).toHaveBeenCalledWith({
+      operationId,
+    });
+    expect(cancelledEvents(deps)).toHaveLength(1);
+    planned.resolve({ valid: true, plan: packagePlan() });
+    await opening;
+    expect(state.plan).toBeUndefined();
+    expect(state.step).not.toBe("selection");
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
+    });
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+  });
+
+  it("drops the result of a file whose dialog was opened again on another", async () => {
+    const { state, deps } = createStoreDeps();
+    const first = deferred();
+    deps.projectService.createResourceImportPlan
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce({
+        valid: true,
+        plan: { ...packagePlan(), planId: "plan-2" },
+      });
+    const opening = openDialogOn(deps, { source: "zip", file: packageFile() });
+    closeDialog(deps);
+    await openDialogOn(deps, {
+      source: "zip",
+      file: packageFile("Pack Two.zip"),
+    });
+
+    first.resolve({ valid: false, error: { code: "package_invalid" } });
+    await opening;
+
+    expect(state).toMatchObject({
+      step: "selection",
+      plan: { planId: "plan-2" },
+    });
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    expect(dialogStore.selectViewData({ state }).packageName).toBe("Pack Two");
+  });
+
+  it("closes when it is opened without a file", () => {
+    const { deps } = createStoreDeps();
+
+    openDialogOn(deps, { source: "zip" });
+
+    expect(cancelledEvents(deps)).toHaveLength(1);
+    expect(deps.projectService.createResourceImportPlan).not.toHaveBeenCalled();
+  });
+});
+
+describe("resource-import-dialog from a URL", () => {
+  it("opens on the URL form without requesting anything", () => {
+    const { state, deps } = createStoreDeps();
+
+    openDialogOn(deps, { source: "url" });
+
+    expect(state).toMatchObject({ source: "url", step: "url" });
+    const view = dialogStore.selectViewData({ state });
+    expect(view).toMatchObject({
+      dialogTitle: "Import from URL",
+      isUrlStep: true,
+      isStoreStep: false,
+      urlDefaultValues: { url: "" },
+    });
+    // The help is the label's hint, not a description under the field.
+    const [field] = view.urlForm.fields;
+    expect(field).toMatchObject({
+      name: "url",
+      type: "input-text",
+      label: "Package URL",
+      required: { message: "Enter the package URL." },
+    });
+    expect(field.tooltip.content).toContain("asset-package.json");
+    expect(field.description).toBeUndefined();
+    expect(view.urlForm.actions.buttons.map((button) => button.id)).toEqual([
+      "cancel",
+      "import-url",
+    ]);
+    expect(deps.render).toHaveBeenCalled();
+    expect(deps.appService.listAssetStorePacks).not.toHaveBeenCalled();
+    expect(deps.projectService.createResourceImportPlan).not.toHaveBeenCalled();
+  });
+
+  it("reads the package at the URL, then opens its selection", async () => {
+    const { state, deps } = createStoreDeps();
+    const planned = deferred();
+    deps.projectService.createResourceImportPlan.mockReturnValue(
+      planned.promise,
+    );
+    openDialogOn(deps, { source: "url" });
+
+    const submitting = submitUrl(
+      deps,
+      "  https://assets.example/packs/Pack%20One.zip?token=1 ",
+    );
+
+    expect(state).toMatchObject({
+      step: "loading",
+      urlValue: "https://assets.example/packs/Pack%20One.zip?token=1",
+    });
+    expect(deps.projectService.validateResourceImportUrl).toHaveBeenCalledWith({
+      url: "https://assets.example/packs/Pack%20One.zip?token=1",
+    });
+    expect(deps.projectService.createResourceImportPlan).toHaveBeenCalledWith({
+      zip: undefined,
+      link: "https://assets.example/packs/Pack%20One.zip?token=1",
+      operationId: state.operationId,
+      fallbackDependencyFolderName: "Pack One",
+    });
+
+    planned.resolve({ valid: true, plan: packagePlan() });
+    await submitting;
+
+    expect(state).toMatchObject({
+      step: "selection",
+      plan: { planId: "plan-1" },
+    });
+    expect(dialogStore.selectViewData({ state })).toMatchObject({
+      isSelectionStep: true,
+      packageName: "Pack One",
+    });
+  });
+
+  it("shows why a URL cannot be used, keeping what was typed", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.i18n = {
+      resourceImportErrors: { unsupported_protocol: "Use an HTTPS link." },
+    };
+    deps.projectService.validateResourceImportUrl.mockReturnValue({
+      valid: false,
+      error: { code: "unsupported_protocol", message: "raw text" },
+    });
+    openDialogOn(deps, { source: "url" });
+    const { formKey } = state;
+
+    await submitUrl(deps, "http://assets.example/pack.zip");
+
+    expect(state).toMatchObject({
+      step: "url",
+      urlValue: "http://assets.example/pack.zip",
+      error: { message: "Use an HTTPS link." },
+    });
+    expect(dialogStore.selectViewData({ state })).toMatchObject({
+      isUrlStep: true,
+      errorMessage: "Use an HTTPS link.",
+      urlDefaultValues: { url: "http://assets.example/pack.zip" },
+    });
+    expect(state.formKey).toBeGreaterThan(formKey);
+    expect(deps.projectService.createResourceImportPlan).not.toHaveBeenCalled();
+  });
+
+  it("does nothing while the form says the URL is missing", async () => {
+    const { state, deps } = createStoreDeps();
+    openDialogOn(deps, { source: "url" });
+
+    await handleUrlFormAction(deps, {
+      _event: {
+        detail: { actionId: "import-url", values: { url: "" }, valid: false },
+      },
+    });
+
+    expect(state).toMatchObject({ step: "url", error: undefined });
+    expect(
+      deps.projectService.validateResourceImportUrl,
+    ).not.toHaveBeenCalled();
+    expect(deps.projectService.createResourceImportPlan).not.toHaveBeenCalled();
+  });
+
+  it("returns to the form with the error when the package cannot be read", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.i18n = {
+      resourceImportErrors: {
+        package_link_unsupported: "That link is not a package.",
+      },
+    };
+    deps.projectService.createResourceImportPlan
+      .mockResolvedValueOnce({
+        valid: false,
+        error: { code: "package_link_unsupported" },
+      })
+      .mockResolvedValueOnce({ valid: true, plan: packagePlan() });
+    openDialogOn(deps, { source: "url" });
+
+    await submitUrl(deps, "https://assets.example/page");
+
+    expect(state).toMatchObject({
+      step: "url",
+      urlValue: "https://assets.example/page",
+      error: { message: "That link is not a package." },
+      operationId: undefined,
+      plan: undefined,
+    });
+    expect(cancelledEvents(deps)).toHaveLength(0);
+    expect(deps.appService.showToast).not.toHaveBeenCalled();
+
+    // A corrected URL imports, and the error is gone.
+    await submitUrl(deps, "https://assets.example/pack.zip");
+    expect(state).toMatchObject({ step: "selection", error: undefined });
+  });
+
+  it("returns to the form when reading is cancelled, and frees a plan that still arrives", async () => {
+    const { state, deps } = createStoreDeps();
+    const planned = deferred();
+    deps.projectService.createResourceImportPlan.mockReturnValue(
+      planned.promise,
+    );
+    openDialogOn(deps, { source: "url" });
+    const submitting = submitUrl(deps, "https://assets.example/pack.zip");
+    const { operationId } = state;
+
+    handleLoadingCancel(deps);
+
+    expect(deps.projectService.cancelResourceImport).toHaveBeenCalledWith({
+      operationId,
+    });
+    expect(state).toMatchObject({
+      step: "url",
+      urlValue: "https://assets.example/pack.zip",
+      error: undefined,
+    });
+    expect(cancelledEvents(deps)).toHaveLength(0);
+    planned.resolve({ valid: true, plan: packagePlan() });
+    await submitting;
+    expect(state).toMatchObject({ step: "url", plan: undefined });
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledWith({
+      planId: "plan-1",
+    });
+  });
+
+  it("closes from the form's Cancel, and from Back on the selection, freeing the plan", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.projectService.createResourceImportPlan.mockResolvedValue({
+      valid: true,
+      plan: packagePlan(),
+    });
+    openDialogOn(deps, { source: "url" });
+
+    await handleUrlFormAction(deps, {
+      _event: { detail: { actionId: "cancel", values: { url: "" } } },
+    });
+    expect(cancelledEvents(deps)).toHaveLength(1);
+    expect(
+      deps.projectService.discardResourceImportPlan,
+    ).not.toHaveBeenCalled();
+
+    await submitUrl(deps, "https://assets.example/pack.zip");
+    handleSelectionBack(deps);
+
+    expect(cancelledEvents(deps)).toHaveLength(2);
+    expect(state.plan).toBeUndefined();
+    expect(deps.projectService.discardResourceImportPlan).toHaveBeenCalledTimes(
+      1,
+    );
+  });
+
+  it("forgets the last URL and source when it opens again on the store", async () => {
+    const { state, deps } = createStoreDeps();
+    deps.appService.listAssetStorePacks.mockResolvedValue({ packs: [] });
+    deps.projectService.validateResourceImportUrl.mockReturnValue({
+      valid: false,
+      error: { code: "invalid_url" },
+    });
+    openDialogOn(deps, { source: "url" });
+    await submitUrl(deps, "not a url");
+    expect(state).toMatchObject({ urlValue: "not a url" });
+    closeDialog(deps);
+
+    openDialog(deps);
+    await settle();
+
+    expect(state).toMatchObject({
+      source: "store",
+      step: "store",
+      urlValue: "",
+    });
+    expect(dialogStore.selectViewData({ state }).dialogTitle).toBe(
+      "Asset Store",
+    );
+    expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
   });
 });

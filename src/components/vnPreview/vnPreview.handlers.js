@@ -33,7 +33,12 @@ import {
   showAssetLoadFailures,
 } from "../../internal/ui/assetLoadFeedback.js";
 import { isFontAssetError } from "../../internal/fontAssetError.js";
-import { isRoutingCycleError } from "../../internal/routingCycleError.js";
+import {
+  formatRoutingCycleMessage,
+  getRoutingCycleLines,
+  isRoutingCycleError,
+  ROUTING_CYCLE_FALLBACK_COPY,
+} from "../../internal/routingCycleError.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
 import { isGraphicsUnavailableError } from "../../internal/graphicsErrors.js";
 import {
@@ -671,9 +676,20 @@ const createBeforeHandleActionsHook = (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { dispatchEvent, store, graphicsService, refs, subject, uiConfig } =
-    deps;
+  const {
+    browserEventsClient,
+    dispatchEvent,
+    store,
+    graphicsService,
+    refs,
+    subject,
+    uiConfig,
+  } = deps;
   store.setUiConfig({ uiConfig });
+  store.setViewportSize({
+    width: browserEventsClient.getViewportWidth(),
+    height: browserEventsClient.getViewportHeight(),
+  });
   function handleKeyDown(event) {
     if (event.key !== "Escape") {
       if (
@@ -772,12 +788,20 @@ const closePreview = (deps, showFeedback) => {
   dispatchEvent(new CustomEvent("close"));
 };
 
-const getPreviewStoppedMessage = ({ i18n, projectService }, error) => {
+// `projectData` is what the engine was playing. It holds the lines of every
+// scene the preview has loaded, which the project state on its own does not.
+const getPreviewStoppedMessage = (
+  { i18n, projectService },
+  error,
+  projectData,
+) => {
   if (isRoutingCycleError(error)) {
-    return (
-      i18n?.vnPreview?.transitionLoop ??
-      "Transitions kept repeating without waiting for the player. Make sure your transitions don't cause an infinite loop."
-    );
+    const copy = { ...ROUTING_CYCLE_FALLBACK_COPY, ...i18n?.vnPreview };
+    return formatRoutingCycleMessage({
+      message: copy.transitionLoop,
+      copy,
+      cycleLines: getRoutingCycleLines(error, projectData),
+    });
   }
   const variableName = getComputedVariableErrorName(error, () =>
     projectService.getRepositoryState(),
@@ -796,31 +820,35 @@ const getPreviewStoppedMessage = ({ i18n, projectService }, error) => {
   );
 };
 
-const showPreviewStoppedAlert = (deps, error) => {
+const showPreviewStoppedAlert = (deps, error, projectData) => {
   const { appService, i18n } = deps;
   appService.showAlert({
     title: i18n?.vnPreview?.stoppedTitle ?? "Preview stopped",
-    message: getPreviewStoppedMessage(deps, error),
+    message: getPreviewStoppedMessage(deps, error, projectData),
   });
 };
 
-const handlePlaybackError = (deps, error) => {
+const handlePlaybackError = (deps, error, runtime) => {
   const { store } = deps;
   if (getPreviewSignal(store)?.aborted) return;
-  closePreview(deps, () => showPreviewStoppedAlert(deps, error));
+  closePreview(deps, () =>
+    showPreviewStoppedAlert(deps, error, runtime.projectData),
+  );
 };
 
 export const handleAfterMount = async (deps) => {
   const { appService, i18n } = deps;
   const startup = startPreviewStartup(deps);
+  // Filled in by the startup with what the engine is given to play.
+  const preview = {};
   try {
-    await initializePreview(deps, startup);
+    await initializePreview(deps, startup, preview);
   } catch (error) {
     if (startup.signal.aborted) return;
     console.error("[vnPreview] Failed to initialize preview", error);
     closePreview(deps, () => {
       if (isRoutingCycleError(error) || getComputedVariableErrorId(error)) {
-        showPreviewStoppedAlert(deps, error);
+        showPreviewStoppedAlert(deps, error, preview.runtime?.projectData);
       } else if (error?.name === "TimeoutError") {
         appService.showAlert({
           title: i18n?.resourcePages?.warningTitle ?? "Warning",
@@ -843,7 +871,7 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-const initializePreview = async (deps, startup) => {
+const initializePreview = async (deps, startup, preview) => {
   const {
     dispatchEvent,
     projectService,
@@ -914,6 +942,7 @@ const initializePreview = async (deps, startup) => {
     projectData: projectDataWithInitial,
     loadedSceneIds: new Set(loadedSceneIds),
   };
+  preview.runtime = runtime;
   const beforeHandleActions = createBeforeHandleActionsHook(deps, {
     repository,
     runtime,
@@ -944,7 +973,7 @@ const initializePreview = async (deps, startup) => {
       signal: startup.signal,
       canvas: canvas,
       beforeHandleActions,
-      onPlaybackError: (error) => handlePlaybackError(deps, error),
+      onPlaybackError: (error) => handlePlaybackError(deps, error, runtime),
       width: previewWidth,
       height: previewHeight,
     }),

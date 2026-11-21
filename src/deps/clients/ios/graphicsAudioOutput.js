@@ -14,7 +14,7 @@ export const createIOSGraphicsAudioOutput = ({
   documentTarget = globalThis.document,
   onError,
 }) => {
-  const context = runtime.graphicsRuntime.context;
+  let outputContext;
   let output;
   let silence;
 
@@ -29,6 +29,7 @@ export const createIOSGraphicsAudioOutput = ({
 
   const ensureOutput = () => {
     if (output) return output;
+    const context = runtime.graphicsRuntime.context;
     const nextOutput = createIOSAudioOutput(context, {
       documentTarget,
       subscribeActivity: runtime.subscribeActivity,
@@ -50,18 +51,28 @@ export const createIOSGraphicsAudioOutput = ({
     return output;
   };
 
-  const outputContext = new Proxy(context, {
-    get(target, property) {
-      if (property === "destination") return ensureOutput().destination;
-      const value = Reflect.get(target, property, target);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
-  });
-
   return {
+    // The fields are listed instead of spread: spreading would call the
+    // runtime's context getter and create its AudioContext at startup.
     graphicsRuntime: {
-      ...runtime.graphicsRuntime,
-      context: outputContext,
+      get context() {
+        if (!outputContext) {
+          outputContext = new Proxy(runtime.graphicsRuntime.context, {
+            get(target, property) {
+              if (property === "destination") return ensureOutput().destination;
+              const value = Reflect.get(target, property, target);
+              return typeof value === "function" ? value.bind(target) : value;
+            },
+          });
+        }
+        return outputContext;
+      },
+      nowMs: runtime.graphicsRuntime.nowMs,
+      setTimeout: runtime.graphicsRuntime.setTimeout,
+      clearTimeout: runtime.graphicsRuntime.clearTimeout,
+      setInterval: runtime.graphicsRuntime.setInterval,
+      clearInterval: runtime.graphicsRuntime.clearInterval,
+      queueMicrotask: runtime.graphicsRuntime.queueMicrotask,
     },
 
     async resume() {

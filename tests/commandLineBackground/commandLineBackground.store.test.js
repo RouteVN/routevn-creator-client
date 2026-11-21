@@ -45,25 +45,26 @@ const createEmptyCollection = () => ({
 });
 
 describe("commandLineBackground.store", () => {
-  it("uses two resource selector columns and hides the explorer in touch mode", () => {
+  it("fills rows with cards and hides the explorer in touch mode", () => {
     const state = createInitialState();
 
-    expect(selectViewData({ state }).imageSelectorColumns).toBeUndefined();
     expect(selectViewData({ state })).toMatchObject({
       showImageSelectorFileExplorer: true,
-      spritesheetSelectorColumns: undefined,
+      // Cards fill each row, two a row or more where the picker has room.
+      resourceSelectorMinCardWidth: 180,
+      resourceSelectorGridStyle:
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
       showInlineSearch: true,
       showSearchButton: false,
     });
 
     setUiConfig({ state }, { uiConfig: { inputMode: "touch" } });
 
-    expect(selectViewData({ state }).imageSelectorColumns).toBe(2);
     expect(selectViewData({ state })).toMatchObject({
       showImageSelectorFileExplorer: false,
-      spritesheetSelectorColumns: 2,
+      resourceSelectorMinCardWidth: 180,
       resourceSelectorGridStyle:
-        "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));",
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr));",
       showInlineSearch: false,
       showSearchButton: true,
     });

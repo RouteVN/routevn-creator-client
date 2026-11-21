@@ -5,6 +5,11 @@ import {
   PLATFORM_APPLICATION_ICON_VALIDATIONS,
 } from "../../internal/ui/platformDetailsForm.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
+  getAndroidSigningKeyErrorMessage,
+  saveAndroidSigningKeyCopy,
+  uploadAndroidSigningKey,
+} from "./support/androidSigningKeys.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
 
 export const handleBeforeMount = (deps) => {
@@ -19,26 +24,174 @@ export const handleAfterMount = async (deps) => {
   const copy = selectPlatformDetailsPageCopy(i18n);
 
   try {
-    const [webPlatformDetails, windowsPlatformDetails, macosPlatformDetails] =
-      await Promise.all([
-        projectService.getCurrentPlatformDetails("web"),
-        projectService.getCurrentPlatformDetails("windows"),
-        projectService.getCurrentPlatformDetails("macos"),
-      ]);
+    const [
+      webPlatformDetails,
+      windowsPlatformDetails,
+      macosPlatformDetails,
+      androidPlatformDetails,
+      iosPlatformDetails,
+    ] = await Promise.all([
+      projectService.getCurrentPlatformDetails("web"),
+      projectService.getCurrentPlatformDetails("windows"),
+      projectService.getCurrentPlatformDetails("macos"),
+      projectService.getCurrentPlatformDetails("android"),
+      projectService.getCurrentPlatformDetails("ios"),
+    ]);
     const platformDetails = [
       ["web", webPlatformDetails],
       ["windows", windowsPlatformDetails],
       ["macos", macosPlatformDetails],
+      ["android", androidPlatformDetails],
+      ["ios", iosPlatformDetails],
     ];
     for (const [platform, applicationInfo] of platformDetails) {
       if (applicationInfo) {
         store.setPlatformApplicationInfo({ platform, applicationInfo });
       }
     }
+    store.setProjectResolution({
+      projectResolution:
+        projectService.getRepositoryState().project?.resolution,
+    });
+    await loadAndroidSigning(deps);
     render();
   } catch {
     appService.showToast({ message: copy.failedLoadMessage });
   }
+};
+
+// The project's signing keys, for hosts that sign Android builds.
+const loadAndroidSigning = async (deps) => {
+  const { appService, i18n, projectService, store } = deps;
+  if (!projectService.supportsAndroidSigning()) {
+    store.setAndroidSigning({ supported: false });
+    return;
+  }
+  try {
+    const { currentKey, currentKeyUnusable, previousKeys } =
+      await projectService.getAndroidSigningSummary();
+    store.setAndroidSigning({
+      supported: true,
+      currentKey,
+      currentKeyUnusable,
+      previousKeys,
+    });
+  } catch {
+    const copy = selectPlatformDetailsPageCopy(i18n);
+    appService.showToast({ message: copy.androidSigningLoadFailed });
+  }
+};
+
+// Runs a key change with the key buttons disabled, then shows the keys as
+// the project now has them.
+const runAndroidSigningChange = async (deps, task) => {
+  const { render, store } = deps;
+  store.setAndroidSigningBusy({ busy: true });
+  render();
+  try {
+    return await task();
+  } finally {
+    await loadAndroidSigning(deps);
+    store.setAndroidSigningBusy({ busy: false });
+    render();
+  }
+};
+
+const createAndroidSigningKey = async (deps) => {
+  const { appService, i18n, projectService, store } = deps;
+  const copy = selectPlatformDetailsPageCopy(i18n);
+  const { applicationName, applicationIdentifier } =
+    store.selectAndroidApplicationInfo();
+  try {
+    await runAndroidSigningChange(deps, () =>
+      projectService.createAndroidSigningKey({
+        applicationName,
+        applicationId: applicationIdentifier,
+      }),
+    );
+    appService.showToast({ message: copy.androidKeyCreatedMessage });
+  } catch (error) {
+    appService.showAlert({
+      message: getAndroidSigningKeyErrorMessage(error, copy),
+      title: copy.errorTitle,
+    });
+  }
+};
+
+// A project whose keys have no usable current key has released builds
+// signed with a key, so a new key gets the same warning as Replace Key.
+export const handleAndroidCreateKeyClick = (deps) => {
+  const { store } = deps;
+  const signing = store.selectAndroidSigning();
+  if (signing.busy) return;
+  if (signing.currentKeyUnusable) return handleAndroidReplaceKeyClick(deps);
+  return createAndroidSigningKey(deps);
+};
+
+export const handleAndroidReplaceKeyClick = async (deps) => {
+  const { appService, i18n, store } = deps;
+  if (store.selectAndroidSigning().busy) return;
+  const copy = selectPlatformDetailsPageCopy(i18n);
+  const confirmed = await appService.showDialog({
+    title: copy.androidReplaceKeyTitle,
+    message: copy.androidReplaceKeyMessage,
+    confirmText: copy.androidReplaceKeyConfirm,
+    cancelText: copy.cancelButton,
+  });
+  if (!confirmed) return;
+  await createAndroidSigningKey(deps);
+};
+
+export const handleAndroidUploadKeyClick = async (deps) => {
+  const { appService, i18n, projectService, store } = deps;
+  const signing = store.selectAndroidSigning();
+  if (signing.busy) return;
+  await uploadAndroidSigningKey({
+    appService,
+    projectService,
+    copy: selectPlatformDetailsPageCopy(i18n),
+    replacesKey: signing.currentKey !== undefined || signing.currentKeyUnusable,
+    onImport: (task) => runAndroidSigningChange(deps, task),
+  });
+};
+
+export const handleAndroidUseKeyAgainClick = async (deps, payload) => {
+  const { appService, i18n, projectService, store } = deps;
+  if (store.selectAndroidSigning().busy) return;
+  const { certificateSha256 } = payload._event.currentTarget.dataset;
+  const copy = selectPlatformDetailsPageCopy(i18n);
+  const confirmed = await appService.showDialog({
+    title: copy.androidUseKeyAgainTitle,
+    message: copy.androidUseKeyAgainMessage,
+    confirmText: copy.androidUseKeyAgainConfirm,
+    cancelText: copy.cancelButton,
+  });
+  if (!confirmed) return;
+  try {
+    await runAndroidSigningChange(deps, () =>
+      projectService.useAndroidSigningKeyAgain(certificateSha256),
+    );
+    appService.showToast({ message: copy.androidKeyInUseMessage });
+  } catch (error) {
+    appService.showAlert({
+      message: getAndroidSigningKeyErrorMessage(error, copy),
+      title: copy.errorTitle,
+    });
+  }
+};
+
+export const handleAndroidSaveKeyCopyClick = async (deps, payload) => {
+  const { appService, i18n, projectService, store } = deps;
+  if (store.selectAndroidSigning().busy) return;
+  const { certificateSha256 } = payload._event.currentTarget.dataset;
+  await saveAndroidSigningKeyCopy({
+    appService,
+    projectService,
+    copy: selectPlatformDetailsPageCopy(i18n),
+    certificateSha256,
+    applicationName: store.selectAndroidApplicationInfo().applicationName,
+    onSave: (task) => runAndroidSigningChange(deps, task),
+  });
 };
 
 export const handlePlatformTabClick = (deps, payload) => {
@@ -135,6 +288,10 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
     platform,
     values,
     iconFileId: store.selectPlatformEditIconFileId(),
+    adaptiveIconFileId: store.selectPlatformEditAdaptiveIconFileId(),
+    splashIconFileId: store.selectPlatformEditSplashIconFileId(),
+    loadingBackgroundFileId: store.selectPlatformEditLoadingBackgroundFileId(),
+    startBackgroundFileId: store.selectPlatformEditStartBackgroundFileId(),
   });
   const validation = validatePlatformDetails({
     platform,
@@ -161,6 +318,26 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
       if (!confirmed) {
         return;
       }
+    }
+  }
+
+  // Installed copies of a signed game only update to builds with the same
+  // application ID.
+  if (
+    mode === "edit" &&
+    platform === "android" &&
+    store.selectAndroidSigning().currentKey &&
+    patch.applicationIdentifier !==
+      store.selectPlatformEditDefaultValues().applicationIdentifier
+  ) {
+    const confirmed = await appService.showDialog({
+      title: copy.androidApplicationIdentifierChangeTitle,
+      message: copy.androidApplicationIdentifierChangeMessage,
+      confirmText: copy.androidApplicationIdentifierChangeConfirm,
+      cancelText: copy.cancelButton,
+    });
+    if (!confirmed) {
+      return;
     }
   }
 
@@ -192,7 +369,10 @@ export const handlePlatformEditFormAction = async (deps, payload = {}) => {
   }
 };
 
-export const handlePlatformEditDialogIconClick = async (deps) => {
+export const handlePlatformEditDialogIconClick = async (
+  deps,
+  { target = "icon" } = {},
+) => {
   const { appService, i18n, render, store } = deps;
   const copy = selectPlatformDetailsPageCopy(i18n);
   let file;
@@ -215,7 +395,95 @@ export const handlePlatformEditDialogIconClick = async (deps) => {
     return;
   }
 
-  store.openPlatformEditIconCropDialog({ file });
+  store.openPlatformEditIconCropDialog({ file, target });
+  render();
+};
+
+// Screen backgrounds must have the project's shape, so they line up with the
+// game and need no cropping.
+export const handlePlatformEditScreenBackgroundClick = async (
+  deps,
+  payload,
+) => {
+  const { appService, i18n, render, store } = deps;
+  const { target } = payload;
+  const copy = selectPlatformDetailsPageCopy(i18n);
+  const projectResolution = store.selectProjectResolution();
+  let file;
+
+  try {
+    file = await appService.pickFiles({
+      accept: "image/png,image/jpeg,image/webp",
+      multiple: false,
+      upload: true,
+      validations: [
+        {
+          type: "image-aspect-ratio",
+          width: projectResolution.width,
+          height: projectResolution.height,
+        },
+      ],
+    });
+  } catch {
+    appService.showAlert({
+      message: copy.failedSelectBackground,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  if (!file) {
+    return;
+  }
+
+  if (!file.uploadSucessful || !file.uploadResult?.fileId) {
+    appService.showAlert({
+      message: copy.failedUploadBackground,
+      title: copy.errorTitle,
+    });
+    return;
+  }
+
+  store.setPlatformEditScreenBackgroundFileId({
+    target,
+    fileId: file.uploadResult.fileId,
+  });
+  render();
+};
+
+export const handlePlatformEditScreenBackgroundRightClick = async (
+  deps,
+  payload,
+) => {
+  const { appService, i18n, render, store } = deps;
+  const { _event: event, target } = payload;
+  const copy = selectPlatformDetailsPageCopy(i18n);
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (!store.selectPlatformEditScreenBackgroundFileId({ target })) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items: [{ type: "item", label: copy.removeIconButton, key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
+  store.setPlatformEditScreenBackgroundFileId({ target, fileId: undefined });
+  render();
+};
+
+export const handleRemovePlatformEditOptionalIcon = (deps, payload) => {
+  const { store, render } = deps;
+  const { target } = payload;
+  store.setPlatformEditOptionalIconFileId({ target, fileId: undefined });
   render();
 };
 
@@ -265,7 +533,23 @@ export const handlePlatformEditIconCropDialogConfirm = async (deps) => {
     return;
   }
 
-  store.setPlatformEditIconFileId({ iconFileId: uploadResult.fileId });
+  const target = store.selectPlatformEditIconCropTarget();
+  if (target === "icon")
+    store.setPlatformEditIconFileId({ iconFileId: uploadResult.fileId });
+  else
+    store.setPlatformEditOptionalIconFileId({
+      target,
+      fileId: uploadResult.fileId,
+    });
   store.closePlatformEditIconCropDialog();
+  render();
+};
+
+export const handlePlatformEditFormChange = (deps, payload) => {
+  const { store, render } = deps;
+  const { name, value } = payload._event.detail;
+  if (name !== "iconBackgroundColor" && name !== "splashBackgroundColor")
+    return;
+  store.setPlatformEditBackgroundColor({ name, value });
   render();
 };

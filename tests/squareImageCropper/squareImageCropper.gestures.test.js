@@ -23,6 +23,17 @@ const expectCropInsideImage = ({ context, store }) => {
 };
 
 describe("cropper gestures", () => {
+  it("sizes the optional guide without changing the crop", () => {
+    const { context, store: cropper } = createCropper();
+    const before = cropper.selectCropSelection();
+    const view = store.selectViewData({
+      ...context,
+      props: { guideCircle: 66 / 72 },
+    });
+    expect(view.guideCircle).toBe(66 / 72);
+    expect(view.guideStyle).toContain(`${(66 / 72) * 100}%`);
+    expect(cropper.selectCropSelection()).toEqual(before);
+  });
   it("drags a wide image with one finger and stops after release", () => {
     const { store } = createCropper(1280, 640);
     store.startPointer({ pointerId: 1, x: 160, y: 160 });

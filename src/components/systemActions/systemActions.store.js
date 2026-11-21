@@ -9,11 +9,16 @@ import {
   buildDialogueSpritePreviewLayers,
 } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
+import { formatList } from "../../internal/dates.js";
+import { isEditableRandomDistribution } from "../../internal/randomActions.js";
 import {
   NEUTRAL_PRESENTATION_ACTION_CSS_ORDER,
   PRESENTATION_ACTION_CSS_ORDER,
 } from "../../internal/presentationActionOrder.js";
-import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
+import {
+  getLayoutInputFieldItems,
+  getVisualLayoutMedia,
+} from "../../internal/project/layout.js";
 import { findSceneIdBySectionId } from "../../internal/project/projection.js";
 import {
   getSpritesheetAnimationPreview,
@@ -27,6 +32,7 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { formatRandomDistributionSummary } from "../../internal/ui/sceneEditor/randomCopy.js";
 
 export const createInitialState = () => ({
   mode: "actions",
@@ -36,6 +42,9 @@ export const createInitialState = () => ({
   showHelpButton: true,
   isActionsDialogOpen: false,
   suppressDialogClose: false,
+  // The visual the visual panel opens in its edit view, when the dialog is
+  // opened again on a visual after its layout was edited.
+  editVisualId: undefined,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -284,6 +293,8 @@ export const selectViewData = ({ state, props, props: attrs, i18n }) => {
     currentSceneId: props.currentSceneId,
     mode: state.mode,
     isActionsDialogOpen: state.isActionsDialogOpen,
+    editVisualId: state.editVisualId,
+    visualSnapshots: props.visualSnapshots,
     showHelpButton: state.showHelpButton,
     dropdownMenu: localizeCommandLineDropdownMenu(state.dropdownMenu, copy),
     displayActions,
@@ -412,14 +423,21 @@ export const hideActionsDialog = ({ state }, _payload = {}) => {
   state.isActionsDialogOpen = false;
   state.suppressDialogClose = false;
   state.mode = "hidden";
+  state.editVisualId = undefined;
 };
 
+// Any other panel, or the visual panel opened again, starts as usual.
 export const setMode = ({ state }, payload = {}) => {
   const mode = payload.mode;
   if (mode === undefined) {
     return;
   }
-  state.mode = mode;
+  state.mode = mode === "resetStoryAtSection" ? "sectionTransition" : mode;
+  state.editVisualId = undefined;
+};
+
+export const setEditVisualId = ({ state }, { visualId } = {}) => {
+  state.editVisualId = visualId;
 };
 
 export const setSuppressDialogClose = (
@@ -652,6 +670,7 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
   const layoutsHierarchy = repositoryStateData.layouts || {};
   const layoutsItems = layoutsHierarchy.items || {};
   const spritesheets = repositoryStateData.spritesheets ?? {};
+  const particles = repositoryStateData.particles?.items ?? {};
   const controlsItems = repositoryStateData.controls?.items || {};
   const sceneItems = scenes.items || {};
 
@@ -796,10 +815,12 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       ...sfx,
       sound: sounds[sfx.resourceId],
     }));
-    const names = soundEffectsData
-      .map((sfx) => sfx.sound?.name ?? sfx.resourceId ?? "")
-      .filter((name) => name !== "")
-      .join(", ");
+    const names = formatList(
+      soundEffectsData
+        .map((sfx) => sfx.sound?.name ?? sfx.resourceId ?? "")
+        .filter((name) => name !== ""),
+      dateTime,
+    );
 
     actionsObject.sfx = sfxAction;
     if (names || props.actionType !== "presentation") {
@@ -895,13 +916,7 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       scene,
       section,
       sectionId,
-      label: targetLabel
-        ? formatCommandLineCopy(
-            "Reset story at {target}",
-            { target: targetLabel },
-            copy,
-          )
-        : localizeCommandLineText("Reset story at section", copy),
+      label: targetLabel,
     };
   }
 
@@ -988,26 +1003,39 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     );
   }
 
+  if (actions.random) {
+    actionsObject.random = actions.random;
+    // A form other than weighted counts no outcomes, but the row still shows
+    // so that the action can be opened and deleted.
+    const distribution = actions.random.distribution;
+    const outcomes =
+      distribution?.type === "weighted" && Array.isArray(distribution.outcomes)
+        ? distribution.outcomes
+        : [];
+    preview.random = {
+      outcomeCount: outcomes.length,
+      summary: formatCommandLinePluralCopy(
+        "outcomeCount",
+        outcomes.length,
+        copy,
+        dateTime,
+      ),
+    };
+    preview.random.title = formatCommandLineCopy(
+      "Random: {summary}",
+      { summary: preview.random.summary },
+      copy,
+    );
+  }
+
   if (actions.conditional) {
     actionsObject.conditional = actions.conditional;
     const branches = Array.isArray(actions.conditional.branches)
       ? actions.conditional.branches
       : [];
-    const actionCount = branches.reduce(
-      (total, branch) => total + countActions(branch?.actions),
-      0,
-    );
-
     preview.conditional = {
       branchCount: branches.length,
-      actionCount,
       summary: formatConditionalSummary(branches, copy, dateTime),
-      actionsSummary: formatCommandLinePluralCopy(
-        "nestedActionCount",
-        actionCount,
-        copy,
-        dateTime,
-      ),
     };
     preview.conditional.title = formatCommandLineCopy(
       "Conditional: {summary}",
@@ -1304,33 +1332,33 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
     preview.visual = {
       count: visualAction.items.length,
       items: visualAction.items.map((item) => {
-        const imageData = images[item.resourceId];
-        const spritesheetData = spritesheets.items?.[item.resourceId];
-        const videoData = videos[item.resourceId];
-        const layoutData = layoutsItems[item.resourceId];
+        // A visual saved as a layout shows the first media its layout shows.
+        const media = item.layout
+          ? (getVisualLayoutMedia(item.layout) ?? {})
+          : item;
+        const { resourceId, animationName } = media;
+        const imageData = images[resourceId];
+        const spritesheetData = spritesheets.items?.[resourceId];
+        const videoData = videos[resourceId];
+        const layoutData = layoutsItems[resourceId];
+        const particleData = particles[resourceId];
+        // As in Route Engine, a particle is looked up before a layout.
         const resourcesByType = {
           image: imageData,
           spritesheet: spritesheetData,
           video: videoData,
+          particle: particleData,
           layout: layoutData,
         };
-        const resourceType = resourcesByType[item.resourceType]
-          ? item.resourceType
-          : imageData
-            ? "image"
-            : spritesheetData
-              ? "spritesheet"
-              : videoData
-                ? "video"
-                : "layout";
+        const resourceType = resourcesByType[media.resourceType]
+          ? media.resourceType
+          : (Object.keys(resourcesByType).find(
+              (type) => resourcesByType[type],
+            ) ?? "layout");
         const resource = resourcesByType[resourceType];
         const spritesheetPreview =
           resourceType === "spritesheet"
-            ? buildSpritesheetPreview(
-                spritesheets,
-                item.resourceId,
-                item.animationName,
-              )
+            ? buildSpritesheetPreview(spritesheets, resourceId, animationName)
             : undefined;
         return {
           ...item,
@@ -1361,8 +1389,8 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
       : [];
 
     const summary =
-      operations
-        .map((op) => {
+      formatList(
+        operations.map((op) => {
           const variable = variableItems[op.variableId];
           const varName = variable?.name || op.variableId;
           if (op.op === "toggle") {
@@ -1381,10 +1409,30 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
             return `${varName} *${op.value}`;
           } else if (op.op === "divide") {
             return `${varName} /${op.value}`;
+          } else if (op.op === "random") {
+            return isEditableRandomDistribution(op.distribution, variable)
+              ? formatCommandLineCopy(
+                  "{variable} = random ({values})",
+                  {
+                    variable: varName,
+                    values: formatRandomDistributionSummary(
+                      op.distribution,
+                      copy,
+                      dateTime,
+                    ),
+                  },
+                  copy,
+                )
+              : formatCommandLineCopy(
+                  "{variable} = random",
+                  { variable: varName },
+                  copy,
+                );
           }
           return `${varName} ${op.op}`;
-        })
-        .join(", ") || localizeCommandLineText("No operations", copy);
+        }),
+        dateTime,
+      ) || localizeCommandLineText("No operations", copy);
 
     preview.updateVariable = {
       summary,

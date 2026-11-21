@@ -37,6 +37,20 @@ const form = {
       ],
     },
     {
+      name: "resetStory",
+      type: "segmented-control",
+      label: "Reset story",
+      tooltip: {
+        content:
+          "Restart the story from this section. Story variables return to defaults and the player cannot roll back past it.",
+      },
+      clearable: false,
+      options: [
+        { value: false, label: "No" },
+        { value: true, label: "Yes" },
+      ],
+    },
+    {
       name: "transitionAnimationId",
       type: "select",
       label: "Animation",
@@ -83,7 +97,7 @@ export const createInitialState = () => ({
   initiated: false,
   scenes: { items: {}, tree: [] },
   animations: { items: {}, tree: [] },
-  formValues: {},
+  formValues: { resetStory: false },
 });
 
 export const setMode = ({ state }, { mode } = {}) => {
@@ -105,6 +119,7 @@ export const setAnimations = ({ state }, { animations } = {}) => {
 export const setFormValues = ({ state }, values = {}) => {
   state.formValues = {
     ...values,
+    resetStory: values.resetStory ?? false,
     playbackSpeed: normalizeAnimationPlaybackSpeed(values.playbackSpeed),
     playbackContinuity: normalizeAnimationPlaybackContinuity(
       values.playbackContinuity,

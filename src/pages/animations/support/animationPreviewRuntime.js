@@ -1,56 +1,15 @@
-import { createAnimationResourcePreviewStates } from "../../../internal/animationPreview.js";
+import {
+  ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR,
+  collectAnimationPreviewFileIds,
+  createAnimationResourcePreviewStates,
+  hasTransitionPreviewAnimation,
+} from "../../../internal/animationPreview.js";
 import { generateId } from "../../../internal/id.js";
 import { requireProjectResolution } from "../../../internal/projectResolution.js";
 import { resolveResourceFileType } from "../../../internal/resourceFileMetadata.js";
 import { selectAnimationsPageCopy } from "./animationsPageCopy.js";
 
 const ANIMATION_PREVIEW_LOOP_PAUSE_MS = 1000;
-const ANIMATION_DETAIL_PREVIEW_BACKGROUND_COLOR = "#000000";
-
-const collectRuntimeMaskTextureIds = (mask = {}) => {
-  if (Array.isArray(mask)) {
-    return mask.flatMap(collectRuntimeMaskTextureIds);
-  }
-
-  if (!mask) {
-    return [];
-  }
-
-  if (mask.kind === "single") {
-    return mask.texture ? [mask.texture] : [];
-  }
-
-  if (mask.kind === "sequence") {
-    return (mask.textures ?? []).filter(Boolean);
-  }
-
-  return (mask.items ?? []).map((item) => item?.texture).filter(Boolean);
-};
-
-const collectRuntimeElementTextureIds = (elements = []) => {
-  const textureIds = [];
-
-  for (const element of elements ?? []) {
-    if (element?.type === "sprite" && element.src) {
-      textureIds.push(element.src);
-    }
-
-    if (Array.isArray(element?.children)) {
-      textureIds.push(...collectRuntimeElementTextureIds(element.children));
-    }
-  }
-
-  return textureIds;
-};
-
-const collectRuntimeRenderStateTextureIds = (renderState = {}) => {
-  return [
-    ...collectRuntimeElementTextureIds(renderState.elements),
-    ...(renderState.animations ?? []).flatMap((animation) =>
-      collectRuntimeMaskTextureIds(animation.mask),
-    ),
-  ];
-};
 
 export const stopAnimationPreviewPlayback = ({ store } = {}) => {
   const frameId = store.selectAnimationPreviewFrameId?.();
@@ -99,7 +58,7 @@ const ensureAnimationPreviewAssetsLoaded = async ({
 
   const renderStates = Array.isArray(renderState) ? renderState : [renderState];
   const textureIds = Array.from(
-    new Set(renderStates.flatMap(collectRuntimeRenderStateTextureIds)),
+    new Set(renderStates.flatMap(collectAnimationPreviewFileIds)),
   );
 
   if (textureIds.length === 0) {
@@ -169,12 +128,6 @@ const ensureAnimationPreviewRuntime = async ({
     height,
   });
   return true;
-};
-
-const hasTransitionPreviewAnimation = (renderState = {}) => {
-  return (renderState.animations ?? []).some(
-    (animation) => animation?.type === "transition",
-  );
 };
 
 const primeTransitionPreviewFrame = async ({
@@ -429,7 +382,7 @@ export const renderSelectedAnimationPreview = async (
     const { resetState, renderState, durationMs } =
       createAnimationResourcePreviewStates({
         animationItem: selectedAnimation,
-        backgroundColor: ANIMATION_DETAIL_PREVIEW_BACKGROUND_COLOR,
+        backgroundColor: ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR,
         imagesData: store.selectImagesData(),
         projectResolution,
       });

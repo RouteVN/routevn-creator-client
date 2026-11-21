@@ -117,14 +117,23 @@ describe("appShellService", () => {
     }
   });
 
-  it("sets the document language", () => {
+  it("sets the document language and direction", () => {
     const service = createAppShellService(createDeps());
-    const root = { documentElement: { lang: "en" } };
+    const root = { documentElement: { lang: "en", dir: "ltr" } };
     vi.stubGlobal("document", root);
 
     try {
+      service.setDocumentLanguage("ar");
+      expect(root.documentElement.lang).toBe("ar");
+      expect(root.documentElement.dir).toBe("rtl");
+
       service.setDocumentLanguage("zh-hans");
       expect(root.documentElement.lang).toBe("zh-hans");
+      expect(root.documentElement.dir).toBe("ltr");
+
+      service.setDocumentLanguage("ur");
+      expect(root.documentElement.dir).toBe("rtl");
+      expect(service.getDocumentDirection()).toBe("rtl");
     } finally {
       vi.unstubAllGlobals();
     }

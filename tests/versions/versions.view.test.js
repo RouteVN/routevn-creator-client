@@ -57,7 +57,7 @@ describe("versions view export actions", () => {
     expect(versionsView).toContain(
       "rtgl-button#exportConfirmationConfirmButton",
     );
-    expect(versionsView).toContain("rtgl-view w=f d=h ah=e av=c g=sm");
+    expect(versionsView).toContain("rtgl-view w=f d=h ah=e av=c g=sm wrap");
     expect(versionsView).toContain("handler: handleExportConfirmationClose");
     expect(versionsView).toContain("handler: handleExportConfirmationConfirm");
   });
@@ -74,27 +74,37 @@ describe("versions view export actions", () => {
     expect(versionsView).toContain("handler: handlePlatformDetailsCreated");
   });
 
-  it("renders gated Windows export actions in desktop and mobile details", () => {
+  it("offers one Export button in the desktop and mobile details", () => {
     expect(
-      versionsView.match(/\$if canExportWindowsExecutable:/g),
+      versionsView.match(
+        /rtgl-button#detailExportBtn data-version-id="\$\{selectedItemId\}"/g,
+      ),
     ).toHaveLength(2);
-    expect(versionsView.match(/rtgl-button#detailWindowsExeBtn/g)).toHaveLength(
-      2,
-    );
-    expect(versionsView.match(/\$if canExportWindowsInstaller:/g)).toHaveLength(
-      2,
-    );
-    expect(
-      versionsView.match(/rtgl-button#detailWindowsInstallerBtn/g),
-    ).toHaveLength(2);
+    expect(versionsView).toContain("handler: handleExportClick");
+    expect(versionsView).not.toContain("detailDownloadBtn");
+    expect(versionsView).not.toContain("detailWindowsExeBtn");
   });
 
-  it("renders gated macOS application actions in desktop and mobile details", () => {
-    expect(versionsView.match(/\$if canExportMacosApplication:/g)).toHaveLength(
-      2,
+  it("lists the export options as a grid of boxes in a dialog", () => {
+    expect(versionsView).toContain(
+      "rtgl-dialog#exportOptionsDialog ?open=${isExportOptionsOpen} s=md:",
     );
-    expect(
-      versionsView.match(/rtgl-button#detailMacosApplicationBtn/g),
-    ).toHaveLength(2);
+    expect(versionsView).toContain("$for option, i in exportOptions:");
+    expect(versionsView).toContain(
+      'rtgl-view#exportOptionRef${i} data-export-option="${option.id}" data-version-id="${exportOptionsVersionId}"',
+    );
+    expect(versionsView).toContain("rtgl-svg svg=${option.icon} wh=56");
+    expect(versionsView).toContain("handler: handleExportOptionClick");
+    expect(versionsView).toContain("handler: handleExportOptionsClose");
+  });
+
+  it("offers the Windows installer as a second button of the confirmation", () => {
+    expect(versionsView).toContain("$if showWindowsInstallerButton:");
+    expect(versionsView).toContain(
+      "rtgl-button#exportConfirmationInstallerButton v=se pre=download: ${exportWindowsInstallerButton}",
+    );
+    expect(versionsView).toContain(
+      "handler: handleExportConfirmationInstallerClick",
+    );
   });
 });

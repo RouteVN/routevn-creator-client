@@ -66,7 +66,7 @@ describe("asset package view", () => {
     expect(assetPackageView).not.toContain("handleFolderCheckboxChange");
     // Folders are indented by depth; one inside a ticked folder shows as
     // included, with no box to click and its checkbox disabled.
-    expect(assetPackageView).toContain("padding-left: ${folder.indent}px;");
+    expect(assetPackageView).toContain("padding-inline-start: ${folder.indent}px;");
     expect(assetPackageView).toContain("$if folder.isIncluded:");
     expect(assetPackageView).toContain(
       "?checked=${folder.selected} ?disabled=${folder.isIncluded}",

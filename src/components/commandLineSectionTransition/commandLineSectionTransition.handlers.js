@@ -1,3 +1,4 @@
+import { upgradeResetStoryActions } from "../../internal/navigationActions.js";
 import { findSceneIdBySectionId } from "../../internal/project/projection.js";
 import {
   localizeCommandLineText,
@@ -9,8 +10,11 @@ export const handleAfterMount = async (deps) => {
   await projectService.ensureRepository();
   const { animations, scenes } = projectService.getRepositoryState();
 
-  // Safe access to nested properties
-  const sectionTransition = props?.sectionTransition;
+  const upgradedActions = upgradeResetStoryActions(props, {
+    resolveSceneId: (sectionId) => findSceneIdBySectionId(scenes, sectionId),
+  });
+  const sectionTransition =
+    upgradedActions.sectionTransition ?? props.resetStoryAtSection;
 
   store.setScenes({
     scenes,
@@ -32,6 +36,9 @@ export const handleAfterMount = async (deps) => {
   // Initialize form values from existing line data
   const transition = sectionTransition;
   const formValues = {
+    resetStory:
+      transition.resetStory === true ||
+      (!upgradedActions.sectionTransition && !!props.resetStoryAtSection),
     transitionAnimationId: transition.screen?.animations?.resourceId,
     playbackSpeed: transition.screen?.animations?.playback?.speed,
     playbackContinuity: transition.screen?.animations?.playback?.continuity,
@@ -55,7 +62,7 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent, store, appService, i18n } = deps;
+  const { dispatchEvent, store, appService, i18n, props = {} } = deps;
   const copy = selectCommandLineCopy(i18n);
   const warningTitle = localizeCommandLineText("Warning", copy);
   const { formValues, scenes } = store.selectSubmitData();
@@ -64,7 +71,12 @@ export const handleSubmitClick = (deps) => {
   if (!formValues?.sceneId && !formValues?.sectionId) {
     dispatchEvent(
       new CustomEvent("action-delete", {
-        detail: { actionType: "sectionTransition" },
+        detail: {
+          actionType:
+            !props.sectionTransition && props.resetStoryAtSection
+              ? "resetStoryAtSection"
+              : "sectionTransition",
+        },
       }),
     );
     return;
@@ -105,6 +117,10 @@ export const handleSubmitClick = (deps) => {
     sceneId: formValues.sceneId,
     sectionId: formValues.sectionId,
   };
+
+  if (formValues.resetStory === true) {
+    sectionTransition.resetStory = true;
+  }
 
   if (formValues.transitionAnimationId) {
     sectionTransition.screen = {

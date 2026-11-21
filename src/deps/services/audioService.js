@@ -1,3 +1,7 @@
+import {
+  createAudioUnavailableError,
+  isAudioUnavailableError,
+} from "../clients/audioAvailability.js";
 import { isMediaActivationRequired } from "../../internal/errorDetails.js";
 import { decodeAudioBuffer } from "../clients/audioDecoder.js";
 
@@ -150,6 +154,8 @@ export const createAudioService = ({
 
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
+      if (!createAudioContext && !AudioContextClass)
+        throw createAudioUnavailableError();
       audioContext = createAudioContext
         ? createAudioContext()
         : new AudioContextClass();
@@ -178,7 +184,13 @@ export const createAudioService = ({
     },
 
     async unlock() {
-      service.init();
+      try {
+        service.init();
+      } catch (error) {
+        // The player reports unavailable audio when it mounts.
+        if (isAudioUnavailableError(error)) return;
+        throw error;
+      }
 
       await resumeAudio(audioContext, audioOutput, playbackRequestId);
     },

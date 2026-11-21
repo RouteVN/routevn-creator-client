@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   closePlatformEditDialog,
   createInitialState,
@@ -6,14 +6,28 @@ import {
   openPlatformCreateDialog,
   openPlatformEditDialog,
   selectCanAddPlatform,
+  selectPlatformEditLoadingBackgroundFileId,
+  selectPlatformEditScreenBackgroundFileId,
+  selectPlatformEditStartBackgroundFileId,
   selectViewData,
+  setAndroidSigning,
+  setAndroidSigningBusy,
   setAppWindowMetrics,
   setPlatform,
   setPlatformApplicationInfo,
+  setPlatformEditScreenBackgroundFileId,
+  setProjectResolution,
   setSelectedPlatform,
   setUiConfig,
 } from "../../src/pages/platformDetails/platformDetails.store.js";
 import { EN_I18N } from "../support/i18n.js";
+
+// These tests cover Android export itself, which ships later; the
+// unreleased state is covered in tests/platformDetails/androidExportUnreleased.test.js.
+vi.mock("../../src/internal/androidExport.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ANDROID_EXPORT_RELEASED: true,
+}));
 
 describe("platformDetails.store", () => {
   it("centers the content in the content column width in tablet landscape", () => {
@@ -59,12 +73,14 @@ describe("platformDetails.store", () => {
         { label: "Web", type: "item", value: "web" },
         { label: "Windows", type: "item", value: "windows" },
         { label: "macOS", type: "item", value: "macos" },
+        { label: "Android", type: "item", value: "android" },
+        { label: "iOS", type: "item", value: "ios" },
       ],
     });
   });
 
   it.each(["android", "ios"])(
-    "offers only Web platform details in the %s app",
+    "offers Web and Android platform details in the %s app",
     (platform) => {
       const state = createInitialState();
       setPlatform({ state }, { platform });
@@ -74,7 +90,10 @@ describe("platformDetails.store", () => {
       expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
         canAddPlatform: true,
         addPlatformMenu: {
-          items: [{ label: "Web", type: "item", value: "web" }],
+          items: [
+            { label: "Web", type: "item", value: "web" },
+            { label: "Android", type: "item", value: "android" },
+          ],
         },
       });
 
@@ -90,7 +109,7 @@ describe("platformDetails.store", () => {
       );
 
       expect(selectViewData({ state, i18n: EN_I18N }).canAddPlatform).toBe(
-        false,
+        true,
       );
     },
   );
@@ -179,15 +198,17 @@ describe("platformDetails.store", () => {
       expect.objectContaining({
         name: "applicationIdentifier",
         required: true,
-        description:
-          EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
+        tooltip: {
+          content:
+            EN_I18N.platformDetailsPage.windowsApplicationIdentifierDescription,
+        },
       }),
     );
     expect(
       viewData.platformEditForm.fields
         .map((field) => field.name)
         .filter(Boolean),
-    ).toEqual(["applicationName", "applicationIdentifier"]);
+    ).toEqual(["applicationName", "icon", "applicationIdentifier"]);
     for (const field of ["publisher", "description", "copyright"]) {
       expect(viewData.platformEditDefaultValues).not.toHaveProperty(field);
     }
@@ -274,7 +295,7 @@ describe("platformDetails.store", () => {
       editViewData.platformEditForm.fields
         .map((field) => field.name)
         .filter(Boolean),
-    ).toEqual(["applicationName", "applicationIdentifier"]);
+    ).toEqual(["applicationName", "icon", "applicationIdentifier"]);
   });
 
   it("prefills platform edit state independently", () => {
@@ -303,14 +324,18 @@ describe("platformDetails.store", () => {
     expect(viewData.addPlatformMenu.items).toEqual([
       { label: "Windows", type: "item", value: "windows" },
       { label: "macOS", type: "item", value: "macos" },
+      { label: "Android", type: "item", value: "android" },
+      { label: "iOS", type: "item", value: "ios" },
     ]);
     expect(viewData.canAddPlatform).toBe(true);
     expect(viewData.platformEditForm.fields).toContainEqual(
       expect.objectContaining({
         name: "applicationIdentifier",
         required: true,
-        description:
-          EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
+        tooltip: {
+          content:
+            EN_I18N.platformDetailsPage.webApplicationIdentifierDescription,
+        },
       }),
     );
     expect(viewData.platformDetailFields).toEqual([
@@ -324,6 +349,9 @@ describe("platformDetails.store", () => {
         slot: "platform-application-identifier",
         label: "Application Identifier",
       },
+      // No background is set, so neither background has a row.
+      { type: "text", label: "Fade After Loading (ms)", value: "0" },
+      { type: "text", label: "Fade After Clicking Start (ms)", value: "0" },
     ]);
     expect(viewData).toMatchObject({
       platformApplicationName: "Web Project",
@@ -331,7 +359,7 @@ describe("platformDetails.store", () => {
       showPlatformApplicationIcon: false,
       showPlatformEditIcon: false,
     });
-    expect(viewData.platformEditForm.fields).toHaveLength(2);
+    expect(viewData.platformEditForm.fields).toHaveLength(6);
     expect(viewData.platformEditForm.actions.buttons).toEqual([
       {
         id: "submit",
@@ -340,5 +368,260 @@ describe("platformDetails.store", () => {
         label: "Save Changes",
       },
     ]);
+  });
+});
+
+it.each(["web", "tauri", "android", "ios"])(
+  "offers Android details on %s and projects colors and previews",
+  (platform) => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform });
+    expect(selectCanAddPlatform({ state }, { platform: "android" })).toBe(true);
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "android",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.example.project_one",
+          iconFileId: "icon-1",
+          iconBackgroundColor: "#AABBCC",
+          splashBackgroundColor: "#123456",
+        },
+      },
+    );
+    setSelectedPlatform({ state }, { platform: "android" });
+    openPlatformEditDialog({ state });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.platformTabs).toEqual([{ id: "android", label: "Android" }]);
+    expect(view.platformEditDefaultValues).toMatchObject({
+      iconBackgroundColor: "#AABBCC",
+      splashBackgroundColor: "#123456",
+    });
+    // Each colour row is a swatch next to its hex value.
+    expect(view.platformDetailFields).toContainEqual({
+      type: "slot",
+      slot: "android-icon-background-color",
+      label: EN_I18N.platformDetailsPage.androidIconBackgroundColorLabel,
+    });
+    expect(view.platformDetailFields).toContainEqual({
+      type: "slot",
+      slot: "android-splash-background-color",
+      label: EN_I18N.platformDetailsPage.androidSplashBackgroundColorLabel,
+    });
+    expect(view.androidIconBackgroundColor).toBe("#AABBCC");
+    expect(view.androidSplashBackgroundColor).toBe("#123456");
+    expect(view.showAndroidPreviews).toBe(true);
+    expect(view.androidIconBackgroundStyle).toBe("background-color: #AABBCC;");
+    expect(view.androidSplashBackgroundStyle).toBe(
+      "background-color: #123456;",
+    );
+    expect(
+      view.platformEditForm.fields
+        .filter((field) => field.type === "color-picker")
+        .map((field) => field.name),
+    ).toEqual(["iconBackgroundColor", "splashBackgroundColor"]);
+    expect(view.platformEditIconOutputSize).toBe(512);
+  },
+);
+
+describe("platformDetails web fade lengths", () => {
+  it("offers each fade length from 0 to 2000 ms in steps of 100", () => {
+    const state = createInitialState();
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "project-one",
+        },
+      },
+    );
+    const { fields } = selectViewData({
+      state,
+      i18n: EN_I18N,
+    }).platformEditForm;
+    for (const name of ["loadingFadeDuration", "startFadeDuration"]) {
+      const field = fields.find((item) => item.name === name);
+      expect(field.type).toBe("select");
+      expect(field.clearable).toBe(false);
+      expect(field.options).toHaveLength(21);
+      expect(field.options[0]).toEqual({ value: 0, label: "0" });
+      expect(field.options[1]).toEqual({ value: 100, label: "100" });
+      expect(field.options.at(-1)).toEqual({ value: 2000, label: "2000" });
+    }
+  });
+});
+
+describe("platformDetails optional pictures", () => {
+  const rowSlots = (platform, applicationInfo) => {
+    const state = createInitialState();
+    setPlatformApplicationInfo({ state }, { platform, applicationInfo });
+    return selectViewData({ state, i18n: EN_I18N }).platformDetailFields.map(
+      (field) => field.slot,
+    );
+  };
+
+  it("lists a web screen background only once it is set", () => {
+    const base = {
+      applicationName: "Project One",
+      applicationIdentifier: "project-one",
+    };
+    expect(rowSlots("web", base)).not.toContain("web-loading-background");
+    expect(rowSlots("web", base)).not.toContain("web-start-background");
+    const slots = rowSlots("web", { ...base, startBackgroundFileId: "s-1" });
+    expect(slots).toContain("web-start-background");
+    expect(slots).not.toContain("web-loading-background");
+  });
+
+  it("lists an Android adaptive or splash icon only once it is set", () => {
+    const base = {
+      applicationName: "Project One",
+      applicationIdentifier: "com.example.project_one",
+      iconFileId: "icon-1",
+    };
+    expect(rowSlots("android", base)).not.toContain("android-adaptive-icon");
+    expect(rowSlots("android", base)).not.toContain("android-splash-icon");
+    const slots = rowSlots("android", { ...base, adaptiveIconFileId: "a-1" });
+    expect(slots).toContain("android-adaptive-icon");
+    expect(slots).not.toContain("android-splash-icon");
+  });
+});
+
+describe("platformDetails Android signing view", () => {
+  const openAndroid = () => {
+    const state = createInitialState();
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "android",
+        applicationInfo: {
+          applicationName: "Project One",
+          applicationIdentifier: "com.example.project_one",
+          iconFileId: "icon-1",
+        },
+      },
+    );
+    return state;
+  };
+  const slotsOf = (view) =>
+    view.platformDetailFields
+      .filter((field) => field.type === "slot")
+      .map((field) => field.slot);
+
+  it("prefills and edits the Web screen backgrounds", () => {
+    const state = createInitialState();
+    setPlatformApplicationInfo(
+      { state },
+      {
+        platform: "web",
+        applicationInfo: {
+          applicationName: "Web Project",
+          applicationIdentifier: "com.example.web-project",
+          loadingBackgroundFileId: "loading-background-1",
+        },
+      },
+    );
+    openPlatformEditDialog({ state });
+
+    expect(selectPlatformEditLoadingBackgroundFileId({ state })).toBe(
+      "loading-background-1",
+    );
+    expect(selectPlatformEditStartBackgroundFileId({ state })).toBeUndefined();
+
+    setPlatformEditScreenBackgroundFileId(
+      { state },
+      { target: "start", fileId: "start-background-1" },
+    );
+    setPlatformEditScreenBackgroundFileId(
+      { state },
+      { target: "loading", fileId: undefined },
+    );
+
+    const viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData).toMatchObject({
+      showWebScreenBackgrounds: true,
+      showWebScreenBackgroundsEdit: true,
+      webLoadingBackgroundFileId: "loading-background-1",
+      platformEditLoadingBackgroundFileId: undefined,
+      platformEditStartBackgroundFileId: "start-background-1",
+      screenBackgroundPreviewWidth: 240,
+      screenBackgroundPreviewHeight: 135,
+    });
+    expect(
+      selectPlatformEditScreenBackgroundFileId({ state }, { target: "start" }),
+    ).toBe("start-background-1");
+
+    // Previews follow the project's shape.
+    setProjectResolution(
+      { state },
+      { projectResolution: { width: 1080, height: 1920 } },
+    );
+    expect(selectViewData({ state, i18n: EN_I18N })).toMatchObject({
+      screenBackgroundPreviewWidth: 135,
+      screenBackgroundPreviewHeight: 240,
+    });
+    expect(viewData.platformEditForm.fields.map((field) => field.slot)).toEqual(
+      expect.arrayContaining([
+        "platform-web-loading-background-edit",
+        "platform-web-start-background-edit",
+      ]),
+    );
+  });
+
+  it("shows no signing fields on a host that cannot sign", () => {
+    const view = selectViewData({ state: openAndroid(), i18n: EN_I18N });
+    expect(view.showAndroidSigning).toBe(false);
+    expect(slotsOf(view)).not.toContain("android-signing-key");
+  });
+
+  it("shows the current key and the previous keys with their dates", () => {
+    const state = openAndroid();
+    setAndroidSigning(
+      { state },
+      {
+        supported: true,
+        currentKey: {
+          certificateSha256: "ab".repeat(32),
+          origin: "uploaded",
+          addedAt: Date.UTC(2026, 0, 2),
+        },
+        previousKeys: [
+          {
+            certificateSha256: "cd".repeat(32),
+            origin: "created",
+            addedAt: Date.UTC(2026, 0, 1),
+          },
+        ],
+      },
+    );
+    setAndroidSigningBusy({ state }, { busy: true });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(slotsOf(view).slice(-2)).toEqual([
+      "android-signing-key",
+      "android-previous-signing-keys",
+    ]);
+    expect(view.androidSigningKey.fingerprint).toBe(
+      `SHA-256 ${Array(32).fill("AB").join(":")}`,
+    );
+    expect(view.androidSigningKey.detail).toMatch(/^Uploaded · .*2026/);
+    expect(view.androidPreviousKeys).toEqual([
+      expect.objectContaining({
+        certificateSha256: "cd".repeat(32),
+        detail: expect.stringMatching(/^Made by RouteVN Creator · .*2026/),
+      }),
+    ]);
+    expect(view.androidSigningBusy).toBe(true);
+  });
+
+  it("offers Create Key when the project has no key yet", () => {
+    const state = openAndroid();
+    setAndroidSigning({ state }, { supported: true, previousKeys: [] });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.androidSigningKey).toBeUndefined();
+    expect(view.showAndroidPreviousKeys).toBe(false);
+    expect(slotsOf(view)).toContain("android-signing-key");
+    expect(slotsOf(view)).not.toContain("android-previous-signing-keys");
   });
 });

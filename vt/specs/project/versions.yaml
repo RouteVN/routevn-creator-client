@@ -170,14 +170,25 @@ steps:
     state: visible
     timeoutMs: 10000
   - action: waitFor
-    selector: "#detailMacosApplicationBtn"
+    selector: "#detailExportBtn"
     state: visible
     timeoutMs: 5000
   - action: wait
     ms: 500
   - action: screenshot
   - action: select
-    selector: "#detailMacosApplicationBtn"
+    selector: "#detailExportBtn"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#exportOptionsDialog [data-export-option='macos']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#exportOptionsDialog [data-export-option='macos']"
     steps:
       - action: click
   - action: waitFor

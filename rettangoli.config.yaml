@@ -17,14 +17,22 @@ fe:
     fallbackLocale: "en"
     locales:
       - "en"
+      - "es"
+      - "pt"
+      - "ru"
       - "ja"
       - "zh-hans"
-      - "es"
+      - "zh-hant"
+      - "ko"
       - "th"
-      - "ru"
-      - "pt"
       - "fr"
       - "vi"
+      - "id"
+      - "uk"
+      - "it"
+      - "pl"
+      - "ar"
+      - "ur"
   #  watchPort: 3001
 
 # all visual testing configuration

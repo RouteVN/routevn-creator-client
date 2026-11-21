@@ -1,3 +1,7 @@
+import {
+  isAudioAvailable,
+  createSilentGraphicsAudioRuntime,
+} from "./deps/clients/audioAvailability.js";
 import { errorReporter } from "./deps/clients/android/errorReporting.js";
 import { createGlobalUI } from "@rettangoli/ui";
 import { configureAudioRuntime } from "route-graphics";
@@ -22,6 +26,7 @@ import Subject from "./deps/subject.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { createGraphicsUnavailableNotifier } from "./deps/services/shared/graphicsUnavailableNotice.js";
 import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
+import { canEmbedYouTubeFrom } from "./internal/youtube.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import { installNativeBackOverlays } from "./primitives/nativeBackOverlays.js";
 import { setAndroidDebugBuild } from "./internal/navigationTiming.js";
@@ -39,7 +44,11 @@ registerPrimitives();
 const nativeBackOverlays = installNativeBackOverlays();
 
 const androidAudioRuntime = createAndroidAudioRuntime();
-configureAudioRuntime(androidAudioRuntime.graphicsRuntime);
+configureAudioRuntime(
+  isAudioAvailable()
+    ? androidAudioRuntime.graphicsRuntime
+    : createSilentGraphicsAudioRuntime(),
+);
 
 let isAndroidDebugBuild = false;
 try {
@@ -149,6 +158,7 @@ const appService = createAppService({
   distribution: updateContext?.distribution,
   updatesEnabled: Boolean(updater),
   updater,
+  youtubeEmbedsSupported: canEmbedYouTubeFrom(window.location),
   audioService,
   projectService,
   subject,
@@ -180,6 +190,7 @@ const apiService = createApiService({
 
 const graphicsService = await createGraphicsService({
   subject,
+  audioAvailable: isAudioAvailable(),
   onGraphicsUnavailable: createGraphicsUnavailableNotifier({ appService }),
   onRenderError: (error) => {
     console.error(error);

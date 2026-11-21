@@ -20,6 +20,7 @@ import {
   DEFAULT_SPRITE_GROUP_ID,
   buildSpriteSelectionGroups,
 } from "../../internal/characterSpriteSelection.js";
+import { createCharacterSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
 import {
   localizeCommandLineBreadcrumb,
   localizeCommandLineForm,
@@ -1405,8 +1406,14 @@ export const selectViewData = ({ state, props, i18n }) => {
     values: defaultValues,
   };
 
+  const resourceSelectorLayout = createCharacterSelectorLayout();
+
   return {
     mode: state.mode,
+    resourceSelectorGridStyle: resourceSelectorLayout.gridStyle,
+    resourceSelectorItemStyle: resourceSelectorLayout.itemStyle,
+    resourceSelectorCardStyle: resourceSelectorLayout.cardStyle,
+    characterSelectorPreviewStyle: resourceSelectorLayout.previewStyle,
     layouts: layoutOptions,
     characters: characterOptions,
     selectedResourceId,

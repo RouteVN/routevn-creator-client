@@ -1,3 +1,4 @@
+import { warnIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import { buildVoiceResourceDataFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 import { generateId } from "../../internal/id.js";
 import {
@@ -301,6 +302,7 @@ export const handleSoundDoubleClick = (deps, payload) => {
 
   // Start audio inside the tap. The player starts only after loading its
   // file, and iOS can refuse a start outside a tap.
+  if (warnIfAudioUnavailable(deps)) return;
   void audioService.unlock();
   store.openAudioPlayer({
     fileId: resource.fileId,

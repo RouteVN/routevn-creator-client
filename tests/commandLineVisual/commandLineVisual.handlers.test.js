@@ -1,72 +1,45 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  handleAddVisualFormAction,
-  handleAddVisualClick,
   handleAnimationChange,
   handleBlurFieldChange,
   handleBlurFieldInput,
-  handleButtonSelectClick,
   handleCustomTransformButtonClick,
   handleCustomTransformButtonKeyDown,
   handleDropdownMenuClickItem,
-  handleFileExplorerItemClick,
   handleFormSectionAction,
-  handleLayerChange,
   handleOpacityInput,
-  handleResourceItemClick,
   handleShaderAdjustmentInput,
-  handleSpritesheetSelected,
   handleSubmitClick,
-  handleTabClick,
-  handleVisualClick,
 } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
 import {
-  addVisual,
-  clearPendingVisualConfig,
-  clearPendingVisualLayer,
-  clearPendingVisualTransformId,
   createInitialState,
-  hideAddVisualPopover,
   hideDropdownMenu,
   moveVisual,
-  openAddVisualPopover,
   removeVisual,
   removeVisualBlurOption,
   removeVisualFlipOption,
   removeVisualOpacityOption,
   removeVisualShaderAdjustmentOption,
-  selectDefaultTransformId,
-  selectDefaultVisualLayer,
   selectDropdownMenuType,
   selectDropdownMenuVisualIndex,
   selectMode,
-  selectPendingVisualLayer,
-  selectPendingVisualTransformId,
+  selectLayoutVisualItem,
   selectSelectedVisuals,
   selectSelectedVisualIndex,
   selectVisualBlurOptionEnabled,
   selectVisualFlipOptionEnabled,
+  selectVisualMedia,
   selectVisualOpacityOptionEnabled,
   selectVisualShaderAdjustmentOptionEnabled,
-  selectTab,
-  selectTempSelectedResourceId,
-  selectTempSelectedAnimationName,
-  selectTempSelectedResourceType,
   setAnimations,
   setExistingVisuals,
-  setMode,
-  setPendingVisualLayer,
-  setPendingVisualTransformId,
-  setSelectedVisualIndex,
-  setTab,
-  setTempSelectedResourceId,
-  setTransforms,
+  setImages,
+  setVideos,
   showDropdownMenu,
   showVisualBlurOption,
   showVisualFlipOption,
   showVisualOpacityOption,
   showVisualShaderAdjustmentOption,
-  updateVisualResource,
   updateVisualAnimation,
   updateVisualBlurField,
   updateVisualLayer,
@@ -81,17 +54,8 @@ const TEST_I18N = {
 };
 
 const createStoreApi = (state) => ({
-  addVisual: (payload) => addVisual({ state }, payload),
-  clearPendingVisualConfig: (payload) =>
-    clearPendingVisualConfig({ state }, payload),
-  clearPendingVisualLayer: (payload) =>
-    clearPendingVisualLayer({ state }, payload),
-  clearPendingVisualTransformId: (payload) =>
-    clearPendingVisualTransformId({ state }, payload),
-  hideAddVisualPopover: (payload) => hideAddVisualPopover({ state }, payload),
   hideDropdownMenu: (payload) => hideDropdownMenu({ state }, payload),
   moveVisual: (payload) => moveVisual({ state }, payload),
-  openAddVisualPopover: (payload) => openAddVisualPopover({ state }, payload),
   removeVisual: (payload) => removeVisual({ state }, payload),
   removeVisualBlurOption: (payload) =>
     removeVisualBlurOption({ state }, payload),
@@ -101,39 +65,22 @@ const createStoreApi = (state) => ({
     removeVisualOpacityOption({ state }, payload),
   removeVisualShaderAdjustmentOption: (payload) =>
     removeVisualShaderAdjustmentOption({ state }, payload),
-  selectDefaultTransformId: () => selectDefaultTransformId({ state }),
-  selectDefaultVisualLayer: () => selectDefaultVisualLayer({ state }),
   selectDropdownMenuType: () => selectDropdownMenuType({ state }),
   selectDropdownMenuVisualIndex: () => selectDropdownMenuVisualIndex({ state }),
   selectMode: () => selectMode({ state }),
-  selectPendingVisualLayer: () => selectPendingVisualLayer({ state }),
-  selectPendingVisualTransformId: () =>
-    selectPendingVisualTransformId({ state }),
+  selectLayoutVisualItem: (payload) =>
+    selectLayoutVisualItem({ state }, payload),
   selectSelectedVisualIndex: () => selectSelectedVisualIndex({ state }),
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
   selectVisualBlurOptionEnabled: (payload) =>
     selectVisualBlurOptionEnabled({ state }, payload),
   selectVisualFlipOptionEnabled: (payload) =>
     selectVisualFlipOptionEnabled({ state }, payload),
+  selectVisualMedia: (payload) => selectVisualMedia({ state }, payload),
   selectVisualOpacityOptionEnabled: (payload) =>
     selectVisualOpacityOptionEnabled({ state }, payload),
   selectVisualShaderAdjustmentOptionEnabled: (payload) =>
     selectVisualShaderAdjustmentOptionEnabled({ state }, payload),
-  selectTab: () => selectTab({ state }),
-  selectTempSelectedResourceId: () => selectTempSelectedResourceId({ state }),
-  selectTempSelectedAnimationName: () =>
-    selectTempSelectedAnimationName({ state }),
-  selectTempSelectedResourceType: () =>
-    selectTempSelectedResourceType({ state }),
-  setMode: (payload) => setMode({ state }, payload),
-  setPendingVisualLayer: (payload) => setPendingVisualLayer({ state }, payload),
-  setPendingVisualTransformId: (payload) =>
-    setPendingVisualTransformId({ state }, payload),
-  setSelectedVisualIndex: (payload) =>
-    setSelectedVisualIndex({ state }, payload),
-  setTab: (payload) => setTab({ state }, payload),
-  setTempSelectedResourceId: (payload) =>
-    setTempSelectedResourceId({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   showVisualBlurOption: (payload) => showVisualBlurOption({ state }, payload),
   showVisualFlipOption: (payload) => showVisualFlipOption({ state }, payload),
@@ -147,7 +94,6 @@ const createStoreApi = (state) => ({
   updateVisualOpacity: (payload) => updateVisualOpacity({ state }, payload),
   updateVisualShaderAdjustment: (payload) =>
     updateVisualShaderAdjustment({ state }, payload),
-  updateVisualResource: (payload) => updateVisualResource({ state }, payload),
 });
 
 const setAnimationCollection = (state) => {
@@ -171,9 +117,131 @@ const setAnimationCollection = (state) => {
   );
 };
 
+// The image and video the visuals show, with no name or size. A visual
+// whose resource is gone is kept as it was saved.
+const createStateWithResources = () => {
+  const state = createInitialState();
+  setImages(
+    { state },
+    {
+      images: {
+        items: { "visual-image": { id: "visual-image", type: "image" } },
+        tree: [{ id: "visual-image" }],
+      },
+    },
+  );
+  setVideos(
+    { state },
+    {
+      videos: {
+        items: { "visual-video": { id: "visual-video", type: "video" } },
+        tree: [{ id: "visual-video" }],
+      },
+    },
+  );
+  return state;
+};
+
+// Visuals are saved, and previewed, as layouts. The resources these tests
+// load have no name or size, so a visual picked from one resource becomes one
+// element with no size, named by the resource id, and a picked shared layout
+// is empty.
+const MEDIA_ELEMENTS = {
+  image: (resourceId) => ({ type: "sprite", imageId: resourceId }),
+  video: (resourceId) => ({
+    type: "video",
+    videoId: resourceId,
+    loop: false,
+    volume: 100,
+  }),
+  spritesheet: (resourceId, animationName) => ({
+    type: "spritesheet-animation",
+    resourceId,
+    animationName,
+  }),
+};
+
+const SCREEN_LAYER = {
+  x: 0,
+  y: 0,
+  anchorX: 0,
+  anchorY: 0,
+  scaleX: 1,
+  scaleY: 1,
+  rotation: 0,
+};
+
+// The fields that place a visual. A visual saved from one media resource has
+// none: its layout puts the media where they placed it. The test transforms
+// have no position, so only the visual's own fields place it.
+const PLACEMENT_FIELDS = [
+  "transformId",
+  "transform",
+  "x",
+  "y",
+  "anchorX",
+  "anchorY",
+  "scaleX",
+  "scaleY",
+  "flipX",
+  "flipY",
+  "rotation",
+  "originX",
+  "originY",
+];
+
+const toSavedLayout = (
+  resourceType,
+  resourceId,
+  animationName,
+  placement = SCREEN_LAYER,
+) => ({
+  layoutSchemaVersion: 2,
+  elements: {
+    items: {
+      content: {
+        name: resourceId,
+        ...placement,
+        ...MEDIA_ELEMENTS[resourceType](resourceId, animationName),
+      },
+    },
+    tree: [{ id: "content" }],
+  },
+});
+
+// A visual as the panel saves it: a project layout by reference, and one
+// image, spritesheet, video or particle as a custom layout that shows it.
+const savedVisual = ({ resourceId, resourceType, animationName, ...item }) => {
+  if (resourceType === "layout") {
+    return { ...item, resourceId, resourceType };
+  }
+
+  const placement = {};
+  for (const [field, defaultValue] of Object.entries(SCREEN_LAYER)) {
+    placement[field] = item[field] ?? defaultValue;
+  }
+  if (item.flipX) {
+    placement.scaleX *= -1;
+  }
+  if (item.flipY) {
+    placement.scaleY *= -1;
+  }
+  const saved = { ...item };
+  for (const field of PLACEMENT_FIELDS) {
+    delete saved[field];
+  }
+  saved.layout = toSavedLayout(
+    resourceType,
+    resourceId,
+    animationName,
+    placement,
+  );
+  return saved;
+};
+
 describe("commandLineVisual.handlers animation controls", () => {
   it("updates and clears per-visual animation selection", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
 
     setAnimationCollection(state);
@@ -242,341 +310,8 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("emits temporary presentation state while picking a new visual resource", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-    const store = createStoreApi(state);
-
-    setTransforms(
-      { state },
-      {
-        transforms: {
-          items: {
-            "visual-center": {
-              id: "visual-center",
-              type: "transform",
-              name: "Center",
-            },
-            "visual-left": {
-              id: "visual-left",
-              type: "transform",
-              name: "Left",
-            },
-          },
-          tree: [{ id: "visual-center" }, { id: "visual-left" }],
-        },
-      },
-    );
-
-    handleAddVisualClick(
-      {
-        store,
-        render,
-      },
-      {
-        _event: {
-          currentTarget: {
-            getBoundingClientRect: () => ({
-              left: 24,
-              bottom: 64,
-            }),
-          },
-        },
-      },
-    );
-    expect(state.addVisualPopover).toMatchObject({
-      isOpen: true,
-      position: { x: 24, y: 64 },
-    });
-
-    handleAddVisualFormAction(
-      {
-        store,
-        render,
-      },
-      {
-        _event: {
-          detail: {
-            actionId: "submit",
-            values: {
-              transformId: "visual-left",
-              layer: 70,
-            },
-          },
-        },
-      },
-    );
-    expect(selectMode({ state })).toBe("resource-select");
-    expect(selectSelectedVisualIndex({ state })).toBe(-1);
-    expect(selectPendingVisualTransformId({ state })).toBe("visual-left");
-    expect(selectPendingVisualLayer({ state })).toBe(70);
-    expect(state.addVisualPopover.isOpen).toBe(false);
-
-    handleResourceItemClick(
-      {
-        store,
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          currentTarget: {
-            dataset: {
-              resourceId: "visual-video",
-              resourceType: "video",
-            },
-          },
-        },
-      },
-    );
-
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent.mock.calls[0][0].type).toBe(
-      "temporary-presentation-state-change",
-    );
-    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
-      presentationState: {
-        visual: {
-          items: [
-            {
-              id: "temporary-visual-preview-video",
-              resourceId: "visual-video",
-              resourceType: "video",
-              transformId: "visual-left",
-              layer: 70,
-            },
-          ],
-        },
-      },
-    });
-  });
-
-  it("includes the selected spritesheet animation in preview and saved visuals", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-    const appService = {
-      showAlert: vi.fn(),
-    };
-    const store = createStoreApi(state);
-
-    setMode({ state }, { mode: "resource-select" });
-    setSelectedVisualIndex({ state }, { index: -1 });
-
-    handleSpritesheetSelected(
-      {
-        store,
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          detail: {
-            resourceId: "visual-spritesheet",
-            animationName: "idle",
-          },
-        },
-      },
-    );
-
-    expect(dispatchEvent.mock.calls[0][0].detail).toMatchObject({
-      presentationState: {
-        visual: {
-          items: [
-            {
-              resourceId: "visual-spritesheet",
-              resourceType: "spritesheet",
-              animationName: "idle",
-            },
-          ],
-        },
-      },
-    });
-
-    handleButtonSelectClick({
-      appService,
-      store,
-      render,
-      dispatchEvent,
-      i18n: TEST_I18N,
-    });
-
-    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
-      resourceId: "visual-spritesheet",
-      resourceType: "spritesheet",
-      animationName: "idle",
-    });
-  });
-
-  it("routes spritesheet explorer items through the animation selector", () => {
-    const handleScrollToItem = vi.fn();
-    const setTempSelectedResourceId = vi.fn();
-
-    handleFileExplorerItemClick(
-      {
-        refs: {
-          spritesheetSelector: {
-            transformedHandlers: { handleScrollToItem },
-          },
-        },
-        store: {
-          selectResourceExplorerTarget: () => ({
-            resourceId: "visual-spritesheet",
-            resourceType: "spritesheet",
-          }),
-          setTempSelectedResourceId,
-        },
-        render: vi.fn(),
-      },
-      {
-        _event: {
-          detail: {
-            itemId: "spritesheet:visual-spritesheet",
-            isFolder: false,
-          },
-        },
-      },
-    );
-
-    expect(handleScrollToItem).toHaveBeenCalledWith({
-      itemId: "visual-spritesheet",
-    });
-    expect(setTempSelectedResourceId).not.toHaveBeenCalled();
-  });
-
-  it("uses a temporary id when an existing visual changes resource type", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-
-    setTransforms(
-      { state },
-      {
-        transforms: {
-          items: {
-            "visual-center": {
-              id: "visual-center",
-              type: "transform",
-              name: "Center",
-            },
-          },
-          tree: [{ id: "visual-center" }],
-        },
-      },
-    );
-    setExistingVisuals(
-      { state },
-      {
-        visuals: [
-          {
-            id: "visual-1",
-            resourceId: "visual-image",
-            resourceType: "image",
-            transformId: "visual-center",
-          },
-        ],
-      },
-    );
-    setMode({ state }, { mode: "resource-select" });
-    setSelectedVisualIndex({ state }, { index: 0 });
-
-    handleResourceItemClick(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          currentTarget: {
-            dataset: {
-              resourceId: "visual-layout",
-              resourceType: "layout",
-            },
-          },
-        },
-      },
-    );
-
-    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
-      presentationState: {
-        visual: {
-          items: [
-            {
-              id: "visual-1-layout-preview",
-              resourceId: "visual-layout",
-              resourceType: "layout",
-              transformId: "visual-center",
-              layer: 50,
-            },
-          ],
-        },
-      },
-    });
-  });
-
-  it("updates visual layer selection and emits temporary presentation state", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-
-    setExistingVisuals(
-      { state },
-      {
-        visuals: [
-          {
-            id: "visual-1",
-            resourceId: "visual-image",
-            resourceType: "image",
-            transformId: "visual-center",
-          },
-        ],
-      },
-    );
-
-    handleLayerChange(
-      {
-        store: createStoreApi(state),
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          currentTarget: {
-            dataset: {
-              index: "0",
-            },
-          },
-          detail: {
-            value: 30,
-          },
-        },
-      },
-    );
-
-    expect(selectSelectedVisuals({ state })[0].layer).toBe(30);
-    expect(render).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
-      presentationState: {
-        visual: {
-          items: [
-            {
-              id: "visual-1",
-              resourceId: "visual-image",
-              resourceType: "image",
-              transformId: "visual-center",
-              layer: 30,
-            },
-          ],
-        },
-      },
-    });
-  });
-
   it("updates visual opacity and blur in temporary presentation state", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -624,14 +359,14 @@ describe("commandLineVisual.handlers animation controls", () => {
       presentationState: {
         visual: {
           items: [
-            {
+            savedVisual({
               id: "visual-1",
               resourceId: "visual-image",
               resourceType: "image",
               transformId: "visual-center",
               layer: 50,
               opacity: 0.42,
-            },
+            }),
           ],
         },
       },
@@ -719,7 +454,7 @@ describe("commandLineVisual.handlers animation controls", () => {
       presentationState: {
         visual: {
           items: [
-            {
+            savedVisual({
               id: "visual-1",
               resourceId: "visual-image",
               resourceType: "image",
@@ -733,7 +468,7 @@ describe("commandLineVisual.handlers animation controls", () => {
                 kernelSize: 13,
                 repeatEdgePixels: true,
               },
-            },
+            }),
           ],
         },
       },
@@ -742,7 +477,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("emits null when visual blur is disabled", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -791,14 +526,14 @@ describe("commandLineVisual.handlers animation controls", () => {
       presentationState: {
         visual: {
           items: [
-            {
+            savedVisual({
               id: "visual-1",
               resourceId: "visual-image",
               resourceType: "image",
               transformId: "visual-center",
               layer: 50,
               blur: null,
-            },
+            }),
           ],
         },
       },
@@ -807,7 +542,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("shows and removes the visual opacity option from the section action", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -885,7 +620,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("shows and removes the visual blur option from the section action", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -959,7 +694,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("moves visuals from the context menu and emits reordered preview data", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
     const store = createStoreApi(state);
@@ -1027,95 +762,35 @@ describe("commandLineVisual.handlers animation controls", () => {
       presentationState: {
         visual: {
           items: [
-            {
+            savedVisual({
               id: "visual-3",
               resourceId: "visual-layout",
               resourceType: "layout",
               transformId: "visual-center",
               layer: 90,
-            },
-            {
+            }),
+            savedVisual({
               id: "visual-2",
               resourceId: "visual-video",
               resourceType: "video",
               transformId: "visual-center",
               layer: 50,
-            },
-            {
+            }),
+            savedVisual({
               id: "visual-1",
               resourceId: "visual-image",
               resourceType: "image",
               transformId: "visual-center",
               layer: 50,
-            },
+            }),
           ],
         },
       },
     });
   });
 
-  it("adds a new visual with the selected add-form transform and layer", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-    const appService = {
-      showAlert: vi.fn(),
-    };
-    const store = createStoreApi(state);
-
-    setPendingVisualLayer(
-      { state },
-      {
-        layer: 10,
-      },
-    );
-    setPendingVisualTransformId(
-      { state },
-      {
-        transformId: "visual-left",
-      },
-    );
-    setMode({ state }, { mode: "resource-select" });
-    setSelectedVisualIndex({ state }, { index: -1 });
-    setTempSelectedResourceId(
-      { state },
-      {
-        resourceId: "visual-image",
-        resourceType: "image",
-      },
-    );
-
-    handleButtonSelectClick({
-      appService,
-      store,
-      render,
-      dispatchEvent,
-      i18n: TEST_I18N,
-    });
-
-    expect(appService.showAlert).not.toHaveBeenCalled();
-    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
-      resourceId: "visual-image",
-      resourceType: "image",
-      transformId: "visual-left",
-      layer: 10,
-    });
-    expect(selectMode({ state })).toBe("current");
-    expect(selectTempSelectedResourceId({ state })).toBeUndefined();
-    expect(render).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
-    expect(
-      dispatchEvent.mock.calls[0][0].detail.presentationState.visual.items[0],
-    ).toMatchObject({
-      resourceId: "visual-image",
-      resourceType: "image",
-      transformId: "visual-left",
-      layer: 10,
-    });
-  });
-
   it("submits animations for selected visuals without changing other data keys", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
 
     setAnimationCollection(state);
@@ -1159,7 +834,7 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
       visual: {
         items: [
-          {
+          savedVisual({
             id: "visual-1",
             resourceId: "visual-image",
             resourceType: "image",
@@ -1181,89 +856,14 @@ describe("commandLineVisual.handlers animation controls", () => {
                 speed: 1,
               },
             },
-          },
+          }),
         ],
       },
     });
   });
 
-  it("switches resource tabs and clears hidden temporary selection", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-    const dispatchEvent = vi.fn();
-    const store = createStoreApi(state);
-
-    setTempSelectedResourceId(
-      { state },
-      {
-        resourceId: "visual-video",
-        resourceType: "video",
-      },
-    );
-
-    handleTabClick(
-      {
-        store,
-        render,
-        dispatchEvent,
-      },
-      {
-        _event: {
-          detail: {
-            id: "layout",
-          },
-        },
-      },
-    );
-
-    expect(selectTab({ state })).toBe("layout");
-    expect(selectTempSelectedResourceId({ state })).toBeUndefined();
-    expect(selectTempSelectedResourceType({ state })).toBeUndefined();
-    expect(render).toHaveBeenCalledTimes(1);
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
-  });
-
-  it("opens existing visual selection on the visual resource tab", () => {
-    const state = createInitialState();
-    const render = vi.fn();
-
-    setExistingVisuals(
-      { state },
-      {
-        visuals: [
-          {
-            id: "visual-1",
-            resourceId: "visual-video",
-            resourceType: "video",
-          },
-        ],
-      },
-    );
-
-    handleVisualClick(
-      {
-        store: createStoreApi(state),
-        render,
-      },
-      {
-        _event: {
-          currentTarget: {
-            dataset: {
-              index: "0",
-            },
-          },
-        },
-      },
-    );
-
-    expect(selectSelectedVisualIndex({ state })).toBe(0);
-    expect(selectMode({ state })).toBe("resource-select");
-    expect(selectTab({ state })).toBe("video");
-    expect(render).toHaveBeenCalledTimes(1);
-  });
-
   it("requests the shared transform editor from the custom transform summary", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const event = {
       preventDefault: vi.fn(),
@@ -1311,30 +911,30 @@ describe("commandLineVisual.handlers animation controls", () => {
       targetType: "visual",
       actionKey: "visual",
       itemIndex: 0,
-      item: {
+      item: savedVisual({
         id: "visual-1",
         resourceId: "visual-image",
         resourceType: "image",
         transformId: "visual-center",
         layer: 50,
-      },
+      }),
       targetName: "Visual One",
       action: {
         items: [
-          {
+          savedVisual({
             id: "visual-1",
             resourceId: "visual-image",
             resourceType: "image",
             transformId: "visual-center",
             layer: 50,
-          },
+          }),
         ],
       },
     });
   });
 
   it("opens the custom transform summary with the keyboard", () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const event = {
       key: "Enter",
@@ -1377,7 +977,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("previews and submits per-visual shader adjustments", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const render = vi.fn();
     const store = createStoreApi(state);
@@ -1448,7 +1048,7 @@ describe("commandLineVisual.handlers animation controls", () => {
   });
 
   it("adds, previews, submits, and removes per-visual flip options", async () => {
-    const state = createInitialState();
+    const state = createStateWithResources();
     const dispatchEvent = vi.fn();
     const render = vi.fn();
     const store = createStoreApi(state);
@@ -1502,18 +1102,38 @@ describe("commandLineVisual.handlers animation controls", () => {
       flipX: true,
       flipY: true,
     });
+    // The flips are saved as the layout element's scale.
     expect(dispatchEvent.mock.calls[1][0].detail).toMatchObject({
       presentationState: {
         visual: {
-          items: [{ flipX: true, flipY: true }],
+          items: [
+            {
+              layout: {
+                elements: {
+                  items: { content: { scaleX: -1, scaleY: -1 } },
+                },
+              },
+            },
+          ],
         },
       },
     });
+    expect(
+      dispatchEvent.mock.calls[1][0].detail.presentationState.visual.items[0],
+    ).not.toHaveProperty("flipX");
 
     handleSubmitClick({ dispatchEvent, store });
     expect(dispatchEvent.mock.calls[2][0].detail).toMatchObject({
       visual: {
-        items: [{ flipX: true, flipY: true }],
+        items: [
+          {
+            layout: {
+              elements: {
+                items: { content: { scaleX: -1, scaleY: -1 } },
+              },
+            },
+          },
+        ],
       },
     });
 
@@ -1530,7 +1150,15 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(dispatchEvent.mock.calls[3][0].detail).toMatchObject({
       presentationState: {
         visual: {
-          items: [{ flipX: false, flipY: true }],
+          items: [
+            {
+              layout: {
+                elements: {
+                  items: { content: { scaleX: 1, scaleY: -1 } },
+                },
+              },
+            },
+          ],
         },
       },
     });
@@ -1538,7 +1166,15 @@ describe("commandLineVisual.handlers animation controls", () => {
     handleSubmitClick({ dispatchEvent, store });
     expect(dispatchEvent.mock.calls[4][0].detail).toMatchObject({
       visual: {
-        items: [{ flipX: false, flipY: true }],
+        items: [
+          {
+            layout: {
+              elements: {
+                items: { content: { scaleX: 1, scaleY: -1 } },
+              },
+            },
+          },
+        ],
       },
     });
   });

@@ -16,6 +16,7 @@ import { canAutoTweenProperty } from "../animationPlayback.js";
 import {
   collectParticleTextureImageIds,
   createRenderableParticleData,
+  isRenderableParticleTexture,
 } from "../particles.js";
 import { toVariableConditionTarget } from "../layoutConditions.js";
 import { requireProjectResolution } from "../projectResolution.js";
@@ -25,6 +26,7 @@ import {
   resolveSpritesheetSize,
 } from "../spritesheets.js";
 import { toExecutableComputed } from "../computedExamples.js";
+import { normalizeRouteEngineActions } from "../routeEngineActions.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const LAYOUT_ACTION_INTERACTION_KEYS = [
@@ -1004,6 +1006,18 @@ const constructParticleResources = (
 
       const renderableParticle = createRenderableParticleData(item, imageItems);
 
+      // A visual draws its particle through Route Engine, which has no
+      // fallback for a texture route-graphics rejects. Such a particle is
+      // left out, so its visual draws nothing, as a layout's particle
+      // element does.
+      if (
+        !isRenderableParticleTexture(
+          renderableParticle.modules?.appearance?.texture,
+        )
+      ) {
+        return result;
+      }
+
       result[particleId] = pickResourceFields(renderableParticle, [
         "name",
         "description",
@@ -1112,6 +1126,7 @@ const constructLayoutResources = (
   filesData = { items: {}, tree: [] },
   soundsData = { items: {}, tree: [] },
   particlesData = { items: {}, tree: [] },
+  videosData = { items: {}, tree: [] },
   spritesheetsData = { items: {}, tree: [] },
   textStylesData = { items: {}, tree: [] },
   colors = { items: {}, tree: [] },
@@ -1148,6 +1163,7 @@ const constructLayoutResources = (
         filesData,
         soundsData,
         particlesData,
+        videosData,
         spritesheetsData,
         layoutsData: repositoryLayouts,
       },
@@ -1182,6 +1198,7 @@ const constructLayoutResources = (
         filesData,
         soundsData,
         particlesData,
+        videosData,
         spritesheetsData,
         layoutsData: repositoryLayouts,
       },
@@ -1207,6 +1224,152 @@ const constructLayoutResources = (
     },
     layouts,
   };
+};
+
+// A visual's layout is saved in the layout editor's format: elements as
+// items plus a tree. The engine takes the nested elements a Layout resource is
+// built into.
+export const isStoredVisualLayout = (layout) =>
+  isObjectRecord(layout) && isObjectRecord(layout.elements);
+
+const hasStoredVisualLayouts = (actions) =>
+  Array.isArray(actions?.visual?.items) &&
+  actions.visual.items.some((item) => isStoredVisualLayout(item?.layout));
+
+// Builds visual layouts against the project's resources, the same way
+// Layout resources are built. With `keepStoredLayouts`, as in the scene
+// editor, each built layout also keeps the saved layout it was built from as
+// its `source`. The engine does not read it and keeps it in the presentation
+// state, so what the engine presents can be edited and saved in its saved form.
+export const createVisualLayoutBuilder = (
+  repositoryState = {},
+  { keepStoredLayouts = false } = {},
+) => {
+  let sources;
+  const getSources = () => {
+    if (sources) {
+      return sources;
+    }
+
+    const repositoryFiles = repositoryState.files?.items ?? {};
+    sources = {
+      imageItems: {
+        ...constructImageResources(
+          repositoryState.images?.items ?? {},
+          repositoryFiles,
+        ),
+        ...extractCharacterImages(
+          repositoryState.characters?.items ?? {},
+          repositoryFiles,
+        ),
+      },
+      filesData: repositoryState.files ?? { items: {}, tree: [] },
+      soundsData: repositoryState.sounds ?? { items: {}, tree: [] },
+      particlesData: repositoryState.particles ?? { items: {}, tree: [] },
+      videosData: repositoryState.videos ?? { items: {}, tree: [] },
+      spritesheetsData: repositoryState.spritesheets ?? { items: {}, tree: [] },
+      textStylesData: repositoryState.textStyles ?? { items: {}, tree: [] },
+      colors: repositoryState.colors ?? { items: {}, tree: [] },
+      fonts: repositoryState.fonts ?? { items: {}, tree: [] },
+      layoutsData: repositoryState.layouts?.items ?? {},
+    };
+    return sources;
+  };
+
+  // Returns the actions with every stored visual layout built for the engine,
+  // and the text styles those layouts add.
+  const buildActions = (actions) => {
+    if (!hasStoredVisualLayouts(actions)) {
+      return { actions, textStyles: {} };
+    }
+
+    const buildSources = getSources();
+    const textStyles = {};
+    const items = actions.visual.items.map((item) => {
+      if (!isStoredVisualLayout(item?.layout)) {
+        return item;
+      }
+
+      const { elements, resources } = buildLayoutElements(
+        toHierarchyStructure(item.layout.elements),
+        buildSources.imageItems,
+        buildSources.textStylesData,
+        buildSources.colors,
+        buildSources.fonts,
+        {
+          layoutId: `visual-${item.id}`,
+          layoutType: "general",
+          layoutSchemaVersion: item.layout.layoutSchemaVersion,
+          filesData: buildSources.filesData,
+          soundsData: buildSources.soundsData,
+          particlesData: buildSources.particlesData,
+          videosData: buildSources.videosData,
+          spritesheetsData: buildSources.spritesheetsData,
+          layoutsData: buildSources.layoutsData,
+        },
+      );
+      Object.assign(textStyles, resources.textStyles);
+
+      // The layout's width and height are the visual's canvas: its size, and
+      // what its anchor is relative to. Without them the canvas is the screen.
+      const builtLayout = { elements };
+      if (item.layout.width !== undefined) {
+        builtLayout.width = item.layout.width;
+      }
+      if (item.layout.height !== undefined) {
+        builtLayout.height = item.layout.height;
+      }
+      const builtItem = structuredClone(item);
+      if (keepStoredLayouts) {
+        builtLayout.source = builtItem.layout;
+      }
+      builtItem.layout = builtLayout;
+      return builtItem;
+    });
+
+    const builtActions = { ...actions };
+    builtActions.visual = { ...actions.visual, items };
+    return { actions: builtActions, textStyles };
+  };
+
+  return { buildActions };
+};
+
+// A presentation state from the engine with each visual layout the editor
+// built given back in its saved form.
+export const toStoredVisualPresentationState = (presentationState) => {
+  const items = presentationState?.visual?.items;
+  if (!Array.isArray(items) || !items.some((item) => item?.layout?.source)) {
+    return presentationState;
+  }
+
+  const storedState = { ...presentationState };
+  storedState.visual = { ...presentationState.visual };
+  storedState.visual.items = items.map((item) => {
+    if (!item?.layout?.source) {
+      return item;
+    }
+    const storedItem = { ...item };
+    storedItem.layout = item.layout.source;
+    return storedItem;
+  });
+  return storedState;
+};
+
+const buildStoryVisualLayouts = (scenes, visualLayoutBuilder) => {
+  const textStyles = {};
+
+  for (const scene of Object.values(scenes)) {
+    for (const section of Object.values(scene.sections)) {
+      for (const line of section.lines) {
+        const built = visualLayoutBuilder.buildActions(line.actions);
+        line.actions = built.actions;
+        Object.assign(textStyles, built.textStyles);
+      }
+    }
+  }
+
+  return textStyles;
 };
 
 const constructProjectResources = (repositoryState = {}) => {
@@ -1271,6 +1434,7 @@ const constructProjectResources = (repositoryState = {}) => {
     repositoryState.files || { items: {}, tree: [] },
     repositoryState.sounds || { items: {}, tree: [] },
     particlesData,
+    repositoryState.videos || { items: {}, tree: [] },
     spritesheetsData,
     textStylesData,
     colors,
@@ -1423,8 +1587,23 @@ export function constructProjectData(state, options = {}) {
     scenes: constructStory(state.scenes),
   };
 
+  Object.assign(
+    resources.textStyles,
+    buildStoryVisualLayouts(
+      story.scenes,
+      createVisualLayoutBuilder(state, {
+        keepStoredLayouts: options.keepStoredVisualLayouts === true,
+      }),
+    ),
+  );
   alignDialogueModesWithLayouts(story, resources.layouts);
   removeUpdatesToMissingVariables(story.scenes, resources.variables);
+
+  // Route Engine rejects updateVariable action ids that are not alphanumeric
+  // and Next Line Config delays below 0.
+  story.scenes = normalizeRouteEngineActions(story.scenes);
+  resources.layouts = normalizeRouteEngineActions(resources.layouts);
+  resources.controls = normalizeRouteEngineActions(resources.controls);
 
   return {
     screen: {
@@ -1479,9 +1658,7 @@ const collectActionPresentationData = (actions = {}) => {
       typeof value.sectionId === "string" &&
       value.sectionId.length > 0
     ) {
-      transitions.push({
-        sectionId: value.sectionId,
-      });
+      transitions.push(value);
     }
 
     if (
@@ -1518,9 +1695,11 @@ const getTransitionsFromLayout = (layout) => {
 
   return Object.values(layout.elements.items)
     .flatMap((element) =>
-      LAYOUT_ACTION_INTERACTION_KEYS.map(
+      LAYOUT_ACTION_INTERACTION_KEYS.flatMap(
         (interactionKey) =>
-          getInteractionActions(element?.[interactionKey]).sectionTransition,
+          collectActionPresentationData(
+            getInteractionActions(element?.[interactionKey]),
+          ).transitions,
       ),
     )
     .filter(Boolean);
@@ -1560,6 +1739,7 @@ export const getSectionPresentation = ({
   layouts,
   controls,
   menuSceneId,
+  scenes,
 }) => {
   const lines = toSectionLines(section);
   const transitions = new Set();
@@ -1568,6 +1748,22 @@ export const getSectionPresentation = ({
   let hasMenuReturnAction = false;
   let returnsToMenuScene = false;
 
+  const addTransition = (transition) => {
+    const sceneId =
+      transition.sceneId ??
+      findSceneIdBySectionId(scenes, transition.sectionId);
+    if (menuSceneId && sceneId === menuSceneId) {
+      returnsToMenuScene = true;
+    }
+    const key = createTransitionKey({
+      sceneId,
+      sectionId: transition.sectionId,
+    });
+    if (key) {
+      transitions.add(key);
+    }
+  };
+
   lines.forEach((line) => {
     const lineActions = normalizeLineActions(line.actions || {});
     const actionPresentationData = collectActionPresentationData(lineActions);
@@ -1575,15 +1771,7 @@ export const getSectionPresentation = ({
       hasMenuReturnAction = true;
     }
 
-    actionPresentationData.transitions.forEach((actionTransition) => {
-      if (menuSceneId && actionTransition?.sceneId === menuSceneId) {
-        returnsToMenuScene = true;
-      }
-      const actionTransitionKey = createTransitionKey(actionTransition);
-      if (actionTransitionKey) {
-        transitions.add(actionTransitionKey);
-      }
-    });
+    actionPresentationData.transitions.forEach(addTransition);
 
     const choice = lineActions?.choice;
     const choiceItems = Array.isArray(choice?.items) ? choice.items : [];
@@ -1597,15 +1785,7 @@ export const getSectionPresentation = ({
       });
       const layoutTransitions = getTransitionsFromLayout(layout);
 
-      layoutTransitions.forEach((layoutTransition) => {
-        if (menuSceneId && layoutTransition?.sceneId === menuSceneId) {
-          returnsToMenuScene = true;
-        }
-        const layoutTransitionKey = createTransitionKey(layoutTransition);
-        if (layoutTransitionKey) {
-          transitions.add(layoutTransitionKey);
-        }
-      });
+      layoutTransitions.forEach(addTransition);
     });
   });
 
@@ -1843,6 +2023,7 @@ const LAYOUT_RESOURCE_KEYS = [
   "layoutId",
   "fragmentLayoutId",
   "particleId",
+  "videoId",
   "sceneId",
   "sectionId",
   "variableId",
@@ -1905,6 +2086,7 @@ const RESOURCE_KEY_TO_TYPES = {
   hoverImageId: ["images"],
   clickImageId: ["images"],
   particleId: ["particles"],
+  videoId: ["videos"],
   thumbImageId: ["images"],
   barImageId: ["images"],
   hoverThumbImageId: ["images"],
@@ -1939,7 +2121,8 @@ const COLLECTION_DEFS = {
 };
 
 const RESOURCE_KEYS_MAP = {
-  scenes: SCENE_RESOURCE_KEYS,
+  // A visual on a line holds layout elements, so lines use layout keys too.
+  scenes: [...new Set([...SCENE_RESOURCE_KEYS, ...LAYOUT_RESOURCE_KEYS])],
   layouts: LAYOUT_RESOURCE_KEYS,
   controls: LAYOUT_RESOURCE_KEYS,
   textStyles: TEXT_STYLE_RESOURCE_KEYS,
@@ -2076,6 +2259,45 @@ const checkNode = (node, resourceId, keys, usages) => {
       checkNode(value, resourceId, keys, usages);
     }
   }
+};
+
+const collectReferencedIds = (node, keys, resourceIds, referencedIds) => {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    if (keys.includes(key)) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (resourceIds.has(item)) {
+            referencedIds.add(item);
+          }
+        }
+      } else if (resourceIds.has(value)) {
+        referencedIds.add(value);
+      }
+    }
+
+    if (typeof value === "object" && value !== null) {
+      collectReferencedIds(value, keys, resourceIds, referencedIds);
+    }
+  }
+};
+
+// The ids from the `resourceIds` set that `node` names under a resource key,
+// by the rule `recursivelyCheckResource` uses for one id. `target` is
+// "scenes", "layouts", "controls" or "textStyles" and picks the keys; pass
+// `keys` to check other ones.
+export const collectReferencedResourceIds = ({
+  node,
+  target,
+  keys = RESOURCE_KEYS_MAP[target],
+  resourceIds,
+}) => {
+  const referencedIds = new Set();
+  collectReferencedIds(node, keys, resourceIds, referencedIds);
+  return referencedIds;
 };
 
 const filterTreeNodesByIds = (nodes, keepIds) => {
@@ -2760,18 +2982,16 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
         inProps[usageTargetName] = usages;
       }
 
+      // Animations and particles can use images themselves, so the ones
+      // referenced here are checked below. A key such as `resourceId` can
+      // name several kinds of resource, so ids that are not animations or
+      // particles are skipped there.
       scanNodeForResourceReferences(data, ({ key, value }) => {
-        // Lines, layouts and controls pick animations as
-        // `animations: { resourceId }`; ids that are not animations are
-        // skipped below.
-        if (
-          (key === "animation" || key === "resourceId") &&
-          typeof value === "string"
-        ) {
+        const types = RESOURCE_KEY_TO_TYPES[key] ?? [];
+        if (types.includes("animations")) {
           referencedAnimationIds.add(value);
         }
-
-        if (key === "particleId" && typeof value === "string") {
+        if (types.includes("particles")) {
           referencedParticleIds.add(value);
         }
       });

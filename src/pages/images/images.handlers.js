@@ -111,6 +111,23 @@ const pickAndUploadImage = async (deps, copy) => {
   return { uploadResult };
 };
 
+// The file explorer's delete uses the check this page shows the places of,
+// so the two cannot disagree about a folder.
+const validateImageExplorerDeletion = async ({
+  projectService,
+  currentItem,
+  itemId,
+}) => {
+  const usage =
+    currentItem.type === "folder"
+      ? await projectService.getImageFolderUsage({ folderId: itemId })
+      : await projectService.getImageUsage({ imageId: itemId });
+
+  return usage.blocksDelete
+    ? { canDelete: false, reason: "in-use" }
+    : { canDelete: true };
+};
+
 const syncImagePageData = ({ store, repositoryState } = {}) => {
   const tagsData = getTagsCollection(repositoryState, IMAGE_TAG_SCOPE_KEY);
   const collectionWithFileMetadata = withResolvedCollectionFileMetadata({
@@ -138,7 +155,7 @@ const {
   openCreateTagDialogForMode,
   refreshData: handleDataChanged,
   handleBeforeMount: handleMediaBeforeMount,
-  handleAfterMount,
+  handleAfterMount: handleMediaAfterMount,
   handleFileExplorerSelectionChanged: handleBaseFileExplorerSelectionChanged,
   handleFileExplorerAction: handleBaseFileExplorerAction,
   handleFileExplorerTargetChanged,
@@ -169,6 +186,7 @@ const {
   }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
   suppressMobileDetailSheetOnEdit: true,
+  validateFileExplorerDeletion: validateImageExplorerDeletion,
   copy: ({ i18n }) => selectImagesPageCopy(i18n),
   tagging: {
     scopeKey: IMAGE_TAG_SCOPE_KEY,
@@ -194,26 +212,73 @@ const {
   },
 });
 
-const openImageDeleteDialog = (deps, { itemId } = {}) => {
-  const { store, render } = deps;
+// An image that is used cannot be deleted, so asking to delete it shows where
+// it is used. Only an image that can be deleted asks for confirmation.
+const openImageDeleteDialog = async (deps, { itemId } = {}) => {
+  const { appService, projectService, store, render } = deps;
   if (!itemId) {
     return;
   }
 
-  store.openDeleteDialog({ itemId });
+  const copy = selectCopy(deps);
+  const usageAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedDeleteResource,
+    title: copy.errorTitle,
+    action: () => projectService.getImageUsage({ imageId: itemId }),
+  });
+  if (!usageAttempt.ok) {
+    return;
+  }
+
+  if (usageAttempt.result.blocksDelete) {
+    store.openBlockedDeleteDialog({ itemId });
+  } else {
+    store.openDeleteDialog({ itemId });
+  }
   render();
 };
 
+// A folder that holds a used image cannot be deleted, so asking to delete it
+// shows those images and where each is used.
+const deleteImageFolder = async (deps, payload) => {
+  const { appService, projectService, store, render } = deps;
+  const { itemId } = payload._event.detail;
+  const copy = selectCopy(deps);
+  const usageAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: copy.failedDeleteResource,
+    title: copy.errorTitle,
+    action: () => projectService.getImageFolderUsage({ folderId: itemId }),
+  });
+  if (!usageAttempt.ok) {
+    return;
+  }
+
+  if (usageAttempt.result.blocksDelete) {
+    store.openBlockedFolderDeleteDialog({ folderId: itemId });
+    render();
+    return;
+  }
+
+  await handleBaseFileExplorerAction(deps, payload);
+};
+
 const handleFileExplorerAction = async (deps, payload) => {
+  const { store } = deps;
   const { item, itemId, value } = payload._event.detail;
   const action = item?.value ?? value;
-  const targetItem = itemId
-    ? deps.store.selectImageItemById({ itemId })
-    : undefined;
 
-  if (action === "delete-item" && targetItem?.type === "image") {
-    openImageDeleteDialog(deps, { itemId });
-    return;
+  if (action === "delete-item" && itemId) {
+    if (store.selectImageItemById({ itemId })) {
+      await openImageDeleteDialog(deps, { itemId });
+      return;
+    }
+
+    if (store.selectFolderById({ folderId: itemId })) {
+      await deleteImageFolder(deps, payload);
+      return;
+    }
   }
 
   await handleBaseFileExplorerAction(deps, payload);
@@ -236,7 +301,6 @@ const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export {
-  handleAfterMount,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
@@ -263,6 +327,18 @@ export const handleBeforeMount = (deps) => {
 
   store.setUiConfig({ uiConfig });
   return handleMediaBeforeMount(deps);
+};
+
+export const handleAfterMount = async (deps) => {
+  const { projectService } = deps;
+
+  await handleMediaAfterMount(deps);
+  // Finding where images are used reads every scene. Starting it here has it
+  // ready by the time an image is selected or deleted. A failure is reported
+  // by whichever of those asks for the usage next.
+  projectService.prepareImageUsage().catch((error) => {
+    console.error("Failed to prepare where images are used:", error);
+  });
 };
 
 export const handleMobileFileExplorerOpen = (deps) => {
@@ -316,7 +392,7 @@ export const handleMobileDetailPreviewClick = (deps, payload) => {
   });
 };
 
-export const handleMobileDetailDeleteClick = (deps, payload) => {
+export const handleMobileDetailDeleteClick = async (deps, payload) => {
   payload?._event?.preventDefault?.();
   payload?._event?.stopPropagation?.();
 
@@ -326,7 +402,15 @@ export const handleMobileDetailDeleteClick = (deps, payload) => {
     return;
   }
 
-  openImageDeleteDialog(deps, { itemId: selectedItemId });
+  await openImageDeleteDialog(deps, { itemId: selectedItemId });
+};
+
+export const handleBlockedDeleteDialogClose = (deps) => {
+  const { store, render } = deps;
+
+  store.closeBlockedDeleteDialog();
+  render();
+  focusGroupView(deps);
 };
 
 export const handleDeleteDialogClose = (deps) => {
@@ -972,11 +1056,7 @@ const deleteImage = async (deps, { itemId } = {}) => {
       appService,
       fallbackMessage: copy.failedDeleteResource,
       title: copy.errorTitle,
-      action: () =>
-        projectService.deleteImageIfUnused({
-          imageId: itemId,
-          checkTargets: ["scenes", "layouts", "controls", "animations"],
-        }),
+      action: () => projectService.deleteImageIfUnused({ imageId: itemId }),
     });
     if (!deleteAttempt.ok) {
       render();
@@ -986,9 +1066,8 @@ const deleteImage = async (deps, { itemId } = {}) => {
     const { result } = deleteAttempt;
     if (!result.deleted) {
       if (result.usage?.isUsed) {
-        appService.showAlert({
-          message: copy.cannotDeleteResourceInUse,
-        });
+        // The image came into use after the delete was confirmed.
+        store.openBlockedDeleteDialog({ itemId });
       } else {
         showResourcePageError({
           appService,
@@ -1011,7 +1090,7 @@ const deleteImage = async (deps, { itemId } = {}) => {
   }
 };
 
-export const handleItemDelete = (deps, payload) => {
+export const handleItemDelete = async (deps, payload) => {
   const { itemId } = payload._event.detail;
-  openImageDeleteDialog(deps, { itemId });
+  await openImageDeleteDialog(deps, { itemId });
 };

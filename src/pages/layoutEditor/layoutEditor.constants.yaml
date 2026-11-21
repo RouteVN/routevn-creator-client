@@ -13,6 +13,9 @@ contextMenuItems:
   - label: Particle
     type: item
     createType: particle
+  - label: Video
+    type: item
+    createType: video
   - label: Text
     type: item
     createType: text
@@ -100,6 +103,9 @@ contextMenuItems:
   - label: Rename
     type: item
     value: rename-item
+  - label: Duplicate
+    type: item
+    value: duplicate-item
   - label: Delete
     type: item
     value: delete-item
@@ -119,6 +125,9 @@ emptyContextMenuItems:
   - label: Particle
     type: item
     createType: particle
+  - label: Video
+    type: item
+    createType: video
   - label: Text
     type: item
     createType: text
@@ -203,6 +212,9 @@ controlContextMenuItems:
   - label: Rename
     type: item
     value: rename-item
+  - label: Duplicate
+    type: item
+    value: duplicate-item
   - label: Delete
     type: item
     value: delete-item

@@ -1,0 +1,13 @@
+componentName: rvn-chat-support-dialog
+propsSchema:
+  type: object
+  properties:
+    open:
+      type: boolean
+      description: Whether the dialog is open
+events:
+  close:
+    type: object
+methods:
+  type: object
+  properties: {}

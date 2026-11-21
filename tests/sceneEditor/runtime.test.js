@@ -158,7 +158,80 @@ const createGraphicsService = () => {
   };
 };
 
+describe("empty scene startup", () => {
+  it("opens without starting the route engine and clears a stale selection", async () => {
+    const projectData = createProjectData();
+    projectData.story.scenes["scene-1"].sections = {};
+    let sectionId = "old-section";
+    let lineId = "old-line";
+    const graphicsService = { init: vi.fn(), initRouteEngine: vi.fn() };
+    const store = {
+      selectScene: () => ({ sections: [] }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => sectionId,
+      selectSelectedLineId: () => lineId,
+      setSelectedSectionId: ({ selectedSectionId }) => {
+        sectionId = selectedSectionId;
+      },
+      setSelectedLineId: ({ selectedLineId }) => {
+        lineId = selectedLineId;
+      },
+      selectProjectData: () => projectData,
+      selectIsScenePageLoading: () => false,
+      selectIsSceneAssetLoading: () => false,
+      setSceneId: vi.fn(),
+      setScenePageLoading: vi.fn(),
+      setSceneAssetLoading: vi.fn(),
+      setSceneLoadingProgress: vi.fn(),
+    };
+    const appService = {
+      getPayload: () => ({ s: "scene-1", sectionId, lineId }),
+      setPayload: vi.fn(),
+    };
+    await initializeSceneEditorPage({
+      store,
+      appService,
+      graphicsService,
+      projectService: {
+        ensureRepository: vi.fn(),
+        setActiveSceneId: vi.fn(),
+        getEnsuredProjectId: () => "project-one",
+      },
+      refs: {
+        previewCanvasHost: { getCanvasRoot: () => ({ isConnected: true }) },
+      },
+      subject: { dispatch: vi.fn() },
+      syncProjectState: vi.fn(),
+      render: vi.fn(),
+    });
+    expect(graphicsService.initRouteEngine).not.toHaveBeenCalled();
+    expect(sectionId).toBeUndefined();
+    expect(lineId).toBeUndefined();
+    expect(appService.setPayload).toHaveBeenCalledWith({ s: "scene-1" });
+  });
+});
+
 describe("renderSceneEditorState", () => {
+  it.each([{}, { missing: undefined }])(
+    "does not initialize the engine when the selected scene has no valid sections",
+    async (sections) => {
+      const projectData = createProjectData();
+      projectData.story.scenes["scene-1"].sections = sections;
+      const graphicsService = { initRouteEngine: vi.fn() };
+      await renderSceneEditorState({
+        graphicsService,
+        projectService: { getEnsuredProjectId: () => "project-one" },
+        store: {
+          selectSceneId: () => "scene-1",
+          selectSelectedSectionId: () => undefined,
+          selectSelectedLineId: () => undefined,
+          selectProjectData: () => projectData,
+        },
+      });
+      expect(graphicsService.initRouteEngine).not.toHaveBeenCalled();
+    },
+  );
+
   it("still paints when the audio warm-up retries a damaged sound", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();
@@ -174,6 +247,7 @@ describe("renderSceneEditorState", () => {
     const showAlert = vi.fn();
     try {
       await renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         graphicsService,
         appService: { showAlert },
         store: {
@@ -181,7 +255,7 @@ describe("renderSceneEditorState", () => {
           selectSelectedSectionId: () => "section-1",
           selectSelectedLineId: () => "line-1",
           selectProjectData: () => projectData,
-          selectTemporaryPresentationState: () => ({}),
+          selectTemporaryPresentationStateForEngine: () => ({}),
           selectIsMuted: () => false,
           setPresentationState: vi.fn(),
         },
@@ -241,6 +315,7 @@ describe("renderSceneEditorState", () => {
       const graphicsService = createGraphicsService();
       graphicsService.loadAssets = vi.fn(async () => {});
       const projectService = {
+        getEnsuredProjectId: () => "project-one",
         getFileContent: vi.fn(async () => {
           throw Object.assign(new Error("checksum mismatch"), {
             fileId: "font-file-one",
@@ -256,7 +331,7 @@ describe("renderSceneEditorState", () => {
         selectSelectedSectionId: () => "section-1",
         selectSelectedLineId: () => "line-2",
         selectProjectData: () => projectData,
-        selectTemporaryPresentationState: () => ({}),
+        selectTemporaryPresentationStateForEngine: () => ({}),
         selectIsBackgroundTransformEditorOpen: () => false,
         selectScene: () => ({ sections: [{ id: "section-1" }] }),
         selectIsMuted: () => true,
@@ -332,6 +407,37 @@ describe("renderSceneEditorState", () => {
       resolveSceneEditorEntrySelection(scene, {
         sectionId: "section-1",
         lineId: "line-stale",
+      }),
+    ).toEqual({
+      sectionId: "section-1",
+      lineId: "line-entry",
+    });
+  });
+
+  it("enters at the line a link asks for, or at the section's entry line when the section has no such line", () => {
+    const scene = {
+      sections: [
+        {
+          id: "section-1",
+          initialLineId: "line-entry",
+          lines: [{ id: "line-1" }, { id: "line-entry" }, { id: "line-3" }],
+        },
+      ],
+    };
+
+    expect(
+      resolveSceneEditorEntrySelection(scene, {
+        sectionId: "section-1",
+        entryLineId: "line-3",
+      }),
+    ).toEqual({
+      sectionId: "section-1",
+      lineId: "line-3",
+    });
+    expect(
+      resolveSceneEditorEntrySelection(scene, {
+        sectionId: "section-1",
+        entryLineId: "line-deleted",
       }),
     ).toEqual({
       sectionId: "section-1",
@@ -663,6 +769,7 @@ describe("renderSceneEditorState", () => {
           }),
       );
       const projectService = {
+        getEnsuredProjectId: () => "project-one",
         getFileContent: vi.fn(async (fileId) => ({ url: fileId })),
         // The open project's repository is gone once the user has left it.
         getRepositoryState: vi.fn(() => {
@@ -681,7 +788,7 @@ describe("renderSceneEditorState", () => {
         selectSelectedSectionId: () => "section-1",
         selectSelectedLineId: () => "line-2",
         selectProjectData: () => projectData,
-        selectTemporaryPresentationState: () => ({}),
+        selectTemporaryPresentationStateForEngine: () => ({}),
         selectIsBackgroundTransformEditorOpen: () => false,
         selectScene: () => ({ sections: [{ id: "section-1" }] }),
         selectIsMuted: () => false,
@@ -830,6 +937,7 @@ describe("renderSceneEditorState", () => {
       },
     };
     const unmount = mountSceneEditorSubscriptions({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       subject,
       appService,
       store,
@@ -884,6 +992,7 @@ describe("renderSceneEditorState", () => {
     try {
       await expect(
         restoreSceneEditorFromPreview({
+          projectService: { getEnsuredProjectId: () => "project-one" },
           appService,
           i18n: {
             resourcePages: { errorTitle: "Error title" },
@@ -929,6 +1038,7 @@ describe("renderSceneEditorState", () => {
       subject,
       appService,
       projectService: {
+        getEnsuredProjectId: () => "project-one",
         getRepositoryState: () => ({
           variables: {
             items: {
@@ -991,6 +1101,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorCanvas(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         render,
         refs: {},
@@ -1027,6 +1138,7 @@ describe("renderSceneEditorState", () => {
 
     await expect(
       renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       }),
@@ -1034,6 +1146,7 @@ describe("renderSceneEditorState", () => {
 
     await expect(
       renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       }),
@@ -1109,10 +1222,7 @@ describe("renderSceneEditorState", () => {
         },
         routeGraphics: {
           render: (renderState) => {
-            options.onSuppressedRenderState?.({
-              renderState,
-              systemState: engine.selectSystemState(),
-            });
+            options.onSuppressedRenderState?.({ renderState });
           },
         },
         ticker: {
@@ -1167,6 +1277,7 @@ describe("renderSceneEditorState", () => {
       },
     };
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: async () => ({
         type: "audio/ogg",
         url: "blob:http://localhost/track.ogg",
@@ -1316,6 +1427,7 @@ describe("renderSceneEditorState", () => {
         store,
         graphicsService,
         projectService: {
+          getEnsuredProjectId: () => "project-one",
           getFileContent: async (fileId) => ({ url: `asset://${fileId}` }),
         },
       }),
@@ -1363,7 +1475,9 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => temporaryPresentationState,
+      selectTemporaryPresentationStateForEngine: () => ({
+        presentationState: temporaryPresentationState,
+      }),
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
         store.presentationState = presentationState;
@@ -1376,6 +1490,7 @@ describe("renderSceneEditorState", () => {
         store,
         graphicsService,
         projectService: {
+          getEnsuredProjectId: () => "project-one",
           getFileContent: async (fileId) => ({ url: `asset://${fileId}` }),
         },
       }),
@@ -1400,7 +1515,9 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => temporaryPresentationState,
+      selectTemporaryPresentationStateForEngine: () => ({
+        presentationState: temporaryPresentationState,
+      }),
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
         store.presentationState = presentationState;
@@ -1409,6 +1526,7 @@ describe("renderSceneEditorState", () => {
     };
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
@@ -1454,7 +1572,9 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => temporaryPresentationState,
+      selectTemporaryPresentationStateForEngine: () => ({
+        presentationState: temporaryPresentationState,
+      }),
       selectScene: () => ({
         sections: [{ id: "section-1" }],
       }),
@@ -1467,6 +1587,7 @@ describe("renderSceneEditorState", () => {
       },
     };
     const deps = {
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       render: vi.fn(),
       graphicsService,
@@ -1533,6 +1654,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorState(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       },
@@ -1546,11 +1668,79 @@ describe("renderSceneEditorState", () => {
     );
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
 
     expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes the visuals' pictures after it sets up the line", async () => {
+    vi.stubGlobal("document", {
+      createElement: () => ({
+        getContext: () => ({ clearRect: vi.fn(), drawImage: vi.fn() }),
+        toDataURL: () => "data:image/png;base64,one",
+      }),
+    });
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const calls = [];
+    const selectRenderState = graphicsService.engineSelectRenderState;
+    graphicsService.engineSelectRenderState = () => {
+      const renderState = selectRenderState();
+      return {
+        ...renderState,
+        elements: [
+          ...renderState.elements,
+          { id: "visual-one", type: "container", children: [] },
+        ],
+      };
+    };
+    const handleActions = graphicsService.engineHandleActions;
+    graphicsService.engineHandleActions = (actions, ...rest) => {
+      if (actions.setNextLineConfig) {
+        calls.push("setNextLineConfig");
+      }
+      handleActions(actions, ...rest);
+    };
+    graphicsService.extractCanvas = vi.fn(async (label) => {
+      calls.push(`picture ${label}`);
+      return { width: 1920, height: 1080 };
+    });
+    const setVisualSnapshots = vi.fn();
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectIsMuted: () => false,
+      setPresentationState: () => {},
+      selectShouldCaptureVisualSnapshots: () => true,
+      selectEffectivePresentationState: () => ({
+        visual: { items: [{ id: "one" }] },
+      }),
+      selectVisualSnapshots: () => ({}),
+      setVisualSnapshots,
+    };
+
+    try {
+      await renderSceneEditorState({
+        projectService: { getEnsuredProjectId: () => "project-one" },
+        store,
+        graphicsService,
+        render: vi.fn(),
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(calls).toEqual(["setNextLineConfig", "picture visual-one"]);
+    expect(setVisualSnapshots).toHaveBeenCalledWith({
+      snapshots: {
+        one: { key: expect.any(String), url: "data:image/png;base64,one" },
+      },
+    });
   });
 
   it("warms render-state videos before painting the canvas", async () => {
@@ -1589,6 +1779,7 @@ describe("renderSceneEditorState", () => {
     };
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
@@ -1620,12 +1811,14 @@ describe("renderSceneEditorState", () => {
     };
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
 
     await renderSceneEditorState(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       },
@@ -1670,6 +1863,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorState(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         graphicsService,
       },
@@ -1703,7 +1897,7 @@ describe("renderSceneEditorState", () => {
       selectPreviewRuntimeGlobal: () => ({
         dialogueTextSpeed: 100,
       }),
-      selectTemporaryPresentationState: () => ({}),
+      selectTemporaryPresentationStateForEngine: () => ({}),
       selectEffectivePresentationState: () => store.presentationState ?? {},
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
@@ -1723,6 +1917,7 @@ describe("renderSceneEditorState", () => {
 
     await renderSceneEditorCanvas(
       {
+        projectService: { getEnsuredProjectId: () => "project-one" },
         store,
         render,
         graphicsService,
@@ -1790,7 +1985,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => ({}),
+      selectTemporaryPresentationStateForEngine: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -1808,6 +2003,7 @@ describe("renderSceneEditorState", () => {
         render: vi.fn(),
         graphicsService,
         projectService: {
+          getEnsuredProjectId: () => "project-one",
           getFileContent: vi.fn(async (fileId) => ({
             url: fileId,
           })),
@@ -1905,7 +2101,7 @@ describe("renderSceneEditorState", () => {
         selectSelectedSectionId: () => "section-1",
         selectSelectedLineId: () => "line-2",
         selectProjectData: () => projectData,
-        selectTemporaryPresentationState: () => ({}),
+        selectTemporaryPresentationStateForEngine: () => ({}),
         selectIsBackgroundTransformEditorOpen: () =>
           selectIsBackgroundTransformEditorOpen({ state }),
         selectBackgroundTransformEditor: () =>
@@ -1927,6 +2123,7 @@ describe("renderSceneEditorState", () => {
           store,
           graphicsService,
           projectService: {
+            getEnsuredProjectId: () => "project-one",
             getFileContent: vi.fn(async (fileId) => ({ url: fileId })),
           },
           refs: {
@@ -2101,6 +2298,7 @@ describe("renderSceneEditorState", () => {
       }
     });
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `asset://${fileId}`,
       })),
@@ -2115,7 +2313,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => ({}),
+      selectTemporaryPresentationStateForEngine: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2171,6 +2369,112 @@ describe("renderSceneEditorState", () => {
     );
   });
 
+  it.each(["closed", "replaced", "unmounted"])(
+    "drops a late scene load when %s",
+    async (scenario) => {
+      const projectData = createProjectData();
+      projectData.resources.videos["late-video"] = {
+        id: "late-video",
+        fileId: `late-video-${scenario}.mp4`,
+        fileType: "video/mp4",
+        width: 1920,
+        height: 1080,
+      };
+      projectData.story.scenes["scene-1"].sections[
+        "section-1"
+      ].lines[1].actions.background = {
+        resourceId: "late-video",
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080,
+      };
+      const graphicsService = createGraphicsService();
+      graphicsService.loadAssets = vi.fn(async (assets) => {
+        if (assets[`late-video-${scenario}.mp4`]) {
+          throw new Error(
+            "Timed out loading video asset `late-video-${scenario}.mp4`.",
+          );
+        }
+      });
+      const projectService = {
+        getEnsuredProjectId: () => "project-one",
+        getFileContent: vi.fn(async (fileId) => ({
+          url: `asset://${fileId}`,
+        })),
+      };
+      const store = {
+        ...createWarningStore(),
+        selectIsScenePageLoading: () => false,
+        selectPreviewScene: () => ({
+          previewVisible: false,
+        }),
+        selectSceneId: () => "scene-1",
+        selectSelectedSectionId: () => "section-1",
+        selectSelectedLineId: () => "line-2",
+        selectProjectData: () => projectData,
+        selectTemporaryPresentationStateForEngine: () => ({}),
+        selectIsBackgroundTransformEditorOpen: () => false,
+        selectScene: () => ({
+          sections: [{ id: "section-1" }],
+        }),
+        selectIsMuted: () => true,
+        setPresentationState: ({ presentationState }) => {
+          store.presentationState = presentationState;
+        },
+        setSectionLineChanges: vi.fn(),
+      };
+      const deps = {
+        appService: { showAlert: vi.fn() },
+        store,
+        render: vi.fn(),
+        graphicsService,
+        projectService,
+        refs: {
+          previewCanvasHost: {
+            getCanvasRoot: () => ({
+              isConnected: true,
+            }),
+          },
+        },
+      };
+
+      let projectId = "project-one";
+      let rejectLoad;
+      let startedLoad;
+      const started = new Promise((resolve) => {
+        startedLoad = resolve;
+      });
+      projectService.getEnsuredProjectId = () => projectId;
+      projectService.getRepositoryState = vi.fn(() => {
+        if (!projectId) throw new Error("Repository not initialized");
+        return {};
+      });
+      graphicsService.loadAssets.mockImplementation(() => {
+        startedLoad();
+        return new Promise((resolve, reject) => {
+          rejectLoad = reject;
+        });
+      });
+      const canvas = { isConnected: true };
+      deps.refs.previewCanvasHost.getCanvasRoot = () => canvas;
+      const load = renderSceneEditorCanvas(deps, {
+        skipRender: true,
+        skipAnimations: true,
+      });
+      await started;
+      projectService.getRepositoryState.mockClear();
+      if (scenario === "closed") projectId = undefined;
+      if (scenario === "replaced") projectId = "project-two";
+      if (scenario === "unmounted") canvas.isConnected = false;
+      rejectLoad(new Error("late failure"));
+      await expect(load).resolves.toBeUndefined();
+      expect(deps.appService.showAlert).not.toHaveBeenCalled();
+      expect(projectService.getRepositoryState).not.toHaveBeenCalled();
+      expect(store.selectWarnedAssetFileIds()).toEqual([]);
+    },
+  );
+
   it("uses project file metadata for scene videos when resource fileType is missing", async () => {
     const projectData = createProjectData();
     projectData.resources.videos["intro-video"] = {
@@ -2191,6 +2495,7 @@ describe("renderSceneEditorState", () => {
     const graphicsService = createGraphicsService();
     graphicsService.loadAssets = vi.fn(async () => {});
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `http://127.0.0.1:45000/file.mp4?path=${fileId}`,
         type: "video/mp4",
@@ -2205,7 +2510,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => ({}),
+      selectTemporaryPresentationStateForEngine: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2294,6 +2599,7 @@ describe("renderSceneEditorState", () => {
       });
     });
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `asset://${fileId}`,
       })),
@@ -2308,7 +2614,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => ({}),
+      selectTemporaryPresentationStateForEngine: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2383,6 +2689,7 @@ describe("renderSceneEditorState", () => {
     graphicsService.hasLoadedAsset = vi.fn(() => false);
     graphicsService.loadAssets = vi.fn(async () => {});
     const projectService = {
+      getEnsuredProjectId: () => "project-one",
       getFileContent: vi.fn(async (fileId) => ({
         url: `asset://${fileId}`,
       })),
@@ -2396,7 +2703,7 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
-      selectTemporaryPresentationState: () => ({}),
+      selectTemporaryPresentationStateForEngine: () => ({}),
       selectIsBackgroundTransformEditorOpen: () => false,
       selectScene: () => ({
         sections: [{ id: "section-1" }],
@@ -2457,6 +2764,7 @@ describe("renderSceneEditorState", () => {
     });
 
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService,
     });
@@ -2515,6 +2823,7 @@ describe("scene editor canvas entry line", () => {
   const renderCanvasLine = async (projectData, { lineId }) => {
     const store = createCanvasStore(projectData, { lineId });
     await renderSceneEditorState({
+      projectService: { getEnsuredProjectId: () => "project-one" },
       store,
       graphicsService: createLineActionGraphicsService(),
     });
@@ -2526,12 +2835,32 @@ describe("scene editor canvas entry line", () => {
   it.each([
     ["a story reset", { resetStoryAtSection: { sectionId: "section-1" } }],
     [
+      "a resetting section transition",
+      { sectionTransition: { sectionId: "section-1", resetStory: true } },
+    ],
+    [
       "a conditional transition",
       {
         conditional: {
           branches: [
             { actions: { sectionTransition: { sectionId: "section-1" } } },
           ],
+        },
+      },
+    ],
+    [
+      "a random transition",
+      {
+        random: {
+          distribution: {
+            type: "weighted",
+            outcomes: [
+              {
+                weight: 1,
+                actions: { sectionTransition: { sectionId: "section-1" } },
+              },
+            ],
+          },
         },
       },
     ],
@@ -2554,6 +2883,20 @@ describe("scene editor canvas entry line", () => {
     const projectData = createProjectData();
     getFirstLine(projectData).actions.conditional = {
       branches: [{ actions: {} }],
+    };
+
+    await expect(
+      renderCanvasLine(projectData, { lineId: "line-1" }),
+    ).resolves.toBe("first");
+  });
+
+  it("does not continue past a selected line whose random stays", async () => {
+    const projectData = createProjectData();
+    getFirstLine(projectData).actions.random = {
+      distribution: {
+        type: "weighted",
+        outcomes: [{ weight: 1, actions: {} }],
+      },
     };
 
     await expect(
@@ -2595,9 +2938,34 @@ describe("scene editor canvas transition loop", () => {
       errorDetailsLabel: "Details label:",
       failedRenderCanvas: "Canvas message",
       transitionLoop: "Loop message",
+      transitionLoopLines: "Loop lines:",
+      transitionLoopStoppedAt: "Stopped at:",
+      transitionLoopLine: "{scene} / {section} / {line}",
     },
   };
-  const LOOP_ALERT = { title: "Error title", message: "Loop message" };
+  const LOOP_ALERT = {
+    title: "Error title",
+    message: "Loop message\n\nStopped at:\n• Scene One / Section One / 2",
+  };
+  // The project data the canvas was playing when the loop error was raised.
+  const selectProjectData = () => ({
+    story: {
+      scenes: {
+        "scene-1": {
+          name: "Scene One",
+          sections: {
+            "section-1": {
+              name: "Section One",
+              lines: [
+                { id: "line-1", actions: {} },
+                { id: "line-2", actions: {} },
+              ],
+            },
+          },
+        },
+      },
+    },
+  });
   const ORDINARY_ALERT = {
     title: "Error title",
     message: "Canvas message\n\nDetails label:\nCanvas render failed",
@@ -2634,7 +3002,10 @@ describe("scene editor canvas transition loop", () => {
         subject,
         appService,
         i18n,
-        store: { selectIsScenePageLoading: () => pageLoading() },
+        store: {
+          selectIsScenePageLoading: () => pageLoading(),
+          selectProjectData,
+        },
       });
       const consoleError = silenceConsoleError();
 
@@ -2665,9 +3036,11 @@ describe("scene editor canvas transition loop", () => {
 
     try {
       await restoreSceneEditorFromPreview({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         appService,
         i18n,
         store: {
+          selectProjectData,
           selectSceneId: () => {
             throw createLoopError();
           },
@@ -2699,6 +3072,7 @@ describe("scene editor canvas transition loop", () => {
         i18n,
         store: {
           selectIsScenePageLoading,
+          selectProjectData,
           // A press, click or scroll on the canvas reads the selected line
           // before it moves the story on.
           selectSelectedLineId: () => "line-1",
@@ -2933,6 +3307,7 @@ describe("scene editor canvas transition loop", () => {
           render: vi.fn(),
           syncProjectState: vi.fn(),
           projectService: {
+            getEnsuredProjectId: () => "project-one",
             ensureRepository: vi.fn(),
             setActiveSceneId: vi.fn(),
             getRepositoryState: () => ({}),
@@ -3001,6 +3376,78 @@ describe("scene editor canvas transition loop", () => {
 });
 
 describe("scene editor return from the full-screen preview", () => {
+  it("shows the panels the line's presentation state the canvas comes back with", async () => {
+    // A visual's layout edited over the scene changes the line. Its panels
+    // must show what the restored canvas presents, not what it did before.
+    const calls = [];
+    const presentationState = { visual: { items: [{ id: "card" }] } };
+    const canvasRoot = { isConnected: true };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const reportError = vi.fn();
+
+    try {
+      await restoreSceneEditorFromPreview({
+        projectService: { getEnsuredProjectId: () => "project-one" },
+        subject: { dispatch: vi.fn() },
+        graphicsService: {
+          init: vi.fn(async () => {}),
+          initRouteEngine: vi.fn(),
+          engineSelectRenderState: () => ({ elements: [] }),
+          engineRenderCurrentState: vi.fn(),
+          engineSelectPresentationState: () => presentationState,
+          engineSelectSectionLineChanges: () => ({ lines: [] }),
+          engineHandleActions: vi.fn(),
+          render: vi.fn(),
+        },
+        appService: {
+          reportError,
+          showAlertWhenIdle: vi.fn(),
+        },
+        i18n: {
+          resourcePages: { errorTitle: "Error title" },
+          scenesPage: {},
+          sceneEditorPage: {
+            errorDetailsLabel: "Details label:",
+            failedRenderCanvas: "Canvas message",
+          },
+        },
+        refs: { previewCanvasHost: { getCanvasRoot: () => canvasRoot } },
+        render: () => calls.push("render"),
+        store: {
+          hidePreviewScene: vi.fn(),
+          selectSceneId: () => "scene-1",
+          selectSelectedSectionId: () => "section-1",
+          selectSelectedLineId: () => "line-1",
+          selectProjectData: () => createProjectData(),
+          selectIsMuted: () => false,
+          selectIsScenePageLoading: () => false,
+          selectIsSceneAssetLoading: () => false,
+          selectTemporaryPresentationState: () => ({}),
+          setCanvasAudioPreviewKey: vi.fn(),
+          setScenePageLoading: vi.fn(),
+          setSceneAssetLoading: vi.fn(),
+          setSceneLoadingProgress: vi.fn(),
+          setPresentationState: ({ presentationState: next }) =>
+            calls.push(["setPresentationState", next]),
+          setSectionLineChanges: vi.fn(),
+          setSectionLineChangesBySectionId: vi.fn(),
+        },
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect(reportError).not.toHaveBeenCalled();
+    const setIndex = calls.findIndex(
+      (call) => Array.isArray(call) && call[0] === "setPresentationState",
+    );
+    expect(setIndex).toBeGreaterThanOrEqual(0);
+    expect(calls[setIndex][1]).toBe(presentationState);
+    expect(calls.slice(setIndex + 1)).toContain("render");
+  });
+
   it("leaves the engine to the editor's render", async () => {
     // A render queued while the assets load may already have painted the
     // selected line's audio. The first engine after the preview must be the
@@ -3018,6 +3465,7 @@ describe("scene editor return from the full-screen preview", () => {
 
     try {
       await restoreSceneEditorFromPreview({
+        projectService: { getEnsuredProjectId: () => "project-one" },
         subject: { dispatch: vi.fn() },
         graphicsService: {
           init: vi.fn(async () => {}),

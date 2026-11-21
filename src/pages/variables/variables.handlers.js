@@ -687,13 +687,14 @@ export const handleVariableUpdated = async (deps, payload) => {
 };
 
 export const handleVariableDelete = async (deps, payload) => {
-  const { appService, store, projectService } = deps;
+  const { appService, store, projectService, i18n } = deps;
   const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
   const deletion = await checkVariableDeletion({
     projectService,
     itemId,
     copy,
+    dateTime: i18n.dateTime,
   });
   if (!deletion.canDelete) {
     appService.showAlert({

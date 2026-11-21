@@ -1,0 +1,298 @@
+{
+  "schema": "routevn.import-pack.v3",
+  "package": {
+    "kind": "routevn.creator.asset-package"
+  },
+  "repository": {
+    "files": {
+      "items": {
+        "file-sprite-happy": {
+          "id": "file-sprite-happy",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-sprite-happy"
+          },
+          "size": 69,
+          "sha256": "d0d19ebdbcc1fbacfb1eff0f2cfbc48868b9b831d0672ce63ce93dee9706fb2d"
+        },
+        "file-sprite-sad": {
+          "id": "file-sprite-sad",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-sprite-sad"
+          },
+          "size": 69,
+          "sha256": "4727f57b8e3eeb47a5c406c0c5628829b448a3257a5bc765fca2a2019f6179e1"
+        },
+        "file-sprite-coat": {
+          "id": "file-sprite-coat",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-sprite-coat"
+          },
+          "size": 69,
+          "sha256": "378831fd0fde632dd4f6b77598f3f32e71b5d5015a9f1eeff065401c2a9be470"
+        },
+        "file-sprite-plain": {
+          "id": "file-sprite-plain",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-sprite-plain"
+          },
+          "size": 69,
+          "sha256": "49b6421aa202efc6348e09cadd78fe5a61492b1de4ca369552e7a7247d5a4020"
+        },
+        "file-sprite-two": {
+          "id": "file-sprite-two",
+          "mimeType": "image/png",
+          "source": {
+            "url": "./files/file-sprite-two"
+          },
+          "size": 69,
+          "sha256": "c7260be10ea6eee0b5d1b82af98a8c6e1f0d4095883db88f010ba714500a6117"
+        }
+      }
+    },
+    "characters": {
+      "items": {
+        "character-one": {
+          "id": "character-one",
+          "type": "character",
+          "name": "Character One",
+          "sprites": {
+            "items": {
+              "sprite-folder-faces": {
+                "id": "sprite-folder-faces",
+                "type": "folder",
+                "name": "Faces"
+              },
+              "sprite-happy": {
+                "id": "sprite-happy",
+                "type": "image",
+                "name": "Happy",
+                "fileId": "file-sprite-happy",
+                "width": 1,
+                "height": 1,
+                "tagIds": [
+                  "tag-face"
+                ]
+              },
+              "sprite-sad": {
+                "id": "sprite-sad",
+                "type": "image",
+                "name": "Sad",
+                "fileId": "file-sprite-sad",
+                "width": 1,
+                "height": 1,
+                "tagIds": [
+                  "tag-face"
+                ]
+              },
+              "sprite-coat": {
+                "id": "sprite-coat",
+                "type": "image",
+                "name": "Coat",
+                "fileId": "file-sprite-coat",
+                "width": 1,
+                "height": 1,
+                "tagIds": [
+                  "tag-outfit"
+                ]
+              },
+              "sprite-plain": {
+                "id": "sprite-plain",
+                "type": "image",
+                "name": "Plain",
+                "fileId": "file-sprite-plain",
+                "width": 1,
+                "height": 1
+              }
+            },
+            "tree": [
+              {
+                "id": "sprite-folder-faces",
+                "children": [
+                  {
+                    "id": "sprite-happy",
+                    "children": []
+                  },
+                  {
+                    "id": "sprite-sad",
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": "sprite-coat",
+                "children": []
+              },
+              {
+                "id": "sprite-plain",
+                "children": []
+              }
+            ]
+          },
+          "spriteTags": {
+            "items": {
+              "tag-face": {
+                "id": "tag-face",
+                "type": "tag",
+                "name": "Face",
+                "color": "#CC3355"
+              },
+              "tag-outfit": {
+                "id": "tag-outfit",
+                "type": "tag",
+                "name": "Outfit"
+              },
+              "tag-spare": {
+                "id": "tag-spare",
+                "type": "tag",
+                "name": "Spare"
+              }
+            },
+            "tree": [
+              {
+                "id": "tag-face"
+              },
+              {
+                "id": "tag-outfit"
+              },
+              {
+                "id": "tag-spare"
+              }
+            ]
+          },
+          "spriteGroups": [
+            {
+              "id": "sprite-group-face",
+              "name": "Face",
+              "tags": [
+                "tag-face"
+              ]
+            },
+            {
+              "id": "sprite-group-outfit",
+              "name": "Outfit",
+              "tags": [
+                "tag-outfit"
+              ]
+            }
+          ]
+        },
+        "folder-characters": {
+          "id": "folder-characters",
+          "type": "folder",
+          "name": "Characters"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-characters",
+          "children": [
+            {
+              "id": "character-one"
+            }
+          ]
+        }
+      ]
+    },
+    "transforms": {
+      "items": {
+        "transform-one": {
+          "id": "transform-one",
+          "type": "transform",
+          "name": "Transform One",
+          "x": 640,
+          "y": 360,
+          "scaleX": 1,
+          "scaleY": 1,
+          "anchorX": 0.5,
+          "anchorY": 0.5,
+          "rotation": 0,
+          "preview": {
+            "target": {
+              "characterId": "character-two",
+              "sprites": [
+                {
+                  "id": "sprite-group-body",
+                  "resourceId": "sprite-two"
+                }
+              ]
+            }
+          }
+        },
+        "folder-transforms": {
+          "id": "folder-transforms",
+          "type": "folder",
+          "name": "Transforms"
+        }
+      },
+      "tree": [
+        {
+          "id": "folder-transforms",
+          "children": [
+            {
+              "id": "transform-one"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "characters": {
+      "items": {
+        "character-two": {
+          "id": "character-two",
+          "type": "character",
+          "name": "Character Two",
+          "sprites": {
+            "items": {
+              "sprite-two": {
+                "id": "sprite-two",
+                "type": "image",
+                "name": "Sprite Two",
+                "fileId": "file-sprite-two",
+                "width": 1,
+                "height": 1,
+                "tagIds": [
+                  "tag-body"
+                ]
+              }
+            },
+            "tree": [
+              {
+                "id": "sprite-two",
+                "children": []
+              }
+            ]
+          },
+          "spriteTags": {
+            "items": {
+              "tag-body": {
+                "id": "tag-body",
+                "type": "tag",
+                "name": "Body"
+              }
+            },
+            "tree": [
+              {
+                "id": "tag-body"
+              }
+            ]
+          },
+          "spriteGroups": [
+            {
+              "id": "sprite-group-body",
+              "name": "Body",
+              "tags": [
+                "tag-body"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

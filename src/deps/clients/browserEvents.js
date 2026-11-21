@@ -6,6 +6,10 @@ export const createBrowserEventsClient = ({ windowTarget } = {}) => {
       return target.innerWidth;
     },
 
+    getViewportHeight() {
+      return target.innerHeight;
+    },
+
     subscribeWindowEvent({ type, listener, options } = {}) {
       target.addEventListener(type, listener, options);
 

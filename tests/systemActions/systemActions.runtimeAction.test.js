@@ -8,7 +8,7 @@ import {
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
 import { selectCommandLineCopy } from "../../src/internal/ui/sceneEditor/commandLineCopy.js";
-import { EN_I18N, PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
+import { EN_I18N, JA_I18N, PT_I18N, ZH_HANS_I18N } from "../support/i18n.js";
 
 const previewActions = (actions, i18n) =>
   selectActionsData({
@@ -134,6 +134,138 @@ describe("systemActions runtime action editor", () => {
 
     expect(preview.updateVariable.summary).toBe(
       "enabled = Verdadeiro, name = true",
+    );
+  });
+});
+
+describe("systemActions random variable operation summary", () => {
+  const VARIABLES = {
+    dice: {
+      id: "dice",
+      type: "variable",
+      name: "Dice",
+      variableType: "number",
+    },
+    lucky: {
+      id: "lucky",
+      type: "variable",
+      name: "Lucky",
+      variableType: "boolean",
+    },
+    weather: {
+      id: "weather",
+      type: "variable",
+      name: "Weather",
+      variableType: "string",
+    },
+  };
+
+  const previewRandomOperations = (operations, i18n) =>
+    selectActionsData({
+      state: {
+        ...createInitialState(),
+        repositoryState: { variables: { items: VARIABLES, tree: [] } },
+      },
+      props: { actions: { updateVariable: { id: "update1", operations } } },
+      copy: selectCommandLineCopy(i18n),
+      dateTime: i18n.dateTime,
+    }).preview.updateVariable;
+
+  it("names what each random operation draws from, next to the other operations", () => {
+    const preview = previewRandomOperations(
+      [
+        {
+          variableId: "dice",
+          op: "random",
+          distribution: { type: "integer", min: 1, max: 6 },
+        },
+        {
+          variableId: "weather",
+          op: "random",
+          distribution: {
+            type: "weighted",
+            values: [
+              { weight: 60, value: "sunny" },
+              { weight: 40, value: "rain" },
+            ],
+          },
+        },
+        {
+          variableId: "lucky",
+          op: "random",
+          distribution: {
+            type: "weighted",
+            values: [
+              { weight: 1, value: true },
+              { weight: 1, value: false },
+            ],
+          },
+        },
+        { variableId: "dice", op: "increment", value: 2 },
+      ],
+      EN_I18N,
+    );
+
+    expect(preview).toEqual({
+      summary:
+        "Dice = random (1 to 6), Weather = random (sunny, rain), Lucky = random (True, False), Dice +2",
+      operationCount: 4,
+    });
+  });
+
+  it.each([
+    ["another type", { type: "dice" }],
+    ["a range for a boolean variable", { type: "integer", min: 0, max: 1 }],
+    ["no distribution", undefined],
+  ])("shows only Random for %s", (_label, distribution) => {
+    const variableId = distribution?.type === "integer" ? "lucky" : "dice";
+    const name = VARIABLES[variableId].name;
+
+    expect(
+      previewRandomOperations(
+        [{ variableId, op: "random", distribution }],
+        EN_I18N,
+      ).summary,
+    ).toBe(`${name} = random`);
+  });
+
+  it("shows only Random in Japanese for an operation it cannot show", () => {
+    const copy = JA_I18N.commandLinePage;
+
+    expect(copy["{variable} = random"]).toEqual(expect.any(String));
+    expect(copy["{variable} = random"]).not.toBe("{variable} = random");
+    expect(
+      previewRandomOperations(
+        [{ variableId: "dice", op: "random", distribution: { type: "dice" } }],
+        JA_I18N,
+      ).summary,
+    ).toBe(copy["{variable} = random"].replace("{variable}", "Dice"));
+  });
+
+  it("uses the catalog's templates and list separator in Japanese", () => {
+    const copy = JA_I18N.commandLinePage;
+    const preview = previewRandomOperations(
+      [
+        {
+          variableId: "lucky",
+          op: "random",
+          distribution: {
+            type: "weighted",
+            values: [
+              { weight: 1, value: true },
+              { weight: 1, value: false },
+            ],
+          },
+        },
+      ],
+      JA_I18N,
+    );
+
+    expect(copy["{variable} = random ({values})"]).toEqual(expect.any(String));
+    expect(preview.summary).toBe(
+      copy["{variable} = random ({values})"]
+        .replace("{variable}", "Lucky")
+        .replace("{values}", "真、偽"),
     );
   });
 });

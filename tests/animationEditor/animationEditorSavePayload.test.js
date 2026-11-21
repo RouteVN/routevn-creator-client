@@ -21,6 +21,7 @@ import {
   handleSelectedPropertyDeleteClick,
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
 import { EN_I18N } from "../support/i18n.js";
+import { createRetainedEditHistoryService } from "../../src/deps/services/shared/retainedEditHistoryService.js";
 
 // The animation editor on its real store and handlers, saving through the real
 // command API into a real repository. A saved change is stored as JSON, which
@@ -115,6 +116,7 @@ const openEditor = async ({ project, payload }) => {
     refs: {},
     i18n: EN_I18N,
     appService: {
+      ...createRetainedEditHistoryService(),
       getPayload: () => payload,
       setPayload: vi.fn(),
       showAlert: vi.fn(),

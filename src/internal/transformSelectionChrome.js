@@ -79,6 +79,18 @@ export const createTransformSelectionAnchor = ({
   return marker;
 };
 
+const RESIZE_CURSORS = ["ew-resize", "nwse-resize", "ns-resize", "nesw-resize"];
+
+// The cursor follows the direction the edge moves in on screen, to the
+// nearest 45 degrees. Rotation is clockwise, as drawn.
+const getResizeCursor = ({ vertical, rotation }) => {
+  const angle =
+    (Number.isFinite(rotation) ? rotation : 0) + (vertical ? 0 : 90);
+  const step = Math.round(angle / 45);
+
+  return RESIZE_CURSORS[((step % 4) + 4) % 4];
+};
+
 export const createTransformSelectionResizeHandle = ({
   id,
   width,
@@ -86,6 +98,7 @@ export const createTransformSelectionResizeHandle = ({
   edge,
   size,
   fill,
+  rotation = 0,
 } = {}) => {
   const resolvedWidth = toPositiveNumber(width);
   const resolvedHeight = toPositiveNumber(height);
@@ -121,7 +134,7 @@ export const createTransformSelectionResizeHandle = ({
     height: vertical ? resolvedHeight : resolvedSize,
     fill,
     hover: {
-      cursor: vertical ? "ew-resize" : "ns-resize",
+      cursor: getResizeCursor({ vertical, rotation }),
     },
     drag: {
       start: { payload: {} },

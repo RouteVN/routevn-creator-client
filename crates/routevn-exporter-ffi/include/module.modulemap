@@ -1,0 +1,4 @@
+module RouteVNExporterFFI {
+    header "routevn_exporter_ffi.h"
+    export *
+}

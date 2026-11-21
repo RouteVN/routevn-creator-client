@@ -1,11 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAfterMount,
   handleAnimationItemClick,
   handleFileExplorerSelectionChanged,
   handleResourceViewBackgroundClick,
 } from "../../src/pages/animations/animations.handlers.js";
 
 describe("animations.handlers", () => {
+  it("asks for the animations' thumbnails when the page opens, without waiting for them", () => {
+    // Opening also focuses the explorer on the next frame.
+    vi.stubGlobal("requestAnimationFrame", vi.fn());
+    const deps = {
+      projectService: {
+        requestAnimationThumbnails: vi.fn(() => new Promise(() => {})),
+      },
+      refs: {},
+      store: {},
+    };
+
+    try {
+      handleAfterMount(deps);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(
+      deps.projectService.requestAnimationThumbnails,
+    ).toHaveBeenCalledWith();
+  });
+
   it("clears selection and preview runtime from a resource background click", async () => {
     const deps = {
       store: {

@@ -16,7 +16,7 @@ describe("systemActionsDialogSurface view", () => {
     );
     expect(dialogSurfaceView).toContain("$if fullscreen");
     expect(dialogSurfaceView).toContain(
-      "left: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); right: 0; bottom: 0;",
+      "inset-inline-start: ${fullscreenHorizontalInset}; top: var(--rvn-window-content-offset, 0px); inset-inline-end: 0; bottom: 0;",
     );
     expect(dialogSurfaceView.match(/p=\$\{dialogPadding\}/g)).toHaveLength(5);
     expect(dialogSurfaceView).toContain(
@@ -26,7 +26,7 @@ describe("systemActionsDialogSurface view", () => {
       'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"',
     );
     expect(dialogSurfaceView).toContain(
-      "left: ${overlayHorizontalInset}; top: var(--rvn-window-content-offset, 0px); bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;",
+      "inset-inline-start: ${overlayHorizontalInset}; top: var(--rvn-window-content-offset, 0px); bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;",
     );
     expect(dialogSurfaceView).toContain(
       "top: calc(var(--rvn-window-content-offset, 0px) + ${panelVerticalInset}); bottom: ${panelVerticalInset};",
@@ -44,7 +44,7 @@ describe("systemActionsDialogSurface view", () => {
     expect(dialogSurfaceView.match(/outline: none;/g)).toHaveLength(5);
     expect(dialogSurfaceView).toContain("$elif isSceneEditorMobile");
     expect(dialogSurfaceView).toContain(
-      "left: 0; right: ${panelRight}; top: ${panelTop}; bottom: ${panelBottom};",
+      "inset-inline-start: 0; inset-inline-end: ${panelRight}; top: ${panelTop}; bottom: ${panelBottom};",
     );
     expect(dialogSurfaceView).toContain("z-index: 2002;");
     expect(dialogSurfaceView).not.toContain("handleDocumentKeyDown");

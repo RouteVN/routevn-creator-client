@@ -1,8 +1,10 @@
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import {
+  findZipDirectory,
   openRemoteZip,
   parseZipDirectory,
+  ZIP_END_SEARCH_BYTES,
 } from "../../src/deps/clients/remoteZip.js";
 
 // The central directory's location, from the end record.
@@ -184,5 +186,103 @@ describe("remoteZip", () => {
     await expect(
       zip.readEntry("files/a", { maxBytes: 5 }),
     ).rejects.toMatchObject({ code: "file_too_large" });
+  });
+});
+
+// The last bytes of a ZIP, as much as an end record search reads.
+const tailOf = (bytes) =>
+  bytes.subarray(Math.max(0, bytes.length - ZIP_END_SEARCH_BYTES));
+
+describe("findZipDirectory", () => {
+  it("finds the central directory from the end record", async () => {
+    const bytes = await storedZip({
+      "asset-package.json": "{}",
+      "files/a": "abc",
+    });
+
+    const place = findZipDirectory(tailOf(bytes), { size: bytes.length });
+
+    expect(place).toEqual(directoryOf(bytes));
+    const { readRange } = rangeReader(bytes);
+    const zip = await openRemoteZip({ ...place, readRange });
+    expect(new TextDecoder().decode(await zip.readEntry("files/a"))).toBe(
+      "abc",
+    );
+  });
+
+  it("finds it behind a trailing comment, even one that holds an end signature", async () => {
+    const plain = await storedZip({ "files/a": "abc" });
+    const commented = await storedZip(
+      { "files/a": "abc" },
+      { comment: "PK\u0005\u0006 is not the end record ".repeat(40) },
+    );
+    expect(commented.length).toBeGreaterThan(plain.length);
+
+    expect(
+      findZipDirectory(tailOf(commented), { size: commented.length }),
+    ).toEqual(directoryOf(plain));
+  });
+
+  it("finds it in a ZIP longer than the search reads", async () => {
+    const bytes = await storedZip({
+      "files/large": new Uint8Array(ZIP_END_SEARCH_BYTES * 2),
+    });
+    const tail = tailOf(bytes);
+    expect(tail.length).toBe(ZIP_END_SEARCH_BYTES);
+
+    expect(findZipDirectory(tail, { size: bytes.length })).toEqual(
+      directoryOf(bytes),
+    );
+  });
+
+  it("refuses what is not a ZIP", () => {
+    const text = new TextEncoder().encode("<!doctype html>".repeat(20));
+    expect(() => findZipDirectory(text, { size: text.length })).toThrow(
+      expect.objectContaining({ code: "package_invalid" }),
+    );
+    expect(() => findZipDirectory(new Uint8Array(0), { size: 0 })).toThrow(
+      expect.objectContaining({ code: "package_invalid" }),
+    );
+  });
+
+  it("refuses a truncated ZIP", async () => {
+    const bytes = await storedZip({ "files/a": "abcdef" });
+    // Cut inside the end record, and cut so the directory is short.
+    for (const cut of [5, 30]) {
+      const truncated = bytes.subarray(0, bytes.length - cut);
+      expect(() =>
+        findZipDirectory(tailOf(truncated), { size: truncated.length }),
+      ).toThrow(expect.objectContaining({ code: "package_invalid" }));
+    }
+    // A middle part lost, so the directory is not where the end record says.
+    const shortened = new Uint8Array([
+      ...bytes.subarray(0, 10),
+      ...bytes.subarray(14),
+    ]);
+    expect(() =>
+      findZipDirectory(tailOf(shortened), { size: shortened.length }),
+    ).toThrow(expect.objectContaining({ code: "package_invalid" }));
+  });
+
+  it("refuses a ZIP64 archive", async () => {
+    const bytes = await storedZip({ "files/a": "abc" });
+    const end = bytes.length - 22;
+    // An end record that sends the reader to a ZIP64 record for the offset.
+    const marked = bytes.slice();
+    marked.set([0xff, 0xff, 0xff, 0xff], end + 16);
+    expect(() =>
+      findZipDirectory(tailOf(marked), { size: marked.length }),
+    ).toThrow("ZIP64");
+    // A ZIP64 locator in front of the end record.
+    const locator = new Uint8Array(20);
+    locator.set([0x50, 0x4b, 0x06, 0x07]);
+    const located = new Uint8Array([
+      ...bytes.subarray(0, end),
+      ...locator,
+      ...bytes.subarray(end),
+    ]);
+    expect(() =>
+      findZipDirectory(tailOf(located), { size: located.length }),
+    ).toThrow(expect.objectContaining({ code: "package_invalid" }));
   });
 });

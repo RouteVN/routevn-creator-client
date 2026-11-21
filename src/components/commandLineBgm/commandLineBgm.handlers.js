@@ -1,3 +1,4 @@
+import { warnIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
   finishAudioTimelineDrag,
@@ -222,6 +223,7 @@ export const handleSoundDoubleClick = (deps, payload) => {
 
   // Start audio inside the tap. The player starts only after loading its
   // file, and iOS can refuse a start outside a tap.
+  if (warnIfAudioUnavailable(deps)) return;
   void audioService.unlock();
   store.openAudioPlayer({
     fileId: resource.fileId,
@@ -364,6 +366,7 @@ export const handleResourceItemDoubleClick = (deps, payload) => {
   store.setTempSelectedResource({ resourceId });
   // Start audio inside the tap. The player starts only after loading its
   // file, and iOS can refuse a start outside a tap.
+  if (warnIfAudioUnavailable(deps)) return;
   void audioService.unlock();
   store.openAudioPlayer({
     fileId: selectedItem.fileId,

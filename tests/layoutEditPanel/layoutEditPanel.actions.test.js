@@ -286,7 +286,7 @@ describe("layoutEditPanel actions", () => {
     });
   });
 
-  it("replaces the interaction's navigation action with a submitted one", () => {
+  it("replaces an interaction's legacy reset with a resetting section transition", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
     setValues(
@@ -296,10 +296,7 @@ describe("layoutEditPanel actions", () => {
           click: {
             payload: {
               actions: {
-                sectionTransition: {
-                  sceneId: "scene-1",
-                  sectionId: "section-2",
-                },
+                resetStoryAtSection: { sectionId: "section-2" },
                 pushOverlay: { resourceId: "layout-settings" },
               },
             },
@@ -323,12 +320,26 @@ describe("layoutEditPanel actions", () => {
         render: () => {},
         dispatchEvent: (event) => dispatchedEvents.push(event),
       },
-      { _event: { detail: { nextLine: {} } } },
+      {
+        _event: {
+          detail: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-2",
+              resetStory: true,
+            },
+          },
+        },
+      },
     );
 
     const expectedActions = {
       pushOverlay: { resourceId: "layout-settings" },
-      nextLine: {},
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-2",
+        resetStory: true,
+      },
     };
     expect(state.values.click.payload.actions).toEqual(expectedActions);
     expect(state.actionsEditorActions).toEqual(expectedActions);
