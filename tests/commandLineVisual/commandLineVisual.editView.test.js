@@ -1440,7 +1440,14 @@ describe("commandLineVisual layout choice", () => {
 
     // Existing Layout starts with no layout chosen: the visual keeps its
     // custom layout, and its picture asks for a layout.
+    expect(selectViewData({ state, i18n: EN_I18N }).saveVisualDisabled).toBe(
+      false,
+    );
     handleLayoutTypeChange(deps, typeEvent("existing"));
+    // Submit waits for a layout to be picked.
+    expect(selectViewData({ state, i18n: EN_I18N }).saveVisualDisabled).toBe(
+      true,
+    );
     expect(selectSelectedVisuals({ state })[index]).toMatchObject({
       resourceId: "image-one",
       resourceType: "image",
@@ -1473,6 +1480,9 @@ describe("commandLineVisual layout choice", () => {
     handleLayoutSelectConfirmClick(deps);
     expect(selectViewData({ state, i18n: EN_I18N }).mode).toBe("edit");
     expect(findEditingVisual(state).awaitsExistingLayout).toBe(true);
+    expect(selectViewData({ state, i18n: EN_I18N }).saveVisualDisabled).toBe(
+      true,
+    );
 
     handleLayoutImageClick(deps, {
       _event: { currentTarget: { dataset: { visualId: "visual-one" } } },
@@ -1497,6 +1507,9 @@ describe("commandLineVisual layout choice", () => {
       layoutType: "existing",
       awaitsExistingLayout: false,
     });
+    expect(selectViewData({ state, i18n: EN_I18N }).saveVisualDisabled).toBe(
+      false,
+    );
     expect(deps.dispatchEvent.mock.calls.at(-1)[0].type).toBe(
       "temporary-presentation-state-change",
     );
@@ -1507,6 +1520,38 @@ describe("commandLineVisual layout choice", () => {
     expect(visual).not.toHaveProperty("resourceId");
     expect(visual.layout).toBeDefined();
     expect(findEditingVisual(state).layoutType).toBe("custom");
+    expect(selectViewData({ state, i18n: EN_I18N }).saveVisualDisabled).toBe(
+      false,
+    );
+  });
+
+  it("does not keep a new visual switched to Existing Layout until a layout is picked", () => {
+    const state = createLayoutState();
+    const deps = createDeps(state);
+    handleAddVisualFormAction(deps, {
+      _event: { detail: { actionId: "submit", values: { layer: 50 } } },
+    });
+    const visualId = selectEditingVisualId({ state });
+    const index = findVisualIndex(state, visualId);
+
+    handleLayoutTypeChange(deps, {
+      _event: {
+        currentTarget: { dataset: { index: String(index) } },
+        detail: { value: "existing" },
+      },
+    });
+    expect(selectViewData({ state, i18n: EN_I18N }).saveVisualDisabled).toBe(
+      true,
+    );
+
+    // Cancel is still there, and takes the new visual out.
+    handleCancelEditClick(deps);
+    expect(
+      selectSelectedVisuals({ state }).some((visual) => visual.id === visualId),
+    ).toBe(false);
+    expect(selectViewData({ state, i18n: EN_I18N }).saveVisualDisabled).toBe(
+      false,
+    );
   });
 
   it("keeps the custom layout of a visual left on Existing Layout with none chosen", () => {

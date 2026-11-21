@@ -55,12 +55,19 @@ refs:
         handler: handleEditPanelPreview
       preview-cancel:
         handler: handleEditPanelPreviewCancel
+styles:
+  # On a phone the title would be cut to a letter and Done pushed off the
+  # screen in longer languages. The canvas zooms with a pinch there, so only
+  # the button that fits it to the screen stays.
+  '@media only screen and (max-width: 420px)':
+    '#editorTitle, #canvasZoomOutButton, #canvasZoomInButton':
+      display: none
 template:
   # Full screen over the scene editor, which stays open under it.
   - 'rtgl-view#visualLayoutEditor pos=fix edge=f d=v bgc=bg z=3400 style="min-width: 0; min-height: 0; overflow: hidden;"':
       - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=md style="flex: 0 0 auto; padding-top: max(env(safe-area-inset-top, 0px), var(--rvn-window-content-offset, 0px));"':
           - 'rtgl-view w=1fg d=h av=c g=sm style="min-width: 0;"':
-              - 'rtgl-text ellipsis=true style="flex: 0 0 auto;"': ${title}
+              - 'rtgl-text#editorTitle ellipsis=true style="flex: 0 0 auto;"': ${title}
           - rtgl-view d=h av=c g=xs:
               - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
               - 'rtgl-button#canvasZoomResetButton v=gh style="min-width: 64px;" aria-label="${canvasZoomFitLabel}" title="${canvasZoomFitLabel}"': ${canvasZoomLabel}

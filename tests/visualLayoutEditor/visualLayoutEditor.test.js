@@ -604,12 +604,49 @@ describe("the layout editor of a visual", () => {
       }),
     );
 
-    // The layout it opened with is kept through the reload.
+    // Still open, it saves edits again.
     deps.projectService.updateVisualLayoutElements = keepSave;
+    await rename(deps, "door", "Gate");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(findSavedElements(repositoryState).items.door.name).toBe("Gate");
+
+    // The layout it opened with is kept through the reload.
     handleCancelClick(deps);
     await vi.advanceTimersByTimeAsync(0);
     expect(findSavedElements(repositoryState)).toEqual(createElements());
     expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves no edit made while Cancel puts the layout back, also not when it closes", async () => {
+    const { cleanup, deps, repositoryState } = createEditor();
+    const keepSave = deps.projectService.updateVisualLayoutElements;
+    await rename(deps, "title", "Heading");
+    await vi.advanceTimersByTimeAsync(400);
+
+    let finishCancelSave;
+    const slowSave = vi.fn(async (payload) => {
+      await new Promise((resolve) => {
+        finishCancelSave = resolve;
+      });
+      return keepSave(payload);
+    });
+    deps.projectService.updateVisualLayoutElements = slowSave;
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(slowSave).toHaveBeenCalledTimes(1);
+    // An element the canvas was moving goes back too.
+    expect(
+      deps.refs.layoutEditorCanvas.discardPendingUpdate,
+    ).toHaveBeenCalled();
+
+    await rename(deps, "door", "Gate");
+    finishCancelSave();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    await cleanup();
+
+    expect(slowSave).toHaveBeenCalledTimes(1);
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
   });
 
   it("saves what is left when it closes some other way", async () => {

@@ -97,6 +97,8 @@ export const createInitialState = () => ({
   layoutData: { items: {}, tree: [] },
   // The elements as they were when the editor opened, which Cancel puts back.
   openingLayoutData: undefined,
+  // From Cancel until the editor closes, only Cancel's own save is made.
+  isCancelling: false,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   resources: {},
   selectedItemId: undefined,
@@ -183,11 +185,13 @@ export const updateLayoutElement = ({ state }, { itemId, item } = {}) => {
 };
 
 // Cancel: the elements go back to how they were when the editor opened. They
-// are left to save unless the saved layout is that already.
+// are left to save unless the saved layout is that already. Edits made after
+// this are not saved.
 export const restoreOpeningLayout = (
   { state },
   { repositoryState, sceneId, sectionId, lineId, visualId } = {},
 ) => {
+  state.isCancelling = true;
   if (!state.openingLayoutData) {
     state.hasUnsavedEdits = false;
     return;
@@ -208,6 +212,14 @@ export const restoreOpeningLayout = (
     state.selectedElementMetrics = undefined;
   }
 };
+
+// Cancel could not put the layout back, so the editor stays open and saves
+// edits again.
+export const stopCancelling = ({ state }) => {
+  state.isCancelling = false;
+};
+
+export const selectIsCancelling = ({ state }) => state.isCancelling;
 
 export const markEditsSaved = ({ state }) => {
   state.hasUnsavedEdits = false;

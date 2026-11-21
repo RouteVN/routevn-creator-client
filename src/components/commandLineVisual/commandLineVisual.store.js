@@ -510,7 +510,8 @@ const createVisualsForm = (visuals = []) => ({
   }),
 });
 
-// The Edit Visual page has no title: its section is not named.
+// The Edit Visual page has no title. It opens on Layout Type, and the
+// visual's options sit under an Options heading at the end.
 const createLocalizedVisualsForm = (visuals = [], copy = {}) =>
   localizeCommandLineForm(createVisualsForm(visuals), copy);
 
@@ -2040,6 +2041,9 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     cancelButtonLabel: localizeCommandLineText("Cancel", copy),
     saveVisualButtonLabel: localizeCommandLineText("Submit", copy),
+    // A visual switched to an existing layout is kept only once one is
+    // picked. Until then its picture asks for one.
+    saveVisualDisabled: state.existingLayoutPendingVisualId !== undefined,
     transformEditorTitle: localizeCommandLineText("Transform", copy),
   };
 };
