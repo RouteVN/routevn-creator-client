@@ -26,7 +26,12 @@ import {
   handleResourceSelectionKeyDown,
   handleResourceSelectionToggle,
   handleSelectionToggleAll,
+  handleStoreSearchButtonClick,
+  handleStoreSearchClear,
   handleStoreSearchInput,
+  handleStoreSearchPopoverKeyDown,
+  handleStoreSearchPopoverPositioned,
+  handleStoreSearchSubmit,
   handleUrlFormAction,
 } from "../../src/components/resource-import-dialog/resource-import-dialog.handlers.js";
 import * as dialogStore from "../../src/components/resource-import-dialog/resource-import-dialog.store.js";
@@ -452,6 +457,110 @@ describe("resource-import-dialog asset store", () => {
       nextCursor: "cursor-2",
     });
     expect(deps.render).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the phone search popover under its button and focuses it once", () => {
+    const { state, deps } = createStoreDeps();
+    deps.refs = {
+      storeSearchButton: {
+        getBoundingClientRect: () => ({ right: 339.6, bottom: 56.2 }),
+      },
+      storeSearchPopoverInput: { focus: vi.fn() },
+    };
+    const stopPropagation = vi.fn();
+
+    handleStoreSearchButtonClick(deps, { _event: { stopPropagation } });
+    expect(stopPropagation).toHaveBeenCalled();
+    expect(state.searchPopover).toEqual({
+      isOpen: true,
+      focusPending: true,
+      position: { x: 340, y: 56 },
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+
+    handleStoreSearchPopoverPositioned(deps);
+    handleStoreSearchPopoverPositioned(deps);
+    expect(deps.refs.storeSearchPopoverInput.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches at once from the popover's Search button or Enter, and closes it", async () => {
+    vi.useFakeTimers();
+    try {
+      const { state, deps } = createStoreDeps();
+      deps.appService.listAssetStorePacks.mockResolvedValue({ packs: [] });
+      const cleanup = handleBeforeMount(deps);
+      openDialog(deps);
+      await vi.runAllTimersAsync();
+      deps.appService.listAssetStorePacks.mockClear();
+      const open = () =>
+        dialogStore.openSearchPopover(
+          { state },
+          { position: { x: 340, y: 56 } },
+        );
+      const type = (value) =>
+        handleStoreSearchInput(deps, { _event: { detail: { value } } });
+
+      open();
+      type("forest ");
+      handleStoreSearchSubmit(deps);
+      expect(state.searchPopover.isOpen).toBe(false);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledWith({
+        cursor: undefined,
+        query: "forest",
+      });
+      // The search waiting for typing to settle never runs.
+      await vi.advanceTimersByTimeAsync(300);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+
+      open();
+      type("dragon");
+      const press = (event) => {
+        const preventDefault = vi.fn();
+        handleStoreSearchPopoverKeyDown(deps, {
+          _event: { preventDefault, ...event },
+        });
+        return preventDefault;
+      };
+      expect(press({ key: "a" })).not.toHaveBeenCalled();
+      expect(state.searchPopover.isOpen).toBe(true);
+      // An Enter that ends an input method composition only picks the text.
+      expect(press({ key: "Enter", isComposing: true })).not.toHaveBeenCalled();
+      expect(press({ key: "Enter", keyCode: 229 })).not.toHaveBeenCalled();
+      expect(state.searchPopover.isOpen).toBe(true);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+      // Enter is kept from the search button that takes focus once the
+      // popover closes, so it can't open the popover again.
+      expect(press({ key: "Enter" })).toHaveBeenCalled();
+      expect(state.searchPopover.isOpen).toBe(false);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
+        cursor: undefined,
+        query: "dragon",
+      });
+
+      // Submitting the search already shown only closes the popover.
+      open();
+      handleStoreSearchSubmit(deps);
+      expect(state.searchPopover.isOpen).toBe(false);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(2);
+
+      // Clear shows every pack at once and keeps the popover open.
+      open();
+      type("dragons");
+      handleStoreSearchClear(deps);
+      expect(state.searchText).toBe("");
+      expect(state.searchPopover.isOpen).toBe(true);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
+        cursor: undefined,
+        query: "",
+      });
+      await vi.advanceTimersByTimeAsync(300);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(3);
+      cleanup();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("appends the next page and retries a failed page with its cursor", async () => {

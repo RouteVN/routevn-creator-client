@@ -3306,6 +3306,7 @@ resourceImport:
   storeNoResults: "Nessun pacchetto di risorse corrisponde alla ricerca."
   searchTitle: "Cerca"
   searchPlaceholder: "Cerca pacchetti di risorse"
+  clearButton: "Cancella"
   storeLoadFailed: "Impossibile caricare il negozio di risorse. Controlla la connessione a internet e riprova."
   retryButton: "Riprova"
   loadMoreButton: "Carica altri"

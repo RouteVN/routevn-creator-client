@@ -3342,6 +3342,7 @@ resourceImport:
   storeNoResults: "За цим запитом пакетів ресурсів не знайдено."
   searchTitle: "Пошук"
   searchPlaceholder: "Пошук пакетів ресурсів…"
+  clearButton: "Очистити"
   storeLoadFailed: "Не вдалося завантажити магазин ресурсів. Перевірте підключення до інтернету й спробуйте ще раз."
   retryButton: "Повторити спробу"
   loadMoreButton: "Завантажити ще"

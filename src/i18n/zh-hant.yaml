@@ -3306,6 +3306,7 @@ resourceImport:
   storeNoResults: "找不到符合搜尋條件的素材包。"
   searchTitle: "搜尋"
   searchPlaceholder: "搜尋素材包"
+  clearButton: "清除"
   storeLoadFailed: "無法載入素材商店。請檢查網路連線，然後再試一次。"
   retryButton: "再試一次"
   loadMoreButton: "載入更多"

@@ -3302,6 +3302,7 @@ resourceImport:
   storeNoResults: "تلاش سے ملتا کوئی اثاثہ پیک نہیں ملا۔"
   searchTitle: "تلاش کریں"
   searchPlaceholder: "اثاثہ پیک تلاش کریں"
+  clearButton: "فلٹر صاف کریں"
   storeLoadFailed: "اثاثہ اسٹور لوڈ نہیں ہو سکا۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔"
   retryButton: "دوبارہ کوشش کریں"
   loadMoreButton: "مزید لوڈ کریں"

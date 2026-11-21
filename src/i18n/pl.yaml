@@ -3342,6 +3342,7 @@ resourceImport:
   storeNoResults: "Nie znaleziono pakietów zasobów pasujących do wyszukiwania."
   searchTitle: "Szukaj"
   searchPlaceholder: "Szukaj pakietów zasobów…"
+  clearButton: "Wyczyść"
   storeLoadFailed: "Nie udało się wczytać sklepu z zasobami. Sprawdź połączenie z internetem i spróbuj ponownie."
   retryButton: "Spróbuj ponownie"
   loadMoreButton: "Wczytaj więcej"

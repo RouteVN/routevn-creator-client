@@ -273,6 +273,69 @@ export const handleStoreSearchInput = (deps, payload) => {
   });
 };
 
+// On phones the search opens in a popover under the header's search button.
+export const handleStoreSearchButtonClick = (deps, payload) => {
+  const { store, refs, render } = deps;
+  const { storeSearchButton } = refs;
+  payload._event.stopPropagation();
+  const rect = storeSearchButton.getBoundingClientRect();
+  store.openSearchPopover({
+    position: { x: Math.round(rect.right), y: Math.round(rect.bottom) },
+  });
+  render();
+};
+
+export const handleStoreSearchPopoverPositioned = (deps) => {
+  const { store, refs } = deps;
+  const { storeSearchPopoverInput } = refs;
+  if (!store.selectSearchPopoverFocusPending()) return;
+  store.clearSearchPopoverFocusPending();
+  storeSearchPopoverInput.focus();
+};
+
+export const handleStoreSearchPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSearchPopover();
+  render();
+};
+
+// The Search button, Enter or the keyboard's search key runs the search at
+// once, in place of the one waiting for typing to settle, and closes the
+// popover to show the results.
+export const handleStoreSearchSubmit = (deps) => {
+  const { store, subject, render } = deps;
+  subject.dispatch(STORE_SEARCH_CANCEL_ACTION, {
+    instanceId: store.selectInstanceId(),
+  });
+  store.closeSearchPopover();
+  render();
+  searchCatalog(deps, store.selectSearchText());
+};
+
+export const handleStoreSearchPopoverKeyDown = (deps, payload) => {
+  const { _event } = payload;
+  // An Enter that ends an input method composition only picks the text.
+  if (_event.key !== "Enter" || _event.isComposing || _event.keyCode === 229) {
+    return;
+  }
+  // Closing the popover focuses the search button again, which this Enter
+  // would otherwise press, opening the popover again.
+  _event.preventDefault();
+  handleStoreSearchSubmit(deps);
+};
+
+// Clear empties the search and shows every pack at once, leaving the popover
+// open for another search.
+export const handleStoreSearchClear = (deps) => {
+  const { store, subject, render } = deps;
+  subject.dispatch(STORE_SEARCH_CANCEL_ACTION, {
+    instanceId: store.selectInstanceId(),
+  });
+  store.setSearchText({ value: "" });
+  render();
+  searchCatalog(deps, "");
+};
+
 export const handleCatalogRetry = (deps) => {
   const { store } = deps;
   return loadCatalog(deps, { cursor: store.selectCatalogFailedCursor() });
