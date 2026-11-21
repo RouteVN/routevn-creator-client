@@ -3184,6 +3184,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "YouTube에서 열기"
   closeLabel: "닫기"
+  actionsLabel: "작업"
 chatSupportDialog:
   title: "채팅 지원"
   emailLabel: "이메일"

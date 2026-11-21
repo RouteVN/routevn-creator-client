@@ -3184,6 +3184,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "Mở trên YouTube"
   closeLabel: "Đóng"
+  actionsLabel: "Thao tác"
 chatSupportDialog:
   title: "Hỗ trợ qua chat"
   emailLabel: "Email"

@@ -3184,6 +3184,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "Apri su YouTube"
   closeLabel: "Chiudi"
+  actionsLabel: "Azioni"
 chatSupportDialog:
   title: "Supporto via chat"
   emailLabel: "Email"

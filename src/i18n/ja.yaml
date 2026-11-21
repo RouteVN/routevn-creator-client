@@ -3184,6 +3184,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "YouTubeで開く"
   closeLabel: "閉じる"
+  actionsLabel: "操作"
 chatSupportDialog:
   title: "チャットサポート"
   emailLabel: "メール"

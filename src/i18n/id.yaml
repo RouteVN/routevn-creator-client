@@ -3184,6 +3184,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "Buka di YouTube"
   closeLabel: "Tutup"
+  actionsLabel: "Tindakan"
 chatSupportDialog:
   title: "Dukungan melalui chat"
   emailLabel: "Email"
