@@ -15,6 +15,7 @@ import {
   createCommandLineOptionMenuItems,
   getCommandLineOptionLabel,
 } from "../../internal/commandLineItemEffects.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -937,13 +938,13 @@ export const handleSearchInput = (deps, payload) => {
 };
 
 export const handleSearchButtonClick = (deps, payload) => {
-  const { refs, store, render } = deps;
+  const { appService, refs, store, render } = deps;
   payload._event.stopPropagation();
   const rect = refs.searchButton.getBoundingClientRect();
 
   store.openSearchPopover({
     position: {
-      x: Math.round(rect.right),
+      x: Math.round(getInlineEndX(rect, appService.getDocumentDirection())),
       y: Math.round(rect.bottom),
     },
   });

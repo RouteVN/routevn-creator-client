@@ -376,6 +376,7 @@ const createStoreDeps = () => {
     subject: new Subject(),
     props: { open: false },
     appService: {
+      getDocumentDirection: () => "ltr",
       listAssetStorePacks: vi.fn(),
       getAssetStorePack: vi.fn(),
       getAssetStorePackDownload: vi.fn(),

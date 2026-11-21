@@ -12,6 +12,7 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 import { dispatchResourceViewBackgroundClick } from "../../internal/ui/resourcePages/resourceViewBackground.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
@@ -28,7 +29,7 @@ const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
 
-const resolvePopoverButtonPosition = (element) => {
+const resolvePopoverButtonPosition = (element, direction) => {
   if (!element?.getBoundingClientRect) {
     return {
       x: 0,
@@ -39,7 +40,7 @@ const resolvePopoverButtonPosition = (element) => {
   const rect = element.getBoundingClientRect();
 
   return {
-    x: Math.round(rect.right),
+    x: Math.round(getInlineEndX(rect, direction)),
     y: Math.round(rect.bottom),
   };
 };
@@ -378,11 +379,14 @@ export const handleTagFilterClearClick = (deps, payload) => {
 export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
 
 export const handleZoomButtonClick = (deps, payload) => {
-  const { refs, store, render } = deps;
+  const { appService, refs, store, render } = deps;
   payload?._event?.stopPropagation?.();
 
   store.openZoomPopover({
-    position: resolvePopoverButtonPosition(refs.zoomButton),
+    position: resolvePopoverButtonPosition(
+      refs.zoomButton,
+      appService.getDocumentDirection(),
+    ),
   });
   render();
 };

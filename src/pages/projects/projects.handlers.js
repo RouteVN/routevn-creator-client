@@ -40,6 +40,10 @@ import {
   pickImportDestinationFolder,
   pickProjectArchive,
 } from "./support/projectImportFlows.js";
+import {
+  getInlineStartX,
+  getInlineEndX,
+} from "../../internal/textDirection.js";
 
 const mapCloudProject = (project, copy) => {
   const projectId = project?.id;
@@ -506,7 +510,7 @@ export const handleOpenButtonClick = (deps, payload) => {
 
   const rect = payload._event.currentTarget.getBoundingClientRect();
   store.openImportSourceMenu({
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     items: createImportMenuItems(copy, appService.getPlatform()),
   });
@@ -666,7 +670,7 @@ export const handleMobileCreateMenuButtonClick = (deps, payload) => {
   const canImportProjects =
     platform === "tauri" || platform === "android" || platform === "ios";
   const menuPayload = {
-    x: rect.right,
+    x: getInlineEndX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     items: [
       {

@@ -1,6 +1,7 @@
 import { debounceTime, filter } from "rxjs";
 import { ASSET_PACKAGE_RESOURCE_CONFIGS } from "../../internal/assetPackageResources.js";
 import { generateId } from "../../internal/id.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 const SELECTION_STEP = "selection";
 const STORE_SEARCH_ACTION = "resourceImport.storeSearch";
@@ -275,12 +276,15 @@ export const handleStoreSearchInput = (deps, payload) => {
 
 // On phones the search opens in a popover under the header's search button.
 export const handleStoreSearchButtonClick = (deps, payload) => {
-  const { store, refs, render } = deps;
+  const { appService, store, refs, render } = deps;
   const { storeSearchButton } = refs;
   payload._event.stopPropagation();
   const rect = storeSearchButton.getBoundingClientRect();
   store.openSearchPopover({
-    position: { x: Math.round(rect.right), y: Math.round(rect.bottom) },
+    position: {
+      x: Math.round(getInlineEndX(rect, appService.getDocumentDirection())),
+      y: Math.round(rect.bottom),
+    },
   });
   render();
 };

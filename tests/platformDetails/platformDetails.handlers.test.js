@@ -23,6 +23,7 @@ import {
 
 const createDeps = () => ({
   appService: {
+    getDocumentDirection: () => "ltr",
     getPlatform: vi.fn(() => "android"),
     pickFiles: vi.fn(),
     showDropdownMenu: vi.fn(),
