@@ -431,6 +431,153 @@ describe("projectExportService", () => {
     expect(manifest).not.toHaveProperty("description");
   });
 
+  it("leaves the Web player page unchanged without screen backgrounds", () => {
+    const indexHtml = createBundlePlayerIndexHtml({ title: "Project One" });
+
+    expect(indexHtml).toContain('<div id="loading">');
+    expect(indexHtml).not.toContain("modulepreload");
+    expect(indexHtml).not.toContain("background-image");
+    expect(indexHtml).not.toContain("__ROUTEVN_");
+  });
+
+  it("inlines the Web screen backgrounds into the player page", () => {
+    const loadingBackgroundDataUrl = "data:image/jpeg;base64,TE9BRElORw==";
+    const startBackgroundDataUrl = "data:image/jpeg;base64,U1RBUlQ=";
+    const indexHtml = createBundlePlayerIndexHtml({
+      title: "Project One",
+      loadingBackgroundDataUrl,
+      startBackgroundDataUrl,
+    });
+    const dom = new JSDOM(indexHtml);
+    const { document } = dom.window;
+
+    expect(document.querySelector("#loading").className).toBe(
+      "has-loading-background has-start-background",
+    );
+    expect(indexHtml).toContain(
+      `#loading-background { background-image: url("${loadingBackgroundDataUrl}"); }`,
+    );
+    expect(indexHtml).toContain(
+      `#loading-start-background { background-image: url("${startBackgroundDataUrl}"); }`,
+    );
+    expect(
+      document.querySelector('link[rel="modulepreload"]').getAttribute("href"),
+    ).toBe("./main.js");
+    expect(indexHtml).not.toContain("__ROUTEVN_");
+    dom.window.close();
+  });
+
+  it("uses the default fade durations for missing or invalid values", () => {
+    const indexHtml = createBundlePlayerIndexHtml({
+      startBackgroundDataUrl: "data:image/png;base64,U1RBUlQ=",
+      loadingFadeDuration: "abc",
+    });
+
+    expect(indexHtml).toContain(
+      'style="--loading-fade-duration: 0ms; --start-fade-duration: 0ms"',
+    );
+  });
+
+  it("keeps the start prompt when only a loading background is set", () => {
+    const indexHtml = createBundlePlayerIndexHtml({
+      loadingBackgroundDataUrl: "data:image/png;base64,TE9BRElORw==",
+    });
+    const dom = new JSDOM(indexHtml);
+
+    expect(dom.window.document.querySelector("#loading").className).toBe(
+      "has-loading-background",
+    );
+    expect(indexHtml).not.toContain("#loading-start-background { background");
+    dom.window.close();
+  });
+
+  it("rejects screen backgrounds that are not plain image data", () => {
+    expect(() =>
+      createBundlePlayerIndexHtml({
+        loadingBackgroundDataUrl:
+          'data:image/png;base64,AAAA"); } </style><script>alert(1)</script>',
+      }),
+    ).toThrow("The Web screen background is not a supported image.");
+    expect(() =>
+      createBundlePlayerIndexHtml({
+        startBackgroundDataUrl: "data:image/svg+xml;base64,AAAA",
+      }),
+    ).toThrow("The Web screen background is not a supported image.");
+  });
+
+  it("reads and re-encodes the selected Web screen backgrounds for export", async () => {
+    const blob = { size: 4 };
+    globalThis.fetch = vi.fn(async (url) => {
+      if (url === "/bundle/main.js") {
+        return { ok: false };
+      }
+      return { ok: true, blob: async () => blob };
+    });
+    const revoke = vi.fn();
+    const getFileContent = vi.fn(async (fileId) => ({
+      url: `blob:${fileId}`,
+      revoke,
+    }));
+    const createImageDataUrl = vi.fn(async () => ({
+      dataUrl: "data:image/jpeg;base64,U0NSRUVO",
+      width: 1920,
+      height: 1080,
+    }));
+    const createDistributionZipStreamedToPath = vi.fn(
+      async ({ outputPath }) => outputPath,
+    );
+    const service = createProjectExportService({
+      fileAdapter: { createDistributionZipStreamedToPath },
+      getFileContent,
+      createImageDataUrl,
+    });
+
+    await service.createDistributionZipStreamedToPath(
+      {},
+      [],
+      "/tmp/export.zip",
+      {
+        webScreens: {
+          loadingBackgroundFileId: "background-1",
+          startBackgroundFileId: "background-1",
+          loadingFadeDuration: 1200,
+          startFadeDuration: 0,
+        },
+      },
+    );
+
+    // The same file used for both screens is read once.
+    expect(getFileContent).toHaveBeenCalledTimes(1);
+    expect(getFileContent).toHaveBeenCalledWith("background-1");
+    expect(createImageDataUrl).toHaveBeenCalledWith(blob);
+    expect(revoke).toHaveBeenCalledTimes(1);
+    const { staticFiles } =
+      createDistributionZipStreamedToPath.mock.calls[0][0];
+    expect(staticFiles.indexHtml).toContain(
+      '#loading-background { background-image: url("data:image/jpeg;base64,U0NSRUVO"); }',
+    );
+    expect(staticFiles.indexHtml).toContain(
+      'class="has-loading-background has-start-background" style="--loading-fade-duration: 1200ms; --start-fade-duration: 0ms; --loading-art-ratio: 1.7778"',
+    );
+  });
+
+  it("fails the export when a Web screen background cannot be read", async () => {
+    globalThis.fetch = vi.fn(async () => ({ ok: false }));
+    const createDistributionZipStreamedToPath = vi.fn();
+    const service = createProjectExportService({
+      fileAdapter: { createDistributionZipStreamedToPath },
+      getFileContent: vi.fn(async () => ({ url: "blob:background-1" })),
+      createImageDataUrl: vi.fn(),
+    });
+
+    await expect(
+      service.createDistributionZipStreamedToPath({}, [], "/tmp/export.zip", {
+        webScreens: { loadingBackgroundFileId: "background-1" },
+      }),
+    ).rejects.toThrow("The Web screen background could not be read.");
+    expect(createDistributionZipStreamedToPath).not.toHaveBeenCalled();
+  });
+
   it("stores repeated raw assets once in bundle format v4", async () => {
     const repeatedBytes = Uint8Array.from(
       Array.from({ length: 160 * 1024 }, (_, index) => index % 251),
@@ -687,4 +834,144 @@ describe("projectExportService", () => {
       "scene-1",
     );
   });
+});
+
+it("reports Android export unavailable for adapters without the capability", async () => {
+  const service = createProjectExportService({ fileAdapter: {} });
+  expect(await service.getAndroidExportAvailability()).toEqual({
+    available: false,
+  });
+});
+
+it.each([
+  [1080, 1920, "portrait"],
+  [1920, 1080, "landscape"],
+])(
+  "derives Android orientation in the shared facade (%s × %s)",
+  async (width, height, orientation) => {
+    const fileAdapter = {
+      getAndroidExportAvailability: vi.fn(async () => ({ available: true })),
+      promptAndroidApkPath: vi.fn(),
+      createAndroidApkToPath: vi.fn(async () => ({
+        outputPath: "/exports/project.apk",
+      })),
+    };
+    const filePicker = {};
+    const getCurrentReference = () => ({
+      projectPath: "/projects/project-one",
+    });
+    const service = createProjectExportService({
+      fileAdapter,
+      filePicker,
+      getCurrentReference,
+    });
+    const projectData = { projectData: { screen: { width, height } } };
+    const metadata = {
+      applicationName: "Project One",
+      applicationId: "com.example.project_one",
+      versionName: "1.2.3",
+      versionCode: 42,
+      iconFileId: "icon-1",
+      adaptiveIconFileId: "adaptive-1",
+      splashIconFileId: "splash-1",
+      iconBackgroundColor: "#FFFFFF",
+      splashBackgroundColor: "#000000",
+    };
+    expect(await service.getAndroidExportAvailability()).toEqual({
+      available: true,
+    });
+    await service.promptAndroidApkPath(
+      { defaultFileName: "project.apk" },
+      { title: "Save One" },
+    );
+    expect(fileAdapter.promptAndroidApkPath).toHaveBeenCalledWith({
+      defaultFileName: "project.apk",
+      options: { title: "Save One" },
+      filePicker,
+    });
+    await service.createAndroidApkToPath(
+      projectData,
+      [{ fileId: "image-1", mimeType: "image/png" }],
+      "/exports/project.apk",
+      metadata,
+    );
+    expect(fileAdapter.createAndroidApkToPath).toHaveBeenCalledWith({
+      projectData,
+      fileEntries: [{ id: "image-1", mimeType: "image/png" }],
+      outputPath: "/exports/project.apk",
+      ...metadata,
+      orientation,
+      options: {},
+      getCurrentReference,
+    });
+    const withoutOptionalIcons = { ...metadata };
+    delete withoutOptionalIcons.adaptiveIconFileId;
+    delete withoutOptionalIcons.splashIconFileId;
+    await service.createAndroidApkToPath(
+      projectData,
+      [],
+      "/exports/project.apk",
+      withoutOptionalIcons,
+    );
+    expect(fileAdapter.createAndroidApkToPath).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        adaptiveIconFileId: undefined,
+        splashIconFileId: undefined,
+      }),
+    );
+  },
+);
+
+it("passes an App Bundle export to the adapter with the APK fields and the key", async () => {
+  const fileAdapter = {
+    promptAndroidBundlePath: vi.fn(async () => "/exports/project.aab"),
+    createAndroidBundleToPath: vi.fn(async () => ({
+      outputPath: "/exports/project.aab",
+    })),
+  };
+  const filePicker = {};
+  const getCurrentReference = () => ({ projectPath: "/projects/project-one" });
+  const service = createProjectExportService({
+    fileAdapter,
+    filePicker,
+    getCurrentReference,
+  });
+  await service.promptAndroidBundlePath(
+    { defaultFileName: "project.aab" },
+    { title: "Save One" },
+  );
+  expect(fileAdapter.promptAndroidBundlePath).toHaveBeenCalledWith({
+    defaultFileName: "project.aab",
+    options: { title: "Save One" },
+    filePicker,
+  });
+  const projectData = {
+    projectData: { screen: { width: 1920, height: 1080 } },
+  };
+  const signingKey = { certificateSha256: "a".repeat(64) };
+  await service.createAndroidBundleToPath(
+    projectData,
+    [{ fileId: "image-1", mimeType: "image/png" }],
+    "/exports/project.aab",
+    {
+      applicationName: "Project One",
+      applicationId: "com.example.project_one",
+      versionName: "1.2.3",
+      versionCode: 42,
+      iconFileId: "icon-1",
+      iconBackgroundColor: "#FFFFFF",
+      splashBackgroundColor: "#000000",
+      signingKey,
+    },
+  );
+  expect(fileAdapter.createAndroidBundleToPath).toHaveBeenCalledWith(
+    expect.objectContaining({
+      fileEntries: [{ id: "image-1", mimeType: "image/png" }],
+      outputPath: "/exports/project.aab",
+      applicationId: "com.example.project_one",
+      orientation: "landscape",
+      signingKey,
+      getCurrentReference,
+    }),
+  );
 });

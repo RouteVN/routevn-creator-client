@@ -11,7 +11,9 @@ import {
   handleDetailHeaderClick,
   handleEditFormAction,
   handleFileExplorerAction,
+  handleItemDelete,
   handleItemDuplicate,
+  handleMobileDetailDeleteClick,
   handleMobileDetailDuplicateClick,
   handleMobileDetailOpenClick,
   handleParticleItemClick,
@@ -333,6 +335,117 @@ describe("particles handlers", () => {
     expect(deps.projectService.createParticle).toHaveBeenCalledTimes(3);
   });
 
+  it("deletes a particle nothing uses", async () => {
+    const page = await createPage();
+    const { deps, repositoryState } = page;
+    deps.projectService.deleteParticleIfUnused = vi.fn(
+      async ({ particleId }) => {
+        const { [particleId]: _deleted, ...items } =
+          repositoryState.particles.items;
+        repositoryState.particles = { items, tree: [{ id: "folder-1" }] };
+        return {
+          deleted: true,
+          usage: { inProps: {}, isUsed: false, count: 0 },
+        };
+      },
+    );
+
+    await handleItemDelete(deps, {
+      _event: { detail: { itemId: "particle-1" } },
+    });
+
+    expect(deps.projectService.deleteParticleIfUnused).toHaveBeenCalledWith({
+      particleId: "particle-1",
+      checkTargets: ["scenes", "layouts", "controls"],
+    });
+    expect(
+      particlesStore.selectParticleItemById(
+        { state: page.state() },
+        { itemId: "particle-1" },
+      ),
+    ).toBeUndefined();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+
+  // A scene can show a particle as a visual, which the project model does
+  // not check when the particle is deleted.
+  it("keeps a particle that is in use and says why", async () => {
+    const page = await createPage();
+    const { deps } = page;
+    deps.projectService.deleteParticleIfUnused = vi.fn(async () => ({
+      deleted: false,
+      usage: { inProps: { lines: [{}] }, isUsed: true, count: 1 },
+    }));
+    deps.store.setSelectedItemId({ itemId: "particle-1" });
+
+    await handleMobileDetailDeleteClick(deps);
+
+    expect(deps.projectService.deleteParticleIfUnused).toHaveBeenCalledWith({
+      particleId: "particle-1",
+      checkTargets: ["scenes", "layouts", "controls"],
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Cannot delete resource, it is currently in use.",
+    });
+    expect(
+      particlesStore.selectParticleItemById(
+        { state: page.state() },
+        { itemId: "particle-1" },
+      ),
+    ).toMatchObject({ id: "particle-1" });
+  });
+
+  // The check reads every scene, and the particle stays listed meanwhile.
+  it("ignores another delete of a particle while its delete runs", async () => {
+    const { deps } = await createPage();
+    let finishCheck;
+    deps.projectService.deleteParticleIfUnused = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          finishCheck = () =>
+            resolve({
+              deleted: false,
+              usage: { inProps: { lines: [{}] }, isUsed: true, count: 1 },
+            });
+        }),
+    );
+    const payload = { _event: { detail: { itemId: "particle-1" } } };
+
+    const firstDelete = handleItemDelete(deps, payload);
+    await handleItemDelete(deps, payload);
+    finishCheck();
+    await firstDelete;
+
+    expect(deps.projectService.deleteParticleIfUnused).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(1);
+
+    // Once it has finished, the particle can be sent to delete again.
+    const nextDelete = handleItemDelete(deps, payload);
+    finishCheck();
+    await nextDelete;
+    expect(deps.projectService.deleteParticleIfUnused).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a delete the project refuses", async () => {
+    const { deps } = await createPage();
+    deps.projectService.deleteParticleIfUnused = vi.fn(async () => ({
+      deleted: false,
+      usage: { inProps: {}, isUsed: false, count: 0 },
+      deleteResult: { valid: false, error: { message: "refused" } },
+    }));
+    deps.render.mockClear();
+
+    await handleItemDelete(deps, {
+      _event: { detail: { itemId: "particle-1" } },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: expect.stringContaining("Failed to delete particle."),
+      title: "Error",
+    });
+    expect(deps.render).toHaveBeenCalled();
+  });
+
   it("puts a tag created from the add form into that form", async () => {
     const page = await createPage();
     const { deps } = page;
@@ -434,5 +547,51 @@ describe("particles handlers", () => {
 
     expect(deps.graphicsService.loadAssets).toHaveBeenCalledTimes(2);
     expect(deps.graphicsService.render).not.toHaveBeenCalled();
+  });
+
+  it("keeps the page usable and says so when the detail preview cannot draw the saved particle", async () => {
+    const { deps } = await createPage();
+    deps.refs.detailCanvas = { isConnected: true };
+    deps.projectService.getFileContent = vi.fn(async (fileId) => ({
+      url: `blob:${fileId}`,
+      type: "image/png",
+    }));
+    const invalidData = new Error("Input Error: invalid particle data");
+    deps.graphicsService = {
+      init: vi.fn(async () => {}),
+      loadAssets: vi.fn(async () => {}),
+      render: vi.fn(),
+    };
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const select = () =>
+      handleParticleItemClick(deps, {
+        _event: { detail: { itemId: "particle-1" } },
+      });
+
+    try {
+      // The renderer can refuse the data at once or after it starts.
+      deps.graphicsService.render.mockImplementationOnce(() => {
+        throw invalidData;
+      });
+      await expect(select()).resolves.toBeUndefined();
+      deps.store.setSelectedItemId({ itemId: undefined });
+      deps.graphicsService.render.mockImplementationOnce(async () => {
+        throw invalidData;
+      });
+      await expect(select()).resolves.toBeUndefined();
+      expect(consoleError.mock.calls).toEqual([
+        ["[particles] Failed to draw the detail preview", invalidData],
+        ["[particles] Failed to draw the detail preview", invalidData],
+      ]);
+    } finally {
+      consoleError.mockRestore();
+    }
+
+    expect(deps.appService.showToast.mock.calls).toEqual([
+      [{ message: "Failed to draw the particle preview." }],
+      [{ message: "Failed to draw the particle preview." }],
+    ]);
   });
 });

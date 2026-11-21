@@ -23,12 +23,14 @@ public class MediaPickerTest {
     @Before public void setUp() {
         activity = Robolectric.buildActivity(MainActivity.class).get();
     }
-    private void addHandler(Intent intent, String packageName, String name) {
+    private ActivityInfo addHandler(Intent intent, String packageName, String name) {
         ResolveInfo info = new ResolveInfo();
         info.activityInfo = new ActivityInfo();
         info.activityInfo.packageName = packageName;
         info.activityInfo.name = name;
+        info.activityInfo.exported = true;
         Shadows.shadowOf(activity.getPackageManager()).addResolveInfoForIntent(intent, info);
+        return info.activityInfo;
     }
     private Intent open(String source, String accept, boolean multiple) {
         ReflectionHelpers.callInstanceMethod(activity, "launchAndroidFilePicker",
@@ -60,10 +62,26 @@ public class MediaPickerTest {
         assertEquals("image/png", intent.getType());
         assertEquals("example.gallery", intent.getComponent().getPackageName());
         assertTrue(intent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE, false));
+        assertEquals(0, intent.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION);
         ReflectionHelpers.callInstanceMethod(activity, "handleAndroidFilePickerActivityResult",
             ClassParameter.from(int.class, MainActivity.RESULT_CANCELED), ClassParameter.from(Intent.class, null));
         assertNull(ReflectionHelpers.getField(activity, "pendingAndroidFilePickerRequestId"));
         assertEquals(Intent.ACTION_OPEN_DOCUMENT, open("files", "image/png", false).getAction());
+    }
+    @Test public void galleriesThisAppMayNotStartAreNotOffered() {
+        Intent pick = new Intent(Intent.ACTION_PICK).setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/png");
+        Intent galleryHome = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_GALLERY);
+        addHandler(pick, "example.private", "PrivatePicker").exported = false;
+        addHandler(galleryHome, "example.private", "PrivateHome");
+        addHandler(pick, "example.locked", "LockedPicker").permission = "example.permission.PICK";
+        addHandler(galleryHome, "example.locked", "LockedHome");
+        assertNull(open("gallery", "image/png", false).getComponent());
+        ReflectionHelpers.callInstanceMethod(activity, "handleAndroidFilePickerActivityResult",
+            ClassParameter.from(int.class, MainActivity.RESULT_CANCELED), ClassParameter.from(Intent.class, null));
+
+        addHandler(pick, "example.gallery", "GalleryPicker");
+        addHandler(galleryHome, "example.gallery", "GalleryHome");
+        assertEquals("example.gallery", open("gallery", "image/png", false).getComponent().getPackageName());
     }
     @Test public void modernPhotoPickerSupportsSingleAndMultiple() {
         if (Build.VERSION.SDK_INT < 33) return;
@@ -81,6 +99,32 @@ public class MediaPickerTest {
         assertEquals(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, intent.getData());
         assertEquals("video/mp4", intent.getType());
         assertFalse(intent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE, true));
+        assertEquals(intent.toString(), 0, intent.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    }
+
+    // Android refuses to start a gallery pick that grants the media collection
+    // when this app cannot read it: "UID ... does not have permission to
+    // content://media/external/images/media". It must not end the app.
+    public static class RefusingActivity extends MainActivity {
+        int starts;
+        @Override public void startActivityForResult(Intent intent, int requestCode) {
+            starts += 1;
+            throw new SecurityException("UID 10088 does not have permission to " + intent.getData());
+        }
+    }
+
+    @Test public void refusedPickerStartIsReportedAndLetsTheNextRequestOpen() {
+        RefusingActivity refusing = Robolectric.buildActivity(RefusingActivity.class).get();
+        for (String requestId : new String[]{"picker-refused", "picker-retry"}) {
+            ReflectionHelpers.callInstanceMethod(MainActivity.class, refusing, "launchAndroidFilePicker",
+                ClassParameter.from(String.class, requestId),
+                ClassParameter.from(boolean.class, false),
+                ClassParameter.from(String.class, "image/png"),
+                ClassParameter.from(String.class, "gallery"));
+            assertNull(ReflectionHelpers.getField(refusing, "pendingAndroidFilePickerRequestId"));
+        }
+        // The second request was not refused as "Another file picker is already open".
+        assertEquals(2, refusing.starts);
     }
 
     @Test @Config(sdk = 33)

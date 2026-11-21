@@ -1,4 +1,4 @@
-import { formatNumber } from "../../internal/dates.js";
+import { formatList, formatNumber } from "../../internal/dates.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
@@ -607,14 +607,16 @@ export const selectViewData = ({ state, i18n }) => {
     const fontIds = toFontIds(fontId);
     if (fontIds.length === 0) return "";
     const fontItems = toFlatItems(state.fontsData);
-    return fontIds
-      .map((id) =>
-        fontItems.find((item) => item.type === "font" && item.id === id),
-      )
-      .filter(Boolean)
-      .map((font) => font.fontFamily ?? "")
-      .filter(Boolean)
-      .join(", ");
+    return formatList(
+      fontIds
+        .map((id) =>
+          fontItems.find((item) => item.type === "font" && item.id === id),
+        )
+        .filter(Boolean)
+        .map((font) => font.fontFamily ?? "")
+        .filter(Boolean),
+      dateTime,
+    );
   };
 
   const detailPreviewFontData = selectedItem

@@ -3,8 +3,8 @@ import {
   createLayoutEditorElementTemplate,
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
-} from "../../src/pages/layoutEditor/support/layoutEditorViewData.js";
-import { selectLayoutEditorPageCopy } from "../../src/pages/layoutEditor/support/layoutEditorPageCopy.js";
+} from "../../src/internal/ui/layoutEditor/layoutEditorViewData.js";
+import { selectLayoutEditorPageCopy } from "../../src/internal/ui/layoutEditor/layoutEditorCopy.js";
 import { createLayoutEditorItemTemplate } from "../../src/internal/layoutEditorElementRegistry.js";
 import { PT_I18N } from "../support/i18n.js";
 
@@ -475,6 +475,7 @@ describe("layoutEditorViewData", () => {
       "sprite",
       "spritesheet-animation",
       "particle",
+      "video",
       "text",
       "slider",
       "input",
@@ -521,6 +522,7 @@ describe("layoutEditorViewData", () => {
       "sprite",
       "spritesheets",
       "particles",
+      "video",
       "text",
       "slider",
       "input",

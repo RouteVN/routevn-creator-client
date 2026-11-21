@@ -1,3 +1,5 @@
+import { parseConditionExpression } from "jempl";
+import { BinaryOp, NodeType } from "jempl/src/parse/constants.js";
 import { getRuntimeConditionItems } from "./runtimeFields.js";
 
 export const SAVE_DATA_AVAILABLE_CONDITION_TARGET = "item.savedAt";
@@ -9,6 +11,27 @@ export const SKIP_MODE_CONDITION_TARGET = "runtime.skipMode";
 const VARIABLE_TARGET_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const VARIABLE_TARGET_BRACKET_PATTERN = /^variables\[(.+)\]$/;
 const VARIABLE_TARGET_DOT_PATTERN = /^variables\.([A-Za-z_$][A-Za-z0-9_$]*)$/;
+
+const CONDITION_SYMBOLS = {
+  eq: "==",
+  neq: "!=",
+  gt: ">",
+  gte: ">=",
+  lt: "<",
+  lte: "<=",
+};
+const OP_BY_SYMBOL = new Map(
+  Object.entries(CONDITION_SYMBOLS).map(([op, symbol]) => [symbol, op]),
+);
+const NUMBER_OPERATORS = Object.keys(CONDITION_SYMBOLS);
+const STRING_OPERATORS = ["eq", "neq"];
+const BOOLEAN_OPERATORS = ["eq"];
+
+export const getVisibilityConditionOperators = (type) => {
+  if (type === "number") return NUMBER_OPERATORS;
+  if (type === "string") return STRING_OPERATORS;
+  return BOOLEAN_OPERATORS;
+};
 
 export const toVariableConditionTarget = (variableId) => {
   if (typeof variableId !== "string" || variableId.length === 0) {
@@ -102,9 +125,19 @@ const trimOuterParentheses = (value) => {
   while (nextValue.startsWith("(") && nextValue.endsWith(")")) {
     let depth = 0;
     let isBalanced = true;
+    let quote;
 
     for (let index = 0; index < nextValue.length; index += 1) {
       const char = nextValue[index];
+      if (quote) {
+        if (char === "\\") index += 1;
+        else if (char === quote) quote = undefined;
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        quote = char;
+        continue;
+      }
       if (char === "(") {
         depth += 1;
       } else if (char === ")") {
@@ -176,6 +209,10 @@ const splitTopLevelAndExpressions = (expression) => {
       continue;
     }
 
+    if (depth === 0 && char === "|" && nextChar === "|") {
+      return [expression];
+    }
+
     if (depth === 0 && char === "&" && nextChar === "&") {
       parts.push(trimOuterParentheses(current));
       current = "";
@@ -204,7 +241,7 @@ const parseConditionValue = (value) => {
     return false;
   }
 
-  if (/^-?\d+(?:\.\d+)?$/.test(normalizedValue)) {
+  if (/^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(normalizedValue)) {
     const parsedNumber = Number(normalizedValue);
     if (Number.isFinite(parsedNumber)) {
       return parsedNumber;
@@ -222,28 +259,16 @@ const parseConditionValue = (value) => {
   return undefined;
 };
 
-const buildScalarConditionExpression = (target, value) => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return `${target} == ${value}`;
-  }
-
-  if (typeof value === "boolean") {
-    return `${target} == ${value}`;
-  }
-
-  return `${target} == ${JSON.stringify(String(value ?? ""))}`;
-};
+const isLayoutComparison = (condition) =>
+  typeof condition?.target === "string" &&
+  condition.target.length > 0 &&
+  getVisibilityConditionOperators(typeof condition.value).includes(
+    condition.op,
+  );
 
 export const buildLayoutConditionExpression = (condition) => {
-  if (condition?.op !== "eq") {
-    return undefined;
-  }
-
-  const target = condition?.target;
-  if (typeof target !== "string" || target.length === 0) {
-    return undefined;
-  }
-
+  if (!isLayoutComparison(condition)) return undefined;
+  const { target } = condition;
   if (
     target === SAVE_DATA_AVAILABLE_CONDITION_TARGET &&
     typeof condition.value === "boolean"
@@ -253,7 +278,8 @@ export const buildLayoutConditionExpression = (condition) => {
       : SAVE_DATA_AVAILABLE_CONDITION_TARGET;
   }
 
-  return buildScalarConditionExpression(target, condition.value);
+  const literal = JSON.stringify(condition.value ?? "");
+  return `${target} ${CONDITION_SYMBOLS[condition.op]} ${literal}`;
 };
 
 export const mergeWhenExpressions = (...expressions) => {
@@ -294,51 +320,33 @@ const parseConditionTargetClause = (clause) => {
     };
   }
 
-  for (const fixedStateItem of Object.values(
-    getSpecialLayoutConditionItems({
-      includeSaveDataAvailable: true,
-    }),
-  )) {
-    const escapedTarget = fixedStateItem.target.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      "\\$&",
-    );
-    const match = clause.match(new RegExp(`^${escapedTarget}\\s*==\\s*(.+)$`));
-    if (!match) {
-      continue;
-    }
-
-    const value = parseConditionValue(match[1]);
-    if (value === undefined) {
-      continue;
-    }
-
-    return {
-      target: fixedStateItem.target,
-      op: "eq",
-      value,
-    };
-  }
-
-  const variableMatch = clause.match(
-    /^((?:variables\.[A-Za-z_$][A-Za-z0-9_$]*|variables\[(?:".*"|'.*')\]))\s*==\s*(.+)$/,
+  const match = clause.match(
+    /^([\w$]+\.[\w$]+|variables\[(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\])\s*(==|!=|>=|<=|>|<)\s*(.+)$/s,
   );
-  if (!variableMatch) {
+  if (!match) return undefined;
+
+  const [, target, symbol, literal] = match;
+  const value = parseConditionValue(literal);
+  const op = OP_BY_SYMBOL.get(symbol);
+  if (
+    value === undefined ||
+    !getVisibilityConditionOperators(typeof value).includes(op)
+  ) {
     return undefined;
   }
 
-  const variableId = parseVariableConditionTarget(variableMatch[1]);
-  const value = parseConditionValue(variableMatch[2]);
+  const variableId = parseVariableConditionTarget(target);
+  if (variableId)
+    return { target: toVariableConditionTarget(variableId), op, value };
 
-  if (!variableId || value === undefined) {
-    return undefined;
+  const field = getSpecialLayoutConditionItems({
+    includeSaveDataAvailable: true,
+  })[target];
+  if (field && getVisibilityConditionOperators(field.type).includes(op)) {
+    return { target, op, value };
   }
 
-  return {
-    target: toVariableConditionTarget(variableId),
-    op: "eq",
-    value,
-  };
+  return undefined;
 };
 
 export const splitLayoutConditionFromWhen = (expression) => {
@@ -353,7 +361,8 @@ export const splitLayoutConditionFromWhen = (expression) => {
   let visibilityClauseIndex = -1;
   let visibilityCondition;
 
-  for (let index = 0; index < clauses.length; index += 1) {
+  // The editor appends its editable condition after the existing clauses.
+  for (let index = clauses.length - 1; index >= 0; index -= 1) {
     const clause = clauses[index];
     const parsedCondition = parseConditionTargetClause(clause);
 
@@ -381,6 +390,86 @@ export const splitLayoutConditionFromWhen = (expression) => {
     baseWhen: mergeWhenExpressions(...remainingClauses),
     visibilityCondition,
   };
+};
+
+// Project data keeps the editable expression. Playback gets the literal value
+// directly so quotes, backslashes and operator characters survive rendering.
+export const compileVisibilityCondition = (condition) => {
+  if (!isLayoutComparison(condition)) return undefined;
+  const { target, op, value } = condition;
+  const variable = { var: target };
+  if (
+    target === SAVE_DATA_AVAILABLE_CONDITION_TARGET &&
+    typeof value === "boolean"
+  ) {
+    return value ? variable : { not: variable };
+  }
+  return { [op]: [variable, value ?? ""] };
+};
+
+const jsonBinaryOperators = {
+  [BinaryOp.EQ]: "eq",
+  [BinaryOp.NEQ]: "neq",
+  [BinaryOp.GT]: "gt",
+  [BinaryOp.GTE]: "gte",
+  [BinaryOp.LT]: "lt",
+  [BinaryOp.LTE]: "lte",
+  [BinaryOp.IN]: "in",
+  [BinaryOp.AND]: "all",
+  [BinaryOp.OR]: "any",
+  [BinaryOp.ADD]: "add",
+  [BinaryOp.SUBTRACT]: "sub",
+};
+
+// Jempl's JSON form treats every string as a literal. Parse an existing
+// expression with Jempl before combining it with an editor comparison.
+const toConditionJson = (node) => {
+  switch (node.type) {
+    case NodeType.VARIABLE:
+      return { var: node.path };
+    case NodeType.LITERAL:
+      return { literal: node.value };
+    case NodeType.FUNCTION:
+      return { call: node.name, args: node.args.map(toConditionJson) };
+    case NodeType.UNARY:
+      return { not: toConditionJson(node.operand) };
+    case NodeType.BINARY:
+      return {
+        [jsonBinaryOperators[node.op]]: [
+          toConditionJson(node.left),
+          toConditionJson(node.right),
+        ],
+      };
+    default:
+      throw new Error("Unsupported layout condition expression");
+  }
+};
+
+export const combineLayoutConditions = (operator, ...conditions) => {
+  const parts = conditions.filter((condition) => condition !== undefined);
+  if (parts.length < 2) return parts[0];
+  return {
+    [operator]: parts.map((part) =>
+      typeof part === "string"
+        ? toConditionJson(parseConditionExpression(part))
+        : part,
+    ),
+  };
+};
+
+export const compileSavedLayoutWhen = (expression) => {
+  if (typeof expression !== "string") return expression;
+  const clauses = splitTopLevelAndExpressions(trimOuterParentheses(expression));
+  if (clauses.length === 0) return undefined;
+  if (clauses.length === 1) {
+    const comparison = parseConditionTargetClause(clauses[0]);
+    return comparison ? compileVisibilityCondition(comparison) : expression;
+  }
+
+  const conditions = clauses.map(compileSavedLayoutWhen);
+  return conditions.some((condition) => typeof condition === "object")
+    ? combineLayoutConditions("all", ...conditions)
+    : expression;
 };
 
 export const getFixedVisibilityStateItems = getRuntimeLayoutConditionItems;

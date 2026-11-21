@@ -49,14 +49,17 @@ styles:
     background-size: 12px 12px
 template:
   - rtgl-view g=md w=f:
-      - rtgl-form#spriteCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f:
+      - rtgl-form#spriteCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f p=none:
           - rtgl-view slot=sprite-image g=xs:
-              - rtgl-view#spriteCreateImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c overflow=hidden:
+              - rtgl-view#spriteCreateImageField w=220 bw=xs bc=bo br=md cur=pointer overflow=hidden:
                   - $if imageId:
-                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; height: 100%; overflow: hidden;"':
+                      - 'div.layoutEditorImageFieldTransparencyGrid style="display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;"':
                           - rvn-file-image imageId=${imageId} source="thumbnail" w=f h=f: null
+                      - rtgl-view w=f p=md:
+                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${imageName}
                     $else:
-                      - rtgl-text c=mu-fg ta=c: ${selectImageLabel}
+                      - 'rtgl-view w=f av=c ah=c style="aspect-ratio: 16 / 9;"':
+                          - rtgl-text c=mu-fg ta=c: ${selectImageLabel}
               - $if validationErrors.imageId:
                   - rtgl-text s=sm c=de: ${validationErrors.imageId}
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=lg:
@@ -68,8 +71,8 @@ template:
               - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
                   - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
           - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancelImageSelection variant=se: ${cancelButton}
-              - rtgl-button#confirmImageSelection variant=pr: ${okButton}
+              - rtgl-button#cancelImageSelection v=se: ${cancelButton}
+              - rtgl-button#confirmImageSelection v=pr: ${okButton}
   - $when: fullImagePreviewVisible
     rtgl-dialog#fullPreviewDialog open layout=fixed bare p=none:
       - rtgl-view#previewOverlay slot=content pos=fix edge=f z=3000 cur=pointer:

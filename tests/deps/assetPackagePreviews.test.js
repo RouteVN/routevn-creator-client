@@ -27,9 +27,9 @@ vi.mock("../../src/deps/clients/canvasVideoRecorder.js", () => ({
 import {
   createLayoutPreviewRenderer,
   renderAnimationPreviewVideos,
-  renderAnimationThumbnailVideo,
   renderFontPreviewImage,
   renderFontPreviewImages,
+  renderParticlePreviewVideos,
   renderTextStylePreviewImages,
 } from "../../src/deps/clients/web/assetPackagePreviews.js";
 import { isRendererStartError } from "../../src/internal/rendererStartError.js";
@@ -218,13 +218,24 @@ describe("asset package preview client", () => {
       new Blob(["slide-thumbnail"], { type: "video/webm" }),
       new Blob(["static-thumbnail"], { type: "video/webm" }),
     ];
-    const renderThumbnailVideo = vi
-      .fn()
-      .mockResolvedValueOnce(thumbnailBlobs[0])
-      .mockResolvedValueOnce(thumbnailBlobs[1])
-      .mockResolvedValueOnce(thumbnailBlobs[2]);
+    startCanvasVideoRecording.mockReset();
+    for (const thumbnailBlob of thumbnailBlobs) {
+      startCanvasVideoRecording.mockReturnValueOnce({
+        stop: vi.fn(async () => thumbnailBlob),
+      });
+    }
+    const drawImage = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      clearRect: vi.fn(),
+      drawImage,
+    });
+    const createElement = vi.spyOn(document, "createElement");
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = 320;
+    sourceCanvas.height = 180;
     const graphicsService = {
       destroy: vi.fn(async () => {}),
+      getCanvas: () => sourceCanvas,
       init: vi.fn(async () => {}),
       loadAssets: vi.fn(async () => {}),
       render: vi.fn(async () => {}),
@@ -290,7 +301,6 @@ describe("asset package preview client", () => {
       ],
       imagesData: { items: {}, tree: [] },
       projectResolution: { width: 320, height: 180 },
-      renderThumbnailVideo,
     });
 
     expect(previews).toEqual([
@@ -325,7 +335,15 @@ describe("asset package preview client", () => {
       });
     }
     expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledTimes(3);
-    expect(renderThumbnailVideo).toHaveBeenCalledTimes(3);
+    // Each thumbnail is recorded next to its full video, from a small copy of
+    // the same canvas, and no video is played back to make it.
+    expect(startCanvasVideoRecording).toHaveBeenCalledTimes(3);
+    expect(startCanvasVideoRecording).toHaveBeenCalledWith({
+      canvas: expect.objectContaining({ width: 160, height: 90 }),
+      frameRate: 60,
+    });
+    expect(drawImage).toHaveBeenCalledWith(sourceCanvas, 0, 0, 160, 90);
+    expect(createElement).not.toHaveBeenCalledWith("video");
     expect(previews[0].thumbnailBlob).toBe(thumbnailBlobs[0]);
     expect(previews[1].thumbnailBlob).toBe(thumbnailBlobs[1]);
     expect(previews[2].thumbnailBlob).toBe(thumbnailBlobs[2]);
@@ -357,6 +375,7 @@ describe("asset package preview client", () => {
     );
     const graphicsService = {
       destroy: vi.fn(async () => {}),
+      getCanvas: () => document.createElement("canvas"),
       init: vi.fn(async () => {}),
       loadAssets: vi.fn(async () => {}),
       render: vi.fn(async () => {}),
@@ -368,9 +387,15 @@ describe("asset package preview client", () => {
         .mockImplementationOnce(() => ({ stop: successfulRecordingStop })),
     };
     createGraphicsService.mockResolvedValueOnce(graphicsService);
-    const renderThumbnailVideo = vi.fn(async () => {
-      return new Blob(["thumbnail"], { type: "video/webm" });
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
     });
+    const thumbnailStop = vi.fn(
+      async () => new Blob(["thumbnail"], { type: "video/webm" }),
+    );
+    startCanvasVideoRecording.mockReset();
+    startCanvasVideoRecording.mockReturnValue({ stop: thumbnailStop });
 
     const previews = await renderAnimationPreviewVideos({
       animations: [
@@ -395,7 +420,6 @@ describe("asset package preview client", () => {
       ],
       imagesData: { items: {}, tree: [] },
       projectResolution: { width: 320, height: 180 },
-      renderThumbnailVideo,
     });
 
     expect(previews).toEqual([
@@ -406,89 +430,283 @@ describe("asset package preview client", () => {
       },
     ]);
     expect(graphicsService.startCanvasVideoRecording).toHaveBeenCalledTimes(2);
-    expect(renderThumbnailVideo).toHaveBeenCalledOnce();
+    expect(startCanvasVideoRecording).toHaveBeenCalledTimes(2);
+    expect(thumbnailStop).toHaveBeenCalledTimes(2);
     expect(emptyRecordingStop).toHaveBeenCalledOnce();
     expect(successfulRecordingStop).toHaveBeenCalledOnce();
     expect(graphicsService.destroy).toHaveBeenCalledOnce();
   });
+});
 
-  it("derives an animation thumbnail from its completed full preview video", async () => {
-    const listeners = new Map();
-    let nextFrameCallback;
-    const video = {
-      readyState: 2,
-      videoWidth: 1920,
-      videoHeight: 1080,
-      duration: 1,
-      ended: false,
-      muted: false,
-      playsInline: false,
-      preload: "",
-      src: "",
-      addEventListener: vi.fn((type, listener) => {
-        listeners.set(type, listener);
-      }),
-      removeEventListener: vi.fn(),
-      requestVideoFrameCallback: vi.fn((callback) => {
-        nextFrameCallback = callback;
-        return 1;
-      }),
-      cancelVideoFrameCallback: vi.fn(),
-      load: vi.fn(),
-      pause: vi.fn(),
-      play: vi.fn(async () => {
-        nextFrameCallback();
-        video.ended = true;
-        listeners.get("ended")();
-      }),
-      removeAttribute: vi.fn(),
-      remove: vi.fn(),
-    };
-    const originalCreateElement = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tagName) => {
-      if (tagName === "video") {
-        return video;
-      }
-      return originalCreateElement(tagName);
-    });
-    const drawImage = vi.fn();
+describe("particle preview videos", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  const running = { mode: "continuous", rate: 10 };
+  const burst = {
+    mode: "burst",
+    burstCount: 20,
+    particleLifetime: { min: 1, max: 2 },
+  };
+
+  // Records the particles of `emissions` in order. `frames.lit` is whether
+  // the scene shows a particle.
+  const record = (emissions, { failingInitIndex } = {}) => {
+    vi.useFakeTimers();
+    const frames = { lit: true };
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
       clearRect: vi.fn(),
-      drawImage,
-      imageSmoothingEnabled: false,
-      imageSmoothingQuality: "low",
+      drawImage: vi.fn(),
+      getImageData: () => ({
+        data: new Uint8ClampedArray([
+          0,
+          0,
+          0,
+          255,
+          frames.lit ? 200 : 0,
+          0,
+          0,
+          255,
+        ]),
+      }),
     });
-    const derivedThumbnail = new Blob(["derived-thumbnail"], {
-      type: "video/webm",
+    const services = [];
+    const events = [];
+    createGraphicsService.mockReset();
+    createGraphicsService.mockImplementation(async () => {
+      const index = services.length;
+      const sourceCanvas = document.createElement("canvas");
+      sourceCanvas.width = 1280;
+      sourceCanvas.height = 720;
+      const blob = new Blob([`full-${index}`], { type: "video/webm" });
+      const service = {
+        blob,
+        destroy: vi.fn(async () => {
+          events.push(`destroy ${index}`);
+        }),
+        getCanvas: () => sourceCanvas,
+        init: vi.fn(async () => {
+          if (index === failingInitIndex) {
+            throw new Error("no context");
+          }
+        }),
+        loadAssets: vi.fn(async () => {}),
+        render: vi.fn(async () => {
+          events.push(`render ${index}`);
+        }),
+        stop: vi.fn(async () => {
+          events.push(`stop ${index}`);
+          return blob;
+        }),
+        startCanvasVideoRecording: vi.fn(() => {
+          events.push(`record ${index}`);
+          return { stop: service.stop };
+        }),
+      };
+      services.push(service);
+      return service;
     });
-    const thumbnailStop = vi.fn(async () => derivedThumbnail);
-    startCanvasVideoRecording.mockReturnValueOnce({ stop: thumbnailStop });
-    Object.defineProperties(URL, {
-      createObjectURL: {
-        configurable: true,
-        value: vi.fn(() => "blob:full-animation-preview"),
-      },
-      revokeObjectURL: {
-        configurable: true,
-        value: vi.fn(),
-      },
+    const thumbnailBlob = new Blob(["thumbnail"], { type: "video/webm" });
+    startCanvasVideoRecording.mockReset();
+    startCanvasVideoRecording.mockReturnValue({
+      stop: vi.fn(async () => thumbnailBlob),
     });
+    const previews = renderParticlePreviewVideos({
+      particles: emissions.map((emission, index) => ({
+        particleId: `particle-${index}`,
+        particle: {
+          type: "particle",
+          name: `Particle ${index}`,
+          width: 1280,
+          height: 720,
+          modules: { emission, appearance: { texture: "circle" } },
+        },
+        imageAssets: [],
+      })),
+      imageItems: {},
+    });
+    previews.catch(() => undefined);
+    return { events, frames, previews, services, thumbnailBlob };
+  };
 
-    const thumbnailBlob = await renderAnimationThumbnailVideo({
-      previewBlob: new Blob(["full-preview"], { type: "video/webm" }),
-    });
+  it("lets a running effect fill out for 3s, then records 5s of it", async () => {
+    const { previews, services, thumbnailBlob } = record([running]);
 
-    expect(thumbnailBlob).toBe(derivedThumbnail);
-    expect(startCanvasVideoRecording).toHaveBeenCalledWith({
-      canvas: expect.objectContaining({ width: 640, height: 360 }),
+    await vi.advanceTimersByTimeAsync(2900);
+    expect(services[0].render).toHaveBeenCalledOnce();
+    expect(services[0].startCanvasVideoRecording).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(200);
+    expect(services[0].startCanvasVideoRecording).toHaveBeenCalledWith({
       frameRate: 60,
     });
-    expect(drawImage).toHaveBeenCalledWith(video, 0, 0, 640, 360);
-    expect(video.play).toHaveBeenCalledOnce();
-    expect(video.pause).toHaveBeenCalledOnce();
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith(
-      "blob:full-animation-preview",
+    expect(startCanvasVideoRecording).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(4800);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+    expect(await previews).toEqual([
+      {
+        particleId: "particle-0",
+        previewBlob: services[0].blob,
+        thumbnailBlob,
+      },
+    ]);
+    expect(services[0].stop).toHaveBeenCalledOnce();
+    expect(services[0].destroy).toHaveBeenCalledOnce();
+  });
+
+  it("records a burst from its start until its last particle is gone", async () => {
+    const { previews, services } = record([burst]);
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(services[0].startCanvasVideoRecording).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(1800);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+    expect(services[0].destroy).toHaveBeenCalledOnce();
+  });
+
+  it("stops a burst's video once its particles have left the scene", async () => {
+    const { frames, previews, services } = record([
+      { mode: "burst", burstCount: 20, particleLifetime: 5 },
+    ]);
+
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    frames.lit = false;
+    await vi.advanceTimersByTimeAsync(400);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(400);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+  });
+
+  it("keeps recording a burst that has not shown a particle yet, and for its first second", async () => {
+    const { frames, previews, services } = record([
+      { mode: "burst", burstCount: 20, particleLifetime: 3 },
+    ]);
+    frames.lit = false;
+
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1200);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+
+    const second = record([
+      { mode: "burst", burstCount: 20, particleLifetime: 3 },
+    ]);
+    await vi.advanceTimersByTimeAsync(200);
+    second.frames.lit = false;
+    await vi.advanceTimersByTimeAsync(700);
+    expect(second.services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+    await second.previews;
+    expect(second.services[0].stop).toHaveBeenCalledOnce();
+  });
+
+  it("does not stop a running effect whose scene is empty", async () => {
+    const { frames, previews, services } = record([running]);
+    await vi.advanceTimersByTimeAsync(3500);
+    frames.lit = false;
+
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(600);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+  });
+
+  it("keeps recording a timed effect that still emits while its scene is empty", async () => {
+    const { frames, previews, services } = record([
+      { duration: 3, rate: 0.5, particleLifetime: 0.5 },
+    ]);
+    await vi.advanceTimersByTimeAsync(600);
+    frames.lit = false;
+
+    await vi.advanceTimersByTimeAsync(2300);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+  });
+
+  it("keeps recording a burst whose scene is empty for a moment", async () => {
+    const { frames, previews, services } = record([
+      { mode: "burst", burstCount: 20, particleLifetime: 3 },
+    ]);
+    await vi.advanceTimersByTimeAsync(1200);
+    frames.lit = false;
+    await vi.advanceTimersByTimeAsync(300);
+    frames.lit = true;
+
+    await vi.advanceTimersByTimeAsync(1300);
+    expect(services[0].stop).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(300);
+    await previews;
+    expect(services[0].stop).toHaveBeenCalledOnce();
+  });
+
+  it("records one particle at a time, and frees each context before the next starts", async () => {
+    const { events, previews } = record([running, burst]);
+
+    await vi.advanceTimersByTimeAsync(8100);
+    expect(events).toEqual([
+      "render 0",
+      "record 0",
+      "stop 0",
+      "destroy 0",
+      "render 1",
+      "record 1",
+    ]);
+
+    await vi.advanceTimersByTimeAsync(2100);
+    expect((await previews).map(({ particleId }) => particleId)).toEqual([
+      "particle-0",
+      "particle-1",
+    ]);
+    expect(events.slice(6)).toEqual(["stop 1", "destroy 1"]);
+  });
+
+  it("names the particle whose recording fails, and frees its context", async () => {
+    const { previews, services } = record([running, running]);
+    await vi.advanceTimersByTimeAsync(3100);
+    services[0].stop.mockRejectedValueOnce(new Error("encoder failed"));
+
+    await vi.advanceTimersByTimeAsync(5100);
+    await expect(previews).rejects.toThrow(
+      "Could not generate preview for particle 'Particle 0' (particle-0): encoder failed",
     );
+    expect(services[0].destroy).toHaveBeenCalledOnce();
+    expect(services).toHaveLength(1);
+  });
+
+  it("names the particle whose context cannot start, and frees it", async () => {
+    const { previews, services } = record([running, running], {
+      failingInitIndex: 1,
+    });
+
+    await vi.advanceTimersByTimeAsync(8200);
+    await expect(previews).rejects.toThrow(
+      "Could not generate preview for particle 'Particle 1' (particle-1): no context",
+    );
+    expect(services[0].stop).toHaveBeenCalledOnce();
+    expect(services[1].destroy).toHaveBeenCalledOnce();
   });
 });
 

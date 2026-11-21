@@ -1,3 +1,4 @@
+import { warnOnceIfAudioUnavailable } from "../../internal/ui/audioUnavailableNotice.js";
 import { defer } from "rxjs";
 import { getResourcePageErrorMessage } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { generateId, generatePrefixedId } from "../../internal/id.js";
@@ -1366,6 +1367,7 @@ export const handleDetailPreviewClick = (deps, payload) => {
   }
 
   store.showPreviewSceneId({ sceneId: selectedItemId });
+  warnOnceIfAudioUnavailable(deps);
   render();
 };
 

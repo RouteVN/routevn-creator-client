@@ -42,6 +42,8 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   const selectedImageId = state.selectedImageId;
   const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
   const columns = parseSelectorColumnCount(props.columns);
+  const minCardWidth = parseSelectorColumnCount(props.minCardWidth);
+  const cardsFillCells = columns !== undefined || minCardWidth !== undefined;
   let imageSelectorLabel = i18n.imagesPage?.title ?? "Images";
   if (props.resourceTarget === "characters") {
     imageSelectorLabel = i18n.charactersPage.title;
@@ -50,6 +52,7 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
   }
   const imageGridStyle = createSelectorGridStyle(columns, {
     minColumnWidth: parseSelectorColumnCount(props.minColumnWidth),
+    minCardWidth,
   });
 
   const resourceGroups = toFlatGroups(images);
@@ -78,7 +81,7 @@ export const selectViewData = ({ state, props = {}, i18n = {} }) => {
           const selectedImageInsetStyle = isSelected
             ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
             : "";
-          const imageCardStyle = `width: ${columns ? "100%" : "200px"}; min-width: 0; max-width: 100%; box-sizing: border-box;${selectedImageInsetStyle}`;
+          const imageCardStyle = `width: ${cardsFillCells ? "100%" : "200px"}; min-width: 0; max-width: 100%; box-sizing: border-box;${selectedImageInsetStyle}`;
 
           return {
             ...child,

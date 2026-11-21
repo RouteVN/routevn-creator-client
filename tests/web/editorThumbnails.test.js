@@ -374,6 +374,72 @@ describe("editor thumbnails", () => {
     }
   });
 
+  it("holds an animation at the asked time, from a drawn start, and hands the clock back", async () => {
+    stubBrowser();
+    const steps = [];
+    const graphics = {
+      ...createGraphics(),
+      render: vi.fn(async (state) => {
+        steps.push(["render", state.id]);
+      }),
+      setAnimationPlaybackMode: vi.fn((mode) => {
+        steps.push(["mode", mode]);
+      }),
+      setAnimationTime: vi.fn((timeMs) => {
+        steps.push(["time", timeMs]);
+      }),
+    };
+    createGraphicsService.mockResolvedValue(graphics);
+    captureGraphicsThumbnailImage.mockImplementationOnce(async () => {
+      steps.push(["capture"]);
+      return thumbnailImage;
+    });
+    const resetState = {
+      id: "start",
+      elements: [{ id: "outgoing", type: "sprite", src: "file-2" }],
+      animations: [],
+    };
+
+    await draw({
+      renderState: {
+        id: "animation",
+        elements: [{ id: "incoming", type: "sprite", src: "file-1" }],
+        animations: [
+          {
+            id: "transition",
+            type: "transition",
+            mask: { kind: "single", texture: "file-2" },
+          },
+        ],
+      },
+      animationFrame: { resetState, timeMs: 500, preparationPassCount: 2 },
+    });
+
+    // The first render clears the last drawing.
+    expect(steps).toEqual([
+      ["render", undefined],
+      ["mode", "manual"],
+      ["time", 0],
+      ["render", "start"],
+      ["render", "animation"],
+      ["time", 0],
+      ["render", "start"],
+      ["render", "animation"],
+      ["time", 0],
+      ["time", 500],
+      ["capture"],
+      ["mode", "auto"],
+    ]);
+    // The start and the mask read their files under the renderer's keys too.
+    const [startKey] = keysOf(graphics).filter((key) => key.endsWith("file-2"));
+    expect(graphics.render.mock.calls[1][0].elements[0].src).toBe(startKey);
+    expect(graphics.render.mock.calls[2][0].animations[0].mask.texture).toBe(
+      startKey,
+    );
+    // The hashed start is left as it was.
+    expect(resetState.elements[0].src).toBe("file-2");
+  });
+
   it("reports a graphics service that cannot be made or started as a start failure, and draws again later", async () => {
     stubBrowser();
     const cause = new Error("No WebGL");

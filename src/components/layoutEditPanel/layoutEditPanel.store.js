@@ -7,6 +7,7 @@ import {
   isSliderPopoverField,
 } from "./support/layoutEditPanelSliderPopovers.js";
 import { parseAndRender } from "jempl";
+import { selectCommandLineCopy } from "../../internal/ui/sceneEditor/commandLineCopy.js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import {
   getSpritesheetAnimationPreview,
@@ -18,15 +19,31 @@ import { getVariableOptions } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
 import { getRuntimeFieldLabel } from "./support/layoutEditPanelRuntimeLabels.js";
-import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
-import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
-import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
+import { getFragmentLayoutOptions } from "../../internal/ui/layoutEditor/layoutFragments.js";
+import {
+  applyLayoutTextDirectionChoice,
+  getLayoutEditorElementDefinition,
+} from "../../internal/layoutEditorElementRegistry.js";
+import {
+  buildVariableEnumOptions,
+  isVariableEnumEnabled,
+} from "../../internal/variableEnums.js";
+import {
+  getLayoutTextDirectionChoice,
+  isVerticalTextWritingMode,
+} from "../../internal/layoutTextWritingMode.js";
+import {
+  parseVariableConditionTarget,
+  splitLayoutConditionFromWhen,
+} from "../../internal/layoutConditions.js";
 import { formatPercent } from "../../internal/dates.js";
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { createCommandLineResourceSelectorLayout } from "../../internal/ui/sceneEditor/commandLineResourceSelectorLayout.js";
 import { isTouchUiConfig } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
 import {
+  createConditionValueChoiceOptions,
+  getConditionPresetValueOptions,
   getVisibilityConditionCharacterValueOptions,
   toVisibilityConditionTargetTypeByTarget,
   toVisibilityConditionTargetValueKindByTarget,
@@ -87,7 +104,7 @@ import {
 } from "./support/layoutEditPanelTextRevealIndicator.js";
 import { selectLayoutEditPanelCopy } from "./support/layoutEditPanelCopy.js";
 
-const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
+const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional", "random"]);
 const DEFAULT_INTERACTION_SOUND_VOLUME = 100;
 // Touch image and sound pickers show up to four a row, each at least 120px
 // wide: four on a tablet, two on a phone.
@@ -116,6 +133,7 @@ const STATIC_LABEL_COPY_KEYS = {
   Appearance: "appearanceSection",
   Auto: "autoOption",
   Blur: "blurTitle",
+  Bottom: "bottomOption",
   "Bottom Center": "anchorBottomCenter",
   "Bottom Left": "anchorBottomLeft",
   "Bottom Right": "anchorBottomRight",
@@ -159,6 +177,9 @@ const STATIC_LABEL_COPY_KEYS = {
   Opacity: "opacityLabel",
   Pagination: "paginationTitle",
   Particle: "particleLabel",
+  Video: "videoLabel",
+  Loop: "loopLabel",
+  Volume: "volumeLabel",
   Position: "positionSection",
   "Position X": "positionXLabel",
   "Position Y": "positionYLabel",
@@ -182,7 +203,9 @@ const STATIC_LABEL_COPY_KEYS = {
   Submit: "submitButton",
   Text: "textTitle",
   "Text Alignment": "textAlignmentLabel",
+  "Text Direction": "textDirectionSection",
   "Text Styles": "textStylesSection",
+  Top: "topOption",
   "Top Center": "anchorTopCenter",
   "Top Left": "anchorTopLeft",
   "Top Right": "anchorTopRight",
@@ -746,8 +769,7 @@ const resetSelectionUiState = (state) => {
   state.visibilityConditionDialog = {
     open: false,
     key: 0,
-    selectedVariableType: undefined,
-    selectedValueKind: undefined,
+    target: undefined,
   };
   state.dropdownMenu = {
     isOpen: false,
@@ -820,8 +842,10 @@ export const createInitialState = () => {
     soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
+    videosData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
+    speakerAvatarUrls: {},
     values: createDefaultValues(),
     isTouchMode: false,
   };
@@ -832,6 +856,12 @@ export const createInitialState = () => {
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode = isTouchUiConfig(uiConfig);
+};
+
+// The text direction choice is not stored. It changes the values as saving it
+// changes the item, so the panel shows the result before the item comes back.
+export const setTextDirection = ({ state }, { textDirection } = {}) => {
+  applyLayoutTextDirectionChoice(state.values, textDirection);
 };
 
 export const updateValueProperty = ({ state }, { value, name } = {}) => {
@@ -1145,17 +1175,39 @@ export const closeConditionalOverrideConditionDialog = (
 
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
   state.visibilityConditionDialog.open = false;
-  state.visibilityConditionDialog.selectedValueKind = undefined;
+  state.visibilityConditionDialog.target = undefined;
 };
 
-export const setVisibilityConditionDialogSelectedVariableType = (
+export const setVisibilityConditionDialogTarget = (
   { state },
-  { selectedVariableType, selectedValueKind } = {},
+  { target } = {},
 ) => {
-  state.visibilityConditionDialog.selectedVariableType =
-    selectedVariableType ?? "string";
-  state.visibilityConditionDialog.selectedValueKind =
-    selectedValueKind ?? selectedVariableType ?? "string";
+  state.visibilityConditionDialog.target = target ?? "";
+};
+
+export const selectVisibilityConditionEnumOptions = (
+  { state },
+  { target } = {},
+) => {
+  const variable =
+    state.variablesData?.items?.[parseVariableConditionTarget(target)];
+  if (!isVariableEnumEnabled(variable)) return undefined;
+
+  const options = buildVariableEnumOptions(variable.enumValues);
+  const { visibilityCondition } = splitLayoutConditionFromWhen(
+    state.values?.$when,
+  );
+  if (
+    visibilityCondition?.target === target &&
+    typeof visibilityCondition.value === "string" &&
+    !options.some(({ value }) => value === visibilityCondition.value)
+  ) {
+    options.push({
+      label: visibilityCondition.value,
+      value: visibilityCondition.value,
+    });
+  }
+  return options;
 };
 
 export const setConditionalOverrideConditionDialogSelectedVariableType = (
@@ -1400,6 +1452,10 @@ export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
   state.textStylesData = textStylesData;
 };
 
+export const setSpeakerAvatarUrls = ({ state }, { urls }) => {
+  state.speakerAvatarUrls = urls;
+};
+
 export const setImagesData = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData;
 };
@@ -1410,6 +1466,10 @@ export const setSoundsData = ({ state }, { soundsData } = {}) => {
 
 export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
   state.spritesheetsData = spritesheetsData;
+};
+
+export const setVideosData = ({ state }, { videosData } = {}) => {
+  state.videosData = videosData;
 };
 
 export const setParticlesData = ({ state }, { particlesData } = {}) => {
@@ -1639,12 +1699,16 @@ const hydrateListBarItems = (
 
 export const selectViewData = ({ state, props, constants, i18n }) => {
   const copy = selectLayoutEditPanelCopy(i18n);
+  const commandLineCopy = selectCommandLineCopy(i18n);
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const soundItems = toSoundOptions(state.soundsData);
   const spritesheetSelectionItems = toSpritesheetAnimationSelectionItems(
     state.spritesheetsData,
   );
   const particleSelectionItems = toParticleSelectionItems(state.particlesData);
+  const videoSelectionItems = toFlatItems(state.videosData)
+    .filter((item) => item.type === "video")
+    .map((item) => ({ label: item.name, value: item.id }));
   const imageFlatItems = toFlatItems(state.imagesData);
   const imageFolderItems = imageFlatItems.filter(
     (item) => item.type === "folder",
@@ -1685,6 +1749,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     systemSectionLabel: copy.systemSection ?? "System",
     variablesSectionLabel: copy.variablesSection ?? "Variables",
     targetLabelCopy: copy,
+    commandLineCopy,
     targetTypeLabels: createConditionTargetTypeLabels(i18n, copy),
   };
   // Visibility and conditional overrides list the same targets, by section.
@@ -1729,6 +1794,13 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
   const currentVisibilityCondition = splitLayoutConditionFromWhen(
     values["$when"],
   ).visibilityCondition;
+  const capabilities =
+    getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
+  // Vertical text sets its column length, measures its width and aligns
+  // along its columns.
+  const isVerticalText =
+    capabilities.supportsTextWritingMode === true &&
+    isVerticalTextWritingMode(values.writingMode);
   const conditionalOverrideRules = normalizeConditionalOverrideRules(
     values.conditionalOverrides,
   );
@@ -1753,34 +1825,39 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         state.textStylesData,
         state.imagesData,
         copy,
+        { isVerticalText },
       ),
     }),
   );
-  const capabilities =
-    getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
   const showsDirectedContainerSizeMode = isDirectedContainer(
     capabilities,
     values,
   );
+  const isText = props.itemType?.startsWith("text") === true;
   const supportsWidthMode =
-    props.itemType?.startsWith("text") === true ||
-    showsDirectedContainerSizeMode;
-  const stackWidthMode = props.itemType?.startsWith("text") === true;
-  const supportsHeightMode = showsDirectedContainerSizeMode;
+    (isText && !isVerticalText) || showsDirectedContainerSizeMode;
+  const stackWidthMode = isText;
+  const supportsHeightMode = isVerticalText || showsDirectedContainerSizeMode;
+  const stackHeightMode = isVerticalText;
   const groupSizeModes = showsDirectedContainerSizeMode;
-  const widthMode =
-    props.itemType?.startsWith("text") === true
-      ? values.width === undefined
-        ? "auto"
-        : "fixed"
-      : supportsWidthMode && isAutoContainerSize(values.width)
-        ? "auto"
-        : "fixed";
-  const heightMode =
-    supportsHeightMode && isAutoContainerSize(values.height) ? "auto" : "fixed";
-  const showWidthField = !supportsWidthMode || widthMode === "fixed";
+  const widthMode = isText
+    ? values.width === undefined
+      ? "auto"
+      : "fixed"
+    : supportsWidthMode && isAutoContainerSize(values.width)
+      ? "auto"
+      : "fixed";
+  const heightMode = isVerticalText
+    ? values.height === undefined
+      ? "auto"
+      : "fixed"
+    : supportsHeightMode && isAutoContainerSize(values.height)
+      ? "auto"
+      : "fixed";
+  const showWidthField =
+    !isVerticalText && (!supportsWidthMode || widthMode === "fixed");
   const showHeightField =
-    capabilities.supportsHeight === true &&
+    (capabilities.supportsHeight === true || isVerticalText) &&
     (!supportsHeightMode || heightMode === "fixed");
   const showLayoutSizeSection =
     capabilities.supportsSize === true || showsDirectedContainerSizeMode;
@@ -1803,6 +1880,11 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       soundItemsWithNone,
       spritesheetSelectionItems,
       particleSelectionItems,
+      videoSelectionItems,
+      videoLoopOptions: [
+        { label: copy.yesOption ?? "Yes", value: true },
+        { label: copy.noOption ?? "No", value: false },
+      ],
       sliderValueOptions,
       revealEffectOptions,
       dateFormatOptions,
@@ -1820,17 +1902,24 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       stackWidthMode,
       widthMode,
       supportsHeightMode,
+      stackHeightMode,
       groupSizeModes,
       heightMode,
       showWidthField,
       showHeightField,
       showAspectRatioMode,
+      isVerticalText,
+      textDirection: getLayoutTextDirectionChoice(values),
       paginationSummary: getSaveLoadPaginationSummary({
         values,
         variablesData: state.variablesData,
         copy,
       }),
-      childInteractionSummary: getChildInteractionSummary(values, copy),
+      childInteractionSummary: getChildInteractionSummary(
+        values,
+        copy,
+        i18n.dateTime,
+      ),
       childInteractionItems: getChildInteractionItems(values, copy),
       choiceItemOptions: createChoiceItemOptions(copy),
       hasChildInteractionInheritance: hasChildInteractionInheritance(values),
@@ -1919,29 +2008,44 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       state.imagesData,
       state.conditionalOverrideAttributeDialog.selectedImageId,
     );
-  const selectedVisibilityConditionVariableType =
-    state.visibilityConditionDialog.selectedVariableType ??
-    visibilityConditionDialogDefaults.selectedVariableType;
+  const visibilityTarget =
+    state.visibilityConditionDialog.target ??
+    visibilityConditionDialogDefaults.target;
+  const selectedVisibilityConditionVariableType = visibilityTarget
+    ? (visibilityConditionTargetTypeByTarget[visibilityTarget] ?? "string")
+    : undefined;
   const selectedVisibilityConditionValueKind =
-    state.visibilityConditionDialog.selectedValueKind ??
-    visibilityConditionDialogDefaults.selectedValueKind;
+    visibilityConditionTargetValueKindByTarget[visibilityTarget] ??
+    selectedVisibilityConditionVariableType;
   const selectedConditionalOverrideVariableType =
     state.conditionalOverrideConditionDialog.selectedVariableType ??
     conditionalOverrideConditionDefaults.selectedVariableType;
   const selectedConditionalOverrideValueKind =
     state.conditionalOverrideConditionDialog.selectedValueKind ??
     conditionalOverrideConditionDefaults.selectedValueKind;
+  const conditionValueChoiceOptions =
+    createConditionValueChoiceOptions(commandLineCopy);
+  const visibilityConditionPresetValueOptions = getConditionPresetValueOptions(
+    selectedVisibilityConditionValueKind,
+    commandLineCopy,
+  );
+  const conditionalOverridePresetValueOptions = getConditionPresetValueOptions(
+    selectedConditionalOverrideValueKind,
+    commandLineCopy,
+  );
   const visibilityConditionCharacterValueOptions =
     getVisibilityConditionCharacterValueOptions({
       charactersData: props.charactersData,
       currentValue: visibilityConditionDialogDefaults.characterValue,
       noneLabel: copy.noCharacterOption,
+      imageSrcByFileId: state.speakerAvatarUrls,
     });
   const conditionalOverrideCharacterValueOptions =
     getVisibilityConditionCharacterValueOptions({
       charactersData: props.charactersData,
       currentValue: conditionalOverrideConditionDefaults.characterValue,
       noneLabel: copy.noCharacterOption,
+      imageSrcByFileId: state.speakerAvatarUrls,
     });
   const textRevealIndicatorDialogDefaults =
     createTextRevealIndicatorDialogDefaults({
@@ -1997,6 +2101,12 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     sectionTooltip: state.sectionTooltip,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
+      targetType: selectedVisibilityConditionVariableType,
+      enumOptions: selectVisibilityConditionEnumOptions(
+        { state },
+        { target: visibilityTarget },
+      ),
+      commandLineCopy,
       targetOptions: conditionTargetOptions,
       copy,
     }),
@@ -2004,6 +2114,9 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       selectedVariableType: selectedVisibilityConditionVariableType,
       selectedValueKind: selectedVisibilityConditionValueKind,
       characterValueOptions: visibilityConditionCharacterValueOptions,
+      valueChoiceOptions: conditionValueChoiceOptions,
+      presetValueOptions: visibilityConditionPresetValueOptions,
+      hasPresetValues: visibilityConditionPresetValueOptions.length > 0,
     },
     saveLoadPaginationDialog: state.saveLoadPaginationDialog,
     saveLoadPaginationDialogDefaults:
@@ -2062,11 +2175,15 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
       state.textStylesData,
       state.imagesData,
       copy,
+      { isVerticalText },
     ),
     conditionalOverrideConditionDialogContext: {
       selectedVariableType: selectedConditionalOverrideVariableType,
       selectedValueKind: selectedConditionalOverrideValueKind,
       characterValueOptions: conditionalOverrideCharacterValueOptions,
+      valueChoiceOptions: conditionValueChoiceOptions,
+      presetValueOptions: conditionalOverridePresetValueOptions,
+      hasPresetValues: conditionalOverridePresetValueOptions.length > 0,
     },
     conditionalOverrideAttributeDialog:
       state.conditionalOverrideAttributeDialog,
@@ -2084,6 +2201,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
         ? (copy.saveButton ?? "Save")
         : (copy.addButton ?? "Add"),
       copy,
+      isVerticalText,
     }),
     conditionalOverrideAttributeDialogContext: {
       hasAttributeOptions: conditionalOverrideAttributeOptions.length > 0,
@@ -2092,7 +2210,7 @@ export const selectViewData = ({ state, props, constants, i18n }) => {
     tempSelectedImageId: state.tempSelectedImageId,
     imageFolderItems,
     showImageSelectorFileExplorer: selectorLayout.showFileExplorer,
-    selectorColumns: selectorLayout.columns,
+    selectorColumns: state.isTouchMode ? 2 : undefined,
     soundSelectorDialog: state.soundSelectorDialog,
     tempSelectedSoundId: state.tempSelectedSoundId,
     soundFolderItems,

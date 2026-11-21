@@ -7,10 +7,14 @@ import {
   EN_I18N,
   ES_I18N,
   FR_I18N,
+  ID_I18N,
+  IT_I18N,
   JA_I18N,
+  PL_I18N,
   PT_I18N,
   RU_I18N,
   TH_I18N,
+  UK_I18N,
   VI_I18N,
   ZH_HANS_I18N,
 } from "../support/i18n.js";
@@ -26,6 +30,10 @@ const LOCALES = {
   pt: PT_I18N,
   fr: FR_I18N,
   vi: VI_I18N,
+  id: ID_I18N,
+  uk: UK_I18N,
+  it: IT_I18N,
+  pl: PL_I18N,
 };
 
 const findEditorNode = (node) => {

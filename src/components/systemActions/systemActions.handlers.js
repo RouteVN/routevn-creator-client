@@ -75,14 +75,16 @@ const syncRepositoryState = (deps) => {
   });
 };
 
+// `editVisualId` opens the visual panel in that visual's edit view.
 export const open = (deps, payload) => {
   const { store, render } = deps;
-  const { mode, actions } = payload;
+  const { mode, actions, editVisualId } = payload;
   const nextActions = actions !== undefined ? actions : deps.props?.actions;
 
   syncActions(store, nextActions);
   store.showActionsDialog();
   store.setMode({ mode });
+  store.setEditVisualId({ visualId: editVisualId });
   render();
 };
 
@@ -421,6 +423,29 @@ export const handleCommandLineSubmit = (deps, payload) => {
   render();
 };
 
+// Edit Layout on a visual, or a new visual, submits the visuals as Submit
+// does, and the host then opens the visual's layout.
+export const handleVisualLayoutEdit = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store, render, dispatchEvent } = deps;
+  const { actions, visualId, returnToEditView } = payload._event.detail;
+
+  store.updateActions(
+    normalizeActionsObject(mergeActions(store.selectAction(), actions)),
+  );
+  dispatchEvent(
+    new CustomEvent("visual-layout-edit", {
+      detail: {
+        actions: normalizeActionsObject(actions),
+        visualId,
+        returnToEditView,
+      },
+    }),
+  );
+  store.hideActionsDialog();
+  render();
+};
+
 // A command line submitted with nothing set removes its action, for example a
 // section transition whose scene and section were cleared. The host removes it
 // as it does for Delete in the actions list.
@@ -516,13 +541,20 @@ export const handleActionItemRightClick = (deps, payload) => {
   render();
 };
 
+// An action row is tagged with the mode that opens its editor. The host removes
+// an action by the key it is stored under, which differs for these modes.
+const ACTION_TYPE_BY_ROW_MODE = {
+  input: "form",
+};
+
 export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
   const { detail } = payload._event;
 
   // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
-  const actionType = store.selectDropdownMenuActionType();
+  const rowMode = store.selectDropdownMenuActionType();
+  const actionType = ACTION_TYPE_BY_ROW_MODE[rowMode] ?? rowMode;
 
   store.hideDropdownMenu();
 

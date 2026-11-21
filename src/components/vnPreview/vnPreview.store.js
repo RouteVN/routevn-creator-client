@@ -18,15 +18,6 @@ const toPositiveDimension = (value) => {
     : undefined;
 };
 
-const createViewportSize = () => ({
-  width:
-    toPositiveDimension(globalThis.window?.innerWidth) ??
-    DEFAULT_PROJECT_RESOLUTION.width,
-  height:
-    toPositiveDimension(globalThis.window?.innerHeight) ??
-    DEFAULT_PROJECT_RESOLUTION.height,
-});
-
 const formatCssPixels = (value) => `${Math.round(value * 100) / 100}px`;
 
 const createPreviewLayout = ({
@@ -135,7 +126,11 @@ export const createInitialState = () => ({
   isTouchMode: false,
   assetLoadCache: createEmptyAssetLoadCache(),
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
-  viewportSize: createViewportSize(),
+  // The mount handler replaces this with the window size.
+  viewportSize: {
+    width: DEFAULT_PROJECT_RESOLUTION.width,
+    height: DEFAULT_PROJECT_RESOLUTION.height,
+  },
 });
 
 export const setLoadingDetailsVisible = ({ state }, { visible }) => {
@@ -182,10 +177,9 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 };
 
 export const setViewportSize = ({ state }, { width, height } = {}) => {
-  const currentViewportSize = state.viewportSize ?? createViewportSize();
   state.viewportSize = {
-    width: toPositiveDimension(width) ?? currentViewportSize.width,
-    height: toPositiveDimension(height) ?? currentViewportSize.height,
+    width: toPositiveDimension(width) ?? state.viewportSize.width,
+    height: toPositiveDimension(height) ?? state.viewportSize.height,
   };
 };
 

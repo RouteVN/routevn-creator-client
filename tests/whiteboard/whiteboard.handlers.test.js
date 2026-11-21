@@ -61,6 +61,7 @@ const createDeps = ({
     selectIsDraggingMinimapViewport: vi.fn(() => isDraggingMinimapViewport),
     selectIsPanMode: vi.fn(() => false),
     selectIsPanning: vi.fn(() => false),
+    selectIsDragging: vi.fn(() => false),
     selectPan: vi.fn(() => currentPan),
     selectZoomLevel: vi.fn(() => currentZoomLevel),
     selectMouseItemPress: vi.fn(() => undefined),
@@ -442,7 +443,10 @@ describe("whiteboard minimap drag handlers", () => {
   });
 
   it("uses compact minimap geometry when starting viewport drag", () => {
-    const deps = createDeps({ minimapHeightScale: 2 / 3 });
+    const deps = createDeps({
+      isDraggingMinimapViewport: false,
+      minimapHeightScale: 2 / 3,
+    });
 
     handleMinimapViewportMouseDown(deps, {
       _event: createMouseEvent({
@@ -546,7 +550,7 @@ describe("whiteboard minimap drag handlers", () => {
   it("dispatches one pan-changed event when minimap drag ends", () => {
     const deps = createDeps();
 
-    handleWindowMouseUp(deps);
+    handleWindowMouseUp(deps, { _event: { button: 0 } });
 
     expect(deps.store.stopMinimapViewportDragging).toHaveBeenCalledTimes(1);
     expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
@@ -870,7 +874,7 @@ describe("whiteboard minimap drag handlers", () => {
       }),
     );
 
-    handleWindowMouseUp(deps);
+    handleWindowMouseUp(deps, { _event: { button: 0 } });
 
     expect(deps.store.clearMouseItemPress).toHaveBeenCalled();
     expect(deps.store.startDragging).not.toHaveBeenCalled();
@@ -915,7 +919,7 @@ describe("whiteboard minimap drag handlers", () => {
       }),
     );
 
-    handleWindowMouseUp(deps);
+    handleWindowMouseUp(deps, { _event: { button: 0 } });
 
     expect(deps.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({

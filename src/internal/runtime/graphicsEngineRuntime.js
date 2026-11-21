@@ -234,7 +234,12 @@ const getThumbnailDimensions = (sourceWidth, sourceHeight) => {
   };
 };
 
-const renderThumbnailDataUrl = ({ source, sourceWidth, sourceHeight }) => {
+const renderThumbnailDataUrl = ({
+  source,
+  sourceWidth,
+  sourceHeight,
+  format = THUMBNAIL_FORMAT,
+}) => {
   const thumbnailDimensions = getThumbnailDimensions(sourceWidth, sourceHeight);
   if (
     !thumbnailDimensions ||
@@ -257,10 +262,7 @@ const renderThumbnailDataUrl = ({ source, sourceWidth, sourceHeight }) => {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(source, 0, 0, canvas.width, canvas.height);
 
-  const thumbnailDataUrl = canvas.toDataURL(
-    THUMBNAIL_FORMAT,
-    THUMBNAIL_QUALITY,
-  );
+  const thumbnailDataUrl = canvas.toDataURL(format, THUMBNAIL_QUALITY);
   canvas.remove?.();
   return thumbnailDataUrl;
 };
@@ -319,6 +321,22 @@ export const captureGraphicsThumbnailImage = async (graphicsService) => {
     source: frame,
     sourceWidth: frame.width,
     sourceHeight: frame.height,
+  });
+};
+
+// A thumbnail of one element of the frame alone, such as a visual, framed as
+// the whole screen. It is a PNG, so that the screen around the element stays
+// transparent.
+export const captureGraphicsElementThumbnailImage = async (
+  graphicsService,
+  label,
+) => {
+  const frame = await graphicsService.extractCanvas(label);
+  return renderThumbnailDataUrl({
+    source: frame,
+    sourceWidth: frame.width,
+    sourceHeight: frame.height,
+    format: "image/png",
   });
 };
 

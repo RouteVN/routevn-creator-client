@@ -146,6 +146,88 @@ describe("createLayoutTemplate", () => {
     });
   });
 
+  it("creates input layouts with a prompt, an input, and a submit button", async () => {
+    const createLayoutItem = vi.fn(async () => "layout-1");
+    const deps = {
+      i18n: EN_I18N,
+      store: {
+        selectTargetGroupId: () => "group-1",
+        closeAddDialog: vi.fn(),
+        setItems: vi.fn(),
+        setTagsData: vi.fn(),
+      },
+      projectService: {
+        createLayoutItem,
+        requestLayoutThumbnails: vi.fn(async () => {}),
+        getRepositoryState: () => ({
+          project: {
+            resolution: projectResolution,
+          },
+          layouts: {
+            items: {},
+            tree: [],
+          },
+          textStyles: {
+            items: {
+              "style-1": {
+                id: "style-1",
+                type: "textStyle",
+                name: "Default",
+              },
+            },
+            tree: [{ id: "style-1" }],
+          },
+        }),
+      },
+      appService: {
+        showAlert: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    await handleLayoutFormActionClick(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Name Input",
+            layoutType: "input",
+          },
+        },
+      },
+    });
+
+    expect(createLayoutItem).toHaveBeenCalledTimes(1);
+    const { layoutType, elements } = createLayoutItem.mock.calls[0][0];
+    const items = Object.values(elements.items);
+    expect(layoutType).toBe("input");
+    expect(elements.tree.map((node) => elements.items[node.id].type)).toEqual([
+      "text",
+      "input",
+      "container",
+    ]);
+    expect(items).toContainEqual(
+      expect.objectContaining({
+        type: "text",
+        text: "Enter your name",
+        textStyleId: "style-1",
+      }),
+    );
+    expect(items).toContainEqual(
+      expect.objectContaining({
+        type: "container",
+        formRole: "submit",
+      }),
+    );
+    expect(items).toContainEqual(
+      expect.objectContaining({
+        type: "text",
+        text: "Submit",
+      }),
+    );
+    expect(deps.store.closeAddDialog).toHaveBeenCalled();
+  });
+
   it("selects a layout without logging", () => {
     const layoutData = {
       id: "layout-1",

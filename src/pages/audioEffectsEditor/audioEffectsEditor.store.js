@@ -12,9 +12,11 @@ import {
   areEditHistoryValuesEqual,
   createEditHistory,
   getEditHistoryChangeKey,
+  getEditHistoryOwner,
   getEditHistoryStep,
   moveEditHistoryStep,
   recordEditHistoryStep,
+  resumeEditHistory,
 } from "../../internal/editHistory.js";
 import { selectEditHistoryCopy } from "../../internal/ui/editHistory.js";
 import {
@@ -303,7 +305,7 @@ export const createInitialState = () => ({
   // The preview sounds as last saved; picked ones save with the audio effect
   // on leaving.
   savedPreview: undefined,
-  // Undo and redo for edits made since the page opened. The baseline is the
+  // Undo and redo, kept when the page is left. The baseline is the
   // audio effect as of the last recorded edit, the before of the next one.
   editHistory: createEditHistory(),
   editHistoryBaseline: undefined,
@@ -357,7 +359,10 @@ export const setAppWindowMetrics = ({ state }, { width, height } = {}) => {
   setMobileResourcePageWindowMetricsState(state, { width, height });
 };
 
-export const loadAudioEffect = ({ state }, { item } = {}) => {
+export const loadAudioEffect = (
+  { state },
+  { item, retainedEditHistory } = {},
+) => {
   state.audioEffectId = item.id;
   state.audioEffectName = item.name ?? "";
   state.definition = normalizeAudioEffectDefinition(item.audioEffect);
@@ -392,11 +397,19 @@ export const loadAudioEffect = ({ state }, { item } = {}) => {
   state.dirty = false;
   state.savedDefinition = state.definition;
   state.savedPreview = createPreviewData(state);
-  state.editHistory = createEditHistory();
+  state.editHistory = resumeEditHistory(retainedEditHistory, state.definition);
   state.editHistoryBaseline = state.definition;
 };
 
 export const selectAudioEffectId = ({ state }) => state.audioEffectId;
+
+// What the page keeps when it is left, so coming back to it brings undo and
+// redo back.
+export const selectRetainedEditHistory = ({ state }) => ({
+  owner: getEditHistoryOwner("audioEffect", state.audioEffectId),
+  history: state.editHistory,
+  content: state.definition,
+});
 export const selectAudioEffectDefinition = ({ state }) =>
   cloneDefinition(state.definition);
 export const selectDirty = ({ state }) => state.dirty;

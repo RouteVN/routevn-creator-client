@@ -25,6 +25,10 @@ const refreshRecentSceneIds = ({ appService, store } = {}) => {
 
 export const handleBeforeMount = (deps) => {
   const { appService, projectService, store, render } = deps;
+  store.setCurrentLocation({
+    path: appService.getPath(),
+    sceneId: appService.getPayload().s,
+  });
   store.setAssetPackageEnabled({ enabled: isAssetPackageEnabled(appService) });
   refreshRecentSceneIds({ appService, store });
   // iOS Config can release the project so library settings remain reachable.

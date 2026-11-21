@@ -1,12 +1,14 @@
 import { createAppShellService } from "./appShellService.js";
 import { createFileSelectionService } from "./fileSelectionService.js";
 import { createProjectEntriesService } from "./projectEntriesService.js";
+import { createRetainedEditHistoryService } from "./retainedEditHistoryService.js";
 import { createTouchLayoutService } from "./touchLayoutService.js";
 import { createUserConfigService } from "./userConfigService.js";
 import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRoute.js";
 import { normalizeTheme } from "../../../internal/theme.js";
 import { noopErrorTracker } from "../../clients/errorReporting.js";
 import { createAssetStoreClient } from "../../clients/assetStoreClient.js";
+import { createDeviceFactsClient } from "../../clients/deviceFacts.js";
 
 export const createAppServiceCore = ({
   db,
@@ -19,6 +21,7 @@ export const createAppServiceCore = ({
   distribution,
   updatesEnabled,
   updater,
+  youtubeEmbedsSupported,
   audioService,
   projectService,
   subject,
@@ -27,7 +30,7 @@ export const createAppServiceCore = ({
   triggerTestCrash,
   windowMetricsClient,
   uiConfig,
-  assetStoreClient = createAssetStoreClient(),
+  assetStoreClient,
 }) => {
   const getCurrentProjectId = () => {
     return router.getPayload()?.p ?? "";
@@ -56,6 +59,7 @@ export const createAppServiceCore = ({
     distribution,
     updatesEnabled,
     updater,
+    youtubeEmbedsSupported,
     audioService,
     triggerTestCrash,
   });
@@ -93,9 +97,28 @@ export const createAppServiceCore = ({
     },
   });
 
+  // A view or a download of an asset store pack names this device and the
+  // app's active language.
+  const assetStore =
+    assetStoreClient ??
+    createAssetStoreClient({
+      getDevice: createDeviceFactsClient({
+        keyValueStore: db,
+        platform,
+        distribution,
+        appVersion,
+        getUiLanguage: () => appShellService.getAppLocaleUsage().uiLanguage,
+      }).get,
+    });
+
   const touchLayoutService = createTouchLayoutService({
     windowMetricsClient,
     uiConfig,
+  });
+
+  const retainedEditHistoryService = createRetainedEditHistoryService({
+    getProjectKey: () => `${getCurrentProjectId()}:${getCurrentProjectPath()}`,
+    getProjectState: () => projectService.getRepositoryState(),
   });
 
   const getTheme = () => {
@@ -114,6 +137,7 @@ export const createAppServiceCore = ({
     ...appShellService,
     ...userConfigService,
     ...touchLayoutService,
+    ...retainedEditHistoryService,
 
     async initUserConfig() {
       const userConfig = await userConfigService.initUserConfig();
@@ -144,18 +168,26 @@ export const createAppServiceCore = ({
 
     // Free packs from the RouteVN asset store, newest first.
     listAssetStorePacks({ cursor, query, assetTypes } = {}) {
-      return assetStoreClient.listAssetPacks({ cursor, query, assetTypes });
+      return assetStore.listAssetPacks({ cursor, query, assetTypes });
     },
 
     // An asset store creator's profile (name, avatar, bio and links) and
     // their free packs.
     getAssetStoreCreator({ creatorId } = {}) {
-      return assetStoreClient.getCreatorById({ creatorId });
+      return assetStore.getCreatorById({ creatorId });
     },
 
-    // One free pack, with the import link the resource importer reads.
+    // One free pack, with its package's manifest and the URLs of its media
+    // files. Each read counts one view of the pack.
     getAssetStorePack({ assetPackId } = {}) {
-      return assetStoreClient.getAssetPackById({ assetPackId });
+      return assetStore.getAssetPackById({ assetPackId });
+    },
+
+    // The signed URL of a pack's package ZIP, which an import reads. With
+    // `countDownload`, set when an import starts, it counts one download of
+    // the pack.
+    getAssetStorePackDownload({ assetPackId, countDownload } = {}) {
+      return assetStore.getAssetPackDownload({ assetPackId, countDownload });
     },
 
     getFileDisplayPath(path) {

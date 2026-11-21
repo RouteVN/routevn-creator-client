@@ -120,7 +120,7 @@ describe("sounds view", () => {
     );
 
     expect(soundsView).toContain(
-      'style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px; bottom: ${audioPlayerBottom};"',
+      'style="inset-inline-start: ${audioPlayerLeft}px; inset-inline-end: ${audioPlayerRight}px; bottom: ${audioPlayerBottom};"',
     );
     expect(soundsView).toContain(":mobileLayout=${mobileLayout}");
     expect(soundsView).toContain("z=1500");

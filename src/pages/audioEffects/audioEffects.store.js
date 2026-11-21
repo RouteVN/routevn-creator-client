@@ -1,5 +1,5 @@
 import { formatI18nCopy } from "../../internal/ui/i18nCopy.js";
-import { formatMilliseconds } from "../../internal/dates.js";
+import { formatList, formatMilliseconds } from "../../internal/dates.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import {
   getAudioEffectDefinitionDuration,
@@ -50,9 +50,12 @@ const formatAudioEffectSummary = (item, copy = {}, dateTime) => {
   if (definition?.type === "transition") {
     const sides = [];
     if (definition.prev) {
-      const properties = Object.keys(definition.prev)
-        .map((property) => getAudioEffectPropertyLabel(property, copy))
-        .join(", ");
+      const properties = formatList(
+        Object.keys(definition.prev).map((property) =>
+          getAudioEffectPropertyLabel(property, copy),
+        ),
+        dateTime,
+      );
       sides.push(
         formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
           label: copy.outgoingLabel ?? "Outgoing",
@@ -61,9 +64,12 @@ const formatAudioEffectSummary = (item, copy = {}, dateTime) => {
       );
     }
     if (definition.next) {
-      const properties = Object.keys(definition.next)
-        .map((property) => getAudioEffectPropertyLabel(property, copy))
-        .join(", ");
+      const properties = formatList(
+        Object.keys(definition.next).map((property) =>
+          getAudioEffectPropertyLabel(property, copy),
+        ),
+        dateTime,
+      );
       sides.push(
         formatI18nCopy(copy.labelValue ?? "{label}: {value}", {
           label: copy.incomingLabel ?? "Incoming",
@@ -76,9 +82,12 @@ const formatAudioEffectSummary = (item, copy = {}, dateTime) => {
 
   const properties = Object.keys(definition?.tween ?? {});
   return properties.length > 0
-    ? properties
-        .map((property) => getAudioEffectPropertyLabel(property, copy))
-        .join(", ")
+    ? formatList(
+        properties.map((property) =>
+          getAudioEffectPropertyLabel(property, copy),
+        ),
+        dateTime,
+      )
     : (copy.noPropertiesLabel ?? "No properties");
 };
 

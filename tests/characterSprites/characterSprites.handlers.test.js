@@ -587,6 +587,9 @@ describe("characterSprites edit dialogs", () => {
     const deps = createUploadDeps();
     deps.projectService.updateCharacterSpriteItem = vi.fn(async () => ({}));
     Object.assign(deps.store, {
+      selectIsSpritesheetDialogSubmitting: vi.fn(() => false),
+      setSpritesheetDialogSubmitting: vi.fn(),
+      selectSpritesheetDialogCreatesEmpty: vi.fn(() => false),
       selectSpritesheetDialogMode: vi.fn(() => "edit"),
       selectSpritesheetDialogItemId: vi.fn(() => "spritesheet-1"),
       selectSpritesheetDialogParentId: vi.fn(() => undefined),
@@ -634,6 +637,9 @@ describe("characterSprites edit dialogs", () => {
     expect(data.width).toBe(expected);
     expect(data.height).toBe(expected);
     expect(data.fileId).toBe("sheet-file");
+    // An undefined field is not a saved change, so the key must be absent.
+    expect(Object.hasOwn(data, "width")).toBe(expected !== undefined);
+    expect(Object.hasOwn(data, "height")).toBe(expected !== undefined);
   });
 
   it("keeps the typed image sprite name when the file is replaced", async () => {

@@ -78,18 +78,23 @@ try {
           };
         }, scenario);
         await page.goto(`${server.origin}/ios/index.html`);
+        // Every start opens Projects. Without a readable folder it does not
+        // ask native for a folder listing; a new install waits for Create, and
+        // a saved folder that cannot be opened asks for it in a dialog.
+        await page.locator("rvn-projects").waitFor({ state: "attached" });
         if (scenario.configured) {
-          await page.locator("rvn-projects").waitFor({ state: "attached" });
           await page.waitForFunction(() =>
             window.startupTrial.calls.some(
               ({ method }) => method === "listProjectFolders",
             ),
           );
-        } else {
-          await page
-            .getByText("Set up your projects folder", { exact: true })
-            .waitFor();
         }
+        const reconnectDialog = page
+          .locator("rtgl-global-ui")
+          .getByText(
+            "Your saved folder is unavailable. Select it again to restore access.",
+          );
+        if (scenario.reason === "reconnect") await reconnectDialog.waitFor();
         await page.waitForFunction(() => window.startupTrial.pending === 0);
         // Let page handlers finish their queued render after native responses.
         await page.evaluate(
@@ -99,12 +104,21 @@ try {
             ),
         );
         const trial = await page.evaluate(() => window.startupTrial);
-        const expectedMounts = scenario.configured ? 1 : 0;
-        assert.equal(trial.projectMounts, expectedMounts, scenario.name);
+        assert.equal(trial.projectMounts, 1, scenario.name);
         assert.equal(
           trial.calls.filter(({ method }) => method === "listProjectFolders")
             .length,
-          expectedMounts,
+          scenario.configured ? 1 : 0,
+          scenario.name,
+        );
+        assert.equal(
+          await page.locator("rvn-project-folder-setup").count(),
+          0,
+          scenario.name,
+        );
+        assert.equal(
+          await reconnectDialog.isVisible(),
+          scenario.reason === "reconnect",
           scenario.name,
         );
         assert.equal(

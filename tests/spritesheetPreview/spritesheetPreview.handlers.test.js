@@ -184,6 +184,87 @@ describe("spritesheetPreview.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("fills the whole canvas with the frame when padding is 0", async () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const drawImage = vi.fn();
+    const context = {
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      drawImage,
+    };
+    const originalCanvasElement = globalThis.HTMLCanvasElement;
+    const originalImageElement = globalThis.HTMLImageElement;
+
+    class FakeCanvas {
+      constructor() {
+        this.width = 0;
+        this.height = 0;
+        this.clientWidth = 64;
+        this.clientHeight = 64;
+      }
+
+      getBoundingClientRect() {
+        return {
+          width: 64,
+          height: 64,
+        };
+      }
+
+      getContext(type) {
+        return type === "2d" ? context : undefined;
+      }
+    }
+
+    class FakeImage {
+      constructor() {
+        this.complete = true;
+        this.naturalWidth = 64;
+        this.naturalHeight = 64;
+        this.src = "blob:test-spritesheet";
+      }
+
+      getAttribute(name) {
+        return name === "src" ? this.src : undefined;
+      }
+    }
+
+    const canvas = new FakeCanvas();
+    const sourceImage = new FakeImage();
+
+    globalThis.HTMLCanvasElement = FakeCanvas;
+    globalThis.HTMLImageElement = FakeImage;
+
+    try {
+      await handleOnUpdate(
+        {
+          projectService: {},
+          props: { padding: "0" },
+          refs: {
+            canvas,
+            sourceImage,
+          },
+          render,
+          store: createStoreApi(state),
+        },
+        {
+          oldProps: {},
+          newProps: {
+            paused: true,
+            padding: "0",
+            src: "blob:test-spritesheet",
+          },
+        },
+      );
+    } finally {
+      globalThis.HTMLCanvasElement = originalCanvasElement;
+      globalThis.HTMLImageElement = originalImageElement;
+    }
+
+    expect(selectStatus({ state })).toBe("ready");
+    expect(drawImage).toHaveBeenCalledWith(sourceImage, 0, 0, 64, 64);
+  });
+
   it("returns to empty when preview source is cleared", async () => {
     const state = createInitialState();
     const render = vi.fn();

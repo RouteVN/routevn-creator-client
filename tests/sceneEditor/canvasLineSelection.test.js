@@ -34,6 +34,7 @@ describe("scene editor canvas line selection", () => {
       subject,
       render,
       refs: { linesEditor: { scrollLineIntoView } },
+      projectService: { getEnsuredProjectId: () => "project-1" },
       graphicsService: {
         initRouteEngine: vi.fn(),
         engineSelectPresentationState: () => ({}),

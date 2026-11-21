@@ -114,7 +114,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-select#select${i} data-field-name=${field.name} av=c :selectedValue=${field.value} :options=${field.options}: null
+                              - rtgl-select#select${i} data-field-name=${field.name} :selectedValue=${field.value} :options=${field.options}: null
                             $else:
                               - rtgl-text: ${field.value}
                     $elif field.type == 'color':
@@ -136,7 +136,7 @@ template:
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-select#textStyleSelect${i} av=c :selectedValue=${field.value} :options=${field.options}: null
+                              - rtgl-select#textStyleSelect${i} :selectedValue=${field.value} :options=${field.options}: null
                             $else:
                               - rtgl-text: ${field.name}
                     $elif field.type == 'image-selector':
@@ -147,7 +147,7 @@ template:
                                   - rtgl-view d=f g=xs:
                                       - rtgl-view#imageSelectorField${i} cur=pointer br=md:
                                           - rvn-file-image w=200 h=150 fileId=${field.fileId} key=${field.fileId}: null
-                                      - rtgl-button#clearImage${i} variant=se size=sm: Clear
+                                      - rtgl-button#clearImage${i} v=se s=sm: Clear
                                 $else:
                                   - rtgl-view#imageSelectorField${i} w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                                       - rtgl-text c=mu-fg: Select Image
@@ -190,5 +190,5 @@ template:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#imageSelector: null
           - rtgl-view d=f g=sm:
-              - rtgl-button#cancelImageSelection variant=se: Cancel
-              - rtgl-button#confirmImageSelection variant=pr: OK
+              - rtgl-button#cancelImageSelection v=se: Cancel
+              - rtgl-button#confirmImageSelection v=pr: OK

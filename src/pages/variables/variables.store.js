@@ -1,3 +1,4 @@
+import { formatList } from "../../internal/dates.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { createFolderChildFolderIdSet } from "../../internal/ui/resourcePages/rootGroups.js";
 import {
@@ -434,7 +435,7 @@ export const selectViewData = ({ state, i18n }) => {
         {
           type: "text",
           label: copy.valuesLabel ?? "Values",
-          value: selectedEnumValues.join(", "),
+          value: formatList(selectedEnumValues, i18n.dateTime),
         },
       );
     }
@@ -463,7 +464,7 @@ export const selectViewData = ({ state, i18n }) => {
           label: copy.computedDependenciesLabel ?? "Dependencies",
           value:
             dependencies.length > 0
-              ? dependencies.join(", ")
+              ? formatList(dependencies, i18n.dateTime)
               : (copy.computedNoDependenciesLabel ?? "None"),
         },
       );

@@ -5,6 +5,8 @@ import {
 } from "../i18nCopy.js";
 
 const COMMAND_LINE_COPY_KEYS = Object.freeze({
+  "Restart the story from this section. Story variables return to defaults and the player cannot roll back past it.":
+    "resetStoryDescription",
   "A resource is required.": "resourceRequiredMessage",
   "Add Value": "addValueButton",
   "Choose a control...": "chooseControlPlaceholder",
@@ -32,6 +34,36 @@ const COMMAND_LINE_COPY_KEYS = Object.freeze({
     "mapEveryInputFieldToStringVariable",
   "No input fields found.": "noInputFieldsFound",
   "Please add at least one branch.": "addBranchRequired",
+  "Please add at least one outcome.": "addOutcomeRequired",
+  "Give at least one outcome a weight greater than 0.":
+    "positiveOutcomeWeightRequired",
+  "Each weight must be 0 or greater.": "outcomeWeightInvalid",
+  "One outcome's weight is so small compared with the largest weight that the outcome can never be picked. Raise it or set it to 0.":
+    "outcomeWeightTooSmall",
+  "This random action is too large to save. Use fewer outcomes, or fewer actions in them.":
+    "randomActionTooLarge",
+  "A random action can have at most 100 outcomes.": "outcomeLimitReached",
+  "This random action is saved in a format that RouteVN Creator can't edit.":
+    "unsupportedRandomDistribution",
+  // The Random operation of Update Variable.
+  "Please add at least one value.": "addRandomValueRequired",
+  "Minimum and Maximum must be whole numbers.": "randomRangeNotWholeNumbers",
+  "Minimum can't be greater than Maximum.": "randomRangeMinAboveMax",
+  "Minimum and Maximum can be at most 4294967295 apart.": "randomRangeTooLarge",
+  "Enter a number for each value.": "randomNumberValueRequired",
+  "Enter text for each value.": "randomTextValueRequired",
+  "Choose a value in each row.": "randomEnumValueRequired",
+  "Values can't contain ${ or #{.": "randomValueTemplateSyntax",
+  "Values can't be _event or start with _event.": "randomValueEventBinding",
+  "This Update Variable action is too large to save. Use fewer or shorter values.":
+    "updateVariableActionTooLarge",
+  "Give at least one value a weight greater than 0.":
+    "positiveRandomValueWeightRequired",
+  "One value's weight is so small compared with the largest weight that the value can never be picked. Raise it or set it to 0.":
+    "randomValueWeightTooSmall",
+  "A random operation can have at most 100 values.": "randomValueLimitReached",
+  "This random operation is saved in a format that RouteVN Creator can't edit.":
+    "unsupportedRandomOperation",
   "Please add at least one valid variable operation.":
     "validVariableOperationRequired",
   "Please select an input layout.": "selectInputLayoutRequired",
@@ -115,12 +147,12 @@ export const formatCommandLineCopy = (template, replacements = {}, copy = {}) =>
 const DEFAULT_COMMAND_LINE_PLURAL_COPY = Object.freeze({
   actionCount_one: "{count} action",
   actionCount_other: "{count} actions",
-  nestedActionCount_one: "{count} nested action",
-  nestedActionCount_other: "{count} nested actions",
   rollbackLineCount_one: "Rollback by {count} line",
   rollbackLineCount_other: "Rollback by {count} lines",
   branchCount_one: "{count} branch",
   branchCount_other: "{count} branches",
+  outcomeCount_one: "{count} outcome",
+  outcomeCount_other: "{count} outcomes",
 });
 
 // Formats a count message such as `actionCount`, so that each language can

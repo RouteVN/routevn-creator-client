@@ -98,6 +98,40 @@ describe("commandLineSetNextLineConfig.handlers", () => {
     expect(nonJsonFieldsOf(detail)).toEqual([]);
   });
 
+  it.each([
+    ["a negative delay as 0", -500, 0],
+    ["a delay of 0", 0, 0],
+    ["a delay typed as text", "250", 250],
+    ["an empty delay as 1000", null, 1000],
+    ["an invalid delay as 1000", "abc", 1000],
+  ])("submits %s", (_label, autoDelay, expectedDelay) => {
+    const deps = createDeps();
+    handleBeforeMount(deps);
+    handleFormChange(deps, {
+      _event: {
+        detail: {
+          values: {
+            ...selectDefaultValues({ state: createInitialState() }),
+            autoEnabled: true,
+            autoDelay,
+          },
+        },
+      },
+    });
+
+    const detail = submit(deps);
+
+    expect(detail.setNextLineConfig.auto.delay).toBe(expectedDelay);
+  });
+
+  it("does not let the delay field go below 0", () => {
+    const delayField = createInitialState().form.fields.find(
+      (field) => field.name === "autoDelay",
+    );
+
+    expect(delayField.min).toBe(0);
+  });
+
   it("submits requireLineCompleted as false when the edited config has none", () => {
     const deps = createDeps({
       setNextLineConfig: {

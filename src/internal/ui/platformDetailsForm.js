@@ -1,4 +1,26 @@
-export const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
+import {
+  normalizeAndroidBackgroundColor,
+  isValidAndroidBackgroundColor,
+} from "../androidExport.js";
+import { IOS_APPLICATION_ICON_OUTPUT_SIZE } from "../iosExport.js";
+import {
+  normalizeWebScreenFadeDuration,
+  WEB_SCREEN_FADE_DURATIONS,
+} from "../webExport.js";
+
+const PLATFORM_APPLICATION_ICON_OUTPUT_SIZE = 256;
+
+// The size the crop dialog makes an icon for each platform.
+export const getPlatformIconOutputSize = (platform, target) => {
+  if (target === "splash") return 768;
+  if (platform === "android") return 512;
+  if (platform === "ios") return IOS_APPLICATION_ICON_OUTPUT_SIZE;
+  return PLATFORM_APPLICATION_ICON_OUTPUT_SIZE;
+};
+
+const WEB_SCREEN_FADE_DURATION_OPTIONS = WEB_SCREEN_FADE_DURATIONS.map(
+  (duration) => ({ value: duration, label: String(duration) }),
+);
 
 export const PLATFORM_APPLICATION_ICON_VALIDATIONS = [
   {
@@ -15,6 +37,8 @@ const getPlatformEditTitle = (platform, copy) => {
   if (platform === "macos") {
     return copy.editMacosPlatformDetailsTitle;
   }
+  if (platform === "android") return copy.editAndroidPlatformDetailsTitle;
+  if (platform === "ios") return copy.editIosPlatformDetailsTitle;
   return copy.editWebPlatformDetailsTitle;
 };
 
@@ -25,16 +49,20 @@ const getPlatformCreateTitle = (platform, copy) => {
   if (platform === "macos") {
     return copy.createMacosPlatformDetailsTitle;
   }
+  if (platform === "android") return copy.createAndroidPlatformDetailsTitle;
+  if (platform === "ios") return copy.createIosPlatformDetailsTitle;
   return copy.createWebPlatformDetailsTitle;
 };
 
+// A slot field has a name so that its hint shows: the form finds the hint
+// of a hovered label by field name.
 export const createPlatformEditForm = (platform, mode, copy) => {
   const fields = [
     {
       name: "applicationName",
       type: "input-text",
       label: copy.applicationNameLabel,
-      description: copy[`${platform}ApplicationNameDescription`],
+      tooltip: { content: copy[`${platform}ApplicationNameDescription`] },
       required: true,
     },
   ];
@@ -43,21 +71,93 @@ export const createPlatformEditForm = (platform, mode, copy) => {
     fields.push({
       type: "slot",
       slot: "platform-application-icon-edit",
+      name: "icon",
       label: copy.iconLabel,
-      description: copy[`${platform}IconDescription`],
+      tooltip: { content: copy[`${platform}IconDescription`] },
     });
+  }
+
+  if (platform === "android") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "platform-android-adaptive-icon-edit",
+        name: "adaptiveIcon",
+        label: copy.androidAdaptiveIconLabel,
+        tooltip: { content: copy.androidAdaptiveIconDescription },
+      },
+      {
+        type: "slot",
+        slot: "platform-android-splash-icon-edit",
+        name: "splashIcon",
+        label: copy.androidSplashIconLabel,
+        tooltip: { content: copy.androidSplashIconDescription },
+      },
+    );
   }
 
   fields.push({
     name: "applicationIdentifier",
     type: "input-text",
     label:
-      platform === "macos"
+      platform === "macos" || platform === "ios"
         ? copy.macosApplicationIdentifierLabel
         : copy.applicationIdentifierLabel,
-    description: copy[`${platform}ApplicationIdentifierDescription`],
+    tooltip: { content: copy[`${platform}ApplicationIdentifierDescription`] },
     required: true,
   });
+
+  if (platform === "web") {
+    fields.push(
+      {
+        type: "slot",
+        slot: "platform-web-loading-background-edit",
+        name: "loadingBackground",
+        label: copy.webLoadingBackgroundLabel,
+        tooltip: { content: copy.webLoadingBackgroundDescription },
+      },
+      {
+        type: "slot",
+        slot: "platform-web-start-background-edit",
+        name: "startBackground",
+        label: copy.webStartBackgroundLabel,
+        tooltip: { content: copy.webStartBackgroundDescription },
+      },
+      {
+        name: "loadingFadeDuration",
+        type: "select",
+        label: copy.webLoadingFadeDurationLabel,
+        tooltip: { content: copy.webLoadingFadeDurationDescription },
+        clearable: false,
+        options: WEB_SCREEN_FADE_DURATION_OPTIONS,
+      },
+      {
+        name: "startFadeDuration",
+        type: "select",
+        label: copy.webStartFadeDurationLabel,
+        tooltip: { content: copy.webStartFadeDurationDescription },
+        clearable: false,
+        options: WEB_SCREEN_FADE_DURATION_OPTIONS,
+      },
+    );
+  }
+
+  if (platform === "android") {
+    fields.push(
+      {
+        name: "iconBackgroundColor",
+        type: "color-picker",
+        label: copy.androidIconBackgroundColorLabel,
+        required: true,
+      },
+      {
+        name: "splashBackgroundColor",
+        type: "color-picker",
+        label: copy.androidSplashBackgroundColorLabel,
+        required: true,
+      },
+    );
+  }
 
   // TODO: Restore optional Windows release metadata in the edit form.
   // if (platform === "windows") {
@@ -113,16 +213,38 @@ export const createPlatformDetailsPatch = ({
   platform,
   values,
   iconFileId,
+  adaptiveIconFileId,
+  splashIconFileId,
+  loadingBackgroundFileId,
+  startBackgroundFileId,
 }) => {
   const patch = {
     applicationName: values.applicationName.trim(),
   };
 
-  if (platform !== "web") {
+  if (platform === "web") {
+    patch.loadingBackgroundFileId = loadingBackgroundFileId;
+    patch.startBackgroundFileId = startBackgroundFileId;
+    patch.loadingFadeDuration = normalizeWebScreenFadeDuration(
+      values.loadingFadeDuration,
+    );
+    patch.startFadeDuration = normalizeWebScreenFadeDuration(
+      values.startFadeDuration,
+    );
+  } else {
     patch.iconFileId = iconFileId;
   }
 
   patch.applicationIdentifier = values.applicationIdentifier.trim();
+  if (platform === "android") {
+    patch.adaptiveIconFileId = adaptiveIconFileId;
+    patch.splashIconFileId = splashIconFileId;
+    for (const name of ["iconBackgroundColor", "splashBackgroundColor"]) {
+      patch[name] = isValidAndroidBackgroundColor(values[name])
+        ? normalizeAndroidBackgroundColor(values[name])
+        : values[name];
+    }
+  }
 
   // TODO: Restore optional Windows release metadata when these fields return
   // to the Platform Details UI. Omitting them from the patch preserves any
@@ -164,5 +286,28 @@ export const getPlatformDetailsValidationMessage = (copy, code) => {
   if (code === "macos-identifier-invalid") {
     return copy.macosApplicationIdentifierInvalid;
   }
+  if (code === "android-icon-required") return copy.androidIconRequired;
+  if (code === "android-identifier-required")
+    return copy.androidApplicationIdentifierRequired;
+  if (code === "android-identifier-invalid")
+    return copy.androidApplicationIdentifierInvalid;
+  if (code === "android-color-invalid") return copy.androidColorInvalid;
+  if (code === "ios-icon-required") return copy.iosIconRequired;
+  if (code === "ios-identifier-required")
+    return copy.iosApplicationIdentifierRequired;
+  if (code === "ios-identifier-invalid")
+    return copy.macosApplicationIdentifierInvalid;
   return copy.failedSavePlatformMessage;
+};
+
+// Screen background previews use the project's shape, with the longer side
+// at this many pixels.
+const SCREEN_BACKGROUND_PREVIEW_SIZE = 240;
+
+export const getScreenBackgroundPreviewSize = ({ width, height }) => {
+  const scale = SCREEN_BACKGROUND_PREVIEW_SIZE / Math.max(width, height);
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
 };

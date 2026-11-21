@@ -25,6 +25,7 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import { normalizeRouteEngineActions } from "../../internal/routeEngineActions.js";
 import {
   isGraphicsContextCreationError,
   isGraphicsUnavailableError,
@@ -128,17 +129,21 @@ const normalizeGraphicsInteractionSoundVolume = (value) => {
   return Math.min(Math.max(parsed, 0), 100);
 };
 
-const sanitizeGraphicsInteractionSoundVolume = (interaction) => {
+const sanitizeGraphicsInteractionSoundVolume = (interaction, disableSound) => {
   if (
     !interaction ||
     typeof interaction !== "object" ||
     Array.isArray(interaction) ||
-    !Object.hasOwn(interaction, "soundVolume")
+    (!disableSound && !Object.hasOwn(interaction, "soundVolume"))
   ) {
     return interaction;
   }
 
   const nextInteraction = { ...interaction };
+  if (disableSound) {
+    delete nextInteraction.sound;
+    delete nextInteraction.soundSrc;
+  }
   const nextVolume = normalizeGraphicsInteractionSoundVolume(
     interaction.soundVolume,
   );
@@ -152,7 +157,7 @@ const sanitizeGraphicsInteractionSoundVolume = (interaction) => {
   return nextInteraction;
 };
 
-const sanitizeGraphicsElementSoundVolumes = (elements) => {
+const sanitizeGraphicsElementSoundVolumes = (elements, disableSound) => {
   if (!Array.isArray(elements) || elements.length === 0) {
     return elements;
   }
@@ -167,8 +172,10 @@ const sanitizeGraphicsElementSoundVolumes = (elements) => {
 
     for (const interactionKey of INTERACTION_SOUND_KEYS) {
       const interaction = element[interactionKey];
-      const nextInteraction =
-        sanitizeGraphicsInteractionSoundVolume(interaction);
+      const nextInteraction = sanitizeGraphicsInteractionSoundVolume(
+        interaction,
+        disableSound,
+      );
       if (nextInteraction !== interaction) {
         if (nextElement === element) {
           nextElement = { ...element };
@@ -179,7 +186,10 @@ const sanitizeGraphicsElementSoundVolumes = (elements) => {
     }
 
     const children = element.children;
-    const nextChildren = sanitizeGraphicsElementSoundVolumes(children);
+    const nextChildren = sanitizeGraphicsElementSoundVolumes(
+      children,
+      disableSound,
+    );
     if (nextChildren !== children) {
       if (nextElement === element) {
         nextElement = { ...element };
@@ -194,9 +204,15 @@ const sanitizeGraphicsElementSoundVolumes = (elements) => {
   return didChange ? nextElements : elements;
 };
 
-const sanitizeRenderStateInteractionSoundVolumes = (renderState) => {
+const sanitizeRenderStateInteractionSoundVolumes = (
+  renderState,
+  disableSound = false,
+) => {
   const elements = renderState?.elements;
-  const nextElements = sanitizeGraphicsElementSoundVolumes(elements);
+  const nextElements = sanitizeGraphicsElementSoundVolumes(
+    elements,
+    disableSound,
+  );
 
   if (nextElements === elements) {
     return renderState;
@@ -663,6 +679,7 @@ export const createGraphicsService = async ({
   subject,
   projectMediaOrigin,
   audioOutput,
+  audioAvailable = true,
   onAudioOutputError,
   onRenderError,
   // Called when graphics cannot start because the device has no usable WebGL.
@@ -791,6 +808,7 @@ export const createGraphicsService = async ({
   };
 
   const ensureAudioAssetsLoaded = async (assetKeys = []) => {
+    if (!audioAvailable) return;
     const uniqueAudioKeys = Array.from(
       new Set(assetKeys.filter((key) => typeof key === "string" && key)),
     );
@@ -1273,7 +1291,15 @@ export const createGraphicsService = async ({
     return new Error(`Video asset "${key}" failed to load (${details}).`);
   };
 
-  const waitForVideoReadyForPlayback = async (key, video) => {
+  const waitForVideoReadyForPlayback = async (
+    key,
+    video,
+    {
+      timeoutMs = VIDEO_ASSET_READY_TIMEOUT_MS,
+      signal,
+      startLoading = true,
+    } = {},
+  ) => {
     if (!video || isVideoReadyForPlayback(video)) {
       return;
     }
@@ -1287,6 +1313,7 @@ export const createGraphicsService = async ({
         video.removeEventListener("canplaythrough", handleReady);
         video.removeEventListener("playing", handleReady);
         video.removeEventListener("error", handleError);
+        signal?.removeEventListener("abort", handleAbort);
       };
       const finish = () => {
         cleanup();
@@ -1305,24 +1332,65 @@ export const createGraphicsService = async ({
         fail(getVideoLoadError(key, video));
       };
 
+      const handleAbort = () =>
+        fail(signal.reason ?? new DOMException("Aborted", "AbortError"));
+
       video.addEventListener("loadeddata", handleReady);
       video.addEventListener("canplay", handleReady);
       video.addEventListener("canplaythrough", handleReady);
       video.addEventListener("playing", handleReady);
       video.addEventListener("error", handleError);
+      signal?.addEventListener("abort", handleAbort, { once: true });
       timeoutId = setTimeout(() => {
-        fail(
-          new Error(`Timed out waiting for video asset "${key}" to preload.`),
+        const error = new Error(
+          `Timed out waiting for video asset "${key}" to preload.`,
         );
-      }, VIDEO_ASSET_READY_TIMEOUT_MS);
+        error.code = "video_ready_timeout";
+        fail(error);
+      }, timeoutMs);
 
-      try {
-        video.preload = "auto";
-        video.load();
-      } catch {}
+      if (startLoading) {
+        try {
+          video.preload = "auto";
+          video.load();
+        } catch {}
+      }
 
-      handleReady();
+      if (signal?.aborted) handleAbort();
+      else if (!startLoading && video.error) handleError();
+      else handleReady();
     });
+  };
+
+  const isVideoReady = (key) => {
+    const video = getVideoResourceForKey(key);
+    return Boolean(video) && isVideoReadyForPlayback(video);
+  };
+
+  const waitForVideosReady = async (keys, { timeoutMs, signal } = {}) => {
+    signal?.throwIfAborted();
+    const results = await Promise.all(
+      keys.map(async (fileId) => {
+        const video = getVideoResourceForKey(fileId);
+        if (!video)
+          return {
+            fileId,
+            error: new Error(`Video asset "${fileId}" is unavailable.`),
+          };
+        try {
+          await waitForVideoReadyForPlayback(fileId, video, {
+            timeoutMs,
+            signal,
+            startLoading: false,
+          });
+        } catch (error) {
+          if (signal?.aborted) throw error;
+          return { fileId, error };
+        }
+        return undefined;
+      }),
+    );
+    return { failures: results.filter(Boolean) };
   };
 
   const waitForVideoWarmFrame = async (key, video) => {
@@ -1921,7 +1989,7 @@ export const createGraphicsService = async ({
       ([, value]) => classifyAsset(value?.type) === "audio",
     );
     let audioLoadError;
-    if (audioAssetEntries.length > 0) {
+    if (audioAvailable && audioAssetEntries.length > 0) {
       try {
         await runAsyncOperation(
           () => decodeAudioAssetEntries(audioAssetEntries),
@@ -2099,6 +2167,7 @@ export const createGraphicsService = async ({
       return;
     }
 
+    nextActions = normalizeRouteEngineActions(nextActions);
     runEnginePlayback(
       () => engine.handleActions(nextActions, eventContext),
       generation,
@@ -2166,9 +2235,12 @@ export const createGraphicsService = async ({
       renderState: nextRenderState,
       enableGlobalKeyboardBindings,
     });
-    nextRenderState =
-      sanitizeRenderStateInteractionSoundVolumes(nextRenderState);
-    const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
+    nextRenderState = sanitizeRenderStateInteractionSoundVolumes(
+      nextRenderState,
+      !audioAvailable,
+    );
+    const effectiveSkipAudio =
+      skipAudio || isEngineAudioMuted || !audioAvailable;
 
     if (
       effectiveSkipAudio &&
@@ -2737,10 +2809,11 @@ export const createGraphicsService = async ({
               return;
             }
             if (suppressedEngineRenderEffects > 0) {
-              onSuppressedRenderState?.({
-                renderState,
-                systemState: routeEngine?.selectSystemState?.(),
-              });
+              // The system state is a deep copy of the whole engine state,
+              // story included. The scene editor makes several suppressed
+              // renders per canvas update, so copying it here ran a large
+              // project out of memory.
+              onSuppressedRenderState?.({ renderState });
               return;
             }
             renderEngineState(renderState);
@@ -2818,6 +2891,8 @@ export const createGraphicsService = async ({
     ensureAudioAssetsLoaded,
     collectRenderStateAudioKeys: getRenderStateAudioKeys,
     warmRenderStateVideoAssets,
+    isVideoReady,
+    waitForVideosReady,
 
     engineRenderCurrentState: (options = {}) => {
       if (!engine || !routeGraphics) {
@@ -2840,7 +2915,8 @@ export const createGraphicsService = async ({
           ? "manual"
           : "auto";
       routeGraphics.setAnimationPlaybackMode?.(nextAnimationPlaybackMode);
-      const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
+      const effectiveSkipAudio =
+        skipAudio || isEngineAudioMuted || !audioAvailable;
       if (skipAnimations) {
         renderState = {
           ...renderState,
@@ -2857,6 +2933,7 @@ export const createGraphicsService = async ({
       if (!engine) {
         return;
       }
+      actions = normalizeRouteEngineActions(actions);
       syncRouteEngineProjectDataFromActions(actions);
       if (options.suppressRenderEffects) {
         return runWithSuppressedEngineRenderEffects(() => {
@@ -2877,8 +2954,17 @@ export const createGraphicsService = async ({
     waitUntilReady,
     attachCanvas,
     render: (payload) => {
+      let renderState = payload;
+      if (!audioAvailable) {
+        renderState = { ...payload, audio: [], audioEffects: [] };
+      }
       return routeGraphics?.render(
-        omitUnloadedVideos(sanitizeRenderStateInteractionSoundVolumes(payload)),
+        omitUnloadedVideos(
+          sanitizeRenderStateInteractionSoundVolumes(
+            renderState,
+            !audioAvailable,
+          ),
+        ),
       );
     },
     parse: (payload) => routeGraphics?.parse(payload),

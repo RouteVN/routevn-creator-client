@@ -89,6 +89,11 @@ describe("projects view", () => {
     expect(projectsView).toContain("handler: handleAppVersionMenuClickItem");
     expect(projectsView).toContain("handler: handleLanguageDialogClose");
     expect(projectsView).toContain("handler: handleLanguageFormAction");
+    // The language suggestion sits above the footer, on every platform.
+    expect(projectsView).toContain(
+      "rvn-language-suggestion#languageSuggestion",
+    );
+    expect(projectsView).toContain("handler: handleLocaleSuggestionChange");
     expect(projectsView).toContain("rtgl-dialog#languageDialog");
     // Language and Appearance use the item editor dialog layout, as on the
     // images page.

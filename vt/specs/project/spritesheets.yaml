@@ -357,7 +357,16 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-command-line-visual#commandLineVisual #visualItem0x0"
+    selector: "rvn-command-line-visual#commandLineVisual #visualItem0"
+    state: visible
+    timeoutMs: 10000
+  - action: screenshot
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #visualItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual #visualImage0x0"
     state: visible
     timeoutMs: 10000
   - action: assert
@@ -459,6 +468,14 @@ steps:
   - action: wait
     ms: 300
   - action: screenshot
+  - action: select
+    selector: "rvn-command-line-visual#commandLineVisual #saveVisualButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-command-line-visual#commandLineVisual #submitButton"
+    state: visible
+    timeoutMs: 10000
   - action: select
     selector: "rvn-command-line-visual#commandLineVisual #submitButton"
     steps:

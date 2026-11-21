@@ -17,6 +17,8 @@ propsSchema:
       type: object
     particlesData:
       type: object
+    videosData:
+      type: object
     charactersData:
       type: object
     textStylesData:
@@ -41,3 +43,18 @@ propsSchema:
       type: boolean
     isInsideDirectedContainer:
       type: boolean
+methods:
+  type: object
+  properties:
+    setSelectedElementMetrics:
+      description: Stores the measured size of the selected element.
+      params: []
+      returns: void
+    getSelectedElementMetrics:
+      description: Returns the stored measured size of the selected element.
+      params: []
+      returns: object
+    setTransientValues:
+      description: Updates the panel fields with values changed on the canvas.
+      params: []
+      returns: void

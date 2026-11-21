@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { createResourceFileExplorerHandlers } from "../../src/internal/ui/fileExplorer.js";
+import { EN_I18N } from "../support/i18n.js";
 
 describe("videos file explorer", () => {
   it("refreshes after deleting a folder", async () => {
     const refresh = vi.fn(async () => {});
     const deleteVideos = vi.fn(async () => ({ valid: true }));
     const deps = {
+      i18n: EN_I18N,
       appService: {
         showAlert: vi.fn(),
       },

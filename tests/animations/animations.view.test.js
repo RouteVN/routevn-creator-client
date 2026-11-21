@@ -22,6 +22,34 @@ describe("animations view", () => {
     expect(catalogView).toContain("rvn-resource-import-action");
   });
 
+  it("lays animations out as a grid with column zoom, six per row on desktop until changed", () => {
+    const animationsView = readFileSync(
+      new URL(
+        "../../src/pages/animations/animations.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const mobileBranchStart = animationsView.indexOf("$if showMobileTopTabs");
+    const desktopBranchStart = animationsView.indexOf(
+      "$else:",
+      mobileBranchStart,
+    );
+    const desktopGrid = animationsView
+      .slice(desktopBranchStart)
+      .split("\n")
+      .find((line) => line.includes("rvn-catalog-resources-view#groupview"));
+
+    expect(desktopGrid).toContain("show-zoom-controls");
+    expect(desktopGrid).toContain("zoom-control-mode=columns");
+    expect(desktopGrid).toContain("default-items-per-row=6");
+    expect(desktopGrid).toContain(
+      'items-per-row-config-key="groupAnimationsView.itemsPerRow"',
+    );
+    // One animation per row was the timeline list.
+    expect(animationsView).not.toContain("fixed-items-per-row");
+  });
+
   it("passes property defaults to every catalog timeline with curves", () => {
     const catalogView = readFileSync(
       new URL(

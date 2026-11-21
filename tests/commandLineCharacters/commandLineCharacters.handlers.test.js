@@ -50,6 +50,7 @@ import {
   selectSpriteSelectionGroupsForCharacterIndex,
   selectTempSelectedSpriteIds,
   selectTempSelectedSpriteId,
+  selectViewData,
   setMode,
   setAnimations,
   setPendingCharacterTransformId,
@@ -76,6 +77,9 @@ import {
   showAddCharacterTransformDropdownMenu,
   updateCharacterSprites,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
+
+import { EN_I18N } from "../support/i18n.js";
+import { renderViewYaml } from "../support/renderView.js";
 
 const createStoreApi = (state) => ({
   addCharacter: (payload) => addCharacter({ state }, payload),
@@ -1695,83 +1699,90 @@ describe("commandLineCharacters.handlers", () => {
     );
   });
 
-  it("allows sprite groups to be left empty when confirming", () => {
+  it("previews, confirms, and reopens None for the first group while keeping the next sprite", () => {
     const state = createInitialState();
-    const render = vi.fn();
-    const showAlert = vi.fn();
-    const store = createStoreApi(state);
-
-    setItems(
-      { state },
-      {
+    const deps = {
+      store: createStoreApi(state),
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    const ctx = { state, i18n: EN_I18N };
+    const face = { id: "face", resourceId: "sprite-face" };
+    const body = { id: "body", resourceId: "sprite-body" };
+    const character = {
+      id: "character-one",
+      type: "character",
+      name: "Character One",
+      spriteGroups: [
+        { id: "body", name: "Body" },
+        { id: "face", name: "Face" },
+      ],
+      sprites: {
         items: {
-          items: {
-            "character-hero": {
-              id: "character-hero",
-              type: "character",
-              name: "Hero",
-              spriteGroups: [
-                {
-                  id: "body",
-                  name: "Body",
-                  tags: [],
-                },
-                {
-                  id: "face",
-                  name: "Face",
-                  tags: [],
-                },
-              ],
-            },
+          "sprite-body": {
+            id: "sprite-body",
+            type: "image",
+            fileId: "file-body",
           },
-          tree: [{ id: "character-hero" }],
-        },
-      },
-    );
-    setExistingCharacters(
-      { state },
-      {
-        characters: [
-          {
-            id: "character-hero",
-            sprites: [
-              {
-                id: "body",
-                resourceId: "sprite-body",
-              },
-            ],
+          "sprite-face": {
+            id: "sprite-face",
+            type: "image",
+            fileId: "file-face",
           },
-        ],
-      },
-    );
-    setMode({ state }, { mode: "sprite-select" });
-    setSelectedCharacterIndex({ state }, { index: 0 });
-    setTempSelectedSpriteIds(
-      { state },
-      {
-        spriteIdsByGroupId: {
-          body: "sprite-body",
         },
+        tree: [{ id: "sprite-body" }, { id: "sprite-face" }],
       },
-    );
-    setSelectedSpriteGroupId({ state }, { spriteGroupId: "body" });
-
-    handleButtonSelectClick({
-      appService: { showAlert },
-      render,
-      store,
+    };
+    setItems(ctx, {
+      items: {
+        items: { [character.id]: character },
+        tree: [{ id: character.id }],
+      },
     });
+    setExistingCharacters(ctx, {
+      characters: [{ id: character.id, sprites: [body, face] }],
+    });
+    const openBody = () =>
+      handleCharacterSpriteGroupBoxClick(deps, {
+        _event: {
+          currentTarget: { dataset: { index: "0", spriteGroupId: "body" } },
+        },
+      });
+    const pickerHtml = () =>
+      renderViewYaml(
+        "src/components/commandLineCharacters/commandLineCharacters.view.yaml",
+        selectViewData(ctx),
+      );
 
-    expect(showAlert).not.toHaveBeenCalled();
-    expect(selectSelectedCharacters({ state })[0].sprites).toEqual([
-      {
-        id: "body",
-        resourceId: "sprite-body",
-      },
-    ]);
-    expect(selectMode({ state })).toBe("current");
-    expect(selectSelectedCharacterIndex({ state })).toBeUndefined();
-    expect(selectTempSelectedSpriteIds({ state })).toEqual({});
+    openBody();
+    expect(pickerHtml()).toMatch(
+      /<button[^>]*aria-pressed="false"[^>]*aria-label="None"/,
+    );
+    handleSpriteItemClick(deps, { _event: { currentTarget: { dataset: {} } } });
+    expect(
+      deps.dispatchEvent.mock.lastCall[0].detail.presentationState.character
+        .items[0].sprites,
+    ).toEqual([face]);
+    expect(selectSelectedCharacters(ctx)[0].sprites).toEqual([body, face]);
+    handleButtonSelectClick(deps);
+    handleSubmitClick(deps);
+    const savedCharacters =
+      deps.dispatchEvent.mock.lastCall[0].detail.character.items;
+    expect(savedCharacters[0].sprites).toEqual([face]);
+    setExistingCharacters(ctx, { characters: savedCharacters });
+    expect(
+      selectViewData(ctx).defaultValues.characters[0].spritePreviewFileIds,
+    ).toEqual(["file-face"]);
+    openBody();
+    expect(pickerHtml()).toMatch(
+      /<button[^>]*aria-pressed="true"[^>]*aria-label="None"/,
+    );
+    expect(selectTempSelectedSpriteIds(ctx)).toEqual({ face: face.resourceId });
+    handleSpriteItemClick(deps, {
+      _event: { currentTarget: { dataset: { spriteId: body.resourceId } } },
+    });
+    handleButtonSelectClick(deps);
+    expect(selectSelectedCharacters(ctx)[0].sprites).toEqual([body, face]);
   });
 
   it("allows all sprite groups to be empty when confirming", () => {
@@ -1823,15 +1834,18 @@ describe("commandLineCharacters.handlers", () => {
         ],
       },
     );
-    setMode({ state }, { mode: "sprite-select" });
-    setSelectedCharacterIndex({ state }, { index: 0 });
-    setTempSelectedSpriteIds(
-      { state },
+    handleCharacterSpriteGroupBoxClick(
+      { store, render },
       {
-        spriteIdsByGroupId: {},
+        _event: {
+          currentTarget: { dataset: { index: "0", spriteGroupId: "body" } },
+        },
       },
     );
-    setSelectedSpriteGroupId({ state }, { spriteGroupId: "body" });
+    handleSpriteItemClick(
+      { store, render },
+      { _event: { currentTarget: { dataset: {} } } },
+    );
 
     handleButtonSelectClick({
       appService: { showAlert },

@@ -1,5 +1,6 @@
 // Undo and redo steps for an editor page, kept in its store while the page
-// is open. A step holds snapshots of the items an edit touched, keyed by id,
+// is open and handed to `appService.retainEditHistory` when it is left. A
+// step holds snapshots of the items an edit touched, keyed by id,
 // from before and after the edit. Edits with the same merge key less than a
 // second apart are one step: a drag, keyboard nudges, or a form that saves
 // several fields at once.
@@ -112,4 +113,30 @@ export const moveEditHistoryStep = (history, direction) => {
   if (lastStep) {
     lastStep.sealed = true;
   }
+};
+
+// Names an editor and the item it edits, for the history kept after the
+// page is left. An editor that has not opened its item has no owner.
+export const getEditHistoryOwner = (editor, itemId) =>
+  itemId === undefined ? undefined : `${editor}:${itemId}`;
+
+export const isEditHistoryEmpty = (history) =>
+  history.undo.length === 0 && history.redo.length === 0;
+
+// The history a page opens with: the one it kept when it was last left
+// (`appService.getRetainedEditHistory`), or a new one. A page whose steps
+// hold the whole item passes `content`, the item as it opened; the kept
+// history is then used only when the item is still as the page left it, so
+// undo never puts back over a change made somewhere else.
+export const resumeEditHistory = (retained, content) => {
+  if (!retained) {
+    return createEditHistory();
+  }
+  if (
+    retained.content !== undefined &&
+    !areEditHistoryValuesEqual(retained.content, content)
+  ) {
+    return createEditHistory();
+  }
+  return retained.history;
 };

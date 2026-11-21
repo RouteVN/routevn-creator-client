@@ -143,6 +143,7 @@ const NON_INHERITED_ACTION_KEYS = new Set([
   "resetStoryAtSection",
   "nextLine",
   "conditional",
+  "random",
   "rollbackByOffset",
   // These play only on the line that sets them.
   "voice",

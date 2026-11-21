@@ -1,9 +1,11 @@
+import { chooseProjectFolder } from "../../internal/ui/projectFolderSetupFlow.js";
 import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import {
   activateAppLocale,
   resolveAppLocale,
 } from "../../internal/ui/appLocale.js";
 import { selectConfigPageCopy } from "./support/configPageCopy.js";
+import { formatPluralCopy } from "../../internal/ui/i18nCopy.js";
 import {
   HELP_BUTTON_VISIBLE_CONFIG_KEY,
   isHelpButtonVisible,
@@ -54,9 +56,13 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
-export const handleChangeProjectFolder = ({ appService }) => {
+export const handleChangeProjectFolder = async (deps) => {
+  const { appService, store, render } = deps;
   if (appService.getPlatform() !== "ios") return;
-  appService.navigate("/project-folder-setup", { from: "config" });
+  const status = await chooseProjectFolder(deps);
+  if (!status) return;
+  store.setProjectFolder({ visible: true, path: status.folder.displayPath });
+  render();
 };
 
 export const handleLanguageChange = async (deps, payload) => {
@@ -125,5 +131,60 @@ export const handleThemeCardClick = (deps, payload) => {
 
   const nextTheme = appService.setTheme(theme);
   store.setCurrentTheme({ theme: nextTheme });
+  render();
+};
+
+// A package ZIP file. Both forms are named, as a platform's picker may know
+// a file by its extension or by its type.
+const ZIP_FILE_ACCEPT = ".zip,application/zip";
+
+// A ZIP file is picked first, and the import dialog opens on it once one is
+// chosen.
+export const handleImportPackageZipClick = async (deps) => {
+  const { appService, i18n, render, store } = deps;
+  let file;
+  try {
+    file = await appService.pickFiles({
+      accept: ZIP_FILE_ACCEPT,
+      multiple: false,
+    });
+  } catch {
+    appService.showToast({
+      message: i18n.resourceImport.zipPickFailed,
+      status: "error",
+    });
+    return;
+  }
+  if (!file) return;
+  store.openImportDialog({ source: "zip", file });
+  render();
+};
+
+// The import dialog opens on its URL form.
+export const handleImportPackageUrlClick = (deps) => {
+  const { render, store } = deps;
+  store.openImportDialog({ source: "url" });
+  render();
+};
+
+export const handleImportDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeImportDialog();
+  render();
+};
+
+export const handleImportComplete = (deps, payload) => {
+  const { appService, i18n, render, store } = deps;
+  const { importedCount } = payload._event.detail;
+  store.closeImportDialog();
+  appService.showToast({
+    message: formatPluralCopy(
+      i18n.resourceImport,
+      "assetPackageImported",
+      importedCount,
+      { dateTime: i18n.dateTime },
+    ),
+    status: "success",
+  });
   render();
 };

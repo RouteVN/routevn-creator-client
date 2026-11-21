@@ -50,104 +50,167 @@ const createEmptyStoryState = () => ({
 });
 
 describe("story command api", () => {
-  it("rejects deleting a section referenced by another scene projection", async () => {
-    const contextState = {
-      scenes: {
-        items: {
-          "scene-1": {
-            id: "scene-1",
-            type: "scene",
-            name: "Scene 1",
-            sections: {
-              items: {
-                "section-1": {
-                  id: "section-1",
-                  name: "Intro",
-                  lines: {
-                    items: {},
-                    tree: [],
-                  },
-                },
-              },
-              tree: [{ id: "section-1" }],
-            },
-          },
-          "scene-2": {
-            id: "scene-2",
-            type: "scene",
-            name: "Scene 2",
-            sections: {
-              items: {
-                "section-2": {
-                  id: "section-2",
-                  name: "Branch",
-                  lines: {
-                    items: {},
-                    tree: [],
-                  },
-                },
-              },
-              tree: [{ id: "section-2" }],
-            },
-          },
-        },
-        tree: [{ id: "scene-1" }, { id: "scene-2" }],
-      },
-    };
-    const fullState = structuredClone(contextState);
-    fullState.scenes.items["scene-2"].sections.items["section-2"].lines = {
-      items: {
-        "line-1": {
-          id: "line-1",
-          actions: {
-            sectionTransition: {
-              sceneId: "scene-1",
-              sectionId: "section-1",
-            },
-          },
-        },
-      },
-      tree: [{ id: "line-1" }],
-    };
-    const context = {
-      projectId: "project-1",
-      state: contextState,
-      repository: {
-        getContextState: vi.fn(async () => fullState),
-      },
-    };
+  it("refuses a deletion that removes the last section", async () => {
+    const context = { state: createStoryState() };
     const shared = {
       ensureCommandContext: vi.fn(async () => context),
-      submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+      submitCommandWithContext: vi.fn(),
     };
-    const api = createStoryCommandApi(shared);
-
-    const result = await api.deleteSectionItem({
+    const result = await createStoryCommandApi(shared).deleteSectionItem({
       sceneId: "scene-1",
       sectionIds: ["section-1"],
     });
-
-    expect(context.repository.getContextState).toHaveBeenCalledWith({
-      sceneIds: ["scene-1", "scene-2"],
-    });
-    expect(result).toEqual({
-      valid: false,
-      error: {
-        message:
-          "This section can't be deleted because another section references it.",
-        code: "section_referenced",
-        details: {
-          sceneId: "scene-2",
-          sceneName: "Scene 2",
-          sectionId: "section-2",
-          sectionName: "Branch",
-          lineId: "line-1",
-          referencedSectionId: "section-1",
-        },
-      },
-    });
+    expect(result.error.code).toBe("last_section");
     expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
   });
+
+  it("refuses moving the sections a scene needs to another scene", async () => {
+    const state = createStoryState();
+    const scene = state.scenes.items["scene-1"];
+    scene.sections.items["section-2"] = {
+      id: "section-2",
+      lines: { items: {}, tree: [] },
+    };
+    scene.sections.tree = [
+      { id: "section-1", children: [{ id: "section-2" }] },
+    ];
+    state.scenes.items["scene-2"] = {
+      id: "scene-2",
+      type: "scene",
+      sections: { items: {}, tree: [] },
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => ({
+        projectId: "project-1",
+        state,
+      })),
+      resolveSectionIndex: vi.fn(() => 0),
+      buildPlacementPayload: vi.fn(() => ({ parentId: null, index: 0 })),
+      submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+      scenePartitionFor: vi.fn((_projectId, sceneId) => `s:${sceneId}`),
+      storyBasePartitionFor: vi.fn(() => "m"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    for (const sectionId of ["section-1", "section-2"]) {
+      const result = await api.moveSectionItem({
+        sectionId,
+        sceneId: "scene-2",
+        position: "last",
+      });
+      expect(result?.error?.code).toBe(
+        sectionId === "section-1" ? "last_section" : undefined,
+      );
+    }
+    expect(shared.submitCommandWithContext).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { sectionTransition: { sceneId: "scene-1", sectionId: "section-1" } },
+    {
+      sectionTransition: {
+        sceneId: "scene-1",
+        sectionId: "section-1",
+        resetStory: true,
+      },
+    },
+    { resetStoryAtSection: { sectionId: "section-1" } },
+  ])(
+    "rejects deleting a section referenced by another scene projection (%j)",
+    async (actions) => {
+      const contextState = {
+        scenes: {
+          items: {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              name: "Scene 1",
+              sections: {
+                items: {
+                  "section-1": {
+                    id: "section-1",
+                    name: "Intro",
+                    lines: {
+                      items: {},
+                      tree: [],
+                    },
+                  },
+                },
+                tree: [{ id: "section-1" }],
+              },
+            },
+            "scene-2": {
+              id: "scene-2",
+              type: "scene",
+              name: "Scene 2",
+              sections: {
+                items: {
+                  "section-2": {
+                    id: "section-2",
+                    name: "Branch",
+                    lines: {
+                      items: {},
+                      tree: [],
+                    },
+                  },
+                },
+                tree: [{ id: "section-2" }],
+              },
+            },
+          },
+          tree: [{ id: "scene-1" }, { id: "scene-2" }],
+        },
+      };
+      const fullState = structuredClone(contextState);
+      fullState.scenes.items["scene-2"].sections.items["section-2"].lines = {
+        items: {
+          "line-1": {
+            id: "line-1",
+            actions,
+          },
+        },
+        tree: [{ id: "line-1" }],
+      };
+      const context = {
+        projectId: "project-1",
+        state: contextState,
+        repository: {
+          getContextState: vi.fn(async () => fullState),
+        },
+      };
+      const shared = {
+        ensureCommandContext: vi.fn(async () => context),
+        submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+      };
+      const api = createStoryCommandApi(shared);
+
+      const result = await api.deleteSectionItem({
+        sceneId: "scene-1",
+        sectionIds: ["section-1"],
+      });
+
+      expect(context.repository.getContextState).toHaveBeenCalledWith({
+        sceneIds: ["scene-1", "scene-2"],
+      });
+      expect(result).toEqual({
+        valid: false,
+        error: {
+          message:
+            "This section can't be deleted because another section references it.",
+          code: "section_referenced",
+          details: {
+            sceneId: "scene-2",
+            sceneName: "Scene 2",
+            sectionId: "section-2",
+            sectionName: "Branch",
+            lineId: "line-1",
+            referencedSectionId: "section-1",
+          },
+        },
+      });
+      expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+    },
+  );
 
   it("creates a scene with its initial section and line in one ordered batch", async () => {
     const context = {
@@ -648,8 +711,12 @@ describe("story command api", () => {
                       tree: [{ id: "line-1" }],
                     },
                   },
+                  "section-2": {
+                    id: "section-2",
+                    lines: { items: {}, tree: [] },
+                  },
                 },
-                tree: [{ id: "section-1" }],
+                tree: [{ id: "section-1" }, { id: "section-2" }],
               },
             },
             "scene-2": {
@@ -1217,8 +1284,13 @@ describe("story command api: duplicating and moving a large section", () => {
                   tree: lines.map(({ id }) => ({ id })),
                 },
               },
+              "section-2": {
+                id: "section-2",
+                name: "Other section",
+                lines: { items: {}, tree: [] },
+              },
             },
-            tree: [{ id: "section-1" }],
+            tree: [{ id: "section-1" }, { id: "section-2" }],
           },
         },
         "scene-2": {
@@ -1392,5 +1464,96 @@ describe("story command api: duplicating and moving a large section", () => {
     expect(copiedTexts).toEqual(
       lines.map((line) => line.actions.dialogue.content[0].text),
     );
+  });
+});
+
+describe("story command api: a visual's layout", () => {
+  const createVisualLayoutContext = () => {
+    const state = createStoryState();
+    state.scenes.items["scene-1"].sections.items["section-1"].lines.items[
+      "line-1"
+    ].actions = {
+      visual: {
+        items: [
+          {
+            id: "card",
+            transformId: "center",
+            layout: {
+              layoutSchemaVersion: 2,
+              elements: {
+                items: { title: { type: "text", text: "Hello" } },
+                tree: [{ id: "title" }],
+              },
+            },
+          },
+        ],
+      },
+    };
+    return { projectId: "project-1", state };
+  };
+
+  const createShared = (context) => ({
+    createId: vi.fn(() => "element-new"),
+    ensureCommandContext: vi.fn(async () => context),
+    submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+    scenePartitionFor: vi.fn(() => "s:scene-1"),
+  });
+
+  it("saves a visual's elements on its line and keeps the rest of the visual", async () => {
+    const context = createVisualLayoutContext();
+    const shared = createShared(context);
+    const elements = {
+      items: {
+        title: { type: "text", text: "Hello" },
+        badge: { type: "rect", x: 1500, y: 80 },
+      },
+      tree: [{ id: "title" }, { id: "badge" }],
+    };
+
+    const result = await createStoryCommandApi(
+      shared,
+    ).updateVisualLayoutElements({
+      lineId: "line-1",
+      visualId: "card",
+      elements,
+    });
+
+    expect(result).toEqual({ valid: true });
+    expect(shared.ensureCommandContext).toHaveBeenCalledWith({
+      lineIds: ["line-1"],
+    });
+    const { payload, type, partition } =
+      shared.submitCommandWithContext.mock.calls[0][0];
+    expect(type).toBe(COMMAND_TYPES.LINE_UPDATE_ACTIONS);
+    expect(partition).toBe("s:scene-1");
+    expect(payload.lineId).toBe("line-1");
+    expect(payload.data.visual.items[0]).toEqual({
+      id: "card",
+      transformId: "center",
+      layout: { layoutSchemaVersion: 2, elements },
+    });
+    // The context's state is not changed by the command.
+    expect(
+      context.state.scenes.items["scene-1"].sections.items["section-1"].lines
+        .items["line-1"].actions.visual.items[0].layout.elements.items.badge,
+    ).toBeUndefined();
+  });
+
+  it("refuses to save the elements of a visual that is not on the line", async () => {
+    const shared = createShared(createVisualLayoutContext());
+
+    const result = await createStoryCommandApi(
+      shared,
+    ).updateVisualLayoutElements({
+      lineId: "line-1",
+      visualId: "missing",
+      elements: { items: {}, tree: [] },
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: { code: "visual_layout_missing" },
+    });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
   });
 });

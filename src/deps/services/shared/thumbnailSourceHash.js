@@ -4,9 +4,16 @@ import { stableStringify } from "../../../internal/stableStringify.js";
 // The hash of what a thumbnail is drawn from, saved with it as
 // `thumbnailSourceHash`, so the app can tell whether the saved thumbnail still
 // shows it. `renderState` must hold only what is drawn: file ids, not blob
-// URLs, and no selection outline. Bump `version` when the same state starts
+// URLs, and no selection outline. `animationFrame` is given when the state's
+// animations are held at one time. Bump `version` when the same state starts
 // drawing differently, so saved thumbnails are drawn again.
-export const createThumbnailSourceHash = ({ version, renderState }) =>
+export const createThumbnailSourceHash = ({
+  version,
+  renderState,
+  animationFrame,
+}) =>
   computeSha256(
-    new TextEncoder().encode(stableStringify({ v: version, renderState })),
+    new TextEncoder().encode(
+      stableStringify({ v: version, renderState, animationFrame }),
+    ),
   );

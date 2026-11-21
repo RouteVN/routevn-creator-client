@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createVariablesFileExplorerHandlers } from "../../src/internal/ui/fileExplorer.js";
+import { EN_I18N } from "../support/i18n.js";
 
 const createRepositoryState = () => ({
   variables: {
@@ -38,6 +39,7 @@ const createRepositoryState = () => ({
 });
 
 const createDeps = ({ repositoryState = createRepositoryState() } = {}) => ({
+  i18n: EN_I18N,
   appService: {
     showAlert: vi.fn(),
   },

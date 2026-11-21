@@ -1,3 +1,6 @@
+import { parseAndRender } from "jempl";
+import createRouteEngine from "route-engine-js";
+import { createNvlDialogueProject } from "../support/nvlDialogue.js";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildLayoutElements } from "../../src/internal/project/layout.js";
@@ -81,8 +84,135 @@ describe("layout visibility conditions", () => {
       { layoutId: "layout-1" },
     );
 
-    expect(elements[0].$when).toBe("variables.score == 10");
+    expect(elements[0].$when).toEqual({ eq: [{ var: "variables.score" }, 10] });
   });
+
+  it.each(['She said "Hi"', "A\\B", "Calm && Quiet", "left ) || ( right"])(
+    "compares %j literally in the preview and the player",
+    (value) => {
+      const variable = 'variables["mood-id"]';
+      const elements = buildLayoutElements(
+        ["eq", "neq"].map((op) => ({
+          id: `badge-${op}`,
+          type: "rect",
+          width: 10,
+          height: 10,
+          $when: `((variables.level + 1 >= 3 || variables.bonus) && (${buildVisibilityConditionExpression({ target: variable, op, value })}))`,
+        })),
+        {},
+        {},
+        {},
+        {},
+      ).elements;
+      for (const [current, level, expected] of [
+        [value, 2, "eq"],
+        ["Other", 2, "neq"],
+        [value, 1, undefined],
+      ]) {
+        const variables = { "mood-id": current, level, bonus: false };
+        const preview = parseAndRender(elements, { variables });
+        const project = createNvlDialogueProject("none");
+        project.resources.layouts.nvl.elements = elements;
+        project.resources.variables = Object.fromEntries(
+          Object.entries(variables).map(([id, initial]) => [
+            id,
+            { type: typeof initial, scope: "context", default: initial },
+          ]),
+        );
+        const engine = createRouteEngine({ handlePendingEffects() {} });
+        engine.init({ initialState: { projectData: project } });
+        for (const op of ["eq", "neq"]) {
+          const id = `badge-${op}`;
+          expect(preview.some((element) => element.id === id)).toBe(
+            expected === op,
+          );
+          expect(
+            findElement(engine.selectRenderState().elements, (element) =>
+              element.id?.endsWith("--" + id),
+            ) !== undefined,
+          ).toBe(expected === op);
+        }
+      }
+    },
+  );
+
+  it("applies matching attribute and visibility overrides in order", () => {
+    const when = {
+      target: "variables.mood",
+      op: "eq",
+      value: 'Calm && "Quiet"',
+    };
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "badge",
+          type: "rect",
+          opacity: 1,
+          $when: "variables.level >= 10",
+          conditionalOverrides: [
+            { when, set: { visible: false, opacity: 0.5, anchorX: 0.25 } },
+            {
+              when: { target: "variables.reveal", op: "eq", value: true },
+              set: { visible: true, opacity: 0.75 },
+            },
+          ],
+        },
+      ],
+      {},
+      {},
+      {},
+      {},
+    );
+    const render = (mood, level, reveal) =>
+      parseAndRender(elements, { variables: { mood, level, reveal } });
+    expect(render(when.value, 10, false)).toEqual([]);
+    expect(render("Other", 10, false)[0].alpha).toBe(1);
+    expect(render(when.value, 0, true)[0]).toMatchObject({
+      alpha: 0.75,
+      anchorX: 0.25,
+    });
+    expect(render("Other", 0, false)).toEqual([]);
+  });
+
+  it.each([
+    ["gt", ">", "variables.score", 100],
+    ["gte", ">=", 'variables["score-one"]', 100],
+    ["lt", "<", "runtime.saveLoadPagination", -2.5],
+    ["lte", "<=", "variables.score", 0],
+    ["neq", "!=", "variables.score", 20],
+    ["neq", "!=", "variables.title", "chapter )"],
+    ["neq", "!=", "dialogue.characterId", "character-one"],
+    ["neq", "!=", "runtime.menuPage", "load"],
+  ])(
+    "round-trips %s on %s with its existing condition",
+    (op, symbol, target, value) => {
+      const condition = { target, op, value };
+      const expression = buildVisibilityConditionExpression(condition);
+      expect(expression).toBe(`${target} ${symbol} ${JSON.stringify(value)}`);
+      expect(
+        splitVisibilityConditionFromWhen(
+          `(variables.level >= 1) && (${expression})`,
+        ),
+      ).toEqual({
+        baseWhen: "variables.level >= 1",
+        visibilityCondition: condition,
+      });
+    },
+  );
+
+  it.each([
+    "runtime.autoMode != true",
+    'runtime.menuPage < "save"',
+    "line.characterName || item.savedAt && variables.score >= 1",
+  ])(
+    "preserves an expression outside the editable comparisons",
+    (expression) => {
+      expect(splitVisibilityConditionFromWhen(expression)).toEqual({
+        baseWhen: expression,
+        visibilityCondition: undefined,
+      });
+    },
+  );
 
   it("maps editor opacity to runtime alpha", () => {
     const { elements } = buildLayoutElements(
@@ -124,9 +254,12 @@ describe("layout visibility conditions", () => {
       { layoutId: "layout-1" },
     );
 
-    expect(elements[0].$when).toBe(
-      '(dialogue.character.name) && (variables["flag-enabled"] == true)',
-    );
+    expect(elements[0].$when).toEqual({
+      all: [
+        { var: "dialogue.character.name" },
+        { eq: [{ var: 'variables["flag-enabled"]' }, true] },
+      ],
+    });
   });
 
   it("extracts a saved visibility condition from $when", () => {
@@ -164,7 +297,7 @@ describe("layout visibility conditions", () => {
       { layoutId: "layout-1" },
     );
 
-    expect(elements[0].$when).toBe("!item.savedAt");
+    expect(elements[0].$when).toEqual({ not: { var: "item.savedAt" } });
   });
 
   it("extracts save data availability visibility from $when", () => {
@@ -349,17 +482,19 @@ describe("layout visibility conditions", () => {
       { layoutId: "layout-1" },
     );
 
-    const conditionalAlignTextStyleId =
-      elements[0]["$if runtime.skipMode == false"]?.textStyleId;
+    const conditionalAlignTextStyleId = elements[0]["$if 4"]?.textStyleId;
 
     expect(elements[0]).toMatchObject({
-      "$if variables.score == 10": {
+      "$if 1": {
+        $when: { eq: [{ var: "variables.score" }, 10] },
         textStyleId: "score-style",
       },
-      "$if runtime.isLineCompleted == true": {
+      "$if 2": {
+        $when: { eq: [{ var: "runtime.isLineCompleted" }, true] },
         textStyleId: "completed-style",
       },
-      "$if runtime.autoMode == true": {
+      "$if 3": {
+        $when: { eq: [{ var: "runtime.autoMode" }, true] },
         hover: {
           textStyleId: "hover-style",
         },
@@ -367,15 +502,17 @@ describe("layout visibility conditions", () => {
           textStyleId: "click-style",
         },
       },
-      "$if runtime.skipMode == false": {
+      "$if 4": {
+        $when: { eq: [{ var: "runtime.skipMode" }, false] },
         textStyleId: conditionalAlignTextStyleId,
       },
-      "$if runtime.skipMode == true": {
+      "$if 5": {
+        $when: { eq: [{ var: "runtime.skipMode" }, true] },
         alpha: 0.4,
         anchorX: 0.5,
         anchorY: 1,
       },
-      $when: "!(runtime.skipMode == true)",
+      $when: { not: { eq: [{ var: "runtime.skipMode" }, true] } },
     });
 
     expect(resources.textStyles[conditionalAlignTextStyleId]).toMatchObject({
@@ -468,13 +605,14 @@ describe("layout visibility conditions", () => {
 
     expect(elements[0]).toMatchObject({
       imageId: "base-image",
-      "$if runtime.autoMode == true": {
+      "$if 1": {
+        $when: { eq: [{ var: "runtime.autoMode" }, true] },
         alpha: 0.5,
         imageId: "auto-image",
         hoverImageId: "hover-image",
         clickImageId: "click-image",
       },
-      $when: "!(runtime.skipMode == true)",
+      $when: { not: { eq: [{ var: "runtime.skipMode" }, true] } },
     });
   });
 

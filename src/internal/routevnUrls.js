@@ -1,6 +1,11 @@
 const ROUTEVN_CREATOR_DOCS_BASE_URL = "https://routevn.com/en/creator/docs";
 
 export const ROUTEVN_CONTACT_URL = "https://routevn.com/en/contact/";
+// Chat support channels, offered on About and from the help button.
+export const ROUTEVN_WHATSAPP_URL = "https://wa.me/6589113417";
+export const ROUTEVN_TELEGRAM_URL = "https://t.me/routevn";
+export const ROUTEVN_DISCORD_URL = "https://discord.gg/8J9dyZSu9C";
+export const ROUTEVN_CONTACT_EMAIL_URL = "mailto:contact@routevn.com";
 export const ROUTEVN_CREATOR_APP_STORE_URL =
   "https://apps.apple.com/sg/app/id6810571721";
 export const ROUTEVN_CREATOR_PLAY_STORE_URL =
@@ -9,23 +14,24 @@ export const ROUTEVN_CREATOR_PLAY_STORE_URL =
 export const ROUTEVN_DOWNLOAD_DOMAIN = "routevn.com";
 export const ROUTEVN_CREATOR_DOCS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/introduction/`;
 export const ROUTEVN_CREATOR_DOCS_PAGE_INDEX_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/page-index/`;
-export const ROUTEVN_CREATOR_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials/`;
-export const ROUTEVN_CREATOR_MOBILE_VIDEO_TUTORIALS_URL = `${ROUTEVN_CREATOR_DOCS_BASE_URL}/video-tutorials-mobile/`;
 
 const creatorDocsPathByRoutePattern = {
-  "/project": "/projects/",
+  "/project": "/projects/#project-details",
   "/projects": "/projects/",
   "/project/images": "/images/",
   "/project/spritesheets": "/spritesheets/",
+  "/project/spritesheet-editor": "/spritesheets/",
   "/project/characters": "/characters/",
   "/project/character-sprites": "/characters/#character-sprites",
   "/project/sounds": "/sounds/",
   "/project/transforms": "/transforms/",
-  "/project/transform-editor": "/transforms/",
+  "/project/transform-editor": "/transforms/#parts-of-the-transform-editor",
   "/project/animations": "/animations/",
-  "/project/animation-editor": "/animations/#animation-editor-page",
+  "/project/animation-editor": "/animations/#parts-of-the-animation-editor",
+  "/project/audio-effects": "/audio-effects/",
+  "/project/audio-effects-editor": "/audio-effects/#audio-effect-editor",
   "/project/particles": "/particles/",
-  "/project/particle-editor": "/particles/",
+  "/project/particle-editor": "/particles/#parts-of-the-particle-editor",
   "/project/videos": "/videos/",
   "/project/colors": "/colors/",
   "/project/text-styles": "/text-styles/",
@@ -40,15 +46,16 @@ const creatorDocsPathByRoutePattern = {
   "/project/releases": "/versions/",
   "/project/releases/versions": "/versions/",
   "/project/releases/web-server": "/web-server/",
-  "/project/about": "/page-index/#settings",
-  "/project/config": "/page-index/#settings",
+  "/project/releases/platform-details": "/platform-details/",
+  "/project/about": "/settings/#about",
+  "/project/config": "/settings/#config",
   "/project/tutorials": "/video-tutorials/",
-  "/project/appearance": "/page-index/#settings",
-  "/project/language": "/page-index/#settings",
+  "/project/appearance": "/settings/#config",
+  "/project/language": "/settings/#config",
   "/project/asset-package": "/page-index/#release",
   "/project/asset-packs": "/page-index/#release",
   "/project/asset-pack-editor": "/page-index/#release",
-  "/project/user": "/page-index/#settings",
+  "/project/user": "/settings/",
 };
 
 // Pages with their own docs for phones and tablets, used in touch mode.
@@ -57,16 +64,18 @@ const creatorTouchDocsPathByRoutePattern = {
 };
 
 const creatorDocsPathBySystemActionMode = {
-  actions: "/scene-editor/",
+  actions: "/scene-editor/#add-an-action-to-a-line",
   hidden: "/page-index/",
   dialogue: "/line-actions/dialogue/",
   choice: "/line-actions/choices/",
-  screen: "/line-actions/visual/",
+  // Screen has no page of its own yet.
+  screen: "/scene-editor/#add-an-action-to-a-line",
   background: "/line-actions/background/",
   bgm: "/line-actions/bgm/",
+  voice: "/line-actions/voice/",
   sfx: "/line-actions/sfx/",
   character: "/line-actions/characters/",
-  visual: "/line-actions/visual/",
+  visual: "/line-actions/visuals/",
   sectionTransition: "/line-actions/section-transition/",
   resetStoryAtSection: "/line-actions/section-transition/",
   control: "/line-actions/controls/",
@@ -77,8 +86,8 @@ const creatorDocsPathBySystemActionMode = {
   stopSkipMode: "/line-actions/toggle-skip-mode/",
   toggleDialogueUI: "/line-actions/dialogue/",
   setDialogueTextSpeed: "/line-actions/dialogue/",
-  pushOverlay: "/line-actions/visual/",
-  popOverlay: "/line-actions/visual/",
+  pushOverlay: "/line-actions/push-layered-view/",
+  popOverlay: "/line-actions/pop-layered-view/",
   rollbackByOffset: "/line-actions/next-line/",
   showConfirmDialog: "/line-actions/controls/",
   hideConfirmDialog: "/line-actions/controls/",
@@ -93,9 +102,14 @@ const creatorDocsPathBySystemActionMode = {
   setMuteAll: "/line-actions/bgm/",
   setMenuPage: "/line-actions/controls/",
   setMenuEntryPoint: "/line-actions/controls/",
+  setAutoForwardDelay: "/line-actions/toggle-auto-mode/",
+  setSkipUnseenText: "/line-actions/toggle-skip-mode/",
+  setSkipTransitionsAndAnimations: "/line-actions/toggle-skip-mode/",
   updateVariable: "/line-actions/update-variable/",
   input: "/line-actions/input/",
   conditional: "/line-actions/conditional/",
+  // Random has no page of its own yet.
+  random: "/scene-editor/#add-an-action-to-a-line",
 };
 
 const normalizeRoutePattern = (routePattern) => {

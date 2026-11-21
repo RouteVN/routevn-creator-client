@@ -19,6 +19,7 @@ const routeGraphicsInstance = {
   destroy: vi.fn(),
   loadAssets: vi.fn(async () => {}),
   render: vi.fn(),
+  parse: vi.fn((state) => state),
   setAnimationPlaybackMode: vi.fn(),
   canvas: {
     style: {},
@@ -125,6 +126,73 @@ describe("graphicsService", () => {
       selectSectionLineChanges: vi.fn(() => []),
       handleActions: vi.fn(),
     });
+  });
+
+  it("renders animated scenes without waiting for unavailable audio", async () => {
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: { dispatch: vi.fn() },
+      audioAvailable: false,
+    });
+    try {
+      await service.init({
+        canvas: { children: [], appendChild: vi.fn(), removeChild: vi.fn() },
+        width: 1920,
+        height: 1080,
+      });
+      service.initRouteEngine({
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      });
+      routeGraphicsInstance.render.mockClear();
+      service.engineRenderCurrentState({
+        renderState: {
+          id: "scene-one",
+          elements: [
+            {
+              id: "button",
+              click: { soundSrc: "cached-sound" },
+              children: [{ id: "child", hover: { sound: "cached-sound" } }],
+            },
+          ],
+          audio: [{ id: "sound-one", src: "missing-sound" }],
+          audioEffects: [],
+          animations: [{ id: "animation-one" }],
+        },
+      });
+      expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+        expect.objectContaining({
+          audio: [],
+          audioEffects: [],
+          animations: [{ id: "animation-one" }],
+          elements: [
+            { id: "button", click: {}, children: [{ id: "child", hover: {} }] },
+          ],
+        }),
+      );
+      const state = {
+        elements: [{ id: "button", click: { soundSrc: "cached-sound" } }],
+        audio: [{ id: "sound-one", src: "cached-sound" }],
+        audioEffects: [{ id: "effect-one" }],
+      };
+      expect(service.parse(state)).toEqual(state);
+      service.render(state);
+      expect(routeGraphicsInstance.render).toHaveBeenLastCalledWith({
+        elements: [{ id: "button", click: {} }],
+        audio: [],
+        audioEffects: [],
+      });
+      const loadAudio = vi.spyOn(audioAssetApi, "load");
+      await service.ensureAudioAssetsLoaded(["cached-sound"]);
+      expect(loadAudio).not.toHaveBeenCalled();
+      loadAudio.mockRestore();
+    } finally {
+      await service.destroy();
+    }
   });
 
   it("starts the platform output before graphics and closes it before destroying sources", async () => {
@@ -981,6 +1049,79 @@ describe("graphicsService", () => {
         source: "url",
       },
     });
+  });
+
+  it("checks video readiness and reports missing, timed-out, and failed videos", async () => {
+    class FakeVideo extends EventTarget {
+      HAVE_FUTURE_DATA = 3;
+      readyState = 0;
+      videoWidth = 0;
+      videoHeight = 0;
+    }
+    const original = globalThis.HTMLVideoElement;
+    globalThis.HTMLVideoElement = FakeVideo;
+    vi.useFakeTimers();
+    try {
+      const { createGraphicsService } = await import(
+        "../../src/deps/services/graphicsService.js"
+      );
+      const service = await createGraphicsService({
+        subject: { dispatch: vi.fn() },
+      });
+      const slow = new FakeVideo();
+      const failed = new FakeVideo();
+      const ready = new FakeVideo();
+      ready.readyState = 3;
+      ready.videoWidth = 100;
+      ready.videoHeight = 100;
+      assetsCache.set("slow", { source: { resource: slow } });
+      assetsCache.set("failed", { source: { resource: failed } });
+      assetsCache.set("ready", { source: { resource: ready } });
+      expect(service.isVideoReady("missing")).toBe(false);
+      expect(service.isVideoReady("slow")).toBe(false);
+      expect(service.isVideoReady("ready")).toBe(true);
+      const pending = service.waitForVideosReady(
+        ["slow", "failed", "ready", "missing"],
+        { timeoutMs: 30000 },
+      );
+      failed.dispatchEvent(new Event("error"));
+      await vi.advanceTimersByTimeAsync(30000);
+      const { failures } = await pending;
+      expect(failures.map(({ fileId }) => fileId)).toEqual([
+        "slow",
+        "failed",
+        "missing",
+      ]);
+      expect(failures[0].error.code).toBe("video_ready_timeout");
+      slow.readyState = 3;
+      slow.videoWidth = 100;
+      slow.videoHeight = 100;
+      expect(service.isVideoReady("slow")).toBe(true);
+      expect(await service.waitForVideosReady(["slow"])).toEqual({
+        failures: [],
+      });
+      const later = new FakeVideo();
+      assetsCache.set("later", { source: { resource: later } });
+      const readyWait = service.waitForVideosReady(["later"], {
+        timeoutMs: 30000,
+      });
+      later.readyState = 3;
+      later.videoWidth = 100;
+      later.videoHeight = 100;
+      later.dispatchEvent(new Event("canplay"));
+      expect(await readyWait).toEqual({ failures: [] });
+      const controller = new AbortController();
+      later.readyState = 0;
+      const aborted = service.waitForVideosReady(["later"], {
+        signal: controller.signal,
+      });
+      controller.abort();
+      await expect(aborted).rejects.toMatchObject({ name: "AbortError" });
+    } finally {
+      vi.useRealTimers();
+      if (original === undefined) delete globalThis.HTMLVideoElement;
+      else globalThis.HTMLVideoElement = original;
+    }
   });
 
   it("waits for video assets to have playable frame data before resolving", async () => {
@@ -2488,7 +2629,7 @@ describe("graphicsService", () => {
 
     const originalActions = {
       updateVariable: {
-        id: "update-1",
+        id: "update1",
         operations: [
           {
             variableId: "var-1",
@@ -2512,7 +2653,7 @@ describe("graphicsService", () => {
     expect(handleActions).toHaveBeenCalledWith(
       {
         updateVariable: {
-          id: "update-1",
+          id: "update1",
           operations: [
             {
               variableId: "var-1",
@@ -2532,7 +2673,7 @@ describe("graphicsService", () => {
     );
     expect(originalActions).toEqual({
       updateVariable: {
-        id: "update-1",
+        id: "update1",
         operations: [
           {
             variableId: "var-1",
@@ -2542,6 +2683,67 @@ describe("graphicsService", () => {
         ],
       },
     });
+  });
+
+  it("gives Route Engine a negative Next Line Config delay from an interaction as 0", async () => {
+    const handleActions = vi.fn();
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions,
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+
+    const originalActions = {
+      setNextLineConfig: {
+        auto: { enabled: true, trigger: "fromStart", delay: -500 },
+      },
+    };
+    routeGraphicsInitOptions.eventHandler("click", {
+      _event: { id: "button-1" },
+      actions: originalActions,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(handleActions).toHaveBeenCalledWith(
+      {
+        setNextLineConfig: {
+          auto: { enabled: true, trigger: "fromStart", delay: 0 },
+        },
+      },
+      { _event: { id: "button-1" } },
+    );
+    expect(originalActions.setNextLineConfig.auto.delay).toBe(-500);
   });
 
   it("uses a noop persistence adapter when initRouteEngine has no namespace", async () => {
@@ -2768,6 +2970,7 @@ describe("graphicsService", () => {
         },
       ],
     };
+    const selectSystemState = vi.fn(() => systemState);
     const handleActions = vi.fn(() => {
       effectsHandlerOptions.routeGraphics.render({
         id: "interaction-render",
@@ -2794,7 +2997,7 @@ describe("graphicsService", () => {
       selectPresentationState: vi.fn(() => undefined),
       selectPresentationChanges: vi.fn(() => undefined),
       selectSectionLineChanges: vi.fn(() => []),
-      selectSystemState: vi.fn(() => systemState),
+      selectSystemState,
       handleActions,
     });
 
@@ -2841,8 +3044,9 @@ describe("graphicsService", () => {
         audio: [],
         animations: [],
       },
-      systemState,
     });
+    // Suppressed renders must not copy the engine state.
+    expect(selectSystemState).not.toHaveBeenCalled();
 
     service.engineHandleActions({ nextLine: true });
 

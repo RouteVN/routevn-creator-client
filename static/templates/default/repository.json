@@ -1,5 +1,7 @@
 {
-  "project": {},
+  "project": {
+    "defaultDialogueAvatarTransformId": "T94KC5Xp3jFx"
+  },
   "story": {
     "initialSceneId": "HydQaTUAxHyS"
   },
@@ -407,12 +409,12 @@
         "size": 44142,
         "sha256": "a3f1802b993bb07662e278e0e66337bbbf514964b7de47f62d3baf6a7996708b"
       },
-      "1byxDzynE1iS": {
-        "id": "1byxDzynE1iS",
+      "qSRdENURtYyq": {
+        "id": "qSRdENURtYyq",
         "type": "image",
         "mimeType": "image/jpeg",
-        "size": 1701,
-        "sha256": "05c1e96d5a049af8c47b61c3e3bd23a577fd331d6333e20f274ff6b45ae855e0"
+        "size": 2681,
+        "sha256": "551738065fc310054b4ffe8168dae421bbbc9322dd5a3ace271a3317e44ded37"
       },
       "FfWD5pnkEJTA": {
         "id": "FfWD5pnkEJTA",
@@ -421,12 +423,12 @@
         "size": 44144,
         "sha256": "848ca63ec7aa63f50fe1dd657b69eab1c2ef2fef85c1694a8b73208093f847bf"
       },
-      "hscb5Wqpv6AS": {
-        "id": "hscb5Wqpv6AS",
+      "zVgefTipyt8j": {
+        "id": "zVgefTipyt8j",
         "type": "image",
         "mimeType": "image/jpeg",
-        "size": 1660,
-        "sha256": "a3837c58bb404eca4180f156c98b14b94a78273ea51e68e89343dee2dee69469"
+        "size": 2686,
+        "sha256": "b07c13494625f07ba7e0eca67c85f4be31fe92b2ef4bc3c864ade4393589bc7b"
       },
       "zgQpB1s6QYLe": {
         "id": "zgQpB1s6QYLe",
@@ -435,12 +437,12 @@
         "size": 44145,
         "sha256": "81774fb5fe28e2ec64c01dc93ea29ec95ca8eebd7dd739763485d11b3c888d1d"
       },
-      "fMoD8QfqczS9": {
-        "id": "fMoD8QfqczS9",
+      "GmB1Cn1w8RQk": {
+        "id": "GmB1Cn1w8RQk",
         "type": "image",
         "mimeType": "image/jpeg",
-        "size": 1695,
-        "sha256": "7452bcc5c145a235ebd2039164da10ccba4d6d5af1ea1b71a96e2e4159d5e789"
+        "size": 2689,
+        "sha256": "8085055d58681906f2c88406db779d80bac19f6aa48e2de094800f7250545697"
       },
       "y9X7P9JoVD6Z": {
         "id": "y9X7P9JoVD6Z",
@@ -449,12 +451,26 @@
         "size": 44163,
         "sha256": "7a118087cc7eb1a8c2dc65950178a136d15d6582f17e5c5088e3b37ff6c19a60"
       },
-      "PMnoNokyMvDz": {
-        "id": "PMnoNokyMvDz",
+      "UbodjJ6LraNP": {
+        "id": "UbodjJ6LraNP",
         "type": "image",
         "mimeType": "image/jpeg",
-        "size": 1768,
-        "sha256": "e0dcc5fc5d9b5bcb34ed1276a62ee98d2ac6d75f36a5bf3b7f7351d78ff8fd6c"
+        "size": 2729,
+        "sha256": "6c398c8bd6b4e17814af3d7fc797804a0bcb75c2fe7282b38c7a200fac9b736f"
+      },
+      "ojQvZCmy6A5e": {
+        "id": "ojQvZCmy6A5e",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 1887,
+        "sha256": "e01fbcfe9082e6fc270ee2cbc86b925f5cefee57a774f01bd72c3e0ead66da17"
+      },
+      "P9d4drEb8vhe": {
+        "id": "P9d4drEb8vhe",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 2708,
+        "sha256": "7eb33de40075ac099643e493a30367a151be0d7b18726a27c7fa1a7babd8c085"
       }
     },
     "tree": [
@@ -573,25 +589,31 @@
         "id": "c5miq87M8EPa"
       },
       {
-        "id": "1byxDzynE1iS"
+        "id": "qSRdENURtYyq"
       },
       {
         "id": "FfWD5pnkEJTA"
       },
       {
-        "id": "hscb5Wqpv6AS"
+        "id": "zVgefTipyt8j"
       },
       {
         "id": "zgQpB1s6QYLe"
       },
       {
-        "id": "fMoD8QfqczS9"
+        "id": "GmB1Cn1w8RQk"
       },
       {
         "id": "y9X7P9JoVD6Z"
       },
       {
-        "id": "PMnoNokyMvDz"
+        "id": "UbodjJ6LraNP"
+      },
+      {
+        "id": "ojQvZCmy6A5e"
+      },
+      {
+        "id": "P9d4drEb8vhe"
       }
     ]
   },
@@ -1337,7 +1359,7 @@
         "anchorY": 1,
         "rotation": 0,
         "description": "",
-        "thumbnailFileId": "1byxDzynE1iS",
+        "thumbnailFileId": "qSRdENURtYyq",
         "previewFileId": "c5miq87M8EPa"
       },
       "aZSd8ACeNytK": {
@@ -1352,7 +1374,7 @@
         "anchorY": 1,
         "rotation": 0,
         "description": "",
-        "thumbnailFileId": "hscb5Wqpv6AS",
+        "thumbnailFileId": "zVgefTipyt8j",
         "previewFileId": "FfWD5pnkEJTA"
       },
       "Pkpjt1DHJLEz": {
@@ -1367,7 +1389,7 @@
         "anchorY": 1,
         "rotation": 0,
         "description": "",
-        "thumbnailFileId": "fMoD8QfqczS9",
+        "thumbnailFileId": "GmB1Cn1w8RQk",
         "previewFileId": "zgQpB1s6QYLe"
       },
       "ZgyCeJuJpLsm": {
@@ -1382,8 +1404,22 @@
         "anchorY": 0.5,
         "rotation": 0,
         "description": "",
-        "thumbnailFileId": "PMnoNokyMvDz",
+        "thumbnailFileId": "UbodjJ6LraNP",
         "previewFileId": "y9X7P9JoVD6Z"
+      },
+      "T94KC5Xp3jFx": {
+        "id": "T94KC5Xp3jFx",
+        "type": "transform",
+        "name": "Avatar",
+        "description": "",
+        "x": 200,
+        "y": 620,
+        "scaleX": 1,
+        "scaleY": 1,
+        "anchorX": 0.5,
+        "anchorY": 0,
+        "rotation": 0,
+        "thumbnailFileId": "P9d4drEb8vhe"
       }
     },
     "tree": [
@@ -1401,6 +1437,9 @@
           },
           {
             "id": "ZgyCeJuJpLsm"
+          },
+          {
+            "id": "T94KC5Xp3jFx"
           }
         ]
       }
@@ -1608,12 +1647,29 @@
         "id": "KfJVu6EFb3es",
         "type": "folder",
         "name": "Default"
+      },
+      "nHQaT2pu9m1E": {
+        "id": "nHQaT2pu9m1E",
+        "type": "variable",
+        "name": "Player Name",
+        "description": "",
+        "variableType": "string",
+        "scope": "context",
+        "default": "Player Name",
+        "value": "Player Name",
+        "isEnum": false,
+        "enumValues": []
       }
     },
     "tree": [
       {
         "id": "KfJVu6EFb3es",
-        "children": []
+        "children": [
+          {
+            "id": "nHQaT2pu9m1E",
+            "children": []
+          }
+        ]
       }
     ]
   },
@@ -1819,6 +1875,278 @@
             "characterId": "",
             "character": {
               "name": "Character"
+            },
+            "content": [
+              {
+                "text": "This is a sample dialogue content"
+              }
+            ],
+            "lines": [
+              {
+                "characterId": "",
+                "character": {
+                  "name": "Character"
+                },
+                "characterName": "Character",
+                "content": [
+                  {
+                    "text": "This is a sample dialogue content"
+                  }
+                ]
+              },
+              {
+                "content": [
+                  {
+                    "text": "This is a sample dialogue content"
+                  }
+                ]
+              },
+              {
+                "character": {
+                  "name": "Narrator"
+                },
+                "characterName": "Narrator",
+                "content": [
+                  {
+                    "text": "This is a sample dialogue content"
+                  }
+                ]
+              }
+            ]
+          },
+          "dialogueLines": [
+            {
+              "characterId": "",
+              "character": {
+                "name": "Character"
+              },
+              "characterName": "Character",
+              "content": [
+                {
+                  "text": "This is a sample dialogue content"
+                }
+              ]
+            },
+            {
+              "content": [
+                {
+                  "text": "This is a sample dialogue content"
+                }
+              ]
+            },
+            {
+              "character": {
+                "name": "Narrator"
+              },
+              "characterName": "Narrator",
+              "content": [
+                {
+                  "text": "This is a sample dialogue content"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "VUNZY29zWHHy": {
+        "id": "VUNZY29zWHHy",
+        "type": "layout",
+        "name": "ADV with Avatar",
+        "thumbnailFileId": "iHmYeZoi3pZZ",
+        "layoutType": "dialogue-adv",
+        "layoutSchemaVersion": 2,
+        "elements": {
+          "items": {
+            "CAhd7gUqshKi": {
+              "id": "CAhd7gUqshKi",
+              "type": "container",
+              "name": "Dialogue Container",
+              "x": 0,
+              "y": 1080,
+              "width": 0,
+              "height": 0,
+              "anchorX": 0,
+              "anchorY": 1,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "gapX": 0,
+              "gapY": 0
+            },
+            "tx9hSBUXFxVe": {
+              "id": "tx9hSBUXFxVe",
+              "type": "sprite",
+              "name": "Dialogue Box",
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 350,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "imageId": "4d8J6KjXUz84"
+            },
+            "QmHXpNuhPar9": {
+              "id": "QmHXpNuhPar9",
+              "type": "text-ref-character-name",
+              "name": "Character Name",
+              "x": 440,
+              "y": 26,
+              "height": 40,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "4RBLmu6eMk58"
+            },
+            "rCgev4qXVDr2": {
+              "id": "rCgev4qXVDr2",
+              "type": "text-revealing-ref-dialogue-content",
+              "name": "Dialogue Content",
+              "x": 440,
+              "y": 106,
+              "width": 1360,
+              "height": 140,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "5rwEfyx2GBEi",
+              "revealEffect": "typewriter"
+            },
+            "D2dMCvr5eXff": {
+              "id": "D2dMCvr5eXff",
+              "type": "sprite",
+              "name": "Sprite",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "width": 240,
+              "height": 80,
+              "imageId": "pR3mjjDnnN71"
+            },
+            "WcPeW6LYZvsK": {
+              "id": "WcPeW6LYZvsK",
+              "type": "container",
+              "name": "Container",
+              "x": 42,
+              "y": 40,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "gapX": 0,
+              "gapY": 0,
+              "$when": "runtime.skipMode == true"
+            },
+            "BMWTGafLAUEj": {
+              "id": "BMWTGafLAUEj",
+              "type": "text",
+              "name": "Text",
+              "x": 41,
+              "y": 11,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Skipping",
+              "textStyle": {
+                "align": "center"
+              },
+              "textStyleId": "e2WbW3vcPZR9"
+            },
+            "mDaKkorUVE3E": {
+              "id": "mDaKkorUVE3E",
+              "type": "fragment-ref",
+              "name": "Dialogue Menu",
+              "x": 1246,
+              "y": 1010,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "width": 0,
+              "height": 0,
+              "fragmentLayoutId": "ob6i5RdAgrcK"
+            }
+          },
+          "tree": [
+            {
+              "id": "mDaKkorUVE3E",
+              "children": []
+            },
+            {
+              "id": "WcPeW6LYZvsK",
+              "children": [
+                {
+                  "id": "BMWTGafLAUEj",
+                  "children": []
+                },
+                {
+                  "id": "D2dMCvr5eXff",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "CAhd7gUqshKi",
+              "children": [
+                {
+                  "id": "rCgev4qXVDr2"
+                },
+                {
+                  "id": "QmHXpNuhPar9"
+                },
+                {
+                  "id": "tx9hSBUXFxVe"
+                }
+              ]
+            }
+          ]
+        },
+        "preview": {
+          "backgroundImageId": "Nywji71vMz3w",
+          "runtime": {
+            "dialogueTextSpeed": 50,
+            "autoForwardDelay": 1000,
+            "skipUnseenText": false,
+            "skipTransitionsAndAnimations": false,
+            "soundVolume": 50,
+            "musicVolume": 50,
+            "muteAll": false,
+            "saveLoadPagination": 1,
+            "menuPage": "",
+            "menuEntryPoint": "",
+            "autoMode": false,
+            "skipMode": false,
+            "dialogueUIHidden": false,
+            "isLineCompleted": false
+          },
+          "dialogue": {
+            "characterId": "",
+            "character": {
+              "name": "Character",
+              "sprite": {
+                "items": [],
+                "transformId": "T94KC5Xp3jFx"
+              }
             },
             "content": [
               {
@@ -2311,8 +2639,10 @@
               "click": {
                 "payload": {
                   "actions": {
-                    "resetStoryAtSection": {
-                      "sectionId": "DbhYkg5Lng7f"
+                    "sectionTransition": {
+                      "sceneId": "LL8EUke6dL2V",
+                      "sectionId": "DbhYkg5Lng7f",
+                      "resetStory": true
                     }
                   }
                 }
@@ -2657,8 +2987,10 @@
                       "resourceId": "3SbNExCHBKaN",
                       "confirmActions": {
                         "popOverlay": {},
-                        "resetStoryAtSection": {
-                          "sectionId": "oivTjWAhhYG1"
+                        "sectionTransition": {
+                          "sceneId": "HydQaTUAxHyS",
+                          "sectionId": "oivTjWAhhYG1",
+                          "resetStory": true
                         }
                       }
                     }
@@ -5546,6 +5878,117 @@
         "preview": {
           "backgroundImageId": "Nywji71vMz3w"
         }
+      },
+      "N2LsZZYHBXt2": {
+        "id": "N2LsZZYHBXt2",
+        "type": "layout",
+        "name": "Default Input",
+        "description": "",
+        "layoutType": "input",
+        "layoutSchemaVersion": 2,
+        "isFragment": false,
+        "elements": {
+          "items": {
+            "hmqzdW4miCkA": {
+              "id": "hmqzdW4miCkA",
+              "type": "text",
+              "name": "Text",
+              "x": 960,
+              "y": 300,
+              "anchorX": 0.5,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Enter your name",
+              "content": [
+                {
+                  "text": "Enter your name"
+                }
+              ],
+              "textStyle": {
+                "align": "center"
+              },
+              "textStyleId": "D6GseHxLs9fE"
+            },
+            "RxjgWPMJuT2a": {
+              "id": "RxjgWPMJuT2a",
+              "type": "input",
+              "name": "Input",
+              "x": 960,
+              "y": 350,
+              "anchorX": 0.5,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "field": "Name input",
+              "width": 330,
+              "height": 52
+            },
+            "qmFVviNGxnCu": {
+              "id": "qmFVviNGxnCu",
+              "type": "container",
+              "name": "Input Submit Container",
+              "x": 960,
+              "y": 472,
+              "anchorX": 0.5,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "absolute",
+              "gapX": 0,
+              "gapY": 0,
+              "formRole": "submit"
+            },
+            "91rHa2us4WnP": {
+              "id": "91rHa2us4WnP",
+              "type": "text",
+              "name": "Text",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Submit",
+              "content": [
+                {
+                  "text": "Submit"
+                }
+              ],
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "D6GseHxLs9fE"
+            }
+          },
+          "tree": [
+            {
+              "id": "hmqzdW4miCkA",
+              "children": []
+            },
+            {
+              "id": "RxjgWPMJuT2a",
+              "children": []
+            },
+            {
+              "id": "qmFVviNGxnCu",
+              "children": [
+                {
+                  "id": "91rHa2us4WnP",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "thumbnailFileId": "ojQvZCmy6A5e",
+        "preview": {
+          "backgroundImageId": "c5xw9bBcNAxD"
+        }
       }
     },
     "tree": [
@@ -5554,6 +5997,9 @@
         "children": [
           {
             "id": "6E1mZaxeXgaN"
+          },
+          {
+            "id": "VUNZY29zWHHy"
           },
           {
             "id": "ob6i5RdAgrcK"
@@ -5581,6 +6027,9 @@
           },
           {
             "id": "nLFbrco2dLmU"
+          },
+          {
+            "id": "N2LsZZYHBXt2"
           }
         ]
       }

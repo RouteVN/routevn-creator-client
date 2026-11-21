@@ -10,6 +10,7 @@ import { isAssetPackageFileMimeTypeAllowed } from "../../../internal/assetPackag
 import {
   createImportPackageClient,
   ImportPackageClientError,
+  resolveImportUrl,
 } from "../../clients/importPackageClient.js";
 
 const PREVIEW_IMAGE_MIME_TYPES = new Set([
@@ -410,20 +411,41 @@ export const createResourcePackageImportService = ({
   };
 
   return {
-    // `url` is a manifest whose files resolve against it; `zip` is a
-    // published package read in place (see importPackageClient.openPackage).
-    // A v2 package's dependencies go into folders named `dependencyFolderName`.
+    // Whether a link typed by the user can be imported from: a well-formed
+    // HTTPS URL, or an HTTP one on this device. Nothing is requested.
+    validateResourceImportUrl({ url } = {}) {
+      try {
+        resolveImportUrl(url);
+        return { valid: true };
+      } catch (error) {
+        return toErrorResult(error);
+      }
+    },
+
+    // The package's source, as importPackageClient.openPackage takes it:
+    // `url` is a manifest whose files resolve against it; `zip` is a package
+    // ZIP, published (`{url, size, directoryOffset, directorySize}`), on any
+    // server (`{url}`) or a file on this device (`{file}`); `link` is a URL
+    // to either a ZIP or a manifest; `assetPack` is an asset store pack,
+    // whose import reads its signed package ZIP.
+    // A v2 package's dependencies go into folders named
+    // `dependencyFolderName`, which the asset store sets to the pack's title.
+    // Without it they are named after the package, by its manifest, or else
+    // `fallbackDependencyFolderName`, such as a package file's name.
     async createResourceImportPlan({
       url,
       zip,
+      link,
+      assetPack,
       operationId,
       dependencyFolderName,
+      fallbackDependencyFolderName,
     } = {}) {
       let operation;
       try {
         recordEvent("plan.started");
         operation = beginOperation(operationId);
-        const source = importClient.openPackage({ url, zip });
+        const source = importClient.openPackage({ url, zip, link, assetPack });
         const { manifest, manifestUrl } = await source.readManifest({
           signal: operation.controller.signal,
         });
@@ -434,6 +456,7 @@ export const createResourcePackageImportService = ({
           repositoryState: getRepositoryState(),
           createId: idGenerator,
           dependencyFolderName,
+          fallbackDependencyFolderName,
         });
         if (plan.knownDownloadBytes > importClient.limits.totalBytes) {
           throw new ImportPackageClientError(
@@ -512,6 +535,7 @@ export const createResourcePackageImportService = ({
         operation = beginOperation(operationId);
         const download = await sources.get(planId).readFile({
           descriptor: previewFile.descriptor,
+          fileId: sourceFileId,
           signal: operation.controller.signal,
         });
         // A plan's previews together stay within the total download limit,
@@ -676,6 +700,13 @@ export const createResourcePackageImportService = ({
           completed: 0,
           total: neededFiles.length,
         });
+        // An asset store pack's files come from its package ZIP, opened
+        // when its import starts; any other package's from where its review
+        // read them.
+        const fileSource =
+          (await source.openImport?.({
+            signal: operation.controller.signal,
+          })) ?? source;
         // The limit counts the files this import brings in, once each, and
         // not the previews of what it leaves out.
         let downloadedBytes = 0;
@@ -685,8 +716,9 @@ export const createResourcePackageImportService = ({
           async (filePlan) => {
             const result =
               previewFiles?.get(filePlan.sourceId)?.download ??
-              (await source.readFile({
+              (await fileSource.readFile({
                 descriptor: filePlan.descriptor,
+                fileId: filePlan.sourceId,
                 signal: operation.controller.signal,
               }));
             downloadedBytes += result.byteLength;

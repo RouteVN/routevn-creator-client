@@ -1,0 +1,4 @@
+componentName: rvn-spritesheet-editor
+propsSchema:
+  type: object
+  properties: {}

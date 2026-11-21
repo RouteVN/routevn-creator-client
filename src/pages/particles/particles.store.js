@@ -214,7 +214,27 @@ export const createInitialState = () => ({
   editDefaultValues: createEmptyMetadataValues(),
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   imagesData: EMPTY_TREE,
+  deletingItemIds: [],
 });
+
+// A particle stays on the page until its delete has finished and the page
+// refreshed, so it can be sent to delete again while the first delete checks
+// every scene.
+export const startDeletingItem = ({ state }, { itemId } = {}) => {
+  if (!state.deletingItemIds.includes(itemId)) {
+    state.deletingItemIds.push(itemId);
+  }
+};
+
+export const finishDeletingItem = ({ state }, { itemId } = {}) => {
+  const index = state.deletingItemIds.indexOf(itemId);
+  if (index >= 0) {
+    state.deletingItemIds.splice(index, 1);
+  }
+};
+
+export const selectIsDeletingItem = ({ state }, { itemId } = {}) =>
+  state.deletingItemIds.includes(itemId);
 
 export {
   setItems,

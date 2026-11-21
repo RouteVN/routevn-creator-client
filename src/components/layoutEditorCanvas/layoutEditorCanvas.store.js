@@ -10,10 +10,14 @@ export const createInitialState = () => ({
   isDragging: false,
   dragMode: "move",
   dragStartPosition: undefined,
+  dragAxisRotation: undefined,
   dragRenderState: undefined,
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
   warnedAssetFileIds: [],
+  timedOutVideoFileIds: [],
+  videoLoadingRequestId: undefined,
+  hasDrawnLayout: false,
   activeRenderRequestId: undefined,
   selectionOccurrencesById: {},
   selectionOccurrenceIdsByOwner: {},
@@ -32,6 +36,24 @@ export const createInitialState = () => ({
   canvasUnitsPerCssPixel: 1,
 });
 
+export const selectTimedOutVideoFileIds = ({ state }) =>
+  state.timedOutVideoFileIds;
+export const selectIsVideoLoading = ({ state }) =>
+  state.videoLoadingRequestId !== undefined;
+export const rememberTimedOutVideoFileIds = ({ state }, { fileIds }) => {
+  state.timedOutVideoFileIds = [
+    ...new Set([...state.timedOutVideoFileIds, ...fileIds]),
+  ];
+};
+export const setVideoLoading = ({ state }, { requestId, value }) => {
+  if (state.activeRenderRequestId !== requestId) return;
+  state.videoLoadingRequestId = value ? requestId : undefined;
+};
+export const selectHasDrawnLayout = ({ state }) => state.hasDrawnLayout;
+export const markLayoutDrawn = ({ state }) => {
+  state.hasDrawnLayout = true;
+};
+
 export const selectWarnedAssetFileIds = ({ state }) => state.warnedAssetFileIds;
 export const markAssetWarningsShown = ({ state }, { fileIds }) => {
   state.warnedAssetFileIds = [
@@ -43,10 +65,15 @@ export const setGraphicsReady = ({ state }, { value = false } = {}) => {
   state.isGraphicsReady = value === true;
 };
 
-export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
+export const startDragging = (
+  { state },
+  { dragMode = "move", axisRotation } = {},
+) => {
   state.isDragging = true;
   state.dragMode = dragMode;
+  state.dragAxisRotation = axisRotation;
   state.activeRenderRequestId = undefined;
+  state.videoLoadingRequestId = undefined;
   // Pointer deltas stay relative to this snapshot for the entire gesture.
   state.dragRenderState = {
     baseElements: state.canvasBaseElements,
@@ -58,7 +85,15 @@ export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
 
 export const setDragStartPosition = (
   { state },
-  { x, y, itemStartX, itemStartY, itemStartWidth, itemStartHeight } = {},
+  {
+    x,
+    y,
+    itemStartX,
+    itemStartY,
+    itemStartWidth,
+    itemStartHeight,
+    axisRotation,
+  } = {},
 ) => {
   if (
     typeof x !== "number" ||
@@ -82,6 +117,10 @@ export const setDragStartPosition = (
 
   if (typeof itemStartHeight === "number") {
     state.dragStartPosition.itemStartHeight = itemStartHeight;
+  }
+
+  if (typeof axisRotation === "number") {
+    state.dragStartPosition.axisRotation = axisRotation;
   }
 };
 
@@ -113,6 +152,7 @@ export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
   state.dragMode = "move";
   state.dragStartPosition = undefined;
+  state.dragAxisRotation = undefined;
   state.dragRenderState = undefined;
 };
 
@@ -126,6 +166,7 @@ export const clearPendingUpdatedItem = ({ state }, _payload = {}) => {
 
 export const setActiveRenderRequestId = ({ state }, { requestId } = {}) => {
   state.activeRenderRequestId = requestId;
+  state.videoLoadingRequestId = undefined;
 };
 
 export const setSelectionOccurrences = (
@@ -254,6 +295,7 @@ export const selectDragging = ({ state }) => {
     isDragging: state.isDragging,
     dragMode: state.dragMode,
     dragStartPosition: state.dragStartPosition,
+    axisRotation: state.dragAxisRotation,
   };
 };
 
@@ -336,13 +378,20 @@ export const selectDragRenderState = ({ state }) => {
   return state.dragRenderState;
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state, props, i18n }) => {
   const resolution = requireProjectResolution(
     props.resolution ?? DEFAULT_PROJECT_RESOLUTION,
     "Layout editor canvas resolution",
   );
 
   return {
+    // Until the layout is first drawn the canvas waits for all its assets;
+    // after that only a video that is still loading covers it.
+    isCanvasLoading:
+      !state.hasDrawnLayout || state.videoLoadingRequestId !== undefined,
+    canvasLoadingLabel: state.hasDrawnLayout
+      ? i18n.layoutEditorPage.loadingVideoLabel
+      : i18n.layoutEditorPage.loadingAssetsLabel,
     canvasAspectRatio: formatProjectResolutionAspectRatio(resolution),
     canvasCursor:
       state.isDragging && state.dragMode === "rotate"

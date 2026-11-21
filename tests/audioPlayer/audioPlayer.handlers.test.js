@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
   handleBeforeMount,
+  handlePlayPause,
 } from "../../src/components/audioPlayer/audioPlayer.handlers.js";
 
 const originalWindow = globalThis.window;
@@ -9,6 +10,7 @@ const originalCustomEvent = globalThis.CustomEvent;
 
 const createDeps = () => ({
   appService: {
+    getPlatform: vi.fn(() => "web"),
     showAlert: vi.fn(),
     showAlertWhenIdle: vi.fn(),
     showToast: vi.fn(),
@@ -184,6 +186,7 @@ describe("audio player handlers", () => {
   });
 
   it("plays a src as it is, without reading a project file", async () => {
+    globalThis.window = { AudioContext: class {} };
     const deps = createDeps();
     deps.props = { src: "blob:sound", autoPlay: true };
     deps.projectService = { getFileContent: vi.fn() };
@@ -195,5 +198,31 @@ describe("audio player handlers", () => {
     expect(deps.projectService.getFileContent).not.toHaveBeenCalled();
     expect(deps.audioService.loadAudio).toHaveBeenCalledWith("blob:sound");
     expect(deps.audioService.play).toHaveBeenCalledOnce();
+  });
+});
+
+describe("audio unavailable", () => {
+  it("stays silent on mount and warns once for each play action", async () => {
+    const error = Object.assign(new Error("Web Audio is not available"), {
+      name: "AudioUnavailableError",
+    });
+    const deps = createDeps();
+    deps.audioService.acquire = () => {
+      throw error;
+    };
+    deps.i18n = {
+      appPage: {
+        audioUnavailable: "Audio is unavailable.",
+        errorDetailsLabel: "Details:",
+      },
+    };
+    expect(() => handleBeforeMount(deps)).not.toThrow();
+    await handleAfterMount(deps);
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    await handlePlayPause(deps, { _event: { preventDefault: vi.fn() } });
+    expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(deps.appService.showAlert.mock.calls[0][0].message).toBe(
+      "Audio is unavailable.\n\nDetails:\nWeb Audio is not available",
+    );
   });
 });

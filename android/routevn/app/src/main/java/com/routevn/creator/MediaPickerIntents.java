@@ -2,6 +2,7 @@ package com.routevn.creator;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
@@ -49,7 +50,10 @@ final class MediaPickerIntents {
                 type
             );
         }
-        pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        // No FLAG_GRANT_READ_URI_PERMISSION: it would grant the gallery the
+        // media collection, which this app cannot read, so Android refuses
+        // the start when the gallery lacks media access itself. The gallery
+        // grants access to the picked items in its result.
         pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
 
         // Devices may route media requests to a file manager. Prefer apps
@@ -62,7 +66,7 @@ final class MediaPickerIntents {
         }
         List<Intent> choices = new ArrayList<>();
         for (ResolveInfo app : packages.queryIntentActivities(pick, PackageManager.MATCH_DEFAULT_ONLY)) {
-            if (galleries.contains(app.activityInfo.packageName)) {
+            if (galleries.contains(app.activityInfo.packageName) && canStart(context, app.activityInfo)) {
                 choices.add(new Intent(pick).setClassName(app.activityInfo.packageName, app.activityInfo.name));
             }
         }
@@ -71,5 +75,14 @@ final class MediaPickerIntents {
         Intent chooser = Intent.createChooser(choices.remove(0), null);
         chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, choices.toArray(new Intent[0]));
         return chooser;
+    }
+
+    // Android refuses to start a gallery activity that other apps may not
+    // open, so such a gallery is not offered.
+    private static boolean canStart(Context context, ActivityInfo activity) {
+        return activity.exported && (
+            activity.permission == null ||
+            context.checkSelfPermission(activity.permission) == PackageManager.PERMISSION_GRANTED
+        );
     }
 }

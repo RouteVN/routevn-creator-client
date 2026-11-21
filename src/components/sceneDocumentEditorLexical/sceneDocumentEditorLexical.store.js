@@ -37,5 +37,6 @@ export const selectViewData = ({ props, i18n }) => ({
   textStyles: props.textStyles || [],
   mentionTargets: props.mentionTargets || [],
   compactPreviews: props.compactPreviews ?? false,
+  textDirection: props.textDirection ?? "ltr",
   menuLabels: selectMenuLabels(i18n),
 });

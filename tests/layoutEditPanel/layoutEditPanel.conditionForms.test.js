@@ -41,6 +41,19 @@ describe("layoutEditPanel condition forms", () => {
     ]);
   });
 
+  it.each([
+    ["number", ["eq", "neq", "gt", "gte", "lt", "lte"]],
+    ["string", ["eq", "neq"]],
+    ["boolean", ["eq"]],
+  ])("offers the visibility operators for %s targets", (targetType, ops) => {
+    const form = createVisibilityConditionForm({ targetType });
+    expect(
+      form.fields
+        .find((field) => field.name === "op")
+        .options.map(({ value }) => value),
+    ).toEqual(ops);
+  });
+
   it("uses character selects for character-valued visibility and override targets", () => {
     const visibilityForm = createVisibilityConditionForm({
       targetOptions: [
@@ -165,7 +178,7 @@ describe.each([
     dialog: "visibility",
     handler: handleVisibilityConditionFormChange,
     formRef: "visibilityConditionForm",
-    setter: "setVisibilityConditionDialogSelectedVariableType",
+    setter: "setVisibilityConditionDialogTarget",
   },
   {
     dialog: "conditional override",
@@ -175,11 +188,15 @@ describe.each([
   },
 ])(
   "layoutEditPanel $dialog condition target defaults",
-  ({ handler, formRef, setter }) => {
+  ({ dialog, handler, formRef, setter }) => {
     const TYPES = {
       "variables['enabled']": "boolean",
       "variables['score']": "number",
     };
+    const expectedSelection = (target, type) =>
+      dialog === "visibility"
+        ? { target }
+        : { selectedVariableType: type, selectedValueKind: type };
     const changeForm = (values) => {
       const calls = [];
       handler(
@@ -192,6 +209,7 @@ describe.each([
           },
           render: () => calls.push({ type: "render" }),
           store: {
+            selectVisibilityConditionEnumOptions: () => undefined,
             selectVisibilityConditionTargetTypeByTarget: () => TYPES,
             selectVisibilityConditionTargetValueKindByTarget: () => TYPES,
             [setter]: (kinds) => calls.push({ type: "kinds", kinds }),
@@ -206,24 +224,35 @@ describe.each([
       expect(changeForm({ target: "variables['score']" })).toEqual([
         {
           type: "kinds",
-          kinds: {
-            selectedVariableType: "number",
-            selectedValueKind: "number",
-          },
+          kinds: expectedSelection("variables['score']", "number"),
         },
         { type: "render" },
         { type: "set", values: { target: "variables['score']", op: "eq" } },
       ]);
     });
 
+    it("resets a numeric comparison when switching to a Boolean target", () => {
+      expect(
+        changeForm({
+          target: "variables['enabled']",
+          op: "gte",
+          booleanValue: false,
+        }).at(-1),
+      ).toEqual({
+        type: "set",
+        values: {
+          target: "variables['enabled']",
+          op: "eq",
+          booleanValue: false,
+        },
+      });
+    });
+
     it("selects True for a Boolean target after the render that shows its value", () => {
       expect(changeForm({ target: "variables['enabled']" })).toEqual([
         {
           type: "kinds",
-          kinds: {
-            selectedVariableType: "boolean",
-            selectedValueKind: "boolean",
-          },
+          kinds: expectedSelection("variables['enabled']", "boolean"),
         },
         { type: "render" },
         {
@@ -261,10 +290,7 @@ describe.each([
       expect(changeForm({})).toEqual([
         {
           type: "kinds",
-          kinds: {
-            selectedVariableType: undefined,
-            selectedValueKind: undefined,
-          },
+          kinds: expectedSelection(undefined, undefined),
         },
         { type: "render" },
       ]);

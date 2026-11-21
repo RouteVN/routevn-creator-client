@@ -1,5 +1,6 @@
 import { extractFileIdsFromRenderState } from "../../../internal/project/layout.js";
 import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorElementRegistry.js";
+import { placeLayoutInSceneBackdrop } from "../../../internal/layoutEditorSceneBackdrop.js";
 import {
   createFontAssetMetadataByFileId,
   createLayoutPreviewElements,
@@ -315,6 +316,7 @@ const buildOverlayResizeHandle = ({
   element,
   overlayId,
   edge,
+  rotation,
   canvasUnitsPerCssPixel,
 }) => {
   if (!hasRenderableBounds(element)) {
@@ -329,6 +331,7 @@ const buildOverlayResizeHandle = ({
     edge,
     size: resizeHandleSize,
     fill: OVERLAY_FILL,
+    rotation,
   });
 };
 
@@ -336,6 +339,7 @@ const buildOverlayResizeHandles = ({
   element,
   overlayId,
   selectedItem,
+  rotation,
   canvasUnitsPerCssPixel,
 }) => {
   const edges = getLayoutEditorItemResizeEdges(selectedItem ?? element);
@@ -346,6 +350,7 @@ const buildOverlayResizeHandles = ({
         element,
         overlayId,
         edge,
+        rotation,
         canvasUnitsPerCssPixel,
       }),
     )
@@ -427,6 +432,11 @@ const buildOverlayTree = ({
       element: selectedElement,
       overlayId,
       selectedItem,
+      // The handles sit inside every rotated ancestor of the element.
+      rotation: path.reduce(
+        (total, element) => total + (element.rotation ?? 0),
+        0,
+      ),
       canvasUnitsPerCssPixel,
     }),
     anchorMarker,
@@ -753,17 +763,21 @@ export const createLayoutEditorRenderState = ({
   createLayoutPreviewRenderState({
     layoutState,
     repositoryState,
+    videoRenderMode: "editor",
     mapElement: createLayoutEditorSelectionElementMapper({
       layoutId: layoutState?.id,
     }),
   });
 
+// A layout edited over its scene, such as a visual's layout, is drawn in the
+// scene's backdrop. The backdrop is only shown: nothing in it is selected.
 const createLayoutEditorResolvedElements = ({
   layoutState,
   repositoryState,
   previewData,
   resolution,
   sampleText,
+  sceneBackdrop,
 } = {}) => {
   const { elements, backgroundElement, characterSprite } =
     createLayoutPreviewElements({
@@ -772,6 +786,7 @@ const createLayoutEditorResolvedElements = ({
       previewData,
       resolution,
       sampleText,
+      videoRenderMode: "editor",
       mapElement: createLayoutEditorSelectionElementMapper({
         layoutId: layoutState?.id,
       }),
@@ -786,7 +801,10 @@ const createLayoutEditorResolvedElements = ({
     renderedElements.push(characterSprite);
   }
   return {
-    renderedElements,
+    renderedElements: placeLayoutInSceneBackdrop(
+      sceneBackdrop,
+      renderedElements,
+    ),
     occurrencesById: selectionOccurrences.occurrencesById,
     occurrenceIdsByOwner: selectionOccurrences.occurrenceIdsByOwner,
   };
@@ -798,6 +816,7 @@ export const createLayoutEditorAssetReferences = ({
   previewData,
   resolution,
   sampleText,
+  sceneBackdrop,
 } = {}) => {
   const { renderedElements } = createLayoutEditorResolvedElements({
     layoutState,
@@ -805,6 +824,7 @@ export const createLayoutEditorAssetReferences = ({
     previewData,
     resolution,
     sampleText,
+    sceneBackdrop,
   });
   const fileReferences = extractFileIdsFromRenderState(renderedElements);
 
@@ -825,6 +845,7 @@ export const createLayoutEditorRenderedElements = ({
   canvasUnitsPerCssPixel,
   graphicsService,
   sampleText,
+  sceneBackdrop,
 } = {}) => {
   const { renderedElements, occurrencesById, occurrenceIdsByOwner } =
     createLayoutEditorResolvedElements({
@@ -833,6 +854,7 @@ export const createLayoutEditorRenderedElements = ({
       previewData,
       resolution,
       sampleText,
+      sceneBackdrop,
     });
   const parsedState = graphicsService.parse({
     elements: renderedElements,

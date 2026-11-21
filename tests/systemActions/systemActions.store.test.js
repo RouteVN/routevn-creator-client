@@ -11,7 +11,7 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 import { PRESENTATION_ACTION_CSS_ORDER } from "../../src/internal/presentationActionOrder.js";
 import { selectCommandLineCopy } from "../../src/internal/ui/sceneEditor/commandLineCopy.js";
-import { FR_I18N, RU_I18N } from "../support/i18n.js";
+import { FR_I18N, JA_I18N, RU_I18N } from "../support/i18n.js";
 
 const TEST_I18N = {
   resourcePages: {},
@@ -60,6 +60,31 @@ describe("systemActions.store", () => {
 
     expect(viewData.authoredDialogue).toEqual(authoredDialogue);
     expect(viewData.actions.dialogue).toEqual(previewDialogue);
+  });
+
+  it("hands the visuals' pictures to the visual panel", async () => {
+    const visualSnapshots = { "visual-one": "data:image/png;base64,b25l" };
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: { actionType: "presentation", visualSnapshots },
+    });
+    expect(viewData.visualSnapshots).toBe(visualSnapshots);
+
+    const { readFile } = await import("node:fs/promises");
+    const view = await readFile(
+      new URL(
+        "../../src/components/systemActions/systemActions.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    expect(
+      view
+        .split("\n")
+        .find((line) =>
+          line.includes("rvn-command-line-visual#commandLineVisual"),
+        ),
+    ).toContain(":visualSnapshots=${visualSnapshots}");
   });
 
   it("expands the dialog for the dedicated action transform editor", () => {
@@ -132,6 +157,7 @@ describe("systemActions.store", () => {
       props: {
         actions: {
           conditional: { branches: [] },
+          random: { distribution: { type: "weighted", outcomes: [] } },
           rollbackByOffset: { offset: -1 },
         },
       },
@@ -139,8 +165,8 @@ describe("systemActions.store", () => {
       dateTime: FR_I18N.dateTime,
     });
 
-    expect(preview.conditional.actionsSummary).toBe(
-      copy.nestedActionCount_one.replace("{count}", "0"),
+    expect(preview.random.summary).toBe(
+      copy.outcomeCount_one.replace("{count}", "0"),
     );
     expect(preview.rollbackByOffset.summary).toBe(
       copy.rollbackLineCount_one.replace("{count}", "1"),
@@ -187,12 +213,40 @@ describe("systemActions.store", () => {
     });
 
     expect(preview.conditional.summary).toBe("5 веток + ветка по умолчанию");
-    expect(preview.conditional.actionsSummary).toBe("2 вложенных действия");
     expect(preview.rollbackByOffset.summary).toBe("Откат на 5 строк");
     expect(preview.showConfirmDialog.summary).toBe(
       "При подтверждении: 1 действие, при отмене: 5 действий",
     );
   });
+
+  // 1, 2 and 5 take the Russian one, few and many forms; English rules would
+  // pick one, other and other.
+  it.each([
+    [1, "1 исход"],
+    [2, "2 исхода"],
+    [5, "5 исходов"],
+  ])(
+    "follows the Russian plural rules for a random with %s outcome(s)",
+    (outcomeCount, summary) => {
+      const outcomes = Array.from({ length: outcomeCount }, () => ({
+        weight: 1,
+        actions: { nextLine: {} },
+      }));
+      const { preview } = selectActionsData({
+        state: createInitialState(),
+        props: {
+          actions: {
+            random: { distribution: { type: "weighted", outcomes } },
+          },
+        },
+        copy: selectCommandLineCopy(RU_I18N),
+        dateTime: RU_I18N.dateTime,
+      });
+
+      expect(preview.random.summary).toBe(summary);
+      expect(preview.random.title).toBe(`Случайный выбор: ${summary}`);
+    },
+  );
 
   it("counts each side of a confirm dialog in English", () => {
     const { preview } = selectActionsData({
@@ -303,10 +357,110 @@ describe("systemActions.store", () => {
     expect(actions.conditional).toEqual(conditional);
     expect(preview.conditional).toEqual({
       branchCount: 2,
-      actionCount: 2,
       summary: "1 branch + default",
-      actionsSummary: "2 nested actions",
       title: "Conditional: 1 branch + default",
+    });
+  });
+
+  it("preserves and previews random actions", () => {
+    const state = createInitialState();
+    const random = {
+      distribution: {
+        type: "weighted",
+        outcomes: [
+          {
+            weight: 70,
+            actions: {
+              nextLine: {},
+              updateVariable: {
+                id: "update-1",
+                operations: [{ variableId: "variable-1", op: "set", value: 1 }],
+              },
+            },
+          },
+          {
+            weight: 30,
+            actions: {
+              sectionTransition: {
+                sceneId: "scene-2",
+                sectionId: "section-2",
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          random,
+        },
+      },
+    });
+
+    expect(actions.random).toEqual(random);
+    expect(preview.random).toEqual({
+      outcomeCount: 2,
+      summary: "2 outcomes",
+      title: "Random: 2 outcomes",
+    });
+  });
+
+  it("titles a conditional and a random in Japanese", () => {
+    const { preview } = selectActionsData({
+      state: createInitialState(),
+      props: {
+        actions: {
+          conditional: {
+            branches: [{ actions: { nextLine: {} } }],
+          },
+          random: {
+            distribution: {
+              type: "weighted",
+              outcomes: [
+                { weight: 1, actions: { nextLine: {}, toggleAutoMode: {} } },
+                { weight: 1, actions: { nextLine: {} } },
+              ],
+            },
+          },
+        },
+      },
+      copy: selectCommandLineCopy(JA_I18N),
+      dateTime: JA_I18N.dateTime,
+    });
+
+    expect(Object.keys(preview.conditional)).not.toContain("actionsSummary");
+    expect(Object.keys(preview.random)).not.toContain("actionsSummary");
+    expect(preview.random.title).toBe("ランダム: 2件の結果");
+  });
+
+  it("keeps a random action in a form it cannot edit, with no outcomes", () => {
+    const state = createInitialState();
+    const random = {
+      distribution: {
+        type: "integer",
+        min: 1,
+        max: 6,
+      },
+      variableId: "variable-1",
+    };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          random,
+        },
+      },
+    });
+
+    expect(actions.random).toEqual(random);
+    expect(preview.random).toEqual({
+      outcomeCount: 0,
+      summary: "0 outcomes",
+      title: "Random: 0 outcomes",
     });
   });
 
@@ -357,7 +511,7 @@ describe("systemActions.store", () => {
     });
     expect(preview.resetStoryAtSection).toMatchObject({
       sectionId: "section-2",
-      label: "Reset story at Opening - Arrival",
+      label: "Opening - Arrival",
     });
   });
 
@@ -453,12 +607,7 @@ describe("systemActions.store", () => {
     });
 
     expect(preview.sectionTransition.label).toBe("Opening\u00a0– Arrival");
-    expect(preview.resetStoryAtSection.label).toBe(
-      copy["Reset story at {target}"].replace(
-        "{target}",
-        "Opening\u00a0– Arrival",
-      ),
-    );
+    expect(preview.resetStoryAtSection.label).toBe("Opening\u00a0– Arrival");
   });
 
   it("preserves and previews screen transition actions", () => {
@@ -1273,6 +1422,101 @@ describe("systemActions.store", () => {
       spritesheetAtlas: atlas,
       spritesheetAnimation: animation,
       spritesheetPreviewKey: "hero-sheet::idle:file-hero-sheet",
+    });
+  });
+
+  it("previews particle visuals with their thumbnails", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          particles: {
+            items: {
+              "snow-particle": {
+                id: "snow-particle",
+                type: "particle",
+                name: "Snowfall",
+                thumbnailFileId: "file-snowfall-thumbnail",
+                modules: {},
+              },
+            },
+            tree: [{ id: "snow-particle" }],
+          },
+        },
+      },
+    );
+
+    const { preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          visual: {
+            items: [{ id: "snow-visual", resourceId: "snow-particle" }],
+          },
+        },
+      },
+    });
+
+    expect(preview.visual.items[0]).toMatchObject({
+      id: "snow-visual",
+      resourceId: "snow-particle",
+      resourceType: "particle",
+      previewFileId: "file-snowfall-thumbnail",
+    });
+  });
+
+  it("shows a visual saved as a layout by the first media its layout shows", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          images: {
+            items: {
+              door: {
+                id: "door",
+                type: "image",
+                name: "Door",
+                fileId: "file-door",
+                thumbnailFileId: "file-door-thumbnail",
+              },
+            },
+            tree: [{ id: "door" }],
+          },
+        },
+      },
+    );
+
+    const { preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          visual: {
+            items: [
+              {
+                id: "card",
+                layout: {
+                  layoutSchemaVersion: 2,
+                  elements: {
+                    items: {
+                      title: { type: "text", text: "Hello" },
+                      content: { type: "sprite", imageId: "door" },
+                    },
+                    tree: [{ id: "title" }, { id: "content" }],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(preview.visual.items[0]).toMatchObject({
+      id: "card",
+      resourceType: "image",
+      previewFileId: "file-door-thumbnail",
     });
   });
 
@@ -2164,4 +2408,51 @@ describe("systemActions.store", () => {
       "updateVariable",
     ]);
   });
+});
+
+describe("section transition reset previews", () => {
+  it("opens the section transition editor for legacy reset rows", () => {
+    const state = createInitialState();
+    setMode({ state }, { mode: "resetStoryAtSection" });
+    expect(state.mode).toBe("sectionTransition");
+  });
+
+  it.each([false, true])(
+    "keeps the same target summary regardless of reset (%s)",
+    (resetStory) => {
+      const state = createInitialState();
+      setRepositoryState(
+        { state },
+        {
+          repositoryState: {
+            scenes: {
+              items: {
+                "scene-1": {
+                  name: "Scene One",
+                  sections: { items: { "section-1": { name: "Section One" } } },
+                },
+              },
+            },
+          },
+        },
+      );
+      const copy = selectCommandLineCopy(FR_I18N);
+      const { preview } = selectActionsData({
+        state,
+        copy,
+        props: {
+          actions: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-1",
+              resetStory,
+            },
+          },
+        },
+      });
+      expect(preview.sectionTransition.label).toBe(
+        "Scene One\u00a0– Section One",
+      );
+    },
+  );
 });

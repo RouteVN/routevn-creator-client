@@ -77,6 +77,10 @@ refs:
     eventListeners:
       click:
         handler: handleSceneTextAnalyticsRetry
+styles:
+  # Back arrows point toward the inline start.
+  "#backButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
       - rtgl-view w=f d=h av=c g=sm:
@@ -90,7 +94,7 @@ template:
   - 'rtgl-view#projectPageScroll w=f h=1fg sv style="min-height: 0;"':
       - 'rtgl-view w=f d=v g=xl pb=xl style="${tabletLandscapeContentStyle}"':
           - rtgl-view w=f d=v pt=md:
-              - rvn-detail-view#detailView w=f :fields=${detailFields} :fillHeight=${false}:
+              - rvn-detail-view#detailView :fields=${detailFields} :fillHeight=${false}:
                   - rtgl-view#projectTitle slot=project-title cur=pointer:
                       - rtgl-text s=h3: ${projectName}
                   - rtgl-view#projectDescription slot=project-description cur=pointer:

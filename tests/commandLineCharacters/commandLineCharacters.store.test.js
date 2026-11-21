@@ -945,7 +945,7 @@ describe("commandLineCharacters.store mobile resource selectors", () => {
     expect(viewData.showResourceSelectorFileExplorer).toBe(false);
     // Two a row in the iPad's panel, more where there is room.
     expect(viewData.resourceSelectorGridStyle).toContain(
-      "grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))",
+      "grid-template-columns: repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr))",
     );
     expect(viewData.resourceSelectorItemStyle).toContain("width: 100%");
     expect(viewData.resourceSelectorCardStyle).toContain("width: 100%");
@@ -962,7 +962,7 @@ describe("commandLineCharacters.store mobile resource selectors", () => {
 
     expect(viewData.showResourceSelectorFileExplorer).toBe(true);
     expect(viewData.resourceSelectorGridStyle).toContain(
-      "repeat(auto-fill, minmax(180px, 1fr))",
+      "repeat(auto-fill, minmax(min(100%, max(120px, min(180px, calc((100% - var(--spacing-lg)) / 2)))), 1fr))",
     );
     expect(viewData.characterSelectorPreviewStyle).toBe(
       "width: 100%; aspect-ratio: 16 / 9;",

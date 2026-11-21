@@ -20,6 +20,7 @@ import {
   buildDefaultCharacterSprites,
   buildSpriteSelectionGroups,
   matchesSpriteGroupTags,
+  restoreCharacterSpriteGroups,
   orderSpriteSelectionGroupsTopFirst,
 } from "../../internal/characterSpriteSelection.js";
 import {
@@ -110,43 +111,6 @@ const createAddCharacterTransformDropdownItems = (transforms = {}) =>
       type: "item",
       value: transform.id,
     }));
-
-const buildTempSelectedSpriteIdsByGroup = ({
-  character,
-  spriteSelectionGroups,
-} = {}) => {
-  const nextSelectedSpriteIds = {};
-  const currentSprites = Array.isArray(character?.sprites)
-    ? character.sprites
-    : [];
-  const firstSelectedSpriteId = currentSprites.find(
-    (sprite) =>
-      typeof sprite?.resourceId === "string" && sprite.resourceId.length > 0,
-  )?.resourceId;
-
-  for (const [index, spriteSelectionGroup] of (
-    spriteSelectionGroups ?? []
-  ).entries()) {
-    const matchingSprite = currentSprites.find(
-      (sprite) =>
-        sprite?.id === spriteSelectionGroup.id &&
-        typeof sprite?.resourceId === "string" &&
-        sprite.resourceId.length > 0,
-    );
-
-    if (matchingSprite?.resourceId) {
-      nextSelectedSpriteIds[spriteSelectionGroup.id] =
-        matchingSprite.resourceId;
-      continue;
-    }
-
-    if (index === 0 && firstSelectedSpriteId) {
-      nextSelectedSpriteIds[spriteSelectionGroup.id] = firstSelectedSpriteId;
-    }
-  }
-
-  return nextSelectedSpriteIds;
-};
 
 const buildSpriteGroupBoxViewData = ({
   spriteSelectionGroups,
@@ -1130,7 +1094,7 @@ export const selectCharactersWithRepositoryData = ({
       characterData,
       groupLabel,
     );
-    const selectedSpriteIdsByGroup = buildTempSelectedSpriteIdsByGroup({
+    const selectedSpriteIdsByGroup = restoreCharacterSpriteGroups({
       character: char,
       spriteSelectionGroups,
     });
@@ -1754,6 +1718,8 @@ export const selectViewData = ({ state, i18n }) => {
     animationOptions,
     spriteItems,
     spriteGroups,
+    noneSpriteLabel: localizeCommandLineText("None", copy),
+    isNoneSpriteSelected: !state.tempSelectedSpriteIds[selectedSpriteGroupId],
     spriteSelectorEmptyMessage: selectResourceSelectorEmptyMessage({
       groups: spriteGroups,
       searchQuery: searchQuery,

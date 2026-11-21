@@ -212,6 +212,7 @@ const resourceParentMapping = {
   releases: "versions",
   "transform-editor": "transforms",
   "particle-editor": "particles",
+  "spritesheet-editor": "spritesheets",
   "text-style-editor": "text-styles",
 };
 
@@ -219,7 +220,16 @@ export const createInitialState = () => ({
   assetPackageEnabled: false,
   scenesData: { tree: [], items: {} },
   recentSceneIds: [],
+  currentPath: "",
+  currentSceneId: undefined,
 });
+
+// The app closes the sheet that holds this sidebar on every route change, so
+// the route read when it mounts stays current while it is open.
+export const setCurrentLocation = ({ state }, { path, sceneId } = {}) => {
+  state.currentPath = path ?? "";
+  state.currentSceneId = sceneId;
+};
 
 export const setScenesData = ({ state }, { scenesData } = {}) => {
   state.scenesData = scenesData ?? { tree: [], items: {} };
@@ -297,18 +307,14 @@ const getNavigationItems = (state) =>
         !item.hidden && (item.id !== "assetPacks" || state.assetPackageEnabled),
     );
 
-const selectCurrentResourceId = () => {
-  if (typeof window === "undefined") {
-    return undefined;
-  }
-
-  const match = window.location.pathname.match(/^\/project\/([^/?]+)/);
+const selectCurrentResourceId = (state) => {
+  const match = state.currentPath.match(/^\/project\/([^/?]+)/);
   if (!match) {
     return undefined;
   }
 
   if (match[1] === "releases") {
-    const releaseMatch = window.location.pathname.match(
+    const releaseMatch = state.currentPath.match(
       /^\/project\/releases\/([^/?]+)/,
     );
     const releaseResourceId =
@@ -323,8 +329,7 @@ const selectCurrentResourceId = () => {
   }
 
   if (match[1] === "scene-editor") {
-    const sceneId = new URLSearchParams(window.location.search).get("s");
-    return sceneId ? `scene:${sceneId}` : undefined;
+    return state.currentSceneId ? `scene:${state.currentSceneId}` : undefined;
   }
 
   return resourceParentMapping[match[1]] ?? match[1];
@@ -337,7 +342,7 @@ export const selectItemById = ({ state }, { itemId } = {}) => {
 export const selectViewData = ({ state, props = {}, i18n }) => {
   const variant = props.variant ?? "assets";
   const sections = getSectionsByVariant(state)[variant] ?? assetsSections;
-  const selectedResourceId = selectCurrentResourceId();
+  const selectedResourceId = selectCurrentResourceId(state);
   const resourceTypesCopy = i18n?.resourceTypes ?? {};
   const sidebarCopy = i18n?.sidebarPage ?? {};
   const viewSections = sections.map((section) => ({

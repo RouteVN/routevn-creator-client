@@ -26,7 +26,6 @@ try {
     "commandLineActions",
     "commandLineNextLine",
     "commandLineSectionTransition",
-    "commandLineResetStoryAtSection",
   ]) {
     const prefix = resolve(`src/components/${name}/${name}`);
     const config = {};
@@ -124,11 +123,7 @@ document.querySelector('#inspector').append(panel);
           });
         });
         await page.goto(`http://fixture.test/?mode=${scenario.mode}`);
-        for (const action of [
-          "Next Line",
-          "Section Transition",
-          "Reset Story At Section",
-        ]) {
+        for (const action of ["Next Line", "Section Transition"]) {
           assert.equal(
             await page
               .locator("rvn-system-actions-dialog-surface rtgl-dialog")
@@ -141,6 +136,13 @@ document.querySelector('#inspector').append(panel);
             .getByText("Click", { exact: true })
             .filter({ visible: true })
             .click();
+          assert.equal(
+            await page
+              .locator("rvn-command-line-actions")
+              .getByText("Reset Story At Section", { exact: true })
+              .count(),
+            0,
+          );
           await page
             .locator("rvn-command-line-actions")
             .getByText(action, { exact: true })
@@ -215,6 +217,70 @@ document.querySelector('#inspector').append(panel);
             .count(),
           0,
           "Dismissed action dialog must not cover the editor",
+        );
+        // Open old content through the inspector, save it, then turn reset off.
+        await page.locator("rvn-layout-edit-panel").evaluate((panel) => {
+          panel.values = {
+            ...panel.values,
+            click: {
+              payload: {
+                actions: {
+                  resetStoryAtSection: { sectionId: "section" },
+                  toggleAutoMode: {},
+                },
+              },
+            },
+          };
+        });
+        await page
+          .getByText("Click: Section Transition", { exact: true })
+          .click();
+        const form = page.locator(
+          "rvn-command-line-section-transition #transitionForm",
+        );
+        await form.waitFor({ state: "visible" });
+        const prefilled = await form.evaluate((el) => el.getValues());
+        assert.equal(prefilled.sceneId, "scene");
+        assert.equal(prefilled.sectionId, "section");
+        assert.equal(prefilled.resetStory, true);
+        await page
+          .locator("rvn-command-line-section-transition #submitButton")
+          .click();
+        await page
+          .locator("rvn-system-actions-dialog-surface rtgl-dialog[open]")
+          .waitFor({ state: "detached" });
+        assert.deepEqual(
+          await page.evaluate(() => window.updates.at(-1).value),
+          {
+            toggleAutoMode: {},
+            sectionTransition: {
+              sceneId: "scene",
+              sectionId: "section",
+              resetStory: true,
+            },
+          },
+        );
+        await page
+          .getByText("Click: Section Transition", { exact: true })
+          .click();
+        await form.waitFor({ state: "visible" });
+        assert.equal(
+          await form.evaluate((el) => el.getValues().resetStory),
+          true,
+        );
+        await form.getByText("No", { exact: true }).click();
+        await page
+          .locator("rvn-command-line-section-transition #submitButton")
+          .click();
+        await page
+          .locator("rvn-system-actions-dialog-surface rtgl-dialog[open]")
+          .waitFor({ state: "detached" });
+        assert.deepEqual(
+          await page.evaluate(() => window.updates.at(-1).value),
+          {
+            toggleAutoMode: {},
+            sectionTransition: { sceneId: "scene", sectionId: "section" },
+          },
         );
         assert.deepEqual(errors, []);
         await page.close();

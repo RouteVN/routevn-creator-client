@@ -158,7 +158,7 @@ describe("handleKeyboardActionsChange", () => {
     });
   });
 
-  it("replaces the key's navigation action with a submitted one", async () => {
+  it("replaces a key's legacy reset with a resetting section transition", async () => {
     const updateControlItem = vi.fn(async () => ({}));
     const deps = {
       appService: { showAlert: vi.fn() },
@@ -177,7 +177,7 @@ describe("handleKeyboardActionsChange", () => {
             enter: {
               payload: {
                 actions: {
-                  nextLine: {},
+                  resetStoryAtSection: { sectionId: "section-1" },
                   toggleAutoMode: {},
                 },
               },
@@ -193,7 +193,15 @@ describe("handleKeyboardActionsChange", () => {
     };
 
     await handleKeyboardActionsChange(deps, {
-      _event: { detail: { rollbackByOffset: { offset: -1 } } },
+      _event: {
+        detail: {
+          sectionTransition: {
+            sceneId: "scene-1",
+            sectionId: "section-1",
+            resetStory: true,
+          },
+        },
+      },
     });
 
     expect(updateControlItem).toHaveBeenCalledWith({
@@ -204,7 +212,11 @@ describe("handleKeyboardActionsChange", () => {
             payload: {
               actions: {
                 toggleAutoMode: {},
-                rollbackByOffset: { offset: -1 },
+                sectionTransition: {
+                  sceneId: "scene-1",
+                  sectionId: "section-1",
+                  resetStory: true,
+                },
               },
             },
           },

@@ -744,3 +744,110 @@ export const createAnimationResourcePreviewStates = ({
     durationMs,
   };
 };
+
+const collectMaskFileIds = (mask) => {
+  if (Array.isArray(mask)) {
+    return mask.flatMap(collectMaskFileIds);
+  }
+
+  if (!mask) {
+    return [];
+  }
+
+  if (mask.kind === "single") {
+    return mask.texture ? [mask.texture] : [];
+  }
+
+  if (mask.kind === "sequence") {
+    return (mask.textures ?? []).filter(Boolean);
+  }
+
+  return (mask.items ?? []).map((item) => item?.texture).filter(Boolean);
+};
+
+const collectElementFileIds = (elements = []) => {
+  const fileIds = [];
+
+  for (const element of elements ?? []) {
+    if (element?.type === "sprite" && element.src) {
+      fileIds.push(element.src);
+    }
+
+    if (Array.isArray(element?.children)) {
+      fileIds.push(...collectElementFileIds(element.children));
+    }
+  }
+
+  return fileIds;
+};
+
+// The image files a preview state draws: its sprites and its transition masks.
+export const collectAnimationPreviewFileIds = (renderState = {}) => {
+  return [
+    ...collectElementFileIds(renderState.elements),
+    ...(renderState.animations ?? []).flatMap((animation) =>
+      collectMaskFileIds(animation.mask),
+    ),
+  ];
+};
+
+// What the Animations page's preview and an animation's thumbnail are drawn
+// on, so the two show the same picture.
+export const ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR = "#000000";
+
+// A transition shows its outgoing side only once that has been drawn, so a
+// preview with one is drawn from its start once more before it is shown.
+export const hasTransitionPreviewAnimation = (renderState = {}) => {
+  return (renderState.animations ?? []).some(
+    (animation) => animation?.type === "transition",
+  );
+};
+
+// Bump when an animation's preview starts drawing the same saved animation
+// differently, so saved thumbnails are drawn again.
+export const ANIMATION_THUMBNAIL_VERSION = 1;
+
+// What a saved animation's thumbnail shows: its preview, as the Animations
+// page plays it, halfway through, and the files that draws.
+export const createAnimationThumbnailSource = ({ item, repositoryState }) => {
+  const projectResolution = requireProjectResolution(
+    repositoryState.project?.resolution,
+    "Project resolution",
+  );
+  const { resetState, renderState, durationMs } =
+    createAnimationResourcePreviewStates({
+      animationItem: item,
+      backgroundColor: ANIMATION_RESOURCE_PREVIEW_BACKGROUND_COLOR,
+      imagesData: repositoryState.images,
+      projectResolution,
+    });
+  const fileIds = new Set([
+    ...collectAnimationPreviewFileIds(resetState),
+    ...collectAnimationPreviewFileIds(renderState),
+  ]);
+  // This runs for every animation each time thumbnails are checked, and most
+  // previews draw no image, so the images are read only for one that does.
+  const fileTypes = new Map();
+  if (fileIds.size > 0) {
+    for (const image of Object.values(repositoryState.images?.items ?? {})) {
+      if (fileIds.has(image.fileId)) {
+        fileTypes.set(image.fileId, image.fileType);
+      }
+    }
+  }
+
+  return {
+    width: projectResolution.width,
+    height: projectResolution.height,
+    renderState,
+    animationFrame: {
+      resetState,
+      timeMs: Math.round(durationMs / 2),
+      preparationPassCount: hasTransitionPreviewAnimation(renderState) ? 2 : 1,
+    },
+    assets: Array.from(fileIds, (fileId) => ({
+      fileId,
+      fileType: fileTypes.get(fileId),
+    })),
+  };
+};

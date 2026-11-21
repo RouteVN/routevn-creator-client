@@ -1,3 +1,11 @@
+import { validatePlatformDetails } from "../../../internal/platformDetailsValidation.js";
+import { normalizeAndroidBackgroundColor } from "../../../internal/androidExport.js";
+import {
+  createIosExportCancelledError,
+  isValidIosBuildNumber,
+  isValidIosTeamId,
+  isValidIosVersion,
+} from "../../../internal/iosExport.js";
 import {
   mkdir,
   writeFile,
@@ -58,10 +66,14 @@ import {
 } from "../../clients/tauri/sqliteConnectionManager.js";
 import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
-import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import {
+  createWindowsPlayerApplicationIdentifier,
+  requireNativeApplicationIdentifier,
+} from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import {
-  isValidMacosApplicationVersion,
+  isValidAndroidVersionCode,
+  isValidNativeApplicationVersion,
   isValidMacosBuildNumber,
 } from "../../../internal/nativeApplicationVersion.js";
 import {
@@ -80,6 +92,8 @@ const WINDOWS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/windows/RouteVNPlayerTemplate.exe";
 const MACOS_PLAYER_TEMPLATE_RESOURCE =
   "player-templates/macos/RouteVNPlayerTemplate.app.zip";
+const IOS_PLAYER_TEMPLATE_RESOURCE =
+  "player-templates/ios/RouteVNPlayerTemplate.app.zip";
 const WINDOWS_APPLICATION_ICON_SIZE = 256;
 const WINDOWS_ICON_MIME_TYPES = new Set([
   "image/png",
@@ -168,7 +182,7 @@ const normalizeWindowsExecutableMetadata = ({
       label: "Project title",
     }),
     version: normalizeWindowsExecutableVersion(version),
-    applicationIdentifier: requireNativeApplicationIdentifier(
+    applicationIdentifier: createWindowsPlayerApplicationIdentifier(
       applicationIdentifier,
     ),
     publisher: publisher?.trim() || null,
@@ -196,7 +210,7 @@ const normalizeMacosApplicationMetadata = ({
   if (!normalizedTitle) {
     throw new Error("Project title is required for macOS application export.");
   }
-  if (!isValidMacosApplicationVersion(shortVersion)) {
+  if (!isValidNativeApplicationVersion(shortVersion)) {
     throw new Error(
       "The macOS short version must contain three numeric components.",
     );
@@ -1037,6 +1051,367 @@ export const createTauriProjectServiceAdapters = ({
     return result;
   };
 
+  const ANDROID_PLAYER_TEMPLATES = {
+    apk: {
+      templatePath: "player-templates/android/RouteVNPlayerTemplate.apk",
+      descriptorPath: "player-templates/android/RouteVNPlayerTemplate.json",
+    },
+    aab: {
+      templatePath: "player-templates/android/RouteVNPlayerTemplate.aab",
+      descriptorPath: "player-templates/android/RouteVNPlayerTemplate.aab.json",
+    },
+  };
+
+  const resolveAndroidPlayerTemplatePaths = async (
+    options = {},
+    format = "apk",
+  ) => ({
+    templatePath:
+      options.templatePath ??
+      (await resolveResource(ANDROID_PLAYER_TEMPLATES[format].templatePath)),
+    descriptorPath:
+      options.descriptorPath ??
+      (await resolveResource(ANDROID_PLAYER_TEMPLATES[format].descriptorPath)),
+  });
+
+  const getAndroidTemplateCapabilities = async (options, format, command) => {
+    const paths = await resolveAndroidPlayerTemplatePaths(options, format);
+    const [templateExists, descriptorExists] = await Promise.all([
+      exists(paths.templatePath),
+      exists(paths.descriptorPath),
+    ]);
+    if (!templateExists || !descriptorExists) return { available: false };
+    return invoke(command, paths);
+  };
+
+  // `bundleAvailable` tells whether the App Bundle template is installed
+  // too. A failed bundle check leaves APK export available.
+  const getAndroidExportAvailability = async ({ options = {} } = {}) => {
+    let capabilities;
+    try {
+      capabilities = await getAndroidTemplateCapabilities(
+        options,
+        "apk",
+        "get_android_export_host_capabilities",
+      );
+    } catch (error) {
+      return { available: false, reason: String(error?.message ?? error) };
+    }
+    if (!capabilities.available) return capabilities;
+    const bundle = await getAndroidTemplateCapabilities(
+      {},
+      "aab",
+      "get_android_bundle_export_capabilities",
+    ).catch(() => ({ available: false }));
+    return { ...capabilities, bundleAvailable: bundle.available };
+  };
+
+  const promptAndroidApkPath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    filePicker.saveFilePicker({
+      title: options.title ?? "Save Android APK",
+      defaultPath: defaultFileName,
+      filters: [
+        { name: options.fileTypeName ?? "Android APK", extensions: ["apk"] },
+      ],
+    });
+
+  const promptAndroidBundlePath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    filePicker.saveFilePicker({
+      title: options.title ?? "Save Android App Bundle",
+      defaultPath: defaultFileName,
+      filters: [
+        {
+          name: options.fileTypeName ?? "Android App Bundle",
+          extensions: ["aab"],
+        },
+      ],
+    });
+
+  // The exporter request both formats share.
+  const createAndroidExportRequest = async ({
+    format,
+    projectData,
+    fileEntries,
+    outputPath,
+    applicationId,
+    applicationName,
+    versionName,
+    versionCode,
+    orientation,
+    iconFileId,
+    adaptiveIconFileId,
+    splashIconFileId,
+    iconBackgroundColor,
+    splashBackgroundColor,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const validation = validatePlatformDetails({
+      platform: "android",
+      applicationInfo: {
+        applicationName,
+        applicationIdentifier: applicationId,
+        iconFileId,
+        iconBackgroundColor,
+        splashBackgroundColor,
+      },
+    });
+    if (!validation.valid)
+      throw new Error(`Invalid Android platform details: ${validation.code}`);
+    if (
+      !isValidNativeApplicationVersion(versionName) ||
+      !Number.isInteger(versionCode) ||
+      !isValidAndroidVersionCode(String(versionCode))
+    ) {
+      throw new Error("Invalid Android version name or version code.");
+    }
+    if (orientation !== "portrait" && orientation !== "landscape") {
+      throw new Error("Invalid Android export orientation.");
+    }
+    const paths = await resolveAndroidPlayerTemplatePaths(options, format);
+    const { filePath: iconPath } = await resolveReferenceFilePath(
+      getCurrentReference(),
+      iconFileId,
+      { label: "Project icon file id" },
+    );
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const request = {
+      templatePath: paths.templatePath,
+      descriptorPath: paths.descriptorPath,
+      outputPath,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      applicationId,
+      applicationName: applicationName.trim(),
+      versionName,
+      versionCode,
+      orientation,
+      iconPath,
+      iconBackgroundColor: normalizeAndroidBackgroundColor(iconBackgroundColor),
+      splashBackgroundColor: normalizeAndroidBackgroundColor(
+        splashBackgroundColor,
+      ),
+    };
+    if (adaptiveIconFileId != null) {
+      const { filePath } = await resolveReferenceFilePath(
+        getCurrentReference(),
+        adaptiveIconFileId,
+        { label: "Android adaptive icon file id" },
+      );
+      request.adaptiveIconPath = filePath;
+    }
+    if (splashIconFileId != null) {
+      const { filePath } = await resolveReferenceFilePath(
+        getCurrentReference(),
+        splashIconFileId,
+        { label: "Android splash icon file id" },
+      );
+      request.splashIconPath = filePath;
+    }
+    return request;
+  };
+
+  const createProgressChannel = (options = {}) => {
+    const onProgress = new Channel();
+    if (options.onProgress) onProgress.onmessage = options.onProgress;
+    return onProgress;
+  };
+
+  const createAndroidApkToPath = async (payload) => {
+    const request = await createAndroidExportRequest({
+      ...payload,
+      format: "apk",
+    });
+    return invoke("export_android_apk", {
+      request,
+      signingKey: payload.signingKey,
+      onProgress: createProgressChannel(payload.options),
+    });
+  };
+
+  // An App Bundle is always signed: Google Play registers its key as the
+  // upload key.
+  const createAndroidBundleToPath = async (payload) => {
+    if (!payload.signingKey) {
+      throw new Error("An Android App Bundle needs a signing key.");
+    }
+    const request = await createAndroidExportRequest({
+      ...payload,
+      format: "aab",
+    });
+    return invoke("export_android_app_bundle", {
+      request,
+      signingKey: payload.signingKey,
+      onProgress: createProgressChannel(payload.options),
+    });
+  };
+
+  const resolveIosPlayerTemplatePath = async (options = {}) =>
+    options.templatePath ?? resolveResource(IOS_PLAYER_TEMPLATE_RESOURCE);
+
+  // iOS export runs only on a Mac; whether Xcode is ready is checked when an
+  // export starts (getIosExportRequirements).
+  const getIosExportAvailability = async ({ options = {} } = {}) => {
+    const hostSupported = isMacosHost();
+    let templateAvailable = false;
+    if (hostSupported) {
+      try {
+        templateAvailable = await exists(
+          await resolveIosPlayerTemplatePath(options),
+        );
+      } catch {}
+    }
+    return {
+      available: hostSupported && templateAvailable,
+      hostSupported,
+      templateAvailable,
+    };
+  };
+
+  // The Xcode status and the Apple teams signed in to Xcode.
+  const getIosExportRequirements = async () =>
+    invoke("get_ios_export_requirements");
+
+  const listIosDevices = async () => invoke("list_ios_devices");
+
+  const promptIosApplicationPath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    filePicker.saveFilePicker({
+      title: options.title ?? "Save iOS App",
+      defaultPath: defaultFileName,
+      filters: [
+        { name: options.fileTypeName ?? "iOS App", extensions: ["ipa"] },
+      ],
+    });
+
+  // The exporter clears its cancel request when it starts, so a request made
+  // while this adapter still collects the export's files is kept here.
+  let iosExportCancelRequested = false;
+
+  const cancelIosExport = async () => {
+    iosExportCancelRequested = true;
+    await invoke("cancel_ios_export");
+  };
+
+  // Saves the IPA to `outputPath`, or, for a development build with
+  // `installDeviceId`, installs it on that device without saving it.
+  const exportIosApplication = async ({
+    projectData,
+    fileEntries,
+    outputPath,
+    installDeviceId,
+    applicationName,
+    bundleIdentifier,
+    version,
+    buildNumber,
+    orientation,
+    iconFileId,
+    teamId,
+    distribution,
+    upload,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const validation = validatePlatformDetails({
+      platform: "ios",
+      applicationInfo: {
+        applicationName,
+        applicationIdentifier: bundleIdentifier,
+        iconFileId,
+      },
+    });
+    if (!validation.valid) {
+      throw new Error(`Invalid iOS platform details: ${validation.code}`);
+    }
+    if (!isValidIosVersion(version) || !isValidIosBuildNumber(buildNumber)) {
+      throw new Error("Invalid iOS version or build number.");
+    }
+    if (!isValidIosTeamId(teamId)) {
+      throw new Error("Invalid Apple team ID.");
+    }
+    iosExportCancelRequested = false;
+    const { filePath: iconPath } = await resolveReferenceFilePath(
+      getCurrentReference(),
+      iconFileId,
+      { label: "Project icon file id" },
+    );
+    const assets = await collectDistributionAssets({
+      fileEntries,
+      getCurrentReference,
+    });
+    const onProgress = new Channel();
+    if (options.onProgress) onProgress.onmessage = options.onProgress;
+    const request = {
+      templatePath: await resolveIosPlayerTemplatePath(options),
+      outputPath,
+      installDeviceId,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      applicationName: applicationName.trim(),
+      bundleIdentifier,
+      version,
+      buildNumber,
+      orientation,
+      iconPath,
+      teamId,
+      distribution,
+      upload: !!upload,
+    };
+    if (iosExportCancelRequested) throw createIosExportCancelledError();
+    return invoke("export_ios_application", { request, onProgress });
+  };
+
+  const createAndroidSigningKey = async ({ applicationName, applicationId }) =>
+    invoke("create_android_signing_key", { applicationName, applicationId });
+
+  const promptAndroidKeystore = async ({ options = {}, filePicker }) => {
+    const path = await filePicker.openFilePicker({
+      title: options.title,
+      multiple: false,
+      filters: [
+        {
+          name: options.fileTypeName ?? "Keystore",
+          extensions: ["p12", "pfx", "keystore", "jks"],
+        },
+      ],
+    });
+    if (!path) return undefined;
+    return { name: path.split(/[\\/]/).pop(), path };
+  };
+
+  const readAndroidKeystore = async ({ keystore, password, alias }) =>
+    invoke("read_android_keystore", { path: keystore.path, password, alias });
+
+  const promptAndroidKeyCopyPath = async ({
+    defaultFileName,
+    options = {},
+    filePicker,
+  }) =>
+    (await filePicker.saveFilePicker({
+      title: options.title,
+      defaultPath: defaultFileName,
+      filters: [
+        { name: options.fileTypeName ?? "PKCS #12", extensions: ["p12"] },
+      ],
+    })) ?? undefined;
+
+  const writeAndroidKeystore = async ({ path, password, alias, key }) =>
+    invoke("write_android_keystore", { path, password, alias, key });
+
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
@@ -1363,12 +1738,28 @@ export const createTauriProjectServiceAdapters = ({
     createDistributionZipStreamedToPath,
     promptWindowsExecutablePath,
     promptWindowsInstallerPath,
+    getAndroidExportAvailability,
+    promptAndroidApkPath,
+    createAndroidApkToPath,
+    promptAndroidBundlePath,
+    createAndroidBundleToPath,
+    createAndroidSigningKey,
+    promptAndroidKeystore,
+    readAndroidKeystore,
+    promptAndroidKeyCopyPath,
+    writeAndroidKeystore,
     promptMacosApplicationPath,
     getWindowsExportAvailability,
     getMacosExportAvailability,
     createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath,
     createMacosApplicationToPath,
+    getIosExportAvailability,
+    getIosExportRequirements,
+    listIosDevices,
+    promptIosApplicationPath,
+    exportIosApplication,
+    cancelIosExport,
   };
 
   const collabAdapter = {

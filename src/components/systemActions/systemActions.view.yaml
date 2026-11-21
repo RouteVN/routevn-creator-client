@@ -13,6 +13,8 @@ refs:
         handler: handleActionTransformCustomize
       submit:
         handler: handleCommandLineSubmit
+      visual-layout-edit:
+        handler: handleVisualLayoutEdit
       action-delete:
         handler: handleCommandLineActionDelete
   actionTransformEditor:
@@ -74,7 +76,7 @@ styles:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.screen || preview.background || preview.bgm || preview.voice || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.form || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.screen || preview.background || preview.bgm || preview.voice || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.form || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.random || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - 'rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.control};"':
                       - rtgl-svg svg=control wh=24: null
@@ -142,7 +144,7 @@ template:
                       - rtgl-text s=sm: ${preview.sectionTransition.label}
               - $if preview.resetStoryAtSection:
                   - 'rtgl-view#actionItemResetStoryAtSection data-mode=resetStoryAtSection g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.resetStoryAtSection};"':
-                      - rtgl-svg svg="settings" wh=24: null
+                      - rtgl-svg svg="transition" wh=24: null
                       - rtgl-text s=sm: ${preview.resetStoryAtSection.label}
               - $if preview.dialogue:
                   - 'rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer style="order: ${presentationActionOrder.dialogue}; min-height: 36px;"':
@@ -247,13 +249,15 @@ template:
               - $if preview.updateVariable:
                   - 'rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.updateVariable};"':
                       - rtgl-svg svg=variable wh=24: null
-                      - rtgl-text s=sm: ${preview.updateVariable.summary}
+                      - rtgl-text s=sm w=1fg ellipsis=true: ${preview.updateVariable.summary}
+              - $if preview.random:
+                  - 'rtgl-view#actionItemRandom data-mode=random g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.random};"':
+                      - rtgl-svg svg=random wh=24: null
+                      - rtgl-text s=sm: ${preview.random.title}
               - $if preview.conditional:
-                  - 'rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md style="order: ${presentationActionOrder.conditional};"':
+                  - 'rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer style="order: ${presentationActionOrder.conditional};"':
                       - rtgl-svg svg=settings wh=24: null
-                      - rtgl-view d=v:
-                          - rtgl-text s=sm: ${preview.conditional.title}
-                          - rtgl-text s=xs c=mu-fg: ${preview.conditional.actionsSummary}
+                      - rtgl-text s=sm: ${preview.conditional.title}
           - rtgl-button#addActionButton v=ol w=f: +
           - $if showEmbeddedClose:
               - rtgl-view d=h av=c ah=e w=f g=lg:
@@ -268,7 +272,7 @@ template:
                   - 'rvn-action-transform-editor#actionTransformEditor style="display: block; width: 100%; height: 100%; min-width: 0; min-height: 0;" :transform=${backgroundTransformEditor.transform} :targetName=${backgroundTransformEditor.targetName} :targetType=${backgroundTransformEditor.targetType} canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}" :projectResolution=${backgroundTransformEditor.projectResolution} :selectedElementMetrics=${backgroundTransformEditor.selectedElementMetrics}': null
                 $else:
                   - $if showHelpButton:
-                      - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 sm-w=24 sm-h=24 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: var(--spacing-md); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
+                      - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 sm-w=24 sm-h=24 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="inset-inline-end: var(--spacing-md); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
                           - rtgl-text s=xs c=mu-fg: '?'
                   - $if mode == "actions":
                       - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes} :allowedModes=${allowedModes}: null
@@ -291,9 +295,7 @@ template:
                     $elif mode == "character":
                       - rvn-command-line-characters#commandLineCharacters :character=${actions.character} :presentationState=${presentationState}: null
                     $elif mode == "sectionTransition":
-                      - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :currentSceneId=${currentSceneId}: null
-                    $elif mode == "resetStoryAtSection":
-                      - rvn-command-line-reset-story-at-section#commandLineResetStoryAtSection :resetStoryAtSection=${actions.resetStoryAtSection} :currentSceneId=${currentSceneId}: null
+                      - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :resetStoryAtSection=${actions.resetStoryAtSection} :currentSceneId=${currentSceneId}: null
                     $elif mode == "control":
                       - rvn-command-line-control#commandLineControl :controls=${controlLayouts} :control=${actions.control}: null
                     $elif mode == "nextLine":
@@ -323,11 +325,13 @@ template:
                     $elif mode == "loadSlot":
                       - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot} :allowAutoSlot=${allowAutoSlot}: null
                     $elif mode == "visual":
-                      - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
+                      - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState} :editVisualId=${editVisualId} :visualSnapshots=${visualSnapshots}: null
                     $elif mode == "setNextLineConfig":
                       - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=${actions.setNextLineConfig}: null
                     $elif mode == "updateVariable":
                       - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=${actions.updateVariable}: null
+                    $elif mode == "random":
+                      - rvn-command-line-random#commandLineRandom :random=${actions.random} :hiddenModes=${hiddenModes}: null
                     $elif mode == "conditional":
                       - rvn-command-line-conditional#commandLineConditional :conditional=${actions.conditional} :hiddenModes=${hiddenModes}: null
                     $elif isRuntimeActionMode:

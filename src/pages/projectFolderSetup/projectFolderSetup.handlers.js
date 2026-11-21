@@ -1,9 +1,4 @@
 const errorKeys = {
-  unavailable: "unavailableError",
-  appFolder: "appFolderError",
-  localFolder: "localFolderError",
-  notDirectory: "invalidFolderError",
-  nameConflict: "nameConflictError",
   lowSpace: "lowSpaceError",
   unknownSpace: "unknownSpaceError",
   reconnect: "reconnectError",
@@ -25,18 +20,8 @@ const showSetupError = (deps, error, fallback) => {
 
 export const handleBeforeMount = ({ appService, store }) => {
   const status = appService.getProjectFolderSetup();
-  store.setBackupMode({ isBackup: status.isBackup === true });
-  store.setDeviceName({ deviceName: status.deviceName });
   if (status.configured) {
     store.setSavedFolder({ folder: status.folder });
-  } else if (status.reason) {
-    if (status.reason === "reconnect") {
-      store.setReconnecting({ isReconnecting: true });
-    }
-    store.setError({
-      errorKey:
-        status.reason === "unavailable" ? "unavailableError" : "reconnectError",
-    });
   }
 };
 

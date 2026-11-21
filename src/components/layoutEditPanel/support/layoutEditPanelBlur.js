@@ -50,9 +50,12 @@ const normalizeBlurKernelSize = (value) => {
 };
 
 export const normalizeSpriteBlur = (blur = {}) => ({
-  x: normalizeBlurNumber(blur.x, DEFAULT_SPRITE_BLUR.x),
-  y: normalizeBlurNumber(blur.y, DEFAULT_SPRITE_BLUR.y),
-  quality: normalizeBlurNumber(blur.quality, DEFAULT_SPRITE_BLUR.quality),
+  x: Math.max(0, normalizeBlurNumber(blur.x, DEFAULT_SPRITE_BLUR.x)),
+  y: Math.max(0, normalizeBlurNumber(blur.y, DEFAULT_SPRITE_BLUR.y)),
+  quality: Math.max(
+    1,
+    normalizeBlurNumber(blur.quality, DEFAULT_SPRITE_BLUR.quality),
+  ),
   kernelSize: normalizeBlurKernelSize(blur.kernelSize),
   repeatEdgePixels: normalizeBlurBoolean(
     blur.repeatEdgePixels,
@@ -93,16 +96,19 @@ export const createSpriteBlurForm = ({
       name: "blurX",
       label: copy.blurXLabel ?? "Blur X",
       type: "input-number",
+      min: 0,
     },
     {
       name: "blurY",
       label: copy.blurYLabel ?? "Blur Y",
       type: "input-number",
+      min: 0,
     },
     {
       name: "blurQuality",
       label: copy.qualityLabel ?? "Quality",
       type: "input-number",
+      min: 1,
     },
     {
       name: "blurKernelSize",

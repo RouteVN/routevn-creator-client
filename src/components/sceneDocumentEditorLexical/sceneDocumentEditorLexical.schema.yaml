@@ -46,6 +46,9 @@ propsSchema:
             type: string
     compactPreviews:
       type: boolean
+    textDirection:
+      type: string
+      description: Writing direction of the script, "ltr" or "rtl", from the project language.
 methods:
   type: object
   properties:

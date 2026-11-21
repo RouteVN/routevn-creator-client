@@ -1,16 +1,23 @@
+import { readAndroidLastBuildNumber } from "../../../internal/androidExport.js";
 import { createProjectAssetService } from "./projectAssetService.js";
 import { createAssetPackageExportService } from "./assetPackageExportService.js";
 import { createEditorThumbnailService } from "./editorThumbnailService.js";
+import { createSpritesheetFramesService } from "./spritesheetFramesService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
+import { createAndroidSigningService } from "./androidSigningService.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
 import { createResourcePackageImportService } from "./resourcePackageImportService.js";
 import { importImageFile as importProjectImageFile } from "./resourceImports.js";
 import {
+  buildImageUsageIndex,
+  selectFolderImageIds,
   checkProjectResourceUsage,
   checkSceneDeleteUsage,
+  selectImageUsage,
 } from "./resourceUsage.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
+import { upgradeResetStoryActions } from "../../../internal/navigationActions.js";
 import {
   CURRENT_LAYOUT_SCHEMA_VERSION,
   normalizeLayoutSchemaVersion,
@@ -30,6 +37,8 @@ import {
 const DEFAULT_MENU_TEXT_STYLES_PATCH_KEY =
   "contentPatch.defaultMenuTextStyles-1-9-1";
 const FONT_WEIGHT_METADATA_PATCH_KEY = "contentPatch.fontWeightMetadata-1-10-0";
+const SECTION_TRANSITION_RESET_STORY_PATCH_KEY =
+  "contentPatch.sectionTransitionResetStory-1-22-0";
 const NON_RETRYABLE_FONT_INSPECTION_ERROR_CODES = new Set([
   "unsupported_font_format",
   "invalid_font_data",
@@ -37,12 +46,20 @@ const NON_RETRYABLE_FONT_INSPECTION_ERROR_CODES = new Set([
   "invalid_font_weight",
   "unreadable_font_weight",
 ]);
+const PLATFORM_DETAILS_IMAGE_PROPERTIES = [
+  "iconFileId",
+  "adaptiveIconFileId",
+  "splashIconFileId",
+  "loadingBackgroundFileId",
+  "startBackgroundFileId",
+];
 const MENU_ITEM_TEXT_STYLE_ID = "e2WbW3vcPZR9";
 const MENU_ITEM_SELECTED_TEXT_STYLE_ID = "saV5A4pkvHRb";
 const MENU_PAGE_LAYOUT_ID = "fKr5fa67MQWh";
 const LOAD_MENU_ELEMENT_ID = "icn4dknq2kyp";
 const LEGACY_DIALOGUE_CONTENT_TEXT_STYLE_ID = "5rwEfyx2GBEi";
-const RELEASE_PLATFORM_IDS = ["web", "windows", "macos"];
+const RELEASE_PLATFORM_IDS = ["web", "windows", "macos", "android", "ios"];
+const IMAGE_USAGE_INDEX_BUILD_ATTEMPTS = 3;
 
 export const createProjectServiceCore = ({
   router,
@@ -122,6 +139,80 @@ export const createProjectServiceCore = ({
   const getCurrentProjectId = () =>
     repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
 
+  const androidSigningService = createAndroidSigningService({
+    fileAdapter,
+    filePicker,
+    getProjectId: getCurrentProjectId,
+    getAndroidSigningByProjectId:
+      repositoryService.getAndroidSigningByProjectId,
+    setAndroidSigningByProjectId:
+      repositoryService.setAndroidSigningByProjectId,
+  });
+
+  // The Build Number of this project's last Android export under
+  // `applicationId`, or no value when there was none.
+  const getLastAndroidBuildNumber = async (applicationId) =>
+    readAndroidLastBuildNumber(
+      await repositoryService.getAndroidLastExportByProjectId(
+        getCurrentProjectId(),
+      ),
+      applicationId,
+    );
+
+  // Called after an export: keeps the highest Build Number exported.
+  const recordAndroidBuildNumber = async ({ applicationId, buildNumber }) => {
+    const last = await getLastAndroidBuildNumber(applicationId);
+    if (last !== undefined && last >= buildNumber) return;
+    await repositoryService.setAndroidLastExportByProjectId(
+      getCurrentProjectId(),
+      { applicationId, buildNumber },
+    );
+  };
+
+  // A signed export names its key by fingerprint; the key comes from the
+  // project.
+  const createAndroidApkToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    const signingKey = metadata.signingCertificateSha256
+      ? await androidSigningService.getAndroidSigningKeyMaterial(
+          metadata.signingCertificateSha256,
+        )
+      : undefined;
+    return exportService.createAndroidApkToPath(
+      projectData,
+      fileEntries,
+      outputPath,
+      { ...metadata, signingKey },
+      options,
+    );
+  };
+
+  // An App Bundle is always signed, with the project key named by
+  // `metadata.signingCertificateSha256`.
+  const createAndroidBundleToPath = async (
+    projectData,
+    fileEntries,
+    outputPath,
+    metadata = {},
+    options = {},
+  ) => {
+    const signingKey = await androidSigningService.getAndroidSigningKeyMaterial(
+      metadata.signingCertificateSha256,
+    );
+    return exportService.createAndroidBundleToPath(
+      projectData,
+      fileEntries,
+      outputPath,
+      { ...metadata, signingKey },
+      options,
+    );
+  };
+
   const contentPatchesByProject = new Map();
   // The repositories whose content patches completed. The route opens a project
   // once and its pages ensure it many times; only the first ensure of an opened
@@ -147,6 +238,12 @@ export const createProjectServiceCore = ({
     updateTransform: collabService.commandApi.updateTransform,
     updateParticle: collabService.commandApi.updateParticle,
     updateLayout: collabService.commandApi.updateLayoutItem,
+    updateAnimation: collabService.commandApi.updateAnimation,
+  });
+
+  const spritesheetFramesService = createSpritesheetFramesService({
+    getFileContent: assetService.getFileContent,
+    uploadFiles: assetService.uploadFiles,
   });
 
   const resourcePackageImportService = createResourcePackageImportService({
@@ -355,9 +452,207 @@ export const createProjectServiceCore = ({
     await store.app.set(FONT_WEIGHT_METADATA_PATCH_KEY, true);
   };
 
+  const selectSceneIdsBySectionId = (repositoryState) => {
+    const sceneIdsBySectionId = new Map();
+    for (const [sceneId, scene] of Object.entries(
+      repositoryState?.scenes?.items ?? {},
+    )) {
+      for (const sectionId of Object.keys(scene?.sections?.items ?? {})) {
+        sceneIdsBySectionId.set(sectionId, sceneId);
+      }
+    }
+    return sceneIdsBySectionId;
+  };
+
+  const createResetStoryUpgrade = (repositoryState) => {
+    const sceneIdsBySectionId = selectSceneIdsBySectionId(repositoryState);
+    return (value) =>
+      upgradeResetStoryActions(value, {
+        resolveSceneId: (sectionId) => sceneIdsBySectionId.get(sectionId),
+      });
+  };
+
+  // The top-level fields of an item that the upgrade rewrote. Element updates
+  // merge by field, so only these are sent.
+  const selectUpgradedFields = (item, upgradedItem) => {
+    const data = {};
+    for (const [key, value] of Object.entries(upgradedItem)) {
+      if (value !== item[key]) {
+        data[key] = value;
+      }
+    }
+    return data;
+  };
+
+  // Where the project holds actions: scene lines, layout elements, control
+  // elements, and control key bindings. Each target reads its item from the
+  // state it is given, so the rewrite can be made from the current state.
+  const selectResetStoryPatchTargets = (repositoryState) => {
+    const targets = [];
+
+    for (const [sceneId, scene] of Object.entries(
+      repositoryState?.scenes?.items ?? {},
+    )) {
+      for (const [sectionId, section] of Object.entries(
+        scene?.sections?.items ?? {},
+      )) {
+        for (const lineId of Object.keys(section?.lines?.items ?? {})) {
+          targets.push({
+            label: `line ${lineId}`,
+            sceneId,
+            selectItem: (state) =>
+              state?.scenes?.items?.[sceneId]?.sections?.items?.[sectionId]
+                ?.lines?.items?.[lineId]?.actions,
+            // A merge would keep the deprecated action next to its
+            // replacement.
+            submit: (actions) =>
+              collabService.commandApi.updateLineActions({
+                lineId,
+                data: actions,
+                replace: true,
+              }),
+          });
+        }
+      }
+    }
+
+    for (const [layoutId, layout] of Object.entries(
+      repositoryState?.layouts?.items ?? {},
+    )) {
+      for (const elementId of Object.keys(layout?.elements?.items ?? {})) {
+        targets.push({
+          label: `layout ${layoutId} element ${elementId}`,
+          selectItem: (state) =>
+            state?.layouts?.items?.[layoutId]?.elements?.items?.[elementId],
+          submit: (upgradedElement, element) =>
+            collabService.commandApi.updateLayoutElement({
+              layoutId,
+              elementId,
+              data: selectUpgradedFields(element, upgradedElement),
+              replace: false,
+            }),
+        });
+      }
+    }
+
+    for (const [controlId, control] of Object.entries(
+      repositoryState?.controls?.items ?? {},
+    )) {
+      for (const key of ["keyboard", "keyup"]) {
+        targets.push({
+          label: `control ${controlId} ${key}`,
+          selectItem: (state) => state?.controls?.items?.[controlId]?.[key],
+          submit: (upgradedKeys) =>
+            collabService.commandApi.updateControlItem({
+              controlId,
+              data: { [key]: upgradedKeys },
+            }),
+        });
+      }
+
+      for (const elementId of Object.keys(control?.elements?.items ?? {})) {
+        targets.push({
+          label: `control ${controlId} element ${elementId}`,
+          selectItem: (state) =>
+            state?.controls?.items?.[controlId]?.elements?.items?.[elementId],
+          submit: (upgradedElement, element) =>
+            collabService.commandApi.updateControlElement({
+              controlId,
+              elementId,
+              data: selectUpgradedFields(element, upgradedElement),
+              replace: false,
+            }),
+        });
+      }
+    }
+
+    return targets;
+  };
+
+  // The repository state holds the lines of the scene being edited only, so
+  // the lines of the given scenes are loaded with it.
+  const readStateWithSceneLines = async (repository, sceneIds) => {
+    if (sceneIds.length === 0) {
+      return repository.getState();
+    }
+    return repository.getContextState({ sceneIds });
+  };
+
+  // Returns whether every rewrite was accepted. A rejected rewrite is skipped
+  // so that one unusual item does not keep the others from being rewritten.
+  const patchResetStoryActions = async (repository) => {
+    const snapshotState = await readStateWithSceneLines(
+      repository,
+      Object.keys(repository.getState()?.scenes?.items ?? {}),
+    );
+    const snapshotUpgrade = createResetStoryUpgrade(snapshotState);
+    const targets = selectResetStoryPatchTargets(snapshotState).filter(
+      ({ selectItem }) => {
+        const item = selectItem(snapshotState);
+        return snapshotUpgrade(item) !== item;
+      },
+    );
+
+    let isComplete = true;
+    for (const { label, sceneId, selectItem, submit } of targets) {
+      // Earlier updates were awaited, so the project may have changed since
+      // the snapshot. The rewrite is made from the item as it is now.
+      const currentState = await readStateWithSceneLines(
+        repository,
+        sceneId === undefined ? [] : [sceneId],
+      );
+      const item = selectItem(currentState);
+      const upgradedItem = createResetStoryUpgrade(currentState)(item);
+      if (upgradedItem === item) {
+        continue;
+      }
+
+      const result = await submit(upgradedItem, item);
+      if (result?.valid === false) {
+        isComplete = false;
+        console.warn(
+          `Could not migrate the reset action of ${label}.`,
+          result.error?.message,
+        );
+      }
+    }
+    return isComplete;
+  };
+
+  const applySectionTransitionResetStoryPatch = async (repository) => {
+    if (typeof repository?.getState !== "function") {
+      return;
+    }
+
+    const store = repositoryService.getCachedStore();
+    const isApplied = await store.app.get(
+      SECTION_TRANSITION_RESET_STORY_PATCH_KEY,
+    );
+    if (isApplied === true) {
+      return;
+    }
+
+    // Route Engine still runs the deprecated action, so a project that could
+    // not be fully rewritten keeps working. A failure here must never keep
+    // the project from opening: the marker stays unset and the patch is
+    // evaluated again the next time the project is opened.
+    try {
+      const isComplete = await patchResetStoryActions(repository);
+      if (isComplete) {
+        await store.app.set(SECTION_TRANSITION_RESET_STORY_PATCH_KEY, true);
+      }
+    } catch (error) {
+      console.warn(
+        "Could not migrate reset actions to section transitions.",
+        error,
+      );
+    }
+  };
+
   const applyProjectContentPatches = async (repository) => {
     await applyDefaultMenuTextStylesPatch(repository);
     await applyFontWeightMetadataPatch(repository);
+    await applySectionTransitionResetStoryPatch(repository);
   };
 
   const repairingSoundIds = new Set();
@@ -533,19 +828,8 @@ export const createProjectServiceCore = ({
     });
   };
 
-  const checkPlatformDetailsImageUsage = async ({
-    itemId,
-    repository,
-  } = {}) => {
-    const image = repository.getState()?.images?.items?.[itemId];
-    if (image?.type !== "image" || !image.fileId) {
-      return {
-        inProps: {},
-        isUsed: false,
-        count: 0,
-      };
-    }
-
+  // The platform details fields that show an image file, by file id.
+  const loadPlatformDetailsFileUsages = async () => {
     const platformDetailsByPlatform = await Promise.all(
       RELEASE_PLATFORM_IDS.map(async (platform) => ({
         platform,
@@ -553,13 +837,45 @@ export const createProjectServiceCore = ({
           await repositoryService.getCurrentPlatformDetails(platform),
       })),
     );
-    const usages = platformDetailsByPlatform
-      .filter(
-        ({ applicationInfo }) => applicationInfo?.iconFileId === image.fileId,
-      )
-      .map(({ platform }) => ({
-        property: `${platform}.iconFileId`,
-      }));
+    const usagesByFileId = new Map();
+    for (const { platform, applicationInfo } of platformDetailsByPlatform) {
+      for (const property of PLATFORM_DETAILS_IMAGE_PROPERTIES) {
+        const fileId = applicationInfo?.[property];
+        if (!fileId) {
+          continue;
+        }
+
+        const usages = usagesByFileId.get(fileId) ?? [];
+        usages.push({ platform, property });
+        usagesByFileId.set(fileId, usages);
+      }
+    }
+
+    return usagesByFileId;
+  };
+
+  // The platform details fields that show the image's file.
+  const findPlatformDetailsImageUsages = async ({
+    itemId,
+    repository,
+  } = {}) => {
+    const image = repository.getState()?.images?.items?.[itemId];
+    if (image?.type !== "image" || !image.fileId) {
+      return [];
+    }
+
+    return (await loadPlatformDetailsFileUsages()).get(image.fileId) ?? [];
+  };
+
+  const checkPlatformDetailsImageUsage = async ({
+    itemId,
+    repository,
+  } = {}) => {
+    const usages = (
+      await findPlatformDetailsImageUsages({ itemId, repository })
+    ).map(({ platform, property }) => ({
+      property: `${platform}.${property}`,
+    }));
 
     return {
       inProps: usages.length > 0 ? { platformDetails: usages } : {},
@@ -587,17 +903,141 @@ export const createProjectServiceCore = ({
     return checkPlatformDetailsImageUsage({ itemId, repository });
   };
 
-  const deleteImageIfUnused = async ({ imageId, checkTargets = [] } = {}) => {
-    const repository = await ensureRepository();
-    const platformDetailsUsage = await checkPlatformDetailsImageUsage({
-      itemId: imageId,
-      repository,
-    });
-    if (platformDetailsUsage.isUsed) {
-      return { deleted: false, usage: platformDetailsUsage };
+  // Where every image is used, kept until the project changes. Building it
+  // reads every scene's lines, so the pages that show or check image usage
+  // share one build per project revision.
+  let imageUsageIndexCache;
+
+  const startImageUsageIndexBuild = (repository) => {
+    const revision = repository.getRevision();
+    if (
+      imageUsageIndexCache?.repository === repository &&
+      imageUsageIndexCache.revision === revision
+    ) {
+      return imageUsageIndexCache;
     }
 
-    return collabService.deleteImageIfUnused({ imageId, checkTargets });
+    const cacheEntry = {
+      repository,
+      revision,
+      promise: buildImageUsageIndex({
+        repository,
+        store: repositoryService.getCachedStore(),
+      }),
+    };
+    imageUsageIndexCache = cacheEntry;
+    cacheEntry.promise.catch(() => {
+      if (imageUsageIndexCache === cacheEntry) {
+        imageUsageIndexCache = undefined;
+      }
+    });
+
+    return cacheEntry;
+  };
+
+  // A change that lands while the index is built can leave it out of date,
+  // so it is built again. After a few builds the newest one is returned as
+  // it is, rather than waiting for a project that keeps changing.
+  const loadImageUsageIndex = async () => {
+    const repository = await ensureRepository();
+    let index;
+    for (
+      let attempt = 0;
+      attempt < IMAGE_USAGE_INDEX_BUILD_ATTEMPTS;
+      attempt += 1
+    ) {
+      const cacheEntry = startImageUsageIndexBuild(repository);
+      index = await cacheEntry.promise;
+      if (repository.getRevision() === cacheEntry.revision) {
+        break;
+      }
+    }
+
+    return index;
+  };
+
+  // Builds the image usage index ahead of the first lookup.
+  const prepareImageUsage = async () => {
+    await loadImageUsageIndex();
+  };
+
+  // An image that platform details shows cannot be deleted.
+  const addPlatformDetailsUsages = (usage, platformDetailsUsages = []) => {
+    for (const { platform, property } of platformDetailsUsages) {
+      usage.usages.push({ type: "platformDetails", platform, property });
+    }
+    if (platformDetailsUsages.length > 0) {
+      usage.blocksDelete = true;
+    }
+  };
+
+  // Where the image is used: `usages` lists the scenes (with their lines),
+  // layouts, controls, animations, particles and platform details fields, and
+  // `blocksDelete` tells whether any of them keeps it from being deleted.
+  const getImageUsage = async ({ imageId } = {}) => {
+    const [index, platformDetailsUsagesByFileId] = await Promise.all([
+      loadImageUsageIndex(),
+      loadPlatformDetailsFileUsages(),
+    ]);
+    const usage = selectImageUsage({ index, imageId });
+    // The index holds the images, so the project state is not copied again
+    // for every image that is looked up.
+    addPlatformDetailsUsages(
+      usage,
+      platformDetailsUsagesByFileId.get(index.images.items[imageId]?.fileId),
+    );
+
+    return usage;
+  };
+
+  // The images in a folder, and in the folders inside it, that cannot be
+  // deleted, each with where it is used. The folder cannot be deleted while
+  // it holds any, which `blocksDelete` tells.
+  const getImageFolderUsage = async ({ folderId } = {}) => {
+    const [index, platformDetailsUsagesByFileId] = await Promise.all([
+      loadImageUsageIndex(),
+      loadPlatformDetailsFileUsages(),
+    ]);
+    const { images } = index;
+    const usedImages = [];
+
+    for (const imageId of selectFolderImageIds({ images, folderId })) {
+      const image = images.items[imageId];
+      const usage = selectImageUsage({ index, imageId });
+      addPlatformDetailsUsages(
+        usage,
+        platformDetailsUsagesByFileId.get(image.fileId),
+      );
+      if (usage.blocksDelete) {
+        usedImages.push({
+          id: imageId,
+          name: image.name,
+          usages: usage.usages,
+        });
+      }
+    }
+
+    return {
+      images: usedImages,
+      blocksDelete: usedImages.length > 0,
+    };
+  };
+
+  const deleteImageIfUnused = async ({ imageId } = {}) => {
+    const usage = await getImageUsage({ imageId });
+    if (usage.blocksDelete) {
+      return {
+        deleted: false,
+        usage: {
+          isUsed: true,
+          count: usage.usages.length,
+          usages: usage.usages,
+        },
+      };
+    }
+
+    // The usage was checked above, so the delete skips its own check.
+    return collabService.deleteImageIfUnused({ imageId, checkTargets: [] });
   };
 
   const checkSceneDeletionUsage = async ({ sceneId } = {}) => {
@@ -728,6 +1168,8 @@ export const createProjectServiceCore = ({
     getDomainState,
     getRepositoryState,
     getRepositoryRevision,
+    validateResourceImportUrl:
+      resourcePackageImportService.validateResourceImportUrl,
     createResourceImportPlan:
       resourcePackageImportService.createResourceImportPlan,
     loadResourceImportPreview:
@@ -767,9 +1209,13 @@ export const createProjectServiceCore = ({
     updateVersionInProject: collabService.updateVersionInProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,
     deleteImageIfUnused,
+    getImageUsage,
+    getImageFolderUsage,
+    prepareImageUsage,
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,
     repairSoundFileType,
     deleteVideoIfUnused: collabService.deleteVideoIfUnused,
+    deleteParticleIfUnused: collabService.deleteParticleIfUnused,
     async initializeProject(payload) {
       await repositoryService.releaseRepositoryByProjectId(payload?.projectId);
       return storageAdapter.initializeProject(payload);
@@ -796,6 +1242,17 @@ export const createProjectServiceCore = ({
     },
     getFileContent: assetService.getFileContent,
     observeFileUrls: assetService.observeFileUrls,
+    readSpritesheetFrameFiles:
+      spritesheetFramesService.readSpritesheetFrameFiles,
+    loadSpritesheetFrameFileIds:
+      spritesheetFramesService.loadSpritesheetFrameFileIds,
+    extractSpritesheetFrames: spritesheetFramesService.extractSpritesheetFrames,
+    renderSpritesheetFramesPreview:
+      spritesheetFramesService.renderSpritesheetFramesPreview,
+    buildSpritesheetFromFrames:
+      spritesheetFramesService.buildSpritesheetFromFrames,
+    combineSpritesheetSourceFiles:
+      spritesheetFramesService.combineSpritesheetSourceFiles,
     checkFileIntegrity: assetService.checkFileIntegrity,
     createAssetPackageBundle:
       assetPackageExportService.createAssetPackageBundle,
@@ -803,6 +1260,8 @@ export const createProjectServiceCore = ({
       editorThumbnailService.requestTransformThumbnails,
     requestParticleThumbnails: editorThumbnailService.requestParticleThumbnails,
     requestLayoutThumbnails: editorThumbnailService.requestLayoutThumbnails,
+    requestAnimationThumbnails:
+      editorThumbnailService.requestAnimationThumbnails,
     downloadMetadata: assetService.downloadMetadata,
     loadFontFile: assetService.loadFontFile,
     detectFileType: assetService.detectFileType,
@@ -821,8 +1280,30 @@ export const createProjectServiceCore = ({
     createWindowsPortableExecutableToPath:
       exportService.createWindowsPortableExecutableToPath,
     createWindowsInstallerToPath: exportService.createWindowsInstallerToPath,
+    getAndroidExportAvailability: exportService.getAndroidExportAvailability,
+    promptAndroidApkPath: exportService.promptAndroidApkPath,
+    createAndroidApkToPath,
+    promptAndroidBundlePath: exportService.promptAndroidBundlePath,
+    createAndroidBundleToPath,
+    getLastAndroidBuildNumber,
+    recordAndroidBuildNumber,
+    supportsAndroidSigning: androidSigningService.supportsAndroidSigning,
+    getAndroidSigningSummary: androidSigningService.getAndroidSigningSummary,
+    ensureAndroidSigningKey: androidSigningService.ensureAndroidSigningKey,
+    createAndroidSigningKey: androidSigningService.createAndroidSigningKey,
+    promptAndroidKeystore: androidSigningService.promptAndroidKeystore,
+    importAndroidSigningKey: androidSigningService.importAndroidSigningKey,
+    useAndroidSigningKeyAgain: androidSigningService.useAndroidSigningKeyAgain,
+    promptAndroidKeyCopyPath: androidSigningService.promptAndroidKeyCopyPath,
+    saveAndroidSigningKeyCopy: androidSigningService.saveAndroidSigningKeyCopy,
     promptMacosApplicationPath: exportService.promptMacosApplicationPath,
     getMacosExportAvailability: exportService.getMacosExportAvailability,
     createMacosApplicationToPath: exportService.createMacosApplicationToPath,
+    getIosExportAvailability: exportService.getIosExportAvailability,
+    getIosExportRequirements: exportService.getIosExportRequirements,
+    listIosDevices: exportService.listIosDevices,
+    promptIosApplicationPath: exportService.promptIosApplicationPath,
+    exportIosApplication: exportService.exportIosApplication,
+    cancelIosExport: exportService.cancelIosExport,
   };
 };

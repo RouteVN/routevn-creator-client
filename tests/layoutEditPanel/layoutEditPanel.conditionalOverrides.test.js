@@ -378,7 +378,7 @@ describe("layoutEditPanel conditional overrides", () => {
     );
 
     expect(imageSelectorDialog).toContain(
-      "rtgl-button#confirmImageSelection variant=pr: ${selectButton}",
+      "rtgl-button#confirmImageSelection v=pr: ${selectButton}",
     );
     expect(imageSelectorDialog).not.toContain("cancelImageSelection");
   });

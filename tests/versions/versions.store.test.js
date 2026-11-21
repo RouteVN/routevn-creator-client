@@ -1,13 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { parseAndRender } from "jempl";
+import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
   closeExportConfirmation,
+  closeExportOptions,
+  openExportOptions,
   openExportConfirmation,
+  selectCanExportAndroidBundle,
   selectExportConfirmation,
   selectViewData,
   setAppWindowMetrics,
   setSelectedItemId,
   setPlatform,
+  setAndroidExportAvailability,
+  setAndroidSigningStatus,
   setMacosExportAvailability,
   setUiConfig,
   setVisualTestMode,
@@ -15,6 +21,13 @@ import {
   setWindowsExportAvailability,
 } from "../../src/pages/versions/versions.store.js";
 import { EN_I18N } from "../support/i18n.js";
+
+// These tests cover Android export itself, which ships later; the
+// unreleased state is covered in tests/platformDetails/androidExportUnreleased.test.js.
+vi.mock("../../src/internal/androidExport.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  ANDROID_EXPORT_RELEASED: true,
+}));
 
 const version = {
   id: "version-1",
@@ -286,9 +299,10 @@ describe("versions store export actions", () => {
 
     expect(viewData.canExportWindowsExecutable).toBe(true);
     expect(viewData.canExportWindowsInstaller).toBe(false);
-    expect(viewData.exportWindowsExecutableButton).toBe(
-      "Export Windows EXE (Beta)",
-    );
+    expect(viewData.exportOptions.map((option) => option.id)).toEqual([
+      "web",
+      "windows",
+    ]);
     expect(viewData.exportWindowsInstallerButton).toBe(
       "Export Windows Installer (Beta)",
     );
@@ -379,5 +393,293 @@ describe("versions store export actions", () => {
     setVisualTestMode({ state }, { enabled: true });
 
     expect(selectViewData({ state }).canExportMacosApplication).toBe(true);
+  });
+});
+
+it.each(["web", "tauri", "android", "ios"])(
+  "gates Android export on host capability for %s",
+  (platform) => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform });
+    setVisualTestMode({ state }, { enabled: true });
+    expect(selectViewData({ state }).canExportAndroidApk).toBe(false);
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: true } },
+    );
+    expect(selectViewData({ state }).canExportAndroidApk).toBe(
+      platform !== "web",
+    );
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: false } },
+    );
+    expect(selectViewData({ state }).canExportAndroidApk).toBe(false);
+  },
+);
+
+it("shows Android release details, native version fields, and the unsigned signing notice", () => {
+  const state = createInitialState();
+  openExportConfirmation(
+    { state },
+    {
+      exportType: "android-apk",
+      platform: "android",
+      versionId: "version-1",
+      versionName: "Release One",
+      applicationInfo: {
+        applicationName: "Project One",
+        applicationIdentifier: "com.example.project_one",
+        iconFileId: "icon-1",
+      },
+    },
+  );
+  const view = selectViewData({ state, i18n: EN_I18N });
+  expect(view.showAndroidExportForm).toBe(true);
+  expect(view.showMacosExportForm).toBe(false);
+  expect(view.exportConfirmationFields.map((field) => field.value)).toEqual([
+    "Release One",
+    "Project One",
+    undefined,
+    "com.example.project_one",
+  ]);
+  expect(
+    view.androidExportForm.fields[0].fields.map((field) => field.name),
+  ).toEqual(["version", "buildNumber"]);
+  expect(view.androidExportForm.actions.buttons[0].label).toBe(
+    EN_I18N.versionsPage.exportAndroidButton,
+  );
+  expect(view.androidUnsignedApkNotice).toBe(
+    EN_I18N.versionsPage.androidUnsignedApkNotice,
+  );
+  // A host that cannot sign shows only the unsigned notice and no choices.
+  expect(view.showAndroidUnsignedNotice).toBe(true);
+  expect(view.androidExportForm.fields).toHaveLength(1);
+});
+
+const openAndroidExport = (state) =>
+  openExportConfirmation(
+    { state },
+    {
+      exportType: "android-apk",
+      platform: "android",
+      versionId: "version-1",
+      versionName: "1.0.0",
+      applicationInfo: {
+        applicationName: "Project One",
+        applicationIdentifier: "com.example.project_one",
+        iconFileId: "icon-1",
+      },
+    },
+  );
+
+// Each field after Version and Build Number with the `$when` condition
+// rtgl-form renders it under.
+const describeSigningFields = (form) =>
+  form.fields.slice(1).map((field) => ({
+    when: field.$when,
+    name: field.name,
+    content: field.content,
+    options: field.options?.map((option) => option.value),
+  }));
+
+// The names or notices rtgl-form shows for these values: it renders a field
+// under `$if <$when>` with the values as `formValues`.
+const visibleFields = (form, formValues) =>
+  parseAndRender(
+    {
+      fields: form.fields
+        .slice(1)
+        .map(({ $when, ...field }) =>
+          $when ? { [`$if ${$when}`]: field } : field,
+        ),
+    },
+    { formValues },
+  ).fields.map((field) => field.name ?? field.content);
+
+describe("Android signing fields", () => {
+  it("offers Signed and Unsigned and explains a new key for a game with none", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus({ state }, { supported: true });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.showAndroidUnsignedNotice).toBe(false);
+    const form = view.androidExportForm;
+    expect(describeSigningFields(form)[0]).toMatchObject({
+      name: "signing",
+      options: ["signed", "unsigned"],
+    });
+    // The hint says who signs in each case.
+    expect(form.fields[1].tooltip).toEqual({
+      content: EN_I18N.versionsPage.androidSigningTooltip,
+    });
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
+      "signing",
+      EN_I18N.versionsPage.androidNewKeyNotice,
+    ]);
+    expect(visibleFields(form, { format: "apk", signing: "unsigned" })).toEqual(
+      ["signing", EN_I18N.versionsPage.androidUnsignedApkNotice],
+    );
+  });
+
+  it("says the project's key signs and asks nothing else", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus(
+      { state },
+      { supported: true, currentKey: "ab".repeat(32) },
+    );
+    const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+    expect(
+      describeSigningFields(form)
+        .map((field) => field.name)
+        .filter(Boolean),
+    ).toEqual(["signing"]);
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
+      "signing",
+      EN_I18N.versionsPage.androidSignedWithKeyNotice,
+    ]);
+  });
+
+  it("says to choose a key when the project's keys have no usable current key", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus(
+      { state },
+      { supported: true, currentKeyUnusable: true },
+    );
+    const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
+      "signing",
+      EN_I18N.versionsPage.androidSigningKeyUnusable,
+    ]);
+  });
+
+  it("offers an App Bundle, always signed, when the host has the bundle template", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus({ state }, { supported: true });
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: true, bundleAvailable: true } },
+    );
+    expect(selectCanExportAndroidBundle({ state })).toBe(true);
+    const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+    expect(describeSigningFields(form)[0]).toMatchObject({
+      name: "format",
+      options: ["apk", "aab"],
+    });
+    // The hint says which format is for what.
+    expect(form.fields[1].tooltip).toEqual({
+      content: EN_I18N.versionsPage.androidFormatTooltip,
+    });
+    expect(visibleFields(form, { format: "apk", signing: "signed" })).toEqual([
+      "format",
+      "signing",
+      EN_I18N.versionsPage.androidNewKeyNotice,
+    ]);
+    // Signing is not a choice for a bundle, whatever the APK choice was.
+    expect(visibleFields(form, { format: "aab", signing: "unsigned" })).toEqual(
+      [
+        "format",
+        EN_I18N.versionsPage.androidBundleNotice,
+        EN_I18N.versionsPage.androidNewKeyNotice,
+      ],
+    );
+  });
+
+  it("offers no App Bundle without the bundle template or signing", () => {
+    for (const [supported, bundleAvailable] of [
+      [true, false],
+      [false, true],
+    ]) {
+      const state = createInitialState();
+      openAndroidExport(state);
+      setAndroidSigningStatus({ state }, { supported });
+      setAndroidExportAvailability(
+        { state },
+        { availability: { available: true, bundleAvailable } },
+      );
+      expect(selectCanExportAndroidBundle({ state })).toBe(false);
+      const form = selectViewData({ state, i18n: EN_I18N }).androidExportForm;
+      expect(form.fields.some((field) => field.name === "format")).toBe(false);
+    }
+  });
+
+  it("shows no signing choice on a host that cannot sign", () => {
+    const state = createInitialState();
+    openAndroidExport(state);
+    setAndroidSigningStatus({ state }, { supported: false });
+    const view = selectViewData({ state, i18n: EN_I18N });
+    expect(view.showAndroidUnsignedNotice).toBe(true);
+    expect(describeSigningFields(view.androidExportForm)).toEqual([]);
+  });
+});
+
+describe("versions store export options", () => {
+  it("lists the platforms this host exports for, with their icons", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+    setMacosExportAvailability(
+      { state },
+      { availability: { hostSupported: true } },
+    );
+    setAndroidExportAvailability(
+      { state },
+      { availability: { available: true } },
+    );
+
+    expect(selectViewData({ state, i18n: EN_I18N }).exportOptions).toEqual([
+      { id: "web", icon: "website", label: "Web" },
+      { id: "windows", beta: true, icon: "windows", label: "Windows" },
+      { id: "macos", beta: true, icon: "apple", label: "macOS" },
+      { id: "android", beta: true, icon: "android", label: "Android" },
+    ]);
+  });
+
+  it("offers only Web in the browser", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "web" });
+    expect(
+      selectViewData({ state, i18n: EN_I18N }).exportOptions.map(
+        (option) => option.id,
+      ),
+    ).toEqual(["web"]);
+  });
+
+  it("opens the options for a version and closes them again", () => {
+    const state = createInitialState();
+    openExportOptions({ state }, { versionId: "version-1" });
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.isExportOptionsOpen).toBe(true);
+    expect(viewData.exportOptionsVersionId).toBe("version-1");
+    expect(viewData.exportButton).toBe("Export");
+
+    closeExportOptions({ state });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.isExportOptionsOpen).toBe(false);
+    expect(viewData.exportOptionsVersionId).toBeUndefined();
+  });
+
+  it("names neither format when the Windows export also offers the installer", () => {
+    const state = createInitialState();
+    setPlatform({ state }, { platform: "tauri" });
+    openExportConfirmation(
+      { state },
+      { exportType: "windows-executable", platform: "windows" },
+    );
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.showWindowsInstallerButton).toBe(false);
+    expect(viewData.exportConfirmationTitle).toBe(
+      EN_I18N.versionsPage.confirmWindowsExecutableExportTitle,
+    );
+
+    setWindowsExportAvailability(
+      { state },
+      { availability: { installer: true } },
+    );
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.showWindowsInstallerButton).toBe(true);
+    expect(viewData.exportConfirmationTitle).toBe("Confirm Windows Export");
   });
 });

@@ -126,6 +126,11 @@ fn run_icon_generation(shell_workspace: &Path, icon: &Path, verbose: bool) -> Re
     run_cargo_command(shell_workspace, &args, verbose)
 }
 
+// The override replaces the shell's window list, so it repeats the shell's
+// WebView2 arguments. See docs/platform/17-windows-application-audio-capture.md.
+const WINDOWS_BROWSER_ARGS: &str =
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,AudioServiceOutOfProcess";
+
 fn generate_override_config(
     shell_workspace: &Path,
     export_root: &Path,
@@ -156,7 +161,8 @@ fn generate_override_config(
                 "title": metadata.title,
                 "width": 1280,
                 "height": 720,
-                "resizable": true
+                "resizable": true,
+                "additionalBrowserArgs": WINDOWS_BROWSER_ARGS
             }]
         },
         "bundle": bundle_config(icon_entries)
@@ -383,6 +389,10 @@ mod tests {
             export_root.to_string_lossy().as_ref()
         );
         assert_eq!(json["app"]["windows"][0]["title"], "Sample App");
+        assert_eq!(
+            json["app"]["windows"][0]["additionalBrowserArgs"],
+            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,AudioServiceOutOfProcess"
+        );
     }
 
     #[test]

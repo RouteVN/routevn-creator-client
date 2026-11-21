@@ -14,6 +14,7 @@ export const PRESENTATION_ACTION_MODE_ORDER = Object.freeze([
   "resetStoryAtSection",
   "control",
   "updateVariable",
+  "random",
   "conditional",
 ]);
 

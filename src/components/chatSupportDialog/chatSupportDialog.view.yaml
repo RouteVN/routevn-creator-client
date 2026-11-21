@@ -1,0 +1,35 @@
+refs:
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+        stopPropagation: true
+  closeButton:
+    eventListeners:
+      click:
+        handler: handleDialogClose
+  channelRow*:
+    eventListeners:
+      click:
+        handler: handleChannelClick
+      keydown:
+        handler: handleChannelKeyDown
+styles:
+  ".chatSupportChannel:focus-visible":
+    outline: 2px solid var(--primary)
+    outline-offset: 2px
+template:
+  - rtgl-dialog#dialog ?open=${open} s=sm:
+      - rtgl-view slot=content w=f g=md p=lg:
+          - rtgl-view w=f d=h av=c g=md:
+              - rtgl-text s=lg w=1fg: ${title}
+              - 'rtgl-button#closeButton v=gh s=sm sq pre=x aria-label="${closeLabel}"': null
+          - rtgl-text s=sm c=mu-fg: ${description}
+          - rtgl-view w=f g=sm:
+              - $for channel, i in channels:
+                  - 'rtgl-view#channelRow${i}.chatSupportChannel data-channel-id=${channel.id} role=button tabindex=0 aria-label="${channel.label}, ${channel.detail}" w=f d=h av=c g=md p=md br=md bw=xs bc=bo h-bc=fg cur=pointer':
+                      - rtgl-svg svg=${channel.svg} wh=22 c=fg: null
+                      - 'rtgl-view w=1fg g=xs style="min-width: 0;"':
+                          - rtgl-text s=md: ${channel.label}
+                          - rtgl-text s=sm c=mu-fg ellipsis=true: ${channel.detail}
+                      - rtgl-svg svg=chevronRight wh=16 c=mu-fg: null

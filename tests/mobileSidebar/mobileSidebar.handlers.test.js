@@ -2,11 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { handleBeforeMount } from "../../src/components/mobileSidebar/mobileSidebar.handlers.js";
 import * as sidebarStore from "../../src/components/mobileSidebar/mobileSidebar.store.js";
 
-const createDeps = (ensuredProjectId) => {
+const createDeps = (
+  ensuredProjectId,
+  { path = "/project/images", payload = { p: "project-1" } } = {},
+) => {
   const state = sidebarStore.createInitialState();
   return {
     appService: {
       getCurrentProjectId: () => "project-1",
+      getPath: () => path,
+      getPayload: () => payload,
       getUserConfig: (key) =>
         key === "sceneEditor.recentSceneIdsByProject"
           ? { "project-1": ["scene-1"] }
@@ -19,6 +24,8 @@ const createDeps = (ensuredProjectId) => {
       }),
     },
     store: {
+      setCurrentLocation: (location) =>
+        sidebarStore.setCurrentLocation({ state }, location),
       setAssetPackageEnabled: (payload) =>
         sidebarStore.setAssetPackageEnabled({ state }, payload),
       setRecentSceneIds: (payload) =>
@@ -84,5 +91,45 @@ describe("mobile sidebar initialization", () => {
 
     cleanup();
     expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it("highlights the item for the route it opened on", () => {
+    const deps = createDeps(undefined, { path: "/project/sounds" });
+
+    handleBeforeMount(deps);
+
+    const items = deps.store
+      .selectViewData("assets")
+      .sections.flatMap((section) => section.items);
+    expect(items.find((item) => item.id === "sounds").bgc).toBe("ac");
+    expect(items.find((item) => item.id === "images").bgc).toBe("bg");
+  });
+
+  it("highlights the open scene in the scene editor", () => {
+    const deps = createDeps("project-1", {
+      path: "/project/scene-editor",
+      payload: { p: "project-1", s: "scene-1" },
+    });
+    let onProjectState;
+    deps.projectService.subscribeProjectState.mockImplementation((listener) => {
+      onProjectState = listener;
+      return vi.fn();
+    });
+
+    handleBeforeMount(deps);
+    onProjectState({
+      repositoryState: {
+        scenes: {
+          tree: [{ id: "scene-1" }],
+          items: {
+            "scene-1": { id: "scene-1", type: "scene", name: "Opening" },
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.store.selectViewData("scene-map").sections[1].items[0],
+    ).toMatchObject({ id: "scene:scene-1", bgc: "ac" });
   });
 });

@@ -173,3 +173,46 @@ Use these rules when reasoning about identity:
 - do not assume `state.project.id` came from repository state
 - do not expose `projectInfo.id` into the exported bundle merely to drive
   runtime save identity
+
+## Android Release Identity
+
+`platformDetails.android` in the project-specific DB `app` store owns the Android
+application name, icon file ID, optional adaptive icon and splash icon file IDs,
+application identifier (package name), icon
+background color, and splash background color. Records are created explicitly
+from Platform Details or export setup. Defaults use the project name and icon,
+a blank identifier, `#FFFFFF` for the icon background, and `#000000` for the
+splash background. Colors are opaque `#RRGGBB` values normalized to uppercase.
+
+Package names have at least two period-separated segments. Each segment starts
+with an ASCII letter and contains only ASCII letters, digits, or underscores.
+`vn.routevn.androidplayer.template` and `com.routevn.creator` are reserved.
+Changing the package name creates a separate app that cannot update the old one.
+Updates also require the same signing key and a higher Build Number.
+
+Android Version and Build Number are per-export inputs. The project's
+`androidLastExport` key records the highest Build Number exported and its
+application ID: the next export's form starts one above it, and an export with
+a Build Number that is not higher asks for confirmation first.
+Version uses the shared three-component numeric native version rule. Build
+Number is an integer from 1 to 2100000000. Orientation comes from the selected
+release's screen resolution: portrait when height exceeds width, landscape
+otherwise. Export writes a signed APK, or an unsigned APK that must be signed
+with APK Signature Scheme v2 or later before installation or distribution. The
+APK is already aligned; running zipalign after signing invalidates the
+signature.
+
+The project's separate `androidSigning` key holds the game's signing keys:
+the current key, which signs new APKs, and every key it replaced. It is not
+part of `platformDetails.android`, so editing Platform Details in a Creator
+version that does not know the field cannot drop it. The keys travel with the
+project database, so copying or backing up the project folder copies them.
+Changing the application identifier keeps the key; after a key exists,
+Platform Details warns that installed copies will not update to builds with a
+new identifier.
+
+All hosts use the shared Platform Details normalizer. Their app-store adapters
+preserve the platform record as JSON, and project-folder imports and exports
+carry the project DB containing it. The desktop, Android, and iOS Creator hosts
+export Android APKs; the web adapter reports Android APK export unavailable.
+See `15-android-player-export.md`.
