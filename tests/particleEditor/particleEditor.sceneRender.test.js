@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { particlesPlugin } from "route-graphics";
 import {
   buildParticleEffectData,
   buildParticleFormValues,
 } from "../../src/pages/particleEditor/support/particleEditorForm.js";
-import { createParticlePreset } from "../../src/pages/particles/support/particlePresets.js";
+import {
+  createParticlePreset,
+  PARTICLE_PRESET_OPTIONS,
+} from "../../src/pages/particles/support/particlePresets.js";
 import { buildLayoutRenderElements } from "../../src/internal/project/layout.js";
 import {
   createParticlePreviewState,
@@ -15,6 +19,12 @@ import {
   MAX_PARTICLE_RATE,
   normalizeParticleModules,
 } from "../../src/internal/particles.js";
+
+// Route Graphics references the browser's Worker when it loads. Parsing
+// element state, which these tests use, never starts one.
+vi.hoisted(() => {
+  globalThis.Worker ??= class Worker {};
+});
 
 const projectResolution = { width: 640, height: 360 };
 const imageItems = {
@@ -279,10 +289,210 @@ describe("particle values route-graphics rejects", () => {
     ).toBe(10);
   });
 
+  it("repairs a rate, count or duration without editing the stored particle", () => {
+    const stored = savedParticle("1");
+    stored.modules.emission.maxActive = 0;
+    stored.modules.emission.rate = -3;
+    stored.modules.emission.duration = -2;
+
+    const element = buildSceneParticleElement(stored);
+
+    expect(element.modules.emission).toMatchObject({
+      maxActive: 60,
+      rate: 1,
+      duration: 0,
+    });
+    expect(stored.modules.emission).toMatchObject({
+      maxActive: 0,
+      rate: -3,
+      duration: -2,
+    });
+  });
+
+  // Imported or synced values the form never saves. JSON stores NaN and
+  // Infinity as null.
+  const repairEmission = (emission) =>
+    normalizeParticleModules({ emission: structuredClone(emission) }).emission;
+
+  it.each([
+    [{ rate: -3 }, { rate: 1 }],
+    [{ rate: 0 }, { rate: 1 }],
+    [{ rate: null }, { rate: 20 }],
+    [{ rate: "fast" }, { rate: 20 }],
+    [{ rate: undefined }, { rate: 20 }],
+    [{ maxActive: 0 }, { maxActive: 60 }],
+    [{ maxActive: -5 }, { maxActive: 60 }],
+    [{ maxActive: null }, { maxActive: 60 }],
+    [{ maxActive: 2.6 }, { maxActive: 3 }],
+    [{ maxActive: 0.3 }, { maxActive: 1 }],
+    [{ duration: -2 }, { duration: 0 }],
+    [{ duration: null }, { duration: 1 }],
+    [{ duration: "soon" }, { duration: 1 }],
+  ])("repairs a continuous effect's %o to %o", (patch, expected) => {
+    expect(
+      repairEmission({ mode: "continuous", rate: 20, ...patch }),
+    ).toMatchObject(expected);
+  });
+
+  it.each([
+    [{ burstCount: -4 }, 1],
+    [{ burstCount: 0 }, 1],
+    [{ burstCount: 2.6 }, 3],
+    [{ burstCount: null }, 8],
+    [{ burstCount: undefined }, 8],
+  ])("repairs a burst's %o to a count of %i", (patch, expected) => {
+    expect(repairEmission({ mode: "burst", ...patch }).burstCount).toBe(
+      expected,
+    );
+  });
+
+  it("drops a burst's Max Active or duration that route-graphics rejects, as the form does", () => {
+    const emission = repairEmission({
+      mode: "burst",
+      burstCount: 8,
+      maxActive: 0,
+      duration: -1,
+    });
+    expect(emission).not.toHaveProperty("maxActive");
+    expect(emission).not.toHaveProperty("duration");
+
+    expect(
+      repairEmission({ mode: "burst", burstCount: 8, maxActive: null }),
+    ).not.toHaveProperty("maxActive");
+    expect(
+      repairEmission({ mode: "burst", burstCount: 8, maxActive: 30.4 })
+        .maxActive,
+    ).toBe(30);
+  });
+
+  it("repairs a value the way the form saves it when the particle is edited", () => {
+    // Loading the stored particle into the form and saving it, as any edit
+    // does, writes the same value the repair draws.
+    const roundTrip = (particle) =>
+      buildParticleEffectData({
+        values: buildParticleFormValues({ particle }),
+        baseParticle: particle,
+      }).modules.emission;
+    const withEmission = (emission) => {
+      const particle = structuredClone(snow);
+      particle.modules.emission = { ...particle.modules.emission, ...emission };
+      return particle;
+    };
+
+    for (const patch of [
+      { rate: -3 },
+      { rate: null },
+      { maxActive: 0 },
+      { maxActive: null },
+      { maxActive: 2.6 },
+      { duration: -2 },
+      { duration: null },
+    ]) {
+      const particle = withEmission(patch);
+      const key = Object.keys(patch)[0];
+      expect(repairEmission(particle.modules.emission)[key]).toBe(
+        roundTrip(particle)[key],
+      );
+    }
+
+    for (const burstCount of [-4, 2.6, null]) {
+      const particle = withEmission({ mode: "burst", burstCount });
+      expect(repairEmission(particle.modules.emission).burstCount).toBe(
+        roundTrip(particle).burstCount,
+      );
+    }
+  });
+
+  it("leaves values the emission mode ignores as saved", () => {
+    // Rewriting them would change the render state, and with it the
+    // thumbnail's source hash, of an effect that already draws.
+    expect(
+      repairEmission({ mode: "continuous", rate: 20, burstCount: 0 })
+        .burstCount,
+    ).toBe(0);
+    expect(
+      repairEmission({ mode: "burst", burstCount: 8, rate: -3 }).rate,
+    ).toBe(-3);
+  });
+
+  it("keeps a rate below 1, an infinite duration and an unset Max Active as saved", () => {
+    const emission = repairEmission({
+      mode: "continuous",
+      rate: 0.5,
+      duration: "infinite",
+    });
+    expect(emission).toEqual({
+      mode: "continuous",
+      rate: 0.5,
+      duration: "infinite",
+    });
+  });
+
+  it("gives route-graphics a particle it accepts for each repaired value", () => {
+    const continuous = [
+      { rate: -3 },
+      { rate: null },
+      { maxActive: 0 },
+      { maxActive: null },
+      { maxActive: 2.6 },
+      { duration: -2 },
+      { duration: null },
+    ];
+    const burst = [
+      { burstCount: -4 },
+      { burstCount: 2.6 },
+      { burstCount: null },
+      { burstCount: 8, maxActive: 0 },
+      { burstCount: 8, duration: -1 },
+    ].map((patch) => ({ mode: "burst", ...patch }));
+
+    for (const patch of [...continuous, ...burst]) {
+      const stored = savedParticle("1");
+      Object.assign(stored.modules.emission, patch);
+      const element = buildSceneParticleElement(stored);
+      const unrepaired = {
+        ...element,
+        modules: {
+          ...element.modules,
+          emission: structuredClone(stored.modules.emission),
+        },
+      };
+
+      expect(() => particlesPlugin.parse({ state: unrepaired })).toThrow(
+        /Input Error: modules\.emission\./,
+      );
+      expect(() => particlesPlugin.parse({ state: element })).not.toThrow();
+    }
+  });
+
   it("leaves valid modules unchanged", () => {
     const modules = savedParticle("1").modules;
     const before = structuredClone(modules);
     expect(normalizeParticleModules(structuredClone(modules))).toEqual(before);
+  });
+
+  it("leaves every preset unchanged, as created and as saved in either mode", () => {
+    for (const { value: presetId } of PARTICLE_PRESET_OPTIONS) {
+      const preset = createParticlePreset({ presetId, projectResolution });
+      const saveAs = (emissionMode) =>
+        buildParticleEffectData({
+          values: {
+            ...buildParticleFormValues({ particle: preset }),
+            emissionMode,
+          },
+          baseParticle: preset,
+        }).modules;
+
+      for (const modules of [
+        preset.modules,
+        saveAs("continuous"),
+        saveAs("burst"),
+      ]) {
+        expect(normalizeParticleModules(structuredClone(modules))).toEqual(
+          modules,
+        );
+      }
+    }
   });
 });
 
