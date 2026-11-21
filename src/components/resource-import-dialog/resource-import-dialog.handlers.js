@@ -313,7 +313,14 @@ export const handleStoreSearchSubmit = (deps) => {
 };
 
 export const handleStoreSearchPopoverKeyDown = (deps, payload) => {
-  if (payload._event.key !== "Enter") return;
+  const { _event } = payload;
+  // An Enter that ends an input method composition only picks the text.
+  if (_event.key !== "Enter" || _event.isComposing || _event.keyCode === 229) {
+    return;
+  }
+  // Closing the popover focuses the search button again, which this Enter
+  // would otherwise press, opening the popover again.
+  _event.preventDefault();
   handleStoreSearchSubmit(deps);
 };
 

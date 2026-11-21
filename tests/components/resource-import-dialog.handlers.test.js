@@ -515,9 +515,23 @@ describe("resource-import-dialog asset store", () => {
 
       open();
       type("dragon");
-      handleStoreSearchPopoverKeyDown(deps, { _event: { key: "a" } });
+      const press = (event) => {
+        const preventDefault = vi.fn();
+        handleStoreSearchPopoverKeyDown(deps, {
+          _event: { preventDefault, ...event },
+        });
+        return preventDefault;
+      };
+      expect(press({ key: "a" })).not.toHaveBeenCalled();
       expect(state.searchPopover.isOpen).toBe(true);
-      handleStoreSearchPopoverKeyDown(deps, { _event: { key: "Enter" } });
+      // An Enter that ends an input method composition only picks the text.
+      expect(press({ key: "Enter", isComposing: true })).not.toHaveBeenCalled();
+      expect(press({ key: "Enter", keyCode: 229 })).not.toHaveBeenCalled();
+      expect(state.searchPopover.isOpen).toBe(true);
+      expect(deps.appService.listAssetStorePacks).toHaveBeenCalledTimes(1);
+      // Enter is kept from the search button that takes focus once the
+      // popover closes, so it can't open the popover again.
+      expect(press({ key: "Enter" })).toHaveBeenCalled();
       expect(state.searchPopover.isOpen).toBe(false);
       expect(deps.appService.listAssetStorePacks).toHaveBeenLastCalledWith({
         cursor: undefined,
