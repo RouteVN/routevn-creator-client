@@ -7,6 +7,9 @@ import {
   handleContainerTouchStart,
   handleDropdownMenuClickItem,
   handleDropdownMenuClickOverlay,
+  handleEmptyAddClick,
+  handleEmptyAddKeyDown,
+  handleEmptyMessageClick,
   handleItemContextMenu,
   handleItemMenuClick,
   handleItemPointerDown,
@@ -325,6 +328,76 @@ describe("baseFileExplorer handlers", () => {
     expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
     expect(deps.render).not.toHaveBeenCalled();
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("opens the add menu under the add box from a click, Enter or Space", () => {
+    const { deps, state } = createDragDeps();
+    const box = {
+      getBoundingClientRect: () => ({ left: 12, bottom: 196 }),
+    };
+    const event = (fields) => ({
+      currentTarget: box,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      ...fields,
+    });
+
+    const click = event({ clientX: 130, clientY: 150 });
+    handleEmptyAddClick(deps, { _event: click });
+    expect(state.dropdownMenu).toMatchObject({
+      isOpen: true,
+      position: { x: 12, y: 200 },
+      items: [{ label: "New Folder", value: "new-item" }],
+    });
+    // The list behind it doesn't take the click as clearing the selection.
+    expect(click.stopPropagation).toHaveBeenCalled();
+
+    state.dropdownMenu.isOpen = false;
+    const tab = event({ key: "Tab" });
+    handleEmptyAddKeyDown(deps, { _event: tab });
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(tab.preventDefault).not.toHaveBeenCalled();
+
+    for (const key of ["Enter", " "]) {
+      state.dropdownMenu.isOpen = false;
+      handleEmptyAddKeyDown(deps, { _event: event({ key }) });
+      expect(state.dropdownMenu.isOpen).toBe(true);
+    }
+  });
+
+  it("opens the empty message's menu where it is clicked, or at its text without a pointer", () => {
+    const { deps, state } = createDragDeps();
+    // The message fills a tall explorer, with its text at the top.
+    const message = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 88,
+        width: 260,
+        bottom: 900,
+      }),
+      querySelector: () => ({
+        getBoundingClientRect: () => ({ left: 100, width: 60, bottom: 140 }),
+      }),
+    };
+    const click = (event) =>
+      handleEmptyMessageClick(deps, {
+        _event: {
+          currentTarget: message,
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          ...event,
+        },
+      });
+
+    click({ detail: 1, clientX: 130, clientY: 128 });
+    expect(state.dropdownMenu).toMatchObject({
+      isOpen: true,
+      position: { x: 130, y: 128 },
+      items: [{ label: "New Folder", value: "new-item" }],
+    });
+
+    click({ detail: 0, clientX: 0, clientY: 0 });
+    expect(state.dropdownMenu.position).toEqual({ x: 130, y: 140 });
   });
 
   it("opens the empty-space menu after a stationary pointer long press", () => {

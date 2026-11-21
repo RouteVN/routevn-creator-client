@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Item saat ini"
   visualTarget: "Elemen visual"
 visualLayoutEditor:
+  cancelButton: "Batal"
   cannotEditLayout: "Tata letak visual ini tidak dapat diedit. Tambahkan visual ini lagi untuk mengedit tata letaknya."
   doneButton: "Selesai"
+  failedDiscardChanges: "Perubahan pada tata letak visual ini tidak dapat dibuang, jadi perubahan tersebut masih ada. Coba lagi."
   failedSaveChanges: "Perubahan terbaru pada tata letak visual ini tidak dapat disimpan dan sudah dibuang. Masukkan lagi perubahan tersebut."
   title: "Edit tata letak"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "Tidak ada bentuk gelombang"
   "+ Add Choice": "+ Tambahkan pilihan"
   "Save Choice": "Simpan pilihan"
-  "Save Visual": "Simpan elemen visual"
   popOverlayDescription: "Tutup lapisan atas saat ini dan kembali ke tampilan sebelumnya."
   "Set Dialogue Text Speed": "Atur kecepatan teks dialog"
   "Set Auto Forward Delay": "Atur jeda mode otomatis"

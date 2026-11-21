@@ -284,4 +284,4 @@ template:
               - rtgl-button#layoutSelectButton: ${selectButtonLabel}
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#addVisualPopover ?open=${addVisualPopover.isOpen} x=${addVisualPopover.position.x} y=${addVisualPopover.position.y} place=bs:
-      - rtgl-form#addVisualForm key=${addVisualPopover.isOpen} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320 p=none: null
+      - rtgl-form#addVisualForm key=${addVisualPopover.isOpen} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320: null

@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Elemento attuale"
   visualTarget: "Elemento grafico"
 visualLayoutEditor:
+  cancelButton: "Annulla"
   cannotEditLayout: "Impossibile modificare il layout di questo visual. Aggiungi di nuovo il visual per modificarne il layout."
   doneButton: "Fine"
+  failedDiscardChanges: "Impossibile annullare le modifiche al layout di questo visual, quindi sono ancora presenti. Riprova."
   failedSaveChanges: "Impossibile salvare le ultime modifiche al layout di questo visual. Le modifiche sono state rimosse. Apportale di nuovo."
   title: "Modifica layout"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "Nessuna forma d’onda"
   "+ Add Choice": "+ Aggiungi opzione"
   "Save Choice": "Salva opzione"
-  "Save Visual": "Salva elemento grafico"
   popOverlayDescription: "Chiude la sovrapposizione attuale e torna alla schermata precedente."
   "Set Dialogue Text Speed": "Imposta velocità del testo"
   "Set Auto Forward Delay": "Imposta ritardo dell’avanzamento automatico"

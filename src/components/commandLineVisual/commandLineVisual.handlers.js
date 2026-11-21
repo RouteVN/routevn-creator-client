@@ -669,8 +669,7 @@ export const handleSubmitClick = (deps) => {
   );
 };
 
-// Add Visual asks for the kind of layout and the layer first, in a popover
-// under the button.
+// Add Visual asks for the layer first, in a popover under the button.
 export const handleAddVisualClick = (deps, payload) => {
   const { store, render } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
@@ -686,9 +685,8 @@ export const handleAddVisualPopoverClose = (deps) => {
   render();
 };
 
-// A custom layout visual is added as an empty layout and its layout editor
-// opens at once. An existing layout visual is added to the list showing the
-// chosen project layout.
+// A new visual is added with an empty layout of its own and opens in its edit
+// view, where its layout can be edited.
 export const handleAddVisualFormAction = (deps, payload) => {
   const { store, render } = deps;
   const { actionId, values } = payload._event.detail;
@@ -696,25 +694,8 @@ export const handleAddVisualFormAction = (deps, payload) => {
     return;
   }
 
-  const visualId = generatePrefixedId("visual-");
-  if (values.layoutType !== "existing") {
-    store.hideAddVisualPopover();
-    store.addVisual({ id: visualId, layer: values.layer });
-    dispatchVisualLayoutEdit(deps, { visualId, returnToEditView: false });
-    return;
-  }
-
-  // The form asks for the layout; without one there is nothing to add.
-  if (!values.layoutId) {
-    return;
-  }
-
   store.hideAddVisualPopover();
-  store.addVisual({
-    id: visualId,
-    layer: values.layer,
-    layoutId: values.layoutId,
-  });
+  store.addVisual({ id: generatePrefixedId("visual-"), layer: values.layer });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };

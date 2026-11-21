@@ -79,12 +79,24 @@ const findLine = (repositoryState, { sceneId, sectionId, lineId }) =>
   repositoryState?.scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines
     ?.items?.[lineId];
 
+const findVisualLayout = (
+  repositoryState,
+  { sceneId, sectionId, lineId, visualId },
+) =>
+  findLine(repositoryState, {
+    sceneId,
+    sectionId,
+    lineId,
+  })?.actions?.visual?.items?.find((item) => item.id === visualId)?.layout;
+
 export const createInitialState = () => ({
   isTouchMode: false,
   isLoaded: false,
   isMissing: false,
   layoutSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
   layoutData: { items: {}, tree: [] },
+  // The elements as they were when the editor opened, which Cancel puts back.
+  openingLayoutData: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   resources: {},
   selectedItemId: undefined,
@@ -106,21 +118,26 @@ export const loadVisualLayout = (
   { state },
   { repositoryState, sceneId, sectionId, lineId, visualId } = {},
 ) => {
-  const visual = findLine(repositoryState, {
+  const layout = findVisualLayout(repositoryState, {
     sceneId,
     sectionId,
     lineId,
-  })?.actions?.visual?.items?.find((item) => item.id === visualId);
-  const layout = visual?.layout;
+    visualId,
+  });
   // Only a layout in its saved form, elements by id and their tree, can be
   // edited. One already built for the engine is not.
   const elements = isStoredVisualLayout(layout) ? layout.elements : undefined;
 
+  const isOpening = !state.isLoaded;
   state.isLoaded = true;
   state.isMissing = !elements?.items || !Array.isArray(elements.tree);
   state.layoutData = state.isMissing
     ? structuredClone(EMPTY_COLLECTION)
     : structuredClone(elements);
+  // A reload after a failed save keeps the layout the editor opened with.
+  if (isOpening && !state.isMissing) {
+    state.openingLayoutData = structuredClone(elements);
+  }
   state.layoutSchemaVersion =
     layout?.layoutSchemaVersion ?? CURRENT_LAYOUT_SCHEMA_VERSION;
   state.projectResolution =
@@ -163,6 +180,33 @@ export const updateLayoutElement = ({ state }, { itemId, item } = {}) => {
     state.canvasPreviewItem = undefined;
   }
   state.hasUnsavedEdits = true;
+};
+
+// Cancel: the elements go back to how they were when the editor opened. They
+// are left to save unless the saved layout is that already.
+export const restoreOpeningLayout = (
+  { state },
+  { repositoryState, sceneId, sectionId, lineId, visualId } = {},
+) => {
+  if (!state.openingLayoutData) {
+    state.hasUnsavedEdits = false;
+    return;
+  }
+
+  const savedElements = findVisualLayout(repositoryState, {
+    sceneId,
+    sectionId,
+    lineId,
+    visualId,
+  })?.elements;
+  state.hasUnsavedEdits =
+    JSON.stringify(savedElements) !== JSON.stringify(state.openingLayoutData);
+  state.layoutData = state.openingLayoutData;
+  state.canvasPreviewItem = undefined;
+  if (state.selectedItemId && !state.layoutData.items[state.selectedItemId]) {
+    state.selectedItemId = undefined;
+    state.selectedElementMetrics = undefined;
+  }
 };
 
 export const markEditsSaved = ({ state }) => {
@@ -283,12 +327,14 @@ export const selectViewData = ({ state, props, i18n }) => {
       copy.cannotEditLayout ??
       "This visual's layout can't be edited. Add the visual again to edit its layout.",
     title: copy.title ?? "Edit Layout",
+    cancelButton: copy.cancelButton ?? "Cancel",
     doneButton: copy.doneButton ?? "Done",
     elementsTitle: layoutCopy.nodeExplorerTitle ?? "Elements",
     noSelectionLabel: layoutCopy.noSelectionLabel ?? "No selection",
     flatItems,
     contextMenuItems,
     emptyContextMenuItems,
+    emptyAddLabel: layoutCopy.addElementMenuLabel ?? "Add Element",
     projectResolution: state.projectResolution,
     // The canvas draws the layout as one layout, named after the visual.
     layoutState: {

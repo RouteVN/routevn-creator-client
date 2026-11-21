@@ -313,10 +313,16 @@ describe("commandLineVisual list and edit view", () => {
     expect(viewData.editingVisuals.map((visual) => visual.id)).toEqual([
       "visual-one",
     ]);
-    expect(viewData.form.fields).toHaveLength(1);
-    // The Edit Visual page has no title.
-    expect(viewData.form.fields[0].id).toBe(`visual-${index}`);
-    expect(viewData.form.fields[0].label).toBeUndefined();
+    // The Edit Visual page has no title: it opens on Layout Type, and the
+    // options sit under an Options heading at the end with the add button.
+    expect(viewData.form.title).toBeUndefined();
+    expect(viewData.form.fields[0].fields[0].label).toBe("Layout Type");
+    expect(viewData.form.fields.at(-1)).toMatchObject({
+      type: "section",
+      id: `visual-${index}`,
+      label: "Options",
+      action: { id: "add", icon: "plus", label: "Add Option" },
+    });
     expect(viewData.breadcrumb.map((item) => item.label)).toEqual([
       "Actions",
       "Visuals",
@@ -446,8 +452,6 @@ describe("commandLineVisual layout editing", () => {
     });
     expect(viewData.addVisualForm.title).toBe("Add Visual");
     expect(viewData.addVisualForm.fields.map((field) => field.name)).toEqual([
-      "layoutType",
-      "layoutId",
       "layer",
     ]);
     expect(selectSelectedVisuals({ state })).toHaveLength(visualCount);
@@ -473,49 +477,79 @@ describe("commandLineVisual layout editing", () => {
     handleAddVisualClick(deps, addButtonClick);
     handleAddVisualFormAction(deps, addVisualSubmit(70));
 
-    const { actions, visualId } = deps.dispatchEvent.mock.calls[0][0].detail;
+    const visualId = selectEditingVisualId({ state });
     expect(
-      actions.visual.items.find((item) => item.id === visualId),
+      selectSelectedVisuals({ state }).find((item) => item.id === visualId),
     ).toMatchObject({ layer: 70 });
     expect(
       selectViewData({ state, i18n: EN_I18N }).addVisualPopover.isOpen,
     ).toBe(false);
   });
 
-  it("adds a visual as an empty layout and asks for its layout editor at once", () => {
+  it("adds a visual as an empty layout and opens it in its edit view, not the layout editor", () => {
     const state = createState();
-    const dispatchEvent = vi.fn();
+    const deps = {
+      store: createFullStoreApi(state),
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
 
-    handleAddVisualFormAction(
-      { store: createFullStoreApi(state), dispatchEvent },
-      addVisualSubmit(50),
-    );
+    handleAddVisualFormAction(deps, addVisualSubmit(50));
 
-    expect(dispatchEvent).toHaveBeenCalledTimes(1);
-    const event = dispatchEvent.mock.calls[0][0];
-    expect(event.type).toBe("visual-layout-edit");
-    expect(event.bubbles).toBe(true);
-    expect(event.composed).toBe(true);
-    const { actions, visualId, returnToEditView } = event.detail;
+    expect(selectMode({ state })).toBe("edit");
+    const visualId = selectEditingVisualId({ state });
     expect(visualId).toMatch(/^visual-/);
-    expect(returnToEditView).toBe(false);
-    // The new visual is saved with the others: an empty layout on the
-    // screen, with no transform, in the default layer.
-    const newItem = actions.visual.items.find((item) => item.id === visualId);
-    expect(newItem).toEqual({
+    // The new visual is an empty layout on the screen, with no transform, in
+    // the default layer.
+    expect(
+      selectSelectedVisuals({ state }).find((item) => item.id === visualId),
+    ).toEqual({
       id: visualId,
       layer: 50,
+      animationMode: "none",
       layout: {
         layoutSchemaVersion: 2,
         elements: { items: {}, tree: [] },
       },
     });
-    expect(actions.visual.items.map((item) => item.id)).toEqual([
+    expect(selectSelectedVisuals({ state }).map((item) => item.id)).toEqual([
       "visual-two",
       "visual-one",
       visualId,
     ]);
-    expect(selectMode({ state })).toBe("current");
+    expect(deps.dispatchEvent.mock.calls.map(([event]) => event.type)).toEqual([
+      "temporary-presentation-state-change",
+    ]);
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("takes a new visual out again on Cancel in its edit view, and keeps it on Submit", () => {
+    const cancelled = createState();
+    const cancelDeps = {
+      store: createFullStoreApi(cancelled),
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    handleAddVisualFormAction(cancelDeps, addVisualSubmit(50));
+    handleCancelEditClick(cancelDeps);
+    expect(selectMode({ state: cancelled })).toBe("current");
+    expect(
+      selectSelectedVisuals({ state: cancelled }).map((item) => item.id),
+    ).toEqual(["visual-two", "visual-one"]);
+
+    const kept = createState();
+    const keepDeps = {
+      store: createFullStoreApi(kept),
+      render: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    handleAddVisualFormAction(keepDeps, addVisualSubmit(50));
+    const visualId = selectEditingVisualId({ state: kept });
+    handleSaveVisualClick(keepDeps);
+    expect(selectMode({ state: kept })).toBe("current");
+    expect(
+      selectSelectedVisuals({ state: kept }).map((item) => item.id),
+    ).toEqual(["visual-two", "visual-one", visualId]);
   });
 
   it("keeps the visual's edits and asks to come back to its edit view from Edit Layout", () => {
@@ -1047,73 +1081,20 @@ describe("commandLineVisual layout choice", () => {
     });
   });
 
-  it("asks in Add Visual for a custom layout or an existing one", () => {
+  it("asks in Add Visual only for the layer, as a new visual has a layout of its own", () => {
     const state = createLayoutState();
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    const [layoutType, layoutId, layer] = viewData.addVisualForm.fields;
 
-    expect(layoutType).toMatchObject({
-      name: "layoutType",
-      type: "segmented-control",
-      label: "Layout",
-      options: [
-        { value: "custom", label: "Custom Layout" },
-        { value: "existing", label: "Existing Layout" },
-      ],
+    expect(viewData.addVisualForm.fields).toHaveLength(1);
+    expect(viewData.addVisualForm.fields[0]).toMatchObject({
+      name: "layer",
+      type: "select",
+      label: "Layer",
     });
-    expect(layoutId).toMatchObject({
-      $when: 'layoutType == "existing"',
-      name: "layoutId",
-      label: "Existing Layout",
-      placeholder: "Select layout",
-      required: true,
-      options: [{ value: "title-card", label: "Menus > Title Card" }],
-    });
-    expect(layer.name).toBe("layer");
-    expect(viewData.addVisualDefaultValues).toEqual({
-      layoutType: "custom",
-      layer: 50,
-    });
+    expect(viewData.addVisualDefaultValues).toEqual({ layer: 50 });
     expect(
-      selectViewData({
-        state,
-        i18n: JA_I18N,
-      }).addVisualForm.fields[0].options.map((option) => option.label),
-    ).toEqual(["カスタムレイアウト", "既存のレイアウト"]);
-  });
-
-  it("adds an existing layout visual to the list without opening the layout editor", () => {
-    const state = createLayoutState();
-    const deps = createDeps(state);
-    const submit = (values) => ({
-      _event: { detail: { actionId: "submit", values } },
-    });
-
-    // Without a layout chosen nothing is added.
-    handleAddVisualFormAction(
-      deps,
-      submit({ layoutType: "existing", layer: 70 }),
-    );
-    expect(deps.dispatchEvent).not.toHaveBeenCalled();
-
-    handleAddVisualFormAction(
-      deps,
-      submit({ layoutType: "existing", layoutId: "title-card", layer: 70 }),
-    );
-
-    const added = selectSelectedVisuals({ state }).find(
-      (visual) => visual.resourceId === "title-card",
-    );
-    expect(added).toMatchObject({ resourceType: "layout", layer: 70 });
-    expect(added).not.toHaveProperty("layout");
-    expect(deps.dispatchEvent.mock.calls.map(([event]) => event.type)).toEqual([
-      "temporary-presentation-state-change",
-    ]);
-    expect(deps.render).toHaveBeenCalled();
-    const row = selectViewData({ state, i18n: EN_I18N }).visualListItems.find(
-      (item) => item.id === added.id,
-    );
-    expect(row).toMatchObject({ isCustomLayout: false });
+      selectViewData({ state, i18n: JA_I18N }).addVisualForm.fields[0].label,
+    ).toBe("レイヤー");
   });
 
   it("shows a project layout by reference and keeps a custom one as its own", () => {
@@ -1438,7 +1419,7 @@ describe("commandLineVisual layout choice", () => {
       },
     });
     const layoutRow = () =>
-      selectViewData({ state, i18n: EN_I18N }).form.fields[0].fields[0].fields;
+      selectViewData({ state, i18n: EN_I18N }).form.fields[0].fields;
 
     handleVisualListItemClick(deps, indexEvent(index));
     expect(findEditingVisual(state).layoutType).toBe("custom");

@@ -602,6 +602,9 @@ export const selectViewData = ({ state, props, props: attrs, i18n = {} }) => {
     shrinkable: getBooleanAttr(attrs, "shrinkable", "shrinkable"),
     itemActionsLabel: resourceCopy.actionsLabel ?? "Actions",
     emptyMessageLabel: resourceCopy.fileExplorerEmptyMessage ?? "No items.",
+    // Only a list that has an add menu shows the add box.
+    emptyAddLabel:
+      props.emptyContextMenuItems?.length > 0 ? props.emptyAddLabel : undefined,
   };
 
   return viewData;

@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Поточний елемент"
   visualTarget: "Візуальний елемент"
 visualLayoutEditor:
+  cancelButton: "Скасувати"
   cannotEditLayout: "Макет цього візуалу не можна редагувати. Додайте візуал знову, щоб редагувати його макет."
   doneButton: "Готово"
+  failedDiscardChanges: "Не вдалося скасувати зміни макета цього візуалу, тому вони залишилися. Спробуйте ще раз."
   failedSaveChanges: "Не вдалося зберегти останні зміни макета цього візуалу, тому їх відкинуто. Внесіть їх ще раз."
   title: "Редагувати макет"
 vnPreview:
@@ -3140,7 +3142,6 @@ commandLinePage:
   "No waveform": "Немає форми хвилі"
   "+ Add Choice": "+ Додати варіант"
   "Save Choice": "Зберегти варіант"
-  "Save Visual": "Зберегти візуальний елемент"
   popOverlayDescription: "Закриває поточне накладання й повертає до попереднього екрана."
   "Set Dialogue Text Speed": "Задати швидкість тексту"
   "Set Auto Forward Delay": "Задати затримку авточитання"

@@ -11,7 +11,7 @@ import {
 import { EN_I18N, JA_I18N } from "../support/i18n.js";
 
 describe("commandLineVisual sections", () => {
-  it("creates a named form section with two-column rows for each visual", () => {
+  it("lays out a visual in two-column rows, with its options under an Options heading at the end", () => {
     const state = createInitialState();
     setImages(
       { state },
@@ -70,16 +70,21 @@ describe("commandLineVisual sections", () => {
 
     startVisualEdit({ state }, { index: 0 });
     const viewData = selectViewData({ state, i18n: EN_I18N });
-    const [section] = viewData.form.fields;
-    const rows = section.fields
+    const { fields } = viewData.form;
+    const section = fields.at(-1);
+    const rows = fields
       .filter((field) => field.type === "row")
       .map((field) => field.fields.map((nestedField) => nestedField.slot));
 
     expect(section).toMatchObject({
       type: "section",
       id: "visual-0",
+      label: "Options",
+      action: { id: "add", icon: "plus", label: "Add Option" },
     });
-    expect(section.label).toBeUndefined();
+    expect(section.fields.every((field) => field.type === "section")).toBe(
+      true,
+    );
     expect(rows).toEqual([
       ["visual-0-layout-type", "visual-0-layout-spacer"],
       ["visual-0-transform-mode", "visual-0-predefined-transform"],
@@ -231,9 +236,10 @@ describe("commandLineVisual sections", () => {
     );
 
     startVisualEdit({ state }, { index: 0 });
-    const [section] = selectViewData({ state, i18n: JA_I18N }).form.fields;
+    const { fields } = selectViewData({ state, i18n: JA_I18N }).form;
 
-    expect(section.label).toBeUndefined();
-    expect(section.fields[1].label).toBe("レイアウト");
+    expect(fields[1].label).toBe("レイアウト");
+    expect(fields.at(-1).label).toBe("オプション");
+    expect(fields.at(-1).action.label).toBe("オプションを追加");
   });
 });

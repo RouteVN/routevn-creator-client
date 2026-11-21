@@ -6,6 +6,28 @@ import {
 } from "../../src/components/baseFileExplorer/baseFileExplorer.store.js";
 
 describe("baseFileExplorer.store", () => {
+  it("shows the add box only when it is asked for and the list has an add menu", () => {
+    const state = createInitialState();
+    const addMenu = [{ label: "Container", type: "item", value: "add" }];
+    const view = (props) =>
+      selectViewData({ state, props: { items: [], ...props } });
+
+    expect(
+      view({ emptyAddLabel: "Add Element", emptyContextMenuItems: addMenu })
+        .emptyAddLabel,
+    ).toBe("Add Element");
+    expect(view({ emptyAddLabel: "Add Element" }).emptyAddLabel).toBe(
+      undefined,
+    );
+    expect(
+      view({ emptyAddLabel: "Add Element", emptyContextMenuItems: [] })
+        .emptyAddLabel,
+    ).toBe(undefined);
+    expect(view({ emptyContextMenuItems: addMenu }).emptyAddLabel).toBe(
+      undefined,
+    );
+  });
+
   it("uses the fragment icon for fragment layouts", () => {
     const state = createInitialState();
     const viewData = selectViewData({
