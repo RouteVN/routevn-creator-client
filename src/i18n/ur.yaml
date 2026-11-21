@@ -3180,6 +3180,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "YouTube پر کھولیں"
   closeLabel: "بند کریں"
+  actionsLabel: "کارروائیاں"
 chatSupportDialog:
   title: "چیٹ کے ذریعے مدد"
   emailLabel: "ای میل"

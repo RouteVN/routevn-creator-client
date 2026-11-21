@@ -3216,6 +3216,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "Открыть на YouTube"
   closeLabel: "Закрыть"
+  actionsLabel: "Действия"
 chatSupportDialog:
   title: "Поддержка в чате"
   emailLabel: "Электронная почта"

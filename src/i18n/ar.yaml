@@ -3244,6 +3244,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "فتح في YouTube"
   closeLabel: "إغلاق"
+  actionsLabel: "العمليات"
 chatSupportDialog:
   title: "الدعم عبر الدردشة"
   emailLabel: "البريد الإلكتروني"

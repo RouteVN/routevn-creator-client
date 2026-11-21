@@ -3184,6 +3184,7 @@ tutorialsPage:
 youtubePlayer:
   openOnYouTubeButton: "在 YouTube 中打开"
   closeLabel: "关闭"
+  actionsLabel: "操作"
 chatSupportDialog:
   title: "在线客服"
   emailLabel: "邮箱"

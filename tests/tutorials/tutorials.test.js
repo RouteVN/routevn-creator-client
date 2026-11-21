@@ -96,6 +96,16 @@ describe("tutorials page", () => {
     expect(html.match(/class="tutorialTitle"/g)).toHaveLength(videoCount);
   });
 
+  it("keeps at least two video columns in a narrow window", () => {
+    const { gridColumns } = createPage({
+      uiConfig: { inputMode: "pointer" },
+    }).viewData();
+
+    expect(gridColumns).toBe(
+      "repeat(auto-fill, minmax(min(240px, calc(50% - var(--spacing-md))), 1fr))",
+    );
+  });
+
   it("lists the mobile tutorials first in touch mode", () => {
     const page = createPage({ uiConfig: { id: "touch", inputMode: "touch" } });
 

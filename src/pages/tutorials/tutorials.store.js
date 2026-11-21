@@ -12,6 +12,9 @@ import { selectTutorialsPageCopy } from "./support/tutorialsPageCopy.js";
 // Phones and tablets list the tutorials recorded on them first.
 const TOUCH_FIRST_FOLDER_ID = "mobile";
 const VIDEO_CARD_MIN_WIDTH = 240;
+// Cards are at least 240px wide where there is room, but a narrow window still
+// gets two columns: the minimum never exceeds half the width minus the gap.
+const VIDEO_GRID_COLUMNS = `repeat(auto-fill, minmax(min(${VIDEO_CARD_MIN_WIDTH}px, calc(50% - var(--spacing-md))), 1fr))`;
 
 const selectOrderedFolders = (state) => {
   if (!state.isTouchMode) {
@@ -93,7 +96,7 @@ export const selectViewData = ({ state, i18n }) => {
     }),
     title: copy.title ?? "Tutorials",
     groups,
-    gridColumns: `repeat(auto-fill, minmax(min(${VIDEO_CARD_MIN_WIDTH}px, 100%), 1fr))`,
+    gridColumns: VIDEO_GRID_COLUMNS,
     playingVideo,
   };
 };
