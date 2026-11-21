@@ -575,14 +575,58 @@ describe("tauri project service adapters preflight reads", () => {
     await expect(
       fileAdapter.createWindowsPortableExecutableToPath(options),
     ).rejects.toThrow(
-      "Native application identifier must use reverse-domain notation with only letters, numbers, hyphens, and periods.",
+      "Windows application identifier must use only letters, numbers, hyphens, and periods.",
     );
     await expect(
       fileAdapter.createWindowsInstallerToPath(options),
     ).rejects.toThrow(
-      "Native application identifier must use reverse-domain notation with only letters, numbers, hyphens, and periods.",
+      "Windows application identifier must use only letters, numbers, hyphens, and periods.",
     );
     expect(mocked.invoke).not.toHaveBeenCalled();
+  });
+
+  it("prefixes a one-word Windows identifier for the player", async () => {
+    mocked.exists.mockResolvedValue(true);
+    mocked.resolveResource.mockResolvedValue(
+      "/resources/player-templates/windows/RouteVNPlayerTemplate.exe",
+    );
+    mocked.readFile.mockResolvedValue(Uint8Array.from([1, 2, 3]));
+    mocked.invoke.mockResolvedValue({ outputPath: "/exports/Game.exe" });
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+    const options = {
+      projectData: { bundleMetadata: { project: { namespace: "demo" } } },
+      fileEntries: [],
+      outputPath: "/exports/Game.exe",
+      title: "Game",
+      version: "1.0.0.4",
+      applicationIdentifier: "project-one",
+      iconFileId: "icon-1",
+      getCurrentReference: () => ({
+        projectPath: "/projects/demo",
+        cacheKey: "/projects/demo",
+      }),
+    };
+
+    await fileAdapter.createWindowsPortableExecutableToPath(options);
+    await fileAdapter.createWindowsInstallerToPath({
+      ...options,
+      outputPath: "/exports/Game Setup.exe",
+    });
+
+    for (const command of [
+      "export_windows_portable_executable",
+      "export_windows_installer_from_project",
+    ]) {
+      expect(mocked.invoke).toHaveBeenCalledWith(
+        command,
+        expect.objectContaining({
+          applicationIdentifier: "vn.routevn.player.project-one",
+        }),
+      );
+    }
   });
 
   it("preflights and invokes universal macOS application export", async () => {

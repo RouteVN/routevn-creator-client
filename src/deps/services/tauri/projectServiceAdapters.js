@@ -66,7 +66,10 @@ import {
 } from "../../clients/tauri/sqliteConnectionManager.js";
 import { isMacosHost } from "../../clients/tauri/platform.js";
 import { normalizeExportFileEntries } from "../shared/projectExportService.js";
-import { requireNativeApplicationIdentifier } from "../../../internal/nativeApplicationIdentifier.js";
+import {
+  createWindowsPlayerApplicationIdentifier,
+  requireNativeApplicationIdentifier,
+} from "../../../internal/nativeApplicationIdentifier.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import {
   isValidAndroidVersionCode,
@@ -179,7 +182,7 @@ const normalizeWindowsExecutableMetadata = ({
       label: "Project title",
     }),
     version: normalizeWindowsExecutableVersion(version),
-    applicationIdentifier: requireNativeApplicationIdentifier(
+    applicationIdentifier: createWindowsPlayerApplicationIdentifier(
       applicationIdentifier,
     ),
     publisher: publisher?.trim() || null,

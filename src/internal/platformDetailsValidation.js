@@ -1,7 +1,10 @@
 import { isValidAndroidApplicationId } from "./androidApplicationId.js";
 import { isValidAndroidBackgroundColor } from "./androidExport.js";
 import { isValidIosBundleIdentifier } from "./iosExport.js";
-import { isValidNativeApplicationIdentifier } from "./nativeApplicationIdentifier.js";
+import {
+  isValidNativeApplicationIdentifier,
+  isValidWindowsApplicationIdentifier,
+} from "./nativeApplicationIdentifier.js";
 
 const WEB_APPLICATION_IDENTIFIER_PATTERN = /^(?=.*[A-Za-z0-9])[A-Za-z0-9.-]+$/;
 
@@ -37,7 +40,9 @@ export const validatePlatformDetails = ({ platform, applicationInfo } = {}) => {
       return { valid: false, code: "windows-identifier-required" };
     }
     if (
-      !isValidNativeApplicationIdentifier(applicationInfo.applicationIdentifier)
+      !isValidWindowsApplicationIdentifier(
+        applicationInfo.applicationIdentifier,
+      )
     ) {
       return { valid: false, code: "windows-identifier-invalid" };
     }
