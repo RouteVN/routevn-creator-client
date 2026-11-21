@@ -32,10 +32,11 @@ const swapReversedRanges = (value) => {
 
 // Repairs, in place, every value that route-graphics rejects or that hangs the
 // webview and that the model's shallow validation lets through: reversed
-// ranges, a negative max speed, an inner radius outside 0..radius, and
-// oversized counts or rates. It runs when the form saves and again when a
-// saved particle is rendered, so data saved earlier is repaired without being
-// rewritten. Callers pass a copy.
+// ranges, a negative max speed, an inner radius outside 0..radius, counts that
+// are not whole numbers of at least 1, a rate that is not above 0, a negative
+// duration, and oversized counts or rates. It runs when the form saves and
+// again when a saved particle is rendered, so data saved earlier, imported or
+// synced is repaired without being rewritten. Callers pass a copy.
 export const normalizeParticleModules = (modules) => {
   if (!isPlainObject(modules)) {
     return modules;
@@ -44,18 +45,24 @@ export const normalizeParticleModules = (modules) => {
   const emission = modules.emission;
   if (isPlainObject(emission)) {
     for (const key of ["maxActive", "burstCount"]) {
-      if (
-        typeof emission[key] === "number" &&
-        emission[key] > MAX_PARTICLE_COUNT
-      ) {
-        emission[key] = MAX_PARTICLE_COUNT;
+      const count = emission[key];
+      if (typeof count === "number" && !Number.isNaN(count)) {
+        emission[key] = Math.min(
+          MAX_PARTICLE_COUNT,
+          Math.max(1, Math.round(count)),
+        );
       }
     }
-    if (
-      typeof emission.rate === "number" &&
-      emission.rate > MAX_PARTICLE_RATE
-    ) {
-      emission.rate = MAX_PARTICLE_RATE;
+    if (typeof emission.rate === "number") {
+      if (emission.rate > MAX_PARTICLE_RATE) {
+        emission.rate = MAX_PARTICLE_RATE;
+      } else if (emission.rate <= 0) {
+        // The lowest rate the form saves.
+        emission.rate = 1;
+      }
+    }
+    if (typeof emission.duration === "number" && emission.duration < 0) {
+      emission.duration = 0;
     }
     const source = emission.source;
     if (

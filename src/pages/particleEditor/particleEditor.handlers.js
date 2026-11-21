@@ -170,12 +170,14 @@ const renderParticleCanvas = async (deps) => {
   try {
     await ensureGraphicsSize(deps);
     warnCanvasImageFailures(deps, await loadCanvasImages(deps));
+    // Both renders are awaited, so a failure inside the renderer is caught
+    // here too.
     if (!store.selectShowsSourceOutline()) {
-      graphicsService.render(createSavedPreviewRenderState(store));
+      await graphicsService.render(createSavedPreviewRenderState(store));
       return;
     }
 
-    graphicsService.render(
+    await graphicsService.render(
       createParticleEditorRenderState({
         effect: store.selectCanvasEffect(),
         imageItems: store.selectAvailableImageItems(),

@@ -279,6 +279,39 @@ describe("particle values route-graphics rejects", () => {
     ).toBe(10);
   });
 
+  it("repairs counts, a rate and a duration that are too low, without editing the stored particle", () => {
+    // Imported or synced values the form would not save: route-graphics
+    // rejects a count or rate that is not above 0, a count that is not a whole
+    // number, and a negative duration.
+    const stored = savedParticle("1");
+    stored.modules.emission.maxActive = 0;
+    stored.modules.emission.rate = -3;
+    stored.modules.emission.duration = -2;
+
+    const element = buildSceneParticleElement(stored);
+
+    expect(element.modules.emission.maxActive).toBe(1);
+    expect(element.modules.emission.rate).toBe(1);
+    expect(element.modules.emission.duration).toBe(0);
+    expect(stored.modules.emission.maxActive).toBe(0);
+    expect(stored.modules.emission.rate).toBe(-3);
+    expect(stored.modules.emission.duration).toBe(-2);
+
+    const repairBurstCount = (burstCount) =>
+      normalizeParticleModules({ emission: { mode: "burst", burstCount } })
+        .emission.burstCount;
+    expect(repairBurstCount(-4)).toBe(1);
+    expect(repairBurstCount(2.6)).toBe(3);
+  });
+
+  it("keeps a rate below 1 and an infinite duration as saved", () => {
+    const emission = normalizeParticleModules({
+      emission: { mode: "continuous", rate: 0.5, duration: "infinite" },
+    }).emission;
+    expect(emission.rate).toBe(0.5);
+    expect(emission.duration).toBe("infinite");
+  });
+
   it("leaves valid modules unchanged", () => {
     const modules = savedParticle("1").modules;
     const before = structuredClone(modules);
