@@ -80,9 +80,56 @@ const createImageLayout = (imageId, width, height) => ({
   }),
 });
 
-const createRepositoryState = (visualItems) => ({
+// A caption as the layout editor adds it, with its own alignment and width.
+const createCaptionLayout = ({ textStyleId, align, wordWrapWidth }) => ({
+  layoutSchemaVersion: 2,
+  elements: createTreeCollection({
+    content: {
+      type: "text",
+      name: "Caption",
+      content: "Hello",
+      x: 0,
+      y: 0,
+      textStyleId,
+      textStyle: { align, wordWrapWidth },
+    },
+  }),
+});
+
+const createRepositoryState = (visualItems, laterLineVisualItems) => ({
   project: { resolution: { width: 1920, height: 1080 } },
   story: { initialSceneId: "scene-1" },
+  fonts: createTreeCollection({
+    body: {
+      id: "body",
+      type: "font",
+      name: "Body",
+      fileId: "body-file",
+      fontFamily: "Body",
+    },
+  }),
+  colors: createTreeCollection({
+    red: { id: "red", type: "color", name: "Red", hex: "#ff0000" },
+    green: { id: "green", type: "color", name: "Green", hex: "#00ff00" },
+  }),
+  textStyles: createTreeCollection({
+    small: {
+      id: "small",
+      type: "textStyle",
+      name: "Small",
+      fontId: "body",
+      colorId: "red",
+      fontSize: 20,
+    },
+    large: {
+      id: "large",
+      type: "textStyle",
+      name: "Large",
+      fontId: "body",
+      colorId: "green",
+      fontSize: 60,
+    },
+  }),
   images: createTreeCollection({
     door: createImage("door", 400, 600),
     button: createImage("button", 200, 80),
@@ -115,6 +162,12 @@ const createRepositoryState = (visualItems) => ({
             "line-1": {
               id: "line-1",
               actions: { visual: { items: visualItems } },
+            },
+            "line-2": {
+              id: "line-2",
+              actions: laterLineVisualItems
+                ? { visual: { items: laterLineVisualItems } }
+                : {},
             },
           }),
         },
@@ -250,6 +303,48 @@ describe("a visual made of a layout", () => {
     expect(
       extractFileIdsForScenes(projectData, ["scene-1"]).map(({ url }) => url),
     ).toContain("door-file");
+  });
+
+  // A visual stays on the following lines, where its layout can be changed.
+  // Each line draws the text as that line saved it.
+  it("keeps a line's text style when a later line restyles the same visual's text", () => {
+    const projectData = constructProjectData(
+      createRepositoryState(
+        [
+          {
+            id: "caption",
+            layout: createCaptionLayout({
+              textStyleId: "small",
+              align: "left",
+              wordWrapWidth: 400,
+            }),
+            layer: 50,
+          },
+        ],
+        [
+          {
+            id: "caption",
+            layout: createCaptionLayout({
+              textStyleId: "large",
+              align: "center",
+              wordWrapWidth: 800,
+            }),
+            layer: 50,
+          },
+        ],
+      ),
+    );
+    const captionStyles = projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines.map((line) => {
+      const [caption] = line.actions.visual.items[0].layout.elements;
+      return projectData.resources.textStyles[caption.textStyleId];
+    });
+
+    expect(captionStyles).toMatchObject([
+      { colorId: "red", fontSize: 20, align: "left", wordWrapWidth: 400 },
+      { colorId: "green", fontSize: 60, align: "center", wordWrapWidth: 800 },
+    ]);
   });
 
   it("keeps an image used in a visual's layout from being deleted", () => {
