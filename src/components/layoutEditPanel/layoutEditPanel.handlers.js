@@ -56,6 +56,7 @@ import {
   toSliderPresetMenuItems,
 } from "../../internal/ui/sliderPopover.js";
 import { normalizeLayoutRotation } from "../../internal/project/layout.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
 const ACTION_INTERACTION_TYPES = [
   "click",
@@ -1880,7 +1881,7 @@ export const handleSpriteBlurFormAction = (deps, payload) => {
 };
 
 export const handleTextRevealIndicatorImageFieldClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   const dialog = store.selectTextRevealIndicatorDialog();
 
   if (!dialog.open) {
@@ -1890,7 +1891,7 @@ export const handleTextRevealIndicatorImageFieldClick = (deps, payload) => {
   const rect = payload._event.currentTarget.getBoundingClientRect();
   store.showContextMenu({
     targetName: TEXT_REVEAL_INDICATOR_VISUAL_SOURCE_TARGET,
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     items: createTextRevealIndicatorVisualSourceItems(selectCopy(deps)),
   });
@@ -2456,7 +2457,7 @@ export const handlePopoverPresetsButtonClick = async (deps, payload) => {
 
   const result = await appService.showDropdownMenu({
     items: toSliderPresetMenuItems(presetItems),
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     place: "bs",
   });

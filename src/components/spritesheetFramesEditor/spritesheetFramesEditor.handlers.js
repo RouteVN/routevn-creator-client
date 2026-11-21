@@ -7,6 +7,7 @@ import {
 } from "../../internal/spritesheetFrames.js";
 import { selectI18nCopy } from "../../internal/ui/i18nCopy.js";
 import { showResourcePageError } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 const FRAME_IMAGE_ACCEPT = ".png,.webp,.jpg,.jpeg";
 const FRAME_IMAGE_PATTERN = /\.(png|webp|jpe?g)$/i;
@@ -413,7 +414,7 @@ export const handleEntryMenuClick = async (deps, payload) => {
       { type: "separator" },
       { type: "item", label: copy.deleteMenuItem, key: "delete" },
     ],
-    x: rect.right,
+    x: getInlineEndX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     place: "be",
   });

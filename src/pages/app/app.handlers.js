@@ -39,6 +39,7 @@ import {
   isHelpButtonVisible,
 } from "../../internal/ui/helpPreferences.js";
 import { createSkippedDraftsReportStream } from "./support/skippedDraftsReport.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 const ROUTE_HISTORY_MODES = new Set(["push", "replace", "none"]);
@@ -813,7 +814,7 @@ export const handleHelpFloatingButtonClick = async (deps, payload) => {
   const rect = payload._event.currentTarget.getBoundingClientRect();
   const result = await appService.showDropdownMenu({
     items: createHelpMenuItems({ i18n, hasVideo: Boolean(video) }),
-    x: rect.right,
+    x: getInlineEndX(rect, appService.getDocumentDirection()),
     y: rect.top - 8,
     place: "te",
   });

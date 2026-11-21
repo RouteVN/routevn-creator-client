@@ -1,5 +1,6 @@
 import { fromEvent, tap } from "rxjs";
 import { canItemReceiveChildren } from "../../internal/fileExplorerDragOptions.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 const isBooleanAttrEnabled = (attrs, camelName, kebabName) => {
   const compactName = kebabName.replaceAll("-", "");
@@ -1699,6 +1700,7 @@ export const handleItemContextMenu = (deps, payload) => {
 };
 
 export const handleItemMenuClick = (deps, payload) => {
+  const { appService } = deps;
   const event = payload._event;
   event.preventDefault();
   event.stopPropagation();
@@ -1714,7 +1716,7 @@ export const handleItemMenuClick = (deps, payload) => {
     emitSelectionEvent: false,
     hideDeleteIcon: true,
     position: {
-      x: Math.round(rect.right),
+      x: Math.round(getInlineEndX(rect, appService.getDocumentDirection())),
       y: Math.round(rect.bottom),
     },
   });

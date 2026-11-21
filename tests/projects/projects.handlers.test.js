@@ -47,6 +47,7 @@ const createDeps = ({
     waitForPaint: vi.fn(async () => {}),
   };
   const appService = {
+    getDocumentDirection: () => "ltr",
     getPlatform: vi.fn(() => platform),
     getProjectFolderSetup: vi.fn(() => ({ configured: true })),
     getAppVersion: vi.fn(() => "1.0.0"),

@@ -11,11 +11,12 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
-const getDropdownPositionFromEvent = (event) => {
+const getDropdownPositionFromEvent = (event, direction) => {
   const rect = event?.currentTarget?.getBoundingClientRect?.();
   if (rect) {
-    return { x: rect.left, y: rect.bottom };
+    return { x: getInlineStartX(rect, direction), y: rect.bottom };
   }
 
   return { x: event?.clientX ?? 0, y: event?.clientY ?? 0 };
@@ -102,7 +103,9 @@ const showChannelMenu = async (deps, event, position) => {
     key: "delete",
   });
 
-  const menuPosition = position ?? getDropdownPositionFromEvent(event);
+  const menuPosition =
+    position ??
+    getDropdownPositionFromEvent(event, appService.getDocumentDirection());
   const result = await appService.showDropdownMenu({
     items,
     x: menuPosition.x,
@@ -398,7 +401,10 @@ export const handleChannelFormChange = (deps, payload) => {
 
 export const handleAddChannelClick = async (deps, payload) => {
   const { store, render, appService } = deps;
-  const position = getDropdownPositionFromEvent(payload._event);
+  const position = getDropdownPositionFromEvent(
+    payload._event,
+    appService.getDocumentDirection(),
+  );
   const result = await appService.showDropdownMenu({
     items: store.selectAddChannelMenuItems(),
     x: position.x,

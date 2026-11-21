@@ -31,6 +31,7 @@ describe("app help button", () => {
     setCurrentRoute({ state }, { route: "/project/tutorials" });
     const deps = {
       appService: {
+        getDocumentDirection: () => "ltr",
         openUrl: vi.fn(),
         showDropdownMenu: vi.fn(async () => ({ item: { key: "docs" } })),
       },

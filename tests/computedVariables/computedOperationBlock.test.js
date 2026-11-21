@@ -179,6 +179,7 @@ describe("computedOperationBlock", () => {
   it("emits path-aware edit events", () => {
     const dispatchEvent = vi.fn();
     const deps = {
+      appService: { getDocumentDirection: () => "ltr" },
       dispatchEvent,
       props: {
         operation: {

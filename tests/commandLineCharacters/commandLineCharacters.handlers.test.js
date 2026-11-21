@@ -260,6 +260,7 @@ describe("commandLineCharacters.handlers", () => {
 
     handleAddCharacterClick(
       {
+        appService: { getDocumentDirection: () => "ltr" },
         store,
         render,
       },
@@ -354,6 +355,7 @@ describe("commandLineCharacters.handlers", () => {
 
     handleAddCharacterClick(
       {
+        appService: { getDocumentDirection: () => "ltr" },
         store,
         render,
       },

@@ -3,6 +3,7 @@ import {
   getSceneEditorTimingDurationMs,
   getSceneEditorTimingNow,
 } from "../../internal/ui/sceneEditor/sceneEditorTiming.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 const KEYBOARD_VISIBLE_INSET_PX = 100;
 const ARROW_REPEAT_DELAY_MS = 280;
@@ -277,7 +278,7 @@ const isArrowRepeatNativeCalloutSuppressed = () => {
 // The More menu hangs from the top of its button, which moves with the
 // keyboard, so it is placed again whenever the toolbar moves.
 const placeMoreMenu = (deps) => {
-  const { refs, store } = deps;
+  const { appService, refs, store } = deps;
   const moreButton = Object.values(refs).find(
     (element) => element?.dataset?.actionId === "more",
   );
@@ -285,7 +286,10 @@ const placeMoreMenu = (deps) => {
   if (!rect) {
     return;
   }
-  store.openMoreMenu({ x: rect.right, y: rect.top });
+  store.openMoreMenu({
+    x: getInlineEndX(rect, appService.getDocumentDirection()),
+    y: rect.top,
+  });
 };
 
 const stopArrowRepeat = (store) => {

@@ -5,6 +5,7 @@ import {
   stepSliderValue,
   toSliderPresetMenuItems,
 } from "../../internal/ui/sliderPopover.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
 // The popover opens under the field, from its value, or its default when it
 // has none.
@@ -66,7 +67,7 @@ export const handlePresetsButtonClick = async (deps, payload) => {
   const rect = payload._event.currentTarget.getBoundingClientRect();
   const result = await appService.showDropdownMenu({
     items: toSliderPresetMenuItems(props.field.presets),
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     place: "bs",
   });

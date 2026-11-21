@@ -172,7 +172,12 @@ describe("audioEffectsEditor.handlers", () => {
     };
 
     handleTimelineZoomButtonClick(
-      { refs, store, render },
+      {
+        appService: { getDocumentDirection: () => "ltr" },
+        refs,
+        store,
+        render,
+      },
       { _event: { stopPropagation } },
     );
     expect(stopPropagation).toHaveBeenCalledOnce();
@@ -641,7 +646,7 @@ describe("audioEffectsEditor.handlers", () => {
     const render = vi.fn();
 
     handleSelectedKeyframeAddClick(
-      { render, store },
+      { appService: { getDocumentDirection: () => "ltr" }, render, store },
       {
         _event: {
           currentTarget: {

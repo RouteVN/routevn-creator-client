@@ -35,6 +35,7 @@ const createApp = ({
     i18n,
     render: vi.fn(),
     appService: {
+      getDocumentDirection: () => "ltr",
       openUrl: vi.fn(),
       canEmbedYouTube: () => canEmbedYouTube,
       showDropdownMenu: vi.fn(async ({ items }) => ({
