@@ -52,7 +52,6 @@ describe("import package command batch", () => {
     const result = await api.commitAssetImportPackage({
       planId: "asset-plan",
       projectId: "project-assets",
-      repositoryRevision: repository.getRevision(),
       fileRecords,
       fileCommandIds,
       entries: [
@@ -200,7 +199,6 @@ describe("import package command batch", () => {
       api.commitAssetImportPackage({
         planId: "asset-plan",
         projectId: "project-assets",
-        repositoryRevision: repository.getRevision(),
         entries,
       });
 
@@ -275,7 +273,6 @@ describe("import package command batch", () => {
     const result = await api.commitAssetImportPackage({
       planId: "all-asset-plan",
       projectId: "project-all-assets",
-      repositoryRevision: repository.getRevision(),
       fileRecords: [
         {
           id: "file.font",
