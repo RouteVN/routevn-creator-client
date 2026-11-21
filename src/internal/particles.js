@@ -30,13 +30,69 @@ const swapReversedRanges = (value) => {
   Object.values(value).forEach(swapReversedRanges);
 };
 
-// Repairs, in place, every value that route-graphics rejects or that hangs the
+const isNumber = (value) => typeof value === "number" && !Number.isNaN(value);
+
+const toParticleCount = (value) =>
+  Math.min(MAX_PARTICLE_COUNT, Math.max(1, Math.round(value)));
+
+const isValidDuration = (value) =>
+  value === undefined ||
+  value === "infinite" ||
+  (isNumber(value) && value >= 0);
+
+// route-graphics checks Max Active and the duration in both emission modes,
+// the rate only for a continuous effect, and Burst Count only for a burst. A
+// value it rejects becomes what the particle editor form saves when it loads
+// that value, so the effect draws as it will after its next edit. A value the
+// mode ignores is not repaired here, so an effect that already draws keeps its
+// render state and its thumbnail.
+const repairEmissionForMode = (emission) => {
+  if (emission.mode === "continuous") {
+    if (!isNumber(emission.rate)) {
+      emission.rate = 20;
+    } else if (emission.rate <= 0) {
+      emission.rate = 1;
+    }
+    if (emission.maxActive !== undefined) {
+      emission.maxActive =
+        isNumber(emission.maxActive) && emission.maxActive > 0
+          ? toParticleCount(emission.maxActive)
+          : 60;
+    }
+    if (!isValidDuration(emission.duration)) {
+      // The form saves 0 for a negative duration and 1 second for one that is
+      // not a number. Like a saved 0, a repaired 0 never stops emitting.
+      emission.duration = isNumber(emission.duration) ? 0 : 1;
+    }
+    return;
+  }
+
+  if (emission.mode === "burst") {
+    emission.burstCount = isNumber(emission.burstCount)
+      ? toParticleCount(emission.burstCount)
+      : 8;
+    // The form saves neither for a burst.
+    if (emission.maxActive !== undefined) {
+      if (isNumber(emission.maxActive) && emission.maxActive > 0) {
+        emission.maxActive = toParticleCount(emission.maxActive);
+      } else {
+        delete emission.maxActive;
+      }
+    }
+    if (!isValidDuration(emission.duration)) {
+      delete emission.duration;
+    }
+  }
+};
+
+// Repairs, in place, values that route-graphics rejects or that hang the
 // webview and that the model's shallow validation lets through: reversed
-// ranges, a negative max speed, an inner radius outside 0..radius, counts that
-// are not whole numbers of at least 1, a rate that is not above 0, a negative
-// duration, and oversized counts or rates. It runs when the form saves and
-// again when a saved particle is rendered, so data saved earlier, imported or
-// synced is repaired without being rewritten. Callers pass a copy.
+// ranges, a negative max speed, an inner radius outside 0..radius, oversized
+// counts or rates, and a rate, count or duration that the emission mode uses
+// but that is missing where required, not a number, or out of range. It runs
+// when the form saves and again when a saved particle is rendered, so data
+// saved earlier, imported or synced is repaired without being rewritten.
+// Callers pass a copy.
 export const normalizeParticleModules = (modules) => {
   if (!isPlainObject(modules)) {
     return modules;
@@ -45,25 +101,20 @@ export const normalizeParticleModules = (modules) => {
   const emission = modules.emission;
   if (isPlainObject(emission)) {
     for (const key of ["maxActive", "burstCount"]) {
-      const count = emission[key];
-      if (typeof count === "number" && !Number.isNaN(count)) {
-        emission[key] = Math.min(
-          MAX_PARTICLE_COUNT,
-          Math.max(1, Math.round(count)),
-        );
+      if (
+        typeof emission[key] === "number" &&
+        emission[key] > MAX_PARTICLE_COUNT
+      ) {
+        emission[key] = MAX_PARTICLE_COUNT;
       }
     }
-    if (typeof emission.rate === "number") {
-      if (emission.rate > MAX_PARTICLE_RATE) {
-        emission.rate = MAX_PARTICLE_RATE;
-      } else if (emission.rate <= 0) {
-        // The lowest rate the form saves.
-        emission.rate = 1;
-      }
+    if (
+      typeof emission.rate === "number" &&
+      emission.rate > MAX_PARTICLE_RATE
+    ) {
+      emission.rate = MAX_PARTICLE_RATE;
     }
-    if (typeof emission.duration === "number" && emission.duration < 0) {
-      emission.duration = 0;
-    }
+    repairEmissionForMode(emission);
     const source = emission.source;
     if (
       source?.kind === "circle" &&

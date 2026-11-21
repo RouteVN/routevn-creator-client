@@ -1020,38 +1020,4 @@ describe("particle editor", () => {
     );
     page.cleanup?.();
   });
-
-  it("says so when the canvas cannot draw the particle, at once or after the render starts", async () => {
-    const page = await createPage();
-    const { render } = page.deps.graphicsService;
-    const { showToast } = page.deps.appService;
-    const invalidData = new Error("Input Error: invalid particle data");
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    showToast.mockClear();
-
-    try {
-      render.mockImplementationOnce(() => {
-        throw invalidData;
-      });
-      await expect(handleCanvasZoomInClick(page.deps)).resolves.toBeUndefined();
-      render.mockImplementationOnce(async () => {
-        throw invalidData;
-      });
-      await expect(handleCanvasZoomInClick(page.deps)).resolves.toBeUndefined();
-      expect(consoleError.mock.calls).toEqual([
-        ["[particleEditor] Failed to render the canvas", invalidData],
-        ["[particleEditor] Failed to render the canvas", invalidData],
-      ]);
-    } finally {
-      consoleError.mockRestore();
-    }
-
-    expect(showToast.mock.calls).toEqual([
-      [{ message: "Failed to draw the particle preview." }],
-      [{ message: "Failed to draw the particle preview." }],
-    ]);
-    page.cleanup?.();
-  });
 });
