@@ -5,7 +5,7 @@ export const createInitialState = () => ({
   menuPosition: { x: 0, y: 0 },
 });
 
-export const openMenu = ({ state }, { x, y } = {}) => {
+export const openMenu = ({ state }, { x, y }) => {
   state.isMenuOpen = true;
   state.menuPosition.x = x;
   state.menuPosition.y = y;
