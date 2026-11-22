@@ -748,7 +748,7 @@ export const handleBeforeMount = (deps) => {
     store.setAssetLoading({ isLoading: false });
     store.setPreviewReady({ isPreviewReady: false });
     resetAssetLoadCache(store);
-    void graphicsService.destroy?.();
+    void graphicsService.destroy?.({ onlyIfDetached: true });
     nativeBackSubscription?.unsubscribe();
     window.removeEventListener("keydown", handleKeyDown, true);
     window.removeEventListener("keyup", handleKeyUp, true);

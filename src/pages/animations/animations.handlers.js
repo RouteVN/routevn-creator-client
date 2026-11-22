@@ -205,7 +205,7 @@ export const handleBeforeMount = (deps) => {
       requestId: undefined,
     });
     deps.store.clearPreviewRuntime();
-    void deps.graphicsService?.destroy?.();
+    void deps.graphicsService?.destroy?.({ onlyIfDetached: true });
   };
 };
 

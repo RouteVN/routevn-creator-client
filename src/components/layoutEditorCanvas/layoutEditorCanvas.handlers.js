@@ -1843,7 +1843,7 @@ export const handleBeforeMount = (deps) => {
     }
     cleanupCanvasResizeObserver();
     cleanupSubscriptions?.();
-    void deps.graphicsService.destroy();
+    void deps.graphicsService.destroy({ onlyIfDetached: true });
   };
 };
 
