@@ -77,9 +77,11 @@ styles:
   "#nodeDetailBackButton:dir(rtl)":
     transform: scaleX(-1)
 template:
-  # Full screen over the scene editor, which stays open under it.
-  - 'rtgl-view#visualLayoutEditor pos=fix edge=f d=v bgc=bg z=3400 style="min-width: 0; min-height: 0; overflow: hidden;"':
-      - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=md style="flex: 0 0 auto; padding-top: max(env(safe-area-inset-top, 0px), var(--rvn-window-content-offset, 0px));"':
+  # Full screen over the scene editor, which stays open under it. It covers
+  # the iOS status bar and home indicator and the desktop title bar, so it
+  # keeps clear of them itself; the header keeps its full height below.
+  - 'rtgl-view#visualLayoutEditor pos=fix edge=f d=v bgc=bg z=3400 style="min-width: 0; min-height: 0; overflow: hidden; box-sizing: border-box; padding-top: max(env(safe-area-inset-top, 0px), var(--rvn-window-content-offset, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px);"':
+      - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=md style="flex: 0 0 auto;"':
           - 'rtgl-view w=1fg d=h av=c g=sm style="min-width: 0;"':
               - 'rtgl-text#editorTitle ellipsis=true style="flex: 0 0 auto;"': ${title}
           - $if showCanvasZoomControls:
