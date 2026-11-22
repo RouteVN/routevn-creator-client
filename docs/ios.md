@@ -321,7 +321,11 @@ folder is chosen from dialogs (`src/internal/ui/projectFolderSetupFlow.js`):
   never recreates the folder or falls back to internal storage. If the user
   dismisses it, the list stays empty and Create or Import asks again.
 - **Config's Change Folder.** The dialog opens on Config and the shown path
-  updates once the new folder is saved. The open project stays open.
+  updates once the new folder is saved. Config keeps its project open, as
+  pack imports write to it. The project closes before the new folder is
+  saved and then opens again from it. If that folder does not hold the
+  project, Config stays open without it and hides Import Asset Pack, and
+  the project's other pages say it cannot be opened.
 
 The dialog has one button and is dismissed by tapping outside it. Dismissing it,
 cancelling the picker, or choosing a folder that is rejected keeps the previous

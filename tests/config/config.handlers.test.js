@@ -45,6 +45,9 @@ const createDeps = () => {
       folder: { displayPath: "On My iPhone/Other Projects" },
     })),
     navigate: vi.fn(),
+    getCurrentProjectId: vi.fn(() => "project-1"),
+    getPath: vi.fn(() => "/project/config"),
+    getPayload: vi.fn(() => ({ p: "project-1" })),
     getTheme: vi.fn(() => "dark"),
     setTheme: vi.fn((theme) => theme),
     getUserConfig: vi.fn(() => undefined),
@@ -73,8 +76,14 @@ const createDeps = () => {
     }),
   };
 
+  const projectService = {
+    getEnsuredProjectId: vi.fn(() => "project-1"),
+    releaseProjectRuntime: vi.fn(async () => {}),
+  };
+
   return {
     appService,
+    projectService,
     locale,
     store: createStore(),
     uiConfig: { id: "normal", inputMode: "pointer" },
@@ -110,6 +119,8 @@ describe("config handlers", () => {
     });
     expect(deps.appService.pickProjectFolderSetup).not.toHaveBeenCalled();
     expect(deps.store.setProjectFolder).toHaveBeenCalledOnce();
+    expect(deps.projectService.releaseProjectRuntime).not.toHaveBeenCalled();
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
 
     await handleChangeProjectFolder(deps);
     expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledWith({
@@ -119,7 +130,81 @@ describe("config handlers", () => {
       visible: true,
       path: "On My iPhone/Other Projects",
     });
-    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
+  it("closes the open project before saving another iOS folder, then opens Config again", async () => {
+    const deps = createDeps();
+    deps.appService.getPlatform.mockReturnValue("ios");
+    const calls = [];
+    deps.projectService.releaseProjectRuntime.mockImplementation(
+      async (projectId) => {
+        calls.push(`release:${projectId}`);
+      },
+    );
+    deps.appService.confirmProjectFolderSetup.mockImplementation(async () => {
+      calls.push("confirm");
+      return {
+        configured: true,
+        folder: { displayPath: "On My iPhone/Other Projects" },
+      };
+    });
+    deps.appService.navigate.mockImplementation((path) => {
+      calls.push(`navigate:${path}`);
+    });
+
+    await handleChangeProjectFolder(deps);
+
+    // Native finds project files through the saved folder, so the project
+    // must not be open, or still saving, when the folder changes.
+    expect(calls).toEqual([
+      "release:project-1",
+      "confirm",
+      "navigate:/project/config",
+    ]);
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/config",
+      { p: "project-1" },
+      { historyMode: "none" },
+    );
+  });
+
+  it("opens the project again when the new iOS folder cannot be saved", async () => {
+    const deps = createDeps();
+    deps.appService.getPlatform.mockReturnValue("ios");
+    deps.appService.confirmProjectFolderSetup.mockRejectedValue(
+      new Error("No space left"),
+    );
+
+    await handleChangeProjectFolder(deps);
+
+    expect(deps.projectService.releaseProjectRuntime).toHaveBeenCalledWith(
+      "project-1",
+    );
+    expect(deps.appService.showToast).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "error" }),
+    );
+    // The previous folder is kept, and the project opens from it again.
+    expect(deps.store.setProjectFolder).not.toHaveBeenCalled();
+    expect(deps.appService.navigate).toHaveBeenCalledWith(
+      "/project/config",
+      { p: "project-1" },
+      { historyMode: "none" },
+    );
+  });
+
+  it.each([
+    ["the project is open", "project-1", true],
+    ["Config opened without its project", undefined, false],
+  ])("shows pack import only when %s", (_label, ensuredProjectId, visible) => {
+    const deps = createDeps();
+    deps.appService.getPlatform.mockReturnValue("ios");
+    deps.projectService.getEnsuredProjectId.mockReturnValue(ensuredProjectId);
+
+    handleBeforeMount(deps);
+
+    expect(deps.store.setImportPackageVisible).toHaveBeenCalledWith({
+      visible,
+    });
   });
 
   it.each(["web", "android", "tauri"])(

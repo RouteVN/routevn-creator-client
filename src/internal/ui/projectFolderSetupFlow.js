@@ -32,7 +32,11 @@ export const selectProjectFolderSetupCopy = (i18n, deviceName = "iPhone") => {
 // The dialog covers a first setup, a saved folder that can no longer be
 // opened, and changing a saved folder. Resolves to the saved folder status,
 // or to no value when the user cancels or the folder is rejected.
-export const chooseProjectFolder = async ({ appService, i18n }) => {
+// `beforeSave` runs once a folder is picked, just before it is saved.
+export const chooseProjectFolder = async (
+  { appService, i18n },
+  { beforeSave = async () => {} } = {},
+) => {
   const status = appService.getProjectFolderSetup();
   const copy = selectProjectFolderSetupCopy(i18n, status.deviceName);
   const showError = (errorKey) => {
@@ -80,6 +84,7 @@ export const chooseProjectFolder = async ({ appService, i18n }) => {
   if (!candidate) return undefined;
 
   try {
+    await beforeSave();
     return await appService.confirmProjectFolderSetup({ uri: candidate.uri });
   } catch (error) {
     showError(errorKeys[error.code] ?? "confirmError");

@@ -69,11 +69,12 @@ template:
                       - 'rtgl-view w=560 sm-w=f g=md style="max-width: 100%;"':
                           - rtgl-text s=sm c=mu-fg: ${assetPackageDescription}
                           - rtgl-segmented-control#assetPackageToggle w=f no-clear :selectedValue=${assetPackageEnabled} :options=${assetPackageOptions}: null
-                  - rtgl-view#importPackageSection w=f mt=xl g=lg:
-                      - rtgl-text s=h4: ${importPackageTitle}
-                      - 'rtgl-view w=560 sm-w=f d=h g=md wrap style="max-width: 100%;"':
-                          - rtgl-button#importPackageZipButton v=ol: ${importPackageZipLabel}
-                          - rtgl-button#importPackageUrlButton v=ol: ${importPackageUrlLabel}
+                  - $if showImportPackage:
+                      - rtgl-view#importPackageSection w=f mt=xl g=lg:
+                          - rtgl-text s=h4: ${importPackageTitle}
+                          - 'rtgl-view w=560 sm-w=f d=h g=md wrap style="max-width: 100%;"':
+                              - rtgl-button#importPackageZipButton v=ol: ${importPackageZipLabel}
+                              - rtgl-button#importPackageUrlButton v=ol: ${importPackageUrlLabel}
                   - rtgl-view#helpButtonSection w=f mt=xl g=lg:
                       - rtgl-text s=h4: ${helpButtonTitle}
                       - 'rtgl-view w=560 sm-w=f g=md style="max-width: 100%;"':
