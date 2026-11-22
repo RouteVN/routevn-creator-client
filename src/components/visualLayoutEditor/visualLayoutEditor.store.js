@@ -17,6 +17,7 @@ import {
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
 } from "../../internal/ui/layoutEditor/layoutEditorViewData.js";
+import { TABLET_LANDSCAPE_EXPLORER_WIDTH } from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 // The elements a visual's layout can add: those of a general layout.
 const CREATE_TYPES = [
@@ -91,6 +92,11 @@ const findVisualLayout = (
 
 export const createInitialState = () => ({
   isTouchMode: false,
+  // A touch window at least 768 logical pixels wide and wider than tall.
+  isTouchLandscape: false,
+  // In the touch layouts with one panel under the canvas, the Elements list
+  // shows there until an element is picked in it, and again after Back.
+  isMobileFileExplorerOpen: true,
   isLoaded: false,
   isMissing: false,
   layoutSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
@@ -113,6 +119,28 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
+
+export const setTouchLandscape = ({ state }, { isTouchLandscape } = {}) => {
+  state.isTouchLandscape = isTouchLandscape;
+};
+
+export const selectIsTouchMode = ({ state }) => state.isTouchMode;
+export const selectIsTouchLandscape = ({ state }) => state.isTouchLandscape;
+
+export const openMobileFileExplorer = ({ state }) => {
+  state.isMobileFileExplorerOpen = true;
+};
+
+export const closeMobileFileExplorer = ({ state }) => {
+  state.isMobileFileExplorerOpen = false;
+};
+
+// Desktop and tablet landscape keep the selected element's panel to the
+// right of the canvas, as the layout editor does, and give the canvas the
+// rest of the screen, where it zooms and pans. Other touch layouts show the
+// canvas fitted, with one panel under it.
+const selectShowRightPanel = (state) =>
+  !state.isTouchMode || state.isTouchLandscape;
 
 // Takes the visual's layout, and the project's resources its elements and
 // the edit panel use, from the repository. Edits not saved yet are dropped.
@@ -326,9 +354,17 @@ export const selectViewData = ({ state, props, i18n }) => {
         },
       }
     : state.layoutData;
+  const showRightPanel = selectShowRightPanel(state);
+  const showMobilePanels = !showRightPanel;
+  // The panel under the canvas shows the selected element once one is picked
+  // in the Elements list, and the list otherwise.
+  const showMobileSelectedNodeDetail =
+    showMobilePanels &&
+    Boolean(selectedItem) &&
+    !state.isMobileFileExplorerOpen;
   const { canvasBackgroundStyle, canvasWrapperStyle } =
     buildEditorCanvasLayoutForPanel({
-      showRightPanel: true,
+      showRightPanel,
       resolution: state.projectResolution,
     });
 
@@ -364,7 +400,21 @@ export const selectViewData = ({ state, props, i18n }) => {
     isInsideSaveLoadSlot: false,
     allowAutoSlot: false,
     canvasDisableInteraction: selectedItemIsHidden,
-    ...buildEditorCanvasZoomViewData(state.canvasZoom, i18n.dateTime),
+    showExplorerPanel: !state.isTouchMode,
+    // Tablet landscape keeps the Elements list in a pane on the left.
+    showTabletLandscapeExplorer: state.isTouchMode && state.isTouchLandscape,
+    tabletLandscapeExplorerWidth: TABLET_LANDSCAPE_EXPLORER_WIDTH,
+    showRightPanel,
+    showMobileNodeExplorer: showMobilePanels && !showMobileSelectedNodeDetail,
+    showMobileSelectedNodeDetail,
+    nodeMovePreviousLabel:
+      layoutCopy.previousElementLabel ?? "Previous element",
+    nodeMoveNextLabel: layoutCopy.nextElementLabel ?? "Next element",
+    showCanvasZoomControls: showRightPanel,
+    ...buildEditorCanvasZoomViewData(
+      showRightPanel ? state.canvasZoom : 1,
+      i18n.dateTime,
+    ),
     canvasZoomInLabel: layoutCopy.canvasZoomInLabel ?? "Zoom in",
     canvasZoomOutLabel: layoutCopy.canvasZoomOutLabel ?? "Zoom out",
     canvasZoomFitLabel: layoutCopy.canvasZoomFitLabel ?? "Fit to view",
