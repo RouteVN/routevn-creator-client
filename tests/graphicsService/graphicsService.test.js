@@ -84,6 +84,7 @@ vi.mock("pixi.js", () => ({
 describe("graphicsService", () => {
   beforeEach(() => {
     routeGraphicsInitOptions = undefined;
+    delete routeGraphicsInstance.canvas.isConnected;
     tickerCallbacks.clear();
     assetsCache.clear();
     audioAssetApi.getAsset = vi.fn(() => undefined);
@@ -236,6 +237,45 @@ describe("graphicsService", () => {
       "Initialization failed",
     );
     expect(audioOutput.close).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the next owner's graphics when the last owner shuts down after them", async () => {
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService();
+    await service.init({ width: 1920, height: 1080 });
+    // The next page starts its graphics before the last page's clean-up asks
+    // to shut its own down; the new canvas is in the page.
+    const next = service.init({ width: 1920, height: 1080 });
+    const leaving = service.destroy({ onlyIfDetached: true });
+    routeGraphicsInstance.canvas.isConnected = true;
+    await Promise.all([next, leaving]);
+
+    // Only the first graphics were shut down, by the second start.
+    expect(routeGraphicsInstance.destroy).toHaveBeenCalledOnce();
+    service.render({ elements: [], animations: [] });
+    expect(routeGraphicsInstance.render).toHaveBeenCalled();
+    await service.destroy();
+  });
+
+  it("shuts down a leaving owner's graphics once their canvas has left the page", async () => {
+    createAssetBufferManagerMock.mockReturnValue({ clear: vi.fn() });
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService();
+    await service.init({ width: 1920, height: 1080 });
+    routeGraphicsInstance.canvas.isConnected = false;
+    await service.destroy({ onlyIfDetached: true });
+    expect(routeGraphicsInstance.destroy).toHaveBeenCalledOnce();
+
+    // Without the option it shuts them down even with the canvas in the page.
+    await service.init({ width: 1920, height: 1080 });
+    routeGraphicsInstance.canvas.isConnected = true;
+    await service.destroy();
+    expect(routeGraphicsInstance.destroy).toHaveBeenCalledTimes(2);
   });
 
   it("can initialize, close and reopen while platform playback remains pending", async () => {

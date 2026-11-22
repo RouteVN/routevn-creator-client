@@ -403,8 +403,9 @@ export const handleBeforeMount = (deps) => {
     cleanupWindowResize();
     cleanupKeyboardShortcuts();
     // The graphics service is shared, and the next page can start its
-    // renderer while the save below runs, so this page's goes first.
-    void graphicsService.destroy();
+    // renderer while the save below runs, so this page's goes first. It may
+    // also have started it already, and that one stays.
+    void graphicsService.destroy({ onlyIfDetached: true });
     const saved = await saveParticleChanges(deps);
     if (!saved) {
       throw new Error("Failed to save particle during cleanup.");

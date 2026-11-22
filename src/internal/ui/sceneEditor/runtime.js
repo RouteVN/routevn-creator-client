@@ -2989,5 +2989,6 @@ export const resetSceneEditorRuntime = async (deps) => {
   setSceneAssetLoading(deps, false);
   disposeSceneLoadingDetails(store);
   resetAssetLoadCache("scene editor unmount");
-  await graphicsService.destroy();
+  // The next page may already have started its graphics.
+  await graphicsService.destroy({ onlyIfDetached: true });
 };
