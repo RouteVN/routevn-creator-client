@@ -200,9 +200,40 @@ const selectElement = (deps, itemId) => {
   }
 };
 
+// Rotating a tablet moves the Elements list between the left pane and the
+// panel under the canvas. The one that mounts has no selection of its own, so
+// it is pointed at the selected element once it is there.
+const selectElementInNewExplorer = (deps) => {
+  const { refs, store } = deps;
+  const itemId = store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      refs.fileExplorer?.selectItem?.({ itemId });
+    });
+  });
+};
+
 export const handleBeforeMount = (deps) => {
-  const { store, subject, uiConfig } = deps;
+  const { appService, render, store, subject, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  store.setTouchLandscape({ isTouchLandscape: appService.isTouchLandscape() });
+  const unsubscribeTouchLandscape = appService.subscribeTouchLandscape(
+    (isTouchLandscape) => {
+      if (isTouchLandscape === store.selectIsTouchLandscape()) {
+        return;
+      }
+
+      store.setTouchLandscape({ isTouchLandscape });
+      // Moving the panels rebuilds them, which closes an open popover
+      // without a cancel, so its value shown on the canvas goes too.
+      store.clearCanvasPreviewItem();
+      render();
+      selectElementInNewExplorer(deps);
+    },
+  );
 
   const saves = merge(
     subject.pipe(
@@ -223,6 +254,7 @@ export const handleBeforeMount = (deps) => {
     .subscribe();
 
   return async () => {
+    unsubscribeTouchLandscape();
     saves.unsubscribe();
     await saveLayoutElements(deps);
   };
@@ -278,11 +310,32 @@ export const handleCanvasBackgroundClick = (deps, payload) => {
 
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store } = deps;
-  const { itemId } = payload._event.detail ?? {};
+  const { itemId, source } = payload._event.detail ?? {};
   if (itemId && store.selectSelectedItemId() === itemId) {
     refs.layoutEditorCanvas?.useDefaultSelectionOccurrence?.();
   }
+  // On touch an element picked in the list opens in the panel under the
+  // canvas. Stepping with the up and down buttons keeps the list open.
+  if (itemId && store.selectIsTouchMode() && source !== "navigation") {
+    store.closeMobileFileExplorer();
+  }
   selectElement(deps, itemId);
+};
+
+// Back from an element to the Elements list, with nothing selected, as in
+// the layout editor.
+export const handleNodeDetailBackClick = (deps) => {
+  const { store } = deps;
+  store.openMobileFileExplorer();
+  selectElement(deps, undefined);
+};
+
+export const handleNodeMovePreviousClick = ({ refs }) => {
+  refs.fileExplorer.navigateSelection({ direction: "previous", clamp: true });
+};
+
+export const handleNodeMoveNextClick = ({ refs }) => {
+  refs.fileExplorer.navigateSelection({ direction: "next", clamp: true });
 };
 
 // Adds elements asked for in the "new" menu, the first one selected.

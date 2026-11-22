@@ -8,7 +8,10 @@ import {
   handleCanvasDragUpdate,
   handleCancelClick,
   handleDoneClick,
+  handleCanvasSelectionChange,
   handleFileExplorerAction,
+  handleFileExplorerItemClick,
+  handleNodeDetailBackClick,
 } from "../../src/components/visualLayoutEditor/visualLayoutEditor.handlers.js";
 import {
   LAYOUT_EDITOR_SCENE_SLOT_ID,
@@ -241,8 +244,14 @@ const findSavedElements = (repositoryState) =>
     .items["line-1"].actions.visual.items[0].layout.elements;
 
 // The editor on its real store, over a project that keeps what is saved, or
-// whose saves are given.
-const createEditor = ({ updateVisualLayoutElements } = {}) => {
+// whose saves are given. `uiConfig` and `isTouchLandscape` set the screen;
+// `rotate` changes whether a touch screen is in landscape.
+const createEditor = ({
+  updateVisualLayoutElements,
+  uiConfig = {},
+  isTouchLandscape = false,
+} = {}) => {
+  let touchLandscapeListener;
   let state = editorStore.createInitialState();
   const store = new Proxy(
     {},
@@ -275,8 +284,15 @@ const createEditor = ({ updateVisualLayoutElements } = {}) => {
       layoutEditPanel: { setTransientValues: vi.fn() },
       layoutEditorCanvas: { discardPendingUpdate: vi.fn() },
     },
-    uiConfig: {},
+    uiConfig,
     appService: {
+      isTouchLandscape: () => isTouchLandscape,
+      subscribeTouchLandscape: (listener) => {
+        touchLandscapeListener = listener;
+        return () => {
+          touchLandscapeListener = undefined;
+        };
+      },
       reportError: vi.fn(),
       showAlert: vi.fn(),
       showAlertWhenIdle: vi.fn(),
@@ -297,7 +313,10 @@ const createEditor = ({ updateVisualLayoutElements } = {}) => {
   };
   const cleanup = handleBeforeMount(deps);
   handleAfterMount(deps);
-  return { cleanup, deps, repositoryState, store };
+  const rotate = (landscape) => touchLandscapeListener?.(landscape);
+  const view = () =>
+    editorStore.selectViewData({ state, props: deps.props, i18n: EN_I18N });
+  return { cleanup, deps, repositoryState, rotate, store, view };
 };
 
 const rename = (deps, itemId, newName) =>
@@ -703,5 +722,142 @@ describe("the layout editor of a visual", () => {
 
     expect(store.selectSelectedItemId()).toBeUndefined();
     expect(store.selectItemById({ itemId: "door" })).toBeUndefined();
+  });
+});
+
+const TOUCH_UI_CONFIG = { id: "touch", inputMode: "touch" };
+
+const pickInList = (deps, itemId, source) =>
+  handleFileExplorerItemClick(deps, {
+    _event: { detail: { itemId, source } },
+  });
+
+const pickOnCanvas = (deps, itemId) =>
+  handleCanvasSelectionChange(deps, { _event: { detail: { itemId } } });
+
+describe("the layout editor of a visual on each screen", () => {
+  it("keeps the Elements list and the element's panel beside the canvas on desktop", () => {
+    const data = createEditor().view();
+
+    expect(data.showExplorerPanel).toBe(true);
+    expect(data.showTabletLandscapeExplorer).toBe(false);
+    expect(data.showRightPanel).toBe(true);
+    expect(data.showCanvasZoomControls).toBe(true);
+    expect(data.showMobileNodeExplorer).toBe(false);
+    expect(data.showMobileSelectedNodeDetail).toBe(false);
+  });
+
+  it("shows the Elements list in a left pane and the element on the right on a tablet in landscape", () => {
+    const data = createEditor({
+      uiConfig: TOUCH_UI_CONFIG,
+      isTouchLandscape: true,
+    }).view();
+
+    expect(data.showExplorerPanel).toBe(false);
+    expect(data.showTabletLandscapeExplorer).toBe(true);
+    expect(data.showRightPanel).toBe(true);
+    expect(data.showCanvasZoomControls).toBe(true);
+    expect(data.showMobileNodeExplorer).toBe(false);
+    expect(data.showMobileSelectedNodeDetail).toBe(false);
+  });
+
+  it("shows the canvas fitted over the Elements list on other touch screens", () => {
+    const { store, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+    store.zoomCanvasIn();
+    const data = view();
+
+    expect(data.showExplorerPanel).toBe(false);
+    expect(data.showTabletLandscapeExplorer).toBe(false);
+    expect(data.showRightPanel).toBe(false);
+    expect(data.showCanvasZoomControls).toBe(false);
+    expect(data.canvasZoom).toBe(1);
+    expect(data.showMobileNodeExplorer).toBe(true);
+    expect(data.showMobileSelectedNodeDetail).toBe(false);
+  });
+
+  it("opens an element picked in the list under the canvas, and goes back to the list with nothing selected", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+
+    pickInList(deps, "door");
+    expect(view()).toMatchObject({
+      selectedItemId: "door",
+      showMobileSelectedNodeDetail: true,
+      showMobileNodeExplorer: false,
+    });
+
+    handleNodeDetailBackClick(deps);
+    expect(view()).toMatchObject({
+      selectedItemId: undefined,
+      showMobileSelectedNodeDetail: false,
+      showMobileNodeExplorer: true,
+    });
+  });
+
+  it("keeps the list open while stepping through it and when an element is picked on the canvas", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+
+    pickInList(deps, "frame", "navigation");
+    expect(view().showMobileNodeExplorer).toBe(true);
+
+    pickOnCanvas(deps, "title");
+    expect(view()).toMatchObject({
+      selectedItemId: "title",
+      showMobileNodeExplorer: true,
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenLastCalledWith({
+      itemId: "title",
+    });
+  });
+
+  it("shows the element picked on the canvas once the list is closed, and the list again when nothing is selected", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+    pickInList(deps, "door");
+
+    pickOnCanvas(deps, "title");
+    expect(view().showMobileSelectedNodeDetail).toBe(true);
+    expect(view().selectedItem.name).toBe("Title");
+
+    pickOnCanvas(deps, undefined);
+    expect(view().showMobileNodeExplorer).toBe(true);
+  });
+
+  it("moves the panels when a tablet turns, dropping a value only shown on the canvas", async () => {
+    vi.stubGlobal("requestAnimationFrame", (callback) => callback());
+    try {
+      const { cleanup, deps, rotate, store, view } = createEditor({
+        uiConfig: TOUCH_UI_CONFIG,
+      });
+      pickInList(deps, "door");
+      store.setCanvasPreviewItem({
+        itemId: "door",
+        item: { type: "sprite", name: "Door", imageId: "door", x: 5 },
+      });
+      deps.render.mockClear();
+      deps.refs.fileExplorer.selectItem.mockClear();
+
+      rotate(true);
+      expect(view()).toMatchObject({
+        showTabletLandscapeExplorer: true,
+        showRightPanel: true,
+      });
+      expect(store.selectHasCanvasPreviewItem()).toBe(false);
+      expect(deps.render).toHaveBeenCalledTimes(1);
+      expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+        itemId: "door",
+      });
+
+      rotate(false);
+      expect(view()).toMatchObject({
+        showRightPanel: false,
+        showMobileSelectedNodeDetail: true,
+      });
+
+      await cleanup();
+      deps.render.mockClear();
+      rotate(true);
+      expect(deps.render).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

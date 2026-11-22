@@ -19,6 +19,18 @@ refs:
     eventListeners:
       click:
         handler: handleCanvasZoomInClick
+  nodeDetailBackButton:
+    eventListeners:
+      click:
+        handler: handleNodeDetailBackClick
+  nodeMovePreviousButton:
+    eventListeners:
+      click:
+        handler: handleNodeMovePreviousClick
+  nodeMoveNextButton:
+    eventListeners:
+      click:
+        handler: handleNodeMoveNextClick
   canvasBackground:
     eventListeners:
       click:
@@ -57,21 +69,24 @@ refs:
         handler: handleEditPanelPreviewCancel
 styles:
   # On a phone the title would be cut to a letter and Done pushed off the
-  # screen in longer languages. The canvas zooms with a pinch there, so only
-  # the button that fits it to the screen stays.
+  # screen in longer languages.
   '@media only screen and (max-width: 420px)':
     '#editorTitle, #canvasZoomOutButton, #canvasZoomInButton':
       display: none
+  # The back arrow points toward the inline start.
+  "#nodeDetailBackButton:dir(rtl)":
+    transform: scaleX(-1)
 template:
   # Full screen over the scene editor, which stays open under it.
   - 'rtgl-view#visualLayoutEditor pos=fix edge=f d=v bgc=bg z=3400 style="min-width: 0; min-height: 0; overflow: hidden;"':
       - 'rtgl-view h=48 w=f d=h av=c ph=md bwb=xs bc=bo g=md style="flex: 0 0 auto; padding-top: max(env(safe-area-inset-top, 0px), var(--rvn-window-content-offset, 0px));"':
           - 'rtgl-view w=1fg d=h av=c g=sm style="min-width: 0;"':
               - 'rtgl-text#editorTitle ellipsis=true style="flex: 0 0 auto;"': ${title}
-          - rtgl-view d=h av=c g=xs:
-              - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
-              - 'rtgl-button#canvasZoomResetButton v=gh style="min-width: 64px;" aria-label="${canvasZoomFitLabel}" title="${canvasZoomFitLabel}"': ${canvasZoomLabel}
-              - 'rtgl-button#canvasZoomInButton sq pre=zoomIn v=ol ?disabled=${canvasZoomInDisabled} aria-label="${canvasZoomInLabel}" title="${canvasZoomInLabel}"': null
+          - $if showCanvasZoomControls:
+              - rtgl-view d=h av=c g=xs:
+                  - 'rtgl-button#canvasZoomOutButton sq pre=zoomOut v=ol ?disabled=${canvasZoomOutDisabled} aria-label="${canvasZoomOutLabel}" title="${canvasZoomOutLabel}"': null
+                  - 'rtgl-button#canvasZoomResetButton v=gh style="min-width: 64px;" aria-label="${canvasZoomFitLabel}" title="${canvasZoomFitLabel}"': ${canvasZoomLabel}
+                  - 'rtgl-button#canvasZoomInButton sq pre=zoomIn v=ol ?disabled=${canvasZoomInDisabled} aria-label="${canvasZoomInLabel}" title="${canvasZoomInLabel}"': null
           - rtgl-view d=h av=c g=sm:
               - rtgl-button#cancelButton v=se: ${cancelButton}
               - rtgl-button#doneButton v=pr: ${doneButton}
@@ -79,26 +94,54 @@ template:
           - rtgl-view w=f h=1fg av=c ah=c ph=lg:
               - rtgl-text c=mu-fg ta=c: ${cannotEditLabel}
         $else:
+          # Laid out as the layout editor is: the Elements list on the left
+          # and the selected element on the right on desktop and tablet
+          # landscape; on other touch screens one panel under the canvas,
+          # the list until an element is picked in it, then that element.
           - 'rtgl-view w=f h=1fg d=h style="min-width: 0; min-height: 0;"':
-              - rvn-resizable-panel w=260 min-w=200 max-w=420 resize-side="right":
-                  - 'rtgl-view slot="content" w=f h=f d=v style="min-height: 0;"':
-                      - 'rtgl-view h=40 w=f d=h av=c ph=md bwb=xs bc=bo style="flex: 0 0 auto;"':
-                          - rtgl-text s=sm w=1fg ellipsis=true: ${elementsTitle}
-                      - 'rtgl-view w=f h=1fg style="min-height: 0;"':
-                          - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems} :emptyAddLabel=${emptyAddLabel}: null
+              - $if showExplorerPanel:
+                  - rvn-resizable-panel w=260 min-w=200 max-w=420 resize-side="right":
+                      - 'rtgl-view slot="content" w=f h=f d=v style="min-height: 0;"':
+                          - 'rtgl-view h=40 w=f d=h av=c ph=md bwb=xs bc=bo style="flex: 0 0 auto;"':
+                              - rtgl-text s=sm w=1fg ellipsis=true: ${elementsTitle}
+                          - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+                              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems} :emptyAddLabel=${emptyAddLabel}: null
+              - $if showTabletLandscapeExplorer:
+                  - 'rvn-tablet-explorer-panel w=${tabletLandscapeExplorerWidth} label="${elementsTitle}" label-size=lg':
+                      - 'rtgl-view slot=content w=f h=f style="min-height: 0;"':
+                          - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=32vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems} :emptyAddLabel=${emptyAddLabel}: null
               - 'rtgl-view w=1fg h=f d=v style="min-width: 0; min-height: 0; container-type: size;"':
-                  - 'rvn-zoom-viewport#canvasBackground zoom=${canvasZoom} gestures style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
+                  - 'rvn-zoom-viewport#canvasBackground zoom=${canvasZoom} ?gestures=${showCanvasZoomControls} style="display: flex; flex-direction: column; width: 100%; min-width: 0; background-color: var(--background); ${canvasBackgroundStyle} background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: 24px 24px;"':
                       - 'div style="${canvasWrapperStyle}"':
                           - $if isLoaded:
                               - 'rvn-layout-editor-canvas#layoutEditorCanvas style="display: block; width: 100%;" :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :sceneBackdrop=${sceneBackdrop} :disableMoveDrag=${selectedItemIsInsideDirectedContainer} :disableInteraction=${canvasDisableInteraction}': null
-              - rvn-resizable-panel panel-type=detail-panel w=300 min-w=240 max-w=500 resize-side="left":
-                  - 'rtgl-view slot="content" w=f h=f d=v style="min-width: 0; min-height: 0;"':
-                      - $if selectedItem:
-                          - 'rtgl-view h=40 w=f d=h av=c ph=md bwb=xs bc=bo style="flex: 0 0 auto;"':
-                              - rtgl-text s=sm w=1fg ellipsis=true: ${selectedItem.name}
+                  - $if showMobileNodeExplorer:
+                      - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
+                          - rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c:
+                              - rtgl-text w=1fg s=lg ellipsis=true: ${elementsTitle}
+                              - 'rtgl-button#nodeMovePreviousButton sq v=ol ml=sm aria-label="${nodeMovePreviousLabel}" title="${nodeMovePreviousLabel}"':
+                                  - 'rtgl-view style="transform: rotate(180deg);"':
+                                      - rtgl-svg svg=chevronDown wh=18: null
+                              - 'rtgl-button#nodeMoveNextButton sq pre=chevronDown v=ol ml=sm aria-label="${nodeMoveNextLabel}" title="${nodeMoveNextLabel}"': null
+                          - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+                              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag show-item-menu-actions bottom-empty-space-height=32vh :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems} :emptyAddLabel=${emptyAddLabel}: null
+                  - $if showMobileSelectedNodeDetail:
+                      - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
+                          - rtgl-view h=48 w=f d=h bgc=bg bwt=xs bwb=xs ph=md av=c:
+                              - rtgl-button#nodeDetailBackButton sq pre=chevronLeft v=ol mr=sm: null
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItem.name}
                           - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
                               - rvn-layout-edit-panel#layoutEditPanel layout-type=general resource-type=layouts item-type=${selectedItem.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :allowAutoSlot=${allowAutoSlot} :isInsideDirectedContainer=${selectedItemIsInsideDirectedContainer} :values=${selectedItem} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :videosData=${videosData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
-                              - 'rtgl-view w=f h=240 aria-hidden=true style="flex: 0 0 240px;"': null
-                        $else:
-                          - rtgl-view wh=f av=c ah=c:
-                              - rtgl-text s=sm c=mu-fg: ${noSelectionLabel}
+                              - 'rtgl-view w=f h=32vh style="flex-shrink: 0;"': null
+              - $if showRightPanel:
+                  - rvn-resizable-panel panel-type=detail-panel show-on-touch w=300 min-w=240 max-w=500 resize-side="left":
+                      - 'rtgl-view slot="content" w=f h=f d=v style="min-width: 0; min-height: 0;"':
+                          - $if selectedItem:
+                              - 'rtgl-view h=40 w=f d=h av=c ph=md bwb=xs bc=bo style="flex: 0 0 auto;"':
+                                  - rtgl-text s=sm w=1fg ellipsis=true: ${selectedItem.name}
+                              - 'rtgl-view w=f h=1fg sv pv=md style="min-height: 0;"':
+                                  - rvn-layout-edit-panel#layoutEditPanel layout-type=general resource-type=layouts item-type=${selectedItem.type} :projectResolution=${projectResolution} :selectedElementMetrics=${selectedElementMetrics} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :allowAutoSlot=${allowAutoSlot} :isInsideDirectedContainer=${selectedItemIsInsideDirectedContainer} :values=${selectedItem} :imagesData=${imagesData} :soundsData=${soundsData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :videosData=${videosData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                                  - 'rtgl-view w=f h=240 aria-hidden=true style="flex: 0 0 240px;"': null
+                            $else:
+                              - rtgl-view wh=f av=c ah=c:
+                                  - rtgl-text s=sm c=mu-fg: ${noSelectionLabel}
