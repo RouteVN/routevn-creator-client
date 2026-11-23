@@ -1277,8 +1277,10 @@ export const createVisualLayoutBuilder = (
   };
 
   // Returns the actions with every stored visual layout built for the engine,
-  // and the text styles those layouts add.
-  const buildActions = (actions) => {
+  // and the text styles those layouts add. A visual stays on the following
+  // lines under the same id, where its layout can differ, so the text styles
+  // a line's layouts add are named for that line with `lineId`.
+  const buildActions = (actions, { lineId } = {}) => {
     if (!hasStoredVisualLayouts(actions)) {
       return { actions, textStyles: {} };
     }
@@ -1290,6 +1292,8 @@ export const createVisualLayoutBuilder = (
         return item;
       }
 
+      const visualLayoutId = `visual-${item.id}`;
+
       const { elements, resources } = buildLayoutElements(
         toHierarchyStructure(item.layout.elements),
         buildSources.imageItems,
@@ -1297,7 +1301,10 @@ export const createVisualLayoutBuilder = (
         buildSources.colors,
         buildSources.fonts,
         {
-          layoutId: `visual-${item.id}`,
+          layoutId:
+            lineId === undefined
+              ? visualLayoutId
+              : `line-${lineId}:${visualLayoutId}`,
           layoutType: "general",
           layoutSchemaVersion: item.layout.layoutSchemaVersion,
           filesData: buildSources.filesData,
@@ -1362,7 +1369,9 @@ const buildStoryVisualLayouts = (scenes, visualLayoutBuilder) => {
   for (const scene of Object.values(scenes)) {
     for (const section of Object.values(scene.sections)) {
       for (const line of section.lines) {
-        const built = visualLayoutBuilder.buildActions(line.actions);
+        const built = visualLayoutBuilder.buildActions(line.actions, {
+          lineId: line.id,
+        });
         line.actions = built.actions;
         Object.assign(textStyles, built.textStyles);
       }

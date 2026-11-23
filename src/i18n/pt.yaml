@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Item atual"
   visualTarget: "Elemento visual"
 visualLayoutEditor:
+  cancelButton: "Cancelar"
   cannotEditLayout: "Não é possível editar o layout deste visual. Adicione o visual novamente para editar o layout."
   doneButton: "Concluído"
+  failedDiscardChanges: "Não foi possível descartar as alterações no layout deste visual, por isso continuam lá. Tente novamente."
   failedSaveChanges: "Não foi possível guardar as últimas alterações no layout deste visual, por isso foram descartadas. Volte a fazer essas alterações."
   title: "Editar layout"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "Sem forma de onda"
   "+ Add Choice": "+ Adicionar opção"
   "Save Choice": "Guardar opção"
-  "Save Visual": "Guardar elemento visual"
   popOverlayDescription: "Fecha a sobreposição atual e volta à interface anterior."
   "Set Dialogue Text Speed": "Definir velocidade do texto"
   "Set Auto Forward Delay": "Definir intervalo do avanço automático"

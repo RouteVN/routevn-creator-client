@@ -39,6 +39,12 @@ refs:
     eventListeners:
       click:
         handler: handleEmptyMessageClick
+  emptyAddButton:
+    eventListeners:
+      click:
+        handler: handleEmptyAddClick
+      keydown:
+        handler: handleEmptyAddKeyDown
   dropdownMenu:
     eventListeners:
       close:
@@ -83,11 +89,21 @@ styles:
     transform: scaleX(-1)
   "[data-file-explorer-item='true']:hover .visibilityAction, .visibilityAction:focus-visible, .visibilityAction[data-always-visible='true']":
     opacity: "1"
+  "#emptyAddButton:focus-visible":
+    border-color: var(--accent)
+    outline: 2px solid var(--ring)
+    outline-offset: 1px
 template:
   # Touch holds are owned by this explorer's own recognizers.
   - 'rtgl-view#root data-long-press-ignore=true w=f h=f d=v sv style="min-width: 0; overflow-x: hidden;"':
       - 'rtgl-view w=f h=1fg d=v g=sm pos=rel style="min-height: 0;"':
-          - $if items.length == 0 && !noEmptyMessage:
+          - $if items.length == 0 && !noEmptyMessage && emptyAddLabel:
+              # An empty list that can add shows a box to add with.
+              - rtgl-view w=f p=md:
+                  - 'rtgl-view#emptyAddButton role=button tabindex=0 aria-haspopup=menu w=f h=96 av=c ah=c g=sm bw=xs bc=bo h-bc=ac br=md cur=pointer':
+                      - rtgl-svg svg=plus wh=20 c=pr aria-hidden=true: null
+                      - rtgl-text s=sm c=pr ta=c: ${emptyAddLabel}
+            $elif items.length == 0 && !noEmptyMessage:
               - rtgl-view#emptyMessage w=f h=1fg d=f av=c ah=c p=xl cur=pointer:
                   - rtgl-text s=sm c=mu-fg ta=c: ${emptyMessageLabel}
             $else:

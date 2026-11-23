@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Elemento actual"
   visualTarget: "Elemento visual"
 visualLayoutEditor:
+  cancelButton: "Cancelar"
   cannotEditLayout: "No se puede editar el diseño de este visual. Vuelve a añadir el visual para editar su diseño."
   doneButton: "Hecho"
+  failedDiscardChanges: "No se pudieron descartar tus cambios en el diseño de este visual, así que siguen ahí. Vuelve a intentarlo."
   failedSaveChanges: "No se pudieron guardar tus últimos cambios en el diseño de este visual, así que se descartaron. Vuelve a escribirlos."
   title: "Editar diseño"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "Sin forma de onda"
   "+ Add Choice": "+ Añadir opción"
   "Save Choice": "Guardar opción"
-  "Save Visual": "Guardar elemento visual"
   popOverlayDescription: "Cierra la superposición actual y vuelve a la vista anterior."
   "Set Dialogue Text Speed": "Establecer velocidad del texto"
   "Set Auto Forward Delay": "Establecer retraso del avance automático"

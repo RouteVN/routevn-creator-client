@@ -2970,10 +2970,18 @@ export const createGraphicsService = async ({
     parse: (payload) => routeGraphics?.parse(payload),
     hitTestElementBounds: (point) =>
       routeGraphics?.hitTestElementBounds(point) ?? [],
-    destroy: () =>
+    // An owner leaving the page passes `onlyIfDetached`. The page can start
+    // the next owner's graphics before this shut-down runs, and they must
+    // stay. Graphics whose canvas is still in the page are that next owner's,
+    // since the leaving owner's canvas went with it.
+    destroy: ({ onlyIfDetached = false } = {}) =>
       queueGraphicsLifecycle(async () => {
         if (routeGraphicsInitPromise) {
           await routeGraphicsInitPromise.catch(() => {});
+        }
+
+        if (onlyIfDetached && routeGraphics?.canvas?.isConnected) {
+          return;
         }
 
         await runDestroyRuntime();

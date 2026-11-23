@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "現在の項目"
   visualTarget: "表示素材"
 visualLayoutEditor:
+  cancelButton: "キャンセル"
   cannotEditLayout: "このビジュアルのレイアウトは編集できません。レイアウトを編集するには、ビジュアルをもう一度追加してください。"
   doneButton: "完了"
+  failedDiscardChanges: "このビジュアルのレイアウトの変更を破棄できなかったため、変更はそのまま残っています。もう一度お試しください。"
   failedSaveChanges: "このビジュアルのレイアウトの最新の変更を保存できなかったため、取り消しました。もう一度入力してください。"
   title: "レイアウトを編集"
 vnPreview:
@@ -3108,7 +3110,6 @@ commandLinePage:
   "No waveform": "波形なし"
   "+ Add Choice": "+ 選択肢を追加"
   "Save Choice": "選択肢を保存"
-  "Save Visual": "表示素材を保存"
   popOverlayDescription: "現在のオーバーレイを閉じて、前の画面に戻ります。"
   "Set Dialogue Text Speed": "テキスト表示速度を設定"
   "Set Auto Forward Delay": "自動送りの待ち時間を設定"

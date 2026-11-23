@@ -1189,8 +1189,10 @@ actionTransformEditor:
   unnamedTarget: "Текущий элемент"
   visualTarget: "Визуальный элемент"
 visualLayoutEditor:
+  cancelButton: "Отмена"
   cannotEditLayout: "Макет этого визуала нельзя изменить. Добавьте визуал заново, чтобы изменить его макет."
   doneButton: "Готово"
+  failedDiscardChanges: "Не удалось отменить изменения макета этого визуала, поэтому они остались. Попробуйте ещё раз."
   failedSaveChanges: "Не удалось сохранить последние изменения макета этого визуала, поэтому они удалены. Введите их снова."
   title: "Изменить макет"
 vnPreview:
@@ -3140,7 +3142,6 @@ commandLinePage:
   "No waveform": "Нет звуковой волны"
   "+ Add Choice": "+ Добавить вариант выбора"
   "Save Choice": "Сохранить вариант выбора"
-  "Save Visual": "Сохранить визуальный элемент"
   popOverlayDescription: "Закрывает текущий оверлей и возвращает к предыдущему экрану."
   "Set Dialogue Text Speed": "Изменение скорости текста"
   "Set Auto Forward Delay": "Изменение задержки авточтения"
