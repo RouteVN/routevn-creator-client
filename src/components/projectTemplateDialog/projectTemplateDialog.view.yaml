@@ -1,0 +1,238 @@
+refs:
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+  dialogCloseButton:
+    eventListeners:
+      click:
+        handler: handleDialogClose
+  templateGrid:
+    eventListeners:
+      click:
+        handler: handleTemplateGridClick
+      keydown:
+        handler: handleTemplateGridKeyDown
+  catalogRetryButton:
+    eventListeners:
+      click:
+        handler: handleCatalogRetry
+  loadMoreTemplatesButton:
+    eventListeners:
+      click:
+        handler: handleLoadMoreTemplates
+  detailBackButton:
+    eventListeners:
+      click:
+        handler: handleDetailBack
+  detailRetryButton:
+    eventListeners:
+      click:
+        handler: handleDetailRetry
+  screenshotViewer:
+    eventListeners:
+      keydown:
+        handler: handleScreenshotViewerKeyDown
+  previousScreenshotButton:
+    eventListeners:
+      click:
+        handler: handlePreviousScreenshotClick
+  nextScreenshotButton:
+    eventListeners:
+      click:
+        handler: handleNextScreenshotClick
+  screenshotThumbnails:
+    eventListeners:
+      click:
+        handler: handleScreenshotThumbnailClick
+      keydown:
+        handler: handleScreenshotThumbnailKeyDown
+  useTemplateButton:
+    eventListeners:
+      click:
+        handler: handleUseTemplateClick
+styles:
+  # An almost full-screen dialog, as the asset store's: 32 px from each window
+  # edge, at most 1600 px wide. Up to 768 px wide it fills the window.
+  '#dialogContent':
+    width: min(1600px, calc(100vw - 64px))
+    height: calc(100vh - 64px)
+  '@supports (width: 100dvw)':
+    '#dialogContent':
+      width: min(1600px, calc(100dvw - 64px))
+      height: calc(100dvh - 64px)
+  '@media only screen and (max-width: 768px)':
+    '#dialogContent':
+      width: 100%
+      height: 100%
+  # The screenshots, then the description, with the template's details and
+  # Use Template beside both, staying in view. Narrower windows put the
+  # details between the screenshots and the description, so Use Template is
+  # near the top.
+  '#templateLayout':
+    display: grid
+    grid-template-columns: minmax(0, 1fr) 320px
+    grid-template-areas: '"shots info" "about info"'
+    column-gap: var(--spacing-xl)
+    row-gap: var(--spacing-xl)
+    align-items: start
+    width: 100%
+  '#templateShots':
+    grid-area: shots
+  '#templateAbout':
+    grid-area: about
+  '#templateInfo':
+    grid-area: info
+    position: sticky
+    top: var(--spacing-lg)
+  '@media only screen and (max-width: 1024px)':
+    '#templateLayout':
+      grid-template-columns: minmax(0, 1fr)
+      grid-template-areas: '"shots" "info" "about"'
+    '#templateInfo':
+      position: static
+  # A card's summary, at most two lines. The clamp is on a wrapper because
+  # rtgl-text resets its own inline overflow when its other attributes change,
+  # which would let the hidden lines show over the creator under them.
+  '.cardSummary':
+    display: -webkit-box
+    -webkit-box-orient: vertical
+    -webkit-line-clamp: '2'
+    overflow: hidden
+  '.cardSummaryText':
+    display: inline
+  # Back and previous point toward the inline start, next toward the end.
+  "#detailBackButton:dir(rtl), #previousScreenshotButton:dir(rtl), #nextScreenshotButton:dir(rtl)":
+    transform: scaleX(-1)
+template:
+  - 'rtgl-dialog#dialog ?open=${open} sm-layout=fixed md-layout=fixed p=none aria-label="${dialogTitle}"':
+      - rtgl-view#dialogContent slot=content d=v bgc=bg br=md overflow=hidden:
+          # The header stays in place while the page under it scrolls, with
+          # the dialog's own close button at its right.
+          - 'rtgl-view d=h w=f av=c g=md ph=lg pv=md bwb=xs bc=bo style="box-sizing: border-box; flex: 0 0 auto;"':
+              - rtgl-text s=lg w=1fg: ${dialogTitle}
+              - 'rtgl-button#dialogCloseButton sq v=gh pre=x aria-label="${closeLabel}" title="${closeLabel}"': null
+          - $if isListStep:
+              - 'rtgl-view d=v w=f h=1fg sv sbv=touch g=lg p=lg style="min-height: 0; box-sizing: border-box;"':
+                  - rtgl-grid#templateGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=2 g=lg sm-g=md w=f:
+                      # The bundled template comes first and never waits for
+                      # the store.
+                      - 'rtgl-view role=button tabindex=0 data-template-id="${defaultTemplate.id}" aria-label="${defaultTemplate.openLabel}" d=v w=f bgc=bg bw=xs bc=bo h-bc=ac br=md cur=pointer overflow=hidden':
+                          - 'rtgl-view w=f av=c ah=c bgc=mu style="aspect-ratio: 16 / 9;"':
+                              - rtgl-svg svg=book wh=32 c=mu-fg: null
+                          - rtgl-view d=v w=f g=xs p=md:
+                              - rtgl-text s=md: ${defaultTemplate.title}
+                              - div.cardSummary:
+                                  - rtgl-text.cardSummaryText s=sm c=mu-fg: ${defaultTemplate.summary}
+                      - $for template in templates:
+                          - 'rtgl-view role=button tabindex=0 data-template-id="${template.id}" aria-label="${template.openLabel}" d=v w=f bgc=bg bw=xs bc=bo h-bc=ac br=md cur=pointer overflow=hidden':
+                              - 'rtgl-view w=f av=c ah=c bgc=mu style="aspect-ratio: 16 / 9;"':
+                                  - $if template.coverUrl:
+                                      - rtgl-image src=${template.coverUrl} w=f h=f of=cov: null
+                                    $else:
+                                      - rtgl-svg svg=image wh=24 c=mu-fg: null
+                              - rtgl-view d=v w=f g=xs p=md:
+                                  - rtgl-text s=md: ${template.title}
+                                  # The summary, at most two lines.
+                                  - $if template.summary:
+                                      - div.cardSummary:
+                                          - rtgl-text.cardSummaryText s=sm c=mu-fg: ${template.summary}
+                                  - rtgl-view d=h av=c g=xs:
+                                      - $if template.creatorAvatarUrl:
+                                          - rtgl-image wh=20 br=f of=cov src=${template.creatorAvatarUrl}: null
+                                      - rtgl-text s=sm c=mu-fg: ${template.creatorName}
+                      # Cards waiting for the store's first page.
+                      - $for placeholder in placeholderCards:
+                          - 'rtgl-view w=f bw=xs bc=bo br=md overflow=hidden aria-hidden=true':
+                              - 'rtgl-view w=f bgc=mu style="aspect-ratio: 16 / 9;"': null
+                              - rtgl-view d=v w=f g=sm p=md:
+                                  - 'rtgl-view h=12 bgc=mu br=sm style="width: 60%;"': null
+                                  - 'rtgl-view h=12 bgc=mu br=sm style="width: 85%;"': null
+                  - $if isCatalogLoading:
+                      - rtgl-view w=f ah=c role=status aria-live=polite:
+                          - rtgl-text s=sm c=mu-fg: ${catalogLoadingLabel}
+                  # Under the bundled template, with Try Again under it.
+                  - $if isCatalogFailed:
+                      - rtgl-view w=f d=v av=c ah=c g=md p=lg role=alert:
+                          - rtgl-text c=mu-fg ta=c: ${catalogFailedLabel}
+                          - rtgl-button#catalogRetryButton v=se: ${retryLabel}
+                  - $if isLoadingMore:
+                      - rtgl-view w=f ah=c p=md role=status aria-live=polite:
+                          - rtgl-text c=mu-fg: ${catalogLoadingLabel}
+                  - $if hasMoreTemplates:
+                      - rtgl-view w=f ah=c:
+                          - rtgl-button#loadMoreTemplatesButton v=se: ${loadMoreLabel}
+          - $if isDetailStep:
+              - 'rtgl-view d=v w=f h=1fg ah=c sv sbv=touch style="min-height: 0;"':
+                  - 'rtgl-view d=v g=xl p=lg style="box-sizing: border-box; width: 100%; max-width: 1200px;"':
+                      - rtgl-view d=h w=f av=c g=md:
+                          - 'rtgl-button#detailBackButton sq pre=chevronLeft v=ol aria-label="${backLabel}" title="${backLabel}"': null
+                          - rtgl-text s=h3 w=1fg: ${detail.title}
+                      - div#templateLayout:
+                          - rtgl-view#templateShots d=v w=f g=md:
+                              # The screenshot shown, whole and in its own shape, with
+                              # previous and next over its sides. Left and Right move
+                              # between screenshots while it has focus.
+                              - 'rtgl-view#screenshotViewer tabindex=0 role=group aria-label="${detail.viewerImage.alt}" w=f pos=rel br=md bgc=mu overflow=hidden style="aspect-ratio: ${detail.viewerImage.width} / ${detail.viewerImage.height};"':
+                                  - $if detail.viewerImage.url:
+                                      - 'rtgl-image src=${detail.viewerImage.url} alt="${detail.viewerImage.alt}" w=f h=f of=con': null
+                                  - $if detail.hasMultipleScreenshots:
+                                      - 'rtgl-view d=h av=c w=f h=f ph=md pos=abs style="inset: 0; pointer-events: none;"':
+                                          - 'rtgl-button#previousScreenshotButton sq v=se pre=chevronLeft aria-label="${previousScreenshotLabel}" title="${previousScreenshotLabel}" style="pointer-events: auto;"': null
+                                          - rtgl-view w=1fg: null
+                                          - 'rtgl-button#nextScreenshotButton sq v=se pre=chevronRight aria-label="${nextScreenshotLabel}" title="${nextScreenshotLabel}" style="pointer-events: auto;"': null
+                              - $if detail.hasMultipleScreenshots:
+                                  - 'rtgl-view#screenshotThumbnails d=h w=f g=sm sh pb=xs':
+                                      - $for screenshot in detail.screenshots:
+                                          - $if screenshot.isSelected:
+                                              - 'rtgl-view role=button tabindex=0 data-screenshot-index="${screenshot.index}" aria-label="${screenshot.alt}" aria-current="true" w=120 br=sm bw=sm bc=pr overflow=hidden cur=pointer style="flex: 0 0 auto; aspect-ratio: 16 / 9;"':
+                                                  - rtgl-image src=${screenshot.url} w=f h=f of=cov: null
+                                            $else:
+                                              - 'rtgl-view role=button tabindex=0 data-screenshot-index="${screenshot.index}" aria-label="${screenshot.alt}" w=120 br=sm bw=xs bc=bo h-bc=ac overflow=hidden cur=pointer style="flex: 0 0 auto; aspect-ratio: 16 / 9;"':
+                                                  - rtgl-image src=${screenshot.url} w=f h=f of=cov: null
+                          - 'rtgl-view#templateInfo d=v w=f g=lg p=lg bw=xs bc=bo br=md bgc=bg style="box-sizing: border-box;"':
+                              - $if detail.summary:
+                                  - rtgl-text c=mu-fg: ${detail.summary}
+                              - rtgl-view d=v g=xs:
+                                  - rtgl-text s=sm c=mu-fg: ${creatorLabel}
+                                  - rtgl-view d=h av=c g=xs:
+                                      - $if detail.creatorAvatarUrl:
+                                          - rtgl-image wh=20 br=f of=cov src=${detail.creatorAvatarUrl}: null
+                                      - rtgl-text: ${detail.creatorName}
+                              - rtgl-view d=v g=xs:
+                                  - rtgl-text s=sm c=mu-fg: ${resolutionLabel}
+                                  - rtgl-text: ${detail.resolution}
+                              - $if detail.languages:
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: ${languagesLabel}
+                                      - rtgl-text: ${detail.languages}
+                              - $if detail.versionName:
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: ${versionLabel}
+                                      - rtgl-text: ${detail.versionName}
+                              - $if detail.released:
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: ${releasedLabel}
+                                      - rtgl-text: ${detail.released}
+                              - $if detail.updated:
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: ${lastUpdatedLabel}
+                                      - rtgl-text: ${detail.updated}
+                              - rtgl-button#useTemplateButton v=pr w=f ?disabled=${detail.useDisabled}: ${useTemplateLabel}
+                          - rtgl-view#templateAbout d=v w=f g=md:
+                              - $if detail.isLoading:
+                                  - rtgl-view w=f role=status aria-live=polite:
+                                      - rtgl-text c=mu-fg: ${detailLoadingLabel}
+                              - $if detail.isFailed:
+                                  - rtgl-view w=f d=v g=md role=alert:
+                                      - rtgl-text c=mu-fg: ${detailFailedLabel}
+                                      - rtgl-view:
+                                          - rtgl-button#detailRetryButton v=se: ${retryLabel}
+                              # An image keeps its shape and never shows larger than it is.
+                              - $for block in detail.description:
+                                  - $if block.imageUrl:
+                                      - 'rtgl-view w=f br=md overflow=hidden style="aspect-ratio: ${block.width} / ${block.height}; max-width: ${block.width}px;"':
+                                          - 'rtgl-image src=${block.imageUrl} alt="${block.alt}" w=f h=f of=con': null
+                                    $else:
+                                      - rtgl-text: ${block.text}
+                      - 'rtgl-view#detailBottomSpacer h=240 aria-hidden=true style="flex: 0 0 240px;"': null

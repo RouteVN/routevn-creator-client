@@ -1,5 +1,6 @@
 import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
 import { APP_LOCALE_SELECT_OPTIONS } from "../../internal/ui/appLocale.js";
+import { createBundledProjectTemplate } from "../../internal/projectTemplates.js";
 import {
   formatProjectsPageCopy,
   selectProjectsPageCopy,
@@ -150,10 +151,16 @@ export const createInitialState = () => ({
     confirmationText: "",
   },
 
+  // Create opens the templates first; the chosen one opens the form.
+  templateDialog: {
+    isOpen: false,
+  },
+
   createDialog: {
     isOpen: false,
     formKey: 0,
     defaultValues: {},
+    template: createBundledProjectTemplate(),
   },
 
   cloudCreateDialog: {
@@ -585,10 +592,28 @@ export const selectIsDeleteDialogOpen = ({ state }) => {
   return Boolean(state.deleteDialog?.isOpen);
 };
 
-export const openCreateDialog = ({ state }, _payload = {}) => {
+export const openTemplateDialog = ({ state }, _payload = {}) => {
+  state.templateDialog.isOpen = true;
+};
+
+export const closeTemplateDialog = ({ state }, _payload = {}) => {
+  state.templateDialog.isOpen = false;
+};
+
+export const selectIsTemplateDialogOpen = ({ state }) => {
+  return state.templateDialog.isOpen;
+};
+
+export const openCreateDialog = ({ state }, { template } = {}) => {
   state.createDialog.isOpen = true;
   state.createDialog.formKey += 1;
   state.createDialog.defaultValues = {};
+  state.createDialog.template = template ?? createBundledProjectTemplate();
+};
+
+// Choosing another template while the form is open keeps what is typed.
+export const setCreateDialogTemplate = ({ state }, { template } = {}) => {
+  state.createDialog.template = template;
 };
 
 export const closeCreateDialog = ({ state }, _payload = {}) => {

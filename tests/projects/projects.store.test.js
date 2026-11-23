@@ -12,6 +12,11 @@ import {
   openAppearanceDialog,
   openLanguageDialog,
   openAppVersionMenu,
+  openCreateDialog,
+  openTemplateDialog,
+  closeTemplateDialog,
+  selectIsTemplateDialogOpen,
+  setCreateDialogTemplate,
   openUrlImportDialog,
   openZipImportDialog,
   removeProject,
@@ -576,6 +581,53 @@ describe("projects store zip import dialog", () => {
       formKey: 2,
       archive: undefined,
       destinationFolder: undefined,
+    });
+  });
+});
+
+describe("projects store project templates", () => {
+  it("opens and closes the templates", () => {
+    const state = createInitialState();
+    expect(selectIsTemplateDialogOpen({ state })).toBe(false);
+
+    openTemplateDialog({ state });
+    expect(selectIsTemplateDialogOpen({ state })).toBe(true);
+    expect(selectViewData({ state, i18n: EN_I18N }).templateDialog).toEqual({
+      isOpen: true,
+    });
+
+    closeTemplateDialog({ state });
+    expect(selectIsTemplateDialogOpen({ state })).toBe(false);
+  });
+
+  it("opens the create dialog with the chosen template, or the bundled one", () => {
+    const state = createInitialState();
+    const template = {
+      id: "template-one",
+      source: "store",
+      title: "Template One",
+      coverUrl: "https://files.example/template-one.png",
+    };
+
+    openCreateDialog({ state }, { template });
+    expect(state.createDialog).toMatchObject({ isOpen: true, template });
+    const formKey = state.createDialog.formKey;
+
+    // Another template keeps the open form and its values.
+    setCreateDialogTemplate(
+      { state },
+      { template: { id: "default", source: "bundled" } },
+    );
+    expect(state.createDialog.formKey).toBe(formKey);
+    expect(state.createDialog.template).toEqual({
+      id: "default",
+      source: "bundled",
+    });
+
+    openCreateDialog({ state });
+    expect(state.createDialog.template).toEqual({
+      id: "default",
+      source: "bundled",
     });
   });
 });

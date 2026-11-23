@@ -19,6 +19,10 @@ refs:
     eventListeners:
       click:
         handler: handleProjectIconClick
+  changeTemplateButton:
+    eventListeners:
+      click:
+        handler: handleChangeTemplateClick
   iconCropDialog:
     eventListeners:
       close:
@@ -41,6 +45,16 @@ template:
                       - rtgl-text s=sm c=de: ${projectLocationMessage}
                     $else:
                       - rtgl-text s=sm c=mu-fg: ${projectLocationMessage}
+      # The template the project starts from; Change opens the templates again.
+      - rtgl-view slot=project-template-selector w=f:
+          - 'rtgl-view d=h w=f av=c g=md p=sm bw=xs bc=bo br=md style="box-sizing: border-box; min-width: 0;"':
+              - 'rtgl-view w=96 av=c ah=c br=sm bgc=mu overflow=hidden style="flex: 0 0 auto; aspect-ratio: 16 / 9;"':
+                  - $if projectTemplate.coverUrl:
+                      - rtgl-image src=${projectTemplate.coverUrl} w=f h=f of=cov: null
+                    $else:
+                      - rtgl-svg svg=book wh=20 c=mu-fg: null
+              - 'rtgl-text w=1fg ellipsis=true style="min-width: 0;"': ${projectTemplate.title}
+              - rtgl-button#changeTemplateButton v=se: ${changeTemplateLabel}
       - rtgl-view slot=project-icon-selector w=f:
           - $if iconPreviewUrl:
               - rtgl-view w=120 h=120 av=c ah=c:

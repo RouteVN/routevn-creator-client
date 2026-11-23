@@ -165,6 +165,14 @@ refs:
     eventListeners:
       submit:
         handler: handleCreateDialogSubmit
+      template-change:
+        handler: handleCreateDialogTemplateChange
+  projectTemplateDialog:
+    eventListeners:
+      template-select:
+        handler: handleTemplateSelect
+      close:
+        handler: handleTemplateDialogClose
   addMemberDialog:
     eventListeners:
       close:
@@ -304,7 +312,9 @@ template:
   - $if createDialog.isOpen:
       - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md md-layout=fixed-top:
           - rtgl-view slot=content d=v w=f h=f overflow=hidden:
-              - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues}: null
+              - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues} :projectTemplate=${createDialog.template}: null
+  # Opened by Create, and by Change in the form, over it.
+  - rvn-project-template-dialog#projectTemplateDialog :open=${templateDialog.isOpen}: null
   - rtgl-dialog#cloudCreateProjectDialog ?open=${cloudCreateDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg:
           - rtgl-form#cloudCreateForm key=${cloudCreateDialog.formKey} :form=${cloudCreateForm} :defaultValues=${cloudCreateDialog.defaultValues} w=f: null

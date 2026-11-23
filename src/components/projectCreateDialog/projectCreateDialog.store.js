@@ -9,6 +9,11 @@ import {
   createProjectLanguageOptions,
   selectProjectLanguageCopy,
 } from "../../internal/ui/projectLanguage.js";
+import {
+  createBundledProjectTemplate,
+  isBundledProjectTemplate,
+} from "../../internal/projectTemplates.js";
+import { selectProjectTemplateTitle } from "../../internal/ui/projectTemplates.js";
 
 const CREATE_PROJECT_RESOLUTION_OPTIONS = PROJECT_RESOLUTION_OPTIONS.filter(
   ({ value }) =>
@@ -26,7 +31,6 @@ const createCreateProjectDefaultValues = (values = {}) => {
     description: values.description ?? "",
     language: values.language ?? DEFAULT_PROJECT_LANGUAGE,
     projectPath: values.projectPath ?? "",
-    template: values.template ?? "default",
     ...createProjectResolutionFormValues(preset),
   };
 
@@ -43,6 +47,12 @@ const createCreateProjectDefaultValues = (values = {}) => {
 const form = {
   title: "Create Project",
   fields: [
+    {
+      name: "projectTemplate",
+      type: "slot",
+      slot: "project-template-selector",
+      label: "Template",
+    },
     {
       name: "name",
       type: "input-text",
@@ -145,6 +155,10 @@ const createLocalizedForm = (copy = {}, projectLanguageCopy, i18n) => ({
     ],
   },
   fields: form.fields.map((field) => {
+    if (field.name === "projectTemplate") {
+      return { ...field, label: copy.templateLabel };
+    }
+
     if (field.name === "name") {
       return {
         ...field,
@@ -225,6 +239,7 @@ export const createInitialState = () => ({
   platform: "tauri",
   formKey: 0,
   defaultValues: createCreateProjectDefaultValues(),
+  template: createBundledProjectTemplate(),
   validationErrors: {},
   iconFile: undefined,
   iconPreviewUrl: undefined,
@@ -245,6 +260,7 @@ export const syncFromProps = ({ state }, { props } = {}) => {
         : "web";
   state.formKey += 1;
   state.defaultValues = createCreateProjectDefaultValues(props?.defaultValues);
+  state.template = props?.projectTemplate ?? createBundledProjectTemplate();
   state.validationErrors = {};
   state.iconFile = undefined;
   state.iconPreviewUrl = undefined;
@@ -282,6 +298,11 @@ export const updateFormValues = (
   if (shouldRemount) {
     state.formKey += 1;
   }
+};
+
+// Another template, chosen while the form is open, keeps what is typed.
+export const setTemplate = ({ state }, { template } = {}) => {
+  state.template = template ?? createBundledProjectTemplate();
 };
 
 export const setProjectPath = ({ state }, { path } = {}) => {
@@ -325,6 +346,10 @@ export const selectPlatform = ({ state }) => {
   return state.platform;
 };
 
+export const selectTemplate = ({ state }) => {
+  return state.template;
+};
+
 export const selectIconFile = ({ state }) => {
   return state.iconFile;
 };
@@ -337,11 +362,19 @@ export const selectIsIconCropDialogOpen = ({ state }) => {
   return state.isIconCropDialogOpen;
 };
 
+// The bundled template shows an icon; a store template shows its cover.
+const createTemplateView = (template, i18n) => ({
+  title: selectProjectTemplateTitle(i18n, template),
+  coverUrl: isBundledProjectTemplate(template) ? undefined : template.coverUrl,
+});
+
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCopy(i18n);
   const projectLanguageCopy = selectProjectLanguageCopy(i18n);
   return {
     platform: state.platform,
+    projectTemplate: createTemplateView(state.template, i18n),
+    changeTemplateLabel: copy.changeTemplateButton,
     form: createLocalizedForm(copy, projectLanguageCopy, i18n),
     formKey: `${state.formKey}-${state.defaultValues.resolution}`,
     defaultValues: state.defaultValues,

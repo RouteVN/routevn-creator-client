@@ -82,6 +82,11 @@ export const handleOnUpdate = (deps, payload = {}) => {
   const newProps = payload.newProps ?? {};
 
   if (!propsChanged(oldProps, newProps)) {
+    // Another template keeps the values typed so far.
+    if (oldProps.projectTemplate !== newProps.projectTemplate) {
+      store.setTemplate({ template: newProps.projectTemplate });
+      render();
+    }
     return;
   }
 
@@ -261,7 +266,13 @@ export const handleGetValues = (deps) => {
 
   values.projectPath = store.selectProjectPath();
   values.iconFile = store.selectIconFile();
+  values.template = store.selectTemplate();
   return values;
+};
+
+export const handleChangeTemplateClick = (deps) => {
+  const { dispatchEvent } = deps;
+  dispatchEvent(new CustomEvent("template-change"));
 };
 
 export const handleFormAction = (deps, payload) => {

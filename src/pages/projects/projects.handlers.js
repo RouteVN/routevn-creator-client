@@ -21,6 +21,7 @@ import { getProjectImportErrorMessage } from "../../internal/projectImportErrors
 import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { readTestCrashKind } from "../../internal/testCrashes.js";
+import { resolveProjectTemplateForCreation } from "../../internal/projectTemplates.js";
 import {
   activateAppLocale,
   DEFAULT_APP_LOCALE,
@@ -232,7 +233,7 @@ const createProjectFromValues = async (deps, values = {}) => {
     const description = values.description ?? "";
     const language = values.language;
     const iconFile = values.iconFile;
-    const template = values.template ?? "default";
+    const template = resolveProjectTemplateForCreation(values.template);
     const resolution = values.resolution;
     const resolutionWidth = values.resolutionWidth;
     const resolutionHeight = values.resolutionHeight;
@@ -338,7 +339,37 @@ const createProjectFromValues = async (deps, values = {}) => {
 export const handleCreateButtonClick = async (deps) => {
   const { store, render } = deps;
   if (!(await ensureProjectFolder(deps))) return;
-  store.openCreateDialog();
+  store.openTemplateDialog();
+  render();
+};
+
+export const handleTemplateDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsTemplateDialogOpen()) {
+    return;
+  }
+  store.closeTemplateDialog();
+  render();
+};
+
+// The chosen template opens the Create Project form, or, when the form is
+// already open behind the templates, becomes its template.
+export const handleTemplateSelect = (deps, payload) => {
+  const { store, render } = deps;
+  const { template } = payload._event.detail;
+  store.closeTemplateDialog();
+  if (store.selectIsCreateDialogOpen()) {
+    store.setCreateDialogTemplate({ template });
+  } else {
+    store.openCreateDialog({ template });
+  }
+  render();
+};
+
+// Change in the form opens the templates over it.
+export const handleCreateDialogTemplateChange = (deps) => {
+  const { store, render } = deps;
+  store.openTemplateDialog();
   render();
 };
 
@@ -706,7 +737,7 @@ export const handleMobileActionMenuClickItem = async (deps, payload) => {
   if (item.value === "create-project") {
     render();
     if (!(await ensureProjectFolder(deps))) return;
-    store.openCreateDialog();
+    store.openTemplateDialog();
     render();
     return;
   }
