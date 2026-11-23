@@ -154,43 +154,146 @@ describe("app Scene Editor keyboard state", () => {
 });
 
 describe("app route transitions", () => {
-  it("opens iOS Config after changing folders without reopening the previous project", async () => {
-    const appService = {
-      prepareNavigation: vi.fn(async () => {}),
-      getCurrentProjectId: vi.fn(() => "project-1"),
-      refreshCurrentProjectEntry: vi.fn(async () => {}),
-      getPlatform: vi.fn(() => "ios"),
-      redirect: vi.fn(),
-      showAlert: vi.fn(),
-    };
-    const projectService = {
-      getEnsuredProjectId: vi.fn(() => undefined),
-      ensureRepository: vi.fn(async () => {
-        throw new Error("Previous project is outside the selected library");
-      }),
-    };
-    const store = {
-      setCurrentRoute: vi.fn(),
-      closeMobileSheet: vi.fn(),
-      setRepositoryLoading: vi.fn(),
-      setRepositoryLoadingPhase: vi.fn(),
-    };
-
-    await createRouteTransitionRunner({
-      appService,
-      projectService,
-      store,
+  // A project route with the project `ensuredProjectId` already open, on
+  // `platform`. `ensureRepository` opens the route's project unless it fails
+  // with `openError`.
+  const createProjectRouteDeps = ({
+    platform,
+    ensuredProjectId,
+    openError,
+  } = {}) => {
+    let openProjectId = ensuredProjectId;
+    return {
+      appService: {
+        prepareNavigation: vi.fn(async () => {}),
+        getCurrentProjectId: vi.fn(() => "project-1"),
+        refreshCurrentProjectEntry: vi.fn(async () => {}),
+        getPlatform: vi.fn(() => platform),
+        redirect: vi.fn(),
+        showAlert: vi.fn(),
+        reportError: vi.fn(),
+      },
+      projectService: {
+        getEnsuredProjectId: vi.fn(() => openProjectId),
+        ensureRepository: vi.fn(async () => {
+          if (openError) throw openError;
+          openProjectId = "project-1";
+        }),
+        releaseProjectRuntime: vi.fn(async () => {
+          openProjectId = undefined;
+        }),
+      },
+      store: {
+        setCurrentRoute: vi.fn(),
+        closeMobileSheet: vi.fn(),
+        setRepositoryLoading: vi.fn(),
+        setRepositoryLoadingPhase: vi.fn(),
+        setRepositoryLoadingProgress: vi.fn(),
+      },
       render: vi.fn(),
-      i18n: {},
-    })({ path: "/project/config", payload: { p: "project-1" } });
+      i18n: EN_I18N,
+    };
+  };
 
-    expect(store.setCurrentRoute).toHaveBeenLastCalledWith({
+  it("keeps the open project on iOS Config, where packs import into it", async () => {
+    const deps = createProjectRouteDeps({
+      platform: "ios",
+      ensuredProjectId: "project-1",
+    });
+
+    await createRouteTransitionRunner(deps)({
+      path: "/project/config",
+      payload: { p: "project-1" },
+    });
+
+    // The open project is neither closed nor shown as loading again.
+    expect(deps.projectService.releaseProjectRuntime).not.toHaveBeenCalled();
+    expect(deps.store.setRepositoryLoading.mock.calls).toEqual([
+      [{ isLoading: false }],
+      [{ isLoading: false }],
+    ]);
+    expect(deps.projectService.getEnsuredProjectId()).toBe("project-1");
+    expect(deps.appService.redirect).not.toHaveBeenCalled();
+  });
+
+  it("opens the project on iOS Config when it is not open yet", async () => {
+    const deps = createProjectRouteDeps({ platform: "ios" });
+    const onOpenProjectChange = vi.fn();
+
+    await createRouteTransitionRunner(deps, { onOpenProjectChange })({
+      path: "/project/config",
+      payload: { p: "project-1" },
+    });
+
+    expect(deps.projectService.ensureRepository).toHaveBeenCalledOnce();
+    expect(deps.projectService.getEnsuredProjectId()).toBe("project-1");
+    expect(onOpenProjectChange.mock.calls).toEqual([["project-1"]]);
+    expect(deps.appService.redirect).not.toHaveBeenCalled();
+  });
+
+  it("keeps iOS Config open when the selected folder does not hold its project", async () => {
+    const deps = createProjectRouteDeps({
+      platform: "ios",
+      openError: new Error(
+        "Project folder is unavailable. Reconnect its folder in setup.",
+      ),
+    });
+    const onOpenProjectChange = vi.fn();
+
+    await createRouteTransitionRunner(deps, { onOpenProjectChange })({
+      path: "/project/config",
+      payload: { p: "project-1" },
+    });
+
+    expect(deps.projectService.ensureRepository).toHaveBeenCalledOnce();
+    expect(deps.store.setCurrentRoute).toHaveBeenLastCalledWith({
       route: "/project/config",
       payload: { p: "project-1" },
     });
-    expect(projectService.ensureRepository).not.toHaveBeenCalled();
-    expect(appService.redirect).not.toHaveBeenCalled();
-    expect(appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.store.setRepositoryLoading).toHaveBeenLastCalledWith({
+      isLoading: false,
+    });
+    expect(onOpenProjectChange.mock.calls).toEqual([[undefined]]);
+    expect(deps.appService.redirect).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.appService.reportError).not.toHaveBeenCalled();
+  });
+
+  it.each(["web", "tauri", "android"])(
+    "returns to Projects when Config cannot open its project on %s",
+    async (platform) => {
+      const deps = createProjectRouteDeps({
+        platform,
+        openError: new Error("Project open failed"),
+      });
+
+      await createRouteTransitionRunner(deps)({
+        path: "/project/config",
+        payload: { p: "project-1" },
+      });
+
+      expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+      expect(deps.appService.redirect).toHaveBeenCalledWith("/projects");
+      expect(deps.store.setCurrentRoute).toHaveBeenLastCalledWith({
+        route: "/projects",
+        payload: {},
+      });
+    },
+  );
+
+  it("still returns to Projects when another iOS project page cannot open its project", async () => {
+    const deps = createProjectRouteDeps({
+      platform: "ios",
+      openError: new Error("Project open failed"),
+    });
+
+    await createRouteTransitionRunner(deps)({
+      path: "/project/images",
+      payload: { p: "project-1" },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledOnce();
+    expect(deps.appService.redirect).toHaveBeenCalledWith("/projects");
   });
 
   it("mounts fullscreen Escape protection with localized feedback and cleanup", () => {

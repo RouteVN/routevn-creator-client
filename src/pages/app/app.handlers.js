@@ -374,12 +374,15 @@ export const createRouteTransitionRunner = (
       });
     }
 
-    // iOS Config must remain reachable after selecting a library that does not
-    // contain the previous project. Its settings do not require project data.
+    // iOS Config keeps its project open, as its pack imports write to it, but
+    // stays reachable when the project cannot open: Change Folder may pick a
+    // folder that does not hold it, and Config's own settings still work.
     const isIOSConfig =
       canonicalPath === "/project/config" && appService.getPlatform() === "ios";
-    const needsRepository =
-      !isIOSConfig && routeNeedsRepository(canonicalPath, currentProjectId);
+    const needsRepository = routeNeedsRepository(
+      canonicalPath,
+      currentProjectId,
+    );
     const currentProjectPath = getLocalProjectPathFromPayload(nextPayload);
     const closingProject = projectRelease;
     const ensuredProjectId = closingProject
@@ -547,6 +550,21 @@ export const createRouteTransitionRunner = (
         message: error?.message,
       });
       store.setRepositoryLoading({ isLoading: false });
+      if (isIOSConfig) {
+        // Config stays open without the project. The project's other pages
+        // still say, and report, why it cannot open.
+        onOpenProjectChange(undefined);
+        renderWithNavigationTiming({
+          render,
+          timing: routeTiming,
+          event: "route.ios-config-without-project",
+        });
+        finishNavigationTiming(routeTiming, "route.transition.complete", {
+          needsRepository,
+          error: true,
+        });
+        return;
+      }
       if (isIncompatibleProjectOpenError(error)) {
         await appService.showAlert({
           title: copy.incompatibleProjectTitle ?? "Incompatible Project",

@@ -16,7 +16,7 @@ import {
 } from "../../internal/ui/releasePreferences.js";
 
 export const handleBeforeMount = (deps) => {
-  const { appService, locale, store, uiConfig } = deps;
+  const { appService, locale, projectService, store, uiConfig } = deps;
 
   store.setUiConfig({ uiConfig });
   store.setAndroidBackupVisible({
@@ -28,6 +28,10 @@ export const handleBeforeMount = (deps) => {
     path: isIOS
       ? appService.getProjectFolderSetup().folder?.displayPath
       : undefined,
+  });
+  store.setImportPackageVisible({
+    visible:
+      projectService.getEnsuredProjectId() === appService.getCurrentProjectId(),
   });
   store.setAssetPackageEnabled({ enabled: isAssetPackageEnabled(appService) });
   store.setHelpButtonVisible({ visible: isHelpButtonVisible(appService) });
@@ -56,13 +60,29 @@ export const handleAfterMount = async (deps) => {
   }
 };
 
+// The open project's files are found through the projects folder, so the
+// project closes before another folder is saved, and Config then opens it
+// again: from the new folder, or not at all if that folder does not hold it.
 export const handleChangeProjectFolder = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, projectService, store, render } = deps;
   if (appService.getPlatform() !== "ios") return;
-  const status = await chooseProjectFolder(deps);
-  if (!status) return;
-  store.setProjectFolder({ visible: true, path: status.folder.displayPath });
-  render();
+  const projectId = appService.getCurrentProjectId();
+  let isProjectClosed = false;
+  const status = await chooseProjectFolder(deps, {
+    beforeSave: async () => {
+      isProjectClosed = true;
+      await projectService.releaseProjectRuntime(projectId);
+    },
+  });
+  if (status) {
+    store.setProjectFolder({ visible: true, path: status.folder.displayPath });
+    render();
+  }
+  if (isProjectClosed) {
+    appService.navigate(appService.getPath(), appService.getPayload(), {
+      historyMode: "none",
+    });
+  }
 };
 
 export const handleLanguageChange = async (deps, payload) => {

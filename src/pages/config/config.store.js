@@ -77,6 +77,9 @@ export const createInitialState = () => ({
   showProjectFolder: false,
   projectFolderPath: undefined,
   showAndroidBackup: false,
+  // Packs import into the open project. On iOS, Config can be open without
+  // it, after Change Folder picked a folder that does not hold it.
+  showImportPackage: true,
   // The asset package import dialog, and what it imports from: a package ZIP
   // `file` picked from this device, or a URL typed in the dialog.
   importDialog: { isOpen: false, source: "url", file: undefined },
@@ -97,6 +100,10 @@ export const closeImportDialog = ({ state }) => {
 export const setProjectFolder = ({ state }, { visible, path }) => {
   state.showProjectFolder = visible;
   state.projectFolderPath = path;
+};
+
+export const setImportPackageVisible = ({ state }, { visible }) => {
+  state.showImportPackage = visible;
 };
 
 export const setCurrentTheme = ({ state }, { theme } = {}) => {

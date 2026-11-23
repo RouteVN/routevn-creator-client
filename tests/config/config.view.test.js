@@ -75,6 +75,10 @@ describe("config asset package import view", () => {
     );
     expect(view).toContain("rtgl-button#importPackageZipButton");
     expect(view).toContain("rtgl-button#importPackageUrlButton");
+    // Hidden while Config is open without its project.
+    expect(view).toContain(
+      "- $if showImportPackage:\n                      - rtgl-view#importPackageSection",
+    );
     expect(view).toContain(
       "rvn-resource-import-dialog#importDialog :open=${importDialog.isOpen} :source=${importDialog.source} :file=${importDialog.file}",
     );
