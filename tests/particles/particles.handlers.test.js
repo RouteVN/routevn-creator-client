@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as particlesStore from "../../src/pages/particles/particles.store.js";
 import {
   handleAfterMount,
+  handleBeforeMount,
   handleAddFormAction,
   handleAddFormAddOptionClick,
   handleAddParticleClick,
@@ -161,6 +162,23 @@ describe("particles handlers", () => {
     expect(
       deps.projectService.requestParticleThumbnails,
     ).toHaveBeenCalledWith();
+  });
+
+  it("shuts its preview's graphics down when it goes, unless the next page has started its own", async () => {
+    const { deps } = await createPage();
+    const unsubscribeProjectState = vi.fn();
+    deps.projectService.subscribeProjectState = vi.fn(
+      () => unsubscribeProjectState,
+    );
+    deps.graphicsService = { destroy: vi.fn(async () => {}) };
+
+    const cleanup = handleBeforeMount(deps);
+    cleanup();
+
+    expect(unsubscribeProjectState).toHaveBeenCalledOnce();
+    expect(deps.graphicsService.destroy).toHaveBeenCalledWith({
+      onlyIfDetached: true,
+    });
   });
 
   it("opens particles in the editor", async () => {

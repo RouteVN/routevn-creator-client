@@ -88,6 +88,7 @@ export const handleBeforeMount = (deps) => {
   const {
     appService,
     browserEventsClient,
+    graphicsService,
     render,
     store,
     uiConfig,
@@ -128,6 +129,9 @@ export const handleBeforeMount = (deps) => {
     cleanupWindowResize();
     cleanupHistoryShortcuts();
     await stopAudioEffectPreview(deps);
+    // The preview's graphics are shared. The next page may have started its
+    // own already, and those stay.
+    void graphicsService.destroy({ onlyIfDetached: true });
     const saved = await persistAudioEffect(deps);
     if (!saved) {
       throw new Error("Failed to save audio effect during cleanup.");
