@@ -490,6 +490,35 @@ export const checkVariableDeletion = async ({
   };
 };
 
+// The Text Styles page also deletes from its grid and its detail sheet.
+// Those deletes need the explorer's checks, or a text style that a line's
+// visual uses can be deleted.
+export const checkTextStyleDeletion = async ({
+  projectService,
+  itemId,
+  copy = {},
+}) => {
+  const currentItem = projectService.getState()?.textStyles?.items?.[itemId];
+  const deletion = await validateResourceDeletion({
+    projectService,
+    resourceType: "textStyles",
+    currentItem,
+    itemId,
+  });
+  if (deletion.canDelete) {
+    return deletion;
+  }
+
+  return {
+    canDelete: false,
+    message: getDeletionBlockedCopyMessage({
+      copy,
+      itemType: currentItem?.type,
+      reason: deletion.reason,
+    }),
+  };
+};
+
 export const createResourceFileExplorerHandlers = ({
   resourceType,
   refresh = noopRefresh,
