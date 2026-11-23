@@ -390,10 +390,10 @@ const validateResourceDeletion = async ({
     return { canDelete: true };
   }
 
+  // Text styles are checked in scenes too, since a visual on a line can hold
+  // its own layout with text in it.
   let checkTargets = ["scenes", "layouts", "controls"];
-  if (currentItemType === "textStyle") {
-    checkTargets = ["layouts", "controls"];
-  } else if (currentItemType === "color" || currentItemType === "font") {
+  if (currentItemType === "color" || currentItemType === "font") {
     checkTargets = ["textStyles"];
   } else if (resourceType === "characters") {
     checkTargets = ["scenes", "layouts", "controls"];
