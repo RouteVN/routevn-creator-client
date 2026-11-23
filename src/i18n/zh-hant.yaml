@@ -2566,7 +2566,7 @@ scenesPage:
   sceneTextStatsSummary: "{lineLabel} · {textCountLabel}"
   sectionFallback: "段落 {index}"
   sectionsLabel: "段落"
-  setInitialSceneMenuItem: "設為初始場景"
+  setInitialSceneMenuItem: "設為起始場景"
   title: "場景"
   updateFolderDescription: "更新資料夾資訊"
   updateSceneDescription: "更新場景資訊"

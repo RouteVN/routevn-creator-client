@@ -2566,7 +2566,7 @@ scenesPage:
   sceneTextStatsSummary: "{lineLabel} · {textCountLabel}"
   sectionFallback: "Parte {index}"
   sectionsLabel: "Partes"
-  setInitialSceneMenuItem: "Definir como cena inicial"
+  setInitialSceneMenuItem: "Definir como cena de início"
   title: "Cenas"
   updateFolderDescription: "Altere os detalhes da pasta"
   updateSceneDescription: "Altere os detalhes da cena"

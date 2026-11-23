@@ -20,7 +20,7 @@ const createContextMenuItems = (copy = {}) => [
   },
   { label: copy.editMenuItem ?? "Edit", type: "item", value: "edit-item" },
   {
-    label: copy.setInitialSceneMenuItem ?? "Set Initial Scene",
+    label: copy.setInitialSceneMenuItem ?? "Set as Start Scene",
     type: "item",
     value: "set-initial",
   },

@@ -2566,7 +2566,7 @@ scenesPage:
   sceneTextStatsSummary: "{lineLabel} {textCountLabel}"
   sectionFallback: "段落 {index}"
   sectionsLabel: "段落"
-  setInitialSceneMenuItem: "设为初始场景"
+  setInitialSceneMenuItem: "设为起始场景"
   title: "场景"
   updateFolderDescription: "更新文件夹详情"
   updateSceneDescription: "更新场景详情"
