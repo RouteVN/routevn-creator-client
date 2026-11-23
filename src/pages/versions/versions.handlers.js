@@ -2298,7 +2298,7 @@ export const handleMacosExportFormAction = async (deps, payload) => {
   } else if (!isValidNativeApplicationVersion(version)) {
     message =
       copy.macosExportVersionInvalid ??
-      "Version must contain three numeric components, for example 1.2.0.";
+      "Version must contain three numeric components, for example 1.2.0";
   } else if (!buildNumber) {
     message =
       copy.macosExportBuildNumberRequired ??
