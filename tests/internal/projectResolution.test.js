@@ -101,4 +101,84 @@ describe("project resolution presets", () => {
       },
     });
   });
+  it("scales a line visual's own layout with project resolution", () => {
+    const sprite = {
+      type: "sprite",
+      x: 960,
+      y: 540,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      width: 960,
+      height: 213,
+      imageId: "image-1",
+    };
+    const scaledState = scaleTemplateProjectStateForResolution(
+      {
+        project: {
+          resolution: { width: 1920, height: 1080 },
+        },
+        scenes: {
+          items: {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              sections: {
+                items: {
+                  "section-1": {
+                    id: "section-1",
+                    lines: {
+                      items: {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            visual: {
+                              items: [
+                                {
+                                  id: "visual-1",
+                                  layer: 50,
+                                  layout: {
+                                    layoutSchemaVersion: 2,
+                                    elements: {
+                                      items: { "element-1": sprite },
+                                      tree: [{ id: "element-1" }],
+                                    },
+                                  },
+                                },
+                                { id: "visual-2", resourceId: "image-1" },
+                              ],
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      { width: 1280, height: 720 },
+    );
+
+    const [ownLayout, resourceVisual] =
+      scaledState.scenes.items["scene-1"].sections.items["section-1"].lines
+        .items["line-1"].actions.visual.items;
+    expect(ownLayout.layout).toEqual({
+      layoutSchemaVersion: 2,
+      elements: {
+        items: {
+          "element-1": {
+            ...sprite,
+            x: 640,
+            y: 360,
+            width: 640,
+            height: 142,
+          },
+        },
+        tree: [{ id: "element-1" }],
+      },
+    });
+    expect(resourceVisual).toEqual({ id: "visual-2", resourceId: "image-1" });
+  });
 });

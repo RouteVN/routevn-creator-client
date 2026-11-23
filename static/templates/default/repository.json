@@ -3,7 +3,7 @@
     "defaultDialogueAvatarTransformId": "T94KC5Xp3jFx"
   },
   "story": {
-    "initialSceneId": "HydQaTUAxHyS"
+    "initialSceneId": "8XJkurKMy7ne"
   },
   "scenes": {
     "items": {
@@ -125,12 +125,177 @@
             }
           ]
         }
+      },
+      "8XJkurKMy7ne": {
+        "id": "8XJkurKMy7ne",
+        "type": "scene",
+        "name": "Splash Screen",
+        "description": "Shows the RouteVN logo, then opens the title screen. Replace the logo with your own.",
+        "position": {
+          "x": 200,
+          "y": 50
+        },
+        "sections": {
+          "items": {
+            "12ENCCx5FEb8": {
+              "id": "12ENCCx5FEb8",
+              "name": "Section 1",
+              "lines": {
+                "items": {
+                  "i3niKkXEgNb3": {
+                    "id": "i3niKkXEgNb3",
+                    "actions": {
+                      "dialogue": {
+                        "clear": true,
+                        "content": [
+                          {
+                            "text": ""
+                          }
+                        ]
+                      },
+                      "control": {},
+                      "background": {},
+                      "visual": {
+                        "items": [
+                          {
+                            "id": "nURXHBPvazY6",
+                            "layer": 50,
+                            "layout": {
+                              "layoutSchemaVersion": 2,
+                              "elements": {
+                                "items": {
+                                  "RY8rvdQEPTtd": {
+                                    "type": "sprite",
+                                    "name": "Logo",
+                                    "x": 960,
+                                    "y": 540,
+                                    "anchorX": 0.5,
+                                    "anchorY": 0.5,
+                                    "scaleX": 1,
+                                    "scaleY": 1,
+                                    "rotation": 0,
+                                    "aspectRatioLock": 4.507042253521127,
+                                    "width": 960,
+                                    "height": 213,
+                                    "imageId": "HEHJFa72WrRa"
+                                  }
+                                },
+                                "tree": [
+                                  {
+                                    "id": "RY8rvdQEPTtd"
+                                  }
+                                ]
+                              }
+                            },
+                            "animations": {
+                              "resourceId": "9xbaXUSLf3cs",
+                              "playback": {
+                                "continuity": "render",
+                                "speed": 1,
+                                "loop": false
+                              }
+                            }
+                          },
+                          {
+                            "id": "UEwvXsm5chTe",
+                            "layer": 10,
+                            "layout": {
+                              "layoutSchemaVersion": 2,
+                              "elements": {
+                                "items": {
+                                  "LGMuchm6PJDs": {
+                                    "type": "sprite",
+                                    "name": "Background",
+                                    "x": 0,
+                                    "y": 0,
+                                    "anchorX": 0,
+                                    "anchorY": 0,
+                                    "scaleX": 1,
+                                    "scaleY": 1,
+                                    "rotation": 0,
+                                    "aspectRatioLock": 1.7777777777777777,
+                                    "width": 1920,
+                                    "height": 1080,
+                                    "imageId": "nziviAa6vhSZ"
+                                  }
+                                },
+                                "tree": [
+                                  {
+                                    "id": "LGMuchm6PJDs"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "setNextLineConfig": {
+                        "applyMode": "singleLine",
+                        "manual": {
+                          "enabled": false,
+                          "requireLineCompleted": false
+                        },
+                        "auto": {
+                          "enabled": true,
+                          "trigger": "fromComplete",
+                          "delay": 100
+                        }
+                      }
+                    }
+                  },
+                  "hwfPN42hroNh": {
+                    "id": "hwfPN42hroNh",
+                    "actions": {
+                      "dialogue": {
+                        "content": [
+                          {
+                            "text": ""
+                          }
+                        ]
+                      },
+                      "sectionTransition": {
+                        "sceneId": "HydQaTUAxHyS",
+                        "sectionId": "oivTjWAhhYG1",
+                        "screen": {
+                          "animations": {
+                            "resourceId": "zcPUL4myXFeY",
+                            "playback": {
+                              "continuity": "render",
+                              "speed": 3
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "tree": [
+                  {
+                    "id": "i3niKkXEgNb3"
+                  },
+                  {
+                    "id": "hwfPN42hroNh"
+                  }
+                ]
+              }
+            }
+          },
+          "tree": [
+            {
+              "id": "12ENCCx5FEb8",
+              "children": []
+            }
+          ]
+        }
       }
     },
     "tree": [
       {
         "id": "ctcnGam7sxmC",
         "children": [
+          {
+            "id": "8XJkurKMy7ne"
+          },
           {
             "id": "HydQaTUAxHyS"
           },
@@ -471,6 +636,20 @@
         "mimeType": "image/jpeg",
         "size": 2708,
         "sha256": "7eb33de40075ac099643e493a30367a151be0d7b18726a27c7fa1a7babd8c085"
+      },
+      "jvh3GfVjerDp": {
+        "id": "jvh3GfVjerDp",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 112039,
+        "sha256": "2b5205055c7a1a6a3e6933cd62feb14e509eab7273453f51e31211a9c2c4d67e"
+      },
+      "puPHE77op1tj": {
+        "id": "puPHE77op1tj",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 6109,
+        "sha256": "0f52608dd021e7069ef19f9d8f46f6d651aaf5cbac5154465092de3574cf8514"
       }
     },
     "tree": [
@@ -614,6 +793,12 @@
       },
       {
         "id": "P9d4drEb8vhe"
+      },
+      {
+        "id": "jvh3GfVjerDp"
+      },
+      {
+        "id": "puPHE77op1tj"
       }
     ]
   },
@@ -775,6 +960,22 @@
         "height": 1080,
         "fileId": "Wt2LWBPXdux2",
         "thumbnailFileId": "oVd6cHn2uKUk"
+      },
+      "HEHJFa72WrRa": {
+        "id": "HEHJFa72WrRa",
+        "type": "image",
+        "name": "routevn_logo",
+        "width": 960,
+        "height": 213,
+        "fileId": "jvh3GfVjerDp"
+      },
+      "nziviAa6vhSZ": {
+        "id": "nziviAa6vhSZ",
+        "type": "image",
+        "name": "black_background",
+        "width": 1920,
+        "height": 1080,
+        "fileId": "puPHE77op1tj"
       }
     },
     "tree": [
@@ -795,6 +996,9 @@
           },
           {
             "id": "c5xw9bBcNAxD"
+          },
+          {
+            "id": "nziviAa6vhSZ"
           }
         ]
       },
@@ -836,6 +1040,9 @@
           },
           {
             "id": "m8FMqxc27sPg"
+          },
+          {
+            "id": "HEHJFa72WrRa"
           }
         ]
       },
@@ -1016,6 +1223,47 @@
             }
           }
         }
+      },
+      "9xbaXUSLf3cs": {
+        "id": "9xbaXUSLf3cs",
+        "type": "animation",
+        "name": "Fade in and out 4s",
+        "description": "",
+        "animation": {
+          "type": "update",
+          "tween": {
+            "alpha": {
+              "keyframes": [
+                {
+                  "duration": 1000,
+                  "value": 1,
+                  "easing": "linear",
+                  "relative": false,
+                  "delay": 500
+                },
+                {
+                  "duration": 1000,
+                  "value": 1,
+                  "easing": "linear",
+                  "relative": false
+                },
+                {
+                  "duration": 1000,
+                  "value": 0,
+                  "easing": "linear",
+                  "relative": false
+                },
+                {
+                  "duration": 500,
+                  "value": 0,
+                  "easing": "linear",
+                  "relative": false
+                }
+              ],
+              "initialValue": 0
+            }
+          }
+        }
       }
     },
     "tree": [
@@ -1038,6 +1286,9 @@
         "children": [
           {
             "id": "z8EhCjJBErGf"
+          },
+          {
+            "id": "9xbaXUSLf3cs"
           }
         ]
       }
