@@ -1,11 +1,9 @@
 import { generateId } from "../../internal/id.js";
-import {
-  getTextStyleCount,
-  getTextStyleRemovalCount,
-} from "../../constants/textStyles.js";
-import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createTextStyleEditorPayload } from "../../internal/textStyleEditorRoute.js";
-import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import {
+  checkTextStyleDeletion,
+  createResourceFileExplorerHandlers,
+} from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { handleResourceZoomShortcutKeyDown } from "../../internal/ui/resourcePages/zoomShortcuts.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -592,31 +590,13 @@ export const handleItemDelete = async (deps, payload) => {
   const copy = selectCopy(deps);
   const { itemId } = payload._event.detail;
 
-  const state = projectService.getState();
-
-  const textStyleCount = getTextStyleCount(state.textStyles);
-  const removalCount = getTextStyleRemovalCount(state.textStyles, itemId);
-  if (textStyleCount - removalCount < 1) {
-    appService.showAlert({
-      message:
-        copy.minimumTextStyleRequired ?? "At least one text style must remain.",
-    });
-    render();
-    return;
-  }
-
-  const usage = recursivelyCheckResource({
-    state,
+  const deletion = await checkTextStyleDeletion({
+    projectService,
     itemId,
-    checkTargets: ["layouts"],
+    copy,
   });
-
-  if (usage.isUsed) {
-    appService.showAlert({
-      message:
-        copy.cannotDeleteResourceInUse ??
-        "Cannot delete resource, it is currently in use.",
-    });
+  if (!deletion.canDelete) {
+    appService.showAlert({ message: deletion.message });
     render();
     return;
   }

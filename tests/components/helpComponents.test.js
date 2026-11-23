@@ -30,7 +30,7 @@ describe("YouTube player", () => {
       store,
       props,
       render: vi.fn(),
-      appService: { openUrl: vi.fn() },
+      appService: { getDocumentDirection: () => "ltr", openUrl: vi.fn() },
     };
 
     return {

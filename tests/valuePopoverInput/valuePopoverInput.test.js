@@ -41,6 +41,7 @@ describe("valuePopoverInput", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();
     const deps = {
+      appService: { getDocumentDirection: () => "ltr" },
       dispatchEvent,
       props: { value: "1000" },
       refs: { input },

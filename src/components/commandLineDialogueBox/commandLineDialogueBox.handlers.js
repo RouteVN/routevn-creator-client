@@ -13,6 +13,7 @@ import {
   localizeCommandLineText,
   selectCommandLineCopy,
 } from "../../internal/ui/sceneEditor/commandLineCopy.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
 const DEFAULT_TEXT_SPEED = 75;
 
@@ -1054,13 +1055,14 @@ export const handleCharacterSpriteBoxContextMenu = async (deps, payload) => {
 };
 
 export const handleCharacterSpriteMenuButtonClick = async (deps, payload) => {
+  const { appService } = deps;
   const { _event: event } = payload;
   const rect = event.currentTarget.getBoundingClientRect();
 
   event.stopPropagation();
 
   await showCharacterSpriteMenu(deps, {
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
 };

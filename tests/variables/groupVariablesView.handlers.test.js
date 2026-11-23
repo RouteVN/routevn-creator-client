@@ -153,7 +153,7 @@ describe("groupVariablesView.handlers", () => {
 
     await handleAddVariableClick(
       {
-        appService: { showDropdownMenu },
+        appService: { getDocumentDirection: () => "ltr", showDropdownMenu },
         i18n: { resourcePages: {}, variablesPage: {} },
         props: {},
         store: { openAddDialog },
@@ -535,6 +535,7 @@ describe("groupVariablesView.handlers", () => {
 
     handleAddOperationClick(
       {
+        appService: { getDocumentDirection: () => "ltr" },
         store: { showOperationChoiceMenu },
         render,
       },
@@ -728,6 +729,7 @@ describe("groupVariablesView.handlers", () => {
 
     handleConditionalVariableClick(
       {
+        appService: { getDocumentDirection: () => "ltr" },
         store: { showOperandSourceMenu },
         render,
       },
@@ -768,6 +770,7 @@ describe("groupVariablesView.handlers", () => {
 
     handleConditionalValueClick(
       {
+        appService: { getDocumentDirection: () => "ltr" },
         store: {
           selectConditionalNodeValue,
           showOperationValuePopover,
@@ -1109,6 +1112,7 @@ describe("groupVariablesView.handlers", () => {
 
     handleAddConditionalNodeClick(
       {
+        appService: { getDocumentDirection: () => "ltr" },
         store: { showOperandSourceMenu },
         render,
       },

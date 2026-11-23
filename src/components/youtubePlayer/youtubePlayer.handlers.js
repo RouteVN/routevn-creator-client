@@ -1,4 +1,5 @@
 import { buildYouTubeWatchUrl } from "../../internal/youtube.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
 export const handleClose = (deps) => {
   const { dispatchEvent } = deps;
@@ -6,9 +7,12 @@ export const handleClose = (deps) => {
 };
 
 export const handleMenuButtonClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
-  store.openMenu({ x: Math.round(rect.right), y: Math.round(rect.bottom) });
+  store.openMenu({
+    x: Math.round(getInlineEndX(rect, appService.getDocumentDirection())),
+    y: Math.round(rect.bottom),
+  });
   render();
 };
 

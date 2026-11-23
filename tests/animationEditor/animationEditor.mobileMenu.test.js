@@ -26,6 +26,7 @@ const createEditor = (isTouchMode = true) => {
     ].map((name) => [name, (payload) => editor[name](ctx, payload)]),
   );
   const deps = {
+    appService: { getDocumentDirection: () => "ltr" },
     store,
     render: vi.fn(),
     refs: {

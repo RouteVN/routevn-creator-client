@@ -22,6 +22,7 @@ import {
   buildComputedExampleInput,
   createComputedExampleInputItems,
 } from "./support/computedExamples.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
 export const handleScrollContainerClick = dispatchResourceViewBackgroundClick;
 
@@ -633,7 +634,9 @@ export const handleComputedExampleContextMenu = async (deps, payload) => {
         key: "remove",
       },
     ],
-    x: usePointerPosition ? event.clientX : rect.left,
+    x: usePointerPosition
+      ? event.clientX
+      : getInlineStartX(rect, appService.getDocumentDirection()),
     y: usePointerPosition ? event.clientY : rect.bottom,
     place: "bs",
   });
@@ -705,12 +708,12 @@ export const handleComputedExampleFormAction = (deps, payload) => {
 };
 
 export const handleAddOperationClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   payload._event.stopPropagation();
   const rect = payload._event.currentTarget.getBoundingClientRect();
 
   store.showOperationChoiceMenu({
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
   render();
@@ -1002,21 +1005,21 @@ const getConditionalTargetFromElement = (element) => {
 };
 
 export const handleAddConditionalNodeClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   payload._event.stopPropagation();
   const element = payload._event.currentTarget;
   const rect = element.getBoundingClientRect();
   store.showOperandSourceMenu({
     purpose: "node",
     target: getConditionalTargetFromElement(element),
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
   render();
 };
 
 export const handleConditionalVariableClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   const event = payload._event;
   event.stopPropagation();
   const element = event.currentTarget;
@@ -1025,14 +1028,14 @@ export const handleConditionalVariableClick = (deps, payload) => {
   store.showOperandSourceMenu({
     purpose: target.kind === "condition" ? "node" : "node-variable",
     target,
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
   render();
 };
 
 export const handleConditionalValueClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   const event = payload._event;
   event.stopPropagation();
   const element = event.currentTarget;
@@ -1051,7 +1054,7 @@ export const handleConditionalValueClick = (deps, payload) => {
     purpose: "node",
     target,
     initialValue: { value },
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
   render();
@@ -1136,7 +1139,7 @@ export const handleAddVariableClick = async (deps, payload) => {
         key: "computed",
       },
     ],
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     place: "bs",
   });
@@ -1173,12 +1176,12 @@ export const handleFormAddOptionClick = (deps, payload) => {
 };
 
 export const handleEnumAddValueClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   payload._event.stopPropagation();
 
   const rect = payload._event.currentTarget.getBoundingClientRect();
   store.openEnumValuePopover({
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
   render();

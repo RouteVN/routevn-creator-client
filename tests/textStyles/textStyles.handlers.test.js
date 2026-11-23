@@ -12,7 +12,9 @@ import {
   handleEditFormAction,
   handleFileExplorerAction,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleItemDelete,
   handleItemDuplicate,
+  handleMobileDetailDeleteClick,
   handleMobileDetailDuplicateClick,
   handleMobileDetailOpenClick,
   handleTextStyleItemDoubleClick,
@@ -362,6 +364,50 @@ describe("textStyles handlers", () => {
       isEditDialogOpen: false,
       selectedItemId: "text-style-1",
       selectedDetailName: "Text Style Renamed",
+    });
+  });
+
+  // A visual on a line can hold its own layout, with text in a text style.
+  it("keeps a text style that a line's visual uses from the center menu and the phone detail sheet deletes", async () => {
+    const page = await createPage();
+    const { deps, repositoryState } = page;
+    repositoryState.textStyles = {
+      items: {
+        ...repositoryState.textStyles.items,
+        "text-style-2": { ...createTextStyle(), name: "Caption" },
+      },
+      tree: [...repositoryState.textStyles.tree, { id: "text-style-2" }],
+    };
+    deps.projectService.checkResourceUsage = vi.fn(async ({ itemId }) => ({
+      isUsed: itemId === "text-style-1",
+      count: itemId === "text-style-1" ? 1 : 0,
+      inProps: {},
+    }));
+    deps.projectService.deleteTextStyles = vi.fn(async () => ({
+      valid: true,
+    }));
+
+    await handleItemDelete(deps, {
+      _event: { detail: { itemId: "text-style-1" } },
+    });
+    deps.store.setSelectedItemId({ itemId: "text-style-1" });
+    await handleMobileDetailDeleteClick(deps);
+
+    expect(deps.projectService.checkResourceUsage).toHaveBeenCalledWith({
+      itemId: "text-style-1",
+      checkTargets: ["scenes", "layouts", "controls"],
+    });
+    expect(deps.projectService.deleteTextStyles).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledTimes(2);
+    expect(deps.appService.showAlert).toHaveBeenLastCalledWith({
+      message: "Cannot delete resource, it is currently in use.",
+    });
+
+    await handleItemDelete(deps, {
+      _event: { detail: { itemId: "text-style-2" } },
+    });
+    expect(deps.projectService.deleteTextStyles).toHaveBeenCalledWith({
+      textStyleIds: ["text-style-2"],
     });
   });
 

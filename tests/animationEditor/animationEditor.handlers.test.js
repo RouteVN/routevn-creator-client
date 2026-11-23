@@ -107,6 +107,7 @@ describe("animationEditor.handlers", () => {
     };
     const cancelAnimationFrame = vi.fn();
     vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame);
+    const graphicsService = { destroy: vi.fn(async () => {}) };
 
     try {
       const cleanup = handleBeforeMount({
@@ -118,6 +119,7 @@ describe("animationEditor.handlers", () => {
           }),
         },
         browserEventsClient,
+        graphicsService,
         store,
         subject,
         uiConfig: { mode: "desktop" },
@@ -137,6 +139,10 @@ describe("animationEditor.handlers", () => {
       });
       expect(cancelAnimationFrame).toHaveBeenCalledWith(42);
       expect(store.stopPreviewPlayback).toHaveBeenCalledWith({});
+      // The preview's graphics go, unless the next page has started its own.
+      expect(graphicsService.destroy).toHaveBeenCalledWith({
+        onlyIfDetached: true,
+      });
     } finally {
       vi.unstubAllGlobals();
     }
@@ -483,6 +489,7 @@ describe("animationEditor.handlers", () => {
         browserEventsClient: {
           subscribeWindowEvent: vi.fn(() => vi.fn()),
         },
+        graphicsService: { destroy: vi.fn(async () => {}) },
         refs: { timelineScrollContainer },
         render,
         store,
@@ -1729,7 +1736,7 @@ describe("animationEditor.handlers", () => {
     const render = vi.fn();
 
     handleSelectedKeyframeAddClick(
-      { render, store },
+      { appService: { getDocumentDirection: () => "ltr" }, render, store },
       {
         _event: {
           currentTarget: {

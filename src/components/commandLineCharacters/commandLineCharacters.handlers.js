@@ -17,6 +17,7 @@ import {
   COMMAND_LINE_SHADER_ADJUSTMENTS,
   getCommandLineShaderAdjustment,
 } from "../../internal/commandLineShaderAdjustments.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
 const getCharacterIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
@@ -75,10 +76,10 @@ const assignInlineTransformFields = (target, source = {}) => {
   }
 };
 
-const getDropdownPositionFromEvent = (event) => {
+const getDropdownPositionFromEvent = (event, direction) => {
   const rect = event?.currentTarget?.getBoundingClientRect?.();
   if (rect) {
-    return { x: rect.left, y: rect.bottom };
+    return { x: getInlineStartX(rect, direction), y: rect.bottom };
   }
 
   return {
@@ -811,7 +812,7 @@ export const handleRemoveCharacterClick = (deps, payload) => {
 };
 
 export const handleAddCharacterClick = (deps, payload = {}) => {
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   const transformItems =
     store.selectAddCharacterTransformDropdownItems?.() ?? [];
 
@@ -824,7 +825,10 @@ export const handleAddCharacterClick = (deps, payload = {}) => {
   }
 
   store.showAddCharacterTransformDropdownMenu({
-    position: getDropdownPositionFromEvent(payload._event),
+    position: getDropdownPositionFromEvent(
+      payload._event,
+      appService.getDocumentDirection(),
+    ),
   });
   render();
 };

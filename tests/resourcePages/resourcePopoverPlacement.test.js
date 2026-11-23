@@ -83,6 +83,7 @@ describe("resource popover placement", () => {
       const openPopover = vi.fn();
       const stopPropagation = vi.fn();
       const deps = {
+        appService: { getDocumentDirection: () => "ltr" },
         props: {
           selectedTagFilterValues: [],
         },

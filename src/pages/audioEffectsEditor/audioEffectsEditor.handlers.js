@@ -15,6 +15,10 @@ import {
 } from "./support/audioEffectPreviewRuntime.js";
 import { selectAudioEffectsEditorPageCopy } from "./support/audioEffectsEditorPageCopy.js";
 import { buildAudioEffectKeyframe } from "./support/audioEffectsEditorValidation.js";
+import {
+  getInlineStartX,
+  getInlineEndX,
+} from "../../internal/textDirection.js";
 
 const TIMELINE_ZOOM_STEP = 0.125;
 
@@ -88,6 +92,7 @@ export const handleBeforeMount = (deps) => {
   const {
     appService,
     browserEventsClient,
+    graphicsService,
     render,
     store,
     uiConfig,
@@ -128,6 +133,9 @@ export const handleBeforeMount = (deps) => {
     cleanupWindowResize();
     cleanupHistoryShortcuts();
     await stopAudioEffectPreview(deps);
+    // The preview's graphics are shared. The next page may have started its
+    // own already, and those stay.
+    void graphicsService.destroy({ onlyIfDetached: true });
     const saved = await persistAudioEffect(deps);
     if (!saved) {
       throw new Error("Failed to save audio effect during cleanup.");
@@ -241,10 +249,13 @@ export const handleTimelineZoomChange = (deps, payload) => {
 };
 
 export const handleTimelineZoomButtonClick = (deps, payload) => {
-  const { refs, render, store } = deps;
+  const { appService, refs, render, store } = deps;
   payload._event.stopPropagation();
   const rect = refs.timelineZoomButton.getBoundingClientRect();
-  store.openTimelineZoomPopover({ x: rect.right, y: rect.bottom });
+  store.openTimelineZoomPopover({
+    x: getInlineEndX(rect, appService.getDocumentDirection()),
+    y: rect.bottom,
+  });
   render();
 };
 
@@ -706,14 +717,14 @@ export const handleSelectedKeyframeRemoveStartValueClick = (deps) => {
 };
 
 export const handleSelectedKeyframeAddClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   if (!store.selectSelectedKeyframe()) {
     return;
   }
 
   const rect = payload._event.currentTarget.getBoundingClientRect();
   store.openSelectedKeyframeAddMenu({
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
   render();

@@ -80,6 +80,7 @@ describe("Camera manual values", () => {
     });
     document.body.append(viewport);
     deps = {
+      appService: { getDocumentDirection: () => "ltr" },
       refs: { viewport, valueInput: { focus: vi.fn() } },
       store: Object.fromEntries(
         Object.entries(cameraEditor).map(([name, fn]) => [

@@ -11,6 +11,7 @@ import {
   uploadAndroidSigningKey,
 } from "./support/androidSigningKeys.js";
 import { selectPlatformDetailsPageCopy } from "./support/platformDetailsPageCopy.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
 export const handleBeforeMount = (deps) => {
   const { appService, store, uiConfig } = deps;
@@ -206,9 +207,12 @@ export const handlePlatformTabClick = (deps, payload) => {
 };
 
 export const handleAddPlatformButtonClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
-  store.openAddPlatformMenu({ x: rect.left, y: rect.bottom });
+  store.openAddPlatformMenu({
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
+    y: rect.bottom,
+  });
   render();
 };
 

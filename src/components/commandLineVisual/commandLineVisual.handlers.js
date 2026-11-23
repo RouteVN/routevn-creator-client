@@ -13,6 +13,7 @@ import {
   getCommandLineShaderAdjustment,
 } from "../../internal/commandLineShaderAdjustments.js";
 import { generatePrefixedId } from "../../internal/id.js";
+import { getInlineStartX } from "../../internal/textDirection.js";
 
 const DEFAULT_VISUAL_LAYER = 50;
 const VALID_VISUAL_LAYERS = [10, 30, 50, 70, 90];
@@ -671,11 +672,16 @@ export const handleSubmitClick = (deps) => {
 
 // Add Visual asks for the layer first, in a popover under the button.
 export const handleAddVisualClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   const rect = payload._event.currentTarget.getBoundingClientRect();
 
   store.hideDropdownMenu();
-  store.openAddVisualPopover({ position: { x: rect.left, y: rect.bottom } });
+  store.openAddVisualPopover({
+    position: {
+      x: getInlineStartX(rect, appService.getDocumentDirection()),
+      y: rect.bottom,
+    },
+  });
   render();
 };
 

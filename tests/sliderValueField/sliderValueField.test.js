@@ -69,7 +69,10 @@ const createField = ({ menuResult, ...propOverrides } = {}) => {
         }),
       },
     },
-    appService: { showDropdownMenu: vi.fn(async () => menuResult) },
+    appService: {
+      getDocumentDirection: () => "ltr",
+      showDropdownMenu: vi.fn(async () => menuResult),
+    },
   };
   const rect = { left: 100, width: 200, bottom: 40 };
   const target = { getBoundingClientRect: () => rect };

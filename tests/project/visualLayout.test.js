@@ -467,6 +467,26 @@ describe("a visual made of a layout", () => {
     ).toBe(true);
   });
 
+  it("finds a text style used in a visual's layout", () => {
+    expect(
+      recursivelyCheckResource({
+        state: createRepositoryState([
+          {
+            id: "caption",
+            layout: createCaptionLayout({
+              textStyleId: "small",
+              align: "left",
+              wordWrapWidth: 400,
+            }),
+            layer: 50,
+          },
+        ]),
+        itemId: "small",
+        checkTargets: ["scenes"],
+      }).isUsed,
+    ).toBe(true);
+  });
+
   it("builds only the stored layouts and leaves other actions as they are", () => {
     const builder = createVisualLayoutBuilder(createRepositoryState([]));
     const actions = {

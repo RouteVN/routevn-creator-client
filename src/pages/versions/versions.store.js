@@ -106,7 +106,7 @@ const createMacosExportForm = (copy = {}) => ({
           tooltip: {
             content:
               copy.macosExportVersionDescription ??
-              "Version shown in Finder and About. Use three numeric components, for example 1.2.0.",
+              "Version shown in Finder and About. Use three numeric components, for example 1.2.0",
           },
           required: true,
         },
