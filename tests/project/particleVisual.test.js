@@ -159,6 +159,40 @@ describe("a particle used as a visual", () => {
     ).toContain("flake-file");
   });
 
+  // A visual's own layout is built in its line, where the particle is drawn
+  // with its texture's file.
+  it("loads the particle's texture image with the scene when a visual's layout shows it", () => {
+    const repositoryState = createRepositoryState();
+    const line =
+      repositoryState.scenes.items["scene-1"].sections.items["section-1"].lines
+        .items["line-1"];
+    line.actions.visual.items = [
+      {
+        id: "snowfall",
+        layer: 50,
+        layout: {
+          layoutSchemaVersion: 2,
+          elements: createTreeCollection({
+            content: {
+              type: "particle",
+              name: "Snow",
+              particleId: "snow",
+              x: 0,
+              y: 0,
+              width: 1920,
+              height: 1080,
+            },
+          }),
+        },
+      },
+    ];
+    const projectData = constructProjectData(repositoryState);
+
+    expect(
+      extractFileIdsForScenes(projectData, ["scene-1"]).map(({ url }) => url),
+    ).toContain("flake-file");
+  });
+
   // Route Graphics threw "modules.appearance.texture is required" on every
   // render of the line: a new particle has no texture until one is picked.
   it.each([

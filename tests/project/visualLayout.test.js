@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import createRouteEngine from "route-engine-js";
-import { extractFileIdsForScenes } from "../../src/internal/project/layout.js";
+import {
+  extractFileIdsForScenes,
+  extractFileIdsForValue,
+} from "../../src/internal/project/layout.js";
 import {
   constructProjectData,
   createVisualLayoutBuilder,
@@ -96,6 +99,12 @@ const createCaptionLayout = ({ textStyleId, align, wordWrapWidth }) => ({
   }),
 });
 
+// A layout of one element, as the layout editor saves it.
+const createElementLayout = (element) => ({
+  layoutSchemaVersion: 2,
+  elements: createTreeCollection({ content: element }),
+});
+
 const createRepositoryState = (visualItems, laterLineVisualItems) => ({
   project: { resolution: { width: 1920, height: 1080 } },
   story: { initialSceneId: "scene-1" },
@@ -128,6 +137,33 @@ const createRepositoryState = (visualItems, laterLineVisualItems) => ({
       fontId: "body",
       colorId: "green",
       fontSize: 60,
+    },
+  }),
+  videos: createTreeCollection({
+    clip: {
+      id: "clip",
+      type: "video",
+      name: "Clip",
+      fileId: "clip-file",
+      fileType: "video/mp4",
+      width: 640,
+      height: 360,
+    },
+  }),
+  sounds: createTreeCollection({
+    blip: {
+      id: "blip",
+      type: "sound",
+      name: "Blip",
+      fileId: "blip-file",
+      fileType: "audio/mpeg",
+    },
+    tap: {
+      id: "tap",
+      type: "sound",
+      name: "Tap",
+      fileId: "tap-file",
+      fileType: "audio/mpeg",
     },
   }),
   images: createTreeCollection({
@@ -345,6 +381,73 @@ describe("a visual made of a layout", () => {
       { colorId: "red", fontSize: 20, align: "left", wordWrapWidth: 400 },
       { colorId: "green", fontSize: 60, align: "center", wordWrapWidth: 800 },
     ]);
+  });
+
+  // A visual's layout is built in its line, where a video, a particle's
+  // texture and a sound are named by their files. The preview and an
+  // exported game load a scene's files from this list.
+  it.each([
+    [
+      "video",
+      { type: "video", name: "Clip", videoId: "clip", x: 0, y: 0 },
+      ["clip-file"],
+    ],
+    [
+      "hover and click sounds",
+      {
+        type: "sprite",
+        name: "Look",
+        imageId: "button",
+        hoverSoundId: "blip",
+        clickSoundId: "tap",
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 80,
+      },
+      ["button-file", "blip-file", "tap-file"],
+    ],
+  ])(
+    "loads the %s in a visual's layout with the scene and with its line",
+    (_name, element, fileIds) => {
+      const projectData = constructProjectData(
+        createRepositoryState([
+          { id: "card", layout: createElementLayout(element), layer: 50 },
+        ]),
+      );
+      const [line] =
+        projectData.story.scenes["scene-1"].sections["section-1"].lines;
+
+      expect(
+        extractFileIdsForScenes(projectData, ["scene-1"]).map(({ url }) => url),
+      ).toEqual(expect.arrayContaining(fileIds));
+      expect(
+        extractFileIdsForValue(projectData, line).map(({ url }) => url),
+      ).toEqual(expect.arrayContaining(fileIds));
+    },
+  );
+
+  it("loads a video in a visual's layout as a video", () => {
+    const projectData = constructProjectData(
+      createRepositoryState([
+        {
+          id: "card",
+          layout: createElementLayout({
+            type: "video",
+            name: "Clip",
+            videoId: "clip",
+            x: 0,
+            y: 0,
+          }),
+          layer: 50,
+        },
+      ]),
+    );
+
+    expect(extractFileIdsForScenes(projectData, ["scene-1"])).toContainEqual({
+      url: "clip-file",
+      type: "video/mp4",
+    });
   });
 
   it("keeps an image used in a visual's layout from being deleted", () => {
