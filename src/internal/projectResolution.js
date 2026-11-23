@@ -377,26 +377,6 @@ export const scaleTemplateProjectStateForResolution = (
     });
   }
 
-  // A line's visual can carry its own layout instead of a layout resource,
-  // as the splash screen's logo does. It scales as a layout resource does.
-  Object.values(nextState.scenes?.items ?? {}).forEach((scene) => {
-    Object.values(scene?.sections?.items ?? {}).forEach((section) => {
-      Object.values(section?.lines?.items ?? {}).forEach((line) => {
-        (line?.actions?.visual?.items ?? []).forEach((visual) => {
-          if (!visual?.layout?.elements) {
-            return;
-          }
-
-          visual.layout.elements = scaleLayoutElementsForProjectResolution(
-            visual.layout.elements,
-            targetResolution,
-            { sourceResolution },
-          );
-        });
-      });
-    });
-  });
-
   return nextState;
 };
 

@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { assertSupportedProjectState } from "../../src/deps/services/shared/projectRepository.js";
-import { scaleTemplateProjectStateForResolution } from "../../src/internal/projectResolution.js";
 
 const repository = JSON.parse(
   readFileSync(
@@ -20,8 +18,8 @@ const templateFileIds = JSON.parse(
 const findItemByName = (collection, name) =>
   Object.values(collection.items).find((item) => item.name === name);
 
-const selectSplash = (state = repository) => {
-  const scene = state.scenes.items[state.story.initialSceneId];
+const selectSplash = () => {
+  const scene = repository.scenes.items[repository.story.initialSceneId];
   const [section] = Object.values(scene.sections.items);
   const [showLogo, openTitle] = section.lines.tree.map(
     ({ id }) => section.lines.items[id],
@@ -133,23 +131,5 @@ describe("default template splash screen", () => {
         sha256: createHash("sha256").update(bytes).digest("hex"),
       });
     }
-  });
-
-  it("keeps the logo centered at another resolution", () => {
-    const scaled = scaleTemplateProjectStateForResolution(repository, {
-      width: 1280,
-      height: 720,
-    });
-    assertSupportedProjectState(scaled);
-
-    const [logo, black] = selectSplash(scaled).showLogo.actions.visual.items;
-    const elementOf = (item) => Object.values(item.layout.elements.items)[0];
-    expect(elementOf(logo)).toMatchObject({
-      x: 640,
-      y: 360,
-      width: 640,
-      height: 142,
-    });
-    expect(elementOf(black)).toMatchObject({ width: 1280, height: 720 });
   });
 });
