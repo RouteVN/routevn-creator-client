@@ -19,7 +19,7 @@ const findItemByName = (collection, name) =>
   Object.values(collection.items).find((item) => item.name === name);
 
 const selectSplash = () => {
-  const scene = repository.scenes.items[repository.story.initialSceneId];
+  const scene = findItemByName(repository.scenes, "Splash Screen");
   const [section] = Object.values(scene.sections.items);
   const [showLogo, openTitle] = section.lines.tree.map(
     ({ id }) => section.lines.items[id],
@@ -28,7 +28,7 @@ const selectSplash = () => {
 };
 
 describe("default template splash screen", () => {
-  it("starts the story with the splash screen, first in the Scenes folder", () => {
+  it("is first in the Scenes folder, while the story still starts on Title", () => {
     const { scene, section } = selectSplash();
     const scenesFolder = findItemByName(repository.scenes, "Scenes");
     const folderNode = repository.scenes.tree.find(
@@ -36,6 +36,9 @@ describe("default template splash screen", () => {
     );
 
     expect(scene).toMatchObject({ type: "scene", name: "Splash Screen" });
+    expect(repository.story.initialSceneId).toBe(
+      findItemByName(repository.scenes, "Title").id,
+    );
     expect(scene.description).toContain("Replace the logo");
     expect(folderNode.children.map(({ id }) => id)).toEqual([
       scene.id,
