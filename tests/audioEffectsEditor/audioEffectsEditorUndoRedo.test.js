@@ -89,6 +89,7 @@ const createPage = async ({
     uiConfig: {},
     windowMetricsClient: { subscribe: () => () => {} },
     browserEventsClient: { subscribeWindowEvent: () => () => {} },
+    graphicsService: { destroy: vi.fn(async () => {}) },
     appService: {
       ...retainedEditHistoryService,
       registerBeforeNavigation: () => () => {},
@@ -207,6 +208,16 @@ describe("audio effects editor undo and redo", () => {
     expect(reopened.view()).toMatchObject({ undoDisabled: false });
     handleUndoButtonClick(reopened.deps);
     expect(reopened.keyframes()[0].value).toBe(50);
+  });
+
+  it("shuts the preview's graphics down when the page is left, unless the next page has started its own", async () => {
+    const page = await createPage();
+
+    await page.cleanup();
+
+    expect(page.deps.graphicsService.destroy).toHaveBeenCalledWith({
+      onlyIfDetached: true,
+    });
   });
 
   it("keeps separate edits as separate steps", async () => {

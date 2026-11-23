@@ -390,10 +390,10 @@ const validateResourceDeletion = async ({
     return { canDelete: true };
   }
 
+  // Text styles are checked in scenes too, since a visual on a line can hold
+  // its own layout with text in it.
   let checkTargets = ["scenes", "layouts", "controls"];
-  if (currentItemType === "textStyle") {
-    checkTargets = ["layouts", "controls"];
-  } else if (currentItemType === "color" || currentItemType === "font") {
+  if (currentItemType === "color" || currentItemType === "font") {
     checkTargets = ["textStyles"];
   } else if (resourceType === "characters") {
     checkTargets = ["scenes", "layouts", "controls"];
@@ -487,6 +487,35 @@ export const checkVariableDeletion = async ({
         itemType: currentItem?.type,
         reason: deletion.reason,
       }),
+  };
+};
+
+// The Text Styles page also deletes from its grid and its detail sheet.
+// Those deletes need the explorer's checks, or a text style that a line's
+// visual uses can be deleted.
+export const checkTextStyleDeletion = async ({
+  projectService,
+  itemId,
+  copy = {},
+}) => {
+  const currentItem = projectService.getState()?.textStyles?.items?.[itemId];
+  const deletion = await validateResourceDeletion({
+    projectService,
+    resourceType: "textStyles",
+    currentItem,
+    itemId,
+  });
+  if (deletion.canDelete) {
+    return deletion;
+  }
+
+  return {
+    canDelete: false,
+    message: getDeletionBlockedCopyMessage({
+      copy,
+      itemType: currentItem?.type,
+      reason: deletion.reason,
+    }),
   };
 };
 

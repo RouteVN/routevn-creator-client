@@ -3287,6 +3287,27 @@ export const extractLayoutIdsFromValue = (value, projectData) => {
   return Array.from(layoutIds);
 };
 
+// A visual's own layout is built in its line, not in the resources. There its
+// elements name some files directly, as a built project layout does: a
+// video's, a particle's texture and a hover or click sound.
+const collectBuiltVisualLayoutElements = (value) => {
+  const layoutElements = [];
+
+  traverseScene(value, (key, entry) => {
+    if (key !== "visual" || !Array.isArray(entry?.items)) {
+      return;
+    }
+
+    for (const item of entry.items) {
+      if (Array.isArray(item?.layout?.elements)) {
+        layoutElements.push(item.layout.elements);
+      }
+    }
+  });
+
+  return layoutElements;
+};
+
 export const extractFileIdsForScene = (projectData, sceneId) => {
   const scene = projectData?.story?.scenes?.[sceneId];
   const resources = projectData?.resources;
@@ -3299,6 +3320,7 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
   const scopedLayouts = pickByIds(resources.layouts, selection.layouts);
 
   const scopedResources = {
+    visualLayouts: collectBuiltVisualLayoutElements(scene),
     images: pickByIds(resources.images, selection.images),
     spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),
@@ -3325,6 +3347,7 @@ export const extractFileIdsForValue = (projectData, value) => {
 
   const selection = collectResourceSelectionFromValue(projectData, value);
   const scopedResources = {
+    visualLayouts: collectBuiltVisualLayoutElements(value),
     images: pickByIds(resources.images, selection.images),
     spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),

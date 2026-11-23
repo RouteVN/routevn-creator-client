@@ -218,27 +218,11 @@ const VISUAL_LAYOUT_TYPE_OPTIONS = [
   { value: EXISTING_LAYOUT_VALUE, label: "Existing Layout" },
 ];
 
-// Asked before a visual is added: which kind it is and the layer it goes on.
-const createAddVisualForm = ({ layoutOptions, layerOptions }) => ({
+// Asked before a visual is added: the layer it goes on. A new visual always
+// has a layout of its own; its edit view can switch it to a project layout.
+const createAddVisualForm = ({ layerOptions }) => ({
   title: "Add Visual",
   fields: [
-    {
-      name: "layoutType",
-      type: "segmented-control",
-      label: "Layout",
-      clearable: false,
-      options: VISUAL_LAYOUT_TYPE_OPTIONS,
-    },
-    {
-      $when: 'layoutType == "existing"',
-      name: "layoutId",
-      type: "select",
-      label: "Existing Layout",
-      options: layoutOptions,
-      clearable: false,
-      required: true,
-      placeholder: "Select layout",
-    },
     {
       name: "layer",
       type: "select",
@@ -286,7 +270,7 @@ const createVisualFormSlots = (visualIndex) => {
 };
 
 const createVisualsForm = (visuals = []) => ({
-  fields: visuals.map((visual) => {
+  fields: visuals.flatMap((visual) => {
     // The layer is not edited here: the list shows a visual under its layer,
     // and Move Layer in its menu changes it.
     const fields = [
@@ -385,8 +369,9 @@ const createVisualsForm = (visuals = []) => ({
       });
     }
 
+    const optionFields = [];
     if (visual.opacityEnabled) {
-      fields.push({
+      optionFields.push({
         type: "section",
         id: `${visual.formSectionId}-opacity`,
         label: "Opacity",
@@ -406,7 +391,7 @@ const createVisualsForm = (visuals = []) => ({
     }
 
     if (visual.blurEnabled) {
-      fields.push({
+      optionFields.push({
         type: "section",
         id: `${visual.formSectionId}-blur`,
         label: "Blur",
@@ -461,7 +446,7 @@ const createVisualsForm = (visuals = []) => ({
         continue;
       }
 
-      fields.push({
+      optionFields.push({
         type: "section",
         id: `${visual.formSectionId}-${flipOption.id}`,
         label: flipOption.label,
@@ -480,7 +465,7 @@ const createVisualsForm = (visuals = []) => ({
         continue;
       }
 
-      fields.push({
+      optionFields.push({
         type: "section",
         id: `${visual.formSectionId}-${adjustment.id}`,
         label: adjustment.label,
@@ -499,26 +484,34 @@ const createVisualsForm = (visuals = []) => ({
       });
     }
 
-    return {
+    // Like Background and Screen, the added options sit under an Options
+    // heading at the end, with the button that adds one beside it.
+    const optionsSection = {
       type: "section",
       id: visual.formSectionId,
-      action:
-        visual.opacityEnabled &&
-        visual.blurEnabled &&
-        visual.flipOptions.every((option) => option.enabled) &&
-        visual.shaderAdjustments.every((adjustment) => adjustment.enabled)
-          ? undefined
-          : {
-              id: "add",
-              icon: "plus",
-              label: "Add option",
-            },
-      fields,
+      label: "Options",
+      fields: optionFields,
     };
+    const allOptionsShown =
+      visual.opacityEnabled &&
+      visual.blurEnabled &&
+      visual.flipOptions.every((option) => option.enabled) &&
+      visual.shaderAdjustments.every((adjustment) => adjustment.enabled);
+    if (!allOptionsShown) {
+      optionsSection.action = {
+        id: "add",
+        icon: "plus",
+        label: "Add Option",
+      };
+    }
+    fields.push(optionsSection);
+
+    return fields;
   }),
 });
 
-// The Edit Visual page has no title: its section is not named.
+// The Edit Visual page has no title. It opens on Layout Type, and the
+// visual's options sit under an Options heading at the end.
 const createLocalizedVisualsForm = (visuals = [], copy = {}) =>
   localizeCommandLineForm(createVisualsForm(visuals), copy);
 
@@ -1016,22 +1009,22 @@ export const hideAddVisualPopover = ({ state }, _payload = {}) => {
   state.addVisualPopover = createAddVisualPopover();
 };
 
-// Adds a visual that shows the project layout `layoutId`, or without one, a
-// visual with an empty layout of its own.
-export const addVisual = ({ state }, { id, layer, layoutId } = {}) => {
-  const visual = { id };
-  if (layoutId) {
-    visual.resourceId = layoutId;
-    visual.resourceType = "layout";
-  } else {
-    visual.layout = createEmptyVisualLayout();
-  }
+// Adds a visual with an empty layout of its own and opens its edit view.
+// Cancel there takes the new visual out again.
+export const addVisual = ({ state }, { id, layer } = {}) => {
+  state.editingVisualsSnapshot = cloneVisuals(state.selectedVisuals);
   state.selectedVisuals.push({
-    ...visual,
+    id,
+    layout: createEmptyVisualLayout(),
     layer: normalizeVisualLayer(layer),
     animationMode: "none",
   });
-  normalizeSelectedVisualOrder(state);
+  state.selectedVisuals = orderVisualsByLayer(state.selectedVisuals);
+  state.editingVisualId = id;
+  state.selectedVisualIndex = state.selectedVisuals.findIndex(
+    (visual) => visual.id === id,
+  );
+  state.mode = "edit";
 };
 
 // Gives the visual at `index` a custom layout of its own: the one it had
@@ -2018,13 +2011,11 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     selectButtonLabel: localizeCommandLineText("Select", copy),
     addVisualForm: localizeCommandLineForm(
       createAddVisualForm({
-        layoutOptions,
         layerOptions: localizeCommandLineOptions(VISUAL_LAYER_OPTIONS, copy),
       }),
       copy,
     ),
     addVisualDefaultValues: {
-      layoutType: CUSTOM_LAYOUT_VALUE,
       layer: DEFAULT_VISUAL_LAYER,
     },
     noThumbnailLabel: localizeCommandLineText("No thumbnail", copy),
@@ -2049,7 +2040,10 @@ export const selectViewData = ({ state, props = {}, i18n }) => {
     addVisualButtonLabel: localizeCommandLineText("+ Add Visual", copy),
     submitButtonLabel: localizeCommandLineText("Submit", copy),
     cancelButtonLabel: localizeCommandLineText("Cancel", copy),
-    saveVisualButtonLabel: localizeCommandLineText("Save Visual", copy),
+    saveVisualButtonLabel: localizeCommandLineText("Submit", copy),
+    // A visual switched to an existing layout is kept only once one is
+    // picked. Until then its picture asks for one.
+    saveVisualDisabled: state.existingLayoutPendingVisualId !== undefined,
     transformEditorTitle: localizeCommandLineText("Transform", copy),
   };
 };

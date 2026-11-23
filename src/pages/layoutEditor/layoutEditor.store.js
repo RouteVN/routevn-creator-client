@@ -910,6 +910,7 @@ export const selectViewData = ({ state, constants, i18n }) => {
     selectedResourceId: isControlResource ? "controls" : "layout-editor",
     contextMenuItems,
     emptyContextMenuItems,
+    emptyAddLabel: copy.addElementMenuLabel ?? "Add Element",
     layoutState,
     previewLayoutState,
     // The canvas is sized in container height units on every layout.

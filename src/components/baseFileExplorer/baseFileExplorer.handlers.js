@@ -1617,13 +1617,61 @@ export const handleEmptyMessageClick = (deps, payload) => {
     return;
   }
 
-  // Show dropdown menu when clicking on empty message
-  const rect = payload._event.currentTarget.getBoundingClientRect();
+  // The menu opens where the message was clicked. The message fills the
+  // explorer, so a click without a pointer, such as one from a script, opens
+  // it at the message's text.
+  const event = payload._event;
+  let position = event.detail > 0 ? getPointerPoint(event) : undefined;
+  if (!position) {
+    const rect = (
+      event.currentTarget.querySelector("rtgl-text") ?? event.currentTarget
+    ).getBoundingClientRect();
+    position = { x: rect.left + rect.width / 2, y: rect.bottom };
+  }
   store.showDropdownMenuFileExplorerEmpty({
-    position: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+    position,
     emptyContextMenuItems,
   });
   render();
+};
+
+// The add box of an empty list opens the list's add menu under the box.
+const openEmptyAddMenu = (deps, box) => {
+  const { props, render, store } = deps;
+  const emptyContextMenuItems = getEmptyContextMenuItems(props);
+  if (!emptyContextMenuItems?.length) {
+    return;
+  }
+
+  const rect = box.getBoundingClientRect();
+  store.showDropdownMenuFileExplorerEmpty({
+    position: { x: rect.left, y: rect.bottom + 4 },
+    emptyContextMenuItems,
+  });
+  render();
+};
+
+export const handleEmptyAddClick = (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+  event.preventDefault();
+  event.stopPropagation();
+  if (store.selectSuppressNextClick()) {
+    store.setSuppressNextClick({ suppress: false });
+    return;
+  }
+
+  openEmptyAddMenu(deps, event.currentTarget);
+};
+
+export const handleEmptyAddKeyDown = (deps, payload) => {
+  const event = payload._event;
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  openEmptyAddMenu(deps, event.currentTarget);
 };
 
 const openItemDropdownMenu = (

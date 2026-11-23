@@ -22,9 +22,11 @@ import {
 
 // Edits change the elements here at once and are saved after a pause, the
 // whole layout at a time, one save after another, so a save never meets
-// another. Done saves what is left and closes the editor.
+// another. Done saves what is left and closes the editor. Cancel saves the
+// layout as it was when the editor opened and closes it.
 const SAVE_ACTION = "visualLayoutEditor.save";
 const DONE_ACTION = "visualLayoutEditor.done";
+const CANCEL_ACTION = "visualLayoutEditor.cancel";
 const SAVE_DELAY_MS = 400;
 
 const CANVAS_TRANSIENT_DETAIL_FIELDS = [
@@ -54,16 +56,29 @@ const queueSave = ({ subject }) => {
 
 // Saves the elements as they are now, when an edit is not saved yet. A save
 // that fails drops the edits not saved, goes back to the saved layout and
-// tells the user.
-const saveLayoutElements = async (deps) => {
+// tells the user, with `failureMessage` when given. Once Cancel is pressed,
+// only Cancel's own save, marked `isCancel`, is made.
+const saveLayoutElements = async (
+  deps,
+  {
+    failureMessage,
+    operation = "visualLayoutEditor.save",
+    isCancel = false,
+  } = {},
+) => {
   const { appService, i18n, projectService, props, refs, render, store } = deps;
-  if (!store.selectHasUnsavedEdits()) {
+  if (
+    !store.selectHasUnsavedEdits() ||
+    (store.selectIsCancelling() && !isCancel)
+  ) {
     return { ok: true };
   }
 
   const copy = selectCopy(i18n);
   const fallbackMessage =
-    copy.failedSaveChanges ?? "Failed to save the layout changes.";
+    failureMessage ??
+    copy.failedSaveChanges ??
+    "Failed to save the layout changes.";
   const elements = store.selectLayoutElements();
   store.markEditsSaved();
   try {
@@ -86,7 +101,7 @@ const saveLayoutElements = async (deps) => {
       detailsLabel: i18n.appPage?.errorDetailsLabel,
       error: toLayoutEditorSaveError(failure, fallbackMessage),
       message: fallbackMessage,
-      operation: "visualLayoutEditor.save",
+      operation,
       title: selectLayoutEditorPageCopy(i18n).errorTitle ?? "Error",
     });
     return { ok: false };
@@ -123,6 +138,37 @@ const finishEditing = async (deps) => {
   dispatchEvent(new CustomEvent("close", { detail: { snapshotUrl } }));
 };
 
+// Cancel puts the layout back as it was when the editor opened and closes
+// without a picture: the visual's picture from before is of that layout. An
+// edit made while it saves is not saved, also not when the editor closes. If
+// the layout cannot be put back, the editor stays open on the saved one.
+const cancelEditing = async (deps) => {
+  const { dispatchEvent, i18n, projectService, props, refs, render, store } =
+    deps;
+  store.restoreOpeningLayout({
+    repositoryState: projectService.getRepositoryState(),
+    sceneId: props.sceneId,
+    sectionId: props.sectionId,
+    lineId: props.lineId,
+    visualId: props.visualId,
+  });
+  // The canvas keeps an element it was moving until it has its position.
+  refs.layoutEditorCanvas?.discardPendingUpdate?.();
+  render();
+  const { ok } = await saveLayoutElements(deps, {
+    failureMessage:
+      selectCopy(i18n).failedDiscardChanges ??
+      "Your changes to this visual's layout could not be discarded.",
+    operation: "visualLayoutEditor.cancel",
+    isCancel: true,
+  });
+  if (!ok) {
+    store.stopCancelling();
+    return;
+  }
+  dispatchEvent(new CustomEvent("close", { detail: {} }));
+};
+
 const applyElementsCommand = (deps, command) => {
   const { render, store } = deps;
   const elements = applyLayoutElementsCommand(
@@ -145,18 +191,56 @@ const updateElement = (deps, { itemId, item }) => {
   queueSave(deps);
 };
 
+// With nothing selected, the panel under the canvas on touch screens goes
+// back to the Elements list and stays on it for the next pick, as in the
+// layout editor. That covers Back, a tap on empty canvas, and the canvas
+// clearing its selection.
 const selectElement = (deps, itemId) => {
   const { refs, render, store } = deps;
   store.setSelectedItemId({ itemId });
+  if (!itemId) {
+    store.openMobileFileExplorer();
+  }
   render();
   if (itemId) {
     refs.fileExplorer?.selectItem?.({ itemId });
   }
 };
 
+// Rotating a tablet moves the Elements list between the left pane and the
+// panel under the canvas. The one that mounts has no selection of its own, so
+// it is pointed at the selected element once it is there.
+const selectElementInNewExplorer = (deps) => {
+  const { refs, store } = deps;
+  const itemId = store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      refs.fileExplorer?.selectItem?.({ itemId });
+    });
+  });
+};
+
 export const handleBeforeMount = (deps) => {
-  const { store, subject, uiConfig } = deps;
+  const { appService, render, store, subject, uiConfig } = deps;
   store.setUiConfig({ uiConfig });
+  store.setTouchLandscape({ isTouchLandscape: appService.isTouchLandscape() });
+  const unsubscribeTouchLandscape = appService.subscribeTouchLandscape(
+    (isTouchLandscape) => {
+      if (isTouchLandscape === store.selectIsTouchLandscape()) {
+        return;
+      }
+
+      store.setTouchLandscape({ isTouchLandscape });
+      // Moving the panels rebuilds them, which closes an open popover
+      // without a cancel, so its value shown on the canvas goes too.
+      store.clearCanvasPreviewItem();
+      render();
+      selectElementInNewExplorer(deps);
+    },
+  );
 
   const saves = merge(
     subject.pipe(
@@ -168,11 +252,16 @@ export const handleBeforeMount = (deps) => {
       filter(({ action }) => action === DONE_ACTION),
       map(() => finishEditing),
     ),
+    subject.pipe(
+      filter(({ action }) => action === CANCEL_ACTION),
+      map(() => cancelEditing),
+    ),
   )
     .pipe(concatMap((step) => from(step(deps))))
     .subscribe();
 
   return async () => {
+    unsubscribeTouchLandscape();
     saves.unsubscribe();
     await saveLayoutElements(deps);
   };
@@ -186,6 +275,10 @@ export const handleAfterMount = (deps) => {
 
 export const handleDoneClick = ({ subject }) => {
   subject.dispatch(DONE_ACTION, {});
+};
+
+export const handleCancelClick = ({ subject }) => {
+  subject.dispatch(CANCEL_ACTION, {});
 };
 
 export const handleCanvasZoomInClick = (deps) => {
@@ -224,11 +317,30 @@ export const handleCanvasBackgroundClick = (deps, payload) => {
 
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store } = deps;
-  const { itemId } = payload._event.detail ?? {};
+  const { itemId, source } = payload._event.detail ?? {};
   if (itemId && store.selectSelectedItemId() === itemId) {
     refs.layoutEditorCanvas?.useDefaultSelectionOccurrence?.();
   }
+  // On touch an element picked in the list opens in the panel under the
+  // canvas. Stepping with the up and down buttons keeps the list open.
+  if (itemId && store.selectIsTouchMode() && source !== "navigation") {
+    store.closeMobileFileExplorer();
+  }
   selectElement(deps, itemId);
+};
+
+// Back from an element to the Elements list, with nothing selected, as in
+// the layout editor.
+export const handleNodeDetailBackClick = (deps) => {
+  selectElement(deps, undefined);
+};
+
+export const handleNodeMovePreviousClick = ({ refs }) => {
+  refs.fileExplorer.navigateSelection({ direction: "previous", clamp: true });
+};
+
+export const handleNodeMoveNextClick = ({ refs }) => {
+  refs.fileExplorer.navigateSelection({ direction: "next", clamp: true });
 };
 
 // Adds elements asked for in the "new" menu, the first one selected.

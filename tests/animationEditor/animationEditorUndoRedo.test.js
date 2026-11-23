@@ -85,6 +85,7 @@ const createPage = async ({
     uiConfig: {},
     windowMetricsClient: { subscribe: () => () => {} },
     browserEventsClient: { subscribeWindowEvent: () => () => {} },
+    graphicsService: { destroy: vi.fn(async () => {}) },
     subject: new Subject(),
     appService: {
       ...retainedEditHistoryService,

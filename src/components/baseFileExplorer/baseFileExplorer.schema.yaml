@@ -56,6 +56,9 @@ propsSchema:
     emptyContextMenuItems:
       type: array
       description: Menu items for right-clicking on empty space
+    emptyAddLabel:
+      type: string
+      description: When the list is empty, shows a box with a plus and this label instead of the empty message; it opens the empty-space menu under it. Needs emptyContextMenuItems.
     draggable:
       type: boolean
       description: Enable drag and drop reordering

@@ -1268,6 +1268,7 @@ export const handlePreviewPlaybackShortcutKeyDown = (deps, payload) => {
 export const handleBeforeMount = (deps) => {
   const {
     appService,
+    graphicsService,
     projectService,
     render,
     store,
@@ -1312,6 +1313,10 @@ export const handleBeforeMount = (deps) => {
     clearScheduledAnimationEditorAutosave(store);
     store.setPreviewPlaybackRequestId({ requestId: undefined });
     stopPreviewPlaybackIndicator({ store });
+    // The graphics service is shared, and the next page can start its
+    // renderer while the save below runs, so this page's goes first. It may
+    // also have started it already, and that one stays.
+    void graphicsService.destroy({ onlyIfDetached: true });
     const autosaveAttempt = await flushQueuedAutosave({
       deps,
       force: true,

@@ -160,7 +160,7 @@ const normalizeWindowsExecutableVersion = (value) => {
 
   if (!isValidVersion) {
     throw new Error(
-      "Windows file version must be numeric dot-separated text like 1.0.0.",
+      "Windows file version must be numeric dot-separated text like 1.0.0",
     );
   }
 

@@ -5,9 +5,14 @@ import * as editorStore from "../../src/components/visualLayoutEditor/visualLayo
 import {
   handleAfterMount,
   handleBeforeMount,
+  handleCanvasBackgroundClick,
   handleCanvasDragUpdate,
+  handleCancelClick,
   handleDoneClick,
+  handleCanvasSelectionChange,
   handleFileExplorerAction,
+  handleFileExplorerItemClick,
+  handleNodeDetailBackClick,
 } from "../../src/components/visualLayoutEditor/visualLayoutEditor.handlers.js";
 import {
   LAYOUT_EDITOR_SCENE_SLOT_ID,
@@ -235,8 +240,19 @@ const createRepositoryState = () => ({
   },
 });
 
-// The editor on its real store, over a project whose saves are given.
-const createEditor = ({ updateVisualLayoutElements } = {}) => {
+const findSavedElements = (repositoryState) =>
+  repositoryState.scenes.items["scene-1"].sections.items["section-1"].lines
+    .items["line-1"].actions.visual.items[0].layout.elements;
+
+// The editor on its real store, over a project that keeps what is saved, or
+// whose saves are given. `uiConfig` and `isTouchLandscape` set the screen;
+// `rotate` changes whether a touch screen is in landscape.
+const createEditor = ({
+  updateVisualLayoutElements,
+  uiConfig = {},
+  isTouchLandscape = false,
+} = {}) => {
+  let touchLandscapeListener;
   let state = editorStore.createInitialState();
   const store = new Proxy(
     {},
@@ -269,8 +285,15 @@ const createEditor = ({ updateVisualLayoutElements } = {}) => {
       layoutEditPanel: { setTransientValues: vi.fn() },
       layoutEditorCanvas: { discardPendingUpdate: vi.fn() },
     },
-    uiConfig: {},
+    uiConfig,
     appService: {
+      isTouchLandscape: () => isTouchLandscape,
+      subscribeTouchLandscape: (listener) => {
+        touchLandscapeListener = listener;
+        return () => {
+          touchLandscapeListener = undefined;
+        };
+      },
       reportError: vi.fn(),
       showAlert: vi.fn(),
       showAlertWhenIdle: vi.fn(),
@@ -279,12 +302,22 @@ const createEditor = ({ updateVisualLayoutElements } = {}) => {
     projectService: {
       getRepositoryState: vi.fn(() => repositoryState),
       updateVisualLayoutElements:
-        updateVisualLayoutElements ?? vi.fn(async () => ({ valid: true })),
+        updateVisualLayoutElements ??
+        vi.fn(async ({ elements }) => {
+          const { layout } =
+            repositoryState.scenes.items["scene-1"].sections.items["section-1"]
+              .lines.items["line-1"].actions.visual.items[0];
+          layout.elements = structuredClone(elements);
+          return { valid: true };
+        }),
     },
   };
   const cleanup = handleBeforeMount(deps);
   handleAfterMount(deps);
-  return { cleanup, deps, store };
+  const rotate = (landscape) => touchLandscapeListener?.(landscape);
+  const view = () =>
+    editorStore.selectViewData({ state, props: deps.props, i18n: EN_I18N });
+  return { cleanup, deps, repositoryState, rotate, store, view };
 };
 
 const rename = (deps, itemId, newName) =>
@@ -527,6 +560,115 @@ describe("the layout editor of a visual", () => {
     );
   });
 
+  it("puts back the layout it opened with on Cancel, then closes without a picture", async () => {
+    const { cleanup, deps, repositoryState, store } = createEditor();
+    const { updateVisualLayoutElements } = deps.projectService;
+
+    await rename(deps, "title", "Heading");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(findSavedElements(repositoryState).items.title.name).toBe("Heading");
+    handleFileExplorerAction(deps, {
+      _event: { detail: { value: "delete-item", itemId: "title" } },
+    });
+
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(updateVisualLayoutElements).toHaveBeenCalledTimes(2);
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
+    expect(store.selectLayoutElements()).toEqual(createElements());
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    const [closeEvent] = deps.dispatchEvent.mock.calls[0];
+    expect(closeEvent.type).toBe("close");
+    expect(closeEvent.detail).toEqual({});
+
+    // The delete waiting for a pause, and closing, save nothing after it.
+    await vi.advanceTimersByTimeAsync(400);
+    await cleanup();
+    expect(updateVisualLayoutElements).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes on Cancel without saving when nothing was saved, dropping edits waiting for a pause", async () => {
+    const { cleanup, deps, repositoryState } = createEditor();
+    const { updateVisualLayoutElements } = deps.projectService;
+
+    await rename(deps, "title", "Heading");
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(400);
+    await cleanup();
+
+    expect(updateVisualLayoutElements).not.toHaveBeenCalled();
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays open on the saved layout when Cancel cannot put it back, and can try again", async () => {
+    const { deps, repositoryState, store } = createEditor();
+    const keepSave = deps.projectService.updateVisualLayoutElements;
+    await rename(deps, "title", "Heading");
+    await vi.advanceTimersByTimeAsync(400);
+
+    deps.projectService.updateVisualLayoutElements = vi.fn(async () => {
+      throw new Error("disk full");
+    });
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+    expect(store.selectItemById({ itemId: "title" }).name).toBe("Heading");
+    expect(deps.appService.showAlertWhenIdle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          EN_I18N.visualLayoutEditor.failedDiscardChanges,
+        ),
+      }),
+    );
+
+    // Still open, it saves edits again.
+    deps.projectService.updateVisualLayoutElements = keepSave;
+    await rename(deps, "door", "Gate");
+    await vi.advanceTimersByTimeAsync(400);
+    expect(findSavedElements(repositoryState).items.door.name).toBe("Gate");
+
+    // The layout it opened with is kept through the reload.
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves no edit made while Cancel puts the layout back, also not when it closes", async () => {
+    const { cleanup, deps, repositoryState } = createEditor();
+    const keepSave = deps.projectService.updateVisualLayoutElements;
+    await rename(deps, "title", "Heading");
+    await vi.advanceTimersByTimeAsync(400);
+
+    let finishCancelSave;
+    const slowSave = vi.fn(async (payload) => {
+      await new Promise((resolve) => {
+        finishCancelSave = resolve;
+      });
+      return keepSave(payload);
+    });
+    deps.projectService.updateVisualLayoutElements = slowSave;
+    handleCancelClick(deps);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(slowSave).toHaveBeenCalledTimes(1);
+    // An element the canvas was moving goes back too.
+    expect(
+      deps.refs.layoutEditorCanvas.discardPendingUpdate,
+    ).toHaveBeenCalled();
+
+    await rename(deps, "door", "Gate");
+    finishCancelSave();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+    await cleanup();
+
+    expect(slowSave).toHaveBeenCalledTimes(1);
+    expect(findSavedElements(repositoryState)).toEqual(createElements());
+  });
+
   it("saves what is left when it closes some other way", async () => {
     const { cleanup, deps } = createEditor();
 
@@ -581,5 +723,172 @@ describe("the layout editor of a visual", () => {
 
     expect(store.selectSelectedItemId()).toBeUndefined();
     expect(store.selectItemById({ itemId: "door" })).toBeUndefined();
+  });
+});
+
+const TOUCH_UI_CONFIG = { id: "touch", inputMode: "touch" };
+
+const pickInList = (deps, itemId, source) =>
+  handleFileExplorerItemClick(deps, {
+    _event: { detail: { itemId, source } },
+  });
+
+const pickOnCanvas = (deps, itemId) =>
+  handleCanvasSelectionChange(deps, { _event: { detail: { itemId } } });
+
+describe("the layout editor of a visual on each screen", () => {
+  it("keeps the Elements list and the element's panel beside the canvas on desktop", () => {
+    const data = createEditor().view();
+
+    expect(data.showExplorerPanel).toBe(true);
+    expect(data.showTabletLandscapeExplorer).toBe(false);
+    expect(data.showRightPanel).toBe(true);
+    expect(data.showCanvasZoomControls).toBe(true);
+    expect(data.showMobileNodeExplorer).toBe(false);
+    expect(data.showMobileSelectedNodeDetail).toBe(false);
+  });
+
+  it("shows the Elements list in a left pane and the element on the right on a tablet in landscape", () => {
+    const data = createEditor({
+      uiConfig: TOUCH_UI_CONFIG,
+      isTouchLandscape: true,
+    }).view();
+
+    expect(data.showExplorerPanel).toBe(false);
+    expect(data.showTabletLandscapeExplorer).toBe(true);
+    expect(data.showRightPanel).toBe(true);
+    expect(data.showCanvasZoomControls).toBe(true);
+    expect(data.showMobileNodeExplorer).toBe(false);
+    expect(data.showMobileSelectedNodeDetail).toBe(false);
+  });
+
+  it("shows the canvas fitted over the Elements list on other touch screens", () => {
+    const { store, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+    store.zoomCanvasIn();
+    const data = view();
+
+    expect(data.showExplorerPanel).toBe(false);
+    expect(data.showTabletLandscapeExplorer).toBe(false);
+    expect(data.showRightPanel).toBe(false);
+    expect(data.showCanvasZoomControls).toBe(false);
+    expect(data.canvasZoom).toBe(1);
+    expect(data.showMobileNodeExplorer).toBe(true);
+    expect(data.showMobileSelectedNodeDetail).toBe(false);
+  });
+
+  it("opens an element picked in the list under the canvas, and goes back to the list with nothing selected", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+
+    pickInList(deps, "door");
+    expect(view()).toMatchObject({
+      selectedItemId: "door",
+      showMobileSelectedNodeDetail: true,
+      showMobileNodeExplorer: false,
+    });
+
+    handleNodeDetailBackClick(deps);
+    expect(view()).toMatchObject({
+      selectedItemId: undefined,
+      showMobileSelectedNodeDetail: false,
+      showMobileNodeExplorer: true,
+    });
+  });
+
+  it("keeps the list open while stepping through it and when an element is picked on the canvas", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+
+    pickInList(deps, "frame", "navigation");
+    expect(view().showMobileNodeExplorer).toBe(true);
+
+    pickOnCanvas(deps, "title");
+    expect(view()).toMatchObject({
+      selectedItemId: "title",
+      showMobileNodeExplorer: true,
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenLastCalledWith({
+      itemId: "title",
+    });
+  });
+
+  it("shows the element picked on the canvas once the list is closed, and the list again when nothing is selected", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+    pickInList(deps, "door");
+
+    pickOnCanvas(deps, "title");
+    expect(view().showMobileSelectedNodeDetail).toBe(true);
+    expect(view().selectedItem.name).toBe("Title");
+
+    pickOnCanvas(deps, undefined);
+    expect(view().showMobileNodeExplorer).toBe(true);
+  });
+
+  it("keeps the list open for the next pick once the canvas clears an element opened from the list", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+    const tapEmptyCanvas = () => {
+      const canvasBackground = {};
+      handleCanvasBackgroundClick(deps, {
+        _event: { target: canvasBackground, currentTarget: canvasBackground },
+      });
+    };
+
+    pickInList(deps, "door");
+    tapEmptyCanvas();
+    expect(view().showMobileNodeExplorer).toBe(true);
+
+    pickInList(deps, "frame", "navigation");
+    expect(view()).toMatchObject({
+      selectedItemId: "frame",
+      showMobileNodeExplorer: true,
+      showMobileSelectedNodeDetail: false,
+    });
+
+    pickInList(deps, "door");
+    pickOnCanvas(deps, undefined);
+    pickOnCanvas(deps, "title");
+    expect(view()).toMatchObject({
+      selectedItemId: "title",
+      showMobileNodeExplorer: true,
+      showMobileSelectedNodeDetail: false,
+    });
+  });
+
+  it("moves the panels when a tablet turns, dropping a value only shown on the canvas", async () => {
+    vi.stubGlobal("requestAnimationFrame", (callback) => callback());
+    try {
+      const { cleanup, deps, rotate, store, view } = createEditor({
+        uiConfig: TOUCH_UI_CONFIG,
+      });
+      pickInList(deps, "door");
+      store.setCanvasPreviewItem({
+        itemId: "door",
+        item: { type: "sprite", name: "Door", imageId: "door", x: 5 },
+      });
+      deps.render.mockClear();
+      deps.refs.fileExplorer.selectItem.mockClear();
+
+      rotate(true);
+      expect(view()).toMatchObject({
+        showTabletLandscapeExplorer: true,
+        showRightPanel: true,
+      });
+      expect(store.selectHasCanvasPreviewItem()).toBe(false);
+      expect(deps.render).toHaveBeenCalledTimes(1);
+      expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+        itemId: "door",
+      });
+
+      rotate(false);
+      expect(view()).toMatchObject({
+        showRightPanel: false,
+        showMobileSelectedNodeDetail: true,
+      });
+
+      await cleanup();
+      deps.render.mockClear();
+      rotate(true);
+      expect(deps.render).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

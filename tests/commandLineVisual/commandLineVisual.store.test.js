@@ -492,9 +492,11 @@ describe("commandLineVisual.store animation controls", () => {
 
     startVisualEdit({ state }, { index: 0 });
     const viewData = selectViewData({ state });
-    const flipSections = viewData.form.fields[0].fields.filter((field) =>
-      ["visual-0-flip-x", "visual-0-flip-y"].includes(field.id),
-    );
+    const flipSections = viewData.form.fields
+      .at(-1)
+      .fields.filter((field) =>
+        ["visual-0-flip-x", "visual-0-flip-y"].includes(field.id),
+      );
     expect(flipSections).toEqual([
       expect.objectContaining({
         id: "visual-0-flip-x",
@@ -554,12 +556,12 @@ describe("commandLineVisual.store animation controls", () => {
 
     startVisualEdit({ state }, { index: 0 });
     const viewData = selectViewData({ state });
-    expect(viewData.form.fields[0].action).toBeUndefined();
+    expect(viewData.form.fields.at(-1).action).toBeUndefined();
     expect(viewData.defaultValues.visuals[0].opacityEnabled).toBe(true);
     expect(viewData.defaultValues.visuals[0].blurEnabled).toBe(true);
 
     removeVisualOpacityOption({ state }, { index: 0 });
-    expect(selectViewData({ state }).form.fields[0].action).toMatchObject({
+    expect(selectViewData({ state }).form.fields.at(-1).action).toMatchObject({
       id: "add",
     });
   });
@@ -618,15 +620,16 @@ describe("commandLineVisual.store animation controls", () => {
       ),
     ).toBe(true);
     expect(
-      viewData.form.fields[0].fields
-        .filter((field) => field.type === "section")
+      viewData.form.fields
+        .at(-1)
+        .fields.filter((field) => field.type === "section")
         .map((field) => field.id),
     ).toEqual(
       COMMAND_LINE_SHADER_ADJUSTMENTS.map(
         (adjustment) => `visual-0-${adjustment.id}`,
       ),
     );
-    expect(viewData.form.fields[0].action).toMatchObject({ id: "add" });
+    expect(viewData.form.fields.at(-1).action).toMatchObject({ id: "add" });
 
     removeVisualShaderAdjustmentOption(
       { state },
@@ -638,7 +641,7 @@ describe("commandLineVisual.store animation controls", () => {
         (adjustment) => adjustment.id === "saturation",
       ).enabled,
     ).toBe(false);
-    expect(viewData.form.fields[0].action).toMatchObject({ id: "add" });
+    expect(viewData.form.fields.at(-1).action).toMatchObject({ id: "add" });
     expect(visual.filters.map((filter) => filter.id)).not.toContain(
       "backgroundSaturation",
     );
