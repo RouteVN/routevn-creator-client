@@ -19,17 +19,17 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: rtgl-form#createProjectForm rtgl-input#field0 input
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
     steps:
       - action: clear
       - action: write
         value: VT Project Versions Workflow
   - action: select
-    selector: rtgl-form#createProjectForm rtgl-input#field1 input
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='description'] input
     steps:
       - action: clear
       - action: write
