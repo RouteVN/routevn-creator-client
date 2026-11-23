@@ -5,6 +5,7 @@ import * as editorStore from "../../src/components/visualLayoutEditor/visualLayo
 import {
   handleAfterMount,
   handleBeforeMount,
+  handleCanvasBackgroundClick,
   handleCanvasDragUpdate,
   handleCancelClick,
   handleDoneClick,
@@ -819,6 +820,36 @@ describe("the layout editor of a visual on each screen", () => {
 
     pickOnCanvas(deps, undefined);
     expect(view().showMobileNodeExplorer).toBe(true);
+  });
+
+  it("keeps the list open for the next pick once the canvas clears an element opened from the list", () => {
+    const { deps, view } = createEditor({ uiConfig: TOUCH_UI_CONFIG });
+    const tapEmptyCanvas = () => {
+      const canvasBackground = {};
+      handleCanvasBackgroundClick(deps, {
+        _event: { target: canvasBackground, currentTarget: canvasBackground },
+      });
+    };
+
+    pickInList(deps, "door");
+    tapEmptyCanvas();
+    expect(view().showMobileNodeExplorer).toBe(true);
+
+    pickInList(deps, "frame", "navigation");
+    expect(view()).toMatchObject({
+      selectedItemId: "frame",
+      showMobileNodeExplorer: true,
+      showMobileSelectedNodeDetail: false,
+    });
+
+    pickInList(deps, "door");
+    pickOnCanvas(deps, undefined);
+    pickOnCanvas(deps, "title");
+    expect(view()).toMatchObject({
+      selectedItemId: "title",
+      showMobileNodeExplorer: true,
+      showMobileSelectedNodeDetail: false,
+    });
   });
 
   it("moves the panels when a tablet turns, dropping a value only shown on the canvas", async () => {

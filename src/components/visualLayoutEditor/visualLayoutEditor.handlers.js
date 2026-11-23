@@ -191,9 +191,16 @@ const updateElement = (deps, { itemId, item }) => {
   queueSave(deps);
 };
 
+// With nothing selected, the panel under the canvas on touch screens goes
+// back to the Elements list and stays on it for the next pick, as in the
+// layout editor. That covers Back, a tap on empty canvas, and the canvas
+// clearing its selection.
 const selectElement = (deps, itemId) => {
   const { refs, render, store } = deps;
   store.setSelectedItemId({ itemId });
+  if (!itemId) {
+    store.openMobileFileExplorer();
+  }
   render();
   if (itemId) {
     refs.fileExplorer?.selectItem?.({ itemId });
@@ -325,8 +332,6 @@ export const handleFileExplorerItemClick = (deps, payload) => {
 // Back from an element to the Elements list, with nothing selected, as in
 // the layout editor.
 export const handleNodeDetailBackClick = (deps) => {
-  const { store } = deps;
-  store.openMobileFileExplorer();
   selectElement(deps, undefined);
 };
 
