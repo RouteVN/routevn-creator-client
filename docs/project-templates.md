@@ -9,7 +9,8 @@ Create opens the Create Project form with the bundled template chosen. Its
 Template row shows the chosen template and a Change button, which opens the
 templates over the form; what is typed in the form stays.
 
-The templates list the bundled template first, at once, then the store's
+The templates list the bundled template first, at once, with a picture of
+its title screen (`static/templates/default/cover.webp`), then the store's
 templates as cards, newest first, with Load More while pages remain. Choosing
 the bundled template returns to the form. A store template opens its page: its
 screenshots, one at a time in a 16:9 frame with previous and next and a row of

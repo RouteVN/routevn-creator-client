@@ -11,7 +11,7 @@ import {
 } from "../../internal/ui/projectLanguage.js";
 import {
   createBundledProjectTemplate,
-  isBundledProjectTemplate,
+  getProjectTemplateCoverUrl,
 } from "../../internal/projectTemplates.js";
 import { selectProjectTemplateTitle } from "../../internal/ui/projectTemplates.js";
 
@@ -362,10 +362,9 @@ export const selectIsIconCropDialogOpen = ({ state }) => {
   return state.isIconCropDialogOpen;
 };
 
-// The bundled template shows an icon; a store template shows its cover.
 const createTemplateView = (template, i18n) => ({
   title: selectProjectTemplateTitle(i18n, template),
-  coverUrl: isBundledProjectTemplate(template) ? undefined : template.coverUrl,
+  coverUrl: getProjectTemplateCoverUrl(template),
 });
 
 export const selectViewData = ({ state, i18n }) => {

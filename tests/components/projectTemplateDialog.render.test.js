@@ -108,6 +108,10 @@ describe("project template dialog rendering", () => {
       "two",
     ]);
     expect(cards[0].getAttribute("aria-label")).toBe("Open Default");
+    // The bundled template shows its title screen.
+    expect(
+      cards[0].querySelector('rtgl-image[src="/templates/default/cover.webp"]'),
+    ).not.toBeNull();
     expect(texts(cards[1])).toEqual([
       "Template one",
       "A starter project.",
@@ -200,8 +204,9 @@ describe("project create dialog template row", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(row().textContent).toContain("Default");
-    expect(row().querySelector("rtgl-image")).toBeNull();
-    expect(row().querySelector("rtgl-svg[svg=book]")).not.toBeNull();
+    expect(row().querySelector("rtgl-image").getAttribute("src")).toBe(
+      "/templates/default/cover.webp",
+    );
     dialog.remove();
   });
 });

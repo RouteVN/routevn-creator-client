@@ -119,7 +119,7 @@ template:
                       # the store.
                       - 'rtgl-view role=button tabindex=0 data-template-id="${defaultTemplate.id}" aria-label="${defaultTemplate.openLabel}" d=v w=f bgc=bg bw=xs bc=bo h-bc=ac br=md cur=pointer overflow=hidden':
                           - 'rtgl-view w=f av=c ah=c bgc=mu style="aspect-ratio: 16 / 9;"':
-                              - rtgl-svg svg=book wh=32 c=mu-fg: null
+                              - rtgl-image src=${defaultTemplate.coverUrl} w=f h=f of=cov: null
                           - rtgl-view d=v w=f g=xs p=md:
                               - rtgl-text s=md: ${defaultTemplate.title}
                               - div.cardSummary:

@@ -7,6 +7,7 @@ import {
 import { PROJECT_LANGUAGES } from "../../internal/projectLanguage.js";
 import { selectProjectLanguageLabel } from "../../internal/ui/projectLanguage.js";
 import {
+  BUNDLED_PROJECT_TEMPLATE_COVER_URL,
   BUNDLED_PROJECT_TEMPLATE_ID,
   createBundledProjectTemplate,
 } from "../../internal/projectTemplates.js";
@@ -163,6 +164,7 @@ export const selectViewData = ({ state, i18n }) => {
       id: BUNDLED_PROJECT_TEMPLATE_ID,
       title: defaultTemplateTitle,
       summary: copy.defaultTemplateSummary,
+      coverUrl: BUNDLED_PROJECT_TEMPLATE_COVER_URL,
       openLabel: formatI18nCopy(copy.openTemplateLabel, {
         name: defaultTemplateTitle,
       }),

@@ -57,6 +57,7 @@ describe("projectTemplateDialog store", () => {
       id: "default",
       title: "Default",
       summary: "A title screen, a prologue and ready-made menus to build on.",
+      coverUrl: "/templates/default/cover.webp",
       openLabel: "Open Default",
     });
     expect(view.templates).toEqual([]);

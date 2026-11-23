@@ -52,7 +52,7 @@ template:
                   - $if projectTemplate.coverUrl:
                       - rtgl-image src=${projectTemplate.coverUrl} w=f h=f of=cov: null
                     $else:
-                      - rtgl-svg svg=book wh=20 c=mu-fg: null
+                      - rtgl-svg svg=image wh=20 c=mu-fg: null
               - 'rtgl-text w=1fg ellipsis=true style="min-width: 0;"': ${projectTemplate.title}
               - rtgl-button#changeTemplateButton v=se: ${changeTemplateLabel}
       - rtgl-view slot=project-icon-selector w=f:

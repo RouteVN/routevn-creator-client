@@ -146,9 +146,10 @@ describe("projectCreateDialog.store", () => {
       slot: "project-template-selector",
       label: "Template",
     });
+    // The bundled template shows its title screen.
     expect(viewData.projectTemplate).toEqual({
       title: "Default",
-      coverUrl: undefined,
+      coverUrl: "/templates/default/cover.webp",
     });
     expect(viewData.changeTemplateLabel).toBe("Change");
 
