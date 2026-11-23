@@ -182,6 +182,7 @@ const createDragDeps = ({ itemCount = 4, rootHeight = 128 } = {}) => {
   });
 
   const deps = {
+    appService: { getDocumentDirection: () => "ltr" },
     dispatchEvent: vi.fn(),
     props,
     refs,

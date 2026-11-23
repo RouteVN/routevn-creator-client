@@ -46,6 +46,7 @@ const createDeps = (name = "x", value = 100) => {
       render: vi.fn(),
       dispatchEvent: (event) => events.push(event),
       appService: {
+        getDocumentDirection: () => "ltr",
         showDropdownMenu: vi.fn(async () => ({ item: { key: "960" } })),
       },
       refs: { form: { setValues: vi.fn() } },

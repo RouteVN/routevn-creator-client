@@ -1,4 +1,9 @@
-const resolveTagFilterButtonPosition = (element, { alignEnd = true } = {}) => {
+import { getInlineEndX, getInlineStartX } from "../textDirection.js";
+
+const resolveTagFilterButtonPosition = (
+  element,
+  { alignEnd = true, direction } = {},
+) => {
   if (!element?.getBoundingClientRect) {
     return {
       x: 0,
@@ -9,7 +14,11 @@ const resolveTagFilterButtonPosition = (element, { alignEnd = true } = {}) => {
   const rect = element.getBoundingClientRect();
 
   return {
-    x: Math.round(alignEnd ? rect.right : rect.left),
+    x: Math.round(
+      alignEnd
+        ? getInlineEndX(rect, direction)
+        : getInlineStartX(rect, direction),
+    ),
     y: Math.round(rect.bottom),
   };
 };
@@ -19,12 +28,13 @@ export const openTagFilterPopoverFromButton = (
   payload,
   { alignEnd = true } = {},
 ) => {
-  const { refs, props, store, render } = deps;
+  const { appService, refs, props, store, render } = deps;
   payload?._event?.stopPropagation?.();
 
   store.openTagFilterPopover({
     position: resolveTagFilterButtonPosition(refs.tagFilterButton, {
       alignEnd,
+      direction: appService.getDocumentDirection(),
     }),
     tagIds: props.selectedTagFilterValues ?? [],
   });

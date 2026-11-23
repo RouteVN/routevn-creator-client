@@ -112,6 +112,7 @@ const createStoreApi = (state) => ({
 const createDeps = (state) => ({
   store: createStoreApi(state),
   appService: {
+    getDocumentDirection: () => "ltr",
     showDropdownMenu: vi.fn(),
   },
   props: createProps(),

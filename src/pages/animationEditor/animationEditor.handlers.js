@@ -35,6 +35,10 @@ import {
 } from "./support/animationEditorAutosave.js";
 import { animationCanvasDataUrlToBlob } from "./support/animationEditorCanvasExport.js";
 import { selectAnimationEditorPageCopy } from "./support/animationEditorPageCopy.js";
+import {
+  getInlineStartX,
+  getInlineEndX,
+} from "../../internal/textDirection.js";
 
 const normalizeTween = (properties = {}) => {
   return Object.fromEntries(
@@ -1977,7 +1981,7 @@ export const handleSelectedKeyframeRemoveStartValueClick = (deps) => {
 };
 
 export const handleSelectedKeyframeAddClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   const selectedKeyframe = store.selectSelectedKeyframe();
   if (!selectedKeyframe) {
     return;
@@ -1986,7 +1990,7 @@ export const handleSelectedKeyframeAddClick = (deps, payload) => {
   const rect = payload._event.currentTarget.getBoundingClientRect();
   store.setPopover({
     mode: "selectedKeyframeAddMenu",
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
     payload: selectedKeyframe,
   });
@@ -3420,11 +3424,15 @@ export const handleTogglePreviewLoop = (deps) => {
 };
 
 export const handleTimelineZoomButtonClick = (deps, payload) => {
-  const { refs, store, render } = deps;
+  const { appService, refs, store, render } = deps;
   payload._event.stopPropagation();
   const rect = refs.timelineZoomButton.getBoundingClientRect();
   store.closePopover();
-  store.setPopover({ mode: "timelineZoom", x: rect.right, y: rect.bottom });
+  store.setPopover({
+    mode: "timelineZoom",
+    x: getInlineEndX(rect, appService.getDocumentDirection()),
+    y: rect.bottom,
+  });
   render();
 };
 

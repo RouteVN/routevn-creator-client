@@ -289,6 +289,7 @@ describe("commandLineBackground.handlers", () => {
 
     handleSearchButtonClick(
       {
+        appService: { getDocumentDirection: () => "ltr" },
         refs: {
           searchButton: {
             getBoundingClientRect: () => ({ right: 312.4, bottom: 48.2 }),

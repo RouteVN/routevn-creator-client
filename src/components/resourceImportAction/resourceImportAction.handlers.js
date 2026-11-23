@@ -1,18 +1,24 @@
 import { formatPluralCopy } from "../../internal/ui/i18nCopy.js";
+import { getInlineEndX } from "../../internal/textDirection.js";
 
-const resolveMenuPosition = (element) => {
+const resolveMenuPosition = (element, direction) => {
   const rect = element.getBoundingClientRect();
   return {
-    x: Math.round(rect.right),
+    x: Math.round(getInlineEndX(rect, direction)),
     y: Math.round(rect.bottom),
   };
 };
 
 export const handleMenuButtonClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { appService, render, store } = deps;
   const { _event } = payload;
   _event.stopPropagation();
-  store.openMenu(resolveMenuPosition(_event.currentTarget));
+  store.openMenu(
+    resolveMenuPosition(
+      _event.currentTarget,
+      appService.getDocumentDirection(),
+    ),
+  );
   render();
 };
 

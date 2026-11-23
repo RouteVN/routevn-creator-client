@@ -1,3 +1,5 @@
+import { getInlineStartX } from "../../internal/textDirection.js";
+
 const dispatchOperationEvent = (deps, type, detail) => {
   deps.dispatchEvent(
     new CustomEvent(type, {
@@ -23,13 +25,14 @@ export const handleOperationContextMenu = (deps, payload) => {
 };
 
 export const handleAddOperandClick = (deps, payload) => {
+  const { appService } = deps;
   payload._event.stopPropagation();
   const rect = payload._event.currentTarget.getBoundingClientRect();
 
   dispatchOperationEvent(deps, "add-operand-click", {
     operationPath: deps.props.operation?.operationPath ?? [],
     target: deps.props.operation?.target,
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
 };
@@ -45,6 +48,7 @@ export const handleRemoveOperandClick = (deps, payload) => {
 };
 
 export const handleValueOperandClick = (deps, payload) => {
+  const { appService } = deps;
   const event = payload._event;
   event.stopPropagation();
   const index = Number(event.currentTarget.dataset.index);
@@ -59,7 +63,7 @@ export const handleValueOperandClick = (deps, payload) => {
     target: deps.props.operation?.target,
     index,
     value: operand.value,
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
 };
@@ -84,6 +88,7 @@ export const handleValueOperandContextMenu = (deps, payload) => {
 };
 
 export const handleVariableOperandClick = (deps, payload) => {
+  const { appService } = deps;
   const event = payload._event;
   event.stopPropagation();
   const index = Number(event.currentTarget.dataset.index);
@@ -97,7 +102,7 @@ export const handleVariableOperandClick = (deps, payload) => {
     operationPath: deps.props.operation?.operationPath ?? [],
     target: deps.props.operation?.target,
     index,
-    x: rect.left,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
     y: rect.bottom,
   });
 };

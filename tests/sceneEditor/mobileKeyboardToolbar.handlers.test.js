@@ -203,6 +203,7 @@ describe("mobileKeyboardToolbar undo and More menu", () => {
     button.dataset.actionId = actionId;
     button.getBoundingClientRect = () => ({ right: 380, top: 700 });
     const deps = {
+      appService: { getDocumentDirection: () => "ltr" },
       store: { openMoreMenu: vi.fn(), closeMoreMenu: vi.fn() },
       render: vi.fn(),
       dispatchEvent: vi.fn(),

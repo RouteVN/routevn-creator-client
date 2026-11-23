@@ -1736,7 +1736,7 @@ describe("animationEditor.handlers", () => {
     const render = vi.fn();
 
     handleSelectedKeyframeAddClick(
-      { render, store },
+      { appService: { getDocumentDirection: () => "ltr" }, render, store },
       {
         _event: {
           currentTarget: {

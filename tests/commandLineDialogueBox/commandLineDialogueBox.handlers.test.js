@@ -2559,6 +2559,7 @@ describe("commandLineDialogueBox.handlers", () => {
       {
         store: createStore(state),
         appService: {
+          getDocumentDirection: () => "ltr",
           showDropdownMenu,
         },
         i18n: EN_I18N,

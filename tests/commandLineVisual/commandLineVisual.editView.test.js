@@ -437,6 +437,7 @@ describe("commandLineVisual layout editing", () => {
   it("asks for the layer in a popover under Add Visual before adding anything", () => {
     const state = createState();
     const deps = {
+      appService: { getDocumentDirection: () => "ltr" },
       store: createFullStoreApi(state),
       render: vi.fn(),
       dispatchEvent: vi.fn(),
@@ -469,6 +470,7 @@ describe("commandLineVisual layout editing", () => {
   it("adds the visual on the chosen layer", () => {
     const state = createState();
     const deps = {
+      appService: { getDocumentDirection: () => "ltr" },
       store: createFullStoreApi(state),
       render: vi.fn(),
       dispatchEvent: vi.fn(),

@@ -7,7 +7,7 @@ import {
 import { RU_I18N } from "../support/i18n.js";
 
 const createDeps = () => ({
-  appService: { showToast: vi.fn() },
+  appService: { getDocumentDirection: () => "ltr", showToast: vi.fn() },
   dispatchEvent: vi.fn(),
   i18n: { resourceImport: {} },
   render: vi.fn(),

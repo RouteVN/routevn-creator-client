@@ -91,7 +91,11 @@ describe("commandLineSoundEffects.handlers", () => {
         .mockResolvedValue({ item: { key: channelId } });
 
       await handleAddChannelClick(
-        { store, render, appService: { showDropdownMenu } },
+        {
+          store,
+          render,
+          appService: { getDocumentDirection: () => "ltr", showDropdownMenu },
+        },
         { _event: { clientX: 100, clientY: 200 } },
       );
 
@@ -120,6 +124,7 @@ describe("commandLineSoundEffects.handlers", () => {
         store,
         render,
         appService: {
+          getDocumentDirection: () => "ltr",
           showDropdownMenu: vi
             .fn()
             .mockResolvedValue({ item: { key: "custom" } }),
@@ -150,7 +155,10 @@ describe("commandLineSoundEffects.handlers", () => {
       {
         store: createStore(state),
         render,
-        appService: { showDropdownMenu: vi.fn().mockResolvedValue(undefined) },
+        appService: {
+          getDocumentDirection: () => "ltr",
+          showDropdownMenu: vi.fn().mockResolvedValue(undefined),
+        },
       },
       { _event: { clientX: 100, clientY: 200 } },
     );

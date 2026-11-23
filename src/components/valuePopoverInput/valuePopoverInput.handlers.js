@@ -1,3 +1,5 @@
+import { getInlineStartX } from "../../internal/textDirection.js";
+
 const normalizeValue = (value) => {
   if (value === undefined || value === null || value === true) {
     return "";
@@ -14,7 +16,7 @@ const focusInput = (refs) => {
 };
 
 const openValuePopover = (deps, event) => {
-  const { props, refs, render, store } = deps;
+  const { appService, props, refs, render, store } = deps;
   if (props.disabled) {
     return;
   }
@@ -25,7 +27,7 @@ const openValuePopover = (deps, event) => {
   store.setTempValue({ value });
   store.openPopover({
     position: {
-      x: rect.left,
+      x: getInlineStartX(rect, appService.getDocumentDirection()),
       y: rect.bottom,
     },
   });

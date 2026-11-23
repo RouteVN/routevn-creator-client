@@ -1,3 +1,5 @@
+import { getInlineStartX } from "../../internal/textDirection.js";
+
 export const handleZoomIn = (deps, { _event }) => {
   const { refs } = deps;
   refs.viewport.zoomBy(1, _event.shiftKey);
@@ -16,10 +18,14 @@ export const handleDone = (deps) => {
 };
 
 export const handleEditValue = (deps, { _event }) => {
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   const { field } = _event.currentTarget.dataset;
   const rect = _event.currentTarget.getBoundingClientRect();
-  store.openValueEditor({ field, x: rect.left, y: rect.top });
+  store.openValueEditor({
+    field,
+    x: getInlineStartX(rect, appService.getDocumentDirection()),
+    y: rect.top,
+  });
   render();
 };
 
