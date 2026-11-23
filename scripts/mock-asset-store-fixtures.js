@@ -1,22 +1,21 @@
-// Project templates for the template gallery until the asset store serves
-// them. Cards and templates have the shape the store client will read from
-// the API: images are URLs, dates are epoch milliseconds, and a description is
-// paragraphs (`{ text }`) as the asset store's pack descriptions are.
-//
-// Every image is an SVG drawn here, so the mock needs no files and no network.
+// Project templates the mock asset store serves, in the shapes the asset
+// store API answers: rows of `{id, data}` with a creator, file IDs in `data`,
+// rich-text descriptions, and epoch-millisecond dates. Every image is an SVG
+// drawn here, served by the mock under its file ID.
 
-const MOCK_DELAY_MS = 450;
-const PAGE_LIMIT = 6;
+import { createHash } from "node:crypto";
+
 const WIDTH = 1920;
 const HEIGHT = 1080;
+const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-export class ProjectTemplateStoreError extends Error {
-  constructor(code, message) {
-    super(message);
-    this.name = "ProjectTemplateStoreError";
-    this.code = code;
-  }
-}
+// A 16-character Base62 ID, as the API's, the same for the same name on every
+// run so links to a template keep working while the mock restarts.
+const stableId = (name) =>
+  [...createHash("sha256").update(name).digest()]
+    .slice(0, 16)
+    .map((byte) => BASE62[byte % 62])
+    .join("");
 
 const escapeXml = (text) =>
   text.replace(
@@ -31,10 +30,8 @@ const escapeXml = (text) =>
       })[character],
   );
 
-const svgDataUrl = (body, { width = WIDTH, height = HEIGHT } = {}) =>
-  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`,
-  )}`;
+const svg = (body, { width = WIDTH, height = HEIGHT } = {}) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${body}</svg>`;
 
 const sky = ({ sky: [top, bottom] }) =>
   `<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient></defs><rect width="${WIDTH}" height="${HEIGHT}" fill="url(#sky)"/>`;
@@ -120,50 +117,46 @@ const drawMenu = (palette) =>
   ].join("");
 
 const SCREENS = {
-  title: { draw: drawTitle, alt: "Title screen" },
-  dialogue: { draw: drawDialogue, alt: "Dialogue" },
-  choices: { draw: drawChoices, alt: "Choices" },
-  menu: { draw: drawMenu, alt: "Save and load" },
+  title: drawTitle,
+  dialogue: drawDialogue,
+  choices: drawChoices,
+  menu: drawMenu,
 };
 
-const createScreenshot = ({ palette, title }, screen) => ({
-  url: svgDataUrl(SCREENS[screen].draw(palette, title)),
-  width: WIDTH,
-  height: HEIGHT,
-  alt: SCREENS[screen].alt,
-});
-
-const createAvatarUrl = ({ name, color }) => {
+const drawAvatar = ({ name, color }) => {
   const initials = name
     .split(" ")
     .map((word) => word[0])
     .join("")
     .slice(0, 2);
-  return svgDataUrl(
+  return svg(
     `<rect width="96" height="96" fill="${color}"/><text x="48" y="60" font-size="36" font-family="sans-serif" font-weight="700" fill="#ffffff" text-anchor="middle">${escapeXml(initials)}</text>`,
     { width: 96, height: 96 },
   );
 };
 
-const CREATORS = {
-  studioOne: { id: "creator-one", name: "Studio One", color: "#c2185b" },
-  studioTwo: { id: "creator-two", name: "Studio Two", color: "#1565c0" },
-  studioThree: { id: "creator-three", name: "Studio Three", color: "#2e7d32" },
-};
+const CREATORS = [
+  { key: "studio-one", name: "Studio One", color: "#c2185b" },
+  { key: "studio-two", name: "Studio Two", color: "#1565c0" },
+  { key: "studio-three", name: "Studio Three", color: "#2e7d32" },
+];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const NOVEMBER_1_2026 = Date.UTC(2026, 10, 1);
+const NOVEMBER_23_2026 = Date.UTC(2026, 10, 23);
 
+// Paragraphs; a line starting with "• " is an item of the list it is in.
 const TEMPLATE_SOURCES = [
   {
-    id: "template-classic-romance",
+    key: "classic-romance",
     title: "Classic Romance",
     summary:
       "A sweet love story starter with affection points and three endings.",
-    creator: CREATORS.studioOne,
+    creator: "studio-one",
     languages: ["en", "ja"],
+    creatorModelSchema: 21,
     versionName: "1.2.0",
-    releasedDaysAgo: 3,
+    releaseNotes: "Adds a third ending.",
+    listedDaysAgo: 3,
     updatedDaysAgo: 1,
     palette: {
       sky: ["#ffd3e1", "#ffb38a"],
@@ -184,14 +177,16 @@ const TEMPLATE_SOURCES = [
     ],
   },
   {
-    id: "template-night-mystery",
+    key: "night-mystery",
     title: "Night Mystery",
     summary:
       "Investigate a case with clues, a notebook and branching accusations.",
-    creator: CREATORS.studioTwo,
+    creator: "studio-two",
     languages: ["en"],
+    creatorModelSchema: 21,
     versionName: "2.0.1",
-    releasedDaysAgo: 9,
+    releaseNotes: "",
+    listedDaysAgo: 9,
     updatedDaysAgo: 4,
     palette: {
       sky: ["#0d1b2a", "#1b4965"],
@@ -203,6 +198,7 @@ const TEMPLATE_SOURCES = [
       title: "#cae9ff",
     },
     screens: ["title", "dialogue", "choices", "menu"],
+    descriptionImage: "menu",
     description: [
       "A detective story starter set at night. Collect clues as you talk to suspects, then choose who to accuse.",
       "Each clue is a variable, so the accusation scene can check what the player has found.",
@@ -212,14 +208,16 @@ const TEMPLATE_SOURCES = [
     ],
   },
   {
-    id: "template-fantasy-quest",
+    key: "fantasy-quest",
     title: "Fantasy Quest",
     summary:
       "An adventure across a magical kingdom, with a map and party members.",
-    creator: CREATORS.studioThree,
+    creator: "studio-three",
     languages: ["en", "es", "fr"],
+    creatorModelSchema: 21,
     versionName: "1.0.0",
-    releasedDaysAgo: 15,
+    releaseNotes: "",
+    listedDaysAgo: 15,
     updatedDaysAgo: 15,
     palette: {
       sky: ["#a8e6cf", "#dcedc1"],
@@ -239,14 +237,16 @@ const TEMPLATE_SOURCES = [
     ],
   },
   {
-    id: "template-school-days",
+    key: "school-days",
     title: "School Days",
     summary:
       "Slice of life at school, with a calendar of days and club activities.",
-    creator: CREATORS.studioOne,
+    creator: "studio-one",
     languages: ["en", "ja", "zh-Hans", "ko"],
+    creatorModelSchema: 21,
     versionName: "1.4.0",
-    releasedDaysAgo: 22,
+    releaseNotes: "",
+    listedDaysAgo: 22,
     updatedDaysAgo: 6,
     palette: {
       sky: ["#a0d8ef", "#e0f4ff"],
@@ -266,13 +266,15 @@ const TEMPLATE_SOURCES = [
     ],
   },
   {
-    id: "template-haunted-house",
+    key: "haunted-house",
     title: "Haunted House",
     summary: "A horror story starter with tense music cues and a sanity meter.",
-    creator: CREATORS.studioTwo,
+    creator: "studio-two",
     languages: ["en"],
+    creatorModelSchema: 21,
     versionName: "1.1.0",
-    releasedDaysAgo: 31,
+    releaseNotes: "",
+    listedDaysAgo: 31,
     updatedDaysAgo: 12,
     palette: {
       sky: ["#1a0f1f", "#4a1c2b"],
@@ -291,14 +293,16 @@ const TEMPLATE_SOURCES = [
     ],
   },
   {
-    id: "template-space-station",
+    key: "space-station",
     title: "Space Station",
     summary:
       "Science fiction aboard a station in orbit, with a ship's computer narrator.",
-    creator: CREATORS.studioThree,
+    creator: "studio-three",
     languages: ["en", "ru"],
+    creatorModelSchema: 21,
     versionName: "0.9.0",
-    releasedDaysAgo: 40,
+    releaseNotes: "",
+    listedDaysAgo: 40,
     updatedDaysAgo: 40,
     palette: {
       sky: ["#03045e", "#0077b6"],
@@ -317,14 +321,16 @@ const TEMPLATE_SOURCES = [
     ],
   },
   {
-    id: "template-kinetic-novel",
+    key: "kinetic-novel",
     title: "Kinetic Novel",
     summary:
       "A story without choices, with text filling the screen like a book.",
-    creator: CREATORS.studioOne,
+    creator: "studio-one",
     languages: ["en", "ja"],
+    creatorModelSchema: 20,
     versionName: "1.0.0",
-    releasedDaysAgo: 55,
+    releaseNotes: "",
+    listedDaysAgo: 55,
     updatedDaysAgo: 50,
     palette: {
       sky: ["#e9e4d4", "#c9bfa5"],
@@ -342,64 +348,122 @@ const TEMPLATE_SOURCES = [
       "Text fills the screen page by page, as in a book, so long passages read comfortably.",
     ],
   },
+  {
+    // Written with a newer Creator model than any released app: a Creator
+    // that sends its own schema never lists it.
+    key: "future-template",
+    title: "Future Template",
+    summary: "Needs a newer RouteVN Creator than this one.",
+    creator: "studio-three",
+    languages: ["en"],
+    creatorModelSchema: 99,
+    versionName: "1.0.0",
+    releaseNotes: "",
+    listedDaysAgo: 1,
+    updatedDaysAgo: 1,
+    palette: {
+      sky: ["#2b2d42", "#8d99ae"],
+      ground: "#2b2d42",
+      accent: "#ef233c",
+      figure: "#000000",
+      box: "#edf2f4",
+      text: "#2b2d42",
+      title: "#edf2f4",
+    },
+    screens: ["title"],
+    description: ["Listed only for a Creator with model schema 99 or later."],
+  },
 ];
 
-const toCreator = ({ id, name, color }) => ({
-  id,
-  name,
-  avatarUrl: createAvatarUrl({ name, color }),
-});
+const run = (text) => ({ text, marks: [], link: null });
 
-const toCard = (source) => ({
-  id: source.id,
-  title: source.title,
-  summary: source.summary,
-  coverUrl: createScreenshot(source, "title").url,
-  resolution: { width: WIDTH, height: HEIGHT },
-  languages: [...source.languages],
-  releasedAt: NOVEMBER_1_2026 + 22 * DAY_MS - source.releasedDaysAgo * DAY_MS,
-  creator: toCreator(source.creator),
-});
-
-const toTemplate = (source) => ({
-  ...toCard(source),
-  description: source.description.map((text) => ({ text })),
-  screenshots: source.screens.map((screen) => createScreenshot(source, screen)),
-  versionName: source.versionName,
-  updatedAt: NOVEMBER_1_2026 + 22 * DAY_MS - source.updatedDaysAgo * DAY_MS,
-});
-
-const wait = (delayMs) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, delayMs);
-  });
-
-export const createMockProjectTemplateClient = ({
-  delayMs = MOCK_DELAY_MS,
-  sources = TEMPLATE_SOURCES,
-} = {}) => ({
-  // Template cards, newest first, a page at a time. The cursor is the index of
-  // the page's first card.
-  async listProjectTemplates({ cursor } = {}) {
-    await wait(delayMs);
-    const start = cursor === undefined ? 0 : Number(cursor);
-    const end = start + PAGE_LIMIT;
-    return {
-      templates: sources.slice(start, end).map(toCard),
-      nextCursor: end < sources.length ? String(end) : undefined,
-    };
-  },
-
-  // One template with its description and screenshots.
-  async getProjectTemplateById({ templateId } = {}) {
-    await wait(delayMs);
-    const source = sources.find(({ id }) => id === templateId);
-    if (!source) {
-      throw new ProjectTemplateStoreError(
-        "project_template_not_found",
-        "The project template is no longer available.",
-      );
+// Rich text as the API answers it: paragraphs, and consecutive "• " lines as
+// one list. An image block names its file by ID.
+const toDescription = (lines, image) => {
+  const blocks = [];
+  for (const line of lines) {
+    if (line.startsWith("• ")) {
+      const last = blocks.at(-1);
+      const item = { children: [run(line.slice(2))] };
+      if (last?.type === "LIST") last.items.push(item);
+      else blocks.push({ type: "LIST", items: [item] });
+    } else {
+      blocks.push({ type: "PARAGRAPH", children: [run(line)] });
     }
-    return toTemplate(source);
-  },
-});
+  }
+  if (image) {
+    blocks.push({
+      type: "IMAGE",
+      fileId: image.fileId,
+      alt: image.alt,
+      width: WIDTH,
+      height: HEIGHT,
+    });
+  }
+  return blocks;
+};
+
+// The mock's templates, newest first, their creators, and an SVG for every
+// file ID they name.
+export const createMockAssetStoreFixtures = ({
+  now = NOVEMBER_23_2026,
+} = {}) => {
+  const files = new Map();
+  const creators = new Map();
+  for (const source of CREATORS) {
+    const creator = {
+      id: stableId(`creator:${source.key}`),
+      name: source.name,
+      avatarFileId: stableId(`creator:${source.key}:avatar`),
+    };
+    files.set(creator.avatarFileId, drawAvatar(source));
+    creators.set(source.key, creator);
+  }
+
+  const templates = TEMPLATE_SOURCES.map((source) => {
+    const screenshotFileIds = source.screens.map((screen) => {
+      const fileId = stableId(`template:${source.key}:${screen}`);
+      files.set(fileId, svg(SCREENS[screen](source.palette, source.title)));
+      return fileId;
+    });
+    let image;
+    if (source.descriptionImage) {
+      image = {
+        fileId:
+          screenshotFileIds[source.screens.indexOf(source.descriptionImage)],
+        alt: "The notebook screen",
+      };
+    }
+    const creator = creators.get(source.creator);
+    return {
+      id: stableId(`template:${source.key}`),
+      creator,
+      data: {
+        title: source.title,
+        summary: source.summary,
+        coverFileId: screenshotFileIds[0],
+        screenshotFileIds,
+        languages: source.languages,
+        resolution: { width: WIDTH, height: HEIGHT },
+        creatorModelSchema: source.creatorModelSchema,
+        pricing: { type: "FREE" },
+        listedAt: now - source.listedDaysAgo * DAY_MS,
+        description: toDescription(source.description, image),
+        versionName: source.versionName,
+        releaseNotes: source.releaseNotes,
+        lastUpdatedAt: now - source.updatedDaysAgo * DAY_MS,
+        package: {
+          fileId: stableId(`template:${source.key}:package`),
+          size: 1024,
+          directoryOffset: 900,
+          directorySize: 124,
+        },
+      },
+    };
+  }).sort(
+    (left, right) =>
+      right.data.listedAt - left.data.listedAt || (left.id < right.id ? -1 : 1),
+  );
+
+  return { templates, files };
+};

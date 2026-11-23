@@ -134,9 +134,6 @@ describe("project template dialog rendering", () => {
         description: [{ text: "First paragraph." }],
         screenshots: ["title", "dialogue"].map((name) => ({
           url: `https://files.example/${name}.png`,
-          width: 1920,
-          height: 1080,
-          alt: name,
         })),
         versionName: "1.0.0",
       },
@@ -146,7 +143,7 @@ describe("project template dialog rendering", () => {
 
     const root = dialog.shadowRoot;
     const viewer = root.querySelector("#screenshotViewer");
-    expect(viewer.getAttribute("aria-label")).toBe("dialogue");
+    expect(viewer.getAttribute("aria-label")).toBe("Screenshot 2");
     expect(
       viewer.querySelector(
         'rtgl-image[src="https://files.example/dialogue.png"]',

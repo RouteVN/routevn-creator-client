@@ -93,27 +93,22 @@ const createDetailView = ({ state, i18n, copy }) => {
     (screenshot, index) => ({
       index,
       url: screenshot.url,
-      alt:
-        screenshot.alt ||
-        formatI18nCopy(copy.screenshotLabel, { number: index + 1 }),
+      alt: formatI18nCopy(copy.screenshotLabel, { number: index + 1 }),
       isSelected: index === detail.screenshotIndex,
     }),
   );
   const currentScreenshot =
     detail.template?.screenshots[detail.screenshotIndex];
   // While the details load, the card's cover stands in for the screenshots.
+  // The viewer is 16:9 and shows each screenshot whole inside it.
   const viewerImage = currentScreenshot
     ? {
         url: currentScreenshot.url,
         alt: screenshots[detail.screenshotIndex].alt,
-        width: currentScreenshot.width,
-        height: currentScreenshot.height,
       }
     : {
         url: template.coverUrl,
         alt: template.title,
-        width: 16,
-        height: 9,
       };
   const isLoaded = detail.status === "ready";
 

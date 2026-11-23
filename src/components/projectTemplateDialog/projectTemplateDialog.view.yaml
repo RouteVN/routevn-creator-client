@@ -170,10 +170,10 @@ template:
                           - rtgl-text s=h3 w=1fg: ${detail.title}
                       - div#templateLayout:
                           - rtgl-view#templateShots d=v w=f g=md:
-                              # The screenshot shown, whole and in its own shape, with
+                              # The screenshot shown, whole inside a 16:9 frame, with
                               # previous and next over its sides. Left and Right move
                               # between screenshots while it has focus.
-                              - 'rtgl-view#screenshotViewer tabindex=0 role=group aria-label="${detail.viewerImage.alt}" w=f pos=rel br=md bgc=mu overflow=hidden style="aspect-ratio: ${detail.viewerImage.width} / ${detail.viewerImage.height};"':
+                              - 'rtgl-view#screenshotViewer tabindex=0 role=group aria-label="${detail.viewerImage.alt}" w=f pos=rel br=md bgc=mu overflow=hidden style="aspect-ratio: 16 / 9;"':
                                   - $if detail.viewerImage.url:
                                       - 'rtgl-image src=${detail.viewerImage.url} alt="${detail.viewerImage.alt}" w=f h=f of=con': null
                                   - $if detail.hasMultipleScreenshots:

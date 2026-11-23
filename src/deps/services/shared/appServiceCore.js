@@ -9,7 +9,6 @@ import { normalizeTheme } from "../../../internal/theme.js";
 import { noopErrorTracker } from "../../clients/errorReporting.js";
 import { createAssetStoreClient } from "../../clients/assetStoreClient.js";
 import { createDeviceFactsClient } from "../../clients/deviceFacts.js";
-import { createMockProjectTemplateClient } from "../../clients/mockProjectTemplateClient.js";
 
 export const createAppServiceCore = ({
   db,
@@ -32,7 +31,6 @@ export const createAppServiceCore = ({
   windowMetricsClient,
   uiConfig,
   assetStoreClient,
-  projectTemplateClient,
 }) => {
   const getCurrentProjectId = () => {
     return router.getPayload()?.p ?? "";
@@ -113,10 +111,6 @@ export const createAppServiceCore = ({
       }).get,
     });
 
-  // Project templates are mock data until the asset store serves them.
-  const projectTemplates =
-    projectTemplateClient ?? createMockProjectTemplateClient();
-
   const touchLayoutService = createTouchLayoutService({
     windowMetricsClient,
     uiConfig,
@@ -196,15 +190,19 @@ export const createAppServiceCore = ({
       return assetStore.getAssetPackDownload({ assetPackId, countDownload });
     },
 
-    // Project templates a new project can start from, newest first, as
-    // cards: title, summary, cover, resolution, languages and creator.
+    // Project templates from the asset store that a new project can start
+    // from, newest first, as cards: title, summary, cover, resolution,
+    // languages and creator.
     listProjectTemplates({ cursor } = {}) {
-      return projectTemplates.listProjectTemplates({ cursor });
+      return assetStore.listProjectTemplates({ cursor });
     },
 
-    // One project template, with its description and screenshots.
+    // One project template, with its description and screenshots. Each read
+    // counts one view of the template.
     getProjectTemplate({ templateId } = {}) {
-      return projectTemplates.getProjectTemplateById({ templateId });
+      return assetStore.getProjectTemplateById({
+        projectTemplateId: templateId,
+      });
     },
 
     getFileDisplayPath(path) {

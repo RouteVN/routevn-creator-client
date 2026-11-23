@@ -20,20 +20,16 @@ const card = (id, overrides = {}) => ({
   ...overrides,
 });
 
-const screenshot = (name, alt = "") => ({
-  url: `https://files.example/${name}.png`,
-  width: 1920,
-  height: 1080,
-  alt,
-});
+// As the asset store client reads them: a URL each.
+const screenshot = (name) => ({ url: `https://files.example/${name}.png` });
 
 const template = (id) => ({
   ...card(id),
   description: [{ text: "First paragraph." }],
   screenshots: [
-    screenshot("title", "Title screen"),
+    screenshot("title"),
     screenshot("dialogue"),
-    screenshot("menu", "Menu"),
+    screenshot("menu"),
   ],
   versionName: "1.2.0",
   updatedAt: Date.UTC(2026, 10, 19),
@@ -146,8 +142,6 @@ describe("projectTemplateDialog store", () => {
     expect(view.detail.viewerImage).toEqual({
       url: "https://files.example/one.png",
       alt: "Template one",
-      width: 16,
-      height: 9,
     });
     expect(view.detail.versionName).toBeUndefined();
     expect(view.detail.updated).toBeUndefined();
@@ -163,11 +157,11 @@ describe("projectTemplateDialog store", () => {
     expect(view.detail.versionName).toBe("1.2.0");
     expect(view.detail.updated).toBe("Nov 19, 2026");
     expect(view.detail.hasMultipleScreenshots).toBe(true);
-    // A screenshot without its own alt text is numbered.
+    // Screenshots are named by their place.
     expect(view.detail.screenshots.map(({ alt }) => alt)).toEqual([
-      "Title screen",
+      "Screenshot 1",
       "Screenshot 2",
-      "Menu",
+      "Screenshot 3",
     ]);
     expect(view.detail.screenshots.map(({ isSelected }) => isSelected)).toEqual(
       [true, false, false],
@@ -177,9 +171,7 @@ describe("projectTemplateDialog store", () => {
     view = store.selectViewData();
     expect(view.detail.viewerImage).toEqual({
       url: "https://files.example/menu.png",
-      alt: "Menu",
-      width: 1920,
-      height: 1080,
+      alt: "Screenshot 3",
     });
 
     store.moveScreenshot({ offset: 1 });
