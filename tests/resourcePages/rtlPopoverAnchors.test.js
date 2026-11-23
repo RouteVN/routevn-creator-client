@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { handleEmptyAddClick } from "../../src/components/baseFileExplorer/baseFileExplorer.handlers.js";
 import { handleAddVisualClick } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
 import { handleMenuButtonClick as handleImportMenuButtonClick } from "../../src/components/resourceImportAction/resourceImportAction.handlers.js";
 import { handleMenuButtonClick as handlePlayerMenuButtonClick } from "../../src/components/youtubePlayer/youtubePlayer.handlers.js";
@@ -66,6 +67,28 @@ describe("popovers anchored on a button", () => {
       expect(platformStore.openAddPlatformMenu).toHaveBeenCalledWith({
         x: anchorX.start,
         y: 54,
+      });
+
+      // The add box of an empty explorer list.
+      const emptyContextMenuItems = [{ label: "New Folder", value: "new" }];
+      const explorerStore = {
+        selectSuppressNextClick: () => false,
+        showDropdownMenuFileExplorerEmpty: vi.fn(),
+      };
+      const event = clickEvent();
+      event._event.preventDefault = vi.fn();
+      handleEmptyAddClick(
+        {
+          ...createDeps(direction, explorerStore),
+          props: { emptyContextMenuItems },
+        },
+        event,
+      );
+      expect(
+        explorerStore.showDropdownMenuFileExplorerEmpty,
+      ).toHaveBeenCalledWith({
+        position: { x: anchorX.start, y: 58 },
+        emptyContextMenuItems,
       });
     });
 

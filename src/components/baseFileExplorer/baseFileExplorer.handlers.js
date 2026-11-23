@@ -1,6 +1,9 @@
 import { fromEvent, tap } from "rxjs";
 import { canItemReceiveChildren } from "../../internal/fileExplorerDragOptions.js";
-import { getInlineEndX } from "../../internal/textDirection.js";
+import {
+  getInlineEndX,
+  getInlineStartX,
+} from "../../internal/textDirection.js";
 
 const isBooleanAttrEnabled = (attrs, camelName, kebabName) => {
   const compactName = kebabName.replaceAll("-", "");
@@ -1637,7 +1640,7 @@ export const handleEmptyMessageClick = (deps, payload) => {
 
 // The add box of an empty list opens the list's add menu under the box.
 const openEmptyAddMenu = (deps, box) => {
-  const { props, render, store } = deps;
+  const { appService, props, render, store } = deps;
   const emptyContextMenuItems = getEmptyContextMenuItems(props);
   if (!emptyContextMenuItems?.length) {
     return;
@@ -1645,7 +1648,10 @@ const openEmptyAddMenu = (deps, box) => {
 
   const rect = box.getBoundingClientRect();
   store.showDropdownMenuFileExplorerEmpty({
-    position: { x: rect.left, y: rect.bottom + 4 },
+    position: {
+      x: getInlineStartX(rect, appService.getDocumentDirection()),
+      y: rect.bottom + 4,
+    },
     emptyContextMenuItems,
   });
   render();
