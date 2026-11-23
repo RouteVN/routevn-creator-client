@@ -2315,6 +2315,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "Ngang, từ phải sang trái"
   verticalRightToLeftOption: "Dọc, từ phải sang trái"
   verticalLeftToRightOption: "Dọc, từ trái sang phải"
+  readingDirectionLabel: "Hướng đọc"
+  leftToRightOption: "Từ trái sang phải"
+  rightToLeftOption: "Từ phải sang trái"
   topOption: "Trên"
   bottomOption: "Dưới"
 controlsPage:

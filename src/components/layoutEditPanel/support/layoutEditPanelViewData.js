@@ -386,6 +386,7 @@ export const toInspectorValues = ({
     scroll: values?.scroll ?? false,
     choiceItemIndex: values?.choiceItemIndex ?? 0,
     direction,
+    readingDirection: values?.readingDirection === "rtl" ? "rtl" : "ltr",
     gapX: values?.gapX ?? 0,
     gapY: values?.gapY ?? 0,
     field: values?.field ?? "",

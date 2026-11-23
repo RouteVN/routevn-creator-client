@@ -2327,6 +2327,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "По горизонталі, справа наліво"
   verticalRightToLeftOption: "По вертикалі, справа наліво"
   verticalLeftToRightOption: "По вертикалі, зліва направо"
+  readingDirectionLabel: "Напрямок читання"
+  leftToRightOption: "Зліва направо"
+  rightToLeftOption: "Справа наліво"
   topOption: "Вгорі"
   bottomOption: "Внизу"
 controlsPage:

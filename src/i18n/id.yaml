@@ -2315,6 +2315,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "Horizontal, kanan ke kiri"
   verticalRightToLeftOption: "Vertikal, kanan ke kiri"
   verticalLeftToRightOption: "Vertikal, kiri ke kanan"
+  readingDirectionLabel: "Arah baca"
+  leftToRightOption: "Kiri ke kanan"
+  rightToLeftOption: "Kanan ke kiri"
   topOption: "Atas"
   bottomOption: "Bawah"
 controlsPage:
