@@ -234,8 +234,15 @@ const refreshParticleData = async (deps, options = {}) => {
   await renderDetailPreview(deps);
 };
 
+// The detail preview draws with the shared graphics, which are shut down
+// when the page goes, unless the next page has started its own already.
 export const handleBeforeMount = (deps) => {
-  return handleBeforeMountBase(deps);
+  const { graphicsService } = deps;
+  const cleanup = handleBeforeMountBase(deps);
+  return () => {
+    cleanup();
+    void graphicsService.destroy({ onlyIfDetached: true });
+  };
 };
 
 // Thumbnails that went out of date, such as when the app closed before an
