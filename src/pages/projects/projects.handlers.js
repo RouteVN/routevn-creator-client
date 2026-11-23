@@ -339,7 +339,7 @@ const createProjectFromValues = async (deps, values = {}) => {
 export const handleCreateButtonClick = async (deps) => {
   const { store, render } = deps;
   if (!(await ensureProjectFolder(deps))) return;
-  store.openTemplateDialog();
+  store.openCreateDialog();
   render();
 };
 
@@ -352,21 +352,17 @@ export const handleTemplateDialogClose = (deps) => {
   render();
 };
 
-// The chosen template opens the Create Project form, or, when the form is
-// already open behind the templates, becomes its template.
+// The chosen template becomes the template of the form behind the templates.
 export const handleTemplateSelect = (deps, payload) => {
   const { store, render } = deps;
   const { template } = payload._event.detail;
   store.closeTemplateDialog();
-  if (store.selectIsCreateDialogOpen()) {
-    store.setCreateDialogTemplate({ template });
-  } else {
-    store.openCreateDialog({ template });
-  }
+  store.setCreateDialogTemplate({ template });
   render();
 };
 
-// Change in the form opens the templates over it.
+// Create opens the form with the bundled template; Change in the form opens
+// the templates over it.
 export const handleCreateDialogTemplateChange = (deps) => {
   const { store, render } = deps;
   store.openTemplateDialog();
@@ -737,7 +733,7 @@ export const handleMobileActionMenuClickItem = async (deps, payload) => {
   if (item.value === "create-project") {
     render();
     if (!(await ensureProjectFolder(deps))) return;
-    store.openTemplateDialog();
+    store.openCreateDialog();
     render();
     return;
   }

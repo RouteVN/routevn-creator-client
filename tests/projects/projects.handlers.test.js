@@ -486,37 +486,24 @@ describe("projects.handleProjectsClick", () => {
 });
 
 describe("projects create dialog", () => {
-  it("opens the templates first", async () => {
+  it("opens the page-owned create dialog, not the templates", async () => {
     const deps = createDeps();
 
     await handleCreateButtonClick(deps);
 
-    expect(deps.store.openTemplateDialog).toHaveBeenCalledOnce();
-    expect(deps.store.openCreateDialog).not.toHaveBeenCalled();
+    expect(deps.store.openCreateDialog).toHaveBeenCalledOnce();
+    expect(deps.store.openTemplateDialog).not.toHaveBeenCalled();
     expect(deps.render).toHaveBeenCalled();
   });
 
-  it("opens the create dialog with the chosen template", () => {
+  it("changes the template of the open create dialog from the templates", () => {
     const deps = createDeps();
-    deps.store.selectIsCreateDialogOpen.mockReturnValue(false);
     const template = {
       id: "template-one",
       source: "store",
       title: "Template One",
       coverUrl: "https://files.example/template-one.png",
     };
-
-    handleTemplateSelect(deps, { _event: { detail: { template } } });
-
-    expect(deps.store.closeTemplateDialog).toHaveBeenCalledOnce();
-    expect(deps.store.openCreateDialog).toHaveBeenCalledWith({ template });
-    expect(deps.store.setCreateDialogTemplate).not.toHaveBeenCalled();
-    expect(deps.render).toHaveBeenCalled();
-  });
-
-  it("changes the template of the open create dialog without reopening it", () => {
-    const deps = createDeps();
-    const template = { id: "default", source: "bundled" };
 
     handleCreateDialogTemplateChange(deps);
     expect(deps.store.openTemplateDialog).toHaveBeenCalledOnce();
@@ -528,6 +515,7 @@ describe("projects create dialog", () => {
       template,
     });
     expect(deps.store.openCreateDialog).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalled();
   });
 
   it("closes the templates", () => {
@@ -1243,7 +1231,7 @@ describe("projects mobile Create menu (two-level dropdown)", () => {
     expect(items[1].disabled).toBe(true);
   });
 
-  it("opens the templates from the first level", async () => {
+  it("opens the create dialog from the first level", async () => {
     const deps = createDeps({ platform: "android" });
 
     await handleMobileActionMenuClickItem(
@@ -1252,7 +1240,7 @@ describe("projects mobile Create menu (two-level dropdown)", () => {
     );
 
     expect(deps.store.closeMobileActionMenu).toHaveBeenCalledTimes(1);
-    expect(deps.store.openTemplateDialog).toHaveBeenCalledTimes(1);
+    expect(deps.store.openCreateDialog).toHaveBeenCalledTimes(1);
     expect(deps.store.openImportSourceMenu).not.toHaveBeenCalled();
   });
 

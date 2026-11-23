@@ -600,7 +600,7 @@ describe("projects store project templates", () => {
     expect(selectIsTemplateDialogOpen({ state })).toBe(false);
   });
 
-  it("opens the create dialog with the chosen template, or the bundled one", () => {
+  it("opens the create dialog on the bundled template, and changes it in place", () => {
     const state = createInitialState();
     const template = {
       id: "template-one",
@@ -609,21 +609,19 @@ describe("projects store project templates", () => {
       coverUrl: "https://files.example/template-one.png",
     };
 
-    openCreateDialog({ state }, { template });
-    expect(state.createDialog).toMatchObject({ isOpen: true, template });
+    openCreateDialog({ state });
+    expect(state.createDialog).toMatchObject({
+      isOpen: true,
+      template: { id: "default", source: "bundled" },
+    });
     const formKey = state.createDialog.formKey;
 
     // Another template keeps the open form and its values.
-    setCreateDialogTemplate(
-      { state },
-      { template: { id: "default", source: "bundled" } },
-    );
+    setCreateDialogTemplate({ state }, { template });
     expect(state.createDialog.formKey).toBe(formKey);
-    expect(state.createDialog.template).toEqual({
-      id: "default",
-      source: "bundled",
-    });
+    expect(state.createDialog.template).toBe(template);
 
+    // A new form starts from the bundled template again.
     openCreateDialog({ state });
     expect(state.createDialog.template).toEqual({
       id: "default",

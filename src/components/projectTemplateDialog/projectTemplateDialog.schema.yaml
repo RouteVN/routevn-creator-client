@@ -1,5 +1,5 @@
 componentName: rvn-project-template-dialog
-description: Chooses the template a new project starts from. The bundled template comes first, then the asset store's templates; a store template opens a page with its screenshots and description.
+description: Chooses the template a new project starts from, opened from the Create Project form. The bundled template comes first, then the asset store's templates; a store template opens a page with its screenshots and description.
 propsSchema:
   type: object
   properties:

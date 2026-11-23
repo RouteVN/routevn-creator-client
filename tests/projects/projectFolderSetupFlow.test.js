@@ -38,7 +38,7 @@ const createDeps = ({ platform = "ios", configured = false, reason } = {}) => {
   };
   const store = {
     setProjects: vi.fn(),
-    openTemplateDialog: vi.fn(),
+    openCreateDialog: vi.fn(),
     closeMobileActionMenu: vi.fn(),
   };
   return { appService, store, i18n, render: vi.fn() };
@@ -83,15 +83,15 @@ describe("iOS projects folder setup from the Projects page", () => {
     });
   });
 
-  it("opens the templates only after the folder is saved", async () => {
+  it("opens the create dialog only after the folder is saved", async () => {
     const deps = createDeps();
     await handleCreateButtonClick(deps);
     expect(deps.appService.confirmProjectFolderSetup).toHaveBeenCalledOnce();
-    expect(deps.store.openTemplateDialog).toHaveBeenCalledOnce();
+    expect(deps.store.openCreateDialog).toHaveBeenCalledOnce();
 
     await handleCreateButtonClick(deps);
     expect(deps.appService.showFormDialog).toHaveBeenCalledOnce();
-    expect(deps.store.openTemplateDialog).toHaveBeenCalledTimes(2);
+    expect(deps.store.openCreateDialog).toHaveBeenCalledTimes(2);
   });
 
   it("asks from the mobile Create menu as well", async () => {
@@ -102,7 +102,7 @@ describe("iOS projects folder setup from the Projects page", () => {
     });
     expect(deps.store.closeMobileActionMenu).toHaveBeenCalledOnce();
     expect(deps.appService.showFormDialog).toHaveBeenCalledOnce();
-    expect(deps.store.openTemplateDialog).not.toHaveBeenCalled();
+    expect(deps.store.openCreateDialog).not.toHaveBeenCalled();
   });
 
   it("stops when the dialog is dismissed or the picker is cancelled", async () => {
@@ -114,7 +114,7 @@ describe("iOS projects folder setup from the Projects page", () => {
     deps.appService.pickProjectFolderSetup.mockResolvedValueOnce(undefined);
     await handleCreateButtonClick(deps);
     expect(deps.appService.confirmProjectFolderSetup).not.toHaveBeenCalled();
-    expect(deps.store.openTemplateDialog).not.toHaveBeenCalled();
+    expect(deps.store.openCreateDialog).not.toHaveBeenCalled();
     expect(deps.appService.showToast).not.toHaveBeenCalled();
   });
 
@@ -149,7 +149,7 @@ describe("iOS projects folder setup from the Projects page", () => {
       message: copy.confirmError,
       status: "error",
     });
-    expect(deps.store.openTemplateDialog).not.toHaveBeenCalled();
+    expect(deps.store.openCreateDialog).not.toHaveBeenCalled();
   });
 
   it("asks for a saved folder that cannot be opened as soon as Projects opens", async () => {
@@ -171,7 +171,7 @@ describe("iOS projects folder setup from the Projects page", () => {
       projects: [{ id: "project-1" }],
     });
     // The create dialog is not opened: the user only opened the app.
-    expect(deps.store.openTemplateDialog).not.toHaveBeenCalled();
+    expect(deps.store.openCreateDialog).not.toHaveBeenCalled();
   });
 
   it.each([

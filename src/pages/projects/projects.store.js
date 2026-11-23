@@ -151,7 +151,7 @@ export const createInitialState = () => ({
     confirmationText: "",
   },
 
-  // Create opens the templates first; the chosen one opens the form.
+  // Change in the Create Project form opens the templates over it.
   templateDialog: {
     isOpen: false,
   },
@@ -604,11 +604,12 @@ export const selectIsTemplateDialogOpen = ({ state }) => {
   return state.templateDialog.isOpen;
 };
 
-export const openCreateDialog = ({ state }, { template } = {}) => {
+// A new form starts from the bundled template.
+export const openCreateDialog = ({ state }, _payload = {}) => {
   state.createDialog.isOpen = true;
   state.createDialog.formKey += 1;
   state.createDialog.defaultValues = {};
-  state.createDialog.template = template ?? createBundledProjectTemplate();
+  state.createDialog.template = createBundledProjectTemplate();
 };
 
 // Choosing another template while the form is open keeps what is typed.
