@@ -2566,7 +2566,7 @@ scenesPage:
   sceneTextStatsSummary: "{lineLabel} · {textCountLabel}"
   sectionFallback: "Section {index}"
   sectionsLabel: "Sections"
-  setInitialSceneMenuItem: "Définir comme scène initiale"
+  setInitialSceneMenuItem: "Définir comme scène de départ"
   title: "Scènes"
   updateFolderDescription: "Modifiez les informations du dossier"
   updateSceneDescription: "Modifiez les informations de la scène"
