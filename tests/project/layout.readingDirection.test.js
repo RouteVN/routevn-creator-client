@@ -79,3 +79,22 @@ describe("a right-to-left container in Route Graphics", () => {
     ]);
   });
 });
+
+describe("the project model", () => {
+  it("accepts a reading direction on a container update", async () => {
+    const { validatePayload } = await import("@routevn/creator-model");
+    const update = (readingDirection) =>
+      validatePayload({
+        type: "layout.element.update",
+        payload: {
+          layoutId: "layout-one",
+          elementId: "container-one",
+          data: { readingDirection },
+        },
+      });
+
+    expect(update("rtl").valid).toBe(true);
+    expect(update("ltr").valid).toBe(true);
+    expect(update("sideways").valid).toBe(false);
+  });
+});
