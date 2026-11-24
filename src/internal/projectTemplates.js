@@ -1,6 +1,7 @@
 // The template a new project starts from: the one bundled with the app, or
 // one from the asset store. A store template carries what the Create Project
-// form shows of it: its title and cover.
+// form shows of it: its title, cover and resolution, the one resolution it
+// is made for.
 
 export const BUNDLED_PROJECT_TEMPLATE_ID = "default";
 
@@ -12,11 +13,17 @@ export const createBundledProjectTemplate = () => ({
   source: PROJECT_TEMPLATE_SOURCE_BUNDLED,
 });
 
-export const createStoreProjectTemplate = ({ id, title, coverUrl }) => ({
+export const createStoreProjectTemplate = ({
+  id,
+  title,
+  coverUrl,
+  resolution,
+}) => ({
   id,
   source: PROJECT_TEMPLATE_SOURCE_STORE,
   title,
   coverUrl,
+  resolution,
 });
 
 export const isBundledProjectTemplate = (template) =>
@@ -33,8 +40,3 @@ export const getProjectTemplateCoverUrl = (template) =>
   isBundledProjectTemplate(template)
     ? BUNDLED_PROJECT_TEMPLATE_COVER_URL
     : template.coverUrl;
-
-// The bundled template a project is created from. Store templates are not
-// downloaded yet, so a project made from one starts from the bundled template.
-export const resolveProjectTemplateForCreation = (_template) =>
-  BUNDLED_PROJECT_TEMPLATE_ID;

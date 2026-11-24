@@ -1,8 +1,8 @@
 import JSZip from "jszip";
 import {
-  loadTemplate,
-  getTemplateFiles,
-} from "../../clients/web/templateLoader.js";
+  copyProjectTemplateFiles,
+  loadProjectTemplate,
+} from "../../clients/web/projectTemplateSource.js";
 import {
   base64ToUint8Array,
   callAndroidBridge,
@@ -27,10 +27,6 @@ import {
   createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
 import {
-  resolveProjectResolutionForWrite,
-  scaleTemplateProjectStateForResolution,
-} from "../../../internal/projectResolution.js";
-import {
   createMainProjectionState,
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
@@ -41,10 +37,6 @@ import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
 import { PROJECT_STORAGE_NOT_EMPTY_MESSAGE } from "../../../internal/projectInitialization.js";
 import { createWebIconAssets } from "../../clients/web/webIconAssets.js";
-import {
-  filterTemplateFileIds,
-  resolveTemplateFontsForLanguage,
-} from "../../../internal/defaultTemplateFonts.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -436,34 +428,6 @@ const resolveAndroidProjectFileMetadata = async ({
   );
 };
 
-const copyTemplateFiles = async ({ templateId, projectId, templateData }) => {
-  const templateFilesPath = `/templates/${templateId}/files/`;
-  const filesToCopy = filterTemplateFileIds({
-    templateData,
-    templateFileIds: await getTemplateFiles(templateId),
-  });
-
-  for (const fileId of filesToCopy) {
-    try {
-      const sourcePath = templateFilesPath + fileId;
-      const response = await fetch(sourcePath);
-      if (response.ok) {
-        const blob = await response.blob();
-        const bytes = new Uint8Array(await blob.arrayBuffer());
-        const templateMimeType = templateData.files.items[fileId].mimeType;
-        await writeAndroidProjectFile({
-          projectId,
-          fileId: assertSafeProjectFileId(fileId),
-          bytes,
-          mimeType: templateMimeType ?? blob.type,
-        });
-      }
-    } catch (error) {
-      console.error(`Failed to copy template file ${fileId}:`, error);
-    }
-  }
-};
-
 const writeDownloadFile = ({ filename, bytes, mimeType }) => {
   return callAndroidBridge("writeDownloadFile", {
     filename,
@@ -681,24 +645,20 @@ export const createAndroidProjectServiceAdapters = ({
 
       await ensureAndroidProjectStorage(safeProjectId);
 
-      const loadedTemplateData = await loadTemplate(template);
-      const languageTemplateData = resolveTemplateFontsForLanguage({
-        templateId: template,
-        templateData: loadedTemplateData,
+      const { templateData, files } = await loadProjectTemplate({
+        template,
         language: projectInfo?.language,
-      });
-      const resolvedProjectResolution = resolveProjectResolutionForWrite({
         projectResolution,
-        fallbackResolution: languageTemplateData.project?.resolution,
       });
-      const templateData = scaleTemplateProjectStateForResolution(
-        languageTemplateData,
-        resolvedProjectResolution,
-      );
-      await copyTemplateFiles({
-        templateId: template,
-        projectId: safeProjectId,
-        templateData,
+      await copyProjectTemplateFiles({
+        files,
+        saveFile: ({ fileId, mimeType, bytes }) =>
+          writeAndroidProjectFile({
+            projectId: safeProjectId,
+            fileId: assertSafeProjectFileId(fileId),
+            bytes,
+            mimeType,
+          }),
       });
 
       assertSupportedProjectState(templateData);

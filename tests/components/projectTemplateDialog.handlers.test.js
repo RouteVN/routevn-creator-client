@@ -229,6 +229,7 @@ describe("projectTemplateDialog handlers", () => {
             source: "store",
             title: "Template one",
             coverUrl: "https://files.example/one.png",
+            resolution: { width: 1920, height: 1080 },
           },
         },
       },

@@ -9,6 +9,8 @@ export { ImportPackageClientError };
 
 const DEFAULT_LIMITS = Object.freeze({
   manifestBytes: 2 * 1024 * 1024,
+  // A project template's manifest holds the whole project's state.
+  projectTemplateManifestBytes: 8 * 1024 * 1024,
   directoryBytes: 4 * 1024 * 1024,
   fileBytes: 50 * 1024 * 1024,
   totalBytes: 200 * 1024 * 1024,
@@ -933,6 +935,30 @@ export const createImportPackageClient = ({
       }
       return createPublishedPackageSource({ zip });
     },
+
+    /**
+     * An asset store project template's package ZIP, read in place with byte
+     * ranges: `readManifest()` reads its `project-template.json`, then
+     * `readFile()` reads each file of its repository, as `files/<id>`, the
+     * descriptor's `source.url`. `zip` is its first signed URL, `{url,
+     * expiresAt, size, directoryOffset, directorySize}`, and `getZip()`
+     * gives a fresh one (see `createSignedRangeReader`).
+     */
+    openProjectTemplatePackage({ id, zip, getZip }) {
+      const reader = createSignedRangeReader({ zip, getZip });
+      return createZipPackageSource({
+        client,
+        cryptoImpl,
+        manifestUrl: `asset-store:///project-templates/${encodeURIComponent(id)}`,
+        manifestEntry: PROJECT_TEMPLATE_MANIFEST_ENTRY,
+        manifestBytes: resolvedLimits.projectTemplateManifestBytes,
+        locate: async () => ({
+          reader,
+          directoryOffset: zip.directoryOffset,
+          directorySize: zip.directorySize,
+        }),
+      });
+    },
   };
   return client;
 };
@@ -952,6 +978,7 @@ export const createUrlPackageSource = ({ client, url }) => {
 };
 
 const MANIFEST_ENTRY = "asset-package.json";
+const PROJECT_TEMPLATE_MANIFEST_ENTRY = "project-template.json";
 
 const isByteCount = (value) => Number.isSafeInteger(value) && value >= 0;
 
@@ -974,13 +1001,16 @@ const packageEntryName = (descriptor) => {
 /**
  * A package ZIP, whose manifest and files are its entries. `locate()` gives
  * the `reader` for its bytes and where its central directory is;
- * `manifestUrl` names where the package came from.
+ * `manifestUrl` names where the package came from. The manifest is the
+ * `manifestEntry` entry, of at most `manifestBytes`.
  */
 const createZipPackageSource = ({
   client,
   cryptoImpl,
   manifestUrl,
   locate,
+  manifestEntry = MANIFEST_ENTRY,
+  manifestBytes = client.limits.manifestBytes,
 }) => {
   let opened;
 
@@ -1006,9 +1036,9 @@ const createZipPackageSource = ({
         },
         signal,
       });
-      const bytes = await opened.readEntry(MANIFEST_ENTRY, {
+      const bytes = await opened.readEntry(manifestEntry, {
         signal,
-        maxBytes: client.limits.manifestBytes,
+        maxBytes: manifestBytes,
         kind: "manifest",
       });
       let manifest;

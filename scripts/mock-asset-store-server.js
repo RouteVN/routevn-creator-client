@@ -1,20 +1,29 @@
 // A local stand-in for the asset store API's project template methods, until
 // the API serves them. It answers JSON-RPC at /asset-store/rpc as the API
-// does, with the same params, results and errors, and serves each file it
-// names at /files/<fileId>. Development builds call 127.0.0.1:3100, the
+// does, with the same params, results and errors, serves each image it names
+// at /files/<fileId>, and each template's package at a signed URL that
+// expires, in byte ranges. Development builds call 127.0.0.1:3100, the
 // mock's default port, so the Creator uses it without configuration.
 //
-//   bun run mock:asset-store [--port 3100] [--delay 400] [--fail list|detail]
+//   bun run mock:asset-store [--port 3100] [--delay 400]
+//     [--fail list|detail|download|package]
 //
-// --delay waits before every answer, to show loading states; --fail makes the
-// template list or a template's page fail, to show their errors.
+// --delay waits before every answer, to show loading states, and an eighth
+// of it before each byte range, to show a download's progress. --fail makes
+// the template list, a template's page or its download URL fail, or, with
+// `package`, serves packages with a file that fails its checksum.
 
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { createMockAssetStoreFixtures } from "./mock-asset-store-fixtures.js";
+import { buildMockTemplatePackage } from "./mock-asset-store-packages.js";
 
 const RPC_PATH = "/asset-store/rpc";
 const FILES_PATH = "/files/";
+const PACKAGES_PATH = "/packages/";
+// As long as the API's signed package URLs work.
+const DOWNLOAD_URL_LIFETIME_MS = 10 * 60 * 1000;
+export const FAIL_MODES = ["list", "detail", "download", "package"];
 const MAX_QUERY_LENGTH = 100;
 const ID_PATTERN = /^[A-Za-z0-9]{16}$/;
 const CARD_FIELDS = [
@@ -32,7 +41,8 @@ const CARD_FIELDS = [
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-RouteVN-RPC",
+  "Access-Control-Allow-Headers": "Content-Type, X-RouteVN-RPC, Range",
+  "Access-Control-Expose-Headers": "Content-Range, Content-Length",
   "Access-Control-Max-Age": "600",
 };
 
@@ -104,8 +114,50 @@ const descriptionFileIds = (description) =>
     block.type === "IMAGE" ? [block.fileId] : [],
   );
 
-export const createMockAssetStore = ({ fixtures, fileUrl, fail } = {}) => {
+const readTemplateId = (params) => {
+  onlyKeys(params, ["projectTemplateId", "device"], "params");
+  const { projectTemplateId, device } = params;
+  if (
+    typeof projectTemplateId !== "string" ||
+    !ID_PATTERN.test(projectTemplateId)
+  ) {
+    throw invalidParams("projectTemplateId is 16 Base62 characters");
+  }
+  if (device !== undefined && !isObject(device)) {
+    throw invalidParams("device is an object");
+  }
+  return { projectTemplateId, device };
+};
+
+/**
+ * The mock's JSON-RPC methods over `fixtures`. `fileUrl(fileId)` is an
+ * image's URL, `packageUrl(templateId, expiresAt)` a package's signed URL,
+ * and `getPackage(template)` the built package (see
+ * mock-asset-store-packages.js).
+ */
+export const createMockAssetStore = ({
+  fixtures,
+  fileUrl,
+  packageUrl,
+  getPackage,
+  fail,
+  now = Date.now,
+} = {}) => {
   const { templates } = fixtures;
+
+  // A template's data, with its package's size and directory.
+  const withPackage = async (template) => {
+    const { size, directoryOffset, directorySize } = await getPackage(template);
+    return {
+      ...template.data,
+      package: {
+        fileId: template.data.package.fileId,
+        size,
+        directoryOffset,
+        directorySize,
+      },
+    };
+  };
 
   const methods = {
     "assetStore.listProjectTemplates"(params) {
@@ -154,18 +206,8 @@ export const createMockAssetStore = ({ fixtures, fileUrl, fail } = {}) => {
       };
     },
 
-    "assetStore.getProjectTemplateById"(params) {
-      onlyKeys(params, ["projectTemplateId", "device"], "params");
-      const { projectTemplateId, device } = params;
-      if (
-        typeof projectTemplateId !== "string" ||
-        !ID_PATTERN.test(projectTemplateId)
-      ) {
-        throw invalidParams("projectTemplateId is 16 Base62 characters");
-      }
-      if (device !== undefined && !isObject(device)) {
-        throw invalidParams("device is an object");
-      }
+    async "assetStore.getProjectTemplateById"(params) {
+      const { projectTemplateId, device } = readTemplateId(params);
       if (fail === "detail") {
         throw new RpcError(-32603, "Internal error (mock --fail detail)");
       }
@@ -175,7 +217,7 @@ export const createMockAssetStore = ({ fixtures, fileUrl, fail } = {}) => {
         console.log(`view of ${template.data.title} from device ${device.id}`);
       }
       return {
-        projectTemplate: { id: template.id, data: template.data },
+        projectTemplate: { id: template.id, data: await withPackage(template) },
         creator: template.creator,
         files: listFiles(
           [
@@ -186,10 +228,37 @@ export const createMockAssetStore = ({ fixtures, fileUrl, fail } = {}) => {
         ),
       };
     },
+
+    // The package's signed URL, which allows byte ranges until it expires.
+    // Each call with a device counts one download.
+    async "assetStore.getProjectTemplateDownloadUrl"(params) {
+      const { projectTemplateId, device } = readTemplateId(params);
+      if (fail === "download") {
+        throw new RpcError(-32603, "Internal error (mock --fail download)");
+      }
+      const template = templates.find(({ id }) => id === projectTemplateId);
+      if (!template) throw notFound();
+      const { size, directoryOffset, directorySize } =
+        await getPackage(template);
+      if (device) {
+        console.log(
+          `download of ${template.data.title} from device ${device.id}`,
+        );
+      }
+      const expiresAt = now() + DOWNLOAD_URL_LIFETIME_MS;
+      return {
+        versionName: template.data.versionName,
+        downloadUrl: packageUrl(template.id, expiresAt),
+        expiresAt,
+        size,
+        directoryOffset,
+        directorySize,
+      };
+    },
   };
 
   // A JSON-RPC request body to its response body.
-  const answer = (body) => {
+  const answer = async (body) => {
     const id = isObject(body) && "id" in body ? body.id : null;
     try {
       if (!isObject(body) || body.jsonrpc !== "2.0") {
@@ -198,7 +267,7 @@ export const createMockAssetStore = ({ fixtures, fileUrl, fail } = {}) => {
       const method = methods[body.method];
       if (!method) throw new RpcError(-32601, "Method not found");
       if (!isObject(body.params)) throw invalidParams("params is an object");
-      return { jsonrpc: "2.0", id, result: method(body.params) };
+      return { jsonrpc: "2.0", id, result: await method(body.params) };
     } catch (error) {
       if (!(error instanceof RpcError)) throw error;
       const rpcError = { code: error.code, message: error.message };
@@ -208,6 +277,44 @@ export const createMockAssetStore = ({ fixtures, fileUrl, fail } = {}) => {
   };
 
   return { answer };
+};
+
+// One byte range of `bytes` for a `Range` header, as a file server answers
+// it: `start-end` or `start-`, or the whole body without one.
+const sendRange = (request, response, bytes) => {
+  const headers = {
+    ...CORS_HEADERS,
+    "Content-Type": "application/zip",
+    "Accept-Ranges": "bytes",
+  };
+  const match = /^bytes=(\d+)-(\d*)$/.exec(request.headers.range ?? "");
+  if (!match) {
+    response
+      .writeHead(200, { ...headers, "Content-Length": bytes.length })
+      .end(bytes);
+    return;
+  }
+  const start = Number(match[1]);
+  const end = Math.min(
+    match[2] === "" ? bytes.length - 1 : Number(match[2]),
+    bytes.length - 1,
+  );
+  if (start > end) {
+    response
+      .writeHead(416, {
+        ...headers,
+        "Content-Range": `bytes */${bytes.length}`,
+      })
+      .end();
+    return;
+  }
+  response
+    .writeHead(206, {
+      ...headers,
+      "Content-Range": `bytes ${start}-${end}/${bytes.length}`,
+      "Content-Length": end - start + 1,
+    })
+    .end(bytes.subarray(start, end + 1));
 };
 
 const readBody = (request) =>
@@ -227,16 +334,50 @@ export const startMockAssetStoreServer = ({
   new Promise((resolve, reject) => {
     const fixtures = createMockAssetStoreFixtures();
     let baseUrl;
+    // Each package is built when it is first asked for, then kept.
+    const packages = new Map();
+    const getPackage = (template) => {
+      if (!packages.has(template.id)) {
+        packages.set(
+          template.id,
+          buildMockTemplatePackage({ template, corrupt: fail === "package" }),
+        );
+      }
+      return packages.get(template.id);
+    };
     const store = createMockAssetStore({
       fixtures,
       fail,
+      getPackage,
       fileUrl: (fileId) => `${baseUrl}${FILES_PATH}${fileId}`,
+      packageUrl: (templateId, expiresAt) =>
+        `${baseUrl}${PACKAGES_PATH}${templateId}.zip?expires=${expiresAt}`,
     });
-    const wait = () =>
-      new Promise((resolveWait) => setTimeout(resolveWait, delayMs));
+    const wait = (ms = delayMs) =>
+      new Promise((resolveWait) => setTimeout(resolveWait, ms));
+
+    // A package's bytes, while its URL has not expired.
+    const servePackage = async (request, response, query) => {
+      const templateId = request.url
+        .split("?")[0]
+        .slice(PACKAGES_PATH.length)
+        .replace(/\.zip$/, "");
+      const template = fixtures.templates.find(({ id }) => id === templateId);
+      if (!template) {
+        response.writeHead(404, CORS_HEADERS).end("Not found");
+        return;
+      }
+      if (!(Number(query.get("expires")) > Date.now())) {
+        response.writeHead(403, CORS_HEADERS).end("Expired");
+        return;
+      }
+      const { bytes } = await getPackage(template);
+      await wait(Math.round(delayMs / 8));
+      sendRange(request, response, bytes);
+    };
 
     const server = createServer(async (request, response) => {
-      const path = request.url.split("?")[0];
+      const [path, search = ""] = request.url.split("?");
       if (request.method === "OPTIONS") {
         response.writeHead(204, CORS_HEADERS).end();
         return;
@@ -256,7 +397,7 @@ export const startMockAssetStoreServer = ({
                 id: null,
                 error: { code: -32700, message: "Parse error" },
               }
-            : store.answer(body),
+            : await store.answer(body),
         );
         response
           .writeHead(200, {
@@ -265,6 +406,10 @@ export const startMockAssetStoreServer = ({
             "Content-Length": Buffer.byteLength(text),
           })
           .end(text);
+        return;
+      }
+      if (request.method === "GET" && path.startsWith(PACKAGES_PATH)) {
+        await servePackage(request, response, new URLSearchParams(search));
         return;
       }
       const file =
@@ -303,8 +448,8 @@ const readOption = (args, name) => {
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   const fail = readOption(args, "fail");
-  if (fail !== undefined && fail !== "list" && fail !== "detail") {
-    console.error("--fail takes list or detail");
+  if (fail !== undefined && !FAIL_MODES.includes(fail)) {
+    console.error(`--fail takes ${FAIL_MODES.join(", ")}`);
     process.exit(1);
   }
   const { url } = await startMockAssetStoreServer({
@@ -314,6 +459,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   });
   console.log(`Mock asset store at ${url}`);
   console.log(
-    "Serves assetStore.listProjectTemplates and assetStore.getProjectTemplateById.",
+    "Serves assetStore.listProjectTemplates, getProjectTemplateById and getProjectTemplateDownloadUrl.",
   );
 }

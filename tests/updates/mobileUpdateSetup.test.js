@@ -188,7 +188,7 @@ describe("Android API update setup", () => {
           detail: {
             values: {
               name: "Project One",
-              template: "default",
+              template: { id: "default", source: "bundled" },
               resolution: "1920x1080",
             },
           },
@@ -241,7 +241,13 @@ describe("Android API update setup", () => {
       },
       {
         _event: {
-          detail: { values: { name: "Project One", resolution: "1920x1080" } },
+          detail: {
+            values: {
+              name: "Project One",
+              template: { id: "default", source: "bundled" },
+              resolution: "1920x1080",
+            },
+          },
         },
       },
     );

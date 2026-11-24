@@ -19,9 +19,9 @@ import { Channel, convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { fileTypeFromBuffer } from "file-type";
 import JSZip from "jszip";
 import {
-  loadTemplate,
-  getTemplateFiles,
-} from "../../clients/web/templateLoader.js";
+  copyProjectTemplateFiles,
+  loadProjectTemplate,
+} from "../../clients/web/projectTemplateSource.js";
 import {
   PROJECT_DB_NAME,
   createPersistedTauriProjectStore,
@@ -44,10 +44,6 @@ import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
-import {
-  resolveProjectResolutionForWrite,
-  scaleTemplateProjectStateForResolution,
-} from "../../../internal/projectResolution.js";
 import {
   createMainProjectionState,
   MAIN_PARTITION,
@@ -80,10 +76,6 @@ import {
   createSquareCroppedImageFile,
   getImageDimensions,
 } from "../../clients/web/fileProcessors.js";
-import {
-  filterTemplateFileIds,
-  resolveTemplateFontsForLanguage,
-} from "../../../internal/defaultTemplateFonts.js";
 import { createProjectFolderNotEmptyError } from "../../../internal/projectInitialization.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
@@ -427,31 +419,6 @@ const createLocalOnlyProjectCollabSession = ({
     },
   };
 };
-
-async function copyTemplateFiles(templateId, targetPath, templateData) {
-  const templateFilesPath = `/templates/${templateId}/files/`;
-  const filesToCopy = filterTemplateFileIds({
-    templateData,
-    templateFileIds: await getTemplateFiles(templateId),
-  });
-
-  for (const fileId of filesToCopy) {
-    try {
-      const sourcePath = templateFilesPath + fileId;
-      const targetFilePath = await join(targetPath, fileId);
-
-      const response = await fetch(sourcePath);
-      if (response.ok) {
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        await writeFile(targetFilePath, uint8Array);
-      }
-    } catch (error) {
-      console.error(`Failed to copy template file ${fileId}:`, error);
-    }
-  }
-}
 
 export const createTauriProjectServiceAdapters = ({
   collabLog,
@@ -1497,21 +1464,16 @@ export const createTauriProjectServiceAdapters = ({
       const filesPath = await join(projectPath, "files");
       await mkdir(filesPath, { recursive: true });
 
-      const loadedTemplateData = await loadTemplate(template);
-      const languageTemplateData = resolveTemplateFontsForLanguage({
-        templateId: template,
-        templateData: loadedTemplateData,
+      const { templateData, files } = await loadProjectTemplate({
+        template,
         language: projectInfo?.language,
-      });
-      const resolvedProjectResolution = resolveProjectResolutionForWrite({
         projectResolution,
-        fallbackResolution: languageTemplateData.project?.resolution,
       });
-      const templateData = scaleTemplateProjectStateForResolution(
-        languageTemplateData,
-        resolvedProjectResolution,
-      );
-      await copyTemplateFiles(template, filesPath, templateData);
+      await copyProjectTemplateFiles({
+        files,
+        saveFile: async ({ fileId, bytes }) =>
+          writeFile(await join(filesPath, fileId), bytes),
+      });
 
       assertSupportedProjectState(templateData);
 

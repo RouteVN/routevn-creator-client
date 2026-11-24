@@ -12,7 +12,9 @@ import {
 import {
   createBundledProjectTemplate,
   getProjectTemplateCoverUrl,
+  isBundledProjectTemplate,
 } from "../../internal/projectTemplates.js";
+import { formatDimensions } from "../../internal/dates.js";
 import { selectProjectTemplateTitle } from "../../internal/ui/projectTemplates.js";
 
 const CREATE_PROJECT_RESOLUTION_OPTIONS = PROJECT_RESOLUTION_OPTIONS.filter(
@@ -95,7 +97,10 @@ const form = {
       slot: "project-icon-selector",
       label: "Project Icon",
     },
+    // A store template is made for one resolution, which the Template row
+    // shows; only the bundled template's is chosen here.
     {
+      $when: "chooseResolution",
       name: "resolution",
       type: "select",
       label: "Resolution",
@@ -104,7 +109,7 @@ const form = {
       options: CREATE_PROJECT_RESOLUTION_OPTIONS,
     },
     {
-      $when: "values.resolution == 'custom'",
+      $when: "chooseResolution && values.resolution == 'custom'",
       name: "resolutionWidth",
       type: "input-number",
       label: "Resolution Width",
@@ -113,7 +118,7 @@ const form = {
       step: 1,
     },
     {
-      $when: "values.resolution == 'custom'",
+      $when: "chooseResolution && values.resolution == 'custom'",
       name: "resolutionHeight",
       type: "input-number",
       label: "Resolution Height",
@@ -362,10 +367,20 @@ export const selectIsIconCropDialogOpen = ({ state }) => {
   return state.isIconCropDialogOpen;
 };
 
-const createTemplateView = (template, i18n) => ({
-  title: selectProjectTemplateTitle(i18n, template),
-  coverUrl: getProjectTemplateCoverUrl(template),
-});
+const createTemplateView = (template, i18n) => {
+  const view = {
+    title: selectProjectTemplateTitle(i18n, template),
+    coverUrl: getProjectTemplateCoverUrl(template),
+  };
+  if (!isBundledProjectTemplate(template)) {
+    view.resolution = formatDimensions(
+      template.resolution.width,
+      template.resolution.height,
+      i18n.dateTime,
+    );
+  }
+  return view;
+};
 
 export const selectViewData = ({ state, i18n }) => {
   const copy = selectCopy(i18n);
@@ -375,7 +390,10 @@ export const selectViewData = ({ state, i18n }) => {
     projectTemplate: createTemplateView(state.template, i18n),
     changeTemplateLabel: copy.changeTemplateButton,
     form: createLocalizedForm(copy, projectLanguageCopy, i18n),
-    formKey: `${state.formKey}-${state.defaultValues.resolution}`,
+    // The form starts again from the values kept here when the resolution
+    // preset changes, or when a template with or without its own resolution
+    // is chosen.
+    formKey: `${state.formKey}-${state.defaultValues.resolution}-${state.template.source}`,
     defaultValues: state.defaultValues,
     projectPathDisplay:
       state.defaultValues.projectPath || copy.noFolderSelected,
@@ -387,6 +405,7 @@ export const selectViewData = ({ state, i18n }) => {
     context: {
       platform: state.platform,
       values: state.defaultValues,
+      chooseResolution: isBundledProjectTemplate(state.template),
     },
     clickToUploadLabel: copy.clickToUpload,
     browseButtonLabel: copy.browseButton,

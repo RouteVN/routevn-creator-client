@@ -612,6 +612,15 @@ export const openCreateDialog = ({ state }, _payload = {}) => {
   state.createDialog.template = createBundledProjectTemplate();
 };
 
+// The form again, with what was typed and the template chosen, after its
+// template failed to download, so Create can be tried again.
+export const reopenCreateDialog = ({ state }, { values, template } = {}) => {
+  state.createDialog.isOpen = true;
+  state.createDialog.formKey += 1;
+  state.createDialog.defaultValues = values;
+  state.createDialog.template = template;
+};
+
 // Choosing another template while the form is open keeps what is typed.
 export const setCreateDialogTemplate = ({ state }, { template } = {}) => {
   state.createDialog.template = template;

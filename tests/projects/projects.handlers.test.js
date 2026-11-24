@@ -34,10 +34,23 @@ import {
   handleProjectsClick,
 } from "../../src/pages/projects/projects.handlers.js";
 import { createProjectFolderNotEmptyError } from "../../src/internal/projectInitialization.js";
+import { createBundledProjectTemplate } from "../../src/internal/projectTemplates.js";
+import { ProjectTemplateDownloadError } from "../../src/deps/services/shared/projectTemplateDownloadService.js";
 import { PT_I18N } from "../support/i18n.js";
 
 const EN_I18N_URL = new URL("../../src/i18n/en.yaml", import.meta.url);
 const EN_I18N = yaml.load(readFileSync(EN_I18N_URL, "utf8"));
+
+// The template the Create Project form gives when the bundled one is chosen.
+const BUNDLED_TEMPLATE = createBundledProjectTemplate();
+
+const STORE_TEMPLATE = {
+  id: "template-one",
+  source: "store",
+  title: "Template One",
+  coverUrl: "https://files.example/template-one.png",
+  resolution: { width: 1280, height: 720 },
+};
 
 const createDeps = ({
   ensureProjectCompatibleById = vi.fn(async () => {}),
@@ -66,6 +79,11 @@ const createDeps = ({
       id: "project-2",
       name: "New Project",
       projectPath: "/projects/new-project",
+    })),
+    downloadProjectTemplate: vi.fn(async ({ templateId }) => ({
+      id: templateId,
+      repository: { project: { resolution: { width: 1280, height: 720 } } },
+      files: [],
     })),
     showAlert: vi.fn(),
     triggerTestCrash: vi.fn(async () => true),
@@ -150,6 +168,7 @@ const createDeps = ({
       closeTemplateDialog: vi.fn(),
       selectIsTemplateDialogOpen: vi.fn(() => true),
       openCreateDialog: vi.fn(),
+      reopenCreateDialog: vi.fn(),
       setCreateDialogTemplate: vi.fn(),
       closeCreateDialog: vi.fn(),
       selectIsCreateDialogOpen: vi.fn(() => true),
@@ -528,7 +547,7 @@ describe("projects create dialog", () => {
     expect(deps.render).toHaveBeenCalledOnce();
   });
 
-  it("creates a project from a store template with the bundled template until store templates download", async () => {
+  it("downloads a store template with progress, then creates the project from it at its own resolution", async () => {
     const deps = createDeps();
 
     await handleCreateDialogSubmit(deps, {
@@ -539,25 +558,123 @@ describe("projects create dialog", () => {
             description: "",
             language: "en",
             iconFile: undefined,
-            template: {
-              id: "template-one",
-              source: "store",
-              title: "Template One",
-              coverUrl: "https://files.example/template-one.png",
-            },
-            resolution: "1920x1080",
-            resolutionWidth: 1920,
-            resolutionHeight: 1080,
+            template: STORE_TEMPLATE,
+            // Kept from the bundled template the form started with; a store
+            // template's own resolution is used instead.
+            resolution: "custom",
+            resolutionWidth: 640,
+            resolutionHeight: 480,
             projectPath: "/projects/new-project",
           },
         },
       },
     });
 
-    expect(deps.appService.createNewProject).toHaveBeenCalledWith(
-      expect.objectContaining({ template: "default" }),
+    const progressDialog =
+      deps.appService.showProgressDialog.mock.results[0].value;
+    expect(deps.appService.downloadProjectTemplate).toHaveBeenCalledWith({
+      templateId: "template-one",
+      onProgress: expect.any(Function),
+    });
+    const { onProgress } =
+      deps.appService.downloadProjectTemplate.mock.calls[0][0];
+    onProgress({ stage: "downloading", current: 512, total: 1024 });
+    expect(progressDialog.update).toHaveBeenLastCalledWith({
+      status: expect.stringContaining("50%"),
+      progress: { current: 512, total: 1024 },
+    });
+    expect(deps.appService.createNewProject).toHaveBeenCalledWith({
+      name: "New Project",
+      description: "",
+      language: "en",
+      iconFile: undefined,
+      projectPath: "/projects/new-project",
+      template:
+        await deps.appService.downloadProjectTemplate.mock.results[0].value,
+      projectResolution: undefined,
+    });
+    expect(
+      deps.appService.downloadProjectTemplate.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      deps.appService.createNewProject.mock.invocationCallOrder[0],
     );
+    expect(deps.store.addProject).toHaveBeenCalledOnce();
+    expect(progressDialog.close).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    [
+      "is no longer listed",
+      new ProjectTemplateDownloadError(
+        "project_template_not_found",
+        "The project template is no longer available.",
+      ),
+      EN_I18N.projectsPage.templateNotFoundMessage,
+    ],
+    [
+      "needs a newer Creator",
+      new ProjectTemplateDownloadError(
+        "project_template_unsupported",
+        "The template needs Creator model schema 99; this app has 21.",
+      ),
+      EN_I18N.projectsPage.templateNeedsNewerAppMessage,
+    ],
+    [
+      "is damaged",
+      new ProjectTemplateDownloadError(
+        "project_template_invalid",
+        "The package is not a project template.",
+      ),
+      `${EN_I18N.projectsPage.templateInvalidMessage}\n\n${EN_I18N.projectsPage.errorDetailsLabel}\nProjectTemplateDownloadError: The package is not a project template.`,
+    ],
+    [
+      "has a file that fails its checksum",
+      Object.assign(new Error("A package file failed integrity validation."), {
+        code: "integrity_mismatch",
+      }),
+      `${EN_I18N.projectsPage.templateInvalidMessage}\n\n${EN_I18N.projectsPage.errorDetailsLabel}\nA package file failed integrity validation.`,
+    ],
+    [
+      "cannot be downloaded",
+      new Error("network down"),
+      `${EN_I18N.projectsPage.templateDownloadFailedMessage}\n\n${EN_I18N.projectsPage.errorDetailsLabel}\nnetwork down`,
+    ],
+  ])(
+    "creates nothing and opens the form again when the template %s",
+    async (_case, error, message) => {
+      const deps = createDeps();
+      deps.appService.downloadProjectTemplate.mockRejectedValue(error);
+
+      await handleCreateDialogSubmit(deps, {
+        _event: {
+          detail: {
+            values: {
+              name: "New Project",
+              description: "A story",
+              language: "ja",
+              template: STORE_TEMPLATE,
+              projectPath: "/projects/new-project",
+            },
+          },
+        },
+      });
+
+      const progressDialog =
+        deps.appService.showProgressDialog.mock.results[0].value;
+      expect(progressDialog.close).toHaveBeenCalledOnce();
+      expect(deps.appService.createNewProject).not.toHaveBeenCalled();
+      expect(deps.store.reopenCreateDialog).toHaveBeenCalledWith({
+        values: {
+          name: "New Project",
+          description: "A story",
+          language: "ja",
+          projectPath: "/projects/new-project",
+        },
+        template: STORE_TEMPLATE,
+      });
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({ message });
+    },
+  );
 
   it("creates a project from the sticky form submit event", async () => {
     const deps = createDeps();
@@ -570,7 +687,7 @@ describe("projects create dialog", () => {
             description: "",
             language: "ja",
             iconFile: undefined,
-            template: "default",
+            template: BUNDLED_TEMPLATE,
             resolution: "1920x1080",
             resolutionWidth: 1920,
             resolutionHeight: 1080,
@@ -627,7 +744,11 @@ describe("projects create dialog", () => {
     await handleCreateDialogSubmit(deps, {
       _event: {
         detail: {
-          values: { name: "ROUTEVN_TEST_PANIC_CRASH", resolution: "1920x1080" },
+          values: {
+            name: "ROUTEVN_TEST_PANIC_CRASH",
+            template: BUNDLED_TEMPLATE,
+            resolution: "1920x1080",
+          },
         },
       },
     });
@@ -646,7 +767,7 @@ describe("projects create dialog", () => {
         detail: {
           values: {
             name: "ROUTEVN_TEST_WEBVIEW_CRASH",
-            template: "default",
+            template: BUNDLED_TEMPLATE,
             resolution: "1920x1080",
           },
         },
@@ -673,7 +794,7 @@ describe("projects create dialog", () => {
             description: "",
             language: "ja",
             iconFile: undefined,
-            template: "default",
+            template: BUNDLED_TEMPLATE,
             resolution: "1920x1080",
             resolutionWidth: 1920,
             resolutionHeight: 1080,
@@ -709,7 +830,7 @@ describe("projects create dialog", () => {
         detail: {
           values: {
             name: "Project One",
-            template: "default",
+            template: BUNDLED_TEMPLATE,
             resolution: "1920x1080",
             projectPath: "/projects/project-one",
           },

@@ -184,12 +184,20 @@ describe("project create dialog template row", () => {
       source: "store",
       title: "Template One",
       coverUrl: "https://files.example/template-one.png",
+      resolution: { width: 1280, height: 720 },
     };
     document.body.append(dialog);
 
     const row = () =>
       dialog.shadowRoot.querySelector("[slot=project-template-selector]");
+    // The form shows its Resolution field only when told to choose one.
+    const choosesResolution = () =>
+      dialog.shadowRoot.querySelector("rtgl-form").context.chooseResolution;
     expect(row().textContent).toContain("Template One");
+    // A store template is made for one resolution: the row shows it, and the
+    // form has none to choose.
+    expect(row().textContent).toContain("1280 × 720");
+    expect(choosesResolution()).toBe(false);
     expect(
       row().querySelector(
         'rtgl-image[src="https://files.example/template-one.png"]',
@@ -207,6 +215,8 @@ describe("project create dialog template row", () => {
     expect(row().querySelector("rtgl-image").getAttribute("src")).toBe(
       "/templates/default/cover.webp",
     );
+    expect(row().textContent).not.toContain("×");
+    expect(choosesResolution()).toBe(true);
     dialog.remove();
   });
 });

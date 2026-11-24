@@ -8,6 +8,7 @@ import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRo
 import { normalizeTheme } from "../../../internal/theme.js";
 import { noopErrorTracker } from "../../clients/errorReporting.js";
 import { createAssetStoreClient } from "../../clients/assetStoreClient.js";
+import { createProjectTemplateDownloadService } from "./projectTemplateDownloadService.js";
 import { createDeviceFactsClient } from "../../clients/deviceFacts.js";
 
 export const createAppServiceCore = ({
@@ -111,6 +112,10 @@ export const createAppServiceCore = ({
       }).get,
     });
 
+  const projectTemplateDownloads = createProjectTemplateDownloadService({
+    assetStore,
+  });
+
   const touchLayoutService = createTouchLayoutService({
     windowMetricsClient,
     uiConfig,
@@ -202,6 +207,16 @@ export const createAppServiceCore = ({
     getProjectTemplate({ templateId } = {}) {
       return assetStore.getProjectTemplateById({
         projectTemplateId: templateId,
+      });
+    },
+
+    // A store template, downloaded and checked, that `createNewProject`
+    // creates a project from: `{id, repository, files}`. It counts one
+    // download of the template; `onProgress` follows the download.
+    downloadProjectTemplate({ templateId, onProgress } = {}) {
+      return projectTemplateDownloads.downloadProjectTemplate({
+        templateId,
+        onProgress,
       });
     },
 

@@ -327,6 +327,7 @@ const TEMPLATE_SOURCES = [
       "A story without choices, with text filling the screen like a book.",
     creator: "studio-one",
     languages: ["en", "ja"],
+    resolution: { width: 1280, height: 720 },
     creatorModelSchema: 20,
     versionName: "1.0.0",
     releaseNotes: "",
@@ -444,7 +445,7 @@ export const createMockAssetStoreFixtures = ({
         coverFileId: screenshotFileIds[0],
         screenshotFileIds,
         languages: source.languages,
-        resolution: { width: WIDTH, height: HEIGHT },
+        resolution: source.resolution ?? { width: WIDTH, height: HEIGHT },
         creatorModelSchema: source.creatorModelSchema,
         pricing: { type: "FREE" },
         listedAt: now - source.listedDaysAgo * DAY_MS,
@@ -452,12 +453,9 @@ export const createMockAssetStoreFixtures = ({
         versionName: source.versionName,
         releaseNotes: source.releaseNotes,
         lastUpdatedAt: now - source.updatedDaysAgo * DAY_MS,
-        package: {
-          fileId: stableId(`template:${source.key}:package`),
-          size: 1024,
-          directoryOffset: 900,
-          directorySize: 124,
-        },
+        // The package's size and directory are the built package's; see
+        // mock-asset-store-packages.js.
+        package: { fileId: stableId(`template:${source.key}:package`) },
       },
     };
   }).sort(

@@ -558,5 +558,44 @@ export const createAssetStoreClient = ({
         : undefined;
       return template;
     },
+
+    // The signed URL of a template's package ZIP, which a project is created
+    // from, as `getAssetPackDownload` gives a pack's. With `countDownload`,
+    // set when creation starts, it counts one download of the template.
+    async getProjectTemplateDownload({
+      projectTemplateId,
+      countDownload = false,
+    } = {}) {
+      const params = { projectTemplateId };
+      if (countDownload) {
+        const device = await readDevice();
+        if (device) params.device = device;
+      }
+      const result = await call(
+        "assetStore.getProjectTemplateDownloadUrl",
+        params,
+        { notFound: templateNotFound },
+      );
+      const { downloadUrl, expiresAt, size, directoryOffset, directorySize } =
+        result;
+      if (
+        !isWebUrl(downloadUrl) ||
+        !isTimestamp(expiresAt) ||
+        !isByteCount(size) ||
+        !isByteCount(directoryOffset) ||
+        !isByteCount(directorySize) ||
+        directorySize === 0 ||
+        directoryOffset + directorySize > size
+      ) {
+        throw unavailable(new Error("Invalid project template download."));
+      }
+      return {
+        url: downloadUrl,
+        expiresAt,
+        size,
+        directoryOffset,
+        directorySize,
+      };
+    },
   };
 };

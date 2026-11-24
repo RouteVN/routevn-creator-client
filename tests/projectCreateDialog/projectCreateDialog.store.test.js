@@ -153,18 +153,34 @@ describe("projectCreateDialog.store", () => {
     });
     expect(viewData.changeTemplateLabel).toBe("Change");
 
+    expect(viewData.context.chooseResolution).toBe(true);
+
+    // A store template shows the one resolution it is made for, which the
+    // form then has no field to choose.
     const template = {
       id: "template-one",
       source: "store",
       title: "Template One",
       coverUrl: "https://files.example/template-one.png",
+      resolution: { width: 1280, height: 720 },
     };
     syncFromProps({ state }, { props: { projectTemplate: template } });
     viewData = selectViewData({ state, i18n: EN_I18N });
     expect(viewData.projectTemplate).toEqual({
       title: "Template One",
       coverUrl: "https://files.example/template-one.png",
+      resolution: "1280 × 720",
     });
+    expect(viewData.context.chooseResolution).toBe(false);
+    expect(
+      viewData.form.fields
+        .filter(({ name }) => name.startsWith("resolution"))
+        .map(({ $when }) => $when),
+    ).toEqual([
+      "chooseResolution",
+      "chooseResolution && values.resolution == 'custom'",
+      "chooseResolution && values.resolution == 'custom'",
+    ]);
     expect(selectTemplate({ state })).toBe(template);
   });
 

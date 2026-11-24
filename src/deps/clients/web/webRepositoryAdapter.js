@@ -1,4 +1,7 @@
-import { loadTemplate, getTemplateFiles } from "./templateLoader.js";
+import {
+  copyProjectTemplateFiles,
+  loadProjectTemplate,
+} from "./projectTemplateSource.js";
 import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
@@ -17,15 +20,7 @@ import {
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
 } from "../../services/shared/projectRepositoryViews/shared.js";
-import {
-  resolveProjectResolutionForWrite,
-  scaleTemplateProjectStateForResolution,
-} from "../../../internal/projectResolution.js";
 import { normalizeProjectLanguage } from "../../../internal/projectLanguage.js";
-import {
-  filterTemplateFileIds,
-  resolveTemplateFontsForLanguage,
-} from "../../../internal/defaultTemplateFonts.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -106,31 +101,6 @@ export const readProjectAppValue = async ({ projectId, key }) => {
   }
 };
 
-async function copyTemplateFiles(templateId, templateData, adapter) {
-  const templateFilesPath = `/templates/${templateId}/files/`;
-  const filesToCopy = filterTemplateFileIds({
-    templateData,
-    templateFileIds: await getTemplateFiles(templateId),
-  });
-
-  for (const fileId of filesToCopy) {
-    try {
-      const sourcePath = templateFilesPath + fileId;
-
-      // Fetch from the web server and save to IndexedDB
-      const response = await fetch(sourcePath);
-      if (response.ok) {
-        const sourceBlob = await response.blob();
-        const mimeType = templateData.files.items[fileId].mimeType;
-        const blob = new Blob([sourceBlob], { type: mimeType });
-        await adapter.setFile(fileId, blob);
-      }
-    } catch (error) {
-      console.error(`Failed to copy template file ${fileId}:`, error);
-    }
-  }
-}
-
 const loadRepositoryHistoryStatsFromClientStore = async (rawClientStore) => {
   const committedEvents =
     await loadCommittedEventsFromClientStore(rawClientStore);
@@ -167,24 +137,18 @@ export const initializeProject = async ({
     rawClientStore,
   });
 
-  // Load template data from static files
-  const loadedTemplateData = await loadTemplate(template);
-  const languageTemplateData = resolveTemplateFontsForLanguage({
-    templateId: template,
-    templateData: loadedTemplateData,
+  const { templateData, files } = await loadProjectTemplate({
+    template,
     language: projectInfo?.language,
-  });
-  const resolvedProjectResolution = resolveProjectResolutionForWrite({
     projectResolution,
-    fallbackResolution: languageTemplateData.project?.resolution,
   });
-  const templateData = scaleTemplateProjectStateForResolution(
-    languageTemplateData,
-    resolvedProjectResolution,
-  );
 
   // Copy template files to project's IndexedDB
-  await copyTemplateFiles(template, templateData, adapter);
+  await copyProjectTemplateFiles({
+    files,
+    saveFile: ({ fileId, mimeType, bytes }) =>
+      adapter.setFile(fileId, new Blob([bytes], { type: mimeType })),
+  });
 
   assertSupportedProjectState(templateData);
 

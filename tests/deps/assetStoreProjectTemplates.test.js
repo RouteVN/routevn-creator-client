@@ -269,4 +269,87 @@ describe("asset store project templates", () => {
       code: "asset_store_unavailable",
     });
   });
+
+  it("signs a template's package, counting a download only when asked", async () => {
+    const download = {
+      versionName: "1.2.0",
+      downloadUrl: "https://files.example/template.zip?signature=1",
+      expiresAt: 1795000600000,
+      size: 2048,
+      directoryOffset: 1900,
+      directorySize: 148,
+    };
+    const { client, fetchImpl } = createClient(
+      () => rpcResponse({ jsonrpc: "2.0", id: 1, result: download }),
+      { getDevice: async () => device },
+    );
+
+    const zip = await client.getProjectTemplateDownload({
+      projectTemplateId: "Tp1TemplateOne01",
+      countDownload: true,
+    });
+    await client.getProjectTemplateDownload({
+      projectTemplateId: "Tp1TemplateOne01",
+    });
+
+    const params = fetchImpl.mock.calls.map(
+      ([, request]) => JSON.parse(request.body).params,
+    );
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).method).toBe(
+      "assetStore.getProjectTemplateDownloadUrl",
+    );
+    expect(params).toEqual([
+      { projectTemplateId: "Tp1TemplateOne01", device },
+      { projectTemplateId: "Tp1TemplateOne01" },
+    ]);
+    expect(zip).toEqual({
+      url: download.downloadUrl,
+      expiresAt: download.expiresAt,
+      size: 2048,
+      directoryOffset: 1900,
+      directorySize: 148,
+    });
+  });
+
+  it("refuses a package whose directory is outside it, and says a gone template is gone", async () => {
+    const { client: broken } = createClient(() =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          versionName: "1.2.0",
+          downloadUrl: "https://files.example/template.zip",
+          expiresAt: 1795000600000,
+          size: 100,
+          directoryOffset: 90,
+          directorySize: 20,
+        },
+      }),
+    );
+    const { client: gone } = createClient(() =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        error: {
+          code: -32000,
+          message: "Resource not found",
+          data: {
+            code: "RESOURCE_NOT_FOUND",
+            details: { resourceType: "PROJECT_TEMPLATE" },
+          },
+        },
+      }),
+    );
+
+    await expect(
+      broken.getProjectTemplateDownload({
+        projectTemplateId: "Tp1TemplateOne01",
+      }),
+    ).rejects.toMatchObject({ code: "asset_store_unavailable" });
+    await expect(
+      gone.getProjectTemplateDownload({
+        projectTemplateId: "Tp1TemplateOne01",
+      }),
+    ).rejects.toMatchObject({ code: "project_template_not_found" });
+  });
 });

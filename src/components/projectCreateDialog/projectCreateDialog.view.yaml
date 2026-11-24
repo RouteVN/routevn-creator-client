@@ -53,7 +53,10 @@ template:
                       - rtgl-image src=${projectTemplate.coverUrl} w=f h=f of=cov: null
                     $else:
                       - rtgl-svg svg=image wh=20 c=mu-fg: null
-              - 'rtgl-text w=1fg ellipsis=true style="min-width: 0;"': ${projectTemplate.title}
+              - 'rtgl-view w=1fg g=xs style="min-width: 0;"':
+                  - 'rtgl-text w=f ellipsis=true style="min-width: 0;"': ${projectTemplate.title}
+                  - $if projectTemplate.resolution:
+                      - rtgl-text s=sm c=mu-fg: ${projectTemplate.resolution}
               - rtgl-button#changeTemplateButton v=se: ${changeTemplateLabel}
       - rtgl-view slot=project-icon-selector w=f:
           - $if iconPreviewUrl:

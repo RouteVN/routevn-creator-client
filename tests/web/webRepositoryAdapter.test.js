@@ -439,6 +439,61 @@ describe("webRepositoryAdapter", () => {
     ).resolves.toBe(21);
   });
 
+  it("creates a project from a downloaded store template, with its own files and resolution", async () => {
+    const projectId = "web-store-template-project";
+    const rawClientStore = createRawClientStoreStub();
+    const repository = structuredClone(initialProjectData);
+    repository.project.resolution = { width: 1280, height: 720 };
+    repository.files = {
+      items: {
+        "image-file-id": {
+          id: "image-file-id",
+          type: "image",
+          mimeType: "image/png",
+          size: 3,
+          sha256: "a".repeat(64),
+        },
+      },
+      tree: [{ id: "image-file-id" }],
+    };
+
+    await initializeProject({
+      projectId,
+      template: {
+        id: "Tp1TemplateOne01",
+        repository,
+        files: [
+          {
+            fileId: "image-file-id",
+            mimeType: "image/png",
+            bytes: new Uint8Array([1, 2, 3]),
+          },
+        ],
+      },
+      projectInfo: { id: projectId, name: "Browser Project" },
+      creatorVersion: 21,
+      rawClientStore,
+    });
+
+    expect(mocked.loadTemplate).not.toHaveBeenCalled();
+    expect(
+      mocked.scaleTemplateProjectStateForResolution,
+    ).not.toHaveBeenCalled();
+    const [createEvent] = rawClientStore.getState().committed;
+    expect(createEvent.payload.state.project.resolution).toEqual({
+      width: 1280,
+      height: 720,
+    });
+    const adapter = await createInsiemeWebStoreAdapter(projectId, {
+      rawClientStore,
+    });
+    const storedImage = await adapter.getFile("image-file-id");
+    expect(storedImage.type).toBe("image/png");
+    expect(new Uint8Array(await storedImage.arrayBuffer())).toEqual(
+      new Uint8Array([1, 2, 3]),
+    );
+  });
+
   it("copies extensionless template assets without requesting Vite raw modules", async () => {
     const projectId = "web-template-file-project";
     const rawClientStore = createRawClientStoreStub();
