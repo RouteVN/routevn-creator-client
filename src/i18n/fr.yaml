@@ -2315,6 +2315,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "Horizontal, de droite à gauche"
   verticalRightToLeftOption: "Vertical, de droite à gauche"
   verticalLeftToRightOption: "Vertical, de gauche à droite"
+  readingDirectionLabel: "Sens de lecture"
+  leftToRightOption: "De gauche à droite"
+  rightToLeftOption: "De droite à gauche"
   topOption: "Haut"
   bottomOption: "Bas"
 controlsPage:

@@ -2315,6 +2315,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "가로쓰기, 오른쪽에서 왼쪽"
   verticalRightToLeftOption: "세로쓰기, 오른쪽에서 왼쪽"
   verticalLeftToRightOption: "세로쓰기, 왼쪽에서 오른쪽"
+  readingDirectionLabel: "읽기 방향"
+  leftToRightOption: "왼쪽에서 오른쪽"
+  rightToLeftOption: "오른쪽에서 왼쪽"
   topOption: "위쪽"
   bottomOption: "아래쪽"
 controlsPage:

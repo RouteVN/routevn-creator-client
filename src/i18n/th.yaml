@@ -2315,6 +2315,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "แนวนอน จากขวาไปซ้าย"
   verticalRightToLeftOption: "แนวตั้ง จากขวาไปซ้าย"
   verticalLeftToRightOption: "แนวตั้ง จากซ้ายไปขวา"
+  readingDirectionLabel: "ทิศทางการอ่าน"
+  leftToRightOption: "จากซ้ายไปขวา"
+  rightToLeftOption: "จากขวาไปซ้าย"
   topOption: "บน"
   bottomOption: "ล่าง"
 controlsPage:

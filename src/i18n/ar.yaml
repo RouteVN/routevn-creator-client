@@ -2335,6 +2335,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "أفقي، من اليمين إلى اليسار"
   verticalRightToLeftOption: "عمودي، من اليمين إلى اليسار"
   verticalLeftToRightOption: "عمودي، من اليسار إلى اليمين"
+  readingDirectionLabel: "اتجاه القراءة"
+  leftToRightOption: "من اليسار إلى اليمين"
+  rightToLeftOption: "من اليمين إلى اليسار"
   topOption: "أعلى"
   bottomOption: "أسفل"
 controlsPage:

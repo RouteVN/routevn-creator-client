@@ -2311,6 +2311,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "افقی، دائیں سے بائیں"
   verticalRightToLeftOption: "عمودی، دائیں سے بائیں"
   verticalLeftToRightOption: "عمودی، بائیں سے دائیں"
+  readingDirectionLabel: "پڑھنے کی سمت"
+  leftToRightOption: "بائیں سے دائیں"
+  rightToLeftOption: "دائیں سے بائیں"
   topOption: "اوپر"
   bottomOption: "نیچے"
 controlsPage:
