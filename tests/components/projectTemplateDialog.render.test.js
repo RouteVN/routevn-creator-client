@@ -138,6 +138,7 @@ describe("project template dialog rendering", () => {
         description: [{ text: "First paragraph." }],
         screenshots: ["title", "dialogue"].map((name) => ({
           url: `https://files.example/${name}.png`,
+          thumbnailUrl: `https://files.example/${name}-small.png`,
         })),
         versionName: "1.0.0",
       },
@@ -159,6 +160,14 @@ describe("project template dialog rendering", () => {
         thumbnail.getAttribute("aria-current"),
       ),
     ).toEqual([null, "true"]);
+    expect(
+      [...thumbnails].map((thumbnail) =>
+        thumbnail.querySelector("rtgl-image").getAttribute("src"),
+      ),
+    ).toEqual([
+      "https://files.example/title-small.png",
+      "https://files.example/dialogue-small.png",
+    ]);
     expect(root.querySelector("#previousScreenshotButton")).not.toBeNull();
     expect(root.querySelector("#templateInfo").textContent).toContain("1.0.0");
     expect(root.querySelector("#templateAbout").textContent).toContain(

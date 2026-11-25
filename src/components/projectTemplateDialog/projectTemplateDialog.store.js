@@ -93,7 +93,7 @@ const createDetailView = ({ state, i18n, copy }) => {
   const screenshots = (detail.template?.screenshots ?? []).map(
     (screenshot, index) => ({
       index,
-      url: screenshot.url,
+      thumbnailUrl: screenshot.thumbnailUrl,
       alt: formatI18nCopy(copy.screenshotLabel, { number: index + 1 }),
       isSelected: index === detail.screenshotIndex,
     }),

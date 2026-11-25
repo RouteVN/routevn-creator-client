@@ -200,15 +200,88 @@ describe("asset store project templates", () => {
           height: 1080,
         },
       ],
-      // A screenshot whose file has no URL is left out.
+      // A screenshot whose file has no URL is left out. Without variants, a
+      // thumbnail is the full-size image.
       screenshots: [
-        { url: "https://files.example/title" },
-        { url: "https://files.example/menu" },
+        {
+          url: "https://files.example/title",
+          thumbnailUrl: "https://files.example/title",
+        },
+        {
+          url: "https://files.example/menu",
+          thumbnailUrl: "https://files.example/menu",
+        },
       ],
       versionName: "1.2.0",
       releaseNotes: "Adds an ending.",
       updatedAt: 1795100000000,
     });
+  });
+
+  it("draws cards, avatars and screenshot thumbnails small, and the page's images large", async () => {
+    const withVariants = (file) => ({
+      ...file,
+      variants: {
+        width640: `${file.url}-640`,
+        width1920: `${file.url}-1920`,
+      },
+    });
+    const filesWithVariants = files.map(withVariants);
+    const description = [
+      {
+        type: "IMAGE",
+        fileId: "FiDescription001",
+        alt: "The notebook",
+        width: 1920,
+        height: 1080,
+      },
+    ];
+    const { client } = createClient(({ method }) =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result:
+          method === "assetStore.listProjectTemplates"
+            ? {
+                items: [{ id: "Tp1TemplateOne01", data: cardData(), creator }],
+                files: filesWithVariants,
+                nextCursor: null,
+              }
+            : {
+                projectTemplate: {
+                  id: "Tp1TemplateOne01",
+                  data: cardData({ description }),
+                },
+                creator,
+                files: filesWithVariants,
+              },
+      }),
+    );
+
+    const { templates } = await client.listProjectTemplates();
+    expect(templates[0].coverUrl).toBe("https://files.example/title-640");
+    expect(templates[0].creator.avatarUrl).toBe(
+      "https://files.example/avatar-640",
+    );
+
+    const template = await client.getProjectTemplateById({
+      projectTemplateId: "Tp1TemplateOne01",
+    });
+    expect(template.coverUrl).toBe("https://files.example/title");
+    expect(template.creator.avatarUrl).toBe("https://files.example/avatar-640");
+    expect(template.description[0].imageUrl).toBe(
+      "https://files.example/notebook",
+    );
+    expect(template.screenshots).toEqual([
+      {
+        url: "https://files.example/title",
+        thumbnailUrl: "https://files.example/title-640",
+      },
+      {
+        url: "https://files.example/menu",
+        thumbnailUrl: "https://files.example/menu-640",
+      },
+    ]);
   });
 
   it("reads a template without a device when the device can't be read", async () => {

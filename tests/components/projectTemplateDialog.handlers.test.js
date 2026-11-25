@@ -20,6 +20,7 @@ const template = (id) => ({
   description: [],
   screenshots: ["one", "two", "three"].map((name) => ({
     url: `https://files.example/${name}.png`,
+    thumbnailUrl: `https://files.example/${name}-small.png`,
   })),
 });
 
