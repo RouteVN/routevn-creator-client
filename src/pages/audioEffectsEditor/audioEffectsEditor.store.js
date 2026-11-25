@@ -75,6 +75,22 @@ const getPropertyLabel = (property, copy = {}) => {
   return labels[property] ?? property;
 };
 
+// Effect values play against the mix the music or sound is set to.
+const getPropertyValueHint = (property, copy = {}) => {
+  const hints = {
+    volume:
+      copy.volumeValueHint ??
+      "A percentage of the volume set for the music or sound: 100 keeps it, 0 is silent.",
+    pan:
+      copy.panValueHint ??
+      "Added to the pan set for the music or sound: 0 keeps it.",
+    playbackRate:
+      copy.playbackRateValueHint ??
+      "Multiplies the playback rate set for the music or sound: 1 keeps it.",
+  };
+  return hints[property];
+};
+
 const cloneDefinition = (definition) => structuredClone(definition);
 
 const createDefaultDefinition = () => ({
@@ -182,6 +198,7 @@ const createKeyframeForm = ({
     name: "value",
     type: "input-number",
     label: copy.valueLabel ?? "Value",
+    description: getPropertyValueHint(property, copy),
     step: propertyConfig.step ?? 0.01,
     required: true,
   });
@@ -1437,6 +1454,10 @@ const buildSelectedKeyframePanelData = (state, copy, linearEasingLabel) => {
       label: copy.propertyLabel ?? "Property",
       value: propertyLabel,
     },
+    {
+      type: "description",
+      value: getPropertyValueHint(property, copy),
+    },
   ];
   fields.push(
     {
@@ -1530,6 +1551,10 @@ const buildSelectedPropertyPanelData = (state, copy = {}) => {
       type: "text",
       label: copy.propertyLabel ?? "Property",
       value: propertyLabel,
+    },
+    {
+      type: "description",
+      value: getPropertyValueHint(property, copy),
     },
     {
       type: "slot",

@@ -1392,7 +1392,9 @@ audioEffectsEditorPage:
   outgoingLabel: "Sortant"
   outgoingSoundLabel: "Son sortant"
   panPropertyLabel: "Panoramique"
+  panValueHint: "S’ajoute au panoramique défini pour la musique ou le son : 0 le conserve."
   playbackRatePropertyLabel: "Vitesse de lecture"
+  playbackRateValueHint: "Multiplie la vitesse de lecture définie pour la musique ou le son : 1 la conserve."
   previewButton: "Prévisualiser"
   previewSoundLabel: "Son de l’aperçu"
   previewTitle: "Aperçu"
@@ -1416,6 +1418,7 @@ audioEffectsEditorPage:
   valueSourceLabel: "Source de la valeur"
   valueTypeLabel: "Type de valeur"
   volumePropertyLabel: "Volume"
+  volumeValueHint: "Pourcentage du volume défini pour la musique ou le son : 100 le conserve, 0 le rend muet."
   deleteKeyframeButton: "Supprimer l’image clé"
 imagesPage:
   deleteTargetFallback: "cette image"

@@ -1392,7 +1392,9 @@ audioEffectsEditorPage:
   outgoingLabel: "Ra"
   outgoingSoundLabel: "Âm thanh ra"
   panPropertyLabel: "Cân bằng trái phải"
+  panValueHint: "Cộng vào cân bằng trái phải đặt cho nhạc nền hoặc âm thanh: 0 giữ nguyên."
   playbackRatePropertyLabel: "Tốc độ phát"
+  playbackRateValueHint: "Nhân với tốc độ phát đặt cho nhạc nền hoặc âm thanh: 1 giữ nguyên."
   previewButton: "Xem trước"
   previewSoundLabel: "Âm thanh xem trước"
   previewTitle: "Xem trước"
@@ -1416,6 +1418,7 @@ audioEffectsEditorPage:
   valueSourceLabel: "Nguồn giá trị"
   valueTypeLabel: "Loại giá trị"
   volumePropertyLabel: "Âm lượng"
+  volumeValueHint: "Phần trăm của âm lượng đặt cho nhạc nền hoặc âm thanh: 100 giữ nguyên, 0 là im lặng."
   deleteKeyframeButton: "Xóa khung hình chính"
 imagesPage:
   deleteTargetFallback: "hình ảnh này"
