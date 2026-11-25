@@ -1392,7 +1392,9 @@ audioEffectsEditorPage:
   outgoingLabel: "Уходящий"
   outgoingSoundLabel: "Уходящий звук"
   panPropertyLabel: "Панорама"
+  panValueHint: "Прибавляется к панораме, заданной для фоновой музыки или звука: 0 сохраняет её."
   playbackRatePropertyLabel: "Скорость воспроизведения"
+  playbackRateValueHint: "Умножает скорость воспроизведения, заданную для фоновой музыки или звука: 1 сохраняет её."
   previewButton: "Предпросмотр"
   previewSoundLabel: "Звук для предпросмотра"
   previewTitle: "Предпросмотр"
@@ -1416,6 +1418,7 @@ audioEffectsEditorPage:
   valueSourceLabel: "Источник значения"
   valueTypeLabel: "Тип значения"
   volumePropertyLabel: "Громкость"
+  volumeValueHint: "Процент от громкости, заданной для фоновой музыки или звука: 100 сохраняет её, 0 — тишина."
   deleteKeyframeButton: "Удалить ключевой кадр"
 imagesPage:
   deleteTargetFallback: "это изображение"

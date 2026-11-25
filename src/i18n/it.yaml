@@ -1392,7 +1392,9 @@ audioEffectsEditorPage:
   outgoingLabel: "In uscita"
   outgoingSoundLabel: "Suono in uscita"
   panPropertyLabel: "Bilanciamento"
+  panValueHint: "Si somma al bilanciamento impostato per la musica o il suono: 0 lo mantiene."
   playbackRatePropertyLabel: "Velocità di riproduzione"
+  playbackRateValueHint: "Moltiplica la velocità di riproduzione impostata per la musica o il suono: 1 la mantiene."
   previewButton: "Anteprima"
   previewSoundLabel: "Suono dell’anteprima"
   previewTitle: "Anteprima"
@@ -1416,6 +1418,7 @@ audioEffectsEditorPage:
   valueSourceLabel: "Origine del valore"
   valueTypeLabel: "Tipo di valore"
   volumePropertyLabel: "Volume"
+  volumeValueHint: "Percentuale del volume impostato per la musica o il suono: 100 lo mantiene, 0 lo azzera."
   deleteKeyframeButton: "Elimina fotogramma chiave"
 imagesPage:
   deleteTargetFallback: "questa immagine"

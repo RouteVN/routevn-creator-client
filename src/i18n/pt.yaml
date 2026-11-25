@@ -1392,7 +1392,9 @@ audioEffectsEditorPage:
   outgoingLabel: "Saída"
   outgoingSoundLabel: "Som de saída"
   panPropertyLabel: "Posição estéreo"
+  panValueHint: "Somado à posição estéreo definida para a música de fundo ou o som: 0 a mantém."
   playbackRatePropertyLabel: "Velocidade de reprodução"
+  playbackRateValueHint: "Multiplica a velocidade de reprodução definida para a música de fundo ou o som: 1 a mantém."
   previewButton: "Pré-visualizar"
   previewSoundLabel: "Som da pré-visualização"
   previewTitle: "Pré-visualização"
@@ -1416,6 +1418,7 @@ audioEffectsEditorPage:
   valueSourceLabel: "Origem do valor"
   valueTypeLabel: "Tipo de valor"
   volumePropertyLabel: "Volume"
+  volumeValueHint: "Porcentagem do volume definido para a música de fundo ou o som: 100 o mantém e 0 o silencia."
   deleteKeyframeButton: "Apagar quadro-chave"
 imagesPage:
   deleteTargetFallback: "esta imagem"

@@ -1392,7 +1392,9 @@ audioEffectsEditorPage:
   outgoingLabel: "나가는 쪽"
   outgoingSoundLabel: "이전 사운드"
   panPropertyLabel: "패닝"
+  panValueHint: "배경 음악 또는 사운드에 설정된 패닝에 더해집니다. 0이면 그대로입니다."
   playbackRatePropertyLabel: "재생 속도"
+  playbackRateValueHint: "배경 음악 또는 사운드에 설정된 재생 속도에 곱해집니다. 1이면 그대로입니다."
   previewButton: "미리 보기"
   previewSoundLabel: "미리 들을 사운드"
   previewTitle: "미리 보기"
@@ -1416,6 +1418,7 @@ audioEffectsEditorPage:
   valueSourceLabel: "값 출처"
   valueTypeLabel: "값 유형"
   volumePropertyLabel: "볼륨"
+  volumeValueHint: "배경 음악 또는 사운드에 설정된 볼륨에 대한 백분율입니다. 100이면 그대로, 0이면 무음입니다."
   deleteKeyframeButton: "키프레임 삭제"
 imagesPage:
   deleteTargetFallback: "이 이미지"

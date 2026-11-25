@@ -327,6 +327,11 @@ describe("audioEffectsEditor.store", () => {
         { label: "Timeline", value: "Update" },
         { label: "Property", value: "Volume" },
         {
+          type: "description",
+          value:
+            "A percentage of the volume set for the music or sound: 100 keeps it, 0 is silent.",
+        },
+        {
           type: "slot",
           label: "Value source",
           slot: "property-value-source",
@@ -358,6 +363,11 @@ describe("audioEffectsEditor.store", () => {
       selectedPropertyDetailFields: [
         { label: "Timeline", value: "Update" },
         { label: "Property", value: "Volume" },
+        {
+          type: "description",
+          value:
+            "A percentage of the volume set for the music or sound: 100 keeps it, 0 is silent.",
+        },
         {
           type: "slot",
           label: "Value source",
@@ -645,6 +655,58 @@ describe("audioEffectsEditor.store", () => {
     removeAudioEffectProperty({ state }, { property: "pan" });
     expect(Object.keys(state.definition.tween)).toEqual(["pan"]);
     expect(state.dirty).toBe(true);
+  });
+
+  it("explains that effect values play against the music or sound's mix", () => {
+    const state = createInitialState();
+    loadAudioEffect(
+      { state },
+      {
+        item: {
+          id: "update-1",
+          name: "Update One",
+          audioEffect: {
+            type: "update",
+            tween: {
+              volume: { keyframes: [{ value: 50, duration: 100 }] },
+              pan: { keyframes: [{ value: -0.5, duration: 100 }] },
+              playbackRate: { keyframes: [{ value: 1.5, duration: 100 }] },
+            },
+          },
+        },
+      },
+    );
+    const describeValues = (fields) =>
+      fields.find((field) => field.type === "description")?.value;
+
+    setSelectedProperty({ state }, { side: "update", property: "pan" });
+    expect(
+      describeValues(
+        selectViewData({ state, i18n: EN_I18N }).selectedPropertyDetailFields,
+      ),
+    ).toBe("Added to the pan set for the music or sound: 0 keeps it.");
+
+    setSelectedKeyframe(
+      { state },
+      { side: "update", property: "playbackRate", index: 0 },
+    );
+    expect(
+      describeValues(
+        selectViewData({ state, i18n: EN_I18N }).selectedKeyframeDetailFields,
+      ),
+    ).toBe(
+      "Multiplies the playback rate set for the music or sound: 1 keeps it.",
+    );
+
+    openKeyframeDialog({ state }, { add: false, property: "volume", index: 0 });
+    const valueField = selectViewData({
+      state,
+      i18n: FR_I18N,
+    }).keyframeForm.fields.find((field) => field.name === "value");
+    expect(valueField.description).toBe(
+      FR_I18N.audioEffectsEditorPage.volumeValueHint,
+    );
+    expect(valueField.description).toContain("100");
   });
 
   it("identifies final keyframes and exposes localized editor data", () => {

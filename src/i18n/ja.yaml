@@ -1392,7 +1392,9 @@ audioEffectsEditorPage:
   outgoingLabel: "アウト"
   outgoingSoundLabel: "前の音声"
   panPropertyLabel: "パン"
+  panValueHint: "BGM または音声に設定されたパンに加算されます。0 でそのままです。"
   playbackRatePropertyLabel: "再生速度"
+  playbackRateValueHint: "BGM または音声に設定された再生速度に掛け合わされます。1 でそのままです。"
   previewButton: "プレビュー"
   previewSoundLabel: "プレビュー用の音声"
   previewTitle: "プレビュー"
@@ -1416,6 +1418,7 @@ audioEffectsEditorPage:
   valueSourceLabel: "値の取得元"
   valueTypeLabel: "値の種類"
   volumePropertyLabel: "音量"
+  volumeValueHint: "BGM または音声に設定された音量に対する割合です。100 でそのまま、0 で無音になります。"
   deleteKeyframeButton: "キーフレームを削除"
 imagesPage:
   deleteTargetFallback: "この画像"
