@@ -62,15 +62,16 @@ describe("applyAudioEffectMixToBgm", () => {
     expect(settled).not.toBe(bgm);
   });
 
-  it("scales a missing channel volume from 100 and clamps the pan", () => {
+  it("scales a missing channel volume from 100 and offsets the pan", () => {
     const bgm = {
       pan: -0.5,
       sounds: [{ id: "main", resourceId: "theme", volume: 50 }],
     };
 
+    // Route Engine clamps the channel pan together with each sound's pan.
     expect(applyAudioEffectMixToBgm(bgm, { volume: 30, pan: -1 })).toEqual({
       volume: 30,
-      pan: -1,
+      pan: -1.5,
       sounds: [{ id: "main", resourceId: "theme", volume: 50 }],
     });
   });

@@ -69,8 +69,9 @@ export const getAudioEffectFinalMix = (definition = {}) => {
 // A copy of a BGM action with an audio effect mix folded into its own values,
 // so it sounds as the BGM does once the effect ends. As Route Engine does,
 // the mix scales the channel volume, offsets the channel pan, and multiplies
-// each sound's playback rate. The channel pan stays within -1 and 1. Legacy
-// single-sound BGM is returned as it is.
+// each sound's playback rate. The channel pan is left unclamped, since the
+// engine clamps it with each sound's pan. Legacy single-sound BGM is returned
+// as it is.
 export const applyAudioEffectMixToBgm = (
   bgm,
   mix = {},
@@ -85,7 +86,7 @@ export const applyAudioEffectMixToBgm = (
     settled.volume = ((settled.volume ?? 100) * mix.volume) / 100;
   }
   if (mix.pan !== undefined) {
-    settled.pan = Math.max(-1, Math.min(1, (settled.pan ?? 0) + mix.pan));
+    settled.pan = (settled.pan ?? 0) + mix.pan;
   }
   if (mix.playbackRate !== undefined) {
     for (const sound of settled.sounds) {

@@ -801,7 +801,7 @@ describe("systemActions.store", () => {
     expect(actions.bgm).toEqual({
       loop: true,
       volume: 20,
-      pan: 1,
+      pan: 1.25,
       sounds: [
         { id: "theme-clip", resourceId: "theme", playbackRate: 2.4 },
         { id: "rain-clip", resourceId: "rain", playbackRate: 1 },
