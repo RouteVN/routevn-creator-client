@@ -447,14 +447,16 @@ The configured policy is:
   backed up or transferred
 
 The [Android project backup system](android-backup.md) copies changed projects
-to a user-selected local folder about every 5 minutes while the app is active,
-and backs up newly created or imported projects shortly after they are added.
-Launch/resume checks use the remaining cooldown, with a five-second grace period
-before overdue work starts. They do not block navigation; backgrounding cancels
-the pending timer rather than starting an exit backup.
+to a user-selected local folder about 30 seconds after edits stop, and at least
+every 3 minutes while editing continues. Native code schedules and runs every
+backup on its own thread, starting no earlier than five seconds after the splash
+screen hides, so backups never hold up startup, setup or navigation. When the app
+leaves the screen with a backup running or due, a `dataSync` foreground service
+keeps the process alive until it finishes; its declaration must be kept up to
+date in the Play Console's foreground service section.
 Setup is skippable with an uninstall/data-loss warning. Projects and Settings
 show backup status; Projects provides folder changes, and Settings shows the
-selected project's backup folder and last backup time.
+selected project's backup folder, last backup time and **Back up now**.
 Backups reserve 1 GB of free space and retain a previous database for recovery.
 Manual export remains available. Device transfer is a convenience, not the
 user's only backup. Real-device backup validation is still required before release.

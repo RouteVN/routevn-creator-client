@@ -243,7 +243,7 @@ describe("scene editor: a line action among the saves around it", () => {
       return saveLinesNow(payload);
     });
     const runningSave = prepareSceneEditorNavigation(page.deps, {
-      reason: "backup",
+      reason: "background",
     });
 
     // The character shortcut on the line, then the line deleted, while that

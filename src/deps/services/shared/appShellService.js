@@ -310,6 +310,11 @@ export const createAppShellService = ({
       return globalUI.runWhenIdle(() => globalUI.showAlert(options));
     },
 
+    // A question raised in the background, shown once no global dialog is open.
+    showDialogWhenIdle(options) {
+      return globalUI.runWhenIdle(() => globalUI.showConfirm(options));
+    },
+
     showToast(options) {
       return globalUI.showToast(options);
     },

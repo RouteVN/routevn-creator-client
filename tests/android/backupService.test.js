@@ -1,440 +1,214 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { createAndroidBackupClient } from "../../src/deps/clients/android/backup.js";
+import { createBackupService } from "../../src/deps/services/android/backupService.js";
 import {
-  createBackupService,
-  BACKUP_INTERVAL_MS,
-  BACKUP_RESUME_DELAY_MS,
-} from "../../src/deps/services/android/backupService.js";
+  findBackupProblem,
+  findLatestBackup,
+  findShownBackupError,
+} from "../../src/internal/backupStatus.js";
 
-afterEach(() => vi.useRealTimers());
+const { bridge } = vi.hoisted(() => ({ bridge: vi.fn() }));
+vi.mock("../../src/deps/clients/android/bridge.js", () => ({
+  callAndroidBridge: bridge,
+}));
 
-const fixture = async ({ lastAttemptAt = 1000000, configured = true } = {}) => {
-  vi.useFakeTimers();
-  vi.setSystemTime(1000000);
-  let active = true;
-  let listener;
-  let status = { configured, lastAttemptAt, projects: [] };
-  const unsubscribe = vi.fn();
-  const calls = [];
-  const client = {
-    status: vi.fn(async () => status),
-    beginPass: vi.fn(async () => {
-      status = { ...status, lastAttemptAt: Date.now() };
-      return { due: true };
-    }),
-    pendingProjects: vi.fn(async () => {
-      calls.push("check");
-      return {
-        projectIds: status.projects.filter((p) => p.pending).map((p) => p.id),
-      };
-    }),
-    configure: vi.fn(
-      async () => (status = { ...status, configured: true, lastAttemptAt: 0 }),
-    ),
-    disable: vi.fn(async () => (status = { configured: false, projects: [] })),
-    isActive: () => active,
-    subscribeActive: (fn) => {
-      listener = fn;
-      return unsubscribe;
-    },
-  };
-  const backupProject = vi.fn(async (id) => {
-    calls.push(id);
+const configured = (projects) => ({
+  configured: true,
+  loading: false,
+  running: false,
+  folder: { uri: "content://backups", displayPath: "Documents/Backups" },
+  projects,
+});
+const project = (fields) => ({
+  id: "project-one",
+  name: "Project One",
+  pending: false,
+  snapshotAt: "",
+  error: "",
+  failures: 0,
+  ...fields,
+});
+
+const fixture = () => {
+  const windowTarget = {};
+  bridge.mockReset();
+  bridge.mockImplementation(async (method) => {
+    if (method === "getBackupStatus") return configured([project()]);
+    if (method === "requestBackup") return configured([project()]);
+    if (method === "setBackupNotificationCopy") return {};
+    throw new Error(`Unexpected method: ${method}`);
   });
-  const notify = vi.fn();
-  const beforeBackup = vi.fn(async () => {
-    calls.push("flush");
-  });
-  const service = createBackupService({
-    client,
-    backupProject,
-    beforeBackup,
-    notify,
-  });
-  await service.initialize();
-  const stop = service.start(() => ({
-    errors: { lowSpace: "Free up space", failed: "Try again" },
-  }));
-  return {
-    service,
-    client,
-    backupProject,
-    beforeBackup,
-    notify,
-    calls,
-    stop,
-    unsubscribe,
-    advance: (ms = BACKUP_INTERVAL_MS) => vi.advanceTimersByTimeAsync(ms),
-    projects: (projects) => {
-      status = { ...status, projects };
-    },
-    active: (value) => {
-      active = value;
-      listener(value);
-    },
-  };
+  const client = createAndroidBackupClient({ windowTarget });
+  const service = createBackupService({ client });
+  return { service, windowTarget };
 };
 
-describe("Android disaster backup scheduling", () => {
-  it("schedules backups once status loads after startup did not wait for it", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1000000);
-    const client = {
-      status: vi.fn(async () => ({
-        configured: true,
-        lastAttemptAt: 1,
-        projects: [],
-      })),
-      beginPass: vi.fn(async () => ({ due: false })),
-      isActive: () => true,
-      subscribeActive: () => () => {},
-    };
-    const service = createBackupService({
-      client,
-      backupProject: vi.fn(),
-      beforeBackup: vi.fn(),
-      notify: vi.fn(),
-    });
-    const stop = service.start(() => ({}));
+describe("Android backup service", () => {
+  it("shows loading until native status arrives and then follows native updates", async () => {
+    const { service, windowTarget } = fixture();
+    const seen = [];
+    service.subscribe((status) => seen.push(status));
     expect(service.getStatus().loading).toBe(true);
-    expect(vi.getTimerCount()).toBe(0);
+
     await service.initialize();
-    expect(service.getStatus().loading).toBeUndefined();
-    await vi.advanceTimersByTimeAsync(BACKUP_RESUME_DELAY_MS);
-    expect(client.beginPass).toHaveBeenCalledOnce();
+    expect(service.getStatus()).toEqual(configured([project()]));
+
+    windowTarget.routeVNBackupStatusChanged(
+      configured([project({ pending: true })]),
+    );
+    expect(service.getStatus().projects[0].pending).toBe(true);
+    expect(seen).toHaveLength(3);
+  });
+
+  it("keeps a pushed update when an older reply arrives after it", async () => {
+    const { service, windowTarget } = fixture();
+    let reply;
+    bridge.mockImplementationOnce(
+      () => new Promise((resolve) => (reply = resolve)),
+    );
+    const refreshing = service.initialize();
+    windowTarget.routeVNBackupStatusChanged({
+      ...configured([project({ snapshotAt: "2026-11-25T10:00:00.000Z" })]),
+      version: 8,
+    });
+    reply({ ...configured([project()]), running: true, version: 7 });
+    await refreshing;
+    expect(service.getStatus().version).toBe(8);
+    expect(service.getStatus().running).toBe(false);
+  });
+
+  it("stops showing loading when native status cannot be read", async () => {
+    const { service } = fixture();
+    bridge.mockRejectedValueOnce(new Error("bridge"));
+    await service.initialize();
+    expect(service.getStatus()).toEqual({
+      configured: false,
+      projects: [],
+      loading: false,
+    });
+  });
+
+  it("only forwards requests and never waits for the backup itself", async () => {
+    const { service } = fixture();
+    await service.backupNow("project-one");
+    expect(bridge).toHaveBeenCalledWith("requestBackup", {
+      projectId: "project-one",
+      reason: "manual",
+    });
+
+    bridge.mockRejectedValue(new Error("bridge"));
+    expect(service.backupNewProject()).toBeUndefined();
+    expect(service.setNotificationCopy({ channel: "c", title: "t" })).toBe(
+      undefined,
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(bridge).toHaveBeenCalledWith("requestBackup", {
+      reason: "newProject",
+    });
+    expect(bridge).toHaveBeenCalledWith("setBackupNotificationCopy", {
+      channel: "c",
+      title: "t",
+    });
+  });
+
+  it("keeps the current status while an existing folder waits for confirmation", async () => {
+    const { service } = fixture();
+    bridge.mockImplementation(async (method) => {
+      if (method === "configureBackup")
+        return { needsExistingConfirmation: true };
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const result = await service.configure({ uri: "content://backups" });
+    expect(result).toEqual({ needsExistingConfirmation: true });
+    expect(service.getStatus().loading).toBe(true);
+  });
+
+  it("raises a problem once, and again only after it cleared or changed", async () => {
+    const { service, windowTarget } = fixture();
+    await service.initialize();
+    const onProblem = vi.fn();
+    const stop = service.watchProblems(onProblem);
+    const push = (fields) =>
+      windowTarget.routeVNBackupStatusChanged(configured([project(fields)]));
+
+    push({ error: "reconnect", failures: 1 });
+    push({ error: "reconnect", failures: 2 });
+    expect(onProblem).toHaveBeenCalledOnce();
+    expect(onProblem).toHaveBeenLastCalledWith({
+      projectId: "project-one",
+      name: "Project One",
+      error: "reconnect",
+      folderProblem: true,
+    });
+
+    push({ error: "lowSpace", failures: 3 });
+    expect(onProblem).toHaveBeenCalledTimes(2);
+    push({ snapshotAt: "2026-11-25T10:00:00.000Z" });
+    push({ error: "lowSpace", failures: 1 });
+    expect(onProblem).toHaveBeenCalledTimes(3);
+
     stop();
+    push({ error: "reconnect", failures: 1 });
+    expect(onProblem).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("Android backup problems", () => {
+  it("opens no dialog for errors saved by an earlier run or for short waits", () => {
+    expect(
+      findBackupProblem(configured([project({ error: "reconnect" })])),
+    ).toBeUndefined();
+    expect(
+      findBackupProblem(configured([project({ error: "busy", failures: 20 })])),
+    ).toBeUndefined();
+    expect(
+      findBackupProblem(
+        configured([project({ error: "failed", failures: 2 })]),
+      ),
+    ).toBeUndefined();
+    expect(
+      findBackupProblem(configured([project({ error: "failed", failures: 3 })]))
+        ?.error,
+    ).toBe("failed");
+    expect(
+      findBackupProblem({
+        configured: false,
+        projects: [project({ error: "reconnect", failures: 1 })],
+      }),
+    ).toBeUndefined();
   });
 
-  it("stays disabled across timers and resumes until explicitly configured again", async () => {
-    const f = await fixture();
-    await f.service.disable();
-    expect(f.service.getStatus().configured).toBe(false);
-    expect(vi.getTimerCount()).toBe(0);
-    f.active(false);
-    f.active(true);
-    await f.advance(BACKUP_INTERVAL_MS * 3);
-    await f.service.run(true);
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    await f.service.configure({ uri: "content://test" });
-    await f.service.run();
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    f.stop();
+  it("puts a folder problem before low space and other failures", () => {
+    const projects = [
+      project({ id: "a", error: "failed", failures: 5 }),
+      project({ id: "b", error: "lowSpace", failures: 1 }),
+      project({ id: "c", error: "nameConflict", failures: 1 }),
+    ];
+    expect(findBackupProblem(configured(projects))?.projectId).toBe("c");
+    expect(findShownBackupError(projects.slice(0, 2))?.projectId).toBe("b");
   });
 
-  it("finishes the current publication before disabling and skips remaining projects", async () => {
-    const f = await fixture({ lastAttemptAt: 1 });
-    f.projects([
-      { id: "one", pending: true },
-      { id: "two", pending: true },
-    ]);
-    let release;
-    f.backupProject.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
+  it("shows saved errors on screen, and a short wait only once it keeps coming back", () => {
+    expect(findShownBackupError([project({ error: "reconnect" })])?.error).toBe(
+      "reconnect",
     );
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    const stopping = f.service.disable();
-    expect(f.service.disable()).toBe(stopping);
-    expect(f.client.disable).not.toHaveBeenCalled();
-    f.active(false);
-    f.active(true);
-    await f.service.run(true);
-    release();
-    await stopping;
-    expect(f.backupProject.mock.calls).toEqual([["one"]]);
-    expect(f.client.disable).toHaveBeenCalledOnce();
-    expect(vi.getTimerCount()).toBe(0);
-    f.stop();
+    expect(
+      findShownBackupError([project({ error: "busy", failures: 5 })]),
+    ).toBeUndefined();
+    expect(
+      findShownBackupError([project({ error: "busy", failures: 6 })])?.error,
+    ).toBe("busy");
   });
 
-  it("keeps the configuration and scheduled backups when disabling fails", async () => {
-    const f = await fixture();
-    f.client.disable.mockRejectedValue(new Error("preferences unavailable"));
-    await expect(f.service.disable()).rejects.toThrow(
-      "preferences unavailable",
-    );
-    expect(f.service.getStatus().configured).toBe(true);
-    await f.advance();
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    f.stop();
-  });
-
-  it("lets an overdue app open before starting asynchronous backup work", async () => {
-    const f = await fixture({ lastAttemptAt: 1 });
-    f.projects([{ id: "one", pending: true }]);
-    let release;
-    f.beforeBackup.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    await f.advance(BACKUP_RESUME_DELAY_MS - 1);
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    await f.advance(1);
-    expect(f.beforeBackup).toHaveBeenCalledOnce();
-    // Startup has returned and the event loop can run while persistence waits.
-    const interaction = vi.fn();
-    setTimeout(interaction, 0);
-    await f.advance(1);
-    expect(interaction).toHaveBeenCalledOnce();
-    expect(f.backupProject).not.toHaveBeenCalled();
-    release();
-    await f.service.run();
-    expect(f.backupProject).toHaveBeenCalledOnce();
-    f.stop();
-  });
-
-  it("resumes one minute before the persisted cooldown ends and runs then", async () => {
-    const f = await fixture();
-    f.active(false);
-    expect(vi.getTimerCount()).toBe(0);
-    await f.advance(BACKUP_INTERVAL_MS - 60 * 1000);
-    f.active(true);
-    await f.advance(60 * 1000 - 1);
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    await f.advance(1);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    await f.advance(BACKUP_INTERVAL_MS);
-    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
-    f.stop();
-  });
-
-  it("backs up a new project shortly without waiting for the interval", async () => {
-    const f = await fixture();
-    f.projects([{ id: "new", pending: true }]);
-    f.service.backupNewProject();
-    await f.advance(BACKUP_RESUME_DELAY_MS - 1);
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    await f.advance(1);
-    expect(f.client.beginPass).toHaveBeenCalledWith(true);
-    expect(f.backupProject).toHaveBeenCalledWith("new");
-    f.stop();
-  });
-
-  it("runs a follow-up pass for a project created during a pass", async () => {
-    const f = await fixture({ lastAttemptAt: 1 });
-    f.projects([{ id: "one", pending: true }]);
-    let release;
-    f.backupProject.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    expect(f.backupProject).toHaveBeenCalledWith("one");
-    f.projects([
-      { id: "one", pending: false },
-      { id: "new", pending: true },
-    ]);
-    f.service.backupNewProject();
-    release();
-    await f.advance(0);
-    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
-    expect(f.backupProject.mock.calls).toEqual([["one"], ["new"]]);
-    f.stop();
-  });
-
-  it("keeps a new project waiting when a pass stops before listing projects", async () => {
-    const f = await fixture();
-    f.projects([{ id: "new", pending: true }]);
-    f.beforeBackup.mockImplementationOnce(async () => f.active(false));
-    f.service.backupNewProject();
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    expect(f.client.pendingProjects).not.toHaveBeenCalled();
-    f.active(true);
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    expect(f.backupProject).toHaveBeenCalledWith("new");
-    f.stop();
-  });
-
-  it("falls back to the interval when a new-project pass fails", async () => {
-    const f = await fixture();
-    f.beforeBackup.mockRejectedValueOnce(new Error("save failed"));
-    f.service.backupNewProject();
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    await f.advance(BACKUP_INTERVAL_MS);
-    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
-    f.stop();
-  });
-
-  it("uses the remaining persisted cooldown on a fresh launch", async () => {
-    const f = await fixture({
-      lastAttemptAt: 1000000 - (BACKUP_INTERVAL_MS - 60 * 1000),
-    });
-    await f.advance(60 * 1000 - 1);
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    await f.advance(1);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    f.stop();
-  });
-
-  it("cancels a resume check when hidden and coalesces repeated resumes", async () => {
-    const f = await fixture({ lastAttemptAt: 1 });
-    await f.advance(1000);
-    f.active(false);
-    await f.advance(BACKUP_INTERVAL_MS);
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    f.active(true);
-    f.active(true);
-    expect(vi.getTimerCount()).toBe(1);
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    f.active(false);
-    f.active(true);
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    f.stop();
-  });
-
-  it("keeps native claim failures throttled even if status cannot be refreshed", async () => {
-    const f = await fixture({ lastAttemptAt: 1 });
-    f.client.beginPass.mockRejectedValue(new Error("bridge unavailable"));
-    f.client.status.mockRejectedValue(new Error("bridge unavailable"));
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    f.active(false);
-    f.active(true);
-    await f.advance(BACKUP_INTERVAL_MS - 1);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    await f.advance(1);
-    expect(f.client.beginPass).toHaveBeenCalledTimes(2);
-    f.stop();
-  });
-
-  it("stops before dirty detection if backgrounded while flushing drafts", async () => {
-    const f = await fixture({ lastAttemptAt: 1 });
-    let release;
-    f.beforeBackup.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    f.active(false);
-    release();
-    await f.service.run();
-    expect(f.client.pendingProjects).not.toHaveBeenCalled();
-    expect(vi.getTimerCount()).toBe(0);
-    f.stop();
-  });
-
-  it("does not schedule another timer after stopping during a backup", async () => {
-    const f = await fixture({ lastAttemptAt: 1 });
-    f.projects([{ id: "one", pending: true }]);
-    let release;
-    f.backupProject.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    const operation = f.service.run();
-    f.stop();
-    release();
-    await operation;
-    expect(f.unsubscribe).toHaveBeenCalledOnce();
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("checks after five minutes, flushes drafts before dirty detection, and skips unchanged projects", async () => {
-    const f = await fixture();
-    await f.service.run();
-    await f.advance(BACKUP_INTERVAL_MS - 1);
-    await f.service.run();
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    await f.advance(1);
-    await f.service.run();
-    expect(f.calls).toEqual(["flush", "check"]);
-    expect(f.backupProject).not.toHaveBeenCalled();
-    f.stop();
-  });
-  it("does not run on background, catches up on resume, and prevents duplicate passes", async () => {
-    const f = await fixture();
-    f.projects([{ id: "one", pending: true }]);
-    let release;
-    f.backupProject.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    f.active(false);
-    await f.advance();
-    expect(f.client.beginPass).not.toHaveBeenCalled();
-    f.active(true);
-    await f.advance(BACKUP_RESUME_DELAY_MS);
-    const first = f.service.run();
-    expect(f.service.run(true)).toBe(first);
-    await vi.waitFor(() => expect(f.backupProject).toHaveBeenCalledTimes(1));
-    release();
-    await first;
-    expect(f.client.beginPass).toHaveBeenCalledTimes(1);
-    f.stop();
-  });
-  it("does not let a low-space project starve another project, and deduplicates warnings", async () => {
-    const f = await fixture();
-    f.projects([
-      { id: "one", pending: true },
-      { id: "two", pending: true },
-    ]);
-    f.backupProject.mockImplementation(async (id) => {
-      if (id === "one") throw Object.assign(new Error(), { code: "lowSpace" });
-    });
-    await f.service.run(true);
-    expect(f.backupProject.mock.calls).toEqual([["one"], ["two"]]);
-    expect(f.service.getStatus().error).toBe("lowSpace");
-    await f.service.run(true);
-    expect(f.notify).toHaveBeenCalledTimes(1);
-    expect(f.notify).toHaveBeenCalledWith({
-      message: "Free up space",
-      status: "error",
-    });
-    f.stop();
-  });
-  it("keeps a change made during backup pending", async () => {
-    const f = await fixture();
-    f.projects([{ id: "one", pending: true }]);
-    await f.service.run(true);
-    expect(f.service.getStatus().projects[0].pending).toBe(true);
-    expect(f.backupProject).toHaveBeenCalledTimes(1);
-    await f.advance();
-    await f.service.run();
-    expect(f.backupProject).toHaveBeenCalledTimes(2);
-    f.stop();
-  });
-  it("starts the initial pass on configuration without waiting for publication", async () => {
-    const f = await fixture();
-    f.projects([{ id: "one", pending: true }]);
-    let release;
-    f.backupProject.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          release = resolve;
-        }),
-    );
-    const status = await f.service.configure({ uri: "content://test" });
-    expect(status.configured).toBe(true);
-    await vi.waitFor(() => expect(f.backupProject).toHaveBeenCalled());
-    release();
-    await f.service.run();
-    f.stop();
-  });
-  it("surfaces a draft flush failure and does not publish stale data", async () => {
-    const f = await fixture();
-    f.beforeBackup.mockRejectedValue(new Error("save failed"));
-    await f.service.run(true);
-    expect(f.client.beginPass).toHaveBeenCalledOnce();
-    expect(f.client.pendingProjects).not.toHaveBeenCalled();
-    expect(f.backupProject).not.toHaveBeenCalled();
-    expect(f.service.getStatus().error).toBe("failed");
-    f.stop();
+  it("finds the latest backup across projects", () => {
+    expect(
+      findLatestBackup([
+        project({ snapshotAt: "2026-11-24T10:00:00.000Z" }),
+        project({ snapshotAt: "" }),
+        project({ snapshotAt: "2026-11-25T09:00:00.000Z" }),
+      ]),
+    ).toBe("2026-11-25T09:00:00.000Z");
+    expect(findLatestBackup([project()])).toBeUndefined();
   });
 });

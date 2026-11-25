@@ -1,5 +1,4 @@
 import { createLibsqlClientStore } from "insieme/client";
-import { callAndroidBridge } from "../../clients/android/bridge.js";
 import { createAndroidSqliteConnection } from "../../clients/android/sqlite.js";
 import { assertSafeAndroidStorageSegment } from "../../clients/android/storagePaths.js";
 import {
@@ -144,14 +143,6 @@ export const evictPersistedAndroidProjectStoreCache = async ({
   await cachedStore?.close?.();
 };
 
-// Do not create/cache a store with an empty materialized-view configuration just
-// to back up a closed project. Only an already-mounted store has JS work to drain.
-export const prepareAndroidProjectBackup = async ({ projectId }) => {
-  const cached = storePromisesByProjectId.get(projectId);
-  if (cached) return (await cached).prepareBackup();
-  return callAndroidBridge("prepareProjectBackup", { projectId });
-};
-
 export const createPersistedAndroidProjectStore = async ({
   projectId,
   materializedViews = [],
@@ -270,15 +261,6 @@ export const createPersistedAndroidProjectStore = async ({
         return queueStoreOperation(() =>
           store.invalidateMaterializedView(payload),
         );
-      },
-
-      async prepareBackup() {
-        return queueStoreOperation(async () => {
-          await store.flushMaterializedViews();
-          return callAndroidBridge("prepareProjectBackup", {
-            projectId: safeProjectId,
-          });
-        });
       },
 
       async flushMaterializedViews() {

@@ -15,6 +15,8 @@ public class BackupDocumentsProvider extends DocumentsProvider {
     File root;
     String failRename;
     String failDelete;
+    int childQueries;
+    final java.util.List<String> created = new java.util.ArrayList<>();
     public boolean onCreate() { return true; }
     private File file(String id) { return id.equals("primary:Documents") ? root : new File(root, id.substring("primary:Documents/".length())); }
     private String id(File file) { return "primary:Documents" + file.getAbsolutePath().substring(root.getAbsolutePath().length()); }
@@ -41,6 +43,7 @@ public class BackupDocumentsProvider extends DocumentsProvider {
         MatrixCursor cursor = cursor(projection); row(cursor, file); return cursor;
     }
     public Cursor queryChildDocuments(String id, String[] projection, String sortOrder) throws FileNotFoundException {
+        childQueries++;
         File[] files = file(id).listFiles(); if (files == null) throw new FileNotFoundException(id);
         MatrixCursor cursor = cursor(projection); for (File file : files) row(cursor, file); return cursor;
     }
@@ -52,6 +55,7 @@ public class BackupDocumentsProvider extends DocumentsProvider {
         try {
             boolean created = Document.MIME_TYPE_DIR.equals(mime) ? file.mkdir() : file.createNewFile();
             if (!created) throw new FileNotFoundException(name);
+            this.created.add(name);
             return id(file);
         } catch (java.io.IOException error) { throw new FileNotFoundException(error.toString()); }
     }

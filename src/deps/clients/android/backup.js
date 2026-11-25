@@ -1,11 +1,23 @@
 import { callAndroidBridge } from "./bridge.js";
 
-export const createAndroidBackupClient = ({ isActive, subscribeActive }) => ({
+// Native code schedules and runs every backup. The page reads the status it
+// keeps in memory, receives updates as they happen, and asks for changes.
+export const createAndroidBackupClient = ({
+  windowTarget = globalThis.window,
+} = {}) => ({
   status: () => callAndroidBridge("getBackupStatus"),
   configure: (payload) => callAndroidBridge("configureBackup", payload),
   disable: () => callAndroidBridge("disableBackup"),
-  pendingProjects: () => callAndroidBridge("getPendingBackupProjects"),
-  beginPass: (manual) => callAndroidBridge("beginBackupPass", { manual }),
-  isActive,
-  subscribeActive,
+  request: (payload) => callAndroidBridge("requestBackup", payload),
+  setNotificationCopy: (payload) =>
+    callAndroidBridge("setBackupNotificationCopy", payload),
+  subscribeStatus(listener) {
+    const handleStatus = (status) => listener(status);
+    windowTarget.routeVNBackupStatusChanged = handleStatus;
+    return () => {
+      if (windowTarget.routeVNBackupStatusChanged === handleStatus) {
+        delete windowTarget.routeVNBackupStatusChanged;
+      }
+    };
+  },
 });

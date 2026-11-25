@@ -3433,25 +3433,40 @@ androidBackup:
   notConfiguredTitle: バックアップ未設定
   configuredTitle: ローカルバックアップ
   configuredDescription: 自動バックアップが有効です。
+  attentionTitle: バックアップの確認が必要です
   setupFolder: バックアップフォルダーを設定
   changeFolder: フォルダーを変更
+  chooseFolderAgain: フォルダーを選び直す
+  tryAgain: 再試行
+  later: 後で
+  backUpNow: 今すぐバックアップ
+  backUpNowError: バックアップを開始できませんでした。もう一度お試しください。
   notConfigured: アプリの削除やデータの消去により、すべてのプロジェクトが失われます。
   running: バックアップ中…
-  upToDate: バックアップ済み
-  never: 未バックアップ
-  lastBackup: "前回のバックアップ:"
-  schedule: アプリを開いている間、変更を5分ごとにバックアップします。
+  preparing: プロジェクトの変更を確認中…
+  backingUp: "「{name}」をバックアップ中…"
+  copyingFiles: "ファイルをコピー中: {done} / {total}"
+  waiting: 編集を終えると、まもなく新しい変更がバックアップされます。
+  notBackedUpYet: まだバックアップされていません。まもなく最初のバックアップが始まります。
+  someNotBackedUp: まだバックアップされていないプロジェクトがあります。
+  never: なし
+  lastBackupAt: "前回のバックアップ: {time}"
+  notificationChannel: プロジェクトのバックアップ
+  notificationTitle: プロジェクトをバックアップ中
 androidBackupErrors:
   failed: バックアップを完了できませんでした。前回のバックアップは保持されています。再試行するか、別のローカルフォルダーを選んでください。
   lowSpace: 空き容量不足のためバックアップを停止しました。バックアップ後に1 GB以上の空き容量が残るよう、端末または保存先の容量を確保してください。
   unknownSpace: 空き容量を確認できません。別のローカルフォルダーを選んでください。
   reconnect: バックアップフォルダーにアクセスできません。ストレージを接続するか、フォルダーを選び直してください。
   localFolder: "この端末またはリムーバブルドライブのフォルダーを選んでください。クラウド上のフォルダーには対応していません。"
+  appFolder: "「Documents/RouteVN Backups」など、Androidのアプリ用ストレージ以外のフォルダーを選んでください。"
   nameConflict: 同名のバックアップフォルダーまたはファイルがあります。既存のバックアップを守るため、別のフォルダーを選んでください。
   invalidBackup: "既存のバックアップデータを検証できませんでした。データはそのまま残してあります。別のフォルダーを選んでください。"
+  projectDamaged: "このプロジェクトのデータが安全チェックに通らなかったため、バックアップしませんでした。前回のバックアップは保持され、置き換えられません。"
   verification: バックアップを検証できませんでした。再試行するか、別のローカルフォルダーを選んでください。
-  busy: "プロジェクトの保存または出力中です。次回の確認時にバックアップを再試行します。"
-  interrupted: バックアップが中断されました。次回の確認時に再試行します。
+  busy: "プロジェクトの保存または出力中です。数秒後にバックアップを再試行します。"
+  changed: バックアップ中にプロジェクトのファイルが変更されました。数秒後に再試行します。
+  interrupted: バックアップが中断されました。まもなく再試行します。
   assetConflict: "ファイルIDはすでに使用されています。既存のファイルは保持されています。"
 androidBackupSetup:
   title: バックアップフォルダーの設定
@@ -3483,7 +3498,6 @@ androidBackupSetup:
   nameConflictError: "バックアップと同じ名前のファイルがすでにあります。別のフォルダーを選んでください。"
   lowSpaceError: 空き容量が不足しています。バックアップ後に1 GB以上の空き容量が必要です。
   unknownSpaceError: 空き容量を確認できません。別のローカルフォルダーを選んでください。
-  busyError: バックアップ中です。完了してからフォルダーを変更してください。
 
 imageUploadValidation:
   title: "画像をアップロードできませんでした"

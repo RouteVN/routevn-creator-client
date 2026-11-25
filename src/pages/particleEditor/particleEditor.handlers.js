@@ -374,8 +374,8 @@ export const handleBeforeMount = (deps) => {
     listener: (event) => handleWindowKeyDown(deps, { _event: event }),
   });
   // Leaving saves waiting changes, then has the thumbnail brought up to date
-  // in the background, so leaving waits only for the save. A backup keeps
-  // the page open, so it only saves.
+  // in the background, so leaving waits only for the save. Going to the
+  // background or quitting keeps the page open, so it only saves.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async ({ reason } = {}) => {
       const saved = await saveParticleChanges(deps);
@@ -383,8 +383,8 @@ export const handleBeforeMount = (deps) => {
         throw new Error("Failed to save particle before navigation.");
       }
       const particleId = store.selectParticleId();
-      // Only leaving the page draws its thumbnail. A backup, the app going to
-      // the background, or quitting only saves.
+      // Only leaving the page draws its thumbnail. The app going to the
+      // background or quitting only saves.
       if (particleId && !reason) {
         void projectService.requestParticleThumbnails({
           particleIds: [particleId],

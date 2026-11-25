@@ -3433,25 +3433,40 @@ androidBackup:
   notConfiguredTitle: 尚未设置备份
   configuredTitle: 本地备份
   configuredDescription: 自动备份已启用。
+  attentionTitle: 备份需要处理
   setupFolder: 设置备份文件夹
   changeFolder: 更改文件夹
+  chooseFolderAgain: 重新选择文件夹
+  tryAgain: 重试
+  later: 稍后
+  backUpNow: 立即备份
+  backUpNowError: 无法开始备份。请重试。
   notConfigured: 卸载应用或清除应用数据会删除所有项目。
   running: "正在备份……"
-  upToDate: 已备份
-  never: 尚未备份
-  lastBackup: 上次备份：
-  schedule: "应用打开期间，每 5 分钟备份有更改的项目。"
+  preparing: 正在检查项目更改……
+  backingUp: "正在备份“{name}”……"
+  copyingFiles: "正在复制文件：{done} / {total}"
+  waiting: 停止编辑后不久，新的更改就会备份。
+  notBackedUpYet: 尚未备份。首次备份即将开始。
+  someNotBackedUp: 部分项目尚未备份。
+  never: 从未
+  lastBackupAt: "上次备份：{time}"
+  notificationChannel: 项目备份
+  notificationTitle: 正在备份项目
 androidBackupErrors:
   failed: 无法完成备份。之前的备份已保留。请重试或选择其他本地文件夹。
   lowSpace: "备份已暂停。请释放设备或备份存储空间，确保备份完成后至少还有 1 GB 可用空间。"
   unknownSpace: 无法检查可用空间。请选择其他本地备份文件夹。
   reconnect: 无法访问备份文件夹。请重新连接存储设备或重新选择文件夹。
   localFolder: 请选择此设备或可移动存储设备中的文件夹。不支持云端文件夹。
+  appFolder: "请选择 Android 应用存储目录之外的文件夹，例如 Documents/RouteVN Backups。"
   nameConflict: 已有同名的备份文件夹或文件。请选择其他备份文件夹，以保护现有备份。
   invalidBackup: "无法验证现有的备份数据库，已将其保留。请选择其他备份文件夹。"
+  projectDamaged: "此项目的数据未通过安全检查，因此未进行备份。之前的备份已保留，不会被替换。"
   verification: 无法验证备份副本。请重试或选择其他本地文件夹。
-  busy: 项目正在保存或导出。将在下次定时检查时重试备份。
-  interrupted: 备份已中断。将在下次定时检查时重试。
+  busy: 项目正在保存或导出。将在几秒后重试备份。
+  changed: 备份期间项目文件发生了更改。将在几秒后重试。
+  interrupted: 备份已中断。将很快重试。
   assetConflict: "文件 ID 已被使用。现有文件已保留。"
 androidBackupSetup:
   title: 设置备份文件夹
@@ -3483,7 +3498,6 @@ androidBackupSetup:
   nameConflictError: 现有文件与备份名称冲突。请选择其他文件夹。
   lowSpaceError: "可用空间不足。备份完成后至少需要保留 1 GB 可用空间。"
   unknownSpaceError: 无法检查可用空间。请选择其他本地文件夹。
-  busyError: 正在备份。请等待完成后再更改文件夹。
 
 imageUploadValidation:
   title: "图片上传失败"

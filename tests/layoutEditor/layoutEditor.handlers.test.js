@@ -972,11 +972,10 @@ describe("layoutEditor preview autosave", () => {
     );
   });
 
-  it("asks for no thumbnail for a backup, the background, or quitting", async () => {
+  it("asks for no thumbnail for the background or quitting", async () => {
     const { deps, leave } = mountEditor();
 
     changePreview(deps, { backgroundImageId: "image-two" });
-    await leave({ reason: "backup" });
     await leave({ reason: "background" });
     await leave({ reason: "quit" });
 

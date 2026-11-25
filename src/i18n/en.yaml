@@ -3433,25 +3433,40 @@ androidBackup:
   notConfiguredTitle: No backup set up
   configuredTitle: Local backups
   configuredDescription: Automatic backups are enabled.
+  attentionTitle: Backups need attention
   setupFolder: Set up backup folder
   changeFolder: Change folder
+  chooseFolderAgain: Choose folder again
+  tryAgain: Try again
+  later: Later
+  backUpNow: Back up now
+  backUpNowError: Could not start the backup. Try again.
   notConfigured: Uninstalling the app or clearing its data will delete all projects.
   running: Backing up…
-  upToDate: Up to date
-  never: Never backed up
-  lastBackup: 'Last backup:'
-  schedule: Automatic backup every 5 minutes
+  preparing: Checking projects for changes…
+  backingUp: "Backing up {name}…"
+  copyingFiles: "Copying files: {done} of {total}"
+  waiting: New changes are backed up shortly after you stop editing.
+  notBackedUpYet: Not backed up yet. The first backup starts shortly.
+  someNotBackedUp: Some projects are not backed up yet.
+  never: Never
+  lastBackupAt: "Last backup: {time}"
+  notificationChannel: Project backups
+  notificationTitle: Backing up projects
 androidBackupErrors:
   failed: Backup could not finish. Your previous backup is kept. Try again or choose another local folder.
   lowSpace: Backup paused. Free up space on your device or backup storage. At least 1 GB must remain free after the backup.
   unknownSpace: Available space could not be checked. Choose another local backup folder.
   reconnect: The backup folder is unavailable. Reconnect your storage or choose the folder again.
   localFolder: Choose a folder on this device or a removable drive. Cloud folders are not supported.
+  appFolder: Choose a folder outside Android app storage, such as Documents/RouteVN Backups.
   nameConflict: A backup folder or file with this name already exists. Choose a different backup folder to keep the existing backup safe.
   invalidBackup: The existing backup database could not be verified. It was kept. Choose a different backup folder.
+  projectDamaged: "This project's data did not pass a safety check, so it was not backed up. Your previous backup is kept and will not be replaced."
   verification: The backup copy could not be verified. Try again or choose another local folder.
-  busy: A project is being saved or exported. Backup will retry at the next scheduled check.
-  interrupted: Backup was interrupted. It will retry at the next scheduled check.
+  busy: A project is being saved or exported. Backup will try again in a few seconds.
+  changed: Project files changed during the backup. It will try again in a few seconds.
+  interrupted: Backup was interrupted. It will try again shortly.
   assetConflict: A file ID is already in use. The existing file was kept.
 androidBackupSetup:
   title: Setup backup folder
@@ -3483,7 +3498,6 @@ androidBackupSetup:
   nameConflictError: Existing files conflict with backup names. Choose another folder.
   lowSpaceError: Not enough free space. At least 1 GB must remain free after the backup.
   unknownSpaceError: Free space could not be checked. Choose another local folder.
-  busyError: A backup is running. Wait for it to finish before changing folders.
 
 imageUploadValidation:
   title: "Failed to upload image"

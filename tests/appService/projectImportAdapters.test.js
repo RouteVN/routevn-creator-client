@@ -72,13 +72,6 @@ const createProjectService = () => ({
 });
 
 const createParams = ({ db, projectService }) => ({
-  appActivity: {
-    isActive: () => true,
-    subscribeActive: (listener) => {
-      listener(true);
-      return () => {};
-    },
-  },
   db,
   router: {
     getPayload: () => ({}),
@@ -754,6 +747,8 @@ const ANDROID = {
     iconFileId: null,
   }),
   finishOptions: { timeoutMs: Number.POSITIVE_INFINITY },
+  // The new project's first backup starts a few seconds later.
+  afterImport: ["requestBackup"],
 };
 const IOS = {
   label: "ios",
@@ -762,6 +757,7 @@ const IOS = {
   createAppService: createIOSAppService,
   storeProject: iosImportPayload,
   finishOptions: undefined,
+  afterImport: [],
 };
 
 const createMobileService = (platform, { db = createDb() } = {}) =>
@@ -830,6 +826,7 @@ describe.each([ANDROID, IOS])("$label project import adapters", (platform) => {
       "extractImportArchive",
       "importProjectFolder",
       "removeTempFolder",
+      ...platform.afterImport,
     ]);
     expect(calls[1].payload).toEqual({
       tempFolderId: "staging-one",
@@ -872,6 +869,7 @@ describe.each([ANDROID, IOS])("$label project import adapters", (platform) => {
       "extractImportArchive",
       "importProjectFolder",
       "removeTempFolder",
+      ...platform.afterImport,
     ]);
     expect(await db.get("projectEntries")).toHaveLength(1);
     expect(calls[1].payload).toEqual({

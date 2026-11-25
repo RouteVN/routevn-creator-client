@@ -381,11 +381,29 @@ export const createAppService = (params) => {
   });
 
   const backup = createBackupService({
-    client: createAndroidBackupClient(params.appActivity),
-    backupProject: (id) => params.projectService.backupProject(id),
-    beforeBackup: () => appService.prepareNavigation({ reason: "backup" }),
-    notify: (options) => appService.showToast(options),
+    client: createAndroidBackupClient(),
   });
+
+  // Asks once, when a background backup starts needing the user, without
+  // replacing a dialog that is already open.
+  const showBackupProblem = async ({ error, folderProblem }, copy) => {
+    const confirmed = await appService.showDialogWhenIdle({
+      title: copy.attentionTitle,
+      message: copy.errors[error] ?? copy.errors.failed,
+      confirmText: folderProblem ? copy.chooseFolderAgain : copy.tryAgain,
+      cancelText: copy.later,
+    });
+    if (!confirmed) return;
+    if (folderProblem) {
+      appService.navigate("/project-folder-setup", { from: "config" });
+      return;
+    }
+    try {
+      await backup.backupNow();
+    } catch {
+      appService.showToast({ status: "error", message: copy.backUpNowError });
+    }
+  };
 
   return {
     ...appService,
@@ -393,8 +411,19 @@ export const createAppService = (params) => {
     getBackupStatus: backup.getStatus,
     subscribeBackup: backup.subscribe,
     refreshBackupStatus: backup.refresh,
-    backupNow: () => backup.run(true),
-    startBackupChecks: backup.start,
+    backupNow: backup.backupNow,
+    startBackupChecks(getCopy) {
+      const { notificationChannel, notificationTitle } = getCopy();
+      backup.setNotificationCopy({
+        channel: notificationChannel,
+        title: notificationTitle,
+      });
+      return backup.watchProblems((problem) =>
+        showBackupProblem(problem, getCopy()).catch((error) => {
+          console.error("Failed to show the backup problem:", error);
+        }),
+      );
+    },
     getProjectFolderSetup: () => ({ ...backup.getStatus(), isBackup: true }),
     pickProjectFolderSetup: (options) =>
       params.filePicker.openFolderPicker({

@@ -24,7 +24,6 @@ describe("Android media source dialog", () => {
     service = createAppService({
       globalUI: { showFormDialog: dialog },
       filePicker,
-      appActivity: {},
     });
   });
   it.each(["gallery", "files"])(

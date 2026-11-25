@@ -49,6 +49,24 @@ public class DatabaseTransactionRollbackTest {
         return (SQLiteDatabase) invoke("openDatabase", new Class<?>[] { String.class }, DB);
     }
 
+    private long synchronousMode() throws Exception {
+        try (Cursor cursor = open().rawQuery("PRAGMA synchronous", null)) {
+            assertTrue(cursor.moveToFirst());
+            return cursor.getLong(0);
+        }
+    }
+
+    // A backup snapshot closes and reopens the page's connection. The page set
+    // synchronous=FULL once; the new connection must keep it.
+    @Test public void reopeningKeepsThePagesSynchronousMode() throws Exception {
+        invoke("rememberSynchronousMode", new Class<?>[] { String.class, String.class }, DB, "PRAGMA synchronous = full");
+        invoke("closeDatabase", new Class<?>[] { String.class }, DB);
+        assertEquals(2, synchronousMode()); // FULL
+        invoke("rememberSynchronousMode", new Class<?>[] { String.class, String.class }, DB, "PRAGMA synchronous=NORMAL");
+        invoke("closeDatabase", new Class<?>[] { String.class }, DB);
+        assertEquals(1, synchronousMode()); // NORMAL
+    }
+
     @SuppressWarnings("unchecked")
     private Set<String> projectTransactions() throws Exception {
         Field field = MainActivity.class.getDeclaredField("projectTransactions");

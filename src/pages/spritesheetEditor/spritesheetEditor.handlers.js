@@ -199,8 +199,8 @@ export const handleBeforeMount = (deps) => {
   });
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async ({ reason } = {}) => {
-      // A backup, the app going to the background, or quitting keeps no
-      // dialog open: it saves what it can and goes on.
+      // The app going to the background or quitting keeps no dialog open:
+      // it saves what it can and goes on.
       if (reason) {
         await saveSpritesheetChanges(deps);
         return;

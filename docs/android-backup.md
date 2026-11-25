@@ -2,9 +2,8 @@
 
 Status: implemented; automated validation passes. Physical-device storage and uninstall/reinstall verification remains required before release.
 
-This document records the Android backup decisions agreed on 2026-09-17.
-The implementation follows the behavior below. Working storage and Android
-system backup rules are documented in [Android development](android.md).
+This document describes how Android project backups work. Working storage and
+Android system backup rules are documented in [Android development](android.md).
 
 ## Purpose And Scope
 
@@ -14,8 +13,8 @@ for SQLite, and automatically copy projects to a user-selected local backup
 folder outside app-specific storage.
 
 This is disaster recovery, not real-time synchronization or a replacement for
-ordinary editor autosave. Backups should be infrequent, incremental for assets,
-and inexpensive when nothing has changed.
+ordinary editor autosave. Backups are incremental for assets and inexpensive
+when nothing has changed, so they can run soon after every editing session.
 
 Decisions:
 
@@ -25,8 +24,11 @@ Decisions:
   introduce database deltas or a custom archive format.
 - Write the new database first, then use renames for publication and recovery.
 - Store backup timestamps and other metadata in `backup.json`.
-- Check for changed projects every 5 minutes while the app is active, and back
-  up newly created or imported projects without waiting for the interval.
+- Back up a changed project 30 seconds after edits stop, and at least every
+  3 minutes while editing continues. Finish due work in a foreground service
+  when the app leaves the screen.
+- Native code owns scheduling and copying. Backups never hold up the splash
+  screen, startup, setup, or navigation.
 - Reserve 1 GB of free space after accounting for backup space requirements.
 - Reuse the iOS folder-setup UI with Android backup wording and a skip flow.
 - Show a card at the bottom of Projects when backups are not configured, the
@@ -35,9 +37,9 @@ Decisions:
 A backup on the same device protects against app uninstall and app-data
 clearing. It does not protect against device loss, factory reset, storage
 failure, or the user deleting the backup folder. Recovery reaches the latest
-completed backup. Five minutes is a scheduling interval, not a guaranteed maximum
-data-loss window: copying, suspension, failures, and unavailable storage can
-extend it.
+completed backup. The 30-second and 3-minute delays are scheduling targets, not a
+guaranteed maximum data-loss window: copying, process death, failures, and
+unavailable storage can extend it.
 
 ## Backup Folder Selection
 
@@ -149,7 +151,8 @@ adding a redundant Cancel button.
 Place the card in the bottom footer, immediately above the RouteVN Creator
 version text. Keep it separate from the project list so it does not interrupt
 browsing projects. Show it even when there are no projects, and preserve the
-project list's existing scroll spacer.
+project list's existing scroll spacer. The card stays hidden until native status
+arrives; status is answered from memory, so this takes no disk work.
 
 When backup is not configured:
 
@@ -157,37 +160,63 @@ When backup is not configured:
 - Description: **Uninstalling the app or clearing its data will delete all projects.**
 - Action: **Set up backup folder**
 
-Keep the card visible after skipping. Selecting a folder alone does not mean
-existing projects are protected. Keep the card after folder selection with a
-green check, **Local backups**, and **Automatic backups are enabled.**, indicating configuration rather than promising
-every recent edit is protected. Show an amber warning if backup fails.
-Keep failures to one summary message in this fixed footer; never expand a list
-of every project's errors here. Project-specific backup details stay in Config,
-so many failures cannot crowd out the project browser or folder action.
-Show the root backup folder on one line using the last two path segments;
-Config uses the selected project's backup subfolder instead.
-An empty library can finish setup without
-manufacturing an empty project backup; new projects become eligible on the normal
-schedule. Settings shows **Never backed up** until a project's first successful
-backup. Configuration alone must not imply those projects are protected.
+Keep the card visible after skipping. Once configured, the card shows one state:
 
-If any project fails in the initial pass, keep an actionable warning. Later
-failures such as insufficient space or revoked access also show a warning card,
-with the last successful backup time where available. Distinguish **Never backed
-up** from an older successful backup. Do not report an entire library as backed
-up just because one project succeeded.
+| State           | Icon and title                            | Text                                                                                                                            | Actions                                                                                    |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Needs attention | Amber warning, **Backups need attention** | The error message; for a project-specific error, the project name above it                                                      | **Choose folder again** for folder problems; otherwise **Try again** and **Change folder** |
+| Backing up      | Upload icon, **Backing up…**              | **Backing up Project One…** and **Copying files: 12 of 80** while media is copied                                               | **Change folder**                                                                          |
+| Backed up       | Green check, **Local backups**            | **Last backup: 5 min. ago** (the newest backup of any project), plus **Some projects are not backed up yet.** when one has none | **Change folder**                                                                          |
+| No backup yet   | Green check, **Local backups**            | **Not backed up yet. The first backup starts shortly.**                                                                         | **Change folder**                                                                          |
 
-Backup settings should expose the selected project's backup-folder path, status,
-and last successful backup time. Once configured, omit the folder-change control
-from Config; setup/reconnection remains accessible from the Projects warning.
-Omit routine pending messages
-and manual backup controls. Display
-`snapshotAt` as the time of protected work and **Never backed up** for projects
-without a successful snapshot. Use a dedicated **Android local backups** section
-matching other Config sections, without a schedule description,
-and one last-backup line for the selected project. Keep detailed recovery instructions in the docs.
-Use localized catalog
-strings in the owning components/stores/handlers.
+Before media copying starts, **Backing up…** reads **Checking projects for
+changes…**. Relative times refresh every 30 seconds. Keep failures to one
+summary message in this fixed footer; never expand a list of every project's
+errors here. A folder problem is shown first, since it stops every project, then
+low space, then any other error. Project-specific details stay in Config, so many
+failures cannot crowd out the project browser or folder action. Show the root
+backup folder on one line using the last two path segments; Config uses the
+selected project's backup subfolder instead. An empty library can finish setup
+without manufacturing an empty project backup.
+
+Short waits clear up by themselves within seconds and are not shown until they
+keep coming back (six failures in a row): a project being saved or exported
+(`busy`), media deleted mid-copy (`changed`), and an interrupted copy
+(`interrupted`). Errors saved by an earlier run of the app are shown on the card
+until the next backup of that project succeeds.
+
+### Problem Dialogs
+
+The app shows a dialog the first time in each run of the app that backups need
+the user: a folder problem (`reconnect`, `unknownSpace`, `localFolder`,
+`appFolder`, `nameConflict`, `invalidBackup`) or low space after one failure,
+and any other error after three failures in a row. `projectDamaged` means the
+project's own database failed its check; it offers **Try again**, never a new
+folder, and the last backup is never replaced by the damaged copy. Short waits and errors saved
+by an earlier run never open one, so a stale error cannot interrupt startup
+before the folder has been checked again. The dialog waits until no other global
+dialog is open:
+
+- Title: **Backups need attention**
+- Message: the error message
+- Actions: **Choose folder again** (opens folder setup) or **Try again** (asks
+  for a backup now), and **Later**
+
+The same problem is not raised again until it clears or a different problem
+replaces it.
+
+### Config Section
+
+The Config page has an **Android local backups** section for the open project:
+its backup folder, a status line, **Last backup: Sep 17, 2026, 14:30:05** or
+**Last backup: Never**, and **Back up now**. The status line shows the project's
+error, **Backing up…** with the file count while this project copies, or
+**New changes are backed up shortly after you stop editing.** while changes wait.
+A folder problem adds **Choose folder again**. **Back up now** is disabled while
+a backup runs; if the request cannot reach native code, a toast reports
+**Could not start the backup. Try again.** Without a configured folder the
+section shows the uninstall warning and **Set up backup folder**. Use localized
+catalog strings in the owning components/stores/handlers.
 
 ## Schedule And Change Detection
 
@@ -195,66 +224,79 @@ The configured **Backup folder is set** screen includes **Stop local backups**.
 Require a destructive confirmation explaining that new changes will not be
 backed up, uninstalling/clearing app data loses all in-app projects, and existing
 backups remain but may be outdated. Canceling keeps backup enabled.
-Stopping waits for the current project's publication, skips remaining projects,
-cancels scheduling, and durably forgets the destination and per-project backup
-status. Keep project data, asset revision counters, existing backup files, and
+Stopping cancels a running copy at its next chunk, keeps the last completed
+backup in the old folder, cancels scheduling, and durably forgets the destination
+and per-project backup status. Keep project data, asset revision counters, existing backup files, and
 shared URI grants intact. Projects and Config show **No backup set up** and
 offer setup again.
 A failed stop retains the configuration and reports an error. Only explicit
 folder setup re-enables backups.
 
-| Event                               | Behavior                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------- |
-| Initial folder setup                | Immediately queue all existing projects once.                                   |
-| Every 5 minutes while active        | Check for changed projects; back them up sequentially.                          |
-| No project data changes             | Check destination access/existence only; skip snapshots and asset scans.        |
-| Project creation/import             | Back up five seconds later, skipping the interval cooldown.                     |
-| App launch/resume                   | Allow five seconds for the screen to settle; check once the remaining cooldown expires. |
-| Project switch or app backgrounding | Do not trigger an extra backup.                                                 |
-| Failure or low space                | Keep pending; retry at the next scheduled check.                                |
+| Event                                         | Behavior                                                                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| App start                                     | Nothing runs until the splash screen hides, then a full check five seconds later.                                               |
+| Project database write                        | Back up 30 seconds after the last write, and no later than 3 minutes after the first one.                                       |
+| App leaves the screen                         | Pending changes are backed up 1.5 seconds later, in the foreground service (see below for when it starts).                      |
+| Write while the app is hidden                 | Back up 2 seconds after the last write, such as an editor saving as the app goes away.                                          |
+| App returns to the screen                     | Retry failed projects and lift a destination hold within 5 seconds, since the user may have freed space or reconnected storage. |
+| Project creation/import                       | Back up 3 seconds later.                                                                                                        |
+| Folder setup or change                        | Cancel any running copy and check every project in the new folder.                                                              |
+| **Back up now** / **Try again**               | Check now, ignoring retry delays and holds.                                                                                     |
+| While visible                                 | A full check every 30 minutes notices backup files deleted or damaged outside the app (see below).                              |
+| Project busy, media changed, copy interrupted | Retry every 3 seconds, five times, then back off like other failures.                                                           |
+| Other failures                                | Keep pending; retry after 15 s, 30 s, 1 min, 2 min, then every 5 min.                                                           |
+| Destination failure                           | Also hold every other project for the same back-off, since they would fail the same way.                                        |
 
-Use one backup queue and only one active backup at a time. Do not repeatedly
-retry a failed backup on every resume or run multiple catch-up passes for missed
-intervals. Persist enough scheduling state to preserve that behavior across
-restarts. No 30-second debounce or two-minute backup schedule is intended.
+`BackupScheduler` is a single process-wide scheduler with its own thread. It
+outlives the activity, runs one pass at a time, and coalesces triggers: a pass
+backs up every due project in turn, stages all of them first so editing pauses
+only briefly, then copies media and publishes each. A write during a pass marks
+the project changed again for the next pass; the running copy is not restarted.
 
-Use one cancellable timeout aimed at the persisted last attempt plus five minutes,
-not a new five-minute interval on every launch/resume. Resuming four minutes after
-the last attempt schedules a check one minute later. An overdue check waits five
-seconds after launch/resume and never blocks route setup or navigation. Cancel
-the timeout while hidden and on teardown; an in-flight pass must not recreate it
-after teardown. Repeated resumes share the same cooldown and queue. Keep a local
-attempt timestamp as a fallback if the native claim/status bridge fails, avoiding
-an immediate retry loop. Initial folder configuration still queues its first pass
-without awaiting completion.
+The bridge notes a change on every statement except `BEGIN` and `PRAGMA` by
+setting a flag; the scheduler thread reads it, so the bridge thread never waits
+for backup work. Whether a project really changed is decided by its revision
+counter (below), so extra notes only cost a cheap check.
 
-Run backup I/O on native worker executors, with no loading overlay or focus
-change. Draft saving and snapshot preparation remain asynchronous to the UI.
-Native database/media staging still serializes storage operations for consistency;
-large newly added assets can delay storage-dependent actions during that stage.
-Do not describe this as zero-cost or guaranteed hitch-free. Recheck foreground
-visibility after claiming the pass, after saving drafts, and between projects.
-Pending changes from a short session may wait until the next app launch/resume.
-Pass `reason: "backup"` through editor preparation hooks. The scene editor flushes
-pending drafts (including their normal post-save cache update), but does not
-rewrite text-statistics checkpoints merely because a backup check ran. Otherwise
-the cache timestamp itself advances the database revision on unchanged scenes.
-Activity checks subscribe to the existing mobile runtime's native
-`routeVNSetAppActive` lifecycle signal as well as document visibility. Some Android
-WebViews stay document-visible while their Activity is paused, so visibility
-events alone are insufficient.
+The page never prepares or runs backups. Editors save on their own schedule, and
+also when the app goes to the background; those writes start the hidden-app
+backup above. The bridge thread that owns the project databases is borrowed only
+for the short snapshot steps, and the scheduler thread never holds a lock that
+the bridge thread waits for.
 
-One project's failure must not block the other projects. Record its warning and
-continue the queue. Destination access failures are reported per project without repeated UI prompts. Insufficient space for a large project can still allow a
-smaller project to back up while preserving the reserve. Re-evaluate space for
-each project; do not create immediate retry loops.
+The page saves what editors hold in memory only after it hears that the app
+left, so the last edits usually reach the database just after `onPause`.
+Android 12 and later allow starting a foreground service only while the
+activity is still visible, so the scheduler starts `BackupService`, a `dataSync`
+foreground service, on every pause while backups are set up. It keeps the
+service for 6 seconds (`LEAVE_GRACE_MS`) for that save and for as long as a
+backup runs or is due within 10 seconds, then stops it. A service that ends
+within the grace shows no notification. Android 8 to 11 show the notification
+at once but allow later starts, so there the scheduler starts the service on
+pause only when a backup runs or is due, and otherwise when a write while
+hidden makes one due. The silent, low-importance notification reads **Backing up
+projects** in the **Project backups** channel, both localized by the page at
+startup. The app does not request the notification permission, so on Android 13
+and later the notification stays out of the notification shade; the service
+still runs, and Android lists it among the active apps. If Android refuses to
+start the service, the backup still runs while the process lives.
+Android 15 limits how long a data sync service may run each day; on timeout the
+service stops and the backup continues while the process lives, finishing on the
+next launch otherwise.
+
+One project's failure must not block the other projects. Record its error and
+continue the pass. A destination failure stops the pass and holds the rest, since
+every project would fail the same way. Insufficient space for a large project can
+still allow a smaller project to back up while preserving the reserve. Space is
+re-evaluated for each project.
 
 Before trusting matching counters, cheaply check access and the existence of the
 mapped project folder, `project.db`, `files/`, and required backup metadata.
 Missing entries invalidate that project's successful baseline. Lost access
-pauses backup rather than creating a replacement directory elsewhere. These
-checks do not hash unchanged databases or scan every asset; silent external
-changes inside `files/` are not detected by the routine unchanged check.
+pauses backup rather than creating a replacement directory elsewhere. For a
+project that looks up to date, also list `files/` and `file-metadata/` and
+compare `project.db` with its published size (see Interrupted Backup And
+Import). These checks do not hash unchanged databases or media.
 
 Maintain a persistent change counter per project and the counter captured by the
 last successful backup for the configured destination. Advance the change
@@ -272,19 +314,17 @@ Read-only unchanged checks must remain cheap.
 
 Capture the counter corresponding to the staged snapshot. Only mark that counter
 backed up after successful publication. Changes during copying remain pending
-for the next scheduled pass; do not cancel and restart the current copy. Failed
-or skipped backups never advance the successful counter or timestamp.
+for the next pass; the current copy is not cancelled and restarted. Failed or
+skipped backups never advance the successful counter or timestamp.
 
 Counters are local bookkeeping, not globally comparable project revisions.
 After restore, folder change, or reinstallation, reconcile identity and establish
 a fresh baseline; do not assume equal numbers from different installations mean
 equal content.
 
-A background WorkManager schedule is not required for the first version.
-Foreground/resume scheduling is the agreed behavior. If background catch-up is
-added later, it must respect Android's inexact execution and the
-[15-minute periodic minimum](https://developer.android.com/reference/androidx/work/PeriodicWorkRequest).
-Do not promise unattended backups every 5 minutes while the app is closed.
+There is no WorkManager job. Backups run while the app is on screen and, for
+work that is due when it leaves, in the foreground service. Changes made just
+before the process is killed are backed up on the next launch.
 
 ## Backup Contents And Metadata
 
@@ -350,38 +390,36 @@ Never copy a live `project.db` without coordinating SQLite: committed changes ma
 still be in its WAL. The staged database must be self-contained and must not
 require the working project's `-wal` or `-shm` files.
 
-The initial implementation approach is:
+Each project is snapshotted by `MainActivity.snapshotProjectForBackup`, run on the
+bridge thread that owns the project databases:
 
-1. Coordinate admission of new project operations while draining pending editor
-   persistence and outstanding native operations.
-2. Pause project writes, including competing native operations.
-3. Complete transactions, execute and verify a successful WAL checkpoint, and
-   close the relevant database connections.
-4. Copy the database to private staging while writes remain paused.
-5. Capture matching change-tracking information and protect the required asset
-   versions from mutation/deletion.
-6. Reopen the working database and resume editing before external copying.
+1. Refuse with `busy` while the project has an open transaction, an unfinished
+   export, or an asset write session; the scheduler retries in 3 seconds.
+2. Run `PRAGMA wal_checkpoint(TRUNCATE)` and check its result; merely issuing the
+   PRAGMA is not sufficient.
+3. Read the revision counter, close the connection, and copy `project.db` to the
+   project's private staging folder (`project-backup-staging/<projectId>/`).
+4. List the project's `files/` and `file-metadata/` entries, skipping unfinished
+   `.routevn-project-write-*` files.
+5. Reopen the database only if it was open before.
 
-Consume and check checkpoint results; merely issuing a PRAGMA is not sufficient.
-Do not hold the editing pause while copying large assets to the external folder.
-Validate the staged database and benchmark the local pause on physical devices.
-Reopen connections and release the write pause in guaranteed cleanup on every
-failure path. A failed backup must not leave editing suspended. Copy missing
-immutable assets and MIME sidecars into private staging on the storage executor
-before allowing further project writes/deletions. Android can deny hard links
-even within private storage (confirmed on Vivo). Existing backed-up assets are
-not staged again. Include new media in both staging and destination capacity
-estimates. Deleting live assets after preparation does not invalidate the staged
-copy. Release staging on completion/failure and clean stale staging after restart.
+Editing pauses only for these steps; media is not copied while the bridge thread
+waits. Asset IDs are never reused and asset files are never rewritten, so the
+listed files are copied later straight from the live project folder. If one was
+deleted since the snapshot, the copy stops with `changed` and the next pass,
+3 seconds later, takes a new snapshot. A failed snapshot always reopens the
+database it closed. Every reopen reapplies the synchronous mode the page set for
+that database, so saves keep `synchronous=FULL` after a snapshot.
 
-Activity destruction signals cancellation through a volatile flag without
-acquiring the preparation monitor. Copy and hash loops check cancellation at
-chunk boundaries. Queue staging, database, file-session, and unfinished-export
-cleanup behind existing storage work, then shut down the storage executor;
-never wait for preparation or filesystem cleanup on the main thread. An active
-publication owns its staging until its own cleanup releases the publication
-lock. A prepared snapshot whose publication never starts is released by queued
-storage cleanup.
+Cancellation (stopping backups or changing folder) sets a flag that copy and
+hash loops check at every chunk, so a pass stops promptly without waiting on a
+lock. A pass cancelled before it has marked the changed projects pending puts
+those changes back for the next pass. When the activity goes away, a pass keeps
+publishing the snapshots it already staged; new snapshots wait for the next
+activity. The last completed backup stays intact, and
+media already copied and verified is kept for the next pass. Staging is removed
+after each project and stale staging from an ended process is removed when the
+scheduler starts.
 
 SQLite's [Online Backup API](https://sqlite.org/backup.html) is an alternative for
 consistent live snapshots. [VACUUM INTO](https://sqlite.org/lang_vacuum.html) also
@@ -412,6 +450,13 @@ previous database for recovery, rather than accumulating snapshot history. Befor
 replacing an older `previous`, establish that the current database is valid and
 any earlier interrupted operation has been recovered.
 
+If `project.db` cannot be read as this project's database and no valid
+`project.db.previous` can replace it, rename it to `project.db.damaged` and
+publish the new verified copy. A damaged copy must never stop later backups.
+Only the newest damaged copy is kept, and restore never reads it. A
+`project.db` that names another project is never replaced; that backup fails
+with `invalidBackup`.
+
 This avoids a second full copy of the old database. It is recoverable replacement,
 not a guaranteed atomic swap: Android's
 [document rename contract](<https://developer.android.com/reference/android/provider/DocumentsProvider#renameDocument(java.lang.String,%20java.lang.String)>)
@@ -435,8 +480,16 @@ assets are not overwritten or removed. This ordering protects both database
 candidates against interrupted backup writes without a new snapshot format.
 The existing importer rejects an absent `files/` directory and unreadable
 entries. It does not reconcile every database reference against the asset
-directory or promise detection of external deletion/modification of individual
-media files. Backups themselves copy assets before publishing their database.
+directory. Backups themselves copy assets before publishing their database.
+
+Every check, including the full checks at startup and every 30 minutes, also
+inspects backups that look up to date. A backup counts as complete only when
+its `files/` and `file-metadata/` folders hold every media file the project
+has, and its `project.db` has the size recorded when it was published. A
+missing file or a size change makes the project pending, and the next backup
+copies the missing files and a fresh database. Media files present under their
+own name are not re-hashed, so a damaged media file with a matching name is not
+detected.
 
 Import is read-only against the backup source: copy the chosen candidate to
 private import staging as `project.db`, validate there, and use normal import
@@ -448,9 +501,18 @@ and must preserve a validated candidate throughout.
 ## Asset Copying And Size
 
 Copy only missing assets and metadata; do not recopy unchanged media each time.
+Project media are flat files; a folder inside `files/` or `file-metadata/`
+(possible after importing a project) is skipped rather than failing the backup.
 Stream bytes natively with bounded buffers rather than moving the entire project
-through JavaScript/base64. Use temporary files and verification so a failed asset
-copy is not mistaken for an existing complete asset on retry.
+through JavaScript/base64. Each asset is written as `<name>.next`, hashed while it
+streams, read back once to compare the hash, then renamed into place, so a failed
+copy is never mistaken for a complete asset. Each verified asset stays, so a pass
+that stops after 40 of 80 files resumes with the remaining 40.
+
+Each destination folder is listed once per publication and the listing is kept
+up to date as files are created, instead of querying the provider for every
+asset; providers answer such queries slowly. Free space is probed once per
+publication.
 
 Asset writes now reject an existing file ID or MIME sidecar at both session
 creation and completion. The existing upload/import workflows generate fresh
@@ -490,7 +552,8 @@ and handle write failures because free space can change after preflight.
 
 Perform space estimation only for due, changed projects. Insufficient space
 skips backup without altering the previous successful backup or clearing pending
-changes. Retry at the next 5-minute check.
+changes. The project retries on the back-off schedule above, and within 5 seconds
+when the app returns to the screen.
 
 Android providers may return unknown space through the optional
 [`COLUMN_AVAILABLE_BYTES`](https://developer.android.com/reference/android/provider/DocumentsContract.Root#COLUMN_AVAILABLE_BYTES).
@@ -501,13 +564,14 @@ approach for supported local providers during implementation.
 
 Warning copy:
 
-> **Backup paused: not enough storage.** Free up space or choose another backup
-> folder. Last successful backup: today at 14:30.
+> **Backups need attention.** Backup paused. Free up space on your device or
+> backup storage. At least 1 GB must remain free after the backup.
 
-Use **Never backed up** when appropriate. Show a toast on entering the failure
-state, not every 5 minutes, and keep status visible in Projects/settings.
-Clear the warning after a successful retry. Unknown capacity and lost permission
-need their own explicit messages rather than an inaccurate low-space message.
+Use **Last backup: Never** when appropriate. Show a dialog once on entering the
+failure state (see [Problem Dialogs](#problem-dialogs)), and keep status visible
+in Projects and Config. Clear the warning after a successful retry. Unknown
+capacity and lost permission have their own messages rather than an inaccurate
+low-space message.
 
 ## Implementation Boundaries And Validation
 
@@ -515,11 +579,10 @@ Reuse the existing Android document picker, native file operations, database
 validation, and project import/export where their contracts fit. Current export
 behavior is a starting point, not proof that concurrent automatic backup is safe.
 
-Keep setup/Projects handlers orchestration-focused behind `appService` and
-`projectService`. Android adapters belong in `src/deps/services/android/` and
-`src/deps/clients/android/`; native SQLite, filesystem, space checks, and document
-operations belong in the Android shell. Do not store backup timers or mutable
-runtime state in page handler modules. Keep installation-specific backup settings
+Keep setup/Projects handlers orchestration-focused behind `appService`. Android
+adapters belong in `src/deps/services/android/` and `src/deps/clients/android/`;
+scheduling, native SQLite, filesystem, space checks, and document operations
+belong in the Android shell. The page keeps no backup timers. Keep installation-specific backup settings
 out of portable project semantics and avoid changing the working database merely
 to record backup completion.
 
@@ -529,9 +592,10 @@ Before shipping, validate:
   placement/status in the UI; add VT coverage where practical.
 - No changed data means no snapshots or asset scans; changes to every durable
   project data category mark pending reliably across restart.
-- Five-minute foreground cadence, resume catch-up, sequential execution, manual
-  backup, and edits during copying without losing pending changes; one broken
-  project must not starve the rest of the queue.
+- The 30-second and 3-minute delays, backing up after leaving the app, startup
+  never waiting for backups, sequential execution, manual backup, and edits
+  during copying without losing pending changes; one broken project must not
+  starve the rest of the pass.
 - Successful import of the ordinary backup folder after uninstall/reinstall on
   a disposable test project; restore without depending on the lost global DB.
 - WAL snapshot correctness and asset consistency during concurrent editing,
@@ -550,34 +614,37 @@ Before shipping, validate:
   large media library on supported physical Android devices.
 
 Cloud backup, multiple-device synchronization, frequent version history,
-MediaStore-based automatic destination selection, and mandatory background jobs
-are outside this first version. Android system device-transfer rules remain
+MediaStore-based automatic destination selection, and scheduled background jobs
+are outside this version. Android system device-transfer rules remain
 separate; see [Backup and device transfer](android.md#backup-and-device-transfer).
-
 
 ## Implementation And Test Map
 
+- `BackupScheduler.java` decides when to back up, runs passes on its own thread,
+  keeps per-project status in memory, and pushes it to the page through
+  `window.routeVNBackupStatusChanged`. `getBackupStatus` answers from memory.
 - `ProjectBackup.java` owns SAF publication, capacity checks, metadata, persistent
   counters, and recovery. SQL triggers update a private revision table in the
   same transaction as project database writes, including drafts and app state.
   Backup completion changes only private preferences, not the project database.
-- The Android project store queues snapshot preparation after materialized-view
-  persistence. The storage bridge rejects preparation during a transaction,
-  export, or active asset write. It checkpoints/closes/copies/reopens SQLite on
-  the storage executor, then publishes on a separate native executor.
-- `backupService.js` owns one foreground queue. Native preferences claim each
-  five-minute attempt before editor drafts are flushed, so failed saves are also
-  throttled. Dirty detection happens after that flush. Folder setup, manual
-  backup, and new projects bypass the interval, never the capacity guard.
+- `BackupService.java` is the `dataSync` foreground service that keeps the
+  process alive after the app leaves the screen.
+- `MainActivity.java` exposes `getBackupStatus`, `configureBackup`,
+  `disableBackup`, `requestBackup`, and `setBackupNotificationCopy`, notes
+  database writes, and takes snapshots on the bridge thread.
+- `src/deps/services/android/backupService.js` mirrors native status for the UI,
+  forwards requests, and raises problem dialogs. It never waits for backup work.
+  `src/internal/backupStatus.js` decides which error to show and which deserves
+  a dialog.
 - Only Android's local external-storage DocumentsProvider is accepted. A small
   disposable file tests IO and rename behavior; `fstatvfs` measures the actual
   destination. Primary emulated storage and internal staging share one capacity
   budget despite their different FUSE device IDs. Preflight includes missing
   assets, the incoming database, staging, validation copies, and metadata.
-- The reused folder setup and `android-backup-status` component provide localized
-  English, Japanese, and Simplified Chinese setup, skip warnings, status, and
-  recovery instructions. Existing backups are explained before the folder is
-  accepted; recovery uses the ordinary Open Project action.
+- The reused folder setup and `android-backup-status` component provide the
+  setup, skip warnings, Projects card and Config section in every app language.
+  Existing backups are explained before the folder is accepted; recovery uses
+  the ordinary Open Project action.
 
 Automated validation:
 
@@ -588,43 +655,36 @@ cd android/routevn
 ```
 
 The JVM tests use Robolectric with real SQLite and a file-backed SAF fixture.
-They cover transactional counters, validation, space guards, publication failures
-before/after renames, metadata failures, retry, stale metadata, and read-only
-import fallback to `previous` while refusing `next`. Capacity syscalls are
-simulated in this fixture; these tests do not establish real provider durability.
-Regression coverage also verifies independent staged media after live-project
-deletion, staging only missing media, and reserving both media copies on shared
-internal/emulated storage.
-Native regressions also cover reconnecting after revoking the original tree
-grant, retaining checkpoint/document identities, cancellation while preparation
-holds its monitor, cancellation during hashing, and cleanup of an unpublished
-snapshot without stranding the publication lock. Folder lookup covers
-re-enabling and switching back, interrupted first backups, re-verifying a
-reused folder, earlier `Project-<projectId>` folders, choosing the newest of
-duplicate id suffixes, and never replacing another project's database.
+`BackupSchedulerTest` drives the scheduler with a fake clock: nothing runs before
+the app is ready, the quiet period and maximum wait, short retries for a busy
+project, back-off and manual retry, backing up after leaving the app in the
+foreground service, the leave grace on Android 12+ and on-demand starts on
+older versions, cancelling a copy when the folder changes, keeping changes when
+a pass is cancelled early, and copy progress. `BackupPublicationTest` and
+`ProjectBackupTest` cover transactional counters, validation, space guards,
+publication failures before/after renames, metadata failures, retry, stale
+metadata, read-only import fallback to `previous` while refusing `next`,
+cancellation during media copying and hashing, media deleted after the snapshot,
+resuming a partly copied pass, and listing each destination folder once instead
+of once per asset. Capacity syscalls are simulated in this fixture; these tests
+do not establish real provider durability. Folder lookup covers re-enabling and
+switching back, interrupted first backups, re-verifying a reused folder, earlier
+`Project-<projectId>` folders, choosing the newest of duplicate id suffixes,
+never replacing another project's database, setting a damaged database aside,
+and recopying media or a database deleted or changed in an unchanged backup.
 
 After `bun run build:android`, serve `_site` locally and run
 `ANDROID_TEST_ORIGIN=http://127.0.0.1:3017 node tests/android/backupSetup.browser.mjs`.
 This exercises the packaged UI with a fixture native bridge, including picker
-cancellation, closing/confirming skip, low-space warnings,
+cancellation, closing/confirming skip, low-space warnings, **Try again**,
 and Settings. It does not exercise Android's real picker or URI grants.
 
-Vivo validation on 2026-09-18: the initial backup failed because `Os.link`
-returned `EACCES`. After replacing hard links with missing-media staging copies,
-backup to the user-selected local Documents folder completed successfully.
-The saved database passed SQLite integrity, identity, size, and metadata hash
-checks; the backup contained 38 media files and 38 MIME sidecars. All 19 native
-tests passed and the fixed APK was installed in place, preserving project data
-and the selected folder.
-
-Physical-device checks remain pending: SD-card grants/renames, low-space
-behavior, process death during copying, uninstall/reinstall recovery, and the
-duration of database and missing-media staging on large real projects. Use
-disposable projects; never uninstall a user's working app to run a test.
-
-Implementation validation on 2026-09-18: 103 Android/iOS JavaScript tests,
-16 native tests, the packaged-browser workflow, smoke tests, and collaboration
-adapter tests passed. The Android frontend and debug APK built successfully;
-changed JavaScript passes lint/format checks. The repository-wide contract
-checker reports 510 errors and 3 warnings, identical to unchanged `HEAD` (no
-new diagnostics from this feature).
+Checked on a Samsung tablet running Android 16: a line typed just before
+pressing Home is backed up within seconds; a 1.5 GB backup finishes with the
+app in the background and the screen off; killing the process during a 4 GB
+copy leaves the last backup intact, and the next launch finishes it; and after
+uninstalling and reinstalling, importing the backup folder restores every
+database row and media file. Still pending: SD-card grants, renames and
+removal, low-space behavior, Android 8 to 12 devices, other manufacturers, and
+the snapshot pause on large real projects. Use disposable projects; never
+uninstall a user's working app to run a test.

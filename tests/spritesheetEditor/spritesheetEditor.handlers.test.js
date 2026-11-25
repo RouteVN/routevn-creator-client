@@ -400,7 +400,7 @@ describe("spritesheet editor page", () => {
     );
   });
 
-  it("saves quietly for a backup and never blocks it", async () => {
+  it("saves quietly when the app goes to the background and never blocks it", async () => {
     const deps = createDeps({
       draft: { ...readyDraft, frames: [], clips: [] },
     });
@@ -409,7 +409,7 @@ describe("spritesheet editor page", () => {
     deps.editFrames();
 
     await expect(
-      deps.runBeforeNavigation({ reason: "backup" }),
+      deps.runBeforeNavigation({ reason: "background" }),
     ).resolves.toBeUndefined();
     expect(deps.appService.showDialog).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).not.toHaveBeenCalled();

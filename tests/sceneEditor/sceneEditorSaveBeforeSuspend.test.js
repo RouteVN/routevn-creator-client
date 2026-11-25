@@ -110,7 +110,7 @@ const createPage = () => {
 };
 
 describe("scene editor: saving as the app goes to the background or quits", () => {
-  it.each(["background", "quit", "backup"])(
+  it.each(["background", "quit"])(
     "saves the unsaved lines for the %s reason",
     async (reason) => {
       const { deps, store, projectService } = createPage();
@@ -137,8 +137,8 @@ describe("scene editor: saving as the app goes to the background or quits", () =
     await prepareSceneEditorNavigation(deps, { reason: "background" });
 
     expect(projectService.syncSectionLinesSnapshot).not.toHaveBeenCalled();
-    // An unchanged page must not make the project look changed, as for a
-    // backup check.
+    // An unchanged page must not make the project look changed, which
+    // would start a backup.
     expect(projectService.cacheSceneTextStats).not.toHaveBeenCalled();
   });
 
@@ -214,32 +214,6 @@ describe("scene editor: saving as the app goes to the background or quits", () =
       expect(store.selectPendingDraftSections()).toEqual([]);
     },
   );
-
-  it("for a backup, leaves lines typed during the save to the next autosave", async () => {
-    vi.useFakeTimers();
-    try {
-      const { deps, store, projectService } = createPage();
-      projectService.syncSectionLinesSnapshot.mockImplementationOnce(
-        async () => {
-          store.setDraftSection({
-            draftSection: {
-              ...store.selectDraftSection(),
-              lines: [...typedLines, line("new-2", "typed during save")],
-              dirty: true,
-            },
-          });
-          return { valid: true };
-        },
-      );
-
-      await prepareSceneEditorNavigation(deps, { reason: "backup" });
-
-      expect(projectService.syncSectionLinesSnapshot).toHaveBeenCalledTimes(1);
-      expect(store.selectPendingDraftSections()).toHaveLength(1);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
 
   it.each(["quit", "background"])(
     "for %s, waits for a line action that is still being written",

@@ -665,6 +665,7 @@ export const handleBeforeMount = (deps) => {
   store.setPlatform({ platform: appService.getPlatform() });
   store.setUiConfig({ uiConfig });
   const cleanupBackup = appService.startBackupChecks?.(() => ({
+    ...deps.i18n.androidBackup,
     errors: deps.i18n.androidBackupErrors,
   }));
   const cleanupWindowMetrics = windowMetricsClient?.subscribe((metrics) => {
