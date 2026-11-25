@@ -2344,6 +2344,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "Horizontal, Right to Left"
   verticalRightToLeftOption: "Vertical, Right to Left"
   verticalLeftToRightOption: "Vertical, Left to Right"
+  readingDirectionLabel: "Reading Direction"
+  leftToRightOption: "Left to Right"
+  rightToLeftOption: "Right to Left"
   topOption: "Top"
   bottomOption: "Bottom"
 controlsPage:
@@ -2529,6 +2532,7 @@ variablesPage:
   computedVariableDeleteBlocked: "This variable is used by: {dependents}"
   computedWhenLabel: "When"
   defaultLabel: "Default"
+  defaultValueLabel: "Default value"
   editVariableTitle: "Edit Variable"
   editComputedVariableTitle: "Edit Computed Variable"
   moveDownLabel: "Move down"

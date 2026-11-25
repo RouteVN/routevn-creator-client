@@ -2289,6 +2289,12 @@ const applyContainerNode = ({ element, node }) => {
     nextElement.scroll = node.scroll;
   }
 
+  // Left to right is the Route Graphics default, so only right to left is
+  // passed on. Route Graphics ignores it for absolute containers.
+  if (node.readingDirection === "rtl") {
+    nextElement.readingDirection = node.readingDirection;
+  }
+
   if (node.anchorToBottom || isNvlLinesContainer(node)) {
     nextElement.anchorToBottom = true;
   }

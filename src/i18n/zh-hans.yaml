@@ -2344,6 +2344,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "横排（从右到左）"
   verticalRightToLeftOption: "竖排（从右到左）"
   verticalLeftToRightOption: "竖排（从左到右）"
+  readingDirectionLabel: "阅读方向"
+  leftToRightOption: "从左到右"
+  rightToLeftOption: "从右到左"
   topOption: "顶端对齐"
   bottomOption: "底端对齐"
 controlsPage:
@@ -2529,6 +2532,7 @@ variablesPage:
   computedVariableDeleteBlocked: "以下变量正在使用此变量：{dependents}"
   computedWhenLabel: "当"
   defaultLabel: "默认值"
+  defaultValueLabel: "默认值"
   editVariableTitle: "编辑变量"
   editComputedVariableTitle: "编辑计算变量"
   moveDownLabel: "下移"

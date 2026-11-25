@@ -2344,6 +2344,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "横書き（右から左）"
   verticalRightToLeftOption: "縦書き（右から左）"
   verticalLeftToRightOption: "縦書き（左から右）"
+  readingDirectionLabel: "読む方向"
+  leftToRightOption: "左から右"
+  rightToLeftOption: "右から左"
   topOption: "上"
   bottomOption: "下"
 controlsPage:
@@ -2529,6 +2532,7 @@ variablesPage:
   computedVariableDeleteBlocked: "この変数は次の変数で使用されています: {dependents}"
   computedWhenLabel: "条件"
   defaultLabel: "初期値"
+  defaultValueLabel: "初期値"
   editVariableTitle: "変数を編集"
   editComputedVariableTitle: "計算変数を編集"
   moveDownLabel: "下へ移動"

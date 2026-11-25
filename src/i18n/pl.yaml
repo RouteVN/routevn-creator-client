@@ -2356,6 +2356,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "Poziomo, od prawej do lewej"
   verticalRightToLeftOption: "Pionowo, od prawej do lewej"
   verticalLeftToRightOption: "Pionowo, od lewej do prawej"
+  readingDirectionLabel: "Kierunek czytania"
+  leftToRightOption: "Od lewej do prawej"
+  rightToLeftOption: "Od prawej do lewej"
   topOption: "Do góry"
   bottomOption: "Do dołu"
 controlsPage:
@@ -2541,6 +2544,7 @@ variablesPage:
   computedVariableDeleteBlocked: "Tej zmiennej używają: {dependents}"
   computedWhenLabel: "Gdy"
   defaultLabel: "Wartość domyślna"
+  defaultValueLabel: "Wartość domyślna"
   editVariableTitle: "Edytuj zmienną"
   editComputedVariableTitle: "Edytuj zmienną obliczaną"
   moveDownLabel: "Przenieś w dół"

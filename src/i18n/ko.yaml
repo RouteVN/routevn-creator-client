@@ -2344,6 +2344,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "가로쓰기, 오른쪽에서 왼쪽"
   verticalRightToLeftOption: "세로쓰기, 오른쪽에서 왼쪽"
   verticalLeftToRightOption: "세로쓰기, 왼쪽에서 오른쪽"
+  readingDirectionLabel: "읽기 방향"
+  leftToRightOption: "왼쪽에서 오른쪽"
+  rightToLeftOption: "오른쪽에서 왼쪽"
   topOption: "위쪽"
   bottomOption: "아래쪽"
 controlsPage:
@@ -2529,6 +2532,7 @@ variablesPage:
   computedVariableDeleteBlocked: "이 변수를 사용하는 항목: {dependents}"
   computedWhenLabel: "조건"
   defaultLabel: "기본값"
+  defaultValueLabel: "기본값"
   editVariableTitle: "변수 편집"
   editComputedVariableTitle: "계산 변수 편집"
   moveDownLabel: "아래로 이동"

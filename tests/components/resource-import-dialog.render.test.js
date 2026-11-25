@@ -393,6 +393,58 @@ describe("resource-import-dialog rendering", () => {
     dialog.remove();
   });
 
+  it("draws a muted frame, and no image, for a missing cover or avatar", () => {
+    const dialog = document.createElement(
+      "rvn-resource-import-dialog-render-test",
+    );
+    document.body.append(dialog);
+    const noAvatar = { id: "creator-1", name: "Creator One" };
+    const pack = {
+      ...card("pack-1", "Pack One"),
+      coverUrl: undefined,
+      creator: noAvatar,
+      description: [],
+    };
+    const coverFrame = (root) =>
+      root.querySelector('rtgl-view[bgc=mu][style*="aspect-ratio: 16 / 9"]');
+
+    dialog.store.startCatalogLoad({ requestId: "request-1" });
+    dialog.store.setCatalogPage({ packs: [pack] });
+    dialog.render();
+    const storeCard = dialog.shadowRoot.querySelector(
+      "#packGrid [data-pack-id]",
+    );
+    expect(coverFrame(storeCard)).not.toBeNull();
+    expect(storeCard.querySelector("rtgl-image")).toBeNull();
+
+    dialog.store.startOpeningPack({ operationId: "operation-1", pack });
+    dialog.store.setPackDetails({ pack });
+    dialog.render();
+    const packInfo = dialog.shadowRoot.querySelector("#packInfo");
+    expect(coverFrame(packInfo)).not.toBeNull();
+    expect(packInfo.querySelector("rtgl-image")).toBeNull();
+
+    dialog.store.startCreatorLoad({
+      requestId: "request-2",
+      creatorId: "creator-1",
+    });
+    dialog.store.setCreatorPage({
+      profile: { ...noAvatar, description: [], links: [] },
+      packs: [pack],
+    });
+    dialog.render();
+    expect(
+      dialog.shadowRoot.querySelector("rtgl-view[w='96'][h='96'][bgc=mu]"),
+    ).not.toBeNull();
+    const creatorCard = dialog.shadowRoot.querySelector(
+      "#creatorPackGrid [data-pack-id]",
+    );
+    expect(coverFrame(creatorCard)).not.toBeNull();
+    expect(dialog.shadowRoot.querySelector("rtgl-image")).toBeNull();
+
+    dialog.remove();
+  });
+
   it("updates only clicked cards across folder groups and sections", () => {
     const dialog = document.createElement(
       "rvn-resource-import-dialog-render-test",

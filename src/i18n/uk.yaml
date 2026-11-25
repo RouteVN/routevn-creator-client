@@ -2356,6 +2356,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "По горизонталі, справа наліво"
   verticalRightToLeftOption: "По вертикалі, справа наліво"
   verticalLeftToRightOption: "По вертикалі, зліва направо"
+  readingDirectionLabel: "Напрямок читання"
+  leftToRightOption: "Зліва направо"
+  rightToLeftOption: "Справа наліво"
   topOption: "Вгорі"
   bottomOption: "Внизу"
 controlsPage:
@@ -2541,6 +2544,7 @@ variablesPage:
   computedVariableDeleteBlocked: "Цю змінну використовують: {dependents}"
   computedWhenLabel: "Коли"
   defaultLabel: "Значення за замовчуванням"
+  defaultValueLabel: "Значення за замовчуванням"
   editVariableTitle: "Редагувати змінну"
   editComputedVariableTitle: "Редагувати обчислювану змінну"
   moveDownLabel: "Перемістити вниз"
