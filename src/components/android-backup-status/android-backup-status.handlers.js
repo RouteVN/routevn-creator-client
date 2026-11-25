@@ -1,4 +1,5 @@
 import { interval } from "rxjs";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 
 // Times such as "5 min ago" move on even when no backup runs.
 const RELATIVE_TIME_REFRESH_MS = 30_000;
@@ -30,10 +31,13 @@ export const handleBackUpNow = async (deps) => {
   render();
   try {
     await appService.backupNow(store.selectCurrentProjectId());
-  } catch {
-    appService.showToast({
-      status: "error",
-      message: i18n.androidBackup.backUpNowError,
+  } catch (error) {
+    appService.showAlert({
+      message: withErrorDetails(
+        i18n.androidBackup.backUpNowError,
+        error,
+        i18n.appPage.errorDetailsLabel,
+      ),
     });
   } finally {
     store.setStarting({ starting: false });

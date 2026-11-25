@@ -310,9 +310,14 @@ export const createAppShellService = ({
       return globalUI.runWhenIdle(() => globalUI.showAlert(options));
     },
 
-    // A question raised in the background, shown once no global dialog is open.
-    showDialogWhenIdle(options) {
-      return globalUI.runWhenIdle(() => globalUI.showConfirm(options));
+    // A question raised in the background, shown once no global dialog is
+    // open. getOptions runs only then, so the question reflects that moment;
+    // it returns nothing when there is no longer anything to ask.
+    showDialogWhenIdle(getOptions) {
+      return globalUI.runWhenIdle(() => {
+        const options = getOptions();
+        return options ? globalUI.showConfirm(options) : false;
+      });
     },
 
     showToast(options) {

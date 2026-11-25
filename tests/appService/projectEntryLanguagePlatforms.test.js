@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   androidBridge: vi.fn(),
@@ -72,6 +72,12 @@ const createParams = ({ db, projectService, globalUI = {} }) => ({
 });
 
 describe("project-entry language platform propagation", () => {
+  const cleanups = [];
+  afterEach(() => {
+    cleanups.splice(0).forEach((cleanup) => cleanup());
+    vi.unstubAllGlobals();
+  });
+
   it("asks native code to back up now without saving editors through navigation", async () => {
     vi.stubGlobal("window", {});
     mocked.androidBridge.mockImplementation(async (method) => {
@@ -83,7 +89,7 @@ describe("project-entry language platform propagation", () => {
       createParams({ db: createDb(), projectService: createProjectService() }),
     );
     const saveEditor = vi.fn(async () => {});
-    const unregister = appService.registerBeforeNavigation(saveEditor);
+    cleanups.push(appService.registerBeforeNavigation(saveEditor));
     await appService.initializeBackup();
     await appService.backupNow();
     expect(mocked.androidBridge).toHaveBeenCalledWith("requestBackup", {
@@ -91,8 +97,6 @@ describe("project-entry language platform propagation", () => {
       reason: "manual",
     });
     expect(saveEditor).not.toHaveBeenCalled();
-    unregister();
-    vi.unstubAllGlobals();
   });
 
   beforeEach(() => {

@@ -55,7 +55,8 @@ public class BackupSchedulerTest extends BackupFixture {
                 now = Math.max(now, task.at);
                 task.run.run();
             }
-            now = target;
+            // A task may move the clock past the target, as a long copy does.
+            now = Math.max(now, target);
         }
     }
 
@@ -108,6 +109,18 @@ public class BackupSchedulerTest extends BackupFixture {
     }
 
     private JSONObject status() throws Exception { return new JSONObject(scheduler.status()); }
+
+    // Passes started so far: each one publishes "running" when it starts.
+    private int passes() throws Exception {
+        int count = 0;
+        boolean wasRunning = false;
+        for (String update : statuses) {
+            boolean isRunning = new JSONObject(update).getBoolean("running");
+            if (isRunning && !wasRunning) count++;
+            wasRunning = isRunning;
+        }
+        return count;
+    }
 
     private JSONObject statusProject() throws Exception {
         return status().getJSONArray("projects").getJSONObject(0);
@@ -269,6 +282,71 @@ public class BackupSchedulerTest extends BackupFixture {
         assertEquals(stops, service.stops);
         timer.advance(BackupScheduler.LEAVE_GRACE_MS);
         assertEquals(stops + 1, service.stops);
+    }
+
+    // Coming back and leaving again while a long copy runs: the return waits
+    // behind the copy, and neither it nor the copy's end may stop the service
+    // the second leave started, which Android 12+ could not start again.
+    @Test public void returningAndLeavingAgainDuringACopyKeepsTheService() throws Exception {
+        start();
+        revision = "2:0";
+        scheduler.noteChange("one");
+        scheduler.setVisible(false);
+        scheduler.serviceStarted();
+        host.duringSnapshot = () -> {
+            host.duringSnapshot = null;
+            timer.now += 20_000; // The copy outlasts the first leave's grace.
+            scheduler.setVisible(true);
+            scheduler.setVisible(false);
+        };
+        timer.advance(0);
+        int stops = service.stops;
+        timer.advance(BackupScheduler.LEAVE_DELAY_MS);
+        assertEquals(2, host.snapshots);
+        timer.advance(0);
+        assertEquals(stops, service.stops);
+        // The page's last save after the second leave.
+        revision = "3:0";
+        scheduler.noteChange("one");
+        timer.advance(BackupScheduler.HIDDEN_QUIET_MS);
+        assertEquals(3, host.snapshots);
+        assertEquals(stops, service.stops);
+        timer.advance(BackupScheduler.LEAVE_GRACE_MS);
+        assertEquals(stops + 1, service.stops);
+    }
+
+    // The wake that ends the leave grace must not start a pass before the
+    // first screen is ready.
+    @Test public void leavingBeforeTheAppIsReadyStartsNoBackup() throws Exception {
+        scheduler.noteChange("one");
+        scheduler.setVisible(false);
+        timer.advance(10 * 60_000);
+        assertEquals(0, passes());
+        assertEquals(0, host.snapshots);
+    }
+
+    // A folder that cannot be reached holds every project back. Leaving the
+    // app, and the page's last save just after, must not retry before the
+    // hold ends.
+    @Test public void leavingDuringAFolderHoldWaitsForTheHold() throws Exception {
+        start();
+        String tree = context.getSharedPreferences("project-backup", 0).getString("uri", "");
+        context.getContentResolver().releasePersistableUriPermission(android.net.Uri.parse(tree),
+            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        revokedTreeId = "primary:Documents";
+        revision = "2:0";
+        scheduler.noteChange("one");
+        timer.advance(BackupScheduler.QUIET_MS);
+        assertEquals("reconnect", statusProject().getString("error"));
+        int passes = passes();
+        scheduler.setVisible(false);
+        timer.advance(500);
+        revision = "3:0";
+        scheduler.noteChange("one");
+        timer.advance(BackupScheduler.LEAVE_GRACE_MS);
+        assertEquals(passes, passes());
+        timer.advance(BackupScheduler.RETRY_MS[0]);
+        assertEquals(passes + 1, passes());
     }
 
     @Test public void beforeAndroid12LeavingWithNothingDueStartsNoService() throws Exception {

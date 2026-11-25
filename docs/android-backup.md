@@ -187,15 +187,17 @@ until the next backup of that project succeeds.
 
 ### Problem Dialogs
 
-The app shows a dialog the first time in each run of the app that backups need
-the user: a folder problem (`reconnect`, `unknownSpace`, `localFolder`,
+The app shows a dialog the first time after the page loads (normally once per
+launch, and again after Android restarts a lost WebView renderer) that backups
+need the user: a folder problem (`reconnect`, `unknownSpace`, `localFolder`,
 `appFolder`, `nameConflict`, `invalidBackup`) or low space after one failure,
 and any other error after three failures in a row. `projectDamaged` means the
 project's own database failed its check; it offers **Try again**, never a new
 folder, and the last backup is never replaced by the damaged copy. Short waits and errors saved
 by an earlier run never open one, so a stale error cannot interrupt startup
 before the folder has been checked again. The dialog waits until no other global
-dialog is open:
+dialog is open, and only one waits at a time. When it opens it shows the problem
+as it is then, or nothing if backups recovered meanwhile:
 
 - Title: **Backups need attention**
 - Message: the error message
@@ -213,8 +215,9 @@ its backup folder, a status line, **Last backup: Sep 17, 2026, 14:30:05** or
 error, **Backing up…** with the file count while this project copies, or
 **New changes are backed up shortly after you stop editing.** while changes wait.
 A folder problem adds **Choose folder again**. **Back up now** is disabled while
-a backup runs; if the request cannot reach native code, a toast reports
-**Could not start the backup. Try again.** Without a configured folder the
+a backup runs; if the request cannot reach native code, an alert reports
+**Could not start the backup. Try again.** with the error details. **Try again**
+in the problem dialog reports the same way. Without a configured folder the
 section shows the uninstall warning and **Set up backup folder**. Use localized
 catalog strings in the owning components/stores/handlers.
 
@@ -246,6 +249,10 @@ folder setup re-enables backups.
 | Project busy, media changed, copy interrupted | Retry every 3 seconds, five times, then back off like other failures.                                                           |
 | Other failures                                | Keep pending; retry after 15 s, 30 s, 1 min, 2 min, then every 5 min.                                                           |
 | Destination failure                           | Also hold every other project for the same back-off, since they would fail the same way.                                        |
+
+Every wake of the scheduler applies the same rules, including the wake that ends
+the leave grace below: it never starts a pass before the app is ready, before the
+startup delay, or during a hold.
 
 `BackupScheduler` is a single process-wide scheduler with its own thread. It
 outlives the activity, runs one pass at a time, and coalesces triggers: a pass
@@ -280,6 +287,14 @@ startup. The app does not request the notification permission, so on Android 13
 and later the notification stays out of the notification shade; the service
 still runs, and Android lists it among the active apps. If Android refuses to
 start the service, the backup still runs while the process lives.
+
+Returning to the app and leaving again can happen while a long copy runs. The
+leave records its grace on the calling thread, and a return that waited behind
+the copy is dropped once a newer leave has happened, so neither can stop the
+service that leave started; Android 12+ could not start it again. The scheduler
+decides to stop on its own thread and the stop runs later on the main thread, so
+`BackupService` stops itself with `stopSelfResult` for the last start it saw:
+Android refuses the stop when a newer start is on its way.
 Android 15 limits how long a data sync service may run each day; on timeout the
 service stops and the backup continues while the process lives, finishing on the
 next launch otherwise.
@@ -659,8 +674,10 @@ The JVM tests use Robolectric with real SQLite and a file-backed SAF fixture.
 the app is ready, the quiet period and maximum wait, short retries for a busy
 project, back-off and manual retry, backing up after leaving the app in the
 foreground service, the leave grace on Android 12+ and on-demand starts on
-older versions, cancelling a copy when the folder changes, keeping changes when
-a pass is cancelled early, and copy progress. `BackupPublicationTest` and
+older versions, returning and leaving again during a copy, no pass at the end of
+the grace before the app is ready or during a hold, cancelling a copy when the
+folder changes, keeping changes when a pass is cancelled early, and copy
+progress. `BackupServiceTest` checks that a stop names the last start. `BackupPublicationTest` and
 `ProjectBackupTest` cover transactional counters, validation, space guards,
 publication failures before/after renames, metadata failures, retry, stale
 metadata, read-only import fallback to `previous` while refusing `next`,

@@ -144,7 +144,6 @@ final class BackupScheduler {
     private boolean forceCheck;
     private long requestedAt;
     private long leaveAt;
-    private long graceUntil;
     private long holdUntil;
     private int holdFailures;
     private JSONObject progress;
@@ -155,6 +154,11 @@ final class BackupScheduler {
     private long workAt;
     private boolean serviceStarted;
     private volatile boolean serviceRequested;
+    // Set on the calling thread when the app leaves the screen: a pass still
+    // running on the backup thread must not stop the service that leave needs.
+    private volatile long graceUntil;
+    // Orders starting and stopping the service between onPause and the backup thread.
+    private final Object serviceLock = new Object();
 
     BackupScheduler(Context context, Timer timer, ServiceControl service) {
         this.timer = timer;
@@ -219,23 +223,30 @@ final class BackupScheduler {
      * a backup is due, and later when a hidden save makes one due.
      */
     void setVisible(boolean value) {
-        visible = value;
-        if (!value && engine.configured() &&
-            (running || workPending || hasChanges() || service.backgroundStartRestricted())) startService();
+        synchronized (serviceLock) {
+            visible = value;
+            graceUntil = value ? 0 : timer.now() + LEAVE_GRACE_MS;
+            if (!value && engine.configured() &&
+                (running || workPending || hasChanges() || service.backgroundStartRestricted())) startService();
+        }
         timer.execute(() -> {
+            // The app came back or left again since: the call queued after this
+            // one decides. A return that waited behind a long copy must not stop
+            // the service the next leave started.
+            if (value != visible) return;
             long now = timer.now();
             if (value) {
                 leaveAt = 0;
-                graceUntil = 0;
                 // The user may have freed space or reconnected storage meanwhile.
                 for (Entry entry : projects.values()) {
                     if (entry.failures > 0) entry.retryAt = Math.min(entry.retryAt, now + RESUME_DELAY_MS);
                 }
                 if (holdUntil > now) holdUntil = Math.min(holdUntil, now + RESUME_DELAY_MS);
-                if (!running) stopService();
-            } else {
-                graceUntil = now + LEAVE_GRACE_MS;
-                if (running || workPending || hasChanges()) leaveAt = now + LEAVE_DELAY_MS;
+                synchronized (serviceLock) {
+                    if (visible && !running) stopService();
+                }
+            } else if (running || workPending || hasChanges()) {
+                leaveAt = now + LEAVE_DELAY_MS;
             }
             reschedule();
         });
@@ -406,31 +417,35 @@ final class BackupScheduler {
         }
     }
 
-    private void reschedule() {
-        long now = timer.now();
+    // When the next pass may start, or Long.MAX_VALUE when no work is due.
+    // The only place that decides it, for both scheduling and waking.
+    private long nextWork() {
+        if (!engine.configured() || host == null || running || !ready) return Long.MAX_VALUE;
         long next = Long.MAX_VALUE;
-        if (engine.configured() && host != null && !running) {
-            if (ready) {
-                if (!checked) next = Math.min(next, readyAt + STARTUP_DELAY_MS);
-                if (leaveAt > 0) next = Math.min(next, leaveAt);
-                synchronized (changeLock) {
-                    if (!changed.isEmpty()) {
-                        long quiet = visible ? QUIET_MS : HIDDEN_QUIET_MS;
-                        next = Math.min(next, Math.min(lastChangeAt + quiet, firstChangeAt + MAX_WAIT_MS));
-                    }
-                }
-                if (checked) {
-                    for (Entry entry : projects.values()) {
-                        if (entry.pending) next = Math.min(next, entry.retryAt);
-                    }
-                    if (visible) next = Math.min(next, lastCheckAt + CHECK_INTERVAL_MS);
-                }
-                // Let the first screen settle; only an explicit request is sooner.
-                if (next != Long.MAX_VALUE) next = Math.max(next, readyAt + STARTUP_DELAY_MS);
-                if (requestedAt > 0) next = Math.min(next, requestedAt);
-                if (next != Long.MAX_VALUE) next = Math.max(next, holdUntil);
+        if (!checked) next = Math.min(next, readyAt + STARTUP_DELAY_MS);
+        if (leaveAt > 0) next = Math.min(next, leaveAt);
+        synchronized (changeLock) {
+            if (!changed.isEmpty()) {
+                long quiet = visible ? QUIET_MS : HIDDEN_QUIET_MS;
+                next = Math.min(next, Math.min(lastChangeAt + quiet, firstChangeAt + MAX_WAIT_MS));
             }
         }
+        if (checked) {
+            for (Entry entry : projects.values()) {
+                if (entry.pending) next = Math.min(next, entry.retryAt);
+            }
+            if (visible) next = Math.min(next, lastCheckAt + CHECK_INTERVAL_MS);
+        }
+        // Let the first screen settle; only an explicit request is sooner.
+        if (next != Long.MAX_VALUE) next = Math.max(next, readyAt + STARTUP_DELAY_MS);
+        if (requestedAt > 0) next = Math.min(next, requestedAt);
+        if (next != Long.MAX_VALUE) next = Math.max(next, holdUntil);
+        return next;
+    }
+
+    private void reschedule() {
+        long now = timer.now();
+        long next = nextWork();
         workAt = next == Long.MAX_VALUE ? 0 : next;
         // Wake when the leave grace ends, so an idle service stops then.
         if (!visible && graceUntil > now) next = Math.min(next, graceUntil);
@@ -450,23 +465,12 @@ final class BackupScheduler {
         wakeAt = 0;
     }
 
+    // Also wakes when the leave grace ends, which must not start a pass during
+    // a hold, before the app is ready, or before the startup delay.
     private void tick() {
         wake = null;
         wakeAt = 0;
-        long now = timer.now();
-        boolean changesSettled;
-        synchronized (changeLock) {
-            long quiet = visible ? QUIET_MS : HIDDEN_QUIET_MS;
-            changesSettled = changed.isEmpty() || now >= Math.min(lastChangeAt + quiet, firstChangeAt + MAX_WAIT_MS);
-        }
-        boolean due = (requestedAt > 0 && now >= requestedAt) || (leaveAt > 0 && now >= leaveAt) ||
-            !checked || (visible && now - lastCheckAt >= CHECK_INTERVAL_MS) || changesSettled && hasChanges();
-        if (!due) {
-            for (Entry entry : projects.values()) {
-                if (entry.pending && entry.retryAt <= now) { due = true; break; }
-            }
-        }
-        if (due) runPass();
+        if (nextWork() <= timer.now()) runPass();
         else reschedule();
     }
 
@@ -698,30 +702,36 @@ final class BackupScheduler {
     // Keeps the foreground service only while the app is hidden and a backup
     // is running or about to run, or the leave grace has not ended.
     private void updateService() {
-        long now = timer.now();
-        boolean hidden = engine.configured() && !visible;
-        boolean work = running || (workAt > 0 && workAt - now <= 10_000);
-        if (!(hidden && (work || graceUntil > now)) && serviceStarted) stopService();
-        // Before Android 12 the service may start from the background, for
-        // example when an editor's save while hidden makes a backup due.
-        if (hidden && work && !serviceRequested && !service.backgroundStartRestricted()) startService();
+        synchronized (serviceLock) {
+            long now = timer.now();
+            boolean hidden = engine.configured() && !visible;
+            boolean work = running || (workAt > 0 && workAt - now <= 10_000);
+            if (!(hidden && (work || graceUntil > now)) && serviceStarted) stopService();
+            // Before Android 12 the service may start from the background, for
+            // example when an editor's save while hidden makes a backup due.
+            if (hidden && work && !serviceRequested && !service.backgroundStartRestricted()) startService();
+        }
     }
 
     private void startService() {
-        try {
-            service.start();
-            serviceRequested = true;
-        } catch (RuntimeException error) {
-            // Android refused (for example, the app is already in the
-            // background). The backup still runs while the process lives.
-            Log.w(TAG, "Could not start the backup service", error);
+        synchronized (serviceLock) {
+            try {
+                service.start();
+                serviceRequested = true;
+            } catch (RuntimeException error) {
+                // Android refused (for example, the app is already in the
+                // background). The backup still runs while the process lives.
+                Log.w(TAG, "Could not start the backup service", error);
+            }
         }
     }
 
     private void stopService() {
-        serviceStarted = false;
-        serviceRequested = false;
-        service.stop();
+        synchronized (serviceLock) {
+            serviceStarted = false;
+            serviceRequested = false;
+            service.stop();
+        }
     }
 
     private static Timer executorTimer() {

@@ -16,6 +16,7 @@ const i18n = yaml.load(
 const copy = () => ({
   ...i18n.androidBackup,
   errors: i18n.androidBackupErrors,
+  errorDetailsLabel: i18n.appPage.errorDetailsLabel,
 });
 const status = (fields) => ({
   configured: true,
@@ -67,6 +68,15 @@ const fixture = ({ confirmed }) => {
 };
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+// Another dialog stays open until the test calls the returned function.
+const holdDialogsOpen = (globalUI) => {
+  const waiting = [];
+  globalUI.runWhenIdle = vi.fn(
+    (show) => new Promise((resolve) => waiting.push(() => resolve(show()))),
+  );
+  return () => waiting.splice(0).forEach((show) => show());
+};
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -126,9 +136,8 @@ describe("Android backup dialogs", () => {
     stop();
   });
 
-  it("toasts when trying again cannot reach native code", async () => {
+  it("shows the details when trying again cannot reach native code", async () => {
     const { appService, globalUI, windowTarget } = fixture({ confirmed: true });
-    globalUI.showToast = vi.fn();
     await appService.initializeBackup();
     const stop = appService.startBackupChecks(copy);
     bridge.mockImplementation(async (method) => {
@@ -139,10 +148,57 @@ describe("Android backup dialogs", () => {
       status({ error: "failed", failures: 3 }),
     );
     await settle();
-    expect(globalUI.showToast).toHaveBeenCalledWith({
-      status: "error",
-      message: "Could not start the backup. Try again.",
+    expect(globalUI.showAlert).toHaveBeenCalledWith({
+      message: expect.stringMatching(
+        /^Could not start the backup\. Try again\.\n\nDetails:\n.*bridge/,
+      ),
     });
+    stop();
+  });
+
+  it("asks once, about the latest problem, after another dialog closes", async () => {
+    const { appService, globalUI, windowTarget } = fixture({
+      confirmed: false,
+    });
+    const closeOtherDialog = holdDialogsOpen(globalUI);
+    await appService.initializeBackup();
+    const stop = appService.startBackupChecks(copy);
+    windowTarget.routeVNBackupStatusChanged(
+      status({ error: "reconnect", failures: 1 }),
+    );
+    windowTarget.routeVNBackupStatusChanged(status({}));
+    windowTarget.routeVNBackupStatusChanged(
+      status({ error: "lowSpace", failures: 1 }),
+    );
+    await settle();
+    expect(globalUI.runWhenIdle).toHaveBeenCalledOnce();
+    closeOtherDialog();
+    await settle();
+    expect(globalUI.showConfirm).toHaveBeenCalledOnce();
+    expect(globalUI.showConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: i18n.androidBackupErrors.lowSpace,
+        confirmText: "Try again",
+      }),
+    );
+    stop();
+  });
+
+  it("does not ask about a problem that cleared while another dialog was open", async () => {
+    const { appService, globalUI, windowTarget } = fixture({
+      confirmed: false,
+    });
+    const closeOtherDialog = holdDialogsOpen(globalUI);
+    await appService.initializeBackup();
+    const stop = appService.startBackupChecks(copy);
+    windowTarget.routeVNBackupStatusChanged(
+      status({ error: "reconnect", failures: 1 }),
+    );
+    windowTarget.routeVNBackupStatusChanged(status({ pending: false }));
+    await settle();
+    closeOtherDialog();
+    await settle();
+    expect(globalUI.showConfirm).not.toHaveBeenCalled();
     stop();
   });
 

@@ -667,6 +667,7 @@ export const handleBeforeMount = (deps) => {
   const cleanupBackup = appService.startBackupChecks?.(() => ({
     ...deps.i18n.androidBackup,
     errors: deps.i18n.androidBackupErrors,
+    errorDetailsLabel: deps.i18n.appPage.errorDetailsLabel,
   }));
   const cleanupWindowMetrics = windowMetricsClient?.subscribe((metrics) => {
     store.setAppWindowMetrics(metrics);

@@ -23,6 +23,7 @@ public final class BackupService extends Service {
     private static final String CHANNEL_ID = "project-backups";
     private static final int NOTIFICATION_ID = 3107;
     private static BackupService running;
+    private int lastStartId;
     // The page sends localized text at startup. The service only starts while
     // the page runs in this process, so the text never needs to be saved.
     private static volatile String channelName = "Project backups";
@@ -34,9 +35,14 @@ public final class BackupService extends Service {
         if (nextTitle != null && !nextTitle.trim().isEmpty()) title = nextTitle.trim();
     }
 
-    /** Main thread. Stops the service once it has entered the foreground. */
+    /**
+     * Main thread. Stops the service once it has entered the foreground. The
+     * scheduler decides to stop on its own thread, so the app may have left
+     * the screen and started the service again before this runs; Android then
+     * refuses the stop, and the newer start's onStartCommand decides again.
+     */
     static void stopRunning() {
-        if (running != null) running.stopSelf();
+        if (running != null) running.stopSelfResult(running.lastStartId);
     }
 
     @Override
@@ -56,6 +62,7 @@ public final class BackupService extends Service {
             return START_NOT_STICKY;
         }
         running = this;
+        lastStartId = startId;
         BackupScheduler.get(this).serviceStarted();
         return START_NOT_STICKY;
     }

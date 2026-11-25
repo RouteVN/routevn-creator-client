@@ -169,7 +169,7 @@ describe("Android backup setup", () => {
     expect(view().message).toBe(i18n.androidBackupErrors.busy);
   });
 
-  it("toasts when a manual backup cannot start", async () => {
+  it("shows the details when a manual backup cannot start", async () => {
     const state = backupStatusStore.createInitialState();
     const store = Object.fromEntries(
       Object.entries(backupStatusStore)
@@ -184,7 +184,7 @@ describe("Android backup setup", () => {
       backupNow: vi.fn(async () => {
         throw new Error("bridge");
       }),
-      showToast: vi.fn(),
+      showAlert: vi.fn(),
     };
     await backupStatusHandlers.handleBackUpNow({
       appService,
@@ -193,9 +193,10 @@ describe("Android backup setup", () => {
       i18n,
     });
     expect(appService.backupNow).toHaveBeenCalledWith("one");
-    expect(appService.showToast).toHaveBeenCalledWith({
-      status: "error",
-      message: "Could not start the backup. Try again.",
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: expect.stringMatching(
+        /^Could not start the backup\. Try again\.\n\nDetails:\n.*bridge/,
+      ),
     });
     expect(state.starting).toBe(false);
   });
