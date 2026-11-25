@@ -998,4 +998,244 @@ describe("assetStoreClient", () => {
       code: "asset_store_unavailable",
     });
   });
+
+  describe("image sizes", () => {
+    const small = (fileId) => `https://files.example/${fileId}/640`;
+    const large = (fileId) => `https://files.example/${fileId}/1920`;
+    // An image's entry with its variants, copies at most 640 and 1920 px
+    // wide; its `url` is the 1920 px copy.
+    const imageWithVariants = (fileId) => ({
+      fileId,
+      url: large(fileId),
+      variants: { width640: small(fileId), width1920: large(fileId) },
+    });
+    const variantFiles = [
+      imageWithVariants("FiPackCover00001"),
+      imageWithVariants("FiCreatorAvatar1"),
+      imageWithVariants("FiPackShot000001"),
+    ];
+    const listResponse = (items, listFiles) => () =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: { items, files: listFiles, nextCursor: null },
+      });
+    const packDetailsResponse =
+      ({ data = {}, packFiles = variantFiles, packMediaFiles = mediaFiles }) =>
+      () =>
+        rpcResponse({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            assetPack: {
+              id: "AsPkPackOne00001",
+              data: {
+                ...packItem("AsPkPackOne00001").data,
+                package: packagePlace,
+                ...data,
+              },
+            },
+            creator,
+            files: packFiles,
+            manifest,
+            mediaFiles: packMediaFiles,
+          },
+        });
+    const creatorResponse = (avatarFileId) => () =>
+      rpcResponse({
+        jsonrpc: "2.0",
+        id: 1,
+        result: {
+          creator: {
+            id: "Cr8rCreatorOne01",
+            data: { name: "Creator One", avatarFileId },
+          },
+          assetPacks: [
+            { id: "AsPkPackOne00001", data: packItem("AsPkPackOne00001").data },
+          ],
+          files: variantFiles,
+        },
+      });
+
+    it("draws card covers and avatars from their 640 px variant, and the full image when an entry has none", async () => {
+      const { client } = createClient(
+        listResponse(
+          [
+            packItem("AsPkPackOne00001"),
+            packItem("AsPkPackTwo00001", { coverFileId: "FiPackCover00002" }),
+          ],
+          [
+            ...variantFiles,
+            {
+              fileId: "FiPackCover00002",
+              url: "https://files.example/FiPackCover00002",
+            },
+          ],
+        ),
+      );
+
+      const { packs } = await client.listAssetPacks();
+
+      expect(
+        packs.map(({ coverUrl, creator }) => [coverUrl, creator.avatarUrl]),
+      ).toEqual([
+        [small("FiPackCover00001"), small("FiCreatorAvatar1")],
+        ["https://files.example/FiPackCover00002", small("FiCreatorAvatar1")],
+      ]);
+    });
+
+    it.each([
+      ["null variants", null],
+      [
+        "variants without a 640 px copy",
+        { width1920: "https://files.example/x" },
+      ],
+      [
+        "a 640 px copy that is not a web URL",
+        { width640: "javascript:alert(1)" },
+      ],
+      ["variants that are not an object", "width640"],
+    ])(
+      "draws a card's full image when its entry has %s",
+      async (_name, variants) => {
+        const cover = {
+          fileId: "FiPackCover00001",
+          url: large("FiPackCover00001"),
+          variants,
+        };
+        const { client } = createClient(
+          listResponse([packItem("AsPkPackOne00001")], [cover]),
+        );
+
+        const { packs } = await client.listAssetPacks();
+
+        expect(packs[0].coverUrl).toBe(large("FiPackCover00001"));
+      },
+    );
+
+    it("draws a pack page's cover and description images full size and its creator's avatar small", async () => {
+      const { client } = createClient(
+        packDetailsResponse({
+          data: {
+            description: [
+              {
+                type: "IMAGE",
+                fileId: "FiPackShot000001",
+                alt: "A diagram",
+                width: 1920,
+                height: 1080,
+              },
+            ],
+          },
+        }),
+      );
+
+      const pack = await client.getAssetPackById({
+        assetPackId: "AsPkPackOne00001",
+      });
+
+      expect(pack.coverUrl).toBe(large("FiPackCover00001"));
+      expect(pack.description).toEqual([
+        {
+          imageUrl: large("FiPackShot000001"),
+          alt: "A diagram",
+          width: 1920,
+          height: 1080,
+        },
+      ]);
+      expect(pack.creator.avatarUrl).toBe(small("FiCreatorAvatar1"));
+    });
+
+    it("reads the package's manifest and media files the same whatever `files` carries", async () => {
+      // A media file is read by its `url` alone.
+      const packMediaFiles = [
+        {
+          ...mediaFiles[0],
+          variants: { width640: "https://files.example/forest/640" },
+        },
+        mediaFiles[1],
+      ];
+      const readPackContents = async (packFiles) => {
+        const { client } = createClient(
+          packDetailsResponse({ packFiles, packMediaFiles }),
+        );
+        const pack = await client.getAssetPackById({
+          assetPackId: "AsPkPackOne00001",
+        });
+        return { manifest: pack.manifest, mediaFileUrls: pack.mediaFileUrls };
+      };
+
+      const withVariants = await readPackContents(variantFiles);
+
+      expect(withVariants).toEqual({
+        manifest,
+        mediaFileUrls: {
+          forest: "https://files.example/FiPackPackage001/forest",
+          theme: "https://files.example/FiPackPackage001/theme",
+        },
+      });
+      expect(withVariants).toEqual(await readPackContents(files));
+    });
+
+    it("draws a creator page's avatar and pack covers small", async () => {
+      const { client } = createClient(creatorResponse("FiCreatorAvatar1"));
+
+      const page = await client.getCreatorById({
+        creatorId: "Cr8rCreatorOne01",
+      });
+
+      expect(page.creator.avatarUrl).toBe(small("FiCreatorAvatar1"));
+      expect(page.packs[0].coverUrl).toBe(small("FiPackCover00001"));
+      expect(page.packs[0].creator.avatarUrl).toBe(small("FiCreatorAvatar1"));
+    });
+
+    it("leaves out an image whose ID is null, absent or not in `files`", async () => {
+      const noAvatar = { id: creator.id, name: creator.name };
+      const list = createClient(
+        listResponse(
+          [
+            {
+              ...packItem("AsPkPackOne00001", { coverFileId: null }),
+              creator: noAvatar,
+            },
+            packItem("AsPkPackTwo00001", { coverFileId: "FiPackCoverGone1" }),
+          ],
+          variantFiles,
+        ),
+      ).client;
+      const details = createClient(
+        packDetailsResponse({
+          data: {
+            coverFileId: null,
+            description: [
+              { type: "PARAGRAPH", children: [{ text: "About" }] },
+              {
+                type: "IMAGE",
+                fileId: "FiPackShotGone01",
+                width: 1,
+                height: 1,
+              },
+            ],
+          },
+        }),
+      ).client;
+      const creatorPage = createClient(creatorResponse(null)).client;
+
+      const { packs } = await list.listAssetPacks();
+      const pack = await details.getAssetPackById({
+        assetPackId: "AsPkPackOne00001",
+      });
+      const page = await creatorPage.getCreatorById({
+        creatorId: "Cr8rCreatorOne01",
+      });
+
+      expect(packs[0].coverUrl).toBeUndefined();
+      expect(packs[0].creator.avatarUrl).toBeUndefined();
+      expect(packs[1].coverUrl).toBeUndefined();
+      expect(pack.coverUrl).toBeUndefined();
+      expect(pack.description).toEqual([{ text: "About" }]);
+      expect(page.creator.avatarUrl).toBeUndefined();
+      expect(page.packs[0].creator.avatarUrl).toBeUndefined();
+    });
+  });
 });
