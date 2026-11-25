@@ -66,10 +66,11 @@ with the same headers and the same development address as the
 - As with packs, only free templates are shown. A card without a title,
   resolution or creator is left out, as is a screenshot whose file has no URL.
 - An image's `files` entry may carry `variants`, as a pack's does
-  ([images drawn small](import-packages.md)). The card covers, every creator
-  avatar and the screenshot thumbnails use `width640` when the entry has it and
-  `url` otherwise. The page's cover, the screenshot in its viewer and its
-  description images use `url`.
+  ([images drawn small](import-packages.md)). The card covers, which the
+  form's Template row also shows, every creator avatar and the screenshot
+  thumbnails use `width640` when the entry has it and `url` otherwise. The
+  page's cover, once its details replace the card's, the screenshot in its
+  viewer and its description images use `url`.
 - A template the store no longer lists shows its own message; a list or page
   that fails to load shows Try Again.
 
