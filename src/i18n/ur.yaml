@@ -2499,6 +2499,7 @@ variablesPage:
   computedVariableDeleteBlocked: "یہ متغیر یہاں استعمال ہو رہا ہے: {dependents}"
   computedWhenLabel: "جب"
   defaultLabel: "ڈیفالٹ قدر"
+  defaultValueLabel: "ڈیفالٹ قدر"
   editVariableTitle: "متغیر میں ترمیم کریں"
   editComputedVariableTitle: "محسوب متغیر میں ترمیم کریں"
   moveDownLabel: "نیچے لے جائیں"

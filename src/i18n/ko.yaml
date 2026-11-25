@@ -2503,6 +2503,7 @@ variablesPage:
   computedVariableDeleteBlocked: "이 변수를 사용하는 항목: {dependents}"
   computedWhenLabel: "조건"
   defaultLabel: "기본값"
+  defaultValueLabel: "기본값"
   editVariableTitle: "변수 편집"
   editComputedVariableTitle: "계산 변수 편집"
   moveDownLabel: "아래로 이동"

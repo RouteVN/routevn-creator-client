@@ -2137,7 +2137,7 @@ export const selectViewData = ({ state, props, i18n }) => {
     nameLabel: copy.nameLabel ?? "Name",
     scopeLabel: copy.scopeLabel ?? "Scope",
     typeLabel: copy.typeLabel ?? "Type",
-    defaultLabel: copy.valueLabel ?? "Value",
+    defaultLabel: copy.defaultValueLabel ?? "Default value",
     enumLabel: copy.enumLabel ?? "Enum",
     computedLabel: copy.computedSourceLabel ?? "Computed",
     searchPlaceholder: copy.searchVariablesPlaceholder ?? "Search variables...",

@@ -2503,6 +2503,7 @@ variablesPage:
   computedVariableDeleteBlocked: "ตัวแปรที่ใช้ตัวแปรนี้: {dependents}"
   computedWhenLabel: "เงื่อนไข"
   defaultLabel: "ค่าเริ่มต้น"
+  defaultValueLabel: "ค่าเริ่มต้น"
   editVariableTitle: "แก้ไขตัวแปร"
   editComputedVariableTitle: "แก้ไขตัวแปรที่คำนวณ"
   moveDownLabel: "ย้ายลง"

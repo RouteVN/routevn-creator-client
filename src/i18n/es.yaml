@@ -2503,6 +2503,7 @@ variablesPage:
   computedVariableDeleteBlocked: "Esta variable se usa en: {dependents}"
   computedWhenLabel: "Cuando"
   defaultLabel: "Valor predeterminado"
+  defaultValueLabel: "Valor predeterminado"
   editVariableTitle: "Editar variable"
   editComputedVariableTitle: "Editar variable calculada"
   moveDownLabel: "Mover abajo"

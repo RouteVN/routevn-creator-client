@@ -2503,6 +2503,7 @@ variablesPage:
   computedVariableDeleteBlocked: "この変数は次の変数で使用されています: {dependents}"
   computedWhenLabel: "条件"
   defaultLabel: "初期値"
+  defaultValueLabel: "初期値"
   editVariableTitle: "変数を編集"
   editComputedVariableTitle: "計算変数を編集"
   moveDownLabel: "下へ移動"

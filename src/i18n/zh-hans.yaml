@@ -2503,6 +2503,7 @@ variablesPage:
   computedVariableDeleteBlocked: "以下变量正在使用此变量：{dependents}"
   computedWhenLabel: "当"
   defaultLabel: "默认值"
+  defaultValueLabel: "默认值"
   editVariableTitle: "编辑变量"
   editComputedVariableTitle: "编辑计算变量"
   moveDownLabel: "下移"
