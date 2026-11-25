@@ -22,6 +22,7 @@
 18. [Project Import](./project-import.md)
 19. [Android Player Export Plan](./android-player-export-plan.md)
 20. [Spritesheets](./spritesheets.md)
+21. [Sending A Project To Support](./support-uploads.md)
 
 ## Runbooks
 

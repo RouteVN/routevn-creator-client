@@ -38,6 +38,7 @@ const createApp = ({
       getDocumentDirection: () => "ltr",
       openUrl: vi.fn(),
       canEmbedYouTube: () => canEmbedYouTube,
+      canSendProjectToSupport: () => false,
       showDropdownMenu: vi.fn(async ({ items }) => ({
         item: items.find((item) => item.key === menuKey),
       })),

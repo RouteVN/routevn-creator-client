@@ -797,6 +797,7 @@ Handler-facing facade for:
 - project entry management
 - file picking
 - app/platform metadata
+- sending a project to support (desktop; see [support-uploads.md](support-uploads.md))
 - the touch landscape layout flag (see [Layout Modes](#layout-modes))
 
 All application configuration must use the existing JS app config API through

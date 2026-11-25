@@ -24,3 +24,4 @@ export const ID_I18N = loadI18n("id");
 export const UK_I18N = loadI18n("uk");
 export const IT_I18N = loadI18n("it");
 export const PL_I18N = loadI18n("pl");
+export const AR_I18N = loadI18n("ar");

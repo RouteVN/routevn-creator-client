@@ -62,6 +62,44 @@ mod project_import {
         Err(UNAVAILABLE.to_string())
     }
 }
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod support_upload;
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+mod support_upload {
+    use serde_json::Value;
+
+    const UNAVAILABLE: &str = "packFailed: sending a project is unavailable on this platform";
+
+    #[tauri::command]
+    pub async fn create_support_archive(
+        _archive_id: String,
+        _project_path: String,
+        _on_progress: tauri::ipc::Channel<Value>,
+    ) -> Result<Value, String> {
+        Err(UNAVAILABLE.to_string())
+    }
+
+    #[tauri::command]
+    pub async fn upload_support_archive(
+        _archive_id: String,
+        _url: String,
+        _headers: Vec<Value>,
+        _on_progress: tauri::ipc::Channel<Value>,
+    ) -> Result<Value, String> {
+        Err(UNAVAILABLE.to_string())
+    }
+
+    #[tauri::command]
+    pub fn cancel_support_archive(_archive_id: String) {}
+
+    #[tauri::command]
+    pub fn discard_support_archive(_archive_id: String) {}
+
+    #[tauri::command]
+    pub async fn get_support_device_facts(_project_path: String) -> Result<Value, String> {
+        Err(UNAVAILABLE.to_string())
+    }
+}
 mod project_file_protocol;
 mod project_media_server;
 mod static_web_server;
@@ -114,6 +152,7 @@ pub fn run() {
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     let builder = builder
         .manage(discord_presence::DiscordPresenceState::new())
+        .manage(support_upload::SupportArchives::default())
         .append_invoke_initialization_script(error_reporting::webview_init_script());
 
     builder
@@ -150,6 +189,11 @@ pub fn run() {
             download::download_file,
             project_import::list_archive,
             project_import::extract_archive,
+            support_upload::create_support_archive,
+            support_upload::upload_support_archive,
+            support_upload::cancel_support_archive,
+            support_upload::discard_support_archive,
+            support_upload::get_support_device_facts,
             project_media_server::get_project_media_server_origin,
             discord_presence::set_discord_presence_details,
             static_web_server::start_static_web_server,

@@ -1,0 +1,18 @@
+componentName: rvn-send-project-dialog
+propsSchema:
+  type: object
+  properties:
+    projects:
+      type: array
+      description: The projects that can be sent, as `{ id, name }`
+    projectId:
+      type: string
+      description: The project chosen when the dialog opens
+events:
+  close:
+    type: object
+  submit:
+    type: object
+methods:
+  type: object
+  properties: {}

@@ -1,0 +1,14 @@
+refs:
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+        stopPropagation: true
+  sendForm:
+    eventListeners:
+      form-action:
+        handler: handleFormAction
+template:
+  - rtgl-dialog#dialog ?open=${open} s=sm:
+      - rtgl-view slot=content w=f p=lg:
+          - rtgl-form#sendForm :form=${form} :defaultValues=${defaultValues} w=f: null

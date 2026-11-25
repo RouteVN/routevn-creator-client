@@ -33,6 +33,7 @@ describe("app help button", () => {
       appService: {
         getDocumentDirection: () => "ltr",
         openUrl: vi.fn(),
+        canSendProjectToSupport: () => false,
         showDropdownMenu: vi.fn(async () => ({ item: { key: "docs" } })),
       },
       store: {

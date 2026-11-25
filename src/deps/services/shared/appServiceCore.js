@@ -166,6 +166,12 @@ export const createAppServiceCore = ({
     getTheme,
     applyTheme,
 
+    // Sending a project to support needs the desktop app, which packs the
+    // project folder; other platforms say no.
+    canSendProjectToSupport() {
+      return false;
+    },
+
     // Free packs from the RouteVN asset store, newest first.
     listAssetStorePacks({ cursor, query, assetTypes } = {}) {
       return assetStore.listAssetPacks({ cursor, query, assetTypes });

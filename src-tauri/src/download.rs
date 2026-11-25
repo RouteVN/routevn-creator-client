@@ -84,7 +84,7 @@ fn is_loopback_host(url: &Url) -> bool {
     )
 }
 
-fn validate_url(url: &Url) -> Result<(), String> {
+pub(crate) fn validate_url(url: &Url) -> Result<(), String> {
     if !url.username().is_empty() || url.password().is_some() {
         return Err(err(INVALID_URL, "credentials in URL are not allowed"));
     }
@@ -98,14 +98,18 @@ fn validate_url(url: &Url) -> Result<(), String> {
     ))
 }
 
-fn build_http_client() -> Result<reqwest::Client, String> {
-    // rustls-no-provider reqwest builds need a process-default CryptoProvider.
-    // Install the ring provider once, mirroring error_reporting::init; if a
-    // provider is already installed (production startup), this is a no-op.
+/// rustls-no-provider reqwest builds need a process-default CryptoProvider.
+/// Installs the ring provider once, mirroring error_reporting::init; if a
+/// provider is already installed (production startup), this is a no-op.
+pub(crate) fn install_tls_provider() {
     static INSTALL_TLS_PROVIDER: std::sync::Once = std::sync::Once::new();
     INSTALL_TLS_PROVIDER.call_once(|| {
         let _ = rustls::crypto::ring::default_provider().install_default();
     });
+}
+
+fn build_http_client() -> Result<reqwest::Client, String> {
+    install_tls_provider();
     // The bytes are saved as the server sends them, on every platform.
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
