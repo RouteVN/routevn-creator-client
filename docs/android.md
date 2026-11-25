@@ -451,9 +451,10 @@ to a user-selected local folder about 30 seconds after edits stop, and at least
 every 3 minutes while editing continues. Native code schedules and runs every
 backup on its own thread, starting no earlier than five seconds after the splash
 screen hides, so backups never hold up startup, setup or navigation. When the app
-leaves the screen with a backup running or due, a `dataSync` foreground service
-keeps the process alive until it finishes; its declaration must be kept up to
-date in the Play Console's foreground service section.
+leaves the screen, a `dataSync` foreground service keeps the process alive for
+the editor's last save and until due backups finish (on Android 8 to 11 it starts
+only when a backup is due); its declaration must be kept up to date in the Play
+Console's foreground service section.
 Setup is skippable with an uninstall/data-loss warning. Projects and Settings
 show backup status; Projects provides folder changes, and Settings shows the
 selected project's backup folder, last backup time and **Back up now**.
