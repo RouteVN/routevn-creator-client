@@ -39,6 +39,8 @@ import {
   isHelpButtonVisible,
 } from "../../internal/ui/helpPreferences.js";
 import { createSkippedDraftsReportStream } from "./support/skippedDraftsReport.js";
+import { sendProjectToSupport } from "./support/sendProjectToSupport.js";
+import { withErrorDetails } from "../../internal/errorDetails.js";
 import { getInlineEndX } from "../../internal/textDirection.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
@@ -773,7 +775,7 @@ export const handleUpdateColor = async (deps, payload) => {
   });
 };
 
-const createHelpMenuItems = ({ i18n = {}, hasVideo } = {}) => {
+const createHelpMenuItems = ({ i18n = {}, hasVideo, canSendProject } = {}) => {
   const copy = i18n.appPage ?? {};
   const items = [
     {
@@ -799,11 +801,21 @@ const createHelpMenuItems = ({ i18n = {}, hasVideo } = {}) => {
     label: copy.helpMenuChat ?? "Chat Support",
     icon: "chat",
   });
+
+  if (canSendProject) {
+    items.push({
+      type: "item",
+      key: "sendProject",
+      label: copy.helpMenuSendProject,
+      icon: "upload",
+    });
+  }
   return items;
 };
 
 // The help button offers the page's docs, its tutorial video when it has one,
-// and chat support.
+// chat support and, where the app can pack a project, sending one to
+// support.
 export const handleHelpFloatingButtonClick = async (deps, payload) => {
   const { appService, store, render, i18n } = deps;
   const docsUrl = getRoutevnCreatorDocsUrl(store.selectCurrentRoutePattern(), {
@@ -813,7 +825,11 @@ export const handleHelpFloatingButtonClick = async (deps, payload) => {
 
   const rect = payload._event.currentTarget.getBoundingClientRect();
   const result = await appService.showDropdownMenu({
-    items: createHelpMenuItems({ i18n, hasVideo: Boolean(video) }),
+    items: createHelpMenuItems({
+      i18n,
+      hasVideo: Boolean(video),
+      canSendProject: appService.canSendProjectToSupport(),
+    }),
     x: getInlineEndX(rect, appService.getDocumentDirection()),
     y: rect.top - 8,
     place: "te",
@@ -838,12 +854,60 @@ export const handleHelpFloatingButtonClick = async (deps, payload) => {
     store.openChatSupportDialog();
     render();
   }
+
+  if (key === "sendProject") {
+    await openSendProjectDialog(deps);
+  }
+};
+
+// Offers every project, with the open one chosen.
+const openSendProjectDialog = async (deps) => {
+  const { appService, store, render, i18n } = deps;
+  const copy = i18n.sendProjectDialog;
+  let projects;
+  try {
+    projects = await appService.loadAllProjects();
+  } catch (error) {
+    appService.showAlert({
+      title: copy.notSentTitle,
+      message: withErrorDetails(
+        copy.failedMessage,
+        error,
+        i18n.appPage.errorDetailsLabel,
+      ),
+    });
+    return;
+  }
+  if (projects.length === 0) {
+    appService.showAlert({ message: copy.noProjectsMessage });
+    return;
+  }
+  store.openSendProjectDialog({
+    projects,
+    projectId: store.selectCurrentProjectId(),
+  });
+  render();
 };
 
 export const handleChatSupportDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeChatSupportDialog();
   render();
+};
+
+export const handleSendProjectDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSendProjectDialog();
+  render();
+};
+
+export const handleSendProjectDialogSubmit = async (deps, payload) => {
+  const { appService, store, render, i18n } = deps;
+  const { code, projectId } = payload._event.detail;
+  const projectPath = store.selectSendProjectPath({ projectId });
+  store.closeSendProjectDialog();
+  render();
+  await sendProjectToSupport({ appService, i18n }, { projectPath, code });
 };
 
 export const handleHelpVideoClose = (deps) => {

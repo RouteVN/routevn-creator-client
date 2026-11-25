@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addHardwareFacts,
   createDeviceFacts,
   formFactorOf,
   osOf,
@@ -162,5 +163,70 @@ describe("device facts", () => {
       app: "routevn-creator",
     });
     expect(facts({ platform: "other" })).not.toHaveProperty("client");
+  });
+});
+
+describe("hardware facts sent to support", () => {
+  it("adds each fact that is in range to the device facts", () => {
+    expect(
+      addHardwareFacts(
+        { os: "windows" },
+        {
+          osVersion: "10.0.22631",
+          model: "Laptop Model 14",
+          arch: "x86_64",
+          webViewVersion: "131.0.2903.112",
+          memoryBytes: 17179869184,
+          freeDiskBytes: 0,
+          gpu: "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          maxTextureSize: 16384,
+          screenWidth: 1920,
+          screenHeight: 1080,
+          pixelRatio: 1.25,
+        },
+      ),
+    ).toEqual({
+      os: "windows",
+      osVersion: "10.0.22631",
+      model: "Laptop Model 14",
+      arch: "x86_64",
+      webViewVersion: "131.0.2903.112",
+      memoryBytes: 17179869184,
+      freeDiskBytes: 0,
+      gpu: "ANGLE (Intel, Intel(R) UHD Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      maxTextureSize: 16384,
+      screenWidth: 1920,
+      screenHeight: 1080,
+      pixelRatio: 1.25,
+    });
+  });
+
+  it("leaves out facts that can't be read or are out of range", () => {
+    expect(
+      addHardwareFacts(
+        { os: "linux" },
+        {
+          osVersion: "   ",
+          model: "x".repeat(257),
+          arch: "riscv64",
+          webViewVersion: "2.46\u0007",
+          memoryBytes: 0,
+          freeDiskBytes: -1,
+          gpu: undefined,
+          maxTextureSize: 65537,
+          screenWidth: 1.5,
+          screenHeight: 100001,
+          pixelRatio: 17,
+        },
+      ),
+    ).toEqual({ os: "linux" });
+  });
+
+  it("counts text in characters, not UTF-16 units", () => {
+    const model = "電".repeat(256);
+    expect(addHardwareFacts({}, { model }).model).toBe(model);
+    expect(addHardwareFacts({}, { model: "😀".repeat(256) }).model).toBe(
+      "😀".repeat(256),
+    );
   });
 });

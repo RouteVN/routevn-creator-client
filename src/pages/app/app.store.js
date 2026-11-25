@@ -16,6 +16,8 @@ export const createInitialState = () => ({
   appWindowMetrics: { width: 0, height: 0 },
   showHelpButton: true,
   isChatSupportDialogOpen: false,
+  // The open Send Project to Support dialog: `{ projects, projectId }`.
+  sendProjectDialog: undefined,
   helpVideoId: undefined,
   isMobileSheetOpen: false,
   mobileSheetVariant: undefined,
@@ -233,6 +235,31 @@ export const closeChatSupportDialog = ({ state }) => {
   state.isChatSupportDialogOpen = false;
 };
 
+// The dialog offers `projects`, `{ id, name, projectPath }`, with
+// `projectId` chosen first.
+export const openSendProjectDialog = ({ state }, { projects, projectId }) => {
+  state.sendProjectDialog = {
+    projects: projects.map(({ id, name, projectPath }) => ({
+      id,
+      name,
+      projectPath,
+    })),
+    projectId,
+  };
+};
+
+export const closeSendProjectDialog = ({ state }) => {
+  state.sendProjectDialog = undefined;
+};
+
+export const selectSendProjectPath = ({ state }, { projectId }) =>
+  state.sendProjectDialog?.projects.find((project) => project.id === projectId)
+    ?.projectPath;
+
+// The project the open page belongs to, if any.
+export const selectCurrentProjectId = ({ state }) =>
+  state.currentRoutePayload.p;
+
 export const openHelpVideo = ({ state }, { youtubeId } = {}) => {
   state.helpVideoId = youtubeId;
 };
@@ -263,6 +290,7 @@ export const setCurrentRoute = ({ state }, { route, payload } = {}) => {
     // Help opened on the previous page doesn't stay over the next one.
     state.helpVideoId = undefined;
     state.isChatSupportDialogOpen = false;
+    state.sendProjectDialog = undefined;
   }
   state.currentRoute = route;
   state.currentRoutePayload = { ...payload };

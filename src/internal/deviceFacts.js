@@ -80,3 +80,53 @@ export const createDeviceFacts = ({
   }
   return facts;
 };
+
+const ARCHES = Object.freeze(["x86_64", "i686", "aarch64", "armv7"]);
+const MAX_SAFE = Number.MAX_SAFE_INTEGER;
+
+// 1-256 code points, no ASCII control characters, and something other than
+// spaces: the text rule of device metadata.
+const isDeviceText = (value) => {
+  if (typeof value !== "string" || value.trim() === "") return false;
+  const characters = Array.from(value);
+  return (
+    characters.length <= 256 &&
+    characters.every((character) => {
+      const code = character.codePointAt(0);
+      return code >= 32 && code !== 127;
+    })
+  );
+};
+
+const isIntegerIn = (value, min, max) =>
+  Number.isSafeInteger(value) && value >= min && value <= max;
+
+// What a project sent to support says of the device besides `facts`: the
+// system's version, the computer's model and processor, the WebView's
+// version, total memory, free space on the drive that holds the project, the
+// GPU and the largest image it can draw, and the screen in CSS pixels. A
+// fact that can't be read, or is out of range, is left out.
+export const addHardwareFacts = (facts, hardware = {}) => {
+  const result = { ...facts };
+  for (const name of ["osVersion", "model", "webViewVersion", "gpu"]) {
+    if (isDeviceText(hardware[name])) result[name] = hardware[name];
+  }
+  if (ARCHES.includes(hardware.arch)) result.arch = hardware.arch;
+  if (isIntegerIn(hardware.memoryBytes, 1, MAX_SAFE)) {
+    result.memoryBytes = hardware.memoryBytes;
+  }
+  if (isIntegerIn(hardware.freeDiskBytes, 0, MAX_SAFE)) {
+    result.freeDiskBytes = hardware.freeDiskBytes;
+  }
+  if (isIntegerIn(hardware.maxTextureSize, 1, 65536)) {
+    result.maxTextureSize = hardware.maxTextureSize;
+  }
+  for (const name of ["screenWidth", "screenHeight"]) {
+    if (isIntegerIn(hardware[name], 1, 100000)) result[name] = hardware[name];
+  }
+  const { pixelRatio } = hardware;
+  if (Number.isFinite(pixelRatio) && pixelRatio > 0 && pixelRatio <= 16) {
+    result.pixelRatio = pixelRatio;
+  }
+  return result;
+};

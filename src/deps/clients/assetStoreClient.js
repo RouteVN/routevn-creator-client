@@ -1,9 +1,6 @@
-import { isDebugHost } from "../../internal/debugHost.js";
+import { resolveRouteVnRpcUrl } from "../../internal/routevnApiUrl.js";
 
 const ASSET_STORE_RPC_PATH = "/asset-store/rpc";
-const PRODUCTION_RPC_URL = `https://api1.routevn.com${ASSET_STORE_RPC_PATH}`;
-// Development builds call a local API that serves the asset store methods.
-const LOCAL_RPC_URL = `http://127.0.0.1:3100${ASSET_STORE_RPC_PATH}`;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 // A pack's details carry its package's manifest, up to 2 MiB, and a URL for
 // each of its media files.
@@ -57,28 +54,8 @@ const creatorNotFound = () =>
     "The creator is no longer available.",
   );
 
-// A page from a dev server (a local or private host, on a port) is a
-// development build whatever its bundle mode, so it never reaches the
-// production API. Release apps load from their own scheme or a domain.
-const isDevServerPage = (page) =>
-  (page?.protocol === "http:" || page?.protocol === "https:") &&
-  page.port !== "" &&
-  isDebugHost(page.hostname);
-
-export const resolveAssetStoreRpcUrl = ({
-  debug = false,
-  page,
-  override,
-} = {}) => {
-  const development = debug || isDevServerPage(page);
-  const url = new URL(
-    development ? (override ?? LOCAL_RPC_URL) : PRODUCTION_RPC_URL,
-  );
-  if (url.protocol !== "https:" && url.protocol !== "http:") {
-    throw new Error("Invalid asset store endpoint.");
-  }
-  return url.href;
-};
+export const resolveAssetStoreRpcUrl = (options = {}) =>
+  resolveRouteVnRpcUrl({ ...options, path: ASSET_STORE_RPC_PATH });
 
 const isObject = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);

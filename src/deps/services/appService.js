@@ -11,6 +11,13 @@ import { setDiscordPresenceDetails as setDiscordPresenceDetailsClient } from "..
 import { createTauriProjectImportHost } from "../clients/tauri/projectImportHost.js";
 import { createProjectImportService } from "./shared/projectImportService.js";
 import { createProjectFolderNotEmptyError } from "../../internal/projectInitialization.js";
+import { createCreatorClient } from "../clients/creatorClient.js";
+import {
+  createDeviceFactsClient,
+  createSupportDeviceFactsClient,
+} from "../clients/deviceFacts.js";
+import { createTauriSupportUploadHost } from "../clients/tauri/supportUpload.js";
+import { createSupportUploadService } from "./shared/supportUploadService.js";
 
 // The folder name, or empty when the path has none. The projects page shows
 // its localized "Untitled" label for a project without a name.
@@ -279,6 +286,23 @@ export const createAppService = (params) => {
     platformAdapter,
   });
 
+  const supportUploadHost = createTauriSupportUploadHost();
+  const supportUpload = createSupportUploadService({
+    host: supportUploadHost,
+    creatorClient: createCreatorClient(),
+    getDevice: createSupportDeviceFactsClient({
+      deviceFacts: createDeviceFactsClient({
+        keyValueStore: params.db,
+        platform: params.platform,
+        distribution: params.distribution,
+        appVersion: params.appVersion,
+        getUiLanguage: () => appService.getAppLocaleUsage().uiLanguage,
+      }),
+      readNativeFacts: supportUploadHost.readNativeFacts,
+    }).get,
+    createId: () => generateId(),
+  });
+
   // Zip and URL imports save the project directly in the chosen folder, so,
   // as for a new project, it must be set and empty. The dialogs check this
   // first; this guards the import itself.
@@ -354,6 +378,21 @@ export const createAppService = (params) => {
 
     copyText(value) {
       return copyTextToClipboard(value);
+    },
+
+    canSendProjectToSupport() {
+      return true;
+    },
+
+    // Packs the project folder at `projectPath` and sends it to support
+    // with the code support gave the user. Resolves to `{ deleteAfter }`;
+    // rejects with a SupportUploadError. See supportUploadService.js.
+    sendProjectToSupport({ projectPath, code, onProgress }) {
+      return supportUpload.sendProject({ projectPath, code, onProgress });
+    },
+
+    cancelSendingProjectToSupport() {
+      return supportUpload.cancel();
     },
 
     setDiscordPresenceDetails(options) {

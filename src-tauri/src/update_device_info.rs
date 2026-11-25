@@ -36,7 +36,7 @@ fn bounded_file(path: &str, limit: u64) -> Option<String> {
 }
 
 #[cfg(target_os = "linux")]
-fn platform_device_info() -> (Option<String>, Option<String>) {
+pub(crate) fn platform_device_info() -> (Option<String>, Option<String>) {
     let manufacturer = bounded_file("/sys/class/dmi/id/sys_vendor", 1024);
     let model = bounded_file("/sys/class/dmi/id/product_name", 1024)
         .or_else(|| bounded_file("/proc/device-tree/model", 1024));
@@ -86,7 +86,7 @@ fn sysctl_text(name: &std::ffi::CStr) -> Option<String> {
 }
 
 #[cfg(target_os = "macos")]
-fn platform_device_info() -> (Option<String>, Option<String>) {
+pub(crate) fn platform_device_info() -> (Option<String>, Option<String>) {
     let os_version = sysctl_text(c"kern.osproductversion")
         .map(|version| format!("macOS {version}"))
         .or_else(|| sysctl_text(c"kern.osrelease").map(|version| format!("Darwin {version}")));
@@ -124,7 +124,7 @@ fn registry_text(path: &str, name: &str) -> Option<String> {
 }
 
 #[cfg(target_os = "windows")]
-fn platform_device_info() -> (Option<String>, Option<String>) {
+pub(crate) fn platform_device_info() -> (Option<String>, Option<String>) {
     const BIOS: &str = r"HARDWARE\DESCRIPTION\System\BIOS";
     const VERSION: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
     let model = registry_text(BIOS, "SystemProductName");
@@ -145,7 +145,7 @@ fn platform_device_info() -> (Option<String>, Option<String>) {
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-fn platform_device_info() -> (Option<String>, Option<String>) {
+pub(crate) fn platform_device_info() -> (Option<String>, Option<String>) {
     (None, None)
 }
 
