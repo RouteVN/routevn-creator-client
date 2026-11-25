@@ -603,7 +603,7 @@ final class ProjectBackup {
     }
 
     void recordError(String id, Exception error) throws Exception {
-        String code = errorCode(error);
+        String code = failureCode(error);
         // A cancelled pass or a closed activity is not a failure of the backup.
         if ("interrupted".equals(code)) return;
         save(prefs.edit().putString("error:" + id, code));
@@ -624,6 +624,23 @@ final class ProjectBackup {
         }
         if (error instanceof SecurityException || error instanceof java.io.FileNotFoundException) return "reconnect";
         return "failed";
+    }
+
+    // With an SD card or USB drive removed, the provider rejects every
+    // document below the chosen folder with an IllegalArgumentException, which
+    // looks like any other failure. When the backup folder itself cannot be
+    // reached either, the storage is gone: ask the user to reconnect it.
+    String failureCode(Throwable error) {
+        String code = errorCode(error);
+        return "failed".equals(code) && configured() && !folderReachable() ? "reconnect" : code;
+    }
+
+    private boolean folderReachable() {
+        try (Cursor cursor = resolver.query(backupRoot(), new String[] {DocumentsContract.Document.COLUMN_DOCUMENT_ID}, null, null, null)) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (RuntimeException error) {
+            return false;
+        }
     }
 
     private static void save(SharedPreferences.Editor editor) throws Exception {

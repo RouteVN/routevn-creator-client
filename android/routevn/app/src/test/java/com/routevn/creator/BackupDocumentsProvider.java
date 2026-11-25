@@ -16,9 +16,14 @@ public class BackupDocumentsProvider extends DocumentsProvider {
     String failRename;
     String failDelete;
     int childQueries;
+    // An SD card taken out: its volume has no root any more.
+    boolean removed;
     final java.util.List<String> created = new java.util.ArrayList<>();
     public boolean onCreate() { return true; }
-    private File file(String id) { return id.equals("primary:Documents") ? root : new File(root, id.substring("primary:Documents/".length())); }
+    private File file(String id) throws FileNotFoundException {
+        if (removed) throw new FileNotFoundException("No root for primary");
+        return id.equals("primary:Documents") ? root : new File(root, id.substring("primary:Documents/".length()));
+    }
     private String id(File file) { return "primary:Documents" + file.getAbsolutePath().substring(root.getAbsolutePath().length()); }
     private MatrixCursor cursor(String[] projection) {
         return new MatrixCursor(projection == null ? new String[] {Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME, Document.COLUMN_MIME_TYPE, Document.COLUMN_SIZE, Document.COLUMN_FLAGS} : projection);
@@ -69,5 +74,13 @@ public class BackupDocumentsProvider extends DocumentsProvider {
         if (file(id).getName().equals(failDelete)) throw new FileNotFoundException("Injected delete interruption");
         if (!file(id).delete()) throw new FileNotFoundException(id);
     }
-    public boolean isChildDocument(String parent, String child) { return child.startsWith(parent + "/"); }
+    // Android's FileSystemProvider fails this way when the volume is gone, so
+    // every document below the chosen folder throws IllegalArgumentException.
+    public boolean isChildDocument(String parent, String child) {
+        if (removed) {
+            throw new IllegalArgumentException("Failed to determine if " + child + " is child of " + parent +
+                ": java.io.FileNotFoundException: No root for primary");
+        }
+        return child.startsWith(parent + "/");
+    }
 }

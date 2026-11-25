@@ -576,14 +576,14 @@ final class BackupScheduler {
     // Returns true when the rest of the pass should stop.
     private boolean failed(String id, Exception error) {
         if (engine.isCancelled()) return true;
-        String code = ProjectBackup.errorCode(error);
+        String code = engine.failureCode(error);
         Entry entry = projects.get(id);
         if (entry == null) return false;
         entry.pending = true;
         entry.error = code;
         entry.failures++;
         entry.retryAt = timer.now() + retryDelay(code, entry.failures);
-        Log.w(TAG, "Backup failed for a project: " + code);
+        Log.w(TAG, "Backup failed for a project: " + code, error);
         publish();
         if (DESTINATION_ERRORS.contains(code)) {
             hold();

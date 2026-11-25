@@ -349,6 +349,33 @@ public class BackupSchedulerTest extends BackupFixture {
         assertEquals(passes + 1, passes());
     }
 
+    // Documents on an SD card, as the setup page suggests: backups go to its
+    // RouteVN Backups subfolder, which fails differently once the card is out.
+    @Test public void aRemovedCardAsksToReconnectTheStorage() throws Exception {
+        List<JSONObject> results = new ArrayList<>();
+        scheduler.configure(selectFolder(""), false, (result, error) -> results.add(result));
+        timer.advance(0);
+        assertTrue(results.get(0).getBoolean("configured"));
+        start();
+        File backupJson = new File(destination, "RouteVN Backups/Project One-one/backup.json");
+        assertEquals("1:0", new JSONObject(Files.readString(backupJson.toPath())).getString("changeCounter"));
+
+        provider.removed = true;
+        revision = "2:0";
+        scheduler.noteChange("one");
+        timer.advance(BackupScheduler.QUIET_MS);
+        assertEquals("reconnect", statusProject().getString("error"));
+        BackupScheduler restarted = new BackupScheduler(context, timer, service);
+        timer.advance(0);
+        assertEquals("reconnect",
+            new JSONObject(restarted.status()).getJSONArray("projects").getJSONObject(0).getString("error"));
+
+        provider.removed = false;
+        timer.advance(BackupScheduler.RETRY_MS[0]);
+        assertEquals("", statusProject().getString("error"));
+        assertEquals("2:0", new JSONObject(Files.readString(backupJson.toPath())).getString("changeCounter"));
+    }
+
     @Test public void beforeAndroid12LeavingWithNothingDueStartsNoService() throws Exception {
         service.restricted = false;
         start();

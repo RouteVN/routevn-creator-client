@@ -70,6 +70,13 @@ or failed selection preserves the previous configuration. Losing access pauses
 backup and requests reconnection; do not silently choose another destination.
 Do not use an app-owned directory as the backup destination.
 
+A removed SD card or USB drive counts as lost access. Android rejects every
+document below the chosen folder with an `IllegalArgumentException` instead of a
+missing-file error, so a failure with no clearer cause is reported as
+`reconnect` when the backup folder itself cannot be reached. Removing a card
+while a file on it is open stops the app's process; the last backup stays
+intact, and the next pass after the card is back finishes the copy.
+
 Before saving the selection, use disposable probe files to check create, write,
 read, rename, and delete behavior, and establish usable free-space measurement.
 Do not modify existing project files for these checks. Explain unsupported
@@ -675,9 +682,9 @@ the app is ready, the quiet period and maximum wait, short retries for a busy
 project, back-off and manual retry, backing up after leaving the app in the
 foreground service, the leave grace on Android 12+ and on-demand starts on
 older versions, returning and leaving again during a copy, no pass at the end of
-the grace before the app is ready or during a hold, cancelling a copy when the
-folder changes, keeping changes when a pass is cancelled early, and copy
-progress. `BackupServiceTest` checks that a stop names the last start. `BackupPublicationTest` and
+the grace before the app is ready or during a hold, a removed SD card reported
+as `reconnect` and recovered once it is back, cancelling a copy when the folder
+changes, keeping changes when a pass is cancelled early, and copy progress. `BackupServiceTest` checks that a stop names the last start. `BackupPublicationTest` and
 `ProjectBackupTest` cover transactional counters, validation, space guards,
 publication failures before/after renames, metadata failures, retry, stale
 metadata, read-only import fallback to `previous` while refusing `next`,
@@ -701,7 +708,20 @@ pressing Home is backed up within seconds; a 1.5 GB backup finishes with the
 app in the background and the screen off; killing the process during a 4 GB
 copy leaves the last backup intact, and the next launch finishes it; and after
 uninstalling and reinstalling, importing the backup folder restores every
-database row and media file. Still pending: SD-card grants, renames and
-removal, low-space behavior, Android 8 to 12 devices, other manufacturers, and
-the snapshot pause on large real projects. Use disposable projects; never
+database row and media file.
+
+Checked on emulators:
+
+- Android 15 with a 4 GB virtual SD card: a backup to the card's Documents
+  folder copies 2.8 GB of media byte for byte. Removing the card mid-copy stops
+  the app and leaves the last backup untouched; the next launch reports
+  `reconnect`, and the backup finishes about 5 seconds after returning to the
+  app with the card back.
+- Android 16 with a 512 MB virtual SD card: backups pause with `lowSpace`.
+- Android 11, with its WebView updated to 124: leaving with nothing due starts
+  no service, and an edit saved just before or just after pressing Home is
+  backed up within 3 seconds.
+
+Still pending: renamed folders on a card, physical Android 8 to 12 devices,
+other manufacturers, and the snapshot pause on large real projects. Use disposable projects; never
 uninstall a user's working app to run a test.
