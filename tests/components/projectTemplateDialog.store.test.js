@@ -20,8 +20,12 @@ const card = (id, overrides = {}) => ({
   ...overrides,
 });
 
-// As the asset store client reads them: a URL each.
-const screenshot = (name) => ({ url: `https://files.example/${name}.png` });
+// As the asset store client reads them: a URL each for the viewer and the
+// thumbnail.
+const screenshot = (name) => ({
+  url: `https://files.example/${name}.png`,
+  thumbnailUrl: `https://files.example/${name}-small.png`,
+});
 
 const template = (id) => ({
   ...card(id),
@@ -167,6 +171,11 @@ describe("projectTemplateDialog store", () => {
     expect(view.detail.screenshots.map(({ isSelected }) => isSelected)).toEqual(
       [true, false, false],
     );
+    // Thumbnails draw the small image and the viewer the full-size one.
+    expect(view.detail.screenshots[0].thumbnailUrl).toBe(
+      "https://files.example/title-small.png",
+    );
+    expect(view.detail.viewerImage.url).toBe("https://files.example/title.png");
 
     store.moveScreenshot({ offset: -1 });
     view = store.selectViewData();

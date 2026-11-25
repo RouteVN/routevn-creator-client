@@ -178,12 +178,13 @@ export const handleScreenshotViewerKeyDown = (deps, payload) => {
   render();
 };
 
+// The form draws the template's cover small, so it takes the card's cover,
+// which is read small, with the page's loaded details.
 export const handleUseTemplateClick = (deps) => {
   const { store } = deps;
-  emitTemplateSelect(
-    deps,
-    createStoreProjectTemplate(store.selectDetailTemplate()),
-  );
+  const template = createStoreProjectTemplate(store.selectDetailTemplate());
+  template.coverUrl = store.selectDetailCard().coverUrl;
+  emitTemplateSelect(deps, template);
 };
 
 export const handleDialogClose = (deps) => {

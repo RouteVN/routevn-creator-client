@@ -2344,6 +2344,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "Horizontal, kanan ke kiri"
   verticalRightToLeftOption: "Vertikal, kanan ke kiri"
   verticalLeftToRightOption: "Vertikal, kiri ke kanan"
+  readingDirectionLabel: "Arah baca"
+  leftToRightOption: "Kiri ke kanan"
+  rightToLeftOption: "Kanan ke kiri"
   topOption: "Atas"
   bottomOption: "Bawah"
 controlsPage:
@@ -2529,6 +2532,7 @@ variablesPage:
   computedVariableDeleteBlocked: "Variabel ini digunakan oleh: {dependents}"
   computedWhenLabel: "Saat"
   defaultLabel: "Nilai bawaan"
+  defaultValueLabel: "Nilai bawaan"
   editVariableTitle: "Edit variabel"
   editComputedVariableTitle: "Edit variabel terhitung"
   moveDownLabel: "Pindahkan ke bawah"

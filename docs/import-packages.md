@@ -463,6 +463,14 @@ with the `X-RouteVN-RPC: 1` header and no credentials:
 | `assetStore.getAssetPackDownloadUrl` | `{assetPackId, device}`                                           | Import: `downloadUrl`, a signed URL of the package's ZIP that allows byte ranges and stops working at `expiresAt`; `size`, its byte size; `directoryOffset` and `directorySize`, where its central directory starts and how long it is; and `versionName`.                                                                                                                                                                                                                                                                                                                          |
 | `assetStore.getCreatorById`          | `{creatorId}`                                                     | The creator page: the profile and `assetPacks`, up to 100 of the creator's packs, newest first, each with the card fields and no `creator` of its own; `files` maps the avatar and covers to URLs.                                                                                                                                                                                                                                                                                                                                                                                  |
 
+Each answer lists its images once in `files`, as `{fileId, url}`, and items
+refer to them by ID. An image's entry may also carry `variants`,
+`{width640, width1920}`: copies at most 640 and 1920 px wide. Images drawn
+small, the covers on pack cards and every creator avatar, use `width640` when
+the entry has it and `url` otherwise. The pack page's cover, once its details
+replace the card's, and its description images use `url`. The package's media
+files in `mediaFiles` have no variants.
+
 A read that carries `device` counts, and one without it counts nothing; the
 API answers the same either way. Opening a pack's page sends `device` with its
 `assetStore.getAssetPackById` read, which counts one view of the pack. Starting

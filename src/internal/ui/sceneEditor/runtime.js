@@ -1,3 +1,7 @@
+import {
+  applyAudioEffectMixToBgm,
+  getAudioEffectFinalMix,
+} from "../../audioEffectDefinition.js";
 import { createAssetLoadSessionGuard } from "../assetLoadSessionGuard.js";
 import {
   setSceneEditorPageLoading,
@@ -1219,30 +1223,14 @@ const stripSelectedLinePreviewAudioEffect = (
     return projectData;
   }
 
-  const sound = bgm.sounds?.length === 1 ? bgm.sounds[0] : undefined;
-  if (sound) {
-    for (const property of ["volume", "pan", "playbackRate"]) {
-      const finalKeyframe = resource.tween?.[property]?.keyframes?.at(-1);
-      if (
-        typeof finalKeyframe?.value !== "number" ||
-        !Number.isFinite(finalKeyframe.value) ||
-        finalKeyframe.relative === true
-      ) {
-        continue;
-      }
-
-      if (property === "volume") {
-        bgm.volume = finalKeyframe.value;
-        sound.volume = 100;
-      } else if (property === "pan") {
-        bgm.pan = finalKeyframe.value;
-        sound.pan = 0;
-      } else {
-        sound.playbackRate = finalKeyframe.value;
-      }
-    }
-  }
-  delete bgm.audioEffects;
+  // Settle the line where its effect leaves it, without replaying the effect.
+  const settledBgm = applyAudioEffectMixToBgm(
+    bgm,
+    getAudioEffectFinalMix(resource),
+    { sounds: projectData.resources.sounds },
+  );
+  delete settledBgm.audioEffects;
+  selectedLine.actions.bgm = settledBgm;
   return projectData;
 };
 

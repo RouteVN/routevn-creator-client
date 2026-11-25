@@ -186,10 +186,10 @@ template:
                                       - $for screenshot in detail.screenshots:
                                           - $if screenshot.isSelected:
                                               - 'rtgl-view role=button tabindex=0 data-screenshot-index="${screenshot.index}" aria-label="${screenshot.alt}" aria-current="true" w=120 br=sm bw=sm bc=pr overflow=hidden cur=pointer style="flex: 0 0 auto; aspect-ratio: 16 / 9;"':
-                                                  - rtgl-image src=${screenshot.url} w=f h=f of=cov: null
+                                                  - rtgl-image src=${screenshot.thumbnailUrl} w=f h=f of=cov: null
                                             $else:
                                               - 'rtgl-view role=button tabindex=0 data-screenshot-index="${screenshot.index}" aria-label="${screenshot.alt}" w=120 br=sm bw=xs bc=bo h-bc=ac overflow=hidden cur=pointer style="flex: 0 0 auto; aspect-ratio: 16 / 9;"':
-                                                  - rtgl-image src=${screenshot.url} w=f h=f of=cov: null
+                                                  - rtgl-image src=${screenshot.thumbnailUrl} w=f h=f of=cov: null
                           - 'rtgl-view#templateInfo d=v w=f g=lg p=lg bw=xs bc=bo br=md bgc=bg style="box-sizing: border-box;"':
                               - $if detail.summary:
                                   - rtgl-text c=mu-fg: ${detail.summary}

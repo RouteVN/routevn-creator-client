@@ -2356,6 +2356,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "По горизонтали, справа налево"
   verticalRightToLeftOption: "По вертикали, справа налево"
   verticalLeftToRightOption: "По вертикали, слева направо"
+  readingDirectionLabel: "Направление чтения"
+  leftToRightOption: "Слева направо"
+  rightToLeftOption: "Справа налево"
   topOption: "Сверху"
   bottomOption: "Снизу"
 controlsPage:
@@ -2541,6 +2544,7 @@ variablesPage:
   computedVariableDeleteBlocked: "Эту переменную используют: {dependents}"
   computedWhenLabel: "Когда"
   defaultLabel: "По умолчанию"
+  defaultValueLabel: "Значение по умолчанию"
   editVariableTitle: "Изменить переменную"
   editComputedVariableTitle: "Изменить вычисляемую переменную"
   moveDownLabel: "Переместить вниз"

@@ -56,6 +56,8 @@ export const selectDetailRequestId = ({ state }) => state.detail.requestId;
 
 export const selectDetailTemplateId = ({ state }) => state.detail.card?.id;
 
+export const selectDetailCard = ({ state }) => state.detail.card;
+
 // The template the detail page shows: its loaded details, or its card while
 // they load.
 export const selectDetailTemplate = ({ state }) =>
@@ -93,7 +95,7 @@ const createDetailView = ({ state, i18n, copy }) => {
   const screenshots = (detail.template?.screenshots ?? []).map(
     (screenshot, index) => ({
       index,
-      url: screenshot.url,
+      thumbnailUrl: screenshot.thumbnailUrl,
       alt: formatI18nCopy(copy.screenshotLabel, { number: index + 1 }),
       isSelected: index === detail.screenshotIndex,
     }),

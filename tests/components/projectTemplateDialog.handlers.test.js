@@ -20,6 +20,7 @@ const template = (id) => ({
   description: [],
   screenshots: ["one", "two", "three"].map((name) => ({
     url: `https://files.example/${name}.png`,
+    thumbnailUrl: `https://files.example/${name}-small.png`,
   })),
 });
 
@@ -207,10 +208,14 @@ describe("projectTemplateDialog handlers", () => {
     expect(deps.store.selectViewData().detail.isLoaded).toBe(true);
   });
 
-  it("uses the store template the page shows", async () => {
+  it("uses the store template the page shows, with the card's small cover", async () => {
     const deps = createDeps({
       listProjectTemplates: async () => ({ templates: [card("one")] }),
-      getProjectTemplate: async () => template("one"),
+      // The page reads its cover at full size.
+      getProjectTemplate: async () => ({
+        ...template("one"),
+        coverUrl: "https://files.example/one-full.png",
+      }),
     });
     handlers.handleBeforeMount(deps);
     await settle();

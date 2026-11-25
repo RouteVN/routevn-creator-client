@@ -2344,6 +2344,9 @@ layoutEditPanel:
   horizontalRightToLeftOption: "Orizzontale, da destra a sinistra"
   verticalRightToLeftOption: "Verticale, da destra a sinistra"
   verticalLeftToRightOption: "Verticale, da sinistra a destra"
+  readingDirectionLabel: "Direzione di lettura"
+  leftToRightOption: "Da sinistra a destra"
+  rightToLeftOption: "Da destra a sinistra"
   topOption: "In alto"
   bottomOption: "In basso"
 controlsPage:
@@ -2529,6 +2532,7 @@ variablesPage:
   computedVariableDeleteBlocked: "Questa variabile è usata da: {dependents}"
   computedWhenLabel: "Quando"
   defaultLabel: "Valore predefinito"
+  defaultValueLabel: "Valore predefinito"
   editVariableTitle: "Modifica variabile"
   editComputedVariableTitle: "Modifica variabile calcolata"
   moveDownLabel: "Sposta giù"
