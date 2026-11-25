@@ -310,6 +310,19 @@ layoutSections:
             ariaLabel: Vertical
             tooltip: Vertical
             value: vertical
+      # Which side rows and columns start from. Absolute containers keep the
+      # positions their children were given, so it is not offered for them.
+      - "$when": "showsGapField"
+        type: segmented-control
+        stacked: true
+        label: Reading Direction
+        name: readingDirection
+        value: "${values.readingDirection}"
+        options:
+          - label: Left to Right
+            value: ltr
+          - label: Right to Left
+            value: rtl
       - "$when": "showsGapField"
         type: group
         stacked: true

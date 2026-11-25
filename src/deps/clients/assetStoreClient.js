@@ -152,11 +152,15 @@ const isWebUrl = (value) => {
   }
 };
 
-const readFileUrls = (files) => {
+// An image's entry may carry `variants`. With `small`, for images drawn small
+// such as cards and avatars, an image maps to its `variants.width640`, at most
+// 640 px wide, when it has one, and to its full-size `url` otherwise.
+const readFileUrls = (files, { small = false } = {}) => {
   const urls = new Map();
   for (const file of files) {
     if (isObject(file) && isText(file.fileId) && isWebUrl(file.url)) {
-      urls.set(file.fileId, file.url);
+      const smallUrl = file.variants?.width640;
+      urls.set(file.fileId, small && isWebUrl(smallUrl) ? smallUrl : file.url);
     }
   }
   return urls;
@@ -209,12 +213,17 @@ const readAssetCounts = (assetCounts) =>
 
 // The app has no purchases, so it shows and opens free packs only. A card
 // carries the title, summary, cover, asset counts, release date and creator.
-// The description comes with the pack's details.
-const readPack = ({ id, data, creator: creatorData }, fileUrls) => {
+// The description comes with the pack's details. The creator's avatar comes
+// from `avatarUrls`, which a pack page reads small beside its large cover.
+const readPack = (
+  { id, data, creator: creatorData },
+  fileUrls,
+  avatarUrls = fileUrls,
+) => {
   if (!isText(id) || !isObject(data)) {
     return undefined;
   }
-  const creator = readCreator(creatorData, fileUrls);
+  const creator = readCreator(creatorData, avatarUrls);
   if (
     !isText(data.title) ||
     !isObject(data.assetCounts) ||
@@ -372,7 +381,8 @@ export const createAssetStoreClient = ({
       if (!Array.isArray(result.items) || !Array.isArray(result.files)) {
         throw unavailable(new Error("Invalid asset pack list."));
       }
-      const fileUrls = readFileUrls(result.files);
+      // Cards draw their cover and avatar small.
+      const fileUrls = readFileUrls(result.files, { small: true });
       return {
         packs: result.items
           .filter(isObject)
@@ -402,9 +412,15 @@ export const createAssetStoreClient = ({
       ) {
         throw unavailable(new Error("Invalid asset pack."));
       }
+      // The page draws its cover and description images large and the
+      // creator's avatar small.
       const fileUrls = readFileUrls(result.files);
       const { id, data } = result.assetPack;
-      const pack = readPack({ id, data, creator: result.creator }, fileUrls);
+      const pack = readPack(
+        { id, data, creator: result.creator },
+        fileUrls,
+        readFileUrls(result.files, { small: true }),
+      );
       if (!pack) throw packNotFound();
       pack.description = readDescription(data.description, fileUrls);
       pack.versionName = isText(data.versionName)
@@ -475,7 +491,8 @@ export const createAssetStoreClient = ({
         throw unavailable(new Error("Invalid creator."));
       }
       const { data } = creator;
-      const fileUrls = readFileUrls(result.files);
+      // The page draws the avatar and its pack cards small.
+      const fileUrls = readFileUrls(result.files, { small: true });
       const packCreator = {
         id: creator.id,
         name: data.name,
