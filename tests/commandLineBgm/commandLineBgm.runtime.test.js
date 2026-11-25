@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import createRouteEngine from "route-engine-js";
 import {
@@ -7,9 +8,10 @@ import {
   selectBgm,
   setBgm,
   updateChannel,
+  updateSound,
 } from "../../src/components/commandLineBgm/commandLineBgm.store.js";
 
-const renderCommands = (commands) => {
+const renderCommands = (commands, { audioEffects = {} } = {}) => {
   let engine;
   engine = createRouteEngine({
     handlePendingEffects(effects) {
@@ -25,7 +27,11 @@ const renderCommands = (commands) => {
       projectData: {
         screen: { width: 640, height: 360 },
         resources: {
-          sounds: { theme: { fileId: "theme.ogg" } },
+          sounds: {
+            theme: { fileId: "theme.ogg" },
+            other: { fileId: "other.ogg" },
+          },
+          audioEffects,
         },
         story: {
           initialSceneId: "scene",
@@ -126,5 +132,82 @@ describe("BGM editor playback identity", () => {
       "bgm:theme",
       "bgm:theme",
     ]);
+  });
+});
+
+// The audio effects new projects start with, by name.
+const readTemplateAudioEffects = () => {
+  const repository = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../static/templates/default/repository.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  return Object.fromEntries(
+    Object.values(repository.audioEffects.items)
+      .filter((item) => item.type === "audioEffect")
+      .map((item) => [item.name, item.audioEffect]),
+  );
+};
+
+describe("BGM editor audio effects", () => {
+  // The template effects fade to volume 100. Effects play relative to the
+  // volume the line sets, so they end at the channel volume of 75 the editor
+  // gives new BGM, not at full volume.
+  const templateEffects = readTemplateAudioEffects();
+  const audioEffects = {
+    fadeIn: templateEffects["Fade in 1s"],
+    crossfade: templateEffects["Crossfade 1s"],
+  };
+
+  it("fades music in to the channel volume", () => {
+    const state = createInitialState();
+    insertSound({ state }, { resourceId: "theme" });
+    updateChannel({ state }, { values: { audioEffectId: "fadeIn" } });
+    updateSound(
+      { state },
+      { soundId: "theme", values: { beginEffectId: "fadeIn" } },
+    );
+    const bgm = selectBgm({ state });
+    expect(bgm.volume).toBe(75);
+
+    const [rendered] = renderCommands([bgm], { audioEffects });
+    const sound = rendered.audio[0].children[0];
+    const [effect] = rendered.audioEffects;
+
+    expect(sound.volume).toBe(75);
+    expect(effect.targetId).toBe(sound.id);
+    expect(effect.properties.volume.enter.keyframes.at(-1).value).toBe(75);
+    expect(sound.beginEffect.volume.keyframes.at(-1).value).toBe(75);
+  });
+
+  it("crossfades between two tracks at the channel volume", () => {
+    const playing = createInitialState();
+    insertSound({ state: playing }, { resourceId: "theme" });
+    const next = createInitialState();
+    insertSound({ state: next }, { resourceId: "other" });
+    updateChannel({ state: next }, { values: { audioEffectId: "crossfade" } });
+
+    const [before, after] = renderCommands(
+      [selectBgm({ state: playing }), selectBgm({ state: next })],
+      { audioEffects },
+    );
+    const effectOn = (targetId) =>
+      after.audioEffects.find((effect) => effect.targetId === targetId)
+        .properties.volume;
+
+    // The outgoing track fades out from the volume it plays at.
+    expect(before.audio[0].children[0].volume).toBe(75);
+    expect(effectOn("bgm:theme").exit.keyframes.at(-1).value).toBe(0);
+
+    const incoming = effectOn("bgm:other").enter;
+    expect(
+      after.audio[0].children.find(({ id }) => id === "bgm:other").volume,
+    ).toBe(75);
+    expect(incoming.initialValue).toBe(0);
+    expect(incoming.keyframes.at(-1).value).toBe(75);
   });
 });
