@@ -758,6 +758,58 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("fills BGM from an earlier line at the level its audio effect left", () => {
+    const state = createInitialState();
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          sounds: {
+            items: {
+              theme: { id: "theme", type: "sound", name: "Theme" },
+              rain: {
+                id: "rain",
+                type: "sound",
+                name: "Rain",
+                playbackRate: 0.5,
+              },
+            },
+            tree: [{ id: "theme" }, { id: "rain" }],
+          },
+        },
+      },
+    );
+    const presentationBgm = {
+      loop: true,
+      volume: 80,
+      pan: 0.5,
+      sounds: [
+        { id: "theme-clip", resourceId: "theme", playbackRate: 1.2 },
+        { id: "rain-clip", resourceId: "rain" },
+      ],
+      audioEffectMix: { volume: 25, pan: 0.75, playbackRate: 2 },
+    };
+
+    const { actions } = selectActionsData({
+      state,
+      props: {
+        actions: {},
+        presentationState: { bgm: presentationBgm },
+      },
+    });
+
+    expect(actions.bgm).toEqual({
+      loop: true,
+      volume: 20,
+      pan: 1,
+      sounds: [
+        { id: "theme-clip", resourceId: "theme", playbackRate: 2.4 },
+        { id: "rain-clip", resourceId: "rain", playbackRate: 1 },
+      ],
+    });
+    expect(presentationBgm.volume).toBe(80);
+  });
+
   it("preserves an empty-object BGM action without a presentation item", () => {
     const state = createInitialState();
 
