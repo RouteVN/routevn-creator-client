@@ -98,6 +98,28 @@ Notes:
 - The `scripts/test-*.js` files remain the home for non-Puty runtime,
   integration, convergence, and command-contract coverage.
 
+## Tests With Every Change
+
+Every change that alters behaviour ships with tests in the same pull request:
+automated tests in the suite that fits (Vitest under `tests/`, Puty for
+storage, `scripts/test-*.js` for runtime and integration), and VT specs in
+`vt/specs/` for anything users see or do in the UI. Leave either out only for
+a very good reason, and give the reason in the pull request description.
+Changes that only touch docs or CI need neither.
+
+- Test the broken case through the path the app uses: drive the page,
+  component, or service the way the app does, not only the helper you
+  changed. Check that the new tests fail without the change.
+- Cover the variants the change touches, such as touch and mouse input,
+  mobile and wide layouts, web and desktop adapters, and right-to-left text.
+- Make VT specs show the screen before and after the behaviour, and wait for
+  the element that proves it before each screenshot. Look at every new
+  reference image before committing it.
+- CI does not run VT. Run new and changed specs locally and list them, with
+  their result, in the pull request description.
+- When a fix also needs a device or platform the tests cannot reach, test it
+  there as well and say so in the pull request.
+
 ## Dependency Changes
 
 Patching dependencies in this repository is strictly prohibited.
