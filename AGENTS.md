@@ -101,9 +101,11 @@ Notes:
 ## Tests With Every Change
 
 Every change that alters behaviour ships with tests in the same pull request:
-unit tests, and VT specs in `vt/specs/` for anything users see or do in the
-UI. Leave either out only for a very good reason, and give the reason in the
-pull request description. Changes that only touch docs or CI need neither.
+automated tests in the suite that fits (Vitest under `tests/`, Puty for
+storage, `scripts/test-*.js` for runtime and integration), and VT specs in
+`vt/specs/` for anything users see or do in the UI. Leave either out only for
+a very good reason, and give the reason in the pull request description.
+Changes that only touch docs or CI need neither.
 
 - Test the broken case through the path the app uses: drive the page,
   component, or service the way the app does, not only the helper you
