@@ -2503,6 +2503,7 @@ variablesPage:
   computedVariableDeleteBlocked: "Biến này đang được dùng trong: {dependents}"
   computedWhenLabel: "Khi"
   defaultLabel: "Giá trị mặc định"
+  defaultValueLabel: "Giá trị mặc định"
   editVariableTitle: "Chỉnh sửa biến"
   editComputedVariableTitle: "Chỉnh sửa biến tính toán"
   moveDownLabel: "Di chuyển xuống"
