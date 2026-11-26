@@ -169,6 +169,28 @@ describe("project template dialog rendering", () => {
     ).toBe(false);
     dialog.remove();
   });
+
+  // Reusing the list's scrolling view would open the page as far down as the
+  // list was scrolled.
+  it("opens a template's page in its own scrolling view", () => {
+    const dialog = document.createElement(
+      "rvn-project-template-dialog-render-test",
+    );
+    document.body.append(dialog);
+    dialog.store.setCatalogPage({ templates: [card("one")], nextCursor: "" });
+    dialog.render();
+    const listScroll = dialog.shadowRoot.querySelector("#templateListScroll");
+    expect(listScroll).not.toBeNull();
+
+    dialog.store.openDetail({ requestId: "detail-1", card: card("one") });
+    dialog.render();
+
+    expect(listScroll.isConnected).toBe(false);
+    expect(
+      dialog.shadowRoot.querySelector("#templateDetailScroll"),
+    ).not.toBeNull();
+    dialog.remove();
+  });
 });
 
 describe("project create dialog template row", () => {

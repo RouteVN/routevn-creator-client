@@ -112,8 +112,10 @@ template:
           - 'rtgl-view d=h w=f av=c g=md ph=lg pv=md bwb=xs bc=bo style="box-sizing: border-box; flex: 0 0 auto;"':
               - rtgl-text s=lg w=1fg: ${dialogTitle}
               - 'rtgl-button#dialogCloseButton sq v=gh pre=x aria-label="${closeLabel}" title="${closeLabel}"': null
+          # The list and a template's page scroll in separate views, so a
+          # template's page opens at its top wherever the list was scrolled.
           - $if isListStep:
-              - 'rtgl-view d=v w=f h=1fg sv sbv=touch g=lg p=lg style="min-height: 0; box-sizing: border-box;"':
+              - 'rtgl-view#templateListScroll d=v w=f h=1fg sv sbv=touch g=lg p=lg style="min-height: 0; box-sizing: border-box;"':
                   - rtgl-grid#templateGrid cols=4 xl-cols=3 lg-cols=2 sm-cols=2 g=lg sm-g=md w=f:
                       # The bundled template comes first and never waits for
                       # the store.
@@ -163,7 +165,7 @@ template:
                       - rtgl-view w=f ah=c:
                           - rtgl-button#loadMoreTemplatesButton v=se: ${loadMoreLabel}
           - $if isDetailStep:
-              - 'rtgl-view d=v w=f h=1fg ah=c sv sbv=touch style="min-height: 0;"':
+              - 'rtgl-view#templateDetailScroll d=v w=f h=1fg ah=c sv sbv=touch style="min-height: 0;"':
                   - 'rtgl-view d=v g=xl p=lg style="box-sizing: border-box; width: 100%; max-width: 1200px;"':
                       - rtgl-view d=h w=f av=c g=md:
                           - 'rtgl-button#detailBackButton sq pre=chevronLeft v=ol aria-label="${backLabel}" title="${backLabel}"': null
