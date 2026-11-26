@@ -3833,11 +3833,11 @@ describe("animationEditor.handlers", () => {
       projectService.updateAnimation.mock.invocationCallOrder[0],
     );
 
-    // An edit with the same preview images saves without them. A backup
-    // keeps the page open, so it only saves.
+    // An edit with the same preview images saves without them. Going to
+    // the background keeps the page open, so it only saves.
     store.selectAnimationName.mockReturnValue("Fade Out");
     version = 3;
-    await beforeNavigation({ reason: "backup" });
+    await beforeNavigation({ reason: "background" });
     expect(projectService.updateAnimation.mock.lastCall[0].data).toEqual({
       name: "Fade Out",
       description: "",

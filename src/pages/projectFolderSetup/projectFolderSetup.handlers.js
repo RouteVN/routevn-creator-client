@@ -2,7 +2,9 @@ const errorKeys = {
   lowSpace: "lowSpaceError",
   unknownSpace: "unknownSpaceError",
   reconnect: "reconnectError",
-  busy: "busyError",
+  appFolder: "appFolderError",
+  localFolder: "localFolderError",
+  nameConflict: "nameConflictError",
 };
 
 const showSetupError = (deps, error, fallback) => {

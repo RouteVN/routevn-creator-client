@@ -617,8 +617,8 @@ export const handleBeforeMount = (deps) => {
       // wait on it when the app goes to the background or quits.
       await flushQueuedLayoutEditorUpdates(deps);
       // A layout's thumbnail follows in the background, once the page is
-      // left: a backup, the app going to the background, or quitting only
-      // saves. Controls show none.
+      // left: the app going to the background or quitting only saves.
+      // Controls show none.
       const layoutId = store.selectLayoutId();
       if (
         layoutId &&

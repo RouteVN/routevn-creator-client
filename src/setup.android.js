@@ -144,10 +144,6 @@ const openUrl = async (url) => {
 };
 
 const appService = createAppService({
-  appActivity: {
-    isActive: androidAudioRuntime.isActive,
-    subscribeActive: androidAudioRuntime.subscribeActivity,
-  },
   db: appDb,
   router,
   globalUI,

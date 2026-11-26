@@ -15,9 +15,24 @@ public class BackupDocumentsProvider extends DocumentsProvider {
     File root;
     String failRename;
     String failDelete;
+    int childQueries;
+    // An SD card taken out: its volume has no root any more.
+    boolean removed;
+    // Renames the way Android 9's storage provider does.
+    boolean android9Rename;
+    // Before Android 10, files under Documents get ids on a separate "home" root.
+    boolean homeRoot;
+    final java.util.List<String> created = new java.util.ArrayList<>();
     public boolean onCreate() { return true; }
-    private File file(String id) { return id.equals("primary:Documents") ? root : new File(root, id.substring("primary:Documents/".length())); }
-    private String id(File file) { return "primary:Documents" + file.getAbsolutePath().substring(root.getAbsolutePath().length()); }
+    private File file(String id) throws FileNotFoundException {
+        if (removed) throw new FileNotFoundException("No root for primary");
+        if (id.startsWith("home:")) return id.equals("home:") ? root : new File(root, id.substring("home:".length()));
+        return id.equals("primary:Documents") ? root : new File(root, id.substring("primary:Documents/".length()));
+    }
+    private String id(File file) {
+        String path = file.getAbsolutePath().substring(root.getAbsolutePath().length());
+        return homeRoot ? "home:" + path.replaceFirst("^/", "") : "primary:Documents" + path;
+    }
     private MatrixCursor cursor(String[] projection) {
         return new MatrixCursor(projection == null ? new String[] {Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME, Document.COLUMN_MIME_TYPE, Document.COLUMN_SIZE, Document.COLUMN_FLAGS} : projection);
     }
@@ -41,6 +56,7 @@ public class BackupDocumentsProvider extends DocumentsProvider {
         MatrixCursor cursor = cursor(projection); row(cursor, file); return cursor;
     }
     public Cursor queryChildDocuments(String id, String[] projection, String sortOrder) throws FileNotFoundException {
+        childQueries++;
         File[] files = file(id).listFiles(); if (files == null) throw new FileNotFoundException(id);
         MatrixCursor cursor = cursor(projection); for (File file : files) row(cursor, file); return cursor;
     }
@@ -52,12 +68,20 @@ public class BackupDocumentsProvider extends DocumentsProvider {
         try {
             boolean created = Document.MIME_TYPE_DIR.equals(mime) ? file.mkdir() : file.createNewFile();
             if (!created) throw new FileNotFoundException(name);
+            this.created.add(name);
             return id(file);
         } catch (java.io.IOException error) { throw new FileNotFoundException(error.toString()); }
     }
     public String renameDocument(String id, String name) throws FileNotFoundException {
         if (name.equals(failRename)) throw new FileNotFoundException("Injected rename interruption");
         File source = file(id); File target = new File(source.getParentFile(), name);
+        if (android9Rename) {
+            // Android 9 gives a taken name a " (1)" suffix, renames, then fails
+            // looking up the old name.
+            for (int i = 1; target.exists(); i++) target = new File(source.getParentFile(), name + " (" + i + ")");
+            if (!source.renameTo(target)) throw new FileNotFoundException(name);
+            throw new FileNotFoundException("Missing file for " + id);
+        }
         if (target.exists() || !source.renameTo(target)) throw new FileNotFoundException(name);
         return id(target);
     }
@@ -65,5 +89,17 @@ public class BackupDocumentsProvider extends DocumentsProvider {
         if (file(id).getName().equals(failDelete)) throw new FileNotFoundException("Injected delete interruption");
         if (!file(id).delete()) throw new FileNotFoundException(id);
     }
-    public boolean isChildDocument(String parent, String child) { return child.startsWith(parent + "/"); }
+    // Android's FileSystemProvider fails this way when the volume is gone, so
+    // every document below the chosen folder throws IllegalArgumentException.
+    public boolean isChildDocument(String parent, String child) {
+        if (removed) {
+            throw new IllegalArgumentException("Failed to determine if " + child + " is child of " + parent +
+                ": java.io.FileNotFoundException: No root for primary");
+        }
+        try {
+            return file(child).getCanonicalPath().startsWith(file(parent).getCanonicalPath() + File.separator);
+        } catch (java.io.IOException error) {
+            throw new IllegalArgumentException(error);
+        }
+    }
 }

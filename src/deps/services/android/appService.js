@@ -1,4 +1,6 @@
 import { createAndroidBackupClient } from "../../clients/android/backup.js";
+import { findBackupProblem } from "../../../internal/backupStatus.js";
+import { withErrorDetails } from "../../../internal/errorDetails.js";
 import { createBackupService } from "./backupService.js";
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import {
@@ -381,11 +383,54 @@ export const createAppService = (params) => {
   });
 
   const backup = createBackupService({
-    client: createAndroidBackupClient(params.appActivity),
-    backupProject: (id) => params.projectService.backupProject(id),
-    beforeBackup: () => appService.prepareNavigation({ reason: "backup" }),
-    notify: (options) => appService.showToast(options),
+    client: createAndroidBackupClient(),
   });
+
+  // Asks when a background backup starts needing the user, without replacing
+  // a dialog that is already open. One question waits at a time, and it asks
+  // about the problem as it is when it opens, or not at all once it cleared.
+  let problemDialogQueued = false;
+  const showBackupProblem = async (getCopy) => {
+    if (problemDialogQueued) return;
+    problemDialogQueued = true;
+    let problem;
+    let copy;
+    let confirmed;
+    try {
+      confirmed = await appService.showDialogWhenIdle(() => {
+        problemDialogQueued = false;
+        problem = findBackupProblem(backup.getStatus());
+        if (!problem) return undefined;
+        copy = getCopy();
+        return {
+          title: copy.attentionTitle,
+          message: copy.errors[problem.error] ?? copy.errors.failed,
+          confirmText: problem.folderProblem
+            ? copy.chooseFolderAgain
+            : copy.tryAgain,
+          cancelText: copy.later,
+        };
+      });
+    } finally {
+      problemDialogQueued = false;
+    }
+    if (!confirmed) return;
+    if (problem.folderProblem) {
+      appService.navigate("/project-folder-setup", { from: "config" });
+      return;
+    }
+    try {
+      await backup.backupNow();
+    } catch (error) {
+      appService.showAlert({
+        message: withErrorDetails(
+          copy.backUpNowError,
+          error,
+          copy.errorDetailsLabel,
+        ),
+      });
+    }
+  };
 
   return {
     ...appService,
@@ -393,8 +438,19 @@ export const createAppService = (params) => {
     getBackupStatus: backup.getStatus,
     subscribeBackup: backup.subscribe,
     refreshBackupStatus: backup.refresh,
-    backupNow: () => backup.run(true),
-    startBackupChecks: backup.start,
+    backupNow: backup.backupNow,
+    startBackupChecks(getCopy) {
+      const { notificationChannel, notificationTitle } = getCopy();
+      backup.setNotificationCopy({
+        channel: notificationChannel,
+        title: notificationTitle,
+      });
+      return backup.watchProblems(() =>
+        showBackupProblem(getCopy).catch((error) => {
+          console.error("Failed to show the backup problem:", error);
+        }),
+      );
+    },
     getProjectFolderSetup: () => ({ ...backup.getStatus(), isBackup: true }),
     pickProjectFolderSetup: (options) =>
       params.filePicker.openFolderPicker({

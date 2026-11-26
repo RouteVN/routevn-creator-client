@@ -17,33 +17,51 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.concurrent.Semaphore;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Local-folder backups. All calls except publish run on the storage executor. */
+/**
+ * Local-folder backups: folder setup, change counters, and publication.
+ *
+ * Every method that touches the backup folder runs on the single backup
+ * thread owned by {@link BackupScheduler}, so publications never overlap.
+ * {@link Storage} calls that need the working databases are routed by the
+ * storage implementation to the thread that owns them.
+ */
 final class ProjectBackup {
     static final long RESERVE_BYTES = 1_000_000_000L;
-    static final long INTERVAL_MS = 5 * 60 * 1000L;
-    private static final Semaphore PUBLICATION_LOCK = new Semaphore(1);
+    static final String STAGING_DIRECTORY = "project-backup-staging";
     private static final String REVISION_TABLE = "routevn_backup_revision";
     private static final String BACKUP_FOLDER_NAME = "RouteVN Backups";
+    private static final String PROJECT_WRITE_PREFIX = ".routevn-project-write-";
 
     interface Storage {
         JSONArray projects() throws Exception;
         File root(String projectId) throws Exception;
         String name(String projectId) throws Exception;
         String counter(String projectId) throws Exception;
-        void snapshot(String projectId, File destination) throws Exception;
+        /**
+         * Copies a consistent, self-contained project database to {@code database}
+         * and returns what it contains, captured while project writes are paused:
+         * the change counter and the asset names it may reference.
+         */
+        Captured snapshot(String projectId, File database) throws Exception;
+    }
+
+    interface Progress {
+        void files(int done, int total);
     }
 
     static final class Failure extends Exception {
@@ -51,35 +69,42 @@ final class ProjectBackup {
         Failure(String code) { super(code); this.code = code; }
     }
 
+    static final class Captured {
+        final String counter;
+        final List<String> files;
+        final List<String> metadata;
+
+        Captured(String counter, List<String> files, List<String> metadata) {
+            this.counter = counter;
+            this.files = files;
+            this.metadata = metadata;
+        }
+    }
+
+    /** A staged database waiting to be published, with the assets it needs. */
+    static final class Snapshot {
+        String projectId;
+        String counter;
+        String snapshotAt;
+        String name;
+        File staging;
+        File database;
+        File source;
+        List<String> files;
+        List<String> metadata;
+    }
+
     private final Context context;
     private final ContentResolver resolver;
     private final SharedPreferences prefs;
     private final Storage storage;
-    private volatile boolean closed;
-    private volatile boolean publishing;
-    private volatile Prepared prepared;
-
-    private static final class Prepared {
-        String projectId;
-        String counter;
-        String snapshotAt;
-        Uri directory;
-        File staging;
-        File database;
-        long destinationDevice;
-    }
+    private volatile boolean cancelled;
 
     ProjectBackup(Context context, Storage storage) {
         this.context = context.getApplicationContext();
         this.resolver = context.getContentResolver();
         this.prefs = context.getSharedPreferences("project-backup", Context.MODE_PRIVATE);
         this.storage = storage;
-        // A killed process may leave staged assets behind. An older activity's
-        // still-running worker owns the semaphore and must keep its staging.
-        if (PUBLICATION_LOCK.tryAcquire()) {
-            try { removeTree(new File(context.getNoBackupFilesDir(), "project-backup-staging")); }
-            finally { PUBLICATION_LOCK.release(); }
-        }
     }
 
     static void installTracking(SQLiteDatabase database) {
@@ -109,6 +134,24 @@ final class ProjectBackup {
         }
     }
 
+    /** Lists the assets a snapshot may reference. Call it while project writes are paused. */
+    static Captured capture(String counter, File projectRoot) throws Exception {
+        return new Captured(counter, assetNames(new File(projectRoot, "files")),
+            assetNames(new File(projectRoot, "file-metadata")));
+    }
+
+    private static List<String> assetNames(File directory) throws Exception {
+        List<String> names = new ArrayList<>();
+        for (File file : listFiles(directory)) {
+            if (file.getName().startsWith(PROJECT_WRITE_PREFIX)) continue;
+            // Project media are flat files. A folder here (from an imported
+            // project, for example) is not media and must not block backups.
+            if (!file.isFile()) continue;
+            names.add(file.getName());
+        }
+        return names;
+    }
+
     void markAssetChange(String projectId) throws Exception {
         String key = "assets:" + projectId;
         save(prefs.edit().putLong(key, Math.addExact(prefs.getLong(key, 0), 1)));
@@ -116,42 +159,68 @@ final class ProjectBackup {
 
     long assetRevision(String projectId) { return prefs.getLong("assets:" + projectId, 0); }
 
-    JSONObject status() throws Exception {
-        JSONObject status = new JSONObject();
-        String uri = prefs.getString("uri", "");
-        status.put("configured", !uri.isEmpty());
-        status.put("folder", new JSONObject().put("uri", uri)
-            .put("displayPath", uri.isEmpty() ? "" : displayFolderPath(backupRoot())));
-        status.put("lastAttemptAt", prefs.getLong("lastAttemptAt", 0));
-        status.put("running", prepared != null);
-        Map<String, Uri> folders = new LinkedHashMap<>();
-        if (!uri.isEmpty()) {
-            try { folders = children(backupRoot()); }
-            catch (Exception error) { } // Lost access is reported by the next pass.
+    boolean configured() { return !prefs.getString("uri", "").isEmpty(); }
+
+    String folderUri() { return prefs.getString("uri", ""); }
+
+    String folderDisplayPath() { return configured() ? displayFolderPath(backupRoot()) : ""; }
+
+    /** Last successful snapshot time per project, read from local checkpoints only. */
+    Map<String, String> savedSnapshots() {
+        Map<String, String> snapshots = new LinkedHashMap<>();
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            if (!entry.getKey().startsWith("success:")) continue;
+            try {
+                snapshots.put(entry.getKey().substring("success:".length()),
+                    new JSONObject(String.valueOf(entry.getValue())).optString("snapshotAt"));
+            } catch (org.json.JSONException ignored) { }
         }
-        JSONArray projects = storage.projects();
-        for (int i = 0; i < projects.length(); i++) {
-            JSONObject project = projects.getJSONObject(i);
-            String id = project.getString("id");
-            JSONObject saved = savedProject(id);
-            boolean pending = true;
-            try { pending = !storage.counter(id).equals(saved.optString("changeCounter")); }
-            catch (Exception error) { recordError(id, error); }
-            project.put("pending", pending);
-            project.put("snapshotAt", saved.optString("snapshotAt"));
-            project.put("error", prefs.getString("error:" + id, ""));
-            Uri backupFolder = null;
-            try { backupFolder = projectFolder(folders, id); }
-            catch (Exception error) { } // Lost access is reported by the next pass.
-            project.put("backupFolderPath", backupFolder == null ? "" : displayFolderPath(backupFolder));
+        return snapshots;
+    }
+
+    /** Last recorded backup error per project, read from local preferences only. */
+    Map<String, String> savedErrors() {
+        Map<String, String> errors = new LinkedHashMap<>();
+        for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
+            if (entry.getKey().startsWith("error:")) {
+                errors.put(entry.getKey().substring("error:".length()), String.valueOf(entry.getValue()));
+            }
         }
-        status.put("projects", projects);
-        return status;
+        return errors;
+    }
+
+    String savedSnapshotAt(String projectId) throws Exception { return savedProject(projectId).optString("snapshotAt"); }
+
+    String savedCounter(String projectId) throws Exception { return savedProject(projectId).optString("changeCounter"); }
+
+    String error(String projectId) { return prefs.getString("error:" + projectId, ""); }
+
+    /** Backup folders currently in the destination, keyed by name. */
+    Map<String, Uri> backupFolders() throws Exception {
+        return children(backupRoot());
+    }
+
+    String folderPath(Map<String, Uri> folders, String projectId) {
+        try {
+            Uri folder = projectFolder(folders, projectId);
+            return folder == null ? "" : displayFolderPath(folder);
+        } catch (Exception error) {
+            return ""; // Lost access is reported by the next pass.
+        }
+    }
+
+    // Before Android 10 the provider also exposes Documents as its own "home"
+    // root, so choosing Documents there gives ids like "home:<path>". Read
+    // those as the same place on primary storage; I/O keeps the granted ids.
+    static String primaryDocumentId(String documentId) {
+        if (!documentId.startsWith("home:")) return documentId;
+        String path = documentId.substring("home:".length());
+        return "primary:" + android.os.Environment.DIRECTORY_DOCUMENTS + (path.isEmpty() ? "" : "/" + path);
     }
 
     private static String displayFolderPath(Uri directory) {
         // Display only; all backup I/O continues through the granted SAF URI.
-        String documentId = DocumentsContract.getDocumentId(directory);
+        String documentId = primaryDocumentId(DocumentsContract.getDocumentId(directory));
         if (documentId.startsWith("primary:")) {
             return new File(android.os.Environment.getExternalStorageDirectory(),
                 documentId.substring("primary:".length())).getAbsolutePath();
@@ -160,188 +229,239 @@ final class ProjectBackup {
     }
 
     JSONObject configure(String value, boolean acceptExisting) throws Exception {
-        if (prepared != null || !PUBLICATION_LOCK.tryAcquire()) throw new Failure("busy");
-        try {
-            Uri tree = Uri.parse(value);
-            if (!"content".equals(tree.getScheme()) ||
-                !"com.android.externalstorage.documents".equals(tree.getAuthority())) {
-                throw new Failure("localFolder");
-            }
-            String treeId = DocumentsContract.getTreeDocumentId(tree);
-            String relativePath = treeId.substring(treeId.indexOf(':') + 1).toLowerCase(Locale.ROOT);
-            if (relativePath.equals("android") || relativePath.startsWith("android/")) throw new Failure("appFolder");
-            // The picker owns consent; never manufacture permission from a raw path.
-            boolean granted = resolver.getPersistedUriPermissions().stream().anyMatch(
-                permission -> permission.getUri().equals(tree) && permission.isReadPermission() && permission.isWritePermission());
-            if (!granted) throw new Failure("reconnect");
-            Uri selected = root(tree);
-            Uri destination = relativePath.equals("documents")
-                ? children(selected).get(BACKUP_FOLDER_NAME) : selected;
-            if (destination == null) {
-                probeSpace(selected);
-                destination = create(selected, BACKUP_FOLDER_NAME, true);
-            }
-            requireDirectory(destination);
-            boolean changed = prefs.getString("uri", "").isEmpty() ||
-                !DocumentsContract.getDocumentId(destination).equals(DocumentsContract.getDocumentId(backupRoot()));
-            if (changed && !acceptExisting && !children(destination).isEmpty()) {
-                return new JSONObject().put("needsExistingConfirmation", true);
-            }
-            probeSpace(destination);
-            SharedPreferences.Editor editor = prefs.edit();
-            if (changed) {
-                for (String key : prefs.getAll().keySet()) {
-                    if (key.startsWith("success:") || key.startsWith("folder:") || key.startsWith("error:")) editor.remove(key);
-                }
-            } else {
-                // The same folder may be selected through a different tree grant.
-                // Keep checkpoints; drop project-folder URIs saved by older versions.
-                for (String key : prefs.getAll().keySet()) {
-                    if (key.startsWith("folder:")) editor.remove(key);
-                }
-            }
-            save(editor.putString("uri", value).putString("directory", destination.toString())
-                .putString("name", name(destination))
-                .putLong("lastAttemptAt", 0));
-            return status();
-        } finally { PUBLICATION_LOCK.release(); }
-    }
-
-    JSONObject disable() throws Exception {
-        if (prepared != null || !PUBLICATION_LOCK.tryAcquire()) throw new Failure("busy");
-        try {
-            SharedPreferences.Editor editor = prefs.edit()
-                .remove("uri").remove("directory").remove("name").remove("lastAttemptAt");
+        Uri tree = Uri.parse(value);
+        if (!"content".equals(tree.getScheme()) ||
+            !"com.android.externalstorage.documents".equals(tree.getAuthority())) {
+            throw new Failure("localFolder");
+        }
+        String treeId = primaryDocumentId(DocumentsContract.getTreeDocumentId(tree));
+        String relativePath = treeId.substring(treeId.indexOf(':') + 1).toLowerCase(Locale.ROOT);
+        if (relativePath.equals("android") || relativePath.startsWith("android/")) throw new Failure("appFolder");
+        // The picker owns consent; never manufacture permission from a raw path.
+        boolean granted = resolver.getPersistedUriPermissions().stream().anyMatch(
+            permission -> permission.getUri().equals(tree) && permission.isReadPermission() && permission.isWritePermission());
+        if (!granted) throw new Failure("reconnect");
+        Uri selected = root(tree);
+        Map<String, Uri> selectedEntries = children(selected);
+        Uri destination = relativePath.equals("documents") ? selectedEntries.get(BACKUP_FOLDER_NAME) : selected;
+        if (destination == null) {
+            probeSpace(selected);
+            destination = create(selected, BACKUP_FOLDER_NAME, true, children(selected));
+        }
+        requireDirectory(destination);
+        boolean changed = prefs.getString("uri", "").isEmpty() ||
+            !DocumentsContract.getDocumentId(destination).equals(DocumentsContract.getDocumentId(backupRoot()));
+        if (changed && !acceptExisting && !children(destination).isEmpty()) {
+            return new JSONObject().put("needsExistingConfirmation", true);
+        }
+        probeSpace(destination);
+        SharedPreferences.Editor editor = prefs.edit();
+        if (changed) {
             for (String key : prefs.getAll().keySet()) {
                 if (key.startsWith("success:") || key.startsWith("folder:") || key.startsWith("error:")) editor.remove(key);
             }
-            // Forget the destination, never delete its files. Keep asset revisions
-            // and URI grants, which other import/export workflows may still use.
-            save(editor);
-            return status();
-        } finally { PUBLICATION_LOCK.release(); }
+        } else {
+            // The same folder may be selected through a different tree grant.
+            // Keep checkpoints; drop project-folder URIs saved by older versions.
+            for (String key : prefs.getAll().keySet()) {
+                if (key.startsWith("folder:") || key.startsWith("error:")) editor.remove(key);
+            }
+        }
+        save(editor.putString("uri", value).putString("directory", destination.toString())
+            .putString("name", name(destination)).remove("lastAttemptAt"));
+        return new JSONObject().put("configured", true).put("changed", changed);
     }
 
-    JSONObject beginPass(boolean manual) throws Exception {
-        long now = System.currentTimeMillis();
-        long previous = prefs.getLong("lastAttemptAt", 0);
-        boolean due = manual || previous == 0 || now < previous || now - previous >= INTERVAL_MS;
-        if (!due || prefs.getString("uri", "").isEmpty()) return new JSONObject().put("due", false);
-        save(prefs.edit().putLong("lastAttemptAt", now));
-        return new JSONObject().put("due", true);
+    void disable() throws Exception {
+        SharedPreferences.Editor editor = prefs.edit()
+            .remove("uri").remove("directory").remove("name").remove("lastAttemptAt");
+        for (String key : prefs.getAll().keySet()) {
+            if (key.startsWith("success:") || key.startsWith("folder:") || key.startsWith("error:")) editor.remove(key);
+        }
+        // Forget the destination, never delete its files. Keep asset revisions
+        // and URI grants, which other import/export workflows may still use.
+        save(editor);
     }
 
-    JSONObject pendingProjects() throws Exception {
-        JSONArray projects = storage.projects();
-        JSONArray pending = new JSONArray();
+    /**
+     * Returns the projects among {@code projectIds} (every project when null)
+     * whose backup is missing, damaged, failed, or older than their data.
+     */
+    List<String> pendingProjects(Collection<String> projectIds) throws Exception {
+        List<String> ids = new ArrayList<>();
+        if (projectIds == null) {
+            JSONArray projects = storage.projects();
+            for (int i = 0; i < projects.length(); i++) ids.add(projects.getJSONObject(i).getString("id"));
+        } else {
+            ids.addAll(projectIds);
+        }
+        List<String> pending = new ArrayList<>();
         Map<String, Uri> folders = null;
-        for (int i = 0; i < projects.length(); i++) {
-            String id = projects.getJSONObject(i).getString("id");
+        for (String id : ids) {
+            if (cancelled) break;
             try {
                 if (folders == null) folders = children(backupRoot());
                 JSONObject saved = savedProject(id);
-                Uri folder = projectFolder(folders, id);
-                boolean intact = false;
-                if (folder != null) {
-                    Map<String, Uri> entries = children(folder);
-                    intact = entries.containsKey("project.db") && entries.containsKey("files") &&
-                        entries.containsKey("file-metadata") && metadataMatches(entries.get("backup.json"), saved);
-                }
-                if (!intact && saved.has("databaseSha256")) save(prefs.edit().remove("success:" + id));
-                if (!intact || !storage.counter(id).equals(saved.optString("changeCounter")) ||
-                    !prefs.getString("error:" + id, "").isEmpty()) pending.put(id);
+                Map<String, Uri> entries = intact(folders, id, saved);
+                if (entries == null && saved.has("databaseSha256")) save(prefs.edit().remove("success:" + id));
+                boolean due = entries == null || !storage.counter(id).equals(saved.optString("changeCounter")) ||
+                    !prefs.getString("error:" + id, "").isEmpty();
+                // An unchanged project's backup can still lose files outside
+                // the app (a cleaner app, a person tidying the folder). The
+                // next backup copies whatever is gone again.
+                if (due || !complete(entries, storage.root(id), saved)) pending.add(id);
             } catch (Exception error) {
                 recordError(id, error);
-                pending.put(id);
+                pending.add(id);
             }
         }
-        return new JSONObject().put("projectIds", pending);
+        return pending;
     }
 
-    synchronized JSONObject prepare(String projectId) throws Exception {
-        if (closed || prepared != null || !PUBLICATION_LOCK.tryAcquire()) throw new Failure("busy");
-        Prepared next = new Prepared();
+    // A cheap check that the last published backup is still there: the folder,
+    // its database, asset folders, and metadata matching the saved checkpoint.
+    // Returns the backup folder's entries, or null when it is not intact.
+    private Map<String, Uri> intact(Map<String, Uri> folders, String projectId, JSONObject saved) throws Exception {
+        if (!saved.has("databaseSha256")) return null;
+        Uri folder = projectFolder(folders, projectId);
+        if (folder == null) return null;
+        Map<String, Uri> entries = children(folder);
+        boolean intact = entries.containsKey("project.db") && entries.containsKey("files") &&
+            entries.containsKey("file-metadata") && metadataMatches(entries.get("backup.json"), saved);
+        return intact ? entries : null;
+    }
+
+    // Whether an intact, current backup still holds every media file the
+    // project has and a database of the size that was published. Costs two
+    // folder listings, so it runs only for projects that look up to date.
+    private boolean complete(Map<String, Uri> entries, File projectRoot, JSONObject saved) throws Exception {
+        if (saved.has("databaseBytes") && documentSize(entries.get("project.db")) != saved.getLong("databaseBytes")) return false;
+        return children(entries.get("files")).keySet().containsAll(localAssetNames(new File(projectRoot, "files"))) &&
+            children(entries.get("file-metadata")).keySet().containsAll(localAssetNames(new File(projectRoot, "file-metadata")));
+    }
+
+    // Like assetNames, but never fails: the snapshot does the strict listing.
+    private static List<String> localAssetNames(File directory) {
+        List<String> names = new ArrayList<>();
+        File[] files = directory.listFiles();
+        if (files == null) return names;
+        for (File file : files) {
+            if (file.isFile() && !file.getName().startsWith(PROJECT_WRITE_PREFIX)) names.add(file.getName());
+        }
+        return names;
+    }
+
+    /** Stages the project database. Runs before any backup-folder work. */
+    Snapshot prepare(String projectId) throws Exception {
+        Snapshot next = new Snapshot();
+        next.projectId = projectId;
         try {
-            next.projectId = projectId;
-            next.directory = projectDirectory(projectId);
-            long[] destinationSpace = probeSpace(next.directory);
-            next.destinationDevice = destinationSpace[1];
-            File source = storage.root(projectId);
-            File sourceDb = new File(source, "project.db");
-            long databaseSize = sourceDb.length() + new File(source, "project.db-wal").length();
-            Map<String, List<File>> missingAssets = missingAssets(source, next.directory);
-            long missingBytes = 0;
-            for (List<File> files : missingAssets.values()) {
-                for (File file : files) missingBytes = Math.addExact(missingBytes, file.length());
-            }
-            long required = Math.addExact(Math.addExact(databaseSize, missingBytes), 16384);
-            Map<String, Uri> entries = children(next.directory);
-            long validationSize = Math.max(documentSize(entries.get("project.db")), documentSize(entries.get("project.db.previous")));
-            long localRequired = Math.addExact(Math.addExact(Math.addExact(databaseSize, validationSize), missingBytes), 16384);
-            // Emulated primary storage uses FUSE: its st_dev differs from /data
-            // even though both consume the same physical storage pool.
-            boolean primary = DocumentsContract.getTreeDocumentId(next.directory).startsWith("primary:");
-            if (primary || Os.stat(source.getAbsolutePath()).st_dev == next.destinationDevice) {
-                required = Math.addExact(required, localRequired);
-                localRequired = required;
-            }
-            requireSpace(destinationSpace[0], required);
-            requireSpace(new StatFs(context.getFilesDir().getAbsolutePath()).getAvailableBytes(), localRequired);
-            next.staging = new File(context.getNoBackupFilesDir(), "project-backup-staging");
+            checkActive();
+            next.source = storage.root(projectId);
+            next.name = storage.name(projectId);
+            long databaseSize = new File(next.source, "project.db").length() +
+                new File(next.source, "project.db-wal").length();
+            File stagingRoot = new File(context.getNoBackupFilesDir(), STAGING_DIRECTORY);
+            next.staging = new File(stagingRoot, projectId);
             removeTree(next.staging);
             if (!next.staging.mkdirs()) throw new Failure("failed");
+            requireSpace(new StatFs(next.staging.getAbsolutePath()).getAvailableBytes(), Math.addExact(databaseSize, 16384));
             next.database = new File(next.staging, "project.db");
-            storage.snapshot(projectId, next.staging);
-            checkActive();
-            // Still on the storage executor: no project writes/deletes can run
-            // between the database snapshot and these independent asset copies.
-            stageAssets(missingAssets, next.staging);
-            checkActive();
-            next.counter = storage.counter(projectId);
+            Captured captured = storage.snapshot(projectId, next.database);
+            next.counter = captured.counter;
+            next.files = captured.files;
+            next.metadata = captured.metadata;
             next.snapshotAt = timestamp();
             checkActive();
-            prepared = next;
-            return new JSONObject().put("projectId", projectId);
+            return next;
         } catch (Exception error) {
             if (next.staging != null) removeTree(next.staging);
-            PUBLICATION_LOCK.release();
             recordError(projectId, error);
             throw error;
         }
     }
 
-    // Runs on a separate executor: never block editor/database bridge calls on SAF copying.
-    JSONObject publish(String projectId) throws Exception {
-        Prepared current;
-        synchronized (this) {
-            current = prepared;
-            if (current == null || !current.projectId.equals(projectId) || publishing) throw new Failure("busy");
-            publishing = true;
-        }
+    /** Publishes a prepared snapshot. Copies assets straight from the project. */
+    JSONObject publish(Snapshot current, Progress progress) throws Exception {
+        String projectId = current.projectId;
         try {
             checkActive();
-            validateDatabase(current.database, projectId);
-            for (String directory : new String[] {"files", "file-metadata"}) {
-                copyAssets(new File(current.staging, directory), ensureDirectory(current.directory, directory));
+            // The copy of the project's own database failed its check: the
+            // project is damaged, not the backup folder. Keep the last backup.
+            try { validateDatabase(current.database, projectId); }
+            catch (android.database.sqlite.SQLiteException | org.json.JSONException error) { throw new Failure("projectDamaged"); }
+            catch (Failure error) { throw "invalidBackup".equals(error.code) ? new Failure("projectDamaged") : error; }
+            Uri directory = projectDirectory(projectId, current.name);
+            long[] destinationSpace = probeSpace(directory);
+            Map<String, Uri> entries = children(directory);
+            Map<String, Uri> existingFiles = entries.containsKey("files") ? children(entries.get("files")) : new LinkedHashMap<>();
+            Map<String, Uri> existingMetadata = entries.containsKey("file-metadata") ? children(entries.get("file-metadata")) : new LinkedHashMap<>();
+            List<File> missingFiles = missing(new File(current.source, "files"), current.files, existingFiles);
+            List<File> missingMetadata = missing(new File(current.source, "file-metadata"), current.metadata, existingMetadata);
+
+            long missingBytes = 0;
+            for (List<File> files : java.util.Arrays.asList(missingFiles, missingMetadata)) {
+                for (File file : files) missingBytes = Math.addExact(missingBytes, file.length());
+            }
+            long databaseSize = current.database.length();
+            long required = Math.addExact(Math.addExact(databaseSize, missingBytes), 16384);
+            long validationSize = Math.max(documentSize(entries.get("project.db")), documentSize(entries.get("project.db.previous")));
+            long localRequired = Math.addExact(validationSize, 16384);
+            // Emulated primary storage uses FUSE: its st_dev differs from /data
+            // even though both consume the same physical storage pool.
+            boolean primary = primaryDocumentId(DocumentsContract.getTreeDocumentId(directory)).startsWith("primary:");
+            if (primary || Os.stat(current.staging.getAbsolutePath()).st_dev == destinationSpace[1]) {
+                required = Math.addExact(required, localRequired);
+                localRequired = required;
+            }
+            requireSpace(destinationSpace[0], required);
+            requireSpace(new StatFs(current.staging.getAbsolutePath()).getAvailableBytes(), localRequired);
+            Uri filesDirectory = ensureDirectory(directory, "files", entries);
+            Uri metadataDirectory = ensureDirectory(directory, "file-metadata", entries);
+
+            // Each verified asset stays in the backup, so an interrupted pass
+            // resumes with only the remaining files. Assets are immutable once
+            // written, so copying them after the snapshot is consistent.
+            int total = missingFiles.size() + missingMetadata.size();
+            int done = 0;
+            progress.files(done, total);
+            for (File file : missingFiles) {
+                copyAsset(file, filesDirectory, existingFiles);
+                progress.files(++done, total);
+            }
+            for (File file : missingMetadata) {
+                copyAsset(file, metadataDirectory, existingMetadata);
+                progress.files(++done, total);
             }
             checkActive();
-            Map<String, Uri> entries = children(current.directory);
+
+            entries = children(directory);
             Uri canonical = entries.get("project.db");
             Uri previous = entries.get("project.db.previous");
-            boolean canonicalValid = validDocumentDatabase(canonical, projectId, current.staging);
-            boolean previousValid = validDocumentDatabase(previous, projectId, current.staging);
+            int canonicalState = documentDatabase(canonical, projectId, current.staging);
+            // Never replace another project's database.
+            if (canonicalState == DATABASE_OTHER_PROJECT) throw new Failure("invalidBackup");
+            boolean canonicalValid = canonicalState == DATABASE_VALID;
             // Repair only with a verified predecessor; do not delete an only-good copy.
-            if (!canonicalValid && previousValid) {
+            if (!canonicalValid && documentDatabase(previous, projectId, current.staging) == DATABASE_VALID) {
                 delete(canonical);
+                entries.remove("project.db");
                 canonical = rename(previous, "project.db");
+                entries.remove("project.db.previous");
+                entries.put("project.db", canonical);
                 previous = null;
                 canonicalValid = true;
-            } else if (canonical != null && !canonicalValid) {
-                throw new Failure("invalidBackup");
+            } else if (canonicalState == DATABASE_DAMAGED) {
+                // An unreadable copy must not stop every later backup. Keep it
+                // beside the new one, under a name restore never reads.
+                if (entries.containsKey("project.db.damaged")) delete(entries.remove("project.db.damaged"));
+                entries.put("project.db.damaged", rename(canonical, "project.db.damaged"));
+                entries.remove("project.db");
+                canonical = null;
             }
-            delete(entries.get("project.db.next"));
-            Uri incoming = create(current.directory, "project.db.next", false);
-            copyVerified(current.database, incoming, current.directory);
+            if (entries.containsKey("project.db.next")) delete(entries.remove("project.db.next"));
+            Uri incoming = create(directory, "project.db.next", false, entries);
+            String hash = copyVerified(current.database, incoming);
             checkActive();
             if (canonicalValid) {
                 delete(previous);
@@ -349,21 +469,20 @@ final class ProjectBackup {
             }
             checkActive();
             Uri published = rename(incoming, "project.db");
-            String hash = hash(current.database);
             if (!hash.equals(hash(published))) throw new Failure("verification");
             JSONObject metadata = new JSONObject().put("formatVersion", 1)
                 .put("projectId", projectId).put("changeCounter", current.counter)
                 .put("snapshotAt", current.snapshotAt).put("completedAt", timestamp())
-                .put("databaseBytes", current.database.length()).put("databaseSha256", hash);
+                .put("databaseBytes", databaseSize).put("databaseSha256", hash);
             File metadataFile = new File(current.staging, "backup.json");
             try (FileOutputStream out = new FileOutputStream(metadataFile)) {
                 out.write(metadata.toString(2).getBytes(StandardCharsets.UTF_8));
                 out.getFD().sync();
             }
-            entries = children(current.directory);
-            delete(entries.get("backup.json.next"));
-            Uri metadataNext = create(current.directory, "backup.json.next", false);
-            copyVerified(metadataFile, metadataNext, current.directory);
+            entries = children(directory);
+            if (entries.containsKey("backup.json.next")) delete(entries.remove("backup.json.next"));
+            Uri metadataNext = create(directory, "backup.json.next", false, entries);
+            copyVerified(metadataFile, metadataNext);
             checkActive();
             delete(entries.get("backup.json"));
             rename(metadataNext, "backup.json");
@@ -373,36 +492,62 @@ final class ProjectBackup {
             recordError(projectId, error);
             throw error;
         } finally {
-            synchronized (this) {
-                removeTree(current.staging);
-                prepared = null;
-                publishing = false;
-                PUBLICATION_LOCK.release();
-            }
+            release(current);
         }
     }
 
-    // Called on the main thread. Never wait for the prepare/publish monitor or I/O.
-    void close() {
-        closed = true;
+    void release(Snapshot snapshot) {
+        if (snapshot != null && snapshot.staging != null) removeTree(snapshot.staging);
     }
 
-    // Called by the storage worker after its queued operations have drained.
-    synchronized void cleanupAfterClose() {
-        if (!publishing && prepared != null) {
-            removeTree(prepared.staging);
-            prepared = null;
-            PUBLICATION_LOCK.release();
+    /** Removes staged databases left by a process that ended mid-backup. */
+    void removeStaleStaging() {
+        removeTree(new File(context.getNoBackupFilesDir(), STAGING_DIRECTORY));
+    }
+
+    /** Stops the running copy at the next chunk boundary. */
+    void cancel() { cancelled = true; }
+
+    void resume() { cancelled = false; }
+
+    boolean isCancelled() { return cancelled; }
+
+    private static List<File> missing(File sourceDirectory, List<String> names, Map<String, Uri> existing) {
+        List<File> files = new ArrayList<>();
+        for (String name : names) {
+            if (!existing.containsKey(name)) files.add(new File(sourceDirectory, name));
         }
+        return files;
+    }
+
+    private void copyAsset(File file, Uri directory, Map<String, Uri> existing) throws Exception {
+        checkActive();
+        // Deleted after the snapshot: that snapshot would reference a missing
+        // file, so stop and let the next pass take a fresh snapshot.
+        if (!file.isFile()) throw new Failure("changed");
+        String temporary = file.getName() + ".next";
+        if (existing.containsKey(temporary)) delete(existing.remove(temporary));
+        Uri incoming = create(directory, temporary, false, existing);
+        try {
+            copyVerified(file, incoming);
+        } catch (java.io.FileNotFoundException error) {
+            if (!file.exists()) throw new Failure("changed");
+            throw error;
+        }
+        existing.remove(temporary);
+        existing.put(file.getName(), rename(incoming, file.getName()));
     }
 
     // A project's backup folder is the one whose name ends in "-<projectId>".
     // The label before it is the project name at creation, so renames keep the
     // original folder, and stopping, re-enabling, or switching back finds it again.
-    private Uri projectDirectory(String projectId) throws Exception {
+    private Uri projectDirectory(String projectId, String name) throws Exception {
         Uri parent = backupRoot();
-        Uri folder = projectFolder(children(parent), projectId);
-        return folder != null ? folder : create(parent, backupFolderName(projectId), true);
+        Map<String, Uri> entries = children(parent);
+        Uri folder = projectFolder(entries, projectId);
+        // The id suffix keeps same-named projects distinct without rename logic.
+        String label = sanitizeFolderTitle(name, "Project") + "-" + projectId;
+        return folder != null ? folder : create(parent, label, true, entries);
     }
 
     // With several matching folders, use the one whose backup.json or project.db
@@ -414,7 +559,7 @@ final class ProjectBackup {
             if (entry.getKey().endsWith("-" + projectId) && isDirectory(entry.getValue())) names.add(entry.getKey());
         }
         if (names.size() < 2) return names.isEmpty() ? null : entries.get(names.get(0));
-        java.util.Collections.sort(names);
+        Collections.sort(names);
         String newest = names.get(0);
         long newestWrite = lastBackupWrite(entries.get(newest));
         for (String name : names.subList(1, names.size())) {
@@ -439,11 +584,6 @@ final class ProjectBackup {
             }
         }
         return latest;
-    }
-
-    private String backupFolderName(String projectId) throws Exception {
-        // The id suffix keeps same-named projects distinct without rename logic.
-        return sanitizeFolderTitle(storage.name(projectId), "Project") + "-" + projectId;
     }
 
     private boolean metadataMatches(Uri uri, JSONObject saved) throws Exception {
@@ -471,14 +611,41 @@ final class ProjectBackup {
         return new JSONObject(prefs.getString("success:" + id, "{}"));
     }
 
-    private void recordError(String id, Exception error) throws Exception {
-        save(prefs.edit().putString("error:" + id, errorCode(error)));
+    void recordError(String id, Exception error) throws Exception {
+        String code = failureCode(error);
+        // A cancelled pass or a closed activity is not a failure of the backup.
+        if ("interrupted".equals(code)) return;
+        save(prefs.edit().putString("error:" + id, code));
+    }
+
+    // The project was deleted in the app. Its backup folder is kept.
+    void forget(String projectId) throws Exception {
+        save(prefs.edit().remove("error:" + projectId).remove("success:" + projectId));
     }
 
     static String errorCode(Throwable error) {
         if (error instanceof Failure) return ((Failure) error).code;
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof android.system.ErrnoException &&
+                ((android.system.ErrnoException) cause).errno == android.system.OsConstants.ENOSPC) return "lowSpace";
+            String message = cause.getMessage();
+            if (message != null && (message.contains("ENOSPC") || message.contains("No space left"))) return "lowSpace";
+        }
         if (error instanceof SecurityException || error instanceof java.io.FileNotFoundException) return "reconnect";
         return "failed";
+    }
+
+    // With an SD card or USB drive removed, the provider rejects every
+    // document below the chosen folder with an IllegalArgumentException, which
+    // looks like any other failure. When the backup folder itself cannot be
+    // reached either, the storage is gone: ask the user to reconnect it.
+    String failureCode(Throwable error) {
+        String code = errorCode(error);
+        return "failed".equals(code) && configured() && !folderReachable() ? "reconnect" : code;
+    }
+
+    private boolean folderReachable() {
+        return exists(backupRoot());
     }
 
     private static void save(SharedPreferences.Editor editor) throws Exception {
@@ -486,7 +653,7 @@ final class ProjectBackup {
     }
 
     private void checkActive() throws Exception {
-        if (closed || Thread.currentThread().isInterrupted()) throw new Failure("interrupted");
+        if (cancelled || Thread.currentThread().isInterrupted()) throw new Failure("interrupted");
     }
 
     static void requireSpace(long available, long additional) throws Exception {
@@ -513,11 +680,13 @@ final class ProjectBackup {
         return resolvedTitle.substring(0, end).trim();
     }
 
+    // Checks create, write, read, rename, and delete with a disposable file,
+    // and measures the destination volume. Once per folder setup or publication.
     private long[] probeSpace(Uri directory) throws Exception {
         Uri probe = null;
         try {
             // Native-only, process-monotonic probe names; never overwrite a user's file.
-            probe = create(directory, ".routevn-space-" + System.nanoTime(), false);
+            probe = create(directory, ".routevn-space-" + System.nanoTime(), false, children(directory));
             long available;
             long device;
             try (ParcelFileDescriptor descriptor = resolver.openFileDescriptor(probe, "rw")) {
@@ -538,80 +707,25 @@ final class ProjectBackup {
         } finally { delete(probe); }
     }
 
-    private Map<String, List<File>> missingAssets(File source, Uri directory) throws Exception {
-        Map<String, List<File>> missing = new LinkedHashMap<>();
-        Map<String, Uri> rootEntries = children(directory);
-        for (String subdir : new String[] {"files", "file-metadata"}) {
-            Uri target = rootEntries.get(subdir);
-            Map<String, Uri> existing = target == null ? new LinkedHashMap<>() : children(target);
-            List<File> files = new ArrayList<>();
-            for (File file : listFiles(new File(source, subdir))) {
-                if (file.getName().startsWith(".routevn-project-write-")) continue;
-                if (!file.isFile()) throw new Failure("failed");
-                if (!existing.containsKey(file.getName())) files.add(file);
-            }
-            missing.put(subdir, files);
-        }
-        return missing;
-    }
-
-    private void stageAssets(Map<String, List<File>> missing, File staging) throws Exception {
-        // Android can deny hard links even within app-private storage. Copy only
-        // missing immutable assets, so dialogue edits do not recopy existing media.
-        for (Map.Entry<String, List<File>> entry : missing.entrySet()) {
-            File directory = new File(staging, entry.getKey());
-            if (!directory.mkdirs()) throw new Failure("failed");
-            for (File source : entry.getValue()) {
-                checkActive();
-                File target = new File(directory, source.getName());
-                requireSpace(new StatFs(staging.getAbsolutePath()).getAvailableBytes(), source.length());
-                try (InputStream in = new FileInputStream(source); FileOutputStream out = new FileOutputStream(target)) {
-                    byte[] buffer = new byte[128 * 1024];
-                    int count;
-                    while ((count = in.read(buffer)) != -1) {
-                        checkActive();
-                        requireSpace(new StatFs(staging.getAbsolutePath()).getAvailableBytes(), count);
-                        out.write(buffer, 0, count);
-                    }
-                    out.getFD().sync();
-                }
-                if (!hash(source).equals(hash(target))) throw new Failure("verification");
-            }
-        }
-    }
-
-    private void copyAssets(File source, Uri directory) throws Exception {
-        Map<String, Uri> existing = children(directory);
-        for (File file : listFiles(source)) {
-            checkActive();
-            Uri found = existing.get(file.getName());
-            if (found != null) {
-                // Asset IDs are immutable at the native write boundary. Do not reread
-                // gigabytes of unchanged media for a dialogue-only database change.
-                continue;
-            }
-            String temporary = file.getName() + ".next";
-            delete(existing.get(temporary));
-            Uri incoming = create(directory, temporary, false);
-            copyVerified(file, incoming, directory);
-            rename(incoming, file.getName());
-        }
-    }
-
-    private void copyVerified(File source, Uri destination, Uri directory) throws Exception {
-        requireSpace(probeSpace(directory)[0], source.length());
-        try (InputStream in = new FileInputStream(source);
+    // Copies through a temporary document, hashing the source as it streams,
+    // then reads the copy back to verify it. Returns the verified hash.
+    private String copyVerified(File source, Uri destination) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream in = new DigestInputStream(new FileInputStream(source), digest);
              ParcelFileDescriptor descriptor = resolver.openFileDescriptor(destination, "wt")) {
             if (descriptor == null) throw new Failure("failed");
             try (OutputStream out = new FileOutputStream(descriptor.getFileDescriptor())) {
+                long length = source.length();
+                requireSpace(available(descriptor), length);
                 byte[] buffer = new byte[128 * 1024];
                 int count;
                 long copied = 0;
+                long nextCheck = 8L * 1024 * 1024;
                 while ((count = in.read(buffer)) != -1) {
                     checkActive();
-                    if (copied % (8 * 1024 * 1024) < buffer.length) {
-                        StructStatVfs stat = Os.fstatvfs(descriptor.getFileDescriptor());
-                        requireSpace(Math.multiplyExact(stat.f_bavail, stat.f_frsize), source.length() - copied);
+                    if (copied >= nextCheck) {
+                        requireSpace(available(descriptor), Math.max(0, length - copied));
+                        nextCheck = copied + 8L * 1024 * 1024;
                     }
                     out.write(buffer, 0, count);
                     copied += count;
@@ -620,21 +734,52 @@ final class ProjectBackup {
                 Os.fsync(descriptor.getFileDescriptor());
             }
         }
-        if (!hash(source).equals(hash(destination))) throw new Failure("verification");
+        String expected = hex(digest.digest());
+        if (!expected.equals(hash(destination))) throw new Failure("verification");
+        return expected;
     }
 
-    private boolean validDocumentDatabase(Uri uri, String projectId, File staging) throws Exception {
-        if (uri == null) return false;
+    private static long available(ParcelFileDescriptor descriptor) throws Exception {
+        try {
+            StructStatVfs stats = Os.fstatvfs(descriptor.getFileDescriptor());
+            return Math.multiplyExact(stats.f_bavail, stats.f_frsize);
+        } catch (android.system.ErrnoException | ArithmeticException error) {
+            throw new Failure("unknownSpace");
+        }
+    }
+
+    private static final int DATABASE_MISSING = 0;
+    private static final int DATABASE_VALID = 1;
+    private static final int DATABASE_DAMAGED = 2;
+    private static final int DATABASE_OTHER_PROJECT = 3;
+
+    private int documentDatabase(Uri uri, String projectId, File staging) throws Exception {
+        if (uri == null) return DATABASE_MISSING;
         File candidate = new File(staging, "validate.db");
         try {
             // Read/capacity failures must abort, not turn a good backup into a
             // supposedly corrupt candidate that could be replaced.
             copyToFile(uri, candidate);
-            try { validateDatabase(candidate, projectId); return true; }
-            catch (android.database.sqlite.SQLiteException | org.json.JSONException error) { return false; }
-            catch (Failure error) { if ("invalidBackup".equals(error.code)) return false; throw error; }
+            try { validateDatabase(candidate, projectId); return DATABASE_VALID; }
+            catch (android.database.sqlite.SQLiteException | org.json.JSONException error) { return DATABASE_DAMAGED; }
+            catch (Failure error) {
+                if (!"invalidBackup".equals(error.code)) throw error;
+                return otherProjectDatabase(candidate, projectId) ? DATABASE_OTHER_PROJECT : DATABASE_DAMAGED;
+            }
         } finally {
             for (String suffix : new String[] {"", "-wal", "-shm", "-journal"}) removeTree(new File(candidate.getPath() + suffix));
+        }
+    }
+
+    // Whether a database that failed validation still names another project.
+    private static boolean otherProjectDatabase(File file, String projectId) {
+        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(file.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+             Cursor info = db.rawQuery("SELECT value FROM app_state WHERE key='projectInfo'", null)) {
+            if (!info.moveToFirst()) return false;
+            String id = new JSONObject(info.getString(0)).optString("id");
+            return !id.isEmpty() && !id.equals(projectId);
+        } catch (Exception error) {
+            return false;
         }
     }
 
@@ -693,8 +838,12 @@ final class ProjectBackup {
             checkActive();
             digest.update(buffer, 0, count);
         }
+        return hex(digest.digest());
+    }
+
+    private static String hex(byte[] bytes) {
         StringBuilder value = new StringBuilder();
-        for (byte b : digest.digest()) value.append(String.format(Locale.ROOT, "%02x", b & 255));
+        for (byte b : bytes) value.append(String.format(Locale.ROOT, "%02x", b & 255));
         return value.toString();
     }
 
@@ -761,13 +910,15 @@ final class ProjectBackup {
         }
     }
 
-    private Uri ensureDirectory(Uri parent, String name) throws Exception {
-        Uri existing = children(parent).get(name);
-        return existing == null ? create(parent, name, true) : existing;
+    private Uri ensureDirectory(Uri parent, String name, Map<String, Uri> entries) throws Exception {
+        Uri existing = entries.get(name);
+        return existing == null ? create(parent, name, true, entries) : existing;
     }
 
-    private Uri create(Uri parent, String name, boolean directory) throws Exception {
-        if (children(parent).containsKey(name)) throw new Failure("nameConflict");
+    // `known` is the parent's current listing; it is updated with the new entry
+    // so a folder is listed once per publication rather than once per file.
+    private Uri create(Uri parent, String name, boolean directory, Map<String, Uri> known) throws Exception {
+        if (known.containsKey(name)) throw new Failure("nameConflict");
         Uri result = DocumentsContract.createDocument(resolver, parent,
             directory ? DocumentsContract.Document.MIME_TYPE_DIR : "application/octet-stream", name);
         if (result == null) throw new Failure("nameConflict");
@@ -775,13 +926,45 @@ final class ProjectBackup {
             delete(result); // The provider rewrote the name; do not leak the document.
             throw new Failure("nameConflict");
         }
+        known.put(name, result);
         return result;
     }
 
+    // Android 9's storage provider renames the document, then fails to find it
+    // under its old name and throws FileNotFoundException. Accept that rename
+    // when the old document is gone and the new one is in its place. Check
+    // first that the name was free: a taken name makes the provider pick
+    // "name (1)", and the file that already had the name is not the renamed one.
     private Uri rename(Uri uri, String name) throws Exception {
-        Uri result = DocumentsContract.renameDocument(resolver, uri, name);
+        boolean beforeAndroid10 = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q;
+        Uri renamed = sibling(uri, name);
+        boolean nameFree = beforeAndroid10 && !exists(renamed);
+        Uri result;
+        try {
+            result = DocumentsContract.renameDocument(resolver, uri, name);
+        } catch (java.io.FileNotFoundException error) {
+            // Both gone, or the old one still there: a real failure.
+            if (!beforeAndroid10 || exists(uri) || !exists(renamed)) throw error;
+            if (!nameFree) throw new Failure("nameConflict");
+            result = renamed;
+        }
         if (result == null || !name.equals(name(result))) throw new Failure("nameConflict");
         return result;
+    }
+
+    // This provider's document ids are paths: a sibling keeps the parent path.
+    private static Uri sibling(Uri uri, String name) {
+        String id = DocumentsContract.getDocumentId(uri);
+        int end = Math.max(id.lastIndexOf('/'), id.indexOf(':'));
+        return DocumentsContract.buildDocumentUriUsingTree(uri, id.substring(0, end + 1) + name);
+    }
+
+    private boolean exists(Uri uri) {
+        try (Cursor cursor = resolver.query(uri, new String[] {DocumentsContract.Document.COLUMN_DOCUMENT_ID}, null, null, null)) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (RuntimeException error) {
+            return false;
+        }
     }
 
     private void delete(Uri uri) throws Exception {

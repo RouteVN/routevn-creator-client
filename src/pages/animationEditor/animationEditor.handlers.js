@@ -1284,8 +1284,8 @@ export const handleBeforeMount = (deps) => {
     render,
   });
   // Leaving saves waiting changes, then has the thumbnail brought up to date
-  // in the background, so leaving waits only for the save. A backup, the app
-  // going to the background, or quitting only saves.
+  // in the background, so leaving waits only for the save. The app going to
+  // the background or quitting only saves.
   const unregisterBeforeNavigation = appService.registerBeforeNavigation(
     async ({ reason } = {}) => {
       const autosaveAttempt = await flushQueuedAutosave({

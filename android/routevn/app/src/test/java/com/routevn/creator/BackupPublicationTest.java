@@ -3,165 +3,71 @@ package com.routevn.creator;
 import static org.junit.Assert.*;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ProviderInfo;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.provider.DocumentsContract;
 import java.io.File;
 import java.nio.file.Files;
-import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Before;
-import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
-import org.robolectric.shadows.ShadowContentResolver;
-import org.robolectric.shadows.ShadowStatFs;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 33, manifest = Config.NONE, shadows = BackupPublicationTest.CapacityShadow.class)
-public class BackupPublicationTest {
-    @org.robolectric.annotation.Implements(android.system.Os.class)
-    public static class CapacityShadow {
-        static long available = 10_000_000_000L;
-        @org.robolectric.annotation.Implementation
-        protected static int write(java.io.FileDescriptor fd, byte[] bytes, int offset, int count) throws java.io.IOException {
-            new java.io.FileOutputStream(fd).write(bytes, offset, count);
-            return count;
-        }
-        @org.robolectric.annotation.Implementation
-        protected static void fsync(java.io.FileDescriptor fd) throws java.io.IOException { fd.sync(); }
-        @org.robolectric.annotation.Implementation
-        protected static android.system.StructStatVfs fstatvfs(java.io.FileDescriptor fd) {
-            return new android.system.StructStatVfs(4096, 4096, available / 4096, available / 4096, available / 4096, 100000, 90000, 90000, 1, 0, 255);
-        }
-    }
-
-    Context context;
-    File source;
-    File destination;
-    BackupDocumentsProvider provider;
-    ProjectBackup backup;
-    ProjectBackup.Storage storage;
-    String revision = "1:0";
-    String projectName = "Project One";
-    String revokedTreeId;
-
-    private void requireAccessibleTree(Uri uri) {
-        if (revokedTreeId != null && DocumentsContract.isTreeUri(uri) &&
-            revokedTreeId.equals(DocumentsContract.getTreeDocumentId(uri))) {
-            throw new SecurityException("Tree grant revoked");
-        }
-    }
-
-    @Before public void setUp() throws Exception {
-        CapacityShadow.available = 10_000_000_000L;
-        context = RuntimeEnvironment.getApplication();
-        source = new File(context.getFilesDir(), "source"); source.mkdirs();
-        new File(source, "files").mkdirs(); new File(source, "file-metadata").mkdirs();
-        Files.write(new File(source, "files/asset").toPath(), new byte[] {1,2,3});
-        Files.writeString(new File(source, "file-metadata/asset.mime").toPath(), "image/png");
-        try (SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(new File(source, "project.db"), null)) {
-            db.execSQL("CREATE TABLE app_state (key TEXT PRIMARY KEY, value TEXT)");
-            db.execSQL("INSERT INTO app_state VALUES ('projectInfo', '{\"id\":\"one\",\"name\":\"Project One\"}')");
-        }
-        destination = new File(context.getFilesDir(), "destination"); destination.mkdirs();
-        provider = new BackupDocumentsProvider(); provider.root = destination;
-        ProviderInfo info = new ProviderInfo(); info.authority = BackupDocumentsProvider.AUTHORITY;
-        info.exported = true; info.grantUriPermissions = true;
-        info.readPermission = "android.permission.MANAGE_DOCUMENTS";
-        info.writePermission = "android.permission.MANAGE_DOCUMENTS";
-        provider.attachInfo(context, info);
-        // Robolectric's legacy query overload does not route to the Bundle
-        // overload used by modern DocumentsProvider. Adapt only the test resolver.
-        android.content.ContentProvider adapter = new android.content.ContentProvider() {
-            public boolean onCreate() { return true; }
-            public android.database.Cursor query(Uri uri, String[] projection, String selection, String[] args, String sort) {
-                requireAccessibleTree(uri);
-                return provider.query(uri, projection, (android.os.Bundle) null, null);
-            }
-            public String getType(Uri uri) { return provider.getType(uri); }
-            public Uri insert(Uri uri, android.content.ContentValues values) { throw new UnsupportedOperationException(); }
-            public int update(Uri uri, android.content.ContentValues values, String where, String[] args) { throw new UnsupportedOperationException(); }
-            public int delete(Uri uri, String where, String[] args) { throw new UnsupportedOperationException(); }
-            public android.os.Bundle call(String method, String arg, android.os.Bundle extras) { return provider.call(method, arg, extras); }
-            public android.os.ParcelFileDescriptor openFile(Uri uri, String mode) throws java.io.FileNotFoundException {
-                requireAccessibleTree(uri);
-                return provider.openFile(uri, mode);
-            }
-            public android.content.res.AssetFileDescriptor openAssetFile(Uri uri, String mode) throws java.io.FileNotFoundException {
-                return new android.content.res.AssetFileDescriptor(openFile(uri, mode), 0, -1);
-            }
-        };
-        adapter.attachInfo(context, info);
-        ShadowContentResolver.registerProviderInternal(info.authority, adapter);
-        Uri tree = DocumentsContract.buildTreeDocumentUri(info.authority, "primary:Documents");
-        context.getContentResolver().takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        context.getSharedPreferences("project-backup", 0).edit().clear().putString("uri", tree.toString()).commit();
-        ShadowStatFs.registerStats(context.getFilesDir().getAbsolutePath(), 10000000, 9000000, 9000000);
-        ShadowStatFs.registerStats(context.getNoBackupFilesDir().getAbsolutePath(), 10000000, 9000000, 9000000);
-        storage = new ProjectBackup.Storage() {
-            public JSONArray projects() throws Exception { return new JSONArray().put(new JSONObject().put("id", "one").put("name", projectName)); }
-            public File root(String id) { return source; }
-            public String name(String id) { return projectName; }
-            public String counter(String id) { return revision; }
-            public void snapshot(String id, File target) throws Exception {
-                Files.copy(new File(source, "project.db").toPath(), new File(target, "project.db").toPath());
-            }
-        };
-        backup = new ProjectBackup(context, storage);
-    }
-    @After public void tearDown() { backup.close(); backup.cleanupAfterClose(); }
-    private File output(String name) { return new File(destination, "Project One-one/" + name); }
-    private void publish() throws Exception { backup.prepare("one"); backup.publish("one"); }
+@Config(sdk = 33, manifest = Config.NONE, shadows = BackupFixture.CapacityShadow.class)
+public class BackupPublicationTest extends BackupFixture {
     @Test public void disablingPersistsAndPreservesExistingBackupFiles() throws Exception {
         publish();
         String databaseHash = backup.hash(output("project.db"));
         String metadata = Files.readString(output("backup.json").toPath());
         backup.markAssetChange("one");
-        JSONObject disabled = backup.disable();
-        assertFalse(disabled.getBoolean("configured"));
-        assertEquals("", disabled.getJSONArray("projects").getJSONObject(0).getString("snapshotAt"));
-        assertEquals("", disabled.getJSONArray("projects").getJSONObject(0).getString("backupFolderPath"));
+        backup.disable();
+        assertFalse(backup.configured());
+        assertEquals("", project().getString("snapshotAt"));
+        assertEquals("", project().getString("backupFolderPath"));
         assertEquals(1L, backup.assetRevision("one"));
-        backup.close(); backup.cleanupAfterClose();
         backup = new ProjectBackup(context, storage);
-        assertFalse(backup.status().getBoolean("configured"));
-        assertFalse(backup.beginPass(false).getBoolean("due"));
-        assertFalse(backup.beginPass(true).getBoolean("due"));
+        assertFalse(backup.configured());
         assertEquals(databaseHash, backup.hash(output("project.db")));
         assertEquals(metadata, Files.readString(output("backup.json").toPath()));
         assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
         assertEquals("image/png", Files.readString(output("file-metadata/asset.mime").toPath()));
         new File(destination, "Enabled Again").mkdirs();
         assertTrue(backup.configure(selectFolder("/Enabled Again"), false).getBoolean("configured"));
-        assertTrue(backup.beginPass(false).getBoolean("due"));
+        assertTrue(backup.configured());
     }
 
-    @Test public void disablingCannotDiscardAnUnpublishedSnapshot() throws Exception {
-        backup.prepare("one");
-        try { backup.disable(); fail("disabled while prepared"); }
-        catch (ProjectBackup.Failure error) { assertEquals("busy", error.code); }
-        assertTrue(backup.status().getBoolean("configured"));
-        backup.publish("one");
-        assertFalse(backup.disable().getBoolean("configured"));
-        ProjectBackup.validateDatabase(output("project.db"), "one");
-    }
-    private String selectFolder(String suffix) {
-        Uri tree = DocumentsContract.buildTreeDocumentUri(BackupDocumentsProvider.AUTHORITY, "primary:Documents" + suffix);
-        context.getContentResolver().takePersistableUriPermission(tree,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        return tree.toString();
+    @Test public void cancellingDuringMediaCopyKeepsTheLastBackupAndRecordsNoError() throws Exception {
+        publish();
+        String hash = backup.hash(output("project.db"));
+        revision = "2:1";
+        for (int i = 0; i < 3; i++) Files.writeString(new File(source, "files/new-" + i).toPath(), "media " + i);
+        ProjectBackup.Snapshot snapshot = backup.prepare("one");
+        try {
+            backup.publish(snapshot, (done, total) -> { if (done == 1) backup.cancel(); });
+            fail("cancel ignored");
+        } catch (ProjectBackup.Failure error) { assertEquals("interrupted", error.code); }
+        backup.resume();
+        assertEquals(hash, backup.hash(output("project.db")));
+        assertEquals("", backup.error("one"));
+        assertFalse(snapshot.staging.exists());
+        // Finished media stays; the next pass copies only what is left.
+        java.util.Set<String> kept = new java.util.HashSet<>(java.util.Arrays.asList(output("files").list()));
+        assertTrue(kept.size() < 4);
+        provider.created.clear();
+        publish();
+        for (int i = 0; i < 3; i++) {
+            assertEquals(!kept.contains("new-" + i), provider.created.contains("new-" + i + ".next"));
+            assertEquals("media " + i, Files.readString(output("files/new-" + i).toPath()));
+        }
     }
     @Test public void createsBackupSubfolderWithoutTreatingParentFilesAsOldBackups() throws Exception {
         Files.writeString(new File(destination, "unrelated.txt").toPath(), "keep");
         JSONObject result = backup.configure(selectFolder(""), false);
         assertTrue(result.getBoolean("configured"));
         assertFalse(result.optBoolean("needsExistingConfirmation"));
-        assertTrue(result.getJSONObject("folder").getString("displayPath").endsWith("/RouteVN Backups"));
+        assertTrue(backup.folderDisplayPath().endsWith("/RouteVN Backups"));
         publish();
         ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project One-one/project.db"), "one");
         assertFalse(output("project.db").exists());
@@ -173,7 +79,7 @@ public class BackupPublicationTest {
         JSONObject result = backup.configure(selectFolder("/RouteVN Backups"), false);
         assertFalse(result.optBoolean("needsExistingConfirmation"));
         assertFalse(new File(destination, "RouteVN Backups/RouteVN Backups").exists());
-        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(0, pendingCount());
     }
     @Test public void reconnectingWithDirectGrantKeepsCheckpointsAndFolder() throws Exception {
         String originalTree = selectFolder("");
@@ -184,9 +90,9 @@ public class BackupPublicationTest {
         context.getContentResolver().releasePersistableUriPermission(Uri.parse(originalTree),
             Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         revokedTreeId = "primary:Documents";
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(1, pendingCount());
         assertEquals("reconnect", preferences.getString("error:one", ""));
-        assertEquals("", backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath"));
+        assertEquals("", project().getString("backupFolderPath"));
 
         // Older versions saved per-project folder URIs; reconnecting drops them.
         preferences.edit().putString("folder:one", "content://stale").commit();
@@ -195,72 +101,21 @@ public class BackupPublicationTest {
         assertFalse(configured.optBoolean("needsExistingConfirmation"));
         assertFalse(preferences.contains("folder:one"));
         assertEquals(checkpoint, preferences.getString("success:one", ""));
-        assertTrue(configured.getJSONArray("projects").getJSONObject(0).getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
-        backup.close(); backup.cleanupAfterClose();
+        assertTrue(project().getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
         backup = new ProjectBackup(context, storage);
         revision = "2:0";
         publish();
-        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(0, pendingCount());
         assertEquals("", preferences.getString("error:one", ""));
         assertEquals(1, new File(destination, "RouteVN Backups").list().length);
         assertFalse(new File(destination, "RouteVN Backups/RouteVN Backups").exists());
     }
 
-    @Test public void closeReturnsWhilePreparationIsBlockedAndCleanupReleasesItsLock() throws Exception {
-        publish();
-        String previousHash = backup.hash(output("project.db"));
-        backup.close(); backup.cleanupAfterClose();
-        java.util.concurrent.CountDownLatch snapshotStarted = new java.util.concurrent.CountDownLatch(1);
-        java.util.concurrent.CountDownLatch releaseSnapshot = new java.util.concurrent.CountDownLatch(1);
-        ProjectBackup.Storage slowStorage = new ProjectBackup.Storage() {
-            public JSONArray projects() throws Exception { return storage.projects(); }
-            public File root(String id) throws Exception { return storage.root(id); }
-            public String name(String id) throws Exception { return storage.name(id); }
-            public String counter(String id) throws Exception { return storage.counter(id); }
-            public void snapshot(String id, File target) throws Exception {
-                storage.snapshot(id, target);
-                snapshotStarted.countDown();
-                assertTrue(releaseSnapshot.await(5, java.util.concurrent.TimeUnit.SECONDS));
-            }
-        };
-        backup = new ProjectBackup(context, slowStorage);
-        ProjectBackup closing = backup;
-        java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
-        java.util.concurrent.ExecutorService lifecycle = java.util.concurrent.Executors.newSingleThreadExecutor();
-        try {
-            java.util.concurrent.Future<String> preparation = worker.submit(() -> {
-                try { closing.prepare("one"); return "unexpected success"; }
-                catch (ProjectBackup.Failure error) { return error.code; }
-            });
-            assertTrue(snapshotStarted.await(3, java.util.concurrent.TimeUnit.SECONDS));
-            // Simulates onDestroy while prepare holds its monitor and staged files.
-            lifecycle.submit(() -> closing.close()).get(1, java.util.concurrent.TimeUnit.SECONDS);
-            java.util.concurrent.Future<?> cleanup = worker.submit(() -> closing.cleanupAfterClose());
-            assertFalse(cleanup.isDone());
-            assertTrue(new File(context.getNoBackupFilesDir(), "project-backup-staging/project.db").exists());
-            releaseSnapshot.countDown();
-            assertEquals("interrupted", preparation.get(3, java.util.concurrent.TimeUnit.SECONDS));
-            cleanup.get(3, java.util.concurrent.TimeUnit.SECONDS);
-            assertFalse(new File(context.getNoBackupFilesDir(), "project-backup-staging").exists());
-            backup = new ProjectBackup(context, storage);
-            assertEquals(previousHash, backup.hash(output("project.db")));
-            publish(); // The previous Activity must not strand or over-release the lock.
-            assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
-        } finally {
-            releaseSnapshot.countDown();
-            worker.shutdown();
-            lifecycle.shutdown();
-            assertTrue(worker.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS));
-            assertTrue(lifecycle.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS));
-            closing.cleanupAfterClose();
-        }
-    }
-
-    @Test public void closeCancelsHashingAtTheNextChunk() throws Exception {
+    @Test public void cancelStopsHashingAtTheNextChunk() throws Exception {
         java.io.InputStream input = new java.io.ByteArrayInputStream(new byte[256 * 1024]) {
             @Override public synchronized int read(byte[] bytes, int offset, int length) {
                 int count = super.read(bytes, offset, length);
-                backup.close();
+                backup.cancel();
                 return count;
             }
         };
@@ -273,13 +128,12 @@ public class BackupPublicationTest {
         }
     }
 
-    @Test public void cleanupReleasesPreparedSnapshotWhenPublicationNeverStarts() throws Exception {
-        backup.prepare("one");
-        backup.close();
-        backup.cleanupAfterClose();
-        backup.cleanupAfterClose(); // Idempotent; do not over-release the semaphore.
-        assertFalse(new File(context.getNoBackupFilesDir(), "project-backup-staging").exists());
+    @Test public void staleStagingFromAnEndedProcessIsRemoved() throws Exception {
+        ProjectBackup.Snapshot snapshot = backup.prepare("one");
+        assertTrue(snapshot.database.exists());
         backup = new ProjectBackup(context, storage);
+        backup.removeStaleStaging();
+        assertFalse(new File(context.getNoBackupFilesDir(), ProjectBackup.STAGING_DIRECTORY).exists());
         publish();
         ProjectBackup.validateDatabase(output("project.db"), "one");
     }
@@ -300,7 +154,7 @@ public class BackupPublicationTest {
         catch (ProjectBackup.Failure error) { assertEquals("nameConflict", error.code); }
         assertFalse(context.getSharedPreferences("project-backup", 0).contains("directory"));
         assertEquals("keep", Files.readString(conflict.toPath()));
-        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(0, pendingCount());
     }
     @Test public void changingDestinationLeavesOldBackupsUntouchedAndStartsFresh() throws Exception {
         publish();
@@ -308,7 +162,7 @@ public class BackupPublicationTest {
         String previousMetadata = Files.readString(output("backup.json").toPath());
         File selected = new File(destination, "new-location"); selected.mkdir();
         backup.configure(selectFolder("/new-location"), false);
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(1, pendingCount());
         publish();
         ProjectBackup.validateDatabase(new File(selected, "Project One-one/project.db"), "one");
         assertFalse(new File(selected, "RouteVN Backups").exists());
@@ -322,13 +176,13 @@ public class BackupPublicationTest {
         backup.disable();
         assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
         // Re-enabling never trusts the old checkpoint; the next pass re-verifies it.
-        JSONObject project = backup.status().getJSONArray("projects").getJSONObject(0);
+        JSONObject project = project();
         assertEquals("", project.getString("snapshotAt"));
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(1, pendingCount());
         publish();
-        project = backup.status().getJSONArray("projects").getJSONObject(0);
+        project = project();
         assertTrue(project.getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
-        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(0, pendingCount());
         ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project One-one/project.db"), "one");
         assertEquals(1, new File(destination, "RouteVN Backups").list().length);
     }
@@ -337,13 +191,13 @@ public class BackupPublicationTest {
         publish();
         File secondLocation = new File(destination, "new-location"); secondLocation.mkdirs();
         backup.configure(selectFolder("/new-location"), false);
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(1, pendingCount());
         publish();
         ProjectBackup.validateDatabase(new File(secondLocation, "Project One-one/project.db"), "one");
         backup.configure(selectFolder(""), true);
         revision = "2:0";
         publish();
-        assertTrue(backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
+        assertTrue(project().getString("backupFolderPath").endsWith("RouteVN Backups/Project One-one"));
         assertEquals(1, new File(destination, "RouteVN Backups").list().length);
         assertEquals("2:0", new JSONObject(Files.readString(new File(destination, "RouteVN Backups/Project One-one/backup.json").toPath())).getString("changeCounter"));
         assertEquals("1:0", new JSONObject(Files.readString(new File(secondLocation, "Project One-one/backup.json").toPath())).getString("changeCounter"));
@@ -355,13 +209,65 @@ public class BackupPublicationTest {
         backup.disable();
         Files.writeString(new File(folder, "project.db").toPath(), "truncated");
         backup.configure(selectFolder(""), true);
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
-        try { publish(); fail("trusted a corrupt backup"); }
-        catch (ProjectBackup.Failure error) { assertEquals("invalidBackup", error.code); }
-        JSONObject project = backup.status().getJSONArray("projects").getJSONObject(0);
-        assertEquals("", project.getString("snapshotAt"));
-        assertTrue(project.getBoolean("pending"));
-        assertEquals("truncated", Files.readString(new File(folder, "project.db").toPath()));
+        assertEquals(1, pendingCount());
+        assertEquals("", project().getString("snapshotAt"));
+        // The damaged copy is set aside, never trusted and never blocking.
+        publish();
+        ProjectBackup.validateDatabase(new File(folder, "project.db"), "one");
+        assertEquals("truncated", Files.readString(new File(folder, "project.db.damaged").toPath()));
+        assertNotEquals("", project().getString("snapshotAt"));
+        assertEquals(0, pendingCount());
+    }
+    @Test public void aDamagedBackupDatabaseIsReplacedAndKeptAside() throws Exception {
+        publish();
+        Files.writeString(output("project.db").toPath(), "not a database");
+        Files.writeString(output("project.db.damaged").toPath(), "older damage");
+        revision = "2:0";
+        publish();
+        ProjectBackup.validateDatabase(output("project.db"), "one");
+        assertEquals("not a database", Files.readString(output("project.db.damaged").toPath()));
+        assertEquals("", backup.error("one"));
+    }
+    @Test public void mediaDeletedFromAnUnchangedBackupIsCopiedAgain() throws Exception {
+        publish();
+        assertEquals(0, pendingCount());
+        assertTrue(output("files/asset").delete());
+        assertEquals(1, pendingCount());
+        publish();
+        assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
+        assertTrue(output("file-metadata/asset.mime").delete());
+        assertEquals(1, pendingCount());
+        publish();
+        assertEquals("image/png", Files.readString(output("file-metadata/asset.mime").toPath()));
+        assertEquals(0, pendingCount());
+    }
+    @Test public void aDamagedProjectIsReportedAsDamagedAndItsLastBackupKept() throws Exception {
+        publish();
+        String hash = backup.hash(output("project.db"));
+        Files.writeString(new File(source, "project.db").toPath(), "damaged working copy");
+        revision = "2:0";
+        try { publish(); fail("backed up a damaged project"); }
+        catch (ProjectBackup.Failure error) { assertEquals("projectDamaged", error.code); }
+        assertEquals("projectDamaged", backup.error("one"));
+        assertEquals(hash, backup.hash(output("project.db")));
+        assertFalse(output("project.db.damaged").exists());
+    }
+    @Test public void aFolderInsideTheProjectsMediaIsSkipped() throws Exception {
+        new File(source, "files/nested").mkdirs();
+        Files.writeString(new File(source, "files/nested/inside").toPath(), "not media");
+        publish();
+        assertFalse(output("files/nested").exists());
+        assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
+        assertEquals(0, pendingCount());
+    }
+    @Test public void aBackupDatabaseOfTheWrongSizeIsReplaced() throws Exception {
+        publish();
+        String hash = backup.hash(output("project.db"));
+        Files.write(output("project.db").toPath(), new byte[] {1}, java.nio.file.StandardOpenOption.APPEND);
+        assertEquals(1, pendingCount());
+        publish();
+        assertEquals(hash, backup.hash(output("project.db")));
+        assertEquals(0, pendingCount());
     }
     @Test public void interruptedFirstBackupsAreReusedAfterReEnabling() throws Exception {
         backup.configure(selectFolder(""), false);
@@ -404,7 +310,7 @@ public class BackupPublicationTest {
         String legacyMetadata = Files.readString(new File(legacy, "backup.json").toPath());
         new File(older, "backup.json").setLastModified(1_000_000L);
         for (String name : new String[] {"backup.json", "project.db"}) new File(legacy, name).setLastModified(2_000_000L);
-        assertTrue(backup.status().getJSONArray("projects").getJSONObject(0).getString("backupFolderPath").endsWith("/Project-one"));
+        assertTrue(project().getString("backupFolderPath").endsWith("/Project-one"));
         revision = "2:0";
         publish();
         assertEquals("2:0", new JSONObject(Files.readString(new File(legacy, "backup.json").toPath())).getString("changeCounter"));
@@ -426,7 +332,7 @@ public class BackupPublicationTest {
         File garbage = new File(backups, "notes"); garbage.mkdirs();
         Files.writeString(new File(garbage, "todo.txt").toPath(), "keep");
         assertTrue(backup.configure(selectFolder(""), true).getBoolean("configured"));
-        JSONObject project = backup.status().getJSONArray("projects").getJSONObject(0);
+        JSONObject project = project();
         assertEquals("", project.getString("backupFolderPath"));
         assertTrue(project.getBoolean("pending"));
         publish();
@@ -482,43 +388,92 @@ public class BackupPublicationTest {
         assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
         JSONObject metadata = new JSONObject(Files.readString(output("backup.json").toPath()));
         assertEquals(backup.hash(output("project.db")), metadata.getString("databaseSha256"));
-        assertEquals(0, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(0, pendingCount());
         revision = "2:0";
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(1, pendingCount());
     }
-    @Test public void stagedAssetsSurviveLiveProjectDeletion() throws Exception {
-        backup.prepare("one");
-        ProjectBackup.removeTree(source);
-        backup.publish("one");
-        ProjectBackup.validateDatabase(output("project.db"), "one");
-        assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
-        assertEquals("image/png", Files.readString(output("file-metadata/asset.mime").toPath()));
+    @Test public void mediaDeletedAfterTheSnapshotStopsWithChangedAndTheNextPassSucceeds() throws Exception {
+        publish();
+        String hash = backup.hash(output("project.db"));
+        revision = "2:1";
+        Files.writeString(new File(source, "files/brief").toPath(), "deleted soon");
+        ProjectBackup.Snapshot snapshot = backup.prepare("one");
+        Files.delete(new File(source, "files/brief").toPath());
+        try { backup.publish(snapshot, (done, total) -> { }); fail("published a snapshot whose media is gone"); }
+        catch (ProjectBackup.Failure error) { assertEquals("changed", error.code); }
+        assertEquals(hash, backup.hash(output("project.db")));
+        assertEquals(1, pendingCount());
+        revision = "3:2";
+        publish();
+        assertFalse(output("files/brief").exists());
+        assertEquals(0, pendingCount());
     }
-    @Test public void stagesOnlyMissingMediaOnSubsequentBackup() throws Exception {
+    @Test public void copiesOnlyMissingMediaOnSubsequentBackup() throws Exception {
         publish();
         revision = "2:1";
         Files.writeString(new File(source, "files/new-asset").toPath(), "new media");
         Files.writeString(new File(source, "file-metadata/new-asset.mime").toPath(), "text/plain");
-        backup.prepare("one");
-        File staging = new File(context.getNoBackupFilesDir(), "project-backup-staging");
-        assertArrayEquals(new String[] {"new-asset"}, new File(staging, "files").list());
-        assertArrayEquals(new String[] {"new-asset.mime"}, new File(staging, "file-metadata").list());
-        backup.publish("one");
+        provider.created.clear();
+        publish();
+        assertTrue(provider.created.contains("new-asset.next"));
+        assertTrue(provider.created.contains("new-asset.mime.next"));
+        assertFalse(provider.created.contains("asset.next"));
         assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(output("files/asset").toPath()));
         assertEquals("new media", Files.readString(output("files/new-asset").toPath()));
     }
-    @Test public void reservesBothStagedAndDestinationMediaOnSharedStorage() throws Exception {
+
+    @Test public void listsEachFolderOnceInsteadOfOncePerMediaFile() throws Exception {
+        for (int i = 0; i < 40; i++) {
+            Files.writeString(new File(source, "files/media-" + i).toPath(), "media " + i);
+            Files.writeString(new File(source, "file-metadata/media-" + i + ".mime").toPath(), "text/plain");
+        }
+        provider.childQueries = 0;
+        publish();
+        assertEquals(41, new File(destination, "Project One-one/files").list().length);
+        assertEquals(41, new File(destination, "Project One-one/file-metadata").list().length);
+        // Listings are per folder, not per file: 82 files took 2 per file before.
+        assertTrue("child listings: " + provider.childQueries, provider.childQueries <= 12);
+        provider.childQueries = 0;
+        revision = "2:0";
+        publish();
+        assertTrue("child listings: " + provider.childQueries, provider.childQueries <= 12);
+    }
+
+    @Test public void needsNoPrivateCopyOfNewMedia() throws Exception {
         publish();
         String hash = backup.hash(output("project.db"));
         int mediaBytes = 1024 * 1024;
         Files.write(new File(source, "files/new-asset").toPath(), new byte[mediaBytes]);
         long dbBytes = new File(source, "project.db").length();
-        // Enough for destination media and DB work, but not its private staging copy.
-        CapacityShadow.available = ProjectBackup.RESERVE_BYTES + mediaBytes + 3 * dbBytes + 65536;
-        try { backup.prepare("one"); fail("staging allocation omitted"); }
+        // Not enough for the media, the database, and its validation copy.
+        CapacityShadow.available = ProjectBackup.RESERVE_BYTES + mediaBytes + 2 * dbBytes;
+        try { publish(); fail("space for the backup was not reserved"); }
         catch (ProjectBackup.Failure error) { assertEquals("lowSpace", error.code); }
         assertEquals(hash, backup.hash(output("project.db")));
-        assertFalse(new File(context.getNoBackupFilesDir(), "project-backup-staging").exists());
+        // Enough for those: no second, private copy of the media is needed.
+        CapacityShadow.available = ProjectBackup.RESERVE_BYTES + mediaBytes + 3 * dbBytes + 65536;
+        revision = "2:1";
+        publish();
+        assertEquals(mediaBytes, output("files/new-asset").length());
+    }
+
+    @Test public void failedMediaCopyKeepsFinishedFilesForTheNextPass() throws Exception {
+        for (int i = 0; i < 3; i++) Files.writeString(new File(source, "files/media-" + i).toPath(), "media " + i);
+        provider.failRename = "media-1";
+        try { publish(); fail("expected interruption"); } catch (Exception expected) { }
+        assertFalse(output("project.db").exists());
+        java.util.Set<String> kept = new java.util.HashSet<>();
+        for (String name : output("files").list()) if (!name.endsWith(".next")) kept.add(name);
+        assertFalse(kept.contains("media-1"));
+        provider.failRename = null;
+        provider.created.clear();
+        publish();
+        ProjectBackup.validateDatabase(output("project.db"), "one");
+        for (String name : new File(source, "files").list()) {
+            assertEquals(name, !kept.contains(name), provider.created.contains(name + ".next"));
+            assertEquals(name, Files.readString(new File(source, "files/" + name).toPath()),
+                Files.readString(output("files/" + name).toPath()));
+        }
     }
     @Test public void interruptedPromotionKeepsPreviousAndRetries() throws Exception {
         publish(); String previousHash = backup.hash(output("project.db"));
@@ -529,14 +484,14 @@ public class BackupPublicationTest {
         assertEquals("1:0", new JSONObject(Files.readString(output("backup.json").toPath())).getString("changeCounter"));
         provider.failRename = null; publish();
         ProjectBackup.validateDatabase(output("project.db"), "one");
-        assertFalse(backup.status().getJSONArray("projects").getJSONObject(0).getBoolean("pending"));
+        assertFalse(project().getBoolean("pending"));
     }
     @Test public void metadataFailureLeavesRecoverableCanonicalAndPendingRetry() throws Exception {
         publish(); revision = "2:0"; provider.failRename = "backup.json";
         try { publish(); fail("expected interruption"); } catch (Exception expected) { }
         ProjectBackup.validateDatabase(output("project.db"), "one");
         ProjectBackup.validateDatabase(output("project.db.previous"), "one");
-        assertTrue(backup.status().getJSONArray("projects").getJSONObject(0).getBoolean("pending"));
+        assertTrue(project().getBoolean("pending"));
         provider.failRename = null; publish();
         assertEquals("2:0", new JSONObject(Files.readString(output("backup.json").toPath())).getString("changeCounter"));
     }
@@ -545,7 +500,7 @@ public class BackupPublicationTest {
         revision = "2:0"; provider.failRename = "project.db.previous";
         try { publish(); fail("expected interruption"); } catch (Exception expected) { }
         assertEquals(hash, backup.hash(output("project.db")));
-        assertTrue(backup.status().getJSONArray("projects").getJSONObject(0).getBoolean("pending"));
+        assertTrue(project().getBoolean("pending"));
     }
     @Test public void failureRemovingOlderPreviousKeepsBothValidCopies() throws Exception {
         publish(); revision = "2:0"; publish();
@@ -564,17 +519,17 @@ public class BackupPublicationTest {
     }
     @Test public void spaceLossAfterStagingPreservesCurrent() throws Exception {
         publish(); String hash = backup.hash(output("project.db"));
-        revision = "2:0"; backup.prepare("one");
+        revision = "2:0"; ProjectBackup.Snapshot snapshot = backup.prepare("one");
         CapacityShadow.available = 999_999_999L;
-        try { backup.publish("one"); fail("low space accepted"); }
+        try { backup.publish(snapshot, (done, total) -> { }); fail("low space accepted"); }
         catch (ProjectBackup.Failure error) { assertEquals("lowSpace", error.code); }
         assertEquals(hash, backup.hash(output("project.db")));
     }
     @Test public void missingOrStaleMetadataRetriesWithoutLocalChanges() throws Exception {
         publish(); Files.writeString(output("backup.json").toPath(), "{}");
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(1, pendingCount());
         publish(); Files.delete(output("project.db").toPath());
-        assertEquals(1, backup.pendingProjects().getJSONArray("projectIds").length());
+        assertEquals(1, pendingCount());
     }
     @Test public void importFallsBackToPreviousWithoutChangingSourceAndIgnoresNext() throws Exception {
         publish();
@@ -598,12 +553,6 @@ public class BackupPublicationTest {
         catch (java.lang.reflect.InvocationTargetException expected) { }
     }
 
-    @Test public void persistsFiveMinuteThrottleBeforeSnapshotWork() throws Exception {
-        assertTrue(backup.beginPass(false).getBoolean("due"));
-        assertFalse(backup.beginPass(false).getBoolean("due"));
-        assertTrue(backup.beginPass(true).getBoolean("due"));
-    }
-
     @Test public void rejectsCloudAndAppOwnedBackupFolders() throws Exception {
         for (String[] trial : new String[][] {
             {"content://cloud.example/tree/one", "localFolder"},
@@ -612,7 +561,7 @@ public class BackupPublicationTest {
             try { backup.configure(trial[0], true); fail("unsafe destination accepted"); }
             catch (ProjectBackup.Failure error) { assertEquals(trial[1], error.code); }
         }
-        assertTrue(backup.status().getBoolean("configured"));
+        assertTrue(backup.configured());
     }
     @Test public void assetSessionsRejectOverwriteAtStartAndFinish() throws Exception {
         MainActivity activity = new MainActivity();
@@ -647,4 +596,68 @@ public class BackupPublicationTest {
         assertFalse(new File(context.getFilesDir(), "projects/deleted/project.db").exists());
     }
 
+    // Android 9's storage provider renames, then throws for the old name.
+    // Setup and every backup rename, so none of them could finish there.
+    @Test @Config(sdk = 28) public void android9RenamesThatReportAMissingFileStillBackUp() throws Exception {
+        provider.android9Rename = true;
+        assertTrue(backup.configure(selectFolder(""), false).getBoolean("configured"));
+        publish();
+        File folder = new File(destination, "RouteVN Backups/Project One-one");
+        ProjectBackup.validateDatabase(new File(folder, "project.db"), "one");
+        assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(new File(folder, "files/asset").toPath()));
+        revision = "2:1";
+        Files.writeString(new File(source, "files/new-asset").toPath(), "media");
+        publish();
+        assertEquals("2:1", new JSONObject(Files.readString(new File(folder, "backup.json").toPath())).getString("changeCounter"));
+        ProjectBackup.validateDatabase(new File(folder, "project.db.previous"), "one");
+        assertEquals("media", Files.readString(new File(folder, "files/new-asset").toPath()));
+        assertEquals("", backup.error("one"));
+        // No space probes or partial copies are left behind.
+        for (File directory : new File[] {destination, folder.getParentFile(), folder, new File(folder, "files")}) {
+            for (String name : directory.list()) {
+                assertFalse(name, name.startsWith(".routevn-space-") || name.endsWith(".next") || name.contains(" (1)"));
+            }
+        }
+    }
+
+    // The provider moved the file to "b (1)" because "b" was taken: the "b"
+    // that exists is another file and must not be taken for the renamed one.
+    @Test @Config(sdk = 28) public void anAndroid9RenameOntoATakenNameIsNotAccepted() throws Exception {
+        Files.writeString(new File(destination, "a").toPath(), "new");
+        Files.writeString(new File(destination, "b").toPath(), "old");
+        Uri tree = Uri.parse(selectFolder(""));
+        Uri a = DocumentsContract.buildDocumentUriUsingTree(tree, "primary:Documents/a");
+        provider.android9Rename = true;
+        java.lang.reflect.Method rename = ProjectBackup.class.getDeclaredMethod("rename", Uri.class, String.class);
+        rename.setAccessible(true);
+        try {
+            rename.invoke(backup, a, "b");
+            fail("a rename onto a taken name was accepted");
+        } catch (java.lang.reflect.InvocationTargetException error) {
+            // A name conflict, not a storage problem that asks to reconnect.
+            assertTrue(error.getCause() instanceof ProjectBackup.Failure);
+            assertEquals("nameConflict", ((ProjectBackup.Failure) error.getCause()).code);
+        }
+        assertEquals("old", Files.readString(new File(destination, "b").toPath()));
+        assertEquals("new", Files.readString(new File(destination, "b (1)").toPath()));
+    }
+
+    // Before Android 10, choosing Documents gives the provider's "home" root.
+    // It is still Documents: back up into a RouteVN Backups folder there.
+    @Test @Config(sdk = 28) public void android9DocumentsGetsARouteVNBackupsFolder() throws Exception {
+        provider.homeRoot = true;
+        provider.android9Rename = true;
+        Files.writeString(new File(destination, "unrelated.txt").toPath(), "keep");
+        Uri tree = DocumentsContract.buildTreeDocumentUri(BackupDocumentsProvider.AUTHORITY, "home:");
+        context.getContentResolver().takePersistableUriPermission(tree,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        JSONObject result = backup.configure(tree.toString(), false);
+        assertTrue(result.getBoolean("configured"));
+        assertFalse(result.optBoolean("needsExistingConfirmation"));
+        assertEquals(new File(android.os.Environment.getExternalStorageDirectory(), "Documents/RouteVN Backups").getAbsolutePath(),
+            backup.folderDisplayPath());
+        publish();
+        ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project One-one/project.db"), "one");
+        assertEquals("keep", Files.readString(new File(destination, "unrelated.txt").toPath()));
+    }
 }

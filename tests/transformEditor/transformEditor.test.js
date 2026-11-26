@@ -806,11 +806,10 @@ describe("transform editor", () => {
     expect(page.savedData()).toEqual([]);
   });
 
-  it("only saves for a backup, the background, or quitting, since the page stays open", async () => {
+  it("only saves for the background or quitting, since the page stays open", async () => {
     const page = await createPage();
     await page.press("ArrowLeft");
 
-    await page.beforeNavigation({ reason: "backup" });
     await page.beforeNavigation({ reason: "background" });
     await page.beforeNavigation({ reason: "quit" });
 

@@ -326,7 +326,7 @@ describe("scene editor: a draft that cannot be saved", () => {
     store.setSelectedSectionId({ selectedSectionId: "section-3" });
     deps.refs = { sectionEditor0: editors.first };
 
-    await prepareSceneEditorNavigation(deps, { reason: "backup" });
+    await prepareSceneEditorNavigation(deps, { reason: "background" });
 
     expect(syncSectionLinesSnapshot).not.toHaveBeenCalled();
     expect(deps.appService.showAlertWhenIdle).not.toHaveBeenCalled();
@@ -344,14 +344,16 @@ describe("scene editor: a draft that cannot be saved", () => {
       )
       .mockResolvedValue({ valid: true });
 
-    const backup = prepareSceneEditorNavigation(deps, { reason: "backup" });
+    const saving = prepareSceneEditorNavigation(deps, {
+      reason: "background",
+    });
     await vi.waitFor(() =>
       expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(1),
     );
     // Preview reads the editor's lines now, before the save fails.
     handlePreviewClick(deps, {});
     failSave();
-    await backup;
+    await saving;
     await vi.waitFor(() =>
       expect(store.selectViewData().previewVisible).toBe(true),
     );

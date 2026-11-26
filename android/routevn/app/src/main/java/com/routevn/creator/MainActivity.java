@@ -188,8 +188,8 @@ public class MainActivity extends Activity {
     private final RendererLossGuard rendererLossGuard = new RendererLossGuard();
     private boolean webViewRecoveryPending = false;
     private String lastReportedWindowMetrics = "";
-    private ProjectBackup projectBackup;
-    private final ExecutorService backupExecutor = Executors.newSingleThreadExecutor();
+    private BackupScheduler backupScheduler;
+    private BackupScheduler.Host backupHost;
     private final Set<String> projectTransactions = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final Set<String> projectExports = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private boolean appResumed = false;
@@ -219,6 +219,10 @@ public class MainActivity extends Activity {
     private final Object androidPlayerTemplateLock = new Object();
     private final Runnable finishSplashRunnable = this::finishSplash;
     private final Map<String, SQLiteDatabase> sqliteDatabases = new HashMap<>();
+    // The page sets each database's synchronous mode once, when it opens it.
+    // Native code also reopens databases (a backup snapshot closes the
+    // connection), and a new connection would lose that durability setting.
+    private final Map<String, String> synchronousModes = new HashMap<>();
     private final Map<String, ProjectFileWriteSession> projectFileWriteSessions =
         new HashMap<>();
     private final Set<String> pendingSaveDocumentUris = new HashSet<>();
@@ -232,20 +236,26 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         applyPhonePortraitLock();
 
-        projectBackup = new ProjectBackup(this, new ProjectBackup.Storage() {
-            public JSONArray projects() throws Exception { return listProjectFolders(); }
+        // Backups run on their own thread and only borrow the bridge thread,
+        // which owns the project databases, for short snapshot steps. Nothing
+        // here touches storage; backup work waits until the page is ready.
+        backupScheduler = BackupScheduler.get(this);
+        backupHost = new BackupScheduler.Host() {
+            public JSONArray projects() throws Exception { return onBridgeThread(MainActivity.this::listProjectFolders); }
             public File root(String id) throws Exception { return getProjectRoot(id); }
             public String name(String id) throws Exception {
-                JSONObject info = readProjectInfoFromDatabaseFile(getProjectDatabaseFile(id));
-                // optString turns a JSON null into the text "null".
-                return info.isNull("name") ? "" : info.optString("name", "");
+                return onBridgeThread(() -> {
+                    JSONObject info = readProjectInfoFromDatabaseFile(getProjectDatabaseFile(id));
+                    // optString turns a JSON null into the text "null".
+                    return info.isNull("name") ? "" : info.optString("name", "");
+                });
             }
-            public String counter(String id) throws Exception {
-                SQLiteDatabase database = openProjectDatabaseForBridge(getProjectDatabasePath(id));
-                return ProjectBackup.databaseRevision(database) + ":" + projectBackup.assetRevision(id);
+            public String counter(String id) throws Exception { return onBridgeThread(() -> backupCounter(id)); }
+            public ProjectBackup.Captured snapshot(String id, File database) throws Exception {
+                return onBridgeThread(() -> snapshotProjectForBackup(id, database));
             }
-            public void snapshot(String id, File target) throws Exception { snapshotProjectForBackup(id, target); }
-        });
+        };
+        backupScheduler.attach(backupHost, this::pushBackupStatus);
         validateNativeExporterSmoke();
         configureWindow();
         configureWebView();
@@ -896,6 +906,7 @@ public class MainActivity extends Activity {
             webView.onResume();
             notifyAudioLifecycle();
         }
+        backupScheduler.setVisible(true);
     }
 
     @Override
@@ -903,6 +914,9 @@ public class MainActivity extends Activity {
         appResumed = false;
         rendererLossGuard.appLeftForeground();
         notifyAudioLifecycle();
+        // While still visible, so a backup that is running or due can keep
+        // going in the foreground service after the app leaves the screen.
+        backupScheduler.setVisible(false);
         if (webView != null) {
             webView.onPause();
         }
@@ -924,14 +938,14 @@ public class MainActivity extends Activity {
             unregisterBackInvokedCallback();
         }
 
-        projectBackup.close();
-        backupExecutor.shutdownNow();
+        // A backup that is already copying keeps going; it no longer needs
+        // this activity. Snapshots wait for the next activity.
+        backupScheduler.detach(backupHost);
         importExecutor.shutdownNow();
         apkExportExecutor.shutdownNow();
         // Cancellation is immediate; cleanup must wait behind storage work on
         // its own thread, not hold Activity destruction on media copies/hashes.
         bridgeExecutor.execute(() -> {
-            projectBackup.cleanupAfterClose();
             closeSqliteDatabases();
             closeProjectFileWriteSessions();
             cleanupPendingSaveDocuments();
@@ -1299,15 +1313,21 @@ public class MainActivity extends Activity {
                 payload = new JSONObject();
             }
 
-            if ("publishProjectBackup".equals(method)) {
+            if ("configureBackup".equals(method) || "disableBackup".equals(method)) {
+                // Answered from the backup thread, which first stops any
+                // running copy, so the bridge thread never waits for a backup.
                 String backupRequestId = requestId;
-                String projectId = safePathSegment(payload.getString("projectId"));
-                backupExecutor.execute(() -> {
+                BackupScheduler.Callback callback = (value, error) -> {
                     String result;
-                    try { result = bridgeSuccess(projectBackup.publish(projectId)); }
-                    catch (Exception error) { result = bridgeFailure(error); }
+                    try { result = error == null ? bridgeSuccess(value) : bridgeFailure(error); }
+                    catch (Exception failure) { result = bridgeFailure(failure); }
                     reply.accept(attachBridgeResponseMetadata(backupRequestId, result));
-                });
+                };
+                if ("configureBackup".equals(method)) {
+                    backupScheduler.configure(payload.getString("uri"), payload.optBoolean("acceptExisting"), callback);
+                } else {
+                    backupScheduler.disable(callback);
+                }
                 return;
             }
 
@@ -1369,17 +1389,18 @@ public class MainActivity extends Activity {
             case "getAppUpdateDeviceInfo":
                 return bridgeSuccess(AppDeviceInfo.read(this));
             case "getBackupStatus":
-                return bridgeSuccess(projectBackup.status());
-            case "configureBackup":
-                return bridgeSuccess(projectBackup.configure(payload.getString("uri"), payload.optBoolean("acceptExisting")));
-            case "disableBackup":
-                return bridgeSuccess(projectBackup.disable());
-            case "beginBackupPass":
-                return bridgeSuccess(projectBackup.beginPass(payload.optBoolean("manual")));
-            case "getPendingBackupProjects":
-                return bridgeSuccess(projectBackup.pendingProjects());
-            case "prepareProjectBackup":
-                return bridgeSuccess(projectBackup.prepare(safePathSegment(payload.getString("projectId"))));
+                return bridgeSuccess(new JSONObject(backupScheduler.status()));
+            case "requestBackup": {
+                String projectId = payload.optString("projectId", "");
+                backupScheduler.request(
+                    projectId.isEmpty() ? null : safePathSegment(projectId),
+                    payload.optString("reason", "manual")
+                );
+                return bridgeSuccess(new JSONObject(backupScheduler.status()));
+            }
+            case "setBackupNotificationCopy":
+                BackupService.setCopy(payload.optString("channel"), payload.optString("title"));
+                return bridgeSuccess(true);
             case "getWindowMetrics":
                 return bridgeSuccess(currentWindowMetrics());
             case "isDebugBuild":
@@ -1514,6 +1535,7 @@ public class MainActivity extends Activity {
 
         public void markSplashReady() {
             runOnUiThread(MainActivity.this::requestSplashDismiss);
+            backupScheduler.appReady();
         }
 
         public String appDbInit(String payloadJson) {
@@ -1619,6 +1641,7 @@ public class MainActivity extends Activity {
                     sql,
                     payload.optJSONArray("args")
                 );
+                rememberSynchronousMode(payload.getString("dbPath"), sql);
                 return bridgeSuccess(rows);
             } catch (Exception error) {
                 return bridgeFailure(error);
@@ -1640,9 +1663,11 @@ public class MainActivity extends Activity {
                 );
                 String normalized = normalizeSingleBridgeSqlStatement(sql).toUpperCase(Locale.ROOT);
                 String dbPath = payload.getString("dbPath");
+                rememberSynchronousMode(dbPath, sql);
                 if (normalized.equals("BEGIN") || normalized.equals("BEGIN IMMEDIATE")) projectTransactions.add(dbPath);
                 if (normalized.equals("COMMIT") || normalized.equals("ROLLBACK")) projectTransactions.remove(dbPath);
                 if (normalized.startsWith("CREATE TABLE")) ProjectBackup.installTracking(database);
+                if (!normalized.startsWith("BEGIN") && !normalized.startsWith("PRAGMA")) backupScheduler.noteChange(dbPath.split("/", -1)[1]);
                 JSONObject result = new JSONObject();
                 result.put("rowsAffected", rowsAffected);
                 return bridgeSuccess(result);
@@ -1697,9 +1722,9 @@ public class MainActivity extends Activity {
         public String deleteProject(String payloadJson) {
             try {
                 JSONObject payload = new JSONObject(payloadJson);
-                return bridgeSuccess(
-                    deleteProjectStorage(payload.getString("projectId"))
-                );
+                JSONObject result = deleteProjectStorage(payload.getString("projectId"));
+                backupScheduler.projectDeleted(safePathSegment(payload.getString("projectId")));
+                return bridgeSuccess(result);
             } catch (Exception error) {
                 return bridgeFailure(error);
             }
@@ -2350,8 +2375,27 @@ public class MainActivity extends Activity {
         try (Cursor ignored = database.rawQuery("PRAGMA busy_timeout=5000", null)) {
             // Android's SQLiteDatabase requires PRAGMA statements to use rawQuery.
         }
+        String synchronous = synchronousModes.get(dbPath);
+        if (synchronous != null) {
+            try (Cursor applied = database.rawQuery("PRAGMA synchronous=" + synchronous, null)) {
+                applied.moveToFirst(); // A cursor runs its statement only when read.
+            }
+        }
         sqliteDatabases.put(dbPath, database);
         return database;
+    }
+
+    // Remembers a synchronous mode the page set, to reapply on every reopen.
+    // Runs after the bridge validated the statement, so only FULL or NORMAL
+    // can reach here.
+    private synchronized void rememberSynchronousMode(String dbPath, String sql) {
+        String compact = normalizeSingleBridgeSqlStatement(sql)
+            .toUpperCase(Locale.ROOT)
+            .replaceAll("\\s", "");
+        String prefix = "PRAGMASYNCHRONOUS=";
+        if (compact.equals(prefix + "FULL") || compact.equals(prefix + "NORMAL")) {
+            synchronousModes.put(dbPath, compact.substring(prefix.length()));
+        }
     }
 
     private synchronized SQLiteDatabase openProjectDatabaseForBridge(String dbPath)
@@ -2867,7 +2911,7 @@ public class MainActivity extends Activity {
             session.output.close();
             session.output = null;
             assertNewProjectAsset(session.projectId, session.fileId);
-            projectBackup.markAssetChange(session.projectId);
+            backupScheduler.markAssetChange(session.projectId);
             Os.rename(
                 session.temporaryFile.getAbsolutePath(),
                 session.targetFile.getAbsolutePath()
@@ -3018,7 +3062,7 @@ public class MainActivity extends Activity {
             new File(projectRoot, "file-metadata"),
             safeFileId + ".mime"
         );
-        projectBackup.markAssetChange(safeProjectId);
+        backupScheduler.markAssetChange(safeProjectId);
         if (file.exists() && !file.delete()) {
             throw new IllegalStateException("Project file could not be deleted.");
         }
@@ -4164,7 +4208,10 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void snapshotProjectForBackup(String projectId, File destination) throws Exception {
+    // Runs on the bridge thread, between page calls, so no project write can
+    // interleave. Copies the database (a few MB) and lists the project's
+    // assets; the media itself is copied later on the backup thread.
+    private ProjectBackup.Captured snapshotProjectForBackup(String projectId, File destination) throws Exception {
         // A project can be deleted after the scheduler lists it. Never recreate
         // an empty working database while trying to back up that stale entry.
         if (!getProjectDatabaseFile(projectId).isFile()) throw new ProjectBackup.Failure("failed");
@@ -4173,15 +4220,59 @@ public class MainActivity extends Activity {
         for (ProjectFileWriteSession session : projectFileWriteSessions.values()) {
             if (session.projectId.equals(projectId)) throw new ProjectBackup.Failure("busy");
         }
+        boolean wasOpen;
+        synchronized (this) { wasOpen = sqliteDatabases.containsKey(dbPath); }
         SQLiteDatabase database = openProjectDatabaseForBridge(dbPath);
+        String counter;
         try (Cursor checkpoint = database.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null)) {
             if (!checkpoint.moveToFirst() || checkpoint.getInt(0) != 0 ||
                 checkpoint.getLong(1) != checkpoint.getLong(2)) throw new ProjectBackup.Failure("busy");
         }
+        counter = ProjectBackup.databaseRevision(database) + ":" + backupScheduler.assetRevision(projectId);
         closeDatabase(dbPath);
         try {
-            copyFile(getProjectDatabaseFile(projectId), new File(destination, "project.db"));
-        } finally { openProjectDatabaseForBridge(dbPath); }
+            copyFile(getProjectDatabaseFile(projectId), destination);
+            return ProjectBackup.capture(counter, getProjectRoot(projectId));
+        } finally {
+            if (wasOpen) openProjectDatabaseForBridge(dbPath);
+        }
+    }
+
+    // The project's change counter. Closes the database again when it was
+    // opened only to read the counter.
+    private String backupCounter(String projectId) throws Exception {
+        if (!getProjectDatabaseFile(projectId).isFile()) throw new ProjectBackup.Failure("failed");
+        String dbPath = getProjectDatabasePath(projectId);
+        boolean wasOpen;
+        synchronized (this) { wasOpen = sqliteDatabases.containsKey(dbPath); }
+        SQLiteDatabase database = openProjectDatabaseForBridge(dbPath);
+        try {
+            return ProjectBackup.databaseRevision(database) + ":" + backupScheduler.assetRevision(projectId);
+        } finally {
+            if (!wasOpen) closeDatabase(dbPath);
+        }
+    }
+
+    // Runs a short task on the bridge thread and waits for it. Only the backup
+    // thread calls this; the bridge thread never waits for the backup thread.
+    private <T> T onBridgeThread(java.util.concurrent.Callable<T> task) throws Exception {
+        java.util.concurrent.FutureTask<T> future = new java.util.concurrent.FutureTask<>(task);
+        if (!ExecutorGuard.submit(bridgeExecutor, future)) throw new ProjectBackup.Failure("interrupted");
+        try {
+            return future.get();
+        } catch (java.util.concurrent.ExecutionException error) {
+            Throwable cause = error.getCause();
+            if (cause instanceof Exception) throw (Exception) cause;
+            throw error;
+        }
+    }
+
+    private void pushBackupStatus(String status) {
+        mainHandler.post(() -> {
+            if (webView != null) {
+                webView.evaluateJavascript("window.routeVNBackupStatusChanged?.(" + status + ")", null);
+            }
+        });
     }
 
     private void promoteImportedProject(File stagedRoot, File projectRoot)
@@ -4889,6 +4980,28 @@ public class MainActivity extends Activity {
         pendingAndroidSaveFilePickerRequestId = null;
     }
 
+    // Before Android 10 the picker hides internal storage unless asked to
+    // show it, and Documents exists only once an app has created it. Without
+    // both, the picker opens at Recent with no folder to choose, so start at
+    // the storage root when Documents is missing.
+    static Intent folderPickerIntent(boolean writable, boolean startInDocuments, File documents) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.putExtra("android.content.extra.SHOW_ADVANCED", true);
+        if (startInDocuments && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            boolean documentsMissing = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && !documents.isDirectory();
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
+                DocumentsContract.buildDocumentUri("com.android.externalstorage.documents",
+                    documentsMissing ? "primary:" : "primary:" + Environment.DIRECTORY_DOCUMENTS));
+        }
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        if (writable) {
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        }
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        return intent;
+    }
+
     private void launchAndroidFolderPicker(String requestId, boolean writable, boolean startInDocuments) {
         if (pendingAndroidFolderPickerRequestId != null) {
             sendAndroidFolderPickerError(
@@ -4900,18 +5013,8 @@ public class MainActivity extends Activity {
 
         pendingAndroidFolderPickerRequestId = requestId;
 
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        if (startInDocuments && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
-                DocumentsContract.buildDocumentUri("com.android.externalstorage.documents",
-                    "primary:" + Environment.DIRECTORY_DOCUMENTS));
-        }
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        if (writable) {
-            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        }
-        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        intent.addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        Intent intent = folderPickerIntent(writable, startInDocuments,
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS));
 
         try {
             startActivityForResult(intent, ANDROID_FOLDER_PICKER_REQUEST_CODE);

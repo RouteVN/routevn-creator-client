@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
   androidBridge: vi.fn(),
@@ -56,13 +56,6 @@ const createProjectService = () => ({
 });
 
 const createParams = ({ db, projectService, globalUI = {} }) => ({
-  appActivity: {
-    isActive: () => true,
-    subscribeActive: (listener) => {
-      listener(true);
-      return () => {};
-    },
-  },
   db,
   router: {
     getPayload: () => ({}),
@@ -79,23 +72,31 @@ const createParams = ({ db, projectService, globalUI = {} }) => ({
 });
 
 describe("project-entry language platform propagation", () => {
-  it("prepares Android backups with a save-only reason instead of a navigation destination", async () => {
+  const cleanups = [];
+  afterEach(() => {
+    cleanups.splice(0).forEach((cleanup) => cleanup());
+    vi.unstubAllGlobals();
+  });
+
+  it("asks native code to back up now without saving editors through navigation", async () => {
+    vi.stubGlobal("window", {});
     mocked.androidBridge.mockImplementation(async (method) => {
-      if (method === "getBackupStatus")
+      if (method === "getBackupStatus" || method === "requestBackup")
         return { configured: true, projects: [] };
-      if (method === "beginBackupPass") return { due: true };
-      if (method === "getPendingBackupProjects") return { projectIds: [] };
       throw new Error(`Unexpected Android bridge method: ${method}`);
     });
     const appService = createAndroidAppService(
       createParams({ db: createDb(), projectService: createProjectService() }),
     );
     const saveEditor = vi.fn(async () => {});
-    const unregister = appService.registerBeforeNavigation(saveEditor);
+    cleanups.push(appService.registerBeforeNavigation(saveEditor));
     await appService.initializeBackup();
     await appService.backupNow();
-    expect(saveEditor).toHaveBeenCalledWith({ reason: "backup" });
-    unregister();
+    expect(mocked.androidBridge).toHaveBeenCalledWith("requestBackup", {
+      projectId: undefined,
+      reason: "manual",
+    });
+    expect(saveEditor).not.toHaveBeenCalled();
   });
 
   beforeEach(() => {

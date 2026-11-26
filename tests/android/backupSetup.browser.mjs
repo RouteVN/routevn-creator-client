@@ -84,14 +84,17 @@ try {
                 name: `Project ${index + 1}`,
                 pending: true,
                 error: "lowSpace",
+                // Saved by an earlier run, so it shows on the card without
+                // opening a dialog over the page.
+                failures: 0,
               })),
             });
             break;
-          case "beginBackupPass":
-            value = { due: true };
+          case "requestBackup":
+            value = state();
             break;
-          case "getPendingBackupProjects":
-            value = { projectIds: [] };
+          case "setBackupNotificationCopy":
+            value = {};
             break;
           case "appDbInit":
           case "updateBackState":
@@ -169,6 +172,13 @@ try {
     "Folder action must remain on screen",
   );
   assert.equal(await page.getByText("Project 50", { exact: true }).count(), 0);
+  await page.getByText("Backups need attention", { exact: true }).waitFor();
+  await page.locator("#backUpNow").click();
+  assert.ok(
+    (await page.evaluate(() => window.backupTrial.calls)).includes(
+      "requestBackup",
+    ),
+  );
   await page.locator("#setupBackup").click();
   await page.locator("#stopBackupButton").click();
   await page.getByText("Stop local backups?", { exact: true }).waitFor();
