@@ -60,6 +60,14 @@ and other folder pickers retain their normal initial location. This hint does
 not create a folder or grant access; create the subfolder only after the user
 chooses and confirms a location through the picker.
 
+Before Android 10 the picker hides internal storage unless
+`android.content.extra.SHOW_ADVANCED` is set, and an initial location that does
+not exist opens Recent, where no folder can be chosen. Always set the extra, and
+start at the storage root while `Documents` does not exist yet. On those
+versions the storage provider also lists `Documents` as a root of its own, so
+choosing it there gives `home:` document ids. Treat them as the primary volume's
+`Documents` folder: create `RouteVN Backups` inside it and show its full path.
+
 Android documents that files outside app-specific storage selected through the
 [Storage Access Framework](https://developer.android.com/training/data-storage/shared/documents-files)
 remain after uninstall. Folder grants can be persisted across device restarts.
@@ -82,6 +90,12 @@ read, rename, and delete behavior, and establish usable free-space measurement.
 Do not modify existing project files for these checks. Explain unsupported
 destinations immediately. Low space is a recoverable paused state, not proof
 that a folder is unsupported.
+
+Android 9's storage provider renames a document, then looks it up under its old
+name and throws `FileNotFoundException`. Accept such a rename only when the old
+document is gone, the new one exists, and the new name was free before the
+rename, so another file that already had the name is never taken for it; a taken
+name is a name conflict.
 
 If the actual backup destination contains existing files, confirm with
 **Folder is not empty** and **Use this folder for backups? Existing files will be kept.**
@@ -685,7 +699,8 @@ older versions, returning and leaving again during a copy, no pass at the end of
 the grace before the app is ready or during a hold, a removed SD card reported
 as `reconnect` and recovered once it is back, cancelling a copy when the folder
 changes, keeping changes when a pass is cancelled early, and copy progress. `BackupServiceTest` checks that a stop names the last start. `BackupPublicationTest` and
-`ProjectBackupTest` cover transactional counters, validation, space guards,
+`ProjectBackupTest` cover Android 9's renames that throw after renaming, its
+`home:` Documents root, transactional counters, validation, space guards,
 publication failures before/after renames, metadata failures, retry, stale
 metadata, read-only import fallback to `previous` while refusing `next`,
 cancellation during media copying and hashing, media deleted after the snapshot,
@@ -701,7 +716,8 @@ After `bun run build:android`, serve `_site` locally and run
 `ANDROID_TEST_ORIGIN=http://127.0.0.1:3017 node tests/android/backupSetup.browser.mjs`.
 This exercises the packaged UI with a fixture native bridge, including picker
 cancellation, closing/confirming skip, low-space warnings, **Try again**,
-and Settings. It does not exercise Android's real picker or URI grants.
+and Settings. It does not exercise Android's real picker or URI grants;
+`FolderPickerIntentTest` checks the picker's start folder before Android 10.
 
 Checked on a Samsung tablet running Android 16: a line typed just before
 pressing Home is backed up within seconds; a 1.5 GB backup finishes with the
@@ -721,6 +737,16 @@ Checked on emulators:
 - Android 11, with its WebView updated to 124: leaving with nothing due starts
   no service, and an edit saved just before or just after pressing Home is
   backed up within 3 seconds.
+- Android 9, with its WebView updated to 131: the picker shows internal storage
+  and opens in `Documents` once it exists; choosing `Documents` creates
+  `RouteVN Backups` and backs up there. An edit is backed up 30 seconds later in
+  the app, and right after Home or after a save that lands after leaving; the
+  notification goes when the service stops, leaving with nothing due starts no
+  service, and both databases pass an integrity check.
+- Android 8.1, with its WebView updated to 131: with no `Documents` folder the
+  picker opens at the storage root; the same checks pass with `Download` chosen,
+  and renames work there without the Android 9 fallback. The Android 8.0
+  emulator image ships no usable WebView, so 8.0 itself was not run.
 
 Still pending: renamed folders on a card, physical Android 8 to 12 devices,
 other manufacturers, and the snapshot pause on large real projects. Use disposable projects; never

@@ -18,13 +18,21 @@ public class BackupDocumentsProvider extends DocumentsProvider {
     int childQueries;
     // An SD card taken out: its volume has no root any more.
     boolean removed;
+    // Renames the way Android 9's storage provider does.
+    boolean android9Rename;
+    // Before Android 10, files under Documents get ids on a separate "home" root.
+    boolean homeRoot;
     final java.util.List<String> created = new java.util.ArrayList<>();
     public boolean onCreate() { return true; }
     private File file(String id) throws FileNotFoundException {
         if (removed) throw new FileNotFoundException("No root for primary");
+        if (id.startsWith("home:")) return id.equals("home:") ? root : new File(root, id.substring("home:".length()));
         return id.equals("primary:Documents") ? root : new File(root, id.substring("primary:Documents/".length()));
     }
-    private String id(File file) { return "primary:Documents" + file.getAbsolutePath().substring(root.getAbsolutePath().length()); }
+    private String id(File file) {
+        String path = file.getAbsolutePath().substring(root.getAbsolutePath().length());
+        return homeRoot ? "home:" + path.replaceFirst("^/", "") : "primary:Documents" + path;
+    }
     private MatrixCursor cursor(String[] projection) {
         return new MatrixCursor(projection == null ? new String[] {Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME, Document.COLUMN_MIME_TYPE, Document.COLUMN_SIZE, Document.COLUMN_FLAGS} : projection);
     }
@@ -67,6 +75,13 @@ public class BackupDocumentsProvider extends DocumentsProvider {
     public String renameDocument(String id, String name) throws FileNotFoundException {
         if (name.equals(failRename)) throw new FileNotFoundException("Injected rename interruption");
         File source = file(id); File target = new File(source.getParentFile(), name);
+        if (android9Rename) {
+            // Android 9 gives a taken name a " (1)" suffix, renames, then fails
+            // looking up the old name.
+            for (int i = 1; target.exists(); i++) target = new File(source.getParentFile(), name + " (" + i + ")");
+            if (!source.renameTo(target)) throw new FileNotFoundException(name);
+            throw new FileNotFoundException("Missing file for " + id);
+        }
         if (target.exists() || !source.renameTo(target)) throw new FileNotFoundException(name);
         return id(target);
     }
@@ -81,6 +96,10 @@ public class BackupDocumentsProvider extends DocumentsProvider {
             throw new IllegalArgumentException("Failed to determine if " + child + " is child of " + parent +
                 ": java.io.FileNotFoundException: No root for primary");
         }
-        return child.startsWith(parent + "/");
+        try {
+            return file(child).getCanonicalPath().startsWith(file(parent).getCanonicalPath() + File.separator);
+        } catch (java.io.IOException error) {
+            throw new IllegalArgumentException(error);
+        }
     }
 }

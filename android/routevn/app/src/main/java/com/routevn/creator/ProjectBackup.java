@@ -209,9 +209,18 @@ final class ProjectBackup {
         }
     }
 
+    // Before Android 10 the provider also exposes Documents as its own "home"
+    // root, so choosing Documents there gives ids like "home:<path>". Read
+    // those as the same place on primary storage; I/O keeps the granted ids.
+    static String primaryDocumentId(String documentId) {
+        if (!documentId.startsWith("home:")) return documentId;
+        String path = documentId.substring("home:".length());
+        return "primary:" + android.os.Environment.DIRECTORY_DOCUMENTS + (path.isEmpty() ? "" : "/" + path);
+    }
+
     private static String displayFolderPath(Uri directory) {
         // Display only; all backup I/O continues through the granted SAF URI.
-        String documentId = DocumentsContract.getDocumentId(directory);
+        String documentId = primaryDocumentId(DocumentsContract.getDocumentId(directory));
         if (documentId.startsWith("primary:")) {
             return new File(android.os.Environment.getExternalStorageDirectory(),
                 documentId.substring("primary:".length())).getAbsolutePath();
@@ -225,7 +234,7 @@ final class ProjectBackup {
             !"com.android.externalstorage.documents".equals(tree.getAuthority())) {
             throw new Failure("localFolder");
         }
-        String treeId = DocumentsContract.getTreeDocumentId(tree);
+        String treeId = primaryDocumentId(DocumentsContract.getTreeDocumentId(tree));
         String relativePath = treeId.substring(treeId.indexOf(':') + 1).toLowerCase(Locale.ROOT);
         if (relativePath.equals("android") || relativePath.startsWith("android/")) throw new Failure("appFolder");
         // The picker owns consent; never manufacture permission from a raw path.
@@ -400,7 +409,7 @@ final class ProjectBackup {
             long localRequired = Math.addExact(validationSize, 16384);
             // Emulated primary storage uses FUSE: its st_dev differs from /data
             // even though both consume the same physical storage pool.
-            boolean primary = DocumentsContract.getTreeDocumentId(directory).startsWith("primary:");
+            boolean primary = primaryDocumentId(DocumentsContract.getTreeDocumentId(directory)).startsWith("primary:");
             if (primary || Os.stat(current.staging.getAbsolutePath()).st_dev == destinationSpace[1]) {
                 required = Math.addExact(required, localRequired);
                 localRequired = required;
@@ -636,11 +645,7 @@ final class ProjectBackup {
     }
 
     private boolean folderReachable() {
-        try (Cursor cursor = resolver.query(backupRoot(), new String[] {DocumentsContract.Document.COLUMN_DOCUMENT_ID}, null, null, null)) {
-            return cursor != null && cursor.moveToFirst();
-        } catch (RuntimeException error) {
-            return false;
-        }
+        return exists(backupRoot());
     }
 
     private static void save(SharedPreferences.Editor editor) throws Exception {
@@ -925,10 +930,41 @@ final class ProjectBackup {
         return result;
     }
 
+    // Android 9's storage provider renames the document, then fails to find it
+    // under its old name and throws FileNotFoundException. Accept that rename
+    // when the old document is gone and the new one is in its place. Check
+    // first that the name was free: a taken name makes the provider pick
+    // "name (1)", and the file that already had the name is not the renamed one.
     private Uri rename(Uri uri, String name) throws Exception {
-        Uri result = DocumentsContract.renameDocument(resolver, uri, name);
+        boolean beforeAndroid10 = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q;
+        Uri renamed = sibling(uri, name);
+        boolean nameFree = beforeAndroid10 && !exists(renamed);
+        Uri result;
+        try {
+            result = DocumentsContract.renameDocument(resolver, uri, name);
+        } catch (java.io.FileNotFoundException error) {
+            // Both gone, or the old one still there: a real failure.
+            if (!beforeAndroid10 || exists(uri) || !exists(renamed)) throw error;
+            if (!nameFree) throw new Failure("nameConflict");
+            result = renamed;
+        }
         if (result == null || !name.equals(name(result))) throw new Failure("nameConflict");
         return result;
+    }
+
+    // This provider's document ids are paths: a sibling keeps the parent path.
+    private static Uri sibling(Uri uri, String name) {
+        String id = DocumentsContract.getDocumentId(uri);
+        int end = Math.max(id.lastIndexOf('/'), id.indexOf(':'));
+        return DocumentsContract.buildDocumentUriUsingTree(uri, id.substring(0, end + 1) + name);
+    }
+
+    private boolean exists(Uri uri) {
+        try (Cursor cursor = resolver.query(uri, new String[] {DocumentsContract.Document.COLUMN_DOCUMENT_ID}, null, null, null)) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (RuntimeException error) {
+            return false;
+        }
     }
 
     private void delete(Uri uri) throws Exception {

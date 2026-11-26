@@ -596,4 +596,68 @@ public class BackupPublicationTest extends BackupFixture {
         assertFalse(new File(context.getFilesDir(), "projects/deleted/project.db").exists());
     }
 
+    // Android 9's storage provider renames, then throws for the old name.
+    // Setup and every backup rename, so none of them could finish there.
+    @Test @Config(sdk = 28) public void android9RenamesThatReportAMissingFileStillBackUp() throws Exception {
+        provider.android9Rename = true;
+        assertTrue(backup.configure(selectFolder(""), false).getBoolean("configured"));
+        publish();
+        File folder = new File(destination, "RouteVN Backups/Project One-one");
+        ProjectBackup.validateDatabase(new File(folder, "project.db"), "one");
+        assertArrayEquals(new byte[] {1,2,3}, Files.readAllBytes(new File(folder, "files/asset").toPath()));
+        revision = "2:1";
+        Files.writeString(new File(source, "files/new-asset").toPath(), "media");
+        publish();
+        assertEquals("2:1", new JSONObject(Files.readString(new File(folder, "backup.json").toPath())).getString("changeCounter"));
+        ProjectBackup.validateDatabase(new File(folder, "project.db.previous"), "one");
+        assertEquals("media", Files.readString(new File(folder, "files/new-asset").toPath()));
+        assertEquals("", backup.error("one"));
+        // No space probes or partial copies are left behind.
+        for (File directory : new File[] {destination, folder.getParentFile(), folder, new File(folder, "files")}) {
+            for (String name : directory.list()) {
+                assertFalse(name, name.startsWith(".routevn-space-") || name.endsWith(".next") || name.contains(" (1)"));
+            }
+        }
+    }
+
+    // The provider moved the file to "b (1)" because "b" was taken: the "b"
+    // that exists is another file and must not be taken for the renamed one.
+    @Test @Config(sdk = 28) public void anAndroid9RenameOntoATakenNameIsNotAccepted() throws Exception {
+        Files.writeString(new File(destination, "a").toPath(), "new");
+        Files.writeString(new File(destination, "b").toPath(), "old");
+        Uri tree = Uri.parse(selectFolder(""));
+        Uri a = DocumentsContract.buildDocumentUriUsingTree(tree, "primary:Documents/a");
+        provider.android9Rename = true;
+        java.lang.reflect.Method rename = ProjectBackup.class.getDeclaredMethod("rename", Uri.class, String.class);
+        rename.setAccessible(true);
+        try {
+            rename.invoke(backup, a, "b");
+            fail("a rename onto a taken name was accepted");
+        } catch (java.lang.reflect.InvocationTargetException error) {
+            // A name conflict, not a storage problem that asks to reconnect.
+            assertTrue(error.getCause() instanceof ProjectBackup.Failure);
+            assertEquals("nameConflict", ((ProjectBackup.Failure) error.getCause()).code);
+        }
+        assertEquals("old", Files.readString(new File(destination, "b").toPath()));
+        assertEquals("new", Files.readString(new File(destination, "b (1)").toPath()));
+    }
+
+    // Before Android 10, choosing Documents gives the provider's "home" root.
+    // It is still Documents: back up into a RouteVN Backups folder there.
+    @Test @Config(sdk = 28) public void android9DocumentsGetsARouteVNBackupsFolder() throws Exception {
+        provider.homeRoot = true;
+        provider.android9Rename = true;
+        Files.writeString(new File(destination, "unrelated.txt").toPath(), "keep");
+        Uri tree = DocumentsContract.buildTreeDocumentUri(BackupDocumentsProvider.AUTHORITY, "home:");
+        context.getContentResolver().takePersistableUriPermission(tree,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        JSONObject result = backup.configure(tree.toString(), false);
+        assertTrue(result.getBoolean("configured"));
+        assertFalse(result.optBoolean("needsExistingConfirmation"));
+        assertEquals(new File(android.os.Environment.getExternalStorageDirectory(), "Documents/RouteVN Backups").getAbsolutePath(),
+            backup.folderDisplayPath());
+        publish();
+        ProjectBackup.validateDatabase(new File(destination, "RouteVN Backups/Project One-one/project.db"), "one");
+        assertEquals("keep", Files.readString(new File(destination, "unrelated.txt").toPath()));
+    }
 }

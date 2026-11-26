@@ -4980,6 +4980,28 @@ public class MainActivity extends Activity {
         pendingAndroidSaveFilePickerRequestId = null;
     }
 
+    // Before Android 10 the picker hides internal storage unless asked to
+    // show it, and Documents exists only once an app has created it. Without
+    // both, the picker opens at Recent with no folder to choose, so start at
+    // the storage root when Documents is missing.
+    static Intent folderPickerIntent(boolean writable, boolean startInDocuments, File documents) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.putExtra("android.content.extra.SHOW_ADVANCED", true);
+        if (startInDocuments && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            boolean documentsMissing = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && !documents.isDirectory();
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
+                DocumentsContract.buildDocumentUri("com.android.externalstorage.documents",
+                    documentsMissing ? "primary:" : "primary:" + Environment.DIRECTORY_DOCUMENTS));
+        }
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        if (writable) {
+            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        }
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        intent.addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        return intent;
+    }
+
     private void launchAndroidFolderPicker(String requestId, boolean writable, boolean startInDocuments) {
         if (pendingAndroidFolderPickerRequestId != null) {
             sendAndroidFolderPickerError(
@@ -4991,18 +5013,8 @@ public class MainActivity extends Activity {
 
         pendingAndroidFolderPickerRequestId = requestId;
 
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        if (startInDocuments && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,
-                DocumentsContract.buildDocumentUri("com.android.externalstorage.documents",
-                    "primary:" + Environment.DIRECTORY_DOCUMENTS));
-        }
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        if (writable) {
-            intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        }
-        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        intent.addFlags(Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        Intent intent = folderPickerIntent(writable, startInDocuments,
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS));
 
         try {
             startActivityForResult(intent, ANDROID_FOLDER_PICKER_REQUEST_CODE);
