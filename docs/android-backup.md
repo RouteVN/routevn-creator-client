@@ -726,6 +726,13 @@ copy leaves the last backup intact, and the next launch finishes it; and after
 uninstalling and reinstalling, importing the backup folder restores every
 database row and media file.
 
+Checked on a vivo X100 phone running Android 16, with a separate test app and
+folder: setup through the picker; an edit is backed up about 35 seconds later
+with the app open, and about 3 seconds after pressing Home or after a save that
+lands after leaving; leaving with nothing due runs no backup and the service
+stops after the grace; no notification is left, and both databases pass an
+integrity check.
+
 Checked on emulators:
 
 - Android 15 with a 4 GB virtual SD card: a backup to the card's Documents
@@ -748,6 +755,7 @@ Checked on emulators:
   and renames work there without the Android 9 fallback. The Android 8.0
   emulator image ships no usable WebView, so 8.0 itself was not run.
 
-Still pending: renamed folders on a card, physical Android 8 to 12 devices,
-other manufacturers, and the snapshot pause on large real projects. Use disposable projects; never
+Still pending: renamed folders on a card, physical Android 7 to 12 devices,
+manufacturers other than Samsung and vivo, a long background backup with the
+screen off on a vivo, and the snapshot pause on large real projects. Use disposable projects; never
 uninstall a user's working app to run a test.
