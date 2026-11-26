@@ -8,6 +8,7 @@ import {
   buildCharacterSpritePreviewLayers,
   buildDialogueSpritePreviewLayers,
 } from "../../internal/characterSpritePreview.js";
+import { applyAudioEffectMixToBgm } from "../../internal/audioEffectDefinition.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { formatList } from "../../internal/dates.js";
 import { isEditableRandomDistribution } from "../../internal/randomActions.js";
@@ -754,6 +755,16 @@ export const selectActionsData = ({ props, state, copy, dateTime }) => {
   let bgmAction = authoredBgmStops
     ? authoredBgm
     : (effectiveBgm ?? authoredBgm);
+  if (!authoredBgm && effectiveBgm?.audioEffectMix) {
+    // Music from an earlier line keeps what its audio effect left. Show and
+    // save that level, so saving the BGM here does not change what plays.
+    bgmAction = applyAudioEffectMixToBgm(
+      effectiveBgm,
+      effectiveBgm.audioEffectMix,
+      { sounds },
+    );
+    delete bgmAction.audioEffectMix;
+  }
   if (!authoredBgmStops && effectiveBgm && authoredBgm) {
     bgmAction = {
       ...effectiveBgm,

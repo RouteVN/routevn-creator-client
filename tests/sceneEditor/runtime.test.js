@@ -1432,8 +1432,9 @@ describe("renderSceneEditorState", () => {
         },
       }),
     ).resolves.toBeUndefined();
-    expect(store.presentationState.bgm.volume).toBe(18);
-    expect(store.presentationState.bgm.sounds[0].volume).toBe(100);
+    // The effect ends at 18% of the channel's 75, as it does in the game.
+    expect(store.presentationState.bgm.volume).toBe(13.5);
+    expect(store.presentationState.bgm.sounds[0].volume).toBe(50);
     expect(
       projectData.story.scenes["scene-1"].sections["section-1"].lines[1].actions
         .bgm.audioEffects,
@@ -1495,7 +1496,10 @@ describe("renderSceneEditorState", () => {
         },
       }),
     ).resolves.toBeUndefined();
-    expect(graphicsService.engineSelectPresentationState().bgm.volume).toBe(35);
+    // The effect ends at 35% of the channel's 35, as it does in the game.
+    expect(graphicsService.engineSelectPresentationState().bgm.volume).toBe(
+      12.25,
+    );
   });
 
   it("applies temporary presentation state to the engine without replacing base store state", async () => {
