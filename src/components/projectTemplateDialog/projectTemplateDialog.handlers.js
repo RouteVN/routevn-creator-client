@@ -186,6 +186,12 @@ export const handleUseTemplateClick = (deps) => {
   );
 };
 
+// The page that opened the dialog picks the file and reads it.
+export const handleOpenTemplateFileClick = (deps) => {
+  const { dispatchEvent } = deps;
+  dispatchEvent(new CustomEvent("template-file-open"));
+};
+
 export const handleDialogClose = (deps) => {
   const { dispatchEvent } = deps;
   dispatchEvent(new CustomEvent("close"));

@@ -21,8 +21,15 @@ import { getProjectImportErrorMessage } from "../../internal/projectImportErrors
 import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { readTestCrashKind } from "../../internal/testCrashes.js";
-import { isBundledProjectTemplate } from "../../internal/projectTemplates.js";
-import { getProjectTemplateDownloadErrorMessage } from "../../internal/projectTemplateErrors.js";
+import {
+  createFileProjectTemplate,
+  isBundledProjectTemplate,
+  isFileProjectTemplate,
+} from "../../internal/projectTemplates.js";
+import {
+  getProjectTemplateDownloadErrorMessage,
+  getProjectTemplateFileErrorMessage,
+} from "../../internal/projectTemplateErrors.js";
 import { createProjectImportProgressView } from "../../internal/projectImportProgress.js";
 import {
   activateAppLocale,
@@ -241,6 +248,7 @@ const createProjectFromValues = async (deps, values = {}) => {
     const iconFile = values.iconFile;
     const template = values.template;
     const isBundledTemplate = isBundledProjectTemplate(template);
+    const isFileTemplate = isFileProjectTemplate(template);
     const resolution = values.resolution;
     const resolutionWidth = values.resolutionWidth;
     const resolutionHeight = values.resolutionHeight;
@@ -313,26 +321,35 @@ const createProjectFromValues = async (deps, values = {}) => {
     let templateError;
     try {
       await progressDialog.waitForPaint();
-      // A store template is downloaded and checked whole before the project
-      // is created, so a failed download creates nothing.
+      // A store template is downloaded, and a template file read, and
+      // checked whole before the project is created, so a template that
+      // fails creates nothing.
       let projectTemplate = template.id;
       if (!isBundledTemplate) {
+        const onProgress = (event) =>
+          progressDialog.update(
+            createProjectImportProgressView({
+              copy,
+              dateTime: i18n.dateTime,
+              event,
+            }),
+          );
         progressDialog.update({
-          status: copy.importConnectingStatus,
+          status: isFileTemplate
+            ? copy.importPreparingStatus
+            : copy.importConnectingStatus,
           progress: {},
         });
         try {
-          projectTemplate = await appService.downloadProjectTemplate({
-            templateId: template.id,
-            onProgress: (event) =>
-              progressDialog.update(
-                createProjectImportProgressView({
-                  copy,
-                  dateTime: i18n.dateTime,
-                  event,
-                }),
-              ),
-          });
+          projectTemplate = isFileTemplate
+            ? await appService.readProjectTemplateFile({
+                file: template.file,
+                onProgress,
+              })
+            : await appService.downloadProjectTemplate({
+                templateId: template.id,
+                onProgress,
+              });
           progressDialog.update({
             status: copy.importFinishingStatus,
             progress: {},
@@ -365,7 +382,9 @@ const createProjectFromValues = async (deps, values = {}) => {
       });
       render();
       appService.showAlert({
-        message: getProjectTemplateDownloadErrorMessage(templateError, copy),
+        message: isFileTemplate
+          ? getProjectTemplateFileErrorMessage(templateError, copy)
+          : getProjectTemplateDownloadErrorMessage(templateError, copy),
       });
       return;
     }
@@ -411,6 +430,47 @@ export const handleTemplateSelect = (deps, payload) => {
   const { template } = payload._event.detail;
   store.closeTemplateDialog();
   store.setCreateDialogTemplate({ template });
+  render();
+};
+
+const TEMPLATE_FILE_ACCEPT = ".zip,application/zip";
+
+// Open File in the templates: a template file on this device becomes the
+// form's template once its manifest is checked. Its files are read when the
+// project is created.
+export const handleTemplateFileOpen = async (deps) => {
+  const { appService, store, render, i18n } = deps;
+  const copy = selectProjectsPageCopy(i18n);
+  let file;
+  try {
+    file = await appService.pickFiles({
+      accept: TEMPLATE_FILE_ACCEPT,
+      multiple: false,
+    });
+  } catch {
+    appService.showToast({
+      message: copy.failedSelectTemplateFile,
+      status: "error",
+    });
+    return;
+  }
+  if (!file) return;
+
+  let info;
+  try {
+    info = await appService.readProjectTemplateFileInfo({ file });
+  } catch (error) {
+    appService.showAlert({
+      message: getProjectTemplateFileErrorMessage(error, copy),
+    });
+    return;
+  }
+  // The templates may have been closed while the file was read.
+  if (!store.selectIsTemplateDialogOpen()) return;
+  store.closeTemplateDialog();
+  store.setCreateDialogTemplate({
+    template: createFileProjectTemplate({ file, ...info }),
+  });
   render();
 };
 

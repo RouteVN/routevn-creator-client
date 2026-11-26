@@ -17,7 +17,7 @@ describe("project page view", () => {
       "rtgl-text s=sm ml=xs: ${i18n.projectPage.backToProjects}",
     );
     expect(projectView).toContain(
-      'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.exportProject}" aria-label="${i18n.projectPage.exportProject}"',
+      'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.projectActionsLabel}" aria-label="${i18n.projectPage.projectActionsLabel}"',
     );
     expect(projectView).not.toContain(
       "rtgl-button#backButton pre=chevronLeft v=gh",

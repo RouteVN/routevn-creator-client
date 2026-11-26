@@ -9,9 +9,9 @@ import {
 } from "../../../internal/projectResolution.js";
 
 // What every platform creates a new project from. `template` is the bundled
-// template's ID, such as "default", or a store template the app service has
-// downloaded: `{id, repository, files}`, each file `{fileId, mimeType,
-// bytes}`.
+// template's ID, such as "default", or a template the app service has
+// downloaded from the store or read from a template file: `{repository,
+// files}`, each file `{fileId, mimeType, bytes}`.
 
 const isDownloadedTemplate = (template) => typeof template === "object";
 
@@ -28,8 +28,8 @@ const readBundledFile = async (templateId, fileId) => {
  * The state a new project starts with, and the files it copies, each
  * `{fileId, mimeType, read}`, `read()` giving its bytes. The bundled template
  * takes fonts for the project's `language` and is scaled to
- * `projectResolution`. A store template keeps its own fonts and resolution:
- * each template is made for one.
+ * `projectResolution`. A store template or template file keeps its own fonts
+ * and resolution: each template is made for one.
  */
 export const loadProjectTemplate = async ({
   template,
@@ -77,8 +77,8 @@ export const loadProjectTemplate = async ({
 /**
  * Saves each template file into the new project with `saveFile({fileId,
  * mimeType, bytes})`. A file that cannot be copied is skipped and logged, as
- * the bundled template's files always were; a store template's are already
- * downloaded and checked.
+ * the bundled template's files always were; any other template's are already
+ * read and checked.
  */
 export const copyProjectTemplateFiles = async ({ files, saveFile }) => {
   for (const file of files) {

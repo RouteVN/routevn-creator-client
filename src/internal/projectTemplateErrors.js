@@ -1,8 +1,9 @@
 import { withErrorDetails } from "./errorDetails.js";
 
-// Stable codes of a failed store template download. Each one the user can
-// act on has its own localized projectsPage message; any other failure, such
-// as a lost connection, says the download failed, with its details.
+// Stable codes of a store template download, or a template file, that
+// failed. Each one the user can act on has its own localized projectsPage
+// message; any other failure, such as a lost connection, says the download
+// or reading failed, with its details.
 export const PROJECT_TEMPLATE_NOT_FOUND = "project_template_not_found";
 export const PROJECT_TEMPLATE_UNSUPPORTED = "project_template_unsupported";
 export const PROJECT_TEMPLATE_INVALID = "project_template_invalid";
@@ -35,6 +36,23 @@ export const getProjectTemplateDownloadErrorMessage = (error, copy) => {
       DAMAGED_CODES.includes(error?.code)
         ? "templateInvalidMessage"
         : "templateDownloadFailedMessage"
+    ],
+    error,
+    copy.errorDetailsLabel,
+  );
+};
+
+// A template file that cannot be opened: one for a newer app, one that is not
+// a template or is damaged, or one that could not be read.
+export const getProjectTemplateFileErrorMessage = (error, copy) => {
+  if (error?.code === PROJECT_TEMPLATE_UNSUPPORTED) {
+    return copy.templateNeedsNewerAppMessage;
+  }
+  return withErrorDetails(
+    copy[
+      DAMAGED_CODES.includes(error?.code)
+        ? "templateFileInvalidMessage"
+        : "templateFileReadFailedMessage"
     ],
     error,
     copy.errorDetailsLabel,

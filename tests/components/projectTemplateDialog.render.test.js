@@ -193,6 +193,33 @@ describe("project template dialog rendering", () => {
   });
 });
 
+describe("project template dialog Open File", () => {
+  it("asks for a template file beside the list, not a template's page", () => {
+    const dialog = document.createElement(
+      "rvn-project-template-dialog-render-test",
+    );
+    document.body.append(dialog);
+    dialog.store.setCatalogPage({ templates: [card("one")], nextCursor: "" });
+    dialog.render();
+    const opened = [];
+    dialog.addEventListener("template-file-open", (event) =>
+      opened.push(event),
+    );
+
+    const button = dialog.shadowRoot.querySelector("#openTemplateFileButton");
+    expect(button.textContent.trim()).toBe("Open File");
+    button.click();
+    expect(opened).toHaveLength(1);
+
+    dialog.store.openDetail({ requestId: "detail-1", card: card("one") });
+    dialog.render();
+    expect(
+      dialog.shadowRoot.querySelector("#openTemplateFileButton"),
+    ).toBeNull();
+    dialog.remove();
+  });
+});
+
 describe("project create dialog template row", () => {
   // A component keeps its own view in `template`, so the form takes the
   // chosen template as `projectTemplate`.
@@ -239,6 +266,35 @@ describe("project create dialog template row", () => {
     );
     expect(row().textContent).not.toContain("×");
     expect(choosesResolution()).toBe(true);
+    dialog.remove();
+  });
+
+  // A template file is made for one resolution, as a store template is, and
+  // has no cover.
+  it("shows a template file's title and resolution", async () => {
+    const dialog = document.createElement(
+      "rvn-project-create-dialog-render-test",
+    );
+    dialog.platform = "web";
+    dialog.projectTemplate = {
+      id: "file",
+      source: "file",
+      title: "Night Train",
+      resolution: { width: 1280, height: 720 },
+      file: new File(["zip"], "night-train.zip"),
+    };
+    document.body.append(dialog);
+
+    const row = dialog.shadowRoot.querySelector(
+      "[slot=project-template-selector]",
+    );
+    expect(row.textContent).toContain("Night Train");
+    expect(row.textContent).toContain("1280 × 720");
+    expect(row.querySelector("rtgl-image")).toBeNull();
+    expect(row.querySelector("rtgl-svg[svg=image]")).not.toBeNull();
+    expect(
+      dialog.shadowRoot.querySelector("rtgl-form").context.chooseResolution,
+    ).toBe(false);
     dialog.remove();
   });
 });

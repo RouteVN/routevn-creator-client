@@ -2,6 +2,7 @@ import { mountMobileResourceWindowLayout } from "../../internal/ui/resourcePages
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 import { requireProjectLanguage } from "../../internal/projectLanguage.js";
 import { withErrorDetails } from "../../internal/errorDetails.js";
+import { exportProjectTemplate } from "../../internal/ui/projectTemplateExport.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
   catchError,
@@ -240,17 +241,22 @@ const resolveFolderUri = (folder) => {
   return folder?.uri ?? "";
 };
 
+// A local project on Android and iOS can be exported as its source folder.
+const canExportNativeProject = (appService) => {
+  const platform = appService.getPlatform();
+  return (
+    (platform === "android" || platform === "ios") &&
+    appService.getCurrentProjectEntry()?.source === "local"
+  );
+};
+
 const exportCurrentNativeProject = async (deps) => {
   const { appService, projectService, store, render, i18n } = deps;
   const copy = selectProjectPageCopy(i18n);
   const currentProject = appService.getCurrentProjectEntry();
   const projectId = currentProject?.id ?? "";
-  const platform = appService.getPlatform();
 
-  if (
-    (platform !== "android" && platform !== "ios") ||
-    currentProject?.source !== "local"
-  ) {
+  if (!canExportNativeProject(appService)) {
     return;
   }
 
@@ -312,16 +318,22 @@ const exportCurrentNativeProject = async (deps) => {
 };
 
 export const handleProjectActionsClick = (deps, payload) => {
-  const { store, render, i18n } = deps;
+  const { appService, store, render, i18n } = deps;
   const copy = selectProjectPageCopy(i18n);
   const event = payload._event;
   event.preventDefault();
   event.stopPropagation();
 
-  store.openProjectActionMenu({
-    ...getActionMenuPosition(event),
-    items: [{ label: copy.exportProject, type: "item", value: "export" }],
+  const items = [];
+  if (canExportNativeProject(appService)) {
+    items.push({ label: copy.exportProject, type: "item", value: "export" });
+  }
+  items.push({
+    label: copy.exportTemplate,
+    type: "item",
+    value: "exportTemplate",
   });
+  store.openProjectActionMenu({ ...getActionMenuPosition(event), items });
   render();
 };
 
@@ -344,6 +356,17 @@ export const handleProjectActionMenuClickItem = async (deps, payload) => {
 
   if (item?.value === "export") {
     await exportCurrentNativeProject(deps);
+  }
+  if (item?.value === "exportTemplate") {
+    const { appService, projectService, i18n } = deps;
+    const project = store.selectCurrentProject();
+    await exportProjectTemplate({
+      appService,
+      projectService,
+      i18n,
+      name: project.name,
+      description: project.description,
+    });
   }
 };
 

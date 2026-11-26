@@ -44,9 +44,14 @@ const packageItems = (manifest, resourceType) => ({
   ...manifest.dependencies?.[resourceType]?.items,
 });
 
-const getPackageFilePath = (fileId) => `files/${encodeURIComponent(fileId)}`;
+export const getPackageFilePath = (fileId) =>
+  `files/${encodeURIComponent(fileId)}`;
 
-const readProjectFile = async ({ fileId, getFileContent, fetchImpl }) => {
+export const readProjectFile = async ({
+  fileId,
+  getFileContent,
+  fetchImpl,
+}) => {
   const content = await getFileContent(fileId);
   try {
     const response = await fetchImpl(content.url);

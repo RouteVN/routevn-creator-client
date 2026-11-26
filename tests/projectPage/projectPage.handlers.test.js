@@ -11,6 +11,7 @@ const {
   handleEditDialogIconClick,
   handleEditFormAction,
   handleProjectActionMenuClickItem,
+  handleProjectActionsClick,
   handleSceneTextAnalyticsRetry,
 } = projectPageHandlers;
 
@@ -858,6 +859,165 @@ describe("project page handlers", () => {
     });
     expect(deps.store.setProjectExportLoading).toHaveBeenLastCalledWith({
       isLoading: false,
+    });
+  });
+
+  it.each([
+    ["web", "local", ["exportTemplate"]],
+    ["tauri", "local", ["exportTemplate"]],
+    ["android", "cloud", ["exportTemplate"]],
+    ["android", "local", ["export", "exportTemplate"]],
+    ["ios", "local", ["export", "exportTemplate"]],
+  ])(
+    "offers Export as template on %s for a %s project",
+    (platform, source, values) => {
+      const deps = {
+        appService: {
+          getPlatform: vi.fn(() => platform),
+          getCurrentProjectEntry: vi.fn(() => ({ id: "project-1", source })),
+        },
+        store: { openProjectActionMenu: vi.fn() },
+        render: vi.fn(),
+        i18n: EN_I18N,
+      };
+      const _event = {
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        currentTarget: {
+          getBoundingClientRect: () => ({ left: 0, right: 40, bottom: 40 }),
+        },
+      };
+
+      handleProjectActionsClick(deps, { _event });
+
+      const { items } = deps.store.openProjectActionMenu.mock.calls[0][0];
+      expect(items.map((item) => item.value)).toEqual(values);
+      expect(items.at(-1).label).toBe(EN_I18N.projectPage.exportTemplate);
+    },
+  );
+
+  const createTemplateExportDeps = ({ prepareProjectTemplate } = {}) => {
+    const progressDialog = {
+      waitForPaint: vi.fn(async () => {}),
+      update: vi.fn(),
+      close: vi.fn(),
+    };
+    const bundle = new Blob(["zip"], { type: "application/zip" });
+    return {
+      bundle,
+      progressDialog,
+      deps: {
+        appService: {
+          saveFilePicker: vi.fn(async () => "/exports/Night Train.zip"),
+          showProgressDialog: vi.fn(() => progressDialog),
+          writeFile: vi.fn(async (path) => path),
+          showAlert: vi.fn(),
+          showToast: vi.fn(),
+        },
+        projectService: {
+          prepareProjectTemplate:
+            prepareProjectTemplate ??
+            vi.fn(async () => ({ repository: { id: 1 } })),
+          createProjectTemplateBundle: vi.fn(async ({ onProgress }) => {
+            onProgress({ current: 50, total: 200 });
+            return bundle;
+          }),
+        },
+        store: {
+          closeProjectActionMenu: vi.fn(),
+          selectCurrentProject: vi.fn(() => ({
+            name: "Night Train",
+            description: "A starter mystery.",
+          })),
+        },
+        render: vi.fn(),
+        i18n: EN_I18N,
+      },
+    };
+  };
+
+  it("exports the project as a template file from the action menu", async () => {
+    const { deps, bundle, progressDialog } = createTemplateExportDeps();
+
+    await handleProjectActionMenuClickItem(deps, {
+      _event: { detail: { item: { value: "exportTemplate" } } },
+    });
+
+    const copy = EN_I18N.projectPage;
+    expect(deps.projectService.prepareProjectTemplate).toHaveBeenCalledWith({
+      name: "Night Train",
+      description: "A starter mystery.",
+    });
+    expect(deps.appService.saveFilePicker).toHaveBeenCalledWith({
+      title: copy.saveTemplateTitle,
+      defaultPath: "Night Train.zip",
+      filters: [{ name: copy.zipFileTypeName, extensions: ["zip"] }],
+    });
+    expect(
+      deps.projectService.createProjectTemplateBundle,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repository: { id: 1 },
+        name: "Night Train",
+        description: "A starter mystery.",
+      }),
+    );
+    expect(progressDialog.update).toHaveBeenCalledWith({
+      status: "Reading files… 25%",
+      progress: { current: 50, total: 200 },
+    });
+    expect(deps.appService.writeFile).toHaveBeenCalledWith(
+      "/exports/Night Train.zip",
+      bundle,
+    );
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: copy.exportCompleteTitle,
+      message: "Template saved to: /exports/Night Train.zip",
+    });
+  });
+
+  it("refuses a project a template cannot hold before asking where to save", async () => {
+    const { ProjectTemplateExportError } = await import(
+      "../../src/internal/projectTemplatePackage.js"
+    );
+    const { deps } = createTemplateExportDeps({
+      prepareProjectTemplate: vi.fn(async () => {
+        throw new ProjectTemplateExportError(
+          "project_template_too_many_files",
+          "The project uses 2001 files.",
+        );
+      }),
+    });
+
+    await handleProjectActionMenuClickItem(deps, {
+      _event: { detail: { item: { value: "exportTemplate" } } },
+    });
+
+    expect(deps.appService.saveFilePicker).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: EN_I18N.projectPage.errorTitle,
+      message:
+        "This project uses more than 2000 files, the most a template can hold.",
+    });
+  });
+
+  it("leads a failed template export alert with the localized message", async () => {
+    const { deps, progressDialog } = createTemplateExportDeps();
+    deps.projectService.createProjectTemplateBundle = vi.fn(async () => {
+      throw new Error("Could not read file 'abc'.");
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleProjectActionMenuClickItem(deps, {
+      _event: { detail: { item: { value: "exportTemplate" } } },
+    });
+
+    const copy = EN_I18N.projectPage;
+    expect(progressDialog.close).toHaveBeenCalled();
+    expect(deps.appService.writeFile).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: copy.errorTitle,
+      message: `${copy.failedExportTemplate}\n\n${copy.errorDetailsLabel}\nCould not read file 'abc'.`,
     });
   });
 

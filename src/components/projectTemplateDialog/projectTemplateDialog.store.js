@@ -159,6 +159,7 @@ export const selectViewData = ({ state, i18n }) => {
     isDetailStep: state.step === DETAIL_STEP,
     dialogTitle: copy.title,
     closeLabel: copy.closeLabel,
+    openTemplateFileLabel: copy.openTemplateFileButton,
     backLabel: copy.backButton,
     defaultTemplate: {
       id: BUNDLED_PROJECT_TEMPLATE_ID,

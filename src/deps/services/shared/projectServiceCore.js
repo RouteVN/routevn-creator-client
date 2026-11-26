@@ -1,6 +1,7 @@
 import { readAndroidLastBuildNumber } from "../../../internal/androidExport.js";
 import { createProjectAssetService } from "./projectAssetService.js";
 import { createAssetPackageExportService } from "./assetPackageExportService.js";
+import { createProjectTemplateExportService } from "./projectTemplateExportService.js";
 import { createEditorThumbnailService } from "./editorThumbnailService.js";
 import { createSpritesheetFramesService } from "./spritesheetFramesService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
@@ -134,6 +135,11 @@ export const createProjectServiceCore = ({
     getFileContent: assetService.getFileContent,
     getRepositoryState: () =>
       repositoryService.getCachedRepository().getState(),
+  });
+
+  const projectTemplateExportService = createProjectTemplateExportService({
+    getFileContent: assetService.getFileContent,
+    getRepository: () => repositoryService.getCachedRepository(),
   });
 
   const getCurrentProjectId = () =>
@@ -1256,6 +1262,9 @@ export const createProjectServiceCore = ({
     checkFileIntegrity: assetService.checkFileIntegrity,
     createAssetPackageBundle:
       assetPackageExportService.createAssetPackageBundle,
+    prepareProjectTemplate: projectTemplateExportService.prepareProjectTemplate,
+    createProjectTemplateBundle:
+      projectTemplateExportService.createProjectTemplateBundle,
     requestTransformThumbnails:
       editorThumbnailService.requestTransformThumbnails,
     requestParticleThumbnails: editorThumbnailService.requestParticleThumbnails,

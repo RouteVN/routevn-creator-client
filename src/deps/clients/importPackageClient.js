@@ -1,3 +1,4 @@
+import { PROJECT_TEMPLATE_MANIFEST_ENTRY } from "../../internal/projectTemplatePackage.js";
 import { ImportPackageClientError } from "./importPackageErrors.js";
 import {
   findZipDirectory,
@@ -959,6 +960,22 @@ export const createImportPackageClient = ({
         }),
       });
     },
+
+    /**
+     * A project template's package ZIP on this device, `file`, read as a
+     * store template's is, a slice at a time.
+     */
+    openProjectTemplateFile({ file }) {
+      const reader = createBlobReader(file);
+      return createZipPackageSource({
+        client,
+        cryptoImpl,
+        manifestUrl: localPackageUrl(file),
+        manifestEntry: PROJECT_TEMPLATE_MANIFEST_ENTRY,
+        manifestBytes: resolvedLimits.projectTemplateManifestBytes,
+        locate: (options) => locateZipDirectory({ reader, ...options }),
+      });
+    },
   };
   return client;
 };
@@ -978,7 +995,6 @@ export const createUrlPackageSource = ({ client, url }) => {
 };
 
 const MANIFEST_ENTRY = "asset-package.json";
-const PROJECT_TEMPLATE_MANIFEST_ENTRY = "project-template.json";
 
 const isByteCount = (value) => Number.isSafeInteger(value) && value >= 0;
 
