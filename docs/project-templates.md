@@ -115,9 +115,9 @@ with the same headers and the same development address as the
 
 ## Mock server
 
-Until the store serves templates, `bun run mock:asset-store` answers all
-three methods at `http://127.0.0.1:3100/asset-store/rpc`, the address
-development builds call, so the app needs no configuration. It checks params
+Development builds call `http://127.0.0.1:3100/asset-store/rpc`, where
+`bun run mock:asset-store` answers all three methods, so the app needs no
+configuration. It checks params
 as the API does, pages with cursors bound to the query and schema, answers
 `RESOURCE_NOT_FOUND` for a template it does not list, and serves each
 screenshot, cover and avatar as an SVG at `/files/<fileId>`.
