@@ -83,20 +83,21 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: rvn-project #projectActionsButton
+    selector: "rvn-project #projectActionsButton"
     state: visible
     timeoutMs: 10000
-  - action: assert
-    type: text
-    selector: "rvn-project #detailView"
-    value: "640 × 360"
-    match: includes
+  # The detail view's values are in its shadow root, which a text assert of
+  # the view does not read.
+  - action: waitFor
+    selector: "rvn-project #detailView rtgl-text:text-is('640 × 360')"
+    state: visible
+    timeoutMs: 5000
   - action: wait
     ms: 500
   # The project has the template's resolution, and the actions button.
   - action: screenshot
   - action: select
-    selector: rvn-project #projectActionsButton
+    selector: "rvn-project #projectActionsButton"
     steps:
       - action: click
   - action: waitFor
