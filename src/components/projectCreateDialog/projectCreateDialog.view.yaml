@@ -29,6 +29,15 @@ refs:
         handler: handleIconCropDialogClose
       confirm:
         handler: handleIconCropDialogConfirm
+styles:
+  # A form taller than the window scrolls its fields above a Submit that stays
+  # in view. The dialog keeps 40 px from the top and bottom edges, inside which
+  # are its padding and border; the phone layout limits it further itself.
+  "#createProjectForm":
+    max-height: calc(100vh - 80px - 2 * var(--spacing-lg) - 2px)
+  "@supports (height: 100dvh)":
+    "#createProjectForm":
+      max-height: calc(100dvh - 80px - 2 * var(--spacing-lg) - 2px)
 template:
   - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} sticky sbv=touch w=f h=f:
       - $if platform == 'ios':
