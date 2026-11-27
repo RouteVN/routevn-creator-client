@@ -220,6 +220,22 @@ export const createAppServiceCore = ({
       });
     },
 
+    // What the Create Project form shows of a template file, a template's
+    // package ZIP on this device, once its manifest is checked: `{title,
+    // resolution}`.
+    readProjectTemplateFileInfo({ file } = {}) {
+      return projectTemplateDownloads.readProjectTemplateFileInfo({ file });
+    },
+
+    // A template file, read and checked, that `createNewProject` creates a
+    // project from: `{repository, files}`. `onProgress` follows the reading.
+    readProjectTemplateFile({ file, onProgress } = {}) {
+      return projectTemplateDownloads.readProjectTemplateFile({
+        file,
+        onProgress,
+      });
+    },
+
     getFileDisplayPath(path) {
       return platformAdapter.getFileDisplayPath?.(path) ?? path;
     },

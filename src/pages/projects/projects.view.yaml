@@ -171,6 +171,8 @@ refs:
     eventListeners:
       template-select:
         handler: handleTemplateSelect
+      template-file-open:
+        handler: handleTemplateFileOpen
       close:
         handler: handleTemplateDialogClose
   addMemberDialog:

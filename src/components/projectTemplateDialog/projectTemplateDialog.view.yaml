@@ -7,6 +7,10 @@ refs:
     eventListeners:
       click:
         handler: handleDialogClose
+  openTemplateFileButton:
+    eventListeners:
+      click:
+        handler: handleOpenTemplateFileClick
   templateGrid:
     eventListeners:
       click:
@@ -108,9 +112,12 @@ template:
   - 'rtgl-dialog#dialog ?open=${open} sm-layout=fixed md-layout=fixed p=none aria-label="${dialogTitle}"':
       - rtgl-view#dialogContent slot=content d=v bgc=bg br=md overflow=hidden:
           # The header stays in place while the page under it scrolls, with
-          # the dialog's own close button at its right.
+          # the dialog's own close button at its right. Beside the list, Open
+          # File takes a template file from this device instead.
           - 'rtgl-view d=h w=f av=c g=md ph=lg pv=md bwb=xs bc=bo style="box-sizing: border-box; flex: 0 0 auto;"':
-              - rtgl-text s=lg w=1fg: ${dialogTitle}
+              - 'rtgl-text s=lg w=1fg ellipsis=true style="min-width: 0;"': ${dialogTitle}
+              - $if isListStep:
+                  - rtgl-button#openTemplateFileButton v=se pre=upload: ${openTemplateFileLabel}
               - 'rtgl-button#dialogCloseButton sq v=gh pre=x aria-label="${closeLabel}" title="${closeLabel}"': null
           # The list and a template's page scroll in separate views, so a
           # template's page opens at its top wherever the list was scrolled.

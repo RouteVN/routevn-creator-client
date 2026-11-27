@@ -89,8 +89,7 @@ template:
           - $if projectSource == 'cloud':
               - rtgl-text s=xs c=mu-fg: ${i18n.projectPage.cloudProject}
           - rtgl-view w=1fg: null
-          - $if showNativeProjectActions:
-              - 'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.exportProject}" aria-label="${i18n.projectPage.exportProject}"': null
+          - 'rtgl-button#projectActionsButton sq pre=ellipsis v=ol title="${i18n.projectPage.projectActionsLabel}" aria-label="${i18n.projectPage.projectActionsLabel}"': null
   - 'rtgl-view#projectPageScroll w=f h=1fg sv style="min-height: 0;"':
       - 'rtgl-view w=f d=v g=xl pb=xl style="${tabletLandscapeContentStyle}"':
           - rtgl-view w=f d=v pt=md:

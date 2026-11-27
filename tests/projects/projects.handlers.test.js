@@ -12,6 +12,7 @@ import {
   handleCreateDialogSubmit,
   handleCreateDialogTemplateChange,
   handleTemplateDialogClose,
+  handleTemplateFileOpen,
   handleTemplateSelect,
   handleDeleteConfirmationInput,
   handleDeleteDialogConfirm,
@@ -675,6 +676,194 @@ describe("projects create dialog", () => {
       expect(deps.appService.showAlert).toHaveBeenCalledWith({ message });
     },
   );
+
+  const TEMPLATE_FILE = new File(["zip"], "night-train.zip", {
+    type: "application/zip",
+  });
+
+  const createTemplateFileDeps = () => {
+    const deps = createDeps();
+    deps.appService.pickFiles = vi.fn(async () => TEMPLATE_FILE);
+    deps.appService.readProjectTemplateFileInfo = vi.fn(async () => ({
+      title: "Night Train",
+      resolution: { width: 1280, height: 720 },
+    }));
+    deps.appService.readProjectTemplateFile = vi.fn(async () => ({
+      repository: { project: { resolution: { width: 1280, height: 720 } } },
+      files: [],
+    }));
+    return deps;
+  };
+
+  it("makes a checked template file the form's template from Open File", async () => {
+    const deps = createTemplateFileDeps();
+
+    await handleTemplateFileOpen(deps);
+
+    expect(deps.appService.pickFiles).toHaveBeenCalledWith({
+      accept: ".zip,application/zip",
+      multiple: false,
+    });
+    expect(deps.appService.readProjectTemplateFileInfo).toHaveBeenCalledWith({
+      file: TEMPLATE_FILE,
+    });
+    expect(deps.store.closeTemplateDialog).toHaveBeenCalledOnce();
+    expect(deps.store.setCreateDialogTemplate).toHaveBeenCalledWith({
+      template: {
+        id: "file",
+        source: "file",
+        title: "Night Train",
+        resolution: { width: 1280, height: 720 },
+        file: TEMPLATE_FILE,
+      },
+    });
+  });
+
+  it("keeps the templates open when no template file is chosen", async () => {
+    const deps = createTemplateFileDeps();
+    deps.appService.pickFiles.mockResolvedValue(undefined);
+
+    await handleTemplateFileOpen(deps);
+
+    expect(deps.appService.readProjectTemplateFileInfo).not.toHaveBeenCalled();
+    expect(deps.store.closeTemplateDialog).not.toHaveBeenCalled();
+  });
+
+  it("says when the file picker fails", async () => {
+    const deps = createTemplateFileDeps();
+    deps.appService.pickFiles.mockRejectedValue(new Error("picker"));
+
+    await handleTemplateFileOpen(deps);
+
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: EN_I18N.projectsPage.failedSelectTemplateFile,
+      status: "error",
+    });
+    expect(deps.store.closeTemplateDialog).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "is for a newer Creator",
+      new ProjectTemplateDownloadError(
+        "project_template_unsupported",
+        "The template needs Creator model schema 99; this app has 22.",
+      ),
+      EN_I18N.projectsPage.templateNeedsNewerAppMessage,
+    ],
+    [
+      "is not a template",
+      Object.assign(new Error("The asset package could not be read."), {
+        code: "package_invalid",
+      }),
+      `${EN_I18N.projectsPage.templateFileInvalidMessage}\n\n${EN_I18N.projectsPage.errorDetailsLabel}\nThe asset package could not be read.`,
+    ],
+    [
+      "cannot be read",
+      new Error("disk gone"),
+      `${EN_I18N.projectsPage.templateFileReadFailedMessage}\n\n${EN_I18N.projectsPage.errorDetailsLabel}\ndisk gone`,
+    ],
+  ])(
+    "keeps the templates open when the template file %s",
+    async (_case, error, message) => {
+      const deps = createTemplateFileDeps();
+      deps.appService.readProjectTemplateFileInfo.mockRejectedValue(error);
+
+      await handleTemplateFileOpen(deps);
+
+      expect(deps.appService.showAlert).toHaveBeenCalledWith({ message });
+      expect(deps.store.closeTemplateDialog).not.toHaveBeenCalled();
+      expect(deps.store.setCreateDialogTemplate).not.toHaveBeenCalled();
+    },
+  );
+
+  it("drops a template file read after the templates closed", async () => {
+    const deps = createTemplateFileDeps();
+    deps.store.selectIsTemplateDialogOpen.mockReturnValue(false);
+
+    await handleTemplateFileOpen(deps);
+
+    expect(deps.store.setCreateDialogTemplate).not.toHaveBeenCalled();
+  });
+
+  const FILE_TEMPLATE = {
+    id: "file",
+    source: "file",
+    title: "Night Train",
+    resolution: { width: 1280, height: 720 },
+    file: TEMPLATE_FILE,
+  };
+
+  it("reads a template file with progress, then creates the project from it", async () => {
+    const deps = createTemplateFileDeps();
+
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "New Project",
+            description: "",
+            language: "en",
+            template: FILE_TEMPLATE,
+            projectPath: "/projects/new-project",
+          },
+        },
+      },
+    });
+
+    const progressDialog =
+      deps.appService.showProgressDialog.mock.results[0].value;
+    expect(deps.appService.downloadProjectTemplate).not.toHaveBeenCalled();
+    expect(deps.appService.readProjectTemplateFile).toHaveBeenCalledWith({
+      file: TEMPLATE_FILE,
+      onProgress: expect.any(Function),
+    });
+    const { onProgress } =
+      deps.appService.readProjectTemplateFile.mock.calls[0][0];
+    onProgress({ stage: "extracting", current: 256, total: 1024 });
+    expect(progressDialog.update).toHaveBeenLastCalledWith({
+      status: expect.stringContaining("25%"),
+      progress: { current: 256, total: 1024 },
+    });
+    expect(deps.appService.createNewProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template:
+          await deps.appService.readProjectTemplateFile.mock.results[0].value,
+        projectResolution: undefined,
+      }),
+    );
+  });
+
+  it("opens the form again when a template file fails as the project is created", async () => {
+    const deps = createTemplateFileDeps();
+    deps.appService.readProjectTemplateFile.mockRejectedValue(
+      Object.assign(new Error("A package file failed integrity validation."), {
+        code: "integrity_mismatch",
+      }),
+    );
+
+    await handleCreateDialogSubmit(deps, {
+      _event: {
+        detail: {
+          values: {
+            name: "New Project",
+            description: "",
+            language: "en",
+            template: FILE_TEMPLATE,
+            projectPath: "/projects/new-project",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.createNewProject).not.toHaveBeenCalled();
+    expect(deps.store.reopenCreateDialog).toHaveBeenCalledWith(
+      expect.objectContaining({ template: FILE_TEMPLATE }),
+    );
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: `${EN_I18N.projectsPage.templateFileInvalidMessage}\n\n${EN_I18N.projectsPage.errorDetailsLabel}\nA package file failed integrity validation.`,
+    });
+  });
 
   it("creates a project from the sticky form submit event", async () => {
     const deps = createDeps();

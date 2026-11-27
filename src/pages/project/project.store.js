@@ -328,8 +328,5 @@ export const selectViewData = ({ state, i18n }) => {
     totalTextCount: formatCount(totalTextCount, intlLocale),
     hasSceneTextError,
     isSceneTextLoading,
-    showNativeProjectActions:
-      (state.platform === "android" || state.platform === "ios") &&
-      state.project.source === "local",
   };
 };

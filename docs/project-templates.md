@@ -1,7 +1,7 @@
 # Project Templates
 
-A new project starts from a template: the one bundled with the app, or one
-published in the asset store.
+A new project starts from a template: the one bundled with the app, one
+published in the asset store, or a template file on this device.
 
 ## Choosing a template
 
@@ -18,9 +18,15 @@ thumbnails (Left and Right move between them while the frame has focus), its
 description, and its summary, creator, resolution, languages, version and
 dates. Use Template returns to the form with that template.
 
-A store template is made for one resolution, so the form shows it in the
-Template row instead of the Resolution field; the bundled template's
-resolution is chosen as before.
+Open File, beside the list, picks a [template file](#template-files) instead.
+Its manifest is read and checked at once; the form then shows the package's
+name, or else the file's, without a cover. A file that is not a template, is
+damaged or needs a newer app is refused with an alert, and the templates stay
+open.
+
+A store template or template file is made for one resolution, so the form
+shows it in the Template row instead of the Resolution field; the bundled
+template's resolution is chosen as before.
 
 ## Creating a project from a store template
 
@@ -49,6 +55,45 @@ typed and the template chosen, and an alert says what happened. A template the
 store no longer lists, or one that needs a newer app, has its own message; a
 damaged template or a failed download shows its details.
 
+## Template files
+
+Export as template, in the project page's actions menu on every platform,
+saves the open project as a template file: one ZIP with its current state and
+the files that state uses, without its history. It is the package the asset
+store takes for a template, so a publisher can upload it, and Open File
+creates a project from it.
+
+| Entry                   | Holds                                                                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `project-template.json` | UTF-8 JSON, exactly `{schema, package, creatorModelSchema, repository}`: `package` is `{kind, name, description}`, the last two from the project and left out when empty; `creatorModelSchema` is this app's |
+| `files/`                | The folder entry JSZip writes                                                                                                                                                                                |
+| `files/<id>`            | One per file record, in the order the project lists them                                                                                                                                                     |
+
+Every entry is stored, uncompressed. The `repository` keeps only the files
+something in the state names by ID: a file nothing uses any more, such as one
+a replaced sound left behind, and the folders of files are left out, so
+`files.tree` is flat. Each record is `{id, type, mimeType, size, sha256}`,
+with the size and lowercase SHA-256 of the bytes written.
+
+A project is refused, with an alert saying which limit, before Save asks
+where to write; the limits on file sizes are checked again as the files are
+read.
+
+| Limit      | Value                                                                 |
+| ---------- | --------------------------------------------------------------------- |
+| Files      | 2,000                                                                 |
+| One file   | 50 MiB                                                                |
+| All files  | 2 GiB                                                                 |
+| Manifest   | 8 MiB                                                                 |
+| Resolution | 1 to 16,384 on each side                                              |
+| File IDs   | `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`, which the Creator's own IDs are |
+| File types | PNG, JPEG, WebP, MP3, WAV, Ogg, TTF, OTF, WOFF2, JSON, MP4 and WebM   |
+
+Creating a project from a template file reads it as a store template is
+read, a slice at a time from the file instead of by byte range, with the same
+checks, and up to the 2 GiB a template can hold rather than the 200 MiB the
+app downloads. The Creating Project dialog shows the share read.
+
 ## Store calls
 
 The app calls three JSON-RPC methods of the asset store, at the same endpoint,
@@ -70,9 +115,9 @@ with the same headers and the same development address as the
 
 ## Mock server
 
-Until the store serves templates, `bun run mock:asset-store` answers all
-three methods at `http://127.0.0.1:3100/asset-store/rpc`, the address
-development builds call, so the app needs no configuration. It checks params
+Development builds call `http://127.0.0.1:3100/asset-store/rpc`, where
+`bun run mock:asset-store` answers all three methods, so the app needs no
+configuration. It checks params
 as the API does, pages with cursors bound to the query and schema, answers
 `RESOURCE_NOT_FOUND` for a template it does not list, and serves each
 screenshot, cover and avatar as an SVG at `/files/<fileId>`.

@@ -8,7 +8,10 @@ propsSchema:
 events:
   template-select:
     type: object
-    description: A template was chosen. `detail.template` is the bundled template (`{ id, source }`) or a store template (`{ id, source, title, coverUrl }`).
+    description: A template was chosen. `detail.template` is the bundled template (`{ id, source }`) or a store template (`{ id, source, title, coverUrl, resolution }`).
+  template-file-open:
+    type: object
+    description: Open File was pressed, to choose a template file on this device instead.
   close: {}
 methods:
   type: object

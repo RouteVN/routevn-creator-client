@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import JSZip from "jszip";
 import { describe, expect, it, vi } from "vitest";
 import {
   createProjectTemplateDownloadService,
@@ -190,5 +191,95 @@ describe("project template downloads", () => {
     await expect(
       service.downloadProjectTemplate({ templateId: "Tp1TemplateOne01" }),
     ).rejects.toBe(failure);
+  });
+});
+
+// A template file on this device, as Export as template writes one.
+const createTemplateFile = async ({
+  manifest = createManifest(),
+  name = "my-template.zip",
+  files = FILES,
+} = {}) => {
+  const zip = new JSZip();
+  zip.file("project-template.json", JSON.stringify(manifest));
+  for (const [fileId, bytes] of Object.entries(files)) {
+    zip.file(`files/${fileId}`, bytes);
+  }
+  const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
+  return new File([blob], name, { type: "application/zip" });
+};
+
+describe("project template files", () => {
+  const service = createProjectTemplateDownloadService({
+    assetStore: {},
+    creatorModelSchema: 21,
+  });
+
+  it("names a template file after its package, or else the file", async () => {
+    const named = createManifest();
+    named.package.name = "  Night Train ";
+
+    await expect(
+      service.readProjectTemplateFileInfo({
+        file: await createTemplateFile({ manifest: named }),
+      }),
+    ).resolves.toEqual({
+      title: "Night Train",
+      resolution: { width: 1280, height: 720 },
+    });
+    await expect(
+      service.readProjectTemplateFileInfo({
+        file: await createTemplateFile({ name: "Old Station.ZIP" }),
+      }),
+    ).resolves.toMatchObject({ title: "Old Station" });
+  });
+
+  it("reads every file of a template file and checks it", async () => {
+    const template = await service.readProjectTemplateFile({
+      file: await createTemplateFile(),
+    });
+
+    expect(template).toEqual({
+      repository: createRepository(),
+      files: [
+        { fileId: "imageOne", mimeType: "image/png", bytes: FILES.imageOne },
+        { fileId: "imageTwo", mimeType: "image/png", bytes: FILES.imageTwo },
+      ],
+    });
+  });
+
+  it("refuses a file that is not a template ZIP", async () => {
+    await expect(
+      service.readProjectTemplateFileInfo({
+        file: new File([new TextEncoder().encode("not a zip")], "a.zip"),
+      }),
+    ).rejects.toMatchObject({ code: "package_invalid" });
+    await expect(
+      service.readProjectTemplateFileInfo({
+        file: await createTemplateFile({
+          manifest: createManifest({ schema: "routevn.import-pack.v1" }),
+        }),
+      }),
+    ).rejects.toMatchObject({ code: "project_template_invalid" });
+  });
+
+  it("refuses a template file from a newer Creator", async () => {
+    await expect(
+      service.readProjectTemplateFileInfo({
+        file: await createTemplateFile({
+          manifest: createManifest({ creatorModelSchema: 22 }),
+        }),
+      }),
+    ).rejects.toMatchObject({ code: "project_template_unsupported" });
+  });
+
+  it("refuses a template file whose file does not match its record", async () => {
+    await expect(
+      service.readProjectTemplateFile({
+        file: await createTemplateFile({
+          files: { ...FILES, imageTwo: new TextEncoder().encode("image 2!!!") },
+        }),
+      }),
+    ).rejects.toMatchObject({ code: "integrity_mismatch" });
   });
 });

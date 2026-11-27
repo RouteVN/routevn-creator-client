@@ -1,0 +1,127 @@
+---
+title: Project Template File
+description: Creates a project from a template file through Open File in the templates, then exports it as a template from the project page's actions menu. The fixture is a 640 x 360 template with one picture, written by Export as template.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  - id: laptop
+    width: 1024
+    height: 768
+  - id: mobile
+    width: 390
+    height: 844
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-form#createProjectForm rtgl-input[data-field-name='name'] input
+    steps:
+      - action: clear
+      - action: write
+        value: Project One
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-button#changeTemplateButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-project-template-dialog [data-template-id='ES4CXLTKY1nbSEI5']"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  # Open File beside the list.
+  - action: screenshot
+  - action: select
+    selector: "rvn-project-template-dialog #openTemplateFileButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#rtglVtFilePickerInput"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#rtglVtFilePickerInput"
+    steps:
+      - action: upload
+        files:
+          - vt/fixtures/project-template.zip
+  - action: waitFor
+    selector: "rvn-project-template-dialog #openTemplateFileButton"
+    state: hidden
+    timeoutMs: 10000
+  - action: assert
+    type: text
+    selector: "rtgl-form#createProjectForm [slot=project-template-selector]"
+    value: "Template One"
+    match: includes
+  - action: wait
+    ms: 300
+  # The form with the template file: its name and resolution, no cover.
+  - action: screenshot
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-button[data-action-id=submit]"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 30000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-project #projectActionsButton"
+    state: visible
+    timeoutMs: 10000
+  # The detail view's values are in its shadow root, which a text assert of
+  # the view does not read.
+  - action: waitFor
+    selector: "rvn-project #detailView rtgl-text:text-is('640 × 360')"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 500
+  # The project has the template's resolution, and the actions button.
+  - action: screenshot
+  - action: select
+    selector: "rvn-project #projectActionsButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: 'rvn-project rtgl-dropdown-menu#projectActionMenu [role="menuitem"]:has-text("Export as template")'
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  # On the web the menu has only Export as template.
+  - action: screenshot
+  - action: select
+    selector: 'rvn-project rtgl-dropdown-menu#projectActionMenu [role="menuitem"]:has-text("Export as template")'
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-global-ui .dialog-message:has-text('Template saved to')"
+    state: visible
+    timeoutMs: 15000
+  - action: assert
+    type: text
+    selector: "rtgl-global-ui .dialog-message"
+    value: "Template saved to: Project One.zip"
+  - action: wait
+    ms: 250
+  # The web downloads the file it names.
+  - action: screenshot
+---
