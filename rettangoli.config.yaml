@@ -40,9 +40,7 @@ vt:
   path: "vt"
   url: "http://127.0.0.1:3001"
   service:
-    # The mock asset store answers the project template methods at the address
-    # pages on 127.0.0.1 call, so the template specs show the store's templates.
-    start: "node scripts/mock-asset-store-server.js --delay 0 & python3 -m http.server 3001 --directory _site"
+    start: "python3 -m http.server 3001 --directory _site"
   name: "RouteVN Creator Visual Tests"
   description: "Visual testing for RouteVN Creator pages"
   sections:

@@ -34,13 +34,9 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-project-template-dialog [data-template-id='ES4CXLTKY1nbSEI5']"
+    selector: "rvn-project-template-dialog [data-template-id='default']"
     state: visible
     timeoutMs: 10000
-  - action: wait
-    ms: 500
-  # Open File beside the list.
-  - action: screenshot
   - action: select
     selector: "rvn-project-template-dialog #openTemplateFileButton"
     steps:
