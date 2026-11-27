@@ -113,37 +113,10 @@ with the same headers and the same development address as the
 - A template the store no longer lists shows its own message; a list or page
   that fails to load shows Try Again.
 
-## Mock server
+## Development
 
-Development builds call `http://127.0.0.1:3100/asset-store/rpc`, where
-`bun run mock:asset-store` answers all three methods, so the app needs no
-configuration. It checks params
-as the API does, pages with cursors bound to the query and schema, answers
-`RESOURCE_NOT_FOUND` for a template it does not list, and serves each
-screenshot, cover and avatar as an SVG at `/files/<fileId>`.
-
-Each template's package is the bundled template under the template's title,
-which its title screen shows, and at its resolution, with the fonts for Latin
-scripts only. The mock builds it when it is first asked for and serves it at a
-URL that expires after ten minutes, in byte ranges. Kinetic Novel is
-1280 × 720; the others are 1920 × 1080.
-
-It lists seven templates, and an eighth that needs Creator model schema 99, so
-a current app never shows it.
-
-| Option            | Effect                                                                                                                                 |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `--port <port>`   | Listen on another port; the default is `3100`                                                                                          |
-| `--delay <ms>`    | Wait before every answer, `400` by default, to show loading, and an eighth of it before each byte range, to show a download's progress |
-| `--fail list`     | Fail every template list, to show its Try Again                                                                                        |
-| `--fail detail`   | Fail every template page, to show its Try Again                                                                                        |
-| `--fail download` | Fail every download URL, to show a failed creation                                                                                     |
-| `--fail package`  | Serve packages with a file that fails its checksum, to show a damaged template                                                         |
-
-It answers only the template methods: the pack methods answer
-`Method not found`, so the asset store's packs need a locally running API
-instead. The app calls one address for both; to run the mock on another port,
-set `VITE_ROUTEVN_ASSET_STORE_RPC_URL` to it when starting the watch server.
-
-`tests/scripts/mockAssetStoreServer.test.js` runs the mock through the app's
-asset store client, so the two stay in agreement.
+Development builds call `http://127.0.0.1:3100/asset-store/rpc`, the same
+address as the [asset store's pack methods](import-packages.md), so the
+templates need a locally running API. Set `VITE_ROUTEVN_ASSET_STORE_RPC_URL`
+when starting the watch server to use another API. Without one, the templates
+list only the bundled template, with Try Again for the store's.
