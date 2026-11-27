@@ -21,7 +21,7 @@ steps:
     steps:
       - action: click
   - action: select
-    selector: "#createProjectForm #field0 input"
+    selector: "#createProjectForm [data-field-name='name'] input"
     steps:
       - action: clear
       - action: write

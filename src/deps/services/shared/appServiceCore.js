@@ -8,6 +8,7 @@ import { getLocalProjectPathFromPayload } from "../../../internal/localProjectRo
 import { normalizeTheme } from "../../../internal/theme.js";
 import { noopErrorTracker } from "../../clients/errorReporting.js";
 import { createAssetStoreClient } from "../../clients/assetStoreClient.js";
+import { createProjectTemplateDownloadService } from "./projectTemplateDownloadService.js";
 import { createDeviceFactsClient } from "../../clients/deviceFacts.js";
 
 export const createAppServiceCore = ({
@@ -111,6 +112,10 @@ export const createAppServiceCore = ({
       }).get,
     });
 
+  const projectTemplateDownloads = createProjectTemplateDownloadService({
+    assetStore,
+  });
+
   const touchLayoutService = createTouchLayoutService({
     windowMetricsClient,
     uiConfig,
@@ -188,6 +193,31 @@ export const createAppServiceCore = ({
     // the pack.
     getAssetStorePackDownload({ assetPackId, countDownload } = {}) {
       return assetStore.getAssetPackDownload({ assetPackId, countDownload });
+    },
+
+    // Project templates from the asset store that a new project can start
+    // from, newest first, as cards: title, summary, cover, resolution,
+    // languages and creator.
+    listProjectTemplates({ cursor } = {}) {
+      return assetStore.listProjectTemplates({ cursor });
+    },
+
+    // One project template, with its description and screenshots. Each read
+    // counts one view of the template.
+    getProjectTemplate({ templateId } = {}) {
+      return assetStore.getProjectTemplateById({
+        projectTemplateId: templateId,
+      });
+    },
+
+    // A store template, downloaded and checked, that `createNewProject`
+    // creates a project from: `{id, repository, files}`. It counts one
+    // download of the template; `onProgress` follows the download.
+    downloadProjectTemplate({ templateId, onProgress } = {}) {
+      return projectTemplateDownloads.downloadProjectTemplate({
+        templateId,
+        onProgress,
+      });
     },
 
     getFileDisplayPath(path) {

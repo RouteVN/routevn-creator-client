@@ -6,8 +6,12 @@ propsSchema:
       type: string
     defaultValues:
       type: object
+    projectTemplate:
+      type: object
+      description: The template the project starts from, as the template dialog chose it. Without one, the bundled template. Not named `template`, which a component's own view uses.
 events:
   submit: {}
+  template-change: {}
 methods:
   type: object
   properties:

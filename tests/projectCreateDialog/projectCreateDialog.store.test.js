@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  selectTemplate,
   selectViewData,
+  setTemplate,
   syncFromProps,
   setLocationPreview,
 } from "../../src/components/projectCreateDialog/projectCreateDialog.store.js";
@@ -132,5 +134,66 @@ describe("projectCreateDialog.store", () => {
         },
       ],
     });
+  });
+
+  it("shows the template first, with the bundled one named in the app's language", () => {
+    const state = createInitialState();
+    let viewData = selectViewData({ state, i18n: EN_I18N });
+
+    expect(viewData.form.fields[0]).toEqual({
+      name: "projectTemplate",
+      type: "slot",
+      slot: "project-template-selector",
+      label: "Template",
+    });
+    // The bundled template shows its title screen.
+    expect(viewData.projectTemplate).toEqual({
+      title: "Default",
+      coverUrl: "/templates/default/cover.webp",
+    });
+    expect(viewData.changeTemplateLabel).toBe("Change");
+
+    expect(viewData.context.chooseResolution).toBe(true);
+
+    // A store template shows the one resolution it is made for, which the
+    // form then has no field to choose.
+    const template = {
+      id: "template-one",
+      source: "store",
+      title: "Template One",
+      coverUrl: "https://files.example/template-one.png",
+      resolution: { width: 1280, height: 720 },
+    };
+    syncFromProps({ state }, { props: { projectTemplate: template } });
+    viewData = selectViewData({ state, i18n: EN_I18N });
+    expect(viewData.projectTemplate).toEqual({
+      title: "Template One",
+      coverUrl: "https://files.example/template-one.png",
+      resolution: "1280 × 720",
+    });
+    expect(viewData.context.chooseResolution).toBe(false);
+    expect(
+      viewData.form.fields
+        .filter(({ name }) => name.startsWith("resolution"))
+        .map(({ $when }) => $when),
+    ).toEqual([
+      "chooseResolution",
+      "chooseResolution && values.resolution == 'custom'",
+      "chooseResolution && values.resolution == 'custom'",
+    ]);
+    expect(selectTemplate({ state })).toBe(template);
+  });
+
+  it("changes the template without resetting the typed values", () => {
+    const state = createInitialState();
+    state.defaultValues.name = "Project One";
+
+    setTemplate({ state }, { template: { id: "default", source: "bundled" } });
+
+    expect(selectTemplate({ state })).toEqual({
+      id: "default",
+      source: "bundled",
+    });
+    expect(state.defaultValues.name).toBe("Project One");
   });
 });

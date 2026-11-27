@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleChangeTemplateClick,
   handleFormAction,
   handleFormChange,
   handleFormInput,
   handleBeforeMount,
+  handleOnUpdate,
   handleProjectIconClick,
 } from "../../src/components/projectCreateDialog/projectCreateDialog.handlers.js";
 import * as dialogStore from "../../src/components/projectCreateDialog/projectCreateDialog.store.js";
@@ -196,8 +198,15 @@ describe("projectCreateDialog handlers", () => {
         selectIconFile: vi.fn(() => undefined),
         selectPlatform: vi.fn(() => "android"),
         selectProjectPath: vi.fn(() => ""),
+        selectTemplate: vi.fn(() => template),
         setValidationErrors: vi.fn(),
       },
+    };
+    const template = {
+      id: "template-one",
+      source: "store",
+      title: "Template One",
+      coverUrl: "https://files.example/template-one.png",
     };
 
     handleFormAction(deps, {
@@ -212,6 +221,7 @@ describe("projectCreateDialog handlers", () => {
         name: "Project One",
         projectPath: "",
         iconFile: undefined,
+        template,
       },
     });
   });
@@ -231,6 +241,7 @@ describe("projectCreateDialog handlers", () => {
       selectIconFile: () => undefined,
       selectPlatform: () => "tauri",
       selectProjectPath: () => "",
+      selectTemplate: () => ({ id: "default", source: "bundled" }),
       setValidationErrors: vi.fn(),
     },
   });
@@ -258,5 +269,36 @@ describe("projectCreateDialog handlers", () => {
       name: "ROUTEVN_TEST_PANIC_CRASH",
       projectPath: "",
     });
+  });
+
+  it("asks for another template from Change", () => {
+    const dispatchEvent = vi.fn();
+
+    handleChangeTemplateClick({ dispatchEvent });
+
+    expect(dispatchEvent.mock.calls[0][0].type).toBe("template-change");
+  });
+
+  it("takes a new template without resetting the form", () => {
+    const store = {
+      setTemplate: vi.fn(),
+      syncFromProps: vi.fn(),
+      selectIconPreviewUrl: vi.fn(),
+    };
+    const render = vi.fn();
+    const defaultValues = {};
+    const template = { id: "default", source: "bundled" };
+
+    handleOnUpdate(
+      { store, render },
+      {
+        oldProps: { platform: "web", defaultValues, projectTemplate: {} },
+        newProps: { platform: "web", defaultValues, projectTemplate: template },
+      },
+    );
+
+    expect(store.setTemplate).toHaveBeenCalledWith({ template });
+    expect(store.syncFromProps).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledOnce();
   });
 });

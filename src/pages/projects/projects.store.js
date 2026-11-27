@@ -1,5 +1,6 @@
 import { DEFAULT_APP_THEME, normalizeTheme } from "../../internal/theme.js";
 import { APP_LOCALE_SELECT_OPTIONS } from "../../internal/ui/appLocale.js";
+import { createBundledProjectTemplate } from "../../internal/projectTemplates.js";
 import {
   formatProjectsPageCopy,
   selectProjectsPageCopy,
@@ -150,10 +151,16 @@ export const createInitialState = () => ({
     confirmationText: "",
   },
 
+  // Change in the Create Project form opens the templates over it.
+  templateDialog: {
+    isOpen: false,
+  },
+
   createDialog: {
     isOpen: false,
     formKey: 0,
     defaultValues: {},
+    template: createBundledProjectTemplate(),
   },
 
   cloudCreateDialog: {
@@ -585,10 +592,38 @@ export const selectIsDeleteDialogOpen = ({ state }) => {
   return Boolean(state.deleteDialog?.isOpen);
 };
 
+export const openTemplateDialog = ({ state }, _payload = {}) => {
+  state.templateDialog.isOpen = true;
+};
+
+export const closeTemplateDialog = ({ state }, _payload = {}) => {
+  state.templateDialog.isOpen = false;
+};
+
+export const selectIsTemplateDialogOpen = ({ state }) => {
+  return state.templateDialog.isOpen;
+};
+
+// A new form starts from the bundled template.
 export const openCreateDialog = ({ state }, _payload = {}) => {
   state.createDialog.isOpen = true;
   state.createDialog.formKey += 1;
   state.createDialog.defaultValues = {};
+  state.createDialog.template = createBundledProjectTemplate();
+};
+
+// The form again, with what was typed and the template chosen, after its
+// template failed to download, so Create can be tried again.
+export const reopenCreateDialog = ({ state }, { values, template } = {}) => {
+  state.createDialog.isOpen = true;
+  state.createDialog.formKey += 1;
+  state.createDialog.defaultValues = values;
+  state.createDialog.template = template;
+};
+
+// Choosing another template while the form is open keeps what is typed.
+export const setCreateDialogTemplate = ({ state }, { template } = {}) => {
+  state.createDialog.template = template;
 };
 
 export const closeCreateDialog = ({ state }, _payload = {}) => {

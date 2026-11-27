@@ -1,0 +1,75 @@
+---
+title: Project Templates
+description: Chooses a store template for a new project, from the Create Project form through the templates and a template's page and back, served by the mock asset store.
+url: /projects
+viewport:
+  - id: laptop
+    width: 1024
+    height: 768
+  - id: mobile
+    width: 390
+    height: 844
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rtgl-form#createProjectForm rtgl-button#changeTemplateButton"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  # The form with the bundled template; at 1024 x 768 its fields scroll above
+  # Submit.
+  - action: screenshot
+  - action: select
+    selector: "rtgl-form#createProjectForm rtgl-button#changeTemplateButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-project-template-dialog [data-template-id='ES4CXLTKY1nbSEI5']"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  # The bundled template first, then the store's, newest first. Future
+  # Template needs a newer Creator model schema, so it is never listed.
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - >-
+        (() => { const find = (root, selector) => root.querySelector(selector) ?? [...root.querySelectorAll('*')].map(node => node.shadowRoot && find(node.shadowRoot, selector)).find(Boolean); return [...find(document, 'rvn-project-template-dialog').shadowRoot.querySelectorAll('[data-template-id]')].map(node => node.dataset.templateId).join(','); })()
+    value: "default,MlW0niuJRG3YE2eu,3lhCJFzS7tW95PR9,QoCwmvgMWki8mfnZ,KSa9XKKqLxHtIO6r,u0fX5WUJyWgcS1Ml,J3Vo8hqNal52HbfW,ES4CXLTKY1nbSEI5"
+  - action: screenshot
+  - action: select
+    selector: "rvn-project-template-dialog [data-template-id='ES4CXLTKY1nbSEI5']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-project-template-dialog rtgl-button#useTemplateButton"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  # Kinetic Novel's page: its screenshots, details and Use Template.
+  - action: screenshot
+  - action: select
+    selector: "rvn-project-template-dialog rtgl-button#useTemplateButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "rvn-project-template-dialog rtgl-button#useTemplateButton"
+    state: hidden
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  # Back in the form: Kinetic Novel at its own 1280 x 720, with no Resolution
+  # field.
+  - action: screenshot
+---

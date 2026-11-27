@@ -19,12 +19,25 @@ refs:
     eventListeners:
       click:
         handler: handleProjectIconClick
+  changeTemplateButton:
+    eventListeners:
+      click:
+        handler: handleChangeTemplateClick
   iconCropDialog:
     eventListeners:
       close:
         handler: handleIconCropDialogClose
       confirm:
         handler: handleIconCropDialogConfirm
+styles:
+  # A form taller than the window scrolls its fields above a Submit that stays
+  # in view. The dialog keeps 40 px from the top and bottom edges, inside which
+  # are its padding and border; the phone layout limits it further itself.
+  "#createProjectForm":
+    max-height: calc(100vh - 80px - 2 * var(--spacing-lg) - 2px)
+  "@supports (height: 100dvh)":
+    "#createProjectForm":
+      max-height: calc(100dvh - 80px - 2 * var(--spacing-lg) - 2px)
 template:
   - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} sticky sbv=touch w=f h=f:
       - $if platform == 'ios':
@@ -41,6 +54,19 @@ template:
                       - rtgl-text s=sm c=de: ${projectLocationMessage}
                     $else:
                       - rtgl-text s=sm c=mu-fg: ${projectLocationMessage}
+      # The template the project starts from; Change opens the templates again.
+      - rtgl-view slot=project-template-selector w=f:
+          - 'rtgl-view d=h w=f av=c g=md p=sm bw=xs bc=bo br=md style="box-sizing: border-box; min-width: 0;"':
+              - 'rtgl-view w=96 av=c ah=c br=sm bgc=mu overflow=hidden style="flex: 0 0 auto; aspect-ratio: 16 / 9;"':
+                  - $if projectTemplate.coverUrl:
+                      - rtgl-image src=${projectTemplate.coverUrl} w=f h=f of=cov: null
+                    $else:
+                      - rtgl-svg svg=image wh=20 c=mu-fg: null
+              - 'rtgl-view w=1fg g=xs style="min-width: 0;"':
+                  - 'rtgl-text w=f ellipsis=true style="min-width: 0;"': ${projectTemplate.title}
+                  - $if projectTemplate.resolution:
+                      - rtgl-text s=sm c=mu-fg: ${projectTemplate.resolution}
+              - rtgl-button#changeTemplateButton v=se: ${changeTemplateLabel}
       - rtgl-view slot=project-icon-selector w=f:
           - $if iconPreviewUrl:
               - rtgl-view w=120 h=120 av=c ah=c:

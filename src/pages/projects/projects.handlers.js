@@ -21,6 +21,9 @@ import { getProjectImportErrorMessage } from "../../internal/projectImportErrors
 import { ROUTEVN_CONTACT_URL } from "../../internal/routevnUrls.js";
 import { resolveUpdatesEnabled } from "../../internal/updates.js";
 import { readTestCrashKind } from "../../internal/testCrashes.js";
+import { isBundledProjectTemplate } from "../../internal/projectTemplates.js";
+import { getProjectTemplateDownloadErrorMessage } from "../../internal/projectTemplateErrors.js";
+import { createProjectImportProgressView } from "../../internal/projectImportProgress.js";
 import {
   activateAppLocale,
   DEFAULT_APP_LOCALE,
@@ -236,7 +239,8 @@ const createProjectFromValues = async (deps, values = {}) => {
     const description = values.description ?? "";
     const language = values.language;
     const iconFile = values.iconFile;
-    const template = values.template ?? "default";
+    const template = values.template;
+    const isBundledTemplate = isBundledProjectTemplate(template);
     const resolution = values.resolution;
     const resolutionWidth = values.resolutionWidth;
     const resolutionHeight = values.resolutionHeight;
@@ -264,13 +268,16 @@ const createProjectFromValues = async (deps, values = {}) => {
       return;
     }
 
-    const projectResolution = resolveProjectResolution({
-      preset: resolution,
-      width: resolutionWidth,
-      height: resolutionHeight,
-    });
+    // A store template is made for its own resolution, so none is chosen.
+    const projectResolution = isBundledTemplate
+      ? resolveProjectResolution({
+          preset: resolution,
+          width: resolutionWidth,
+          height: resolutionHeight,
+        })
+      : undefined;
 
-    if (!projectResolution) {
+    if (isBundledTemplate && !projectResolution) {
       if (resolution === CUSTOM_PROJECT_RESOLUTION_PRESET) {
         if (!resolutionWidth) {
           appService.showAlert({ message: copy.resolutionWidthRequired });
@@ -303,21 +310,64 @@ const createProjectFromValues = async (deps, values = {}) => {
 
     let newProject;
     let creationError;
+    let templateError;
     try {
       await progressDialog.waitForPaint();
-      newProject = await appService.createNewProject({
-        name,
-        description,
-        language,
-        iconFile,
-        projectPath,
-        template,
-        projectResolution,
-      });
+      // A store template is downloaded and checked whole before the project
+      // is created, so a failed download creates nothing.
+      let projectTemplate = template.id;
+      if (!isBundledTemplate) {
+        progressDialog.update({
+          status: copy.importConnectingStatus,
+          progress: {},
+        });
+        try {
+          projectTemplate = await appService.downloadProjectTemplate({
+            templateId: template.id,
+            onProgress: (event) =>
+              progressDialog.update(
+                createProjectImportProgressView({
+                  copy,
+                  dateTime: i18n.dateTime,
+                  event,
+                }),
+              ),
+          });
+          progressDialog.update({
+            status: copy.importFinishingStatus,
+            progress: {},
+          });
+        } catch (error) {
+          templateError = error;
+        }
+      }
+      if (!templateError) {
+        newProject = await appService.createNewProject({
+          name,
+          description,
+          language,
+          iconFile,
+          projectPath,
+          template: projectTemplate,
+          projectResolution,
+        });
+      }
     } catch (error) {
       creationError = error;
     } finally {
       progressDialog.close();
+    }
+
+    if (templateError) {
+      store.reopenCreateDialog({
+        values: { name, description, language, projectPath },
+        template,
+      });
+      render();
+      appService.showAlert({
+        message: getProjectTemplateDownloadErrorMessage(templateError, copy),
+      });
+      return;
     }
 
     if (creationError) {
@@ -343,6 +393,32 @@ export const handleCreateButtonClick = async (deps) => {
   const { store, render } = deps;
   if (!(await ensureProjectFolder(deps))) return;
   store.openCreateDialog();
+  render();
+};
+
+export const handleTemplateDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsTemplateDialogOpen()) {
+    return;
+  }
+  store.closeTemplateDialog();
+  render();
+};
+
+// The chosen template becomes the template of the form behind the templates.
+export const handleTemplateSelect = (deps, payload) => {
+  const { store, render } = deps;
+  const { template } = payload._event.detail;
+  store.closeTemplateDialog();
+  store.setCreateDialogTemplate({ template });
+  render();
+};
+
+// Create opens the form with the bundled template; Change in the form opens
+// the templates over it.
+export const handleCreateDialogTemplateChange = (deps) => {
+  const { store, render } = deps;
+  store.openTemplateDialog();
   render();
 };
 

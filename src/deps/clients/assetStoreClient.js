@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from "@routevn/creator-model";
 import { isDebugHost } from "../../internal/debugHost.js";
 
 const ASSET_STORE_RPC_PATH = "/asset-store/rpc";
@@ -49,6 +50,12 @@ const packNotFound = () =>
   new AssetStoreError(
     "asset_pack_not_found",
     "The asset pack is no longer available.",
+  );
+
+const templateNotFound = () =>
+  new AssetStoreError(
+    "project_template_not_found",
+    "The project template is no longer available.",
   );
 
 const creatorNotFound = () =>
@@ -239,6 +246,54 @@ const readPack = (
   };
 };
 
+const isResolution = (value) =>
+  isObject(value) &&
+  isPositiveInteger(value.width) &&
+  isPositiveInteger(value.height);
+
+// A project template card carries what the template gallery shows: the title,
+// summary, cover, resolution, languages, release date and creator. As with
+// packs, only free templates are shown.
+const readTemplateCard = ({ id, data, creator: creatorData }, fileUrls) => {
+  if (!isText(id) || !isObject(data)) {
+    return undefined;
+  }
+  const creator = readCreator(creatorData, fileUrls);
+  if (
+    !isText(data.title) ||
+    !isResolution(data.resolution) ||
+    data.pricing?.type !== "FREE" ||
+    !creator
+  ) {
+    return undefined;
+  }
+  return {
+    id,
+    title: data.title,
+    summary: typeof data.summary === "string" ? data.summary.trim() : "",
+    coverUrl: fileUrls.get(data.coverFileId),
+    resolution: {
+      width: data.resolution.width,
+      height: data.resolution.height,
+    },
+    languages: Array.isArray(data.languages)
+      ? data.languages.filter(isText)
+      : [],
+    releasedAt: isTimestamp(data.listedAt) ? data.listedAt : undefined,
+    creator,
+  };
+};
+
+// A template's screenshots, in order, as `[{ url }]`; one whose file is not
+// mapped to a usable URL is left out.
+const readScreenshots = (screenshotFileIds, fileUrls) =>
+  Array.isArray(screenshotFileIds)
+    ? screenshotFileIds
+        .map((fileId) => fileUrls.get(fileId))
+        .filter(Boolean)
+        .map((url) => ({ url }))
+    : [];
+
 export const createAssetStoreClient = ({
   url = resolveAssetStoreRpcUrl({
     debug: import.meta.env?.DEV === true,
@@ -248,6 +303,9 @@ export const createAssetStoreClient = ({
   fetchImpl = globalThis.fetch,
   // The device a view or a download is made on: its ID and facts.
   getDevice = async () => undefined,
+  // The Creator model schema this app writes, so the store lists only the
+  // project templates it can open.
+  creatorModelSchema = SCHEMA_VERSION,
 } = {}) => {
   const call = async (
     method,
@@ -458,6 +516,102 @@ export const createAssetStoreClient = ({
             readPack({ id, data: packData, creator: packCreator }, fileUrls),
           )
           .filter(Boolean),
+      };
+    },
+
+    // Project template cards, newest first. `query` matches template titles
+    // and creator names; empty lists every template. Templates written with a
+    // newer Creator model than this app's are left out by the store.
+    async listProjectTemplates({ cursor, query } = {}) {
+      const trimmedQuery = query?.trim().slice(0, MAX_QUERY_LENGTH);
+      const result = await call("assetStore.listProjectTemplates", {
+        query: trimmedQuery ? trimmedQuery : null,
+        creatorModelSchema,
+        page: { cursor: cursor ?? null, limit: PAGE_LIMIT },
+      });
+      if (!Array.isArray(result.items) || !Array.isArray(result.files)) {
+        throw unavailable(new Error("Invalid project template list."));
+      }
+      const fileUrls = readFileUrls(result.files);
+      return {
+        templates: result.items
+          .filter(isObject)
+          .map((item) => readTemplateCard(item, fileUrls))
+          .filter(Boolean),
+        nextCursor: isText(result.nextCursor) ? result.nextCursor : undefined,
+      };
+    },
+
+    // A person opening a template's page: the card fields with the rich-text
+    // description, the screenshots, the version and its last update. The read
+    // is sent with this device's ID and facts, so it counts one view of the
+    // template; a device that can't be read leaves them out.
+    async getProjectTemplateById({ projectTemplateId } = {}) {
+      const params = { projectTemplateId };
+      const device = await readDevice();
+      if (device) params.device = device;
+      const result = await call("assetStore.getProjectTemplateById", params, {
+        notFound: templateNotFound,
+      });
+      if (!isObject(result.projectTemplate) || !Array.isArray(result.files)) {
+        throw unavailable(new Error("Invalid project template."));
+      }
+      const fileUrls = readFileUrls(result.files);
+      const { id, data } = result.projectTemplate;
+      const template = readTemplateCard(
+        { id, data, creator: result.creator },
+        fileUrls,
+      );
+      if (!template) throw templateNotFound();
+      template.description = readDescription(data.description, fileUrls);
+      template.screenshots = readScreenshots(data.screenshotFileIds, fileUrls);
+      template.versionName = isText(data.versionName)
+        ? data.versionName
+        : undefined;
+      template.releaseNotes =
+        typeof data.releaseNotes === "string" ? data.releaseNotes.trim() : "";
+      template.updatedAt = isTimestamp(data.lastUpdatedAt)
+        ? data.lastUpdatedAt
+        : undefined;
+      return template;
+    },
+
+    // The signed URL of a template's package ZIP, which a project is created
+    // from, as `getAssetPackDownload` gives a pack's. With `countDownload`,
+    // set when creation starts, it counts one download of the template.
+    async getProjectTemplateDownload({
+      projectTemplateId,
+      countDownload = false,
+    } = {}) {
+      const params = { projectTemplateId };
+      if (countDownload) {
+        const device = await readDevice();
+        if (device) params.device = device;
+      }
+      const result = await call(
+        "assetStore.getProjectTemplateDownloadUrl",
+        params,
+        { notFound: templateNotFound },
+      );
+      const { downloadUrl, expiresAt, size, directoryOffset, directorySize } =
+        result;
+      if (
+        !isWebUrl(downloadUrl) ||
+        !isTimestamp(expiresAt) ||
+        !isByteCount(size) ||
+        !isByteCount(directoryOffset) ||
+        !isByteCount(directorySize) ||
+        directorySize === 0 ||
+        directoryOffset + directorySize > size
+      ) {
+        throw unavailable(new Error("Invalid project template download."));
+      }
+      return {
+        url: downloadUrl,
+        expiresAt,
+        size,
+        directoryOffset,
+        directorySize,
       };
     },
   };

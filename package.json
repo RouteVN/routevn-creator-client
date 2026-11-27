@@ -104,6 +104,7 @@
     "vt:accept": "bash ./scripts/run-vt-docker.sh vt accept",
     "vt:serve": "bunx serve .rettangoli/vt/_site -p 3002",
     "serve": "bunx serve _site -p 3001",
+    "mock:asset-store": "node scripts/mock-asset-store-server.js",
     "lint": "oxlint && bun prettier --check src && bun run check:i18n",
     "lint:fix": "oxlint && bun prettier --check --write src && bun run check:i18n",
     "prepare": "husky",
