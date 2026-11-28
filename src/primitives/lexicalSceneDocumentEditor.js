@@ -1058,6 +1058,17 @@ const getEventTimestamp = (event) => {
   return Number.isFinite(timestamp) ? timestamp : undefined;
 };
 
+// Whether an input belongs to the key recorded at pending.timeStamp: it came
+// after the key, within TEXT_INPUT_FALLBACK_MAX_AGE_MS.
+const isEventWithinKeyInputWindow = (event, pending) => {
+  const eventTimestamp = getEventTimestamp(event);
+  if (eventTimestamp === undefined || pending.timeStamp === undefined) {
+    return true;
+  }
+  const elapsed = eventTimestamp - pending.timeStamp;
+  return elapsed >= 0 && elapsed <= TEXT_INPUT_FALLBACK_MAX_AGE_MS;
+};
+
 const getPrintableKeyText = (event) => {
   // WebKit can deliver an IME confirmation key after compositionend, when
   // isComposing is false but keyCode/which still marks it as a process key.
@@ -1346,6 +1357,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.lastCommittedTextInputFallback = undefined;
     this.pendingFocusTarget = undefined;
     this.pendingHandledBackspaceKeyDown = undefined;
+    this.pendingImeKeyDown = undefined;
     this.programmaticFocusRestoreUntil = 0;
     this.lastProgrammaticFocusTarget = undefined;
     this.focusRestoreSequenceId = 0;
@@ -3068,6 +3080,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.closeMentionMenu({ dismissCurrentTrigger: true });
     }
     this.updatePendingTextInputFallback(event);
+    this.updatePendingImeKeyDown(event);
 
     if (this.handleReferenceArrowNavigation(event)) {
       return;
@@ -3687,17 +3700,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return undefined;
     }
 
-    const eventTimestamp = getEventTimestamp(event);
-    if (
-      eventTimestamp !== undefined &&
-      fallback.timeStamp !== undefined &&
-      (eventTimestamp < fallback.timeStamp ||
-        eventTimestamp - fallback.timeStamp > TEXT_INPUT_FALLBACK_MAX_AGE_MS)
-    ) {
-      return undefined;
-    }
-
-    return fallback.nativeSelection;
+    return isEventWithinKeyInputWindow(event, fallback)
+      ? fallback.nativeSelection
+      : undefined;
   }
 
   resolveBeforeInputText(event, { allowKeyFallback = true } = {}) {
@@ -3718,6 +3723,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.clearPendingTextInputFallback();
     return undefined;
+  }
+
+  // A software keyboard's key arrives as keyCode 229 before its input. On
+  // Android, Chromium clears the page selection before a delete input when the
+  // caret follows a variable, so the input carries no caret. Keep the caret and
+  // the selected variable from the key for that input.
+  updatePendingImeKeyDown(event) {
+    this.pendingImeKeyDown = isImeProcessKeyboardEvent(event)
+      ? {
+          timeStamp: getEventTimestamp(event),
+          nativeSelection: this.getNativeLineSelectionContext(),
+          selectedReferenceNodeKey: this.selectedReferenceNodeKey,
+        }
+      : undefined;
+  }
+
+  consumePendingImeKeyDown(event) {
+    const pending = this.pendingImeKeyDown;
+    this.pendingImeKeyDown = undefined;
+    return pending && isEventWithinKeyInputWindow(event, pending)
+      ? pending
+      : undefined;
   }
 
   markHandledBackspaceKeyDown(event) {
@@ -5188,6 +5215,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   handleNativeBeforeInput(event) {
     this.hideSelectionPopover();
     const inputType = String(event.inputType ?? "");
+    const imeKeyDown = this.consumePendingImeKeyDown(event);
 
     if (this.state?.mode === "block") {
       this.clearPendingTextInputFallback();
@@ -5283,7 +5311,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       ? getSelectionRange(this.refs.editor)?.startContainer
       : undefined;
 
-    this.clearSelectedReferenceNodeKey();
+    // A delete input removes the selected variable, so it must not clear it.
+    if (inputType !== "deleteContentBackward") {
+      this.clearSelectedReferenceNodeKey();
+    }
 
     if (inputType === "historyUndo" || inputType === "historyRedo") {
       this.clearPendingTextInputFallback();
@@ -5401,7 +5432,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         return;
       }
 
-      const nativeSelection = this.getInputLineSelectionContext(event);
+      // The key cleared the selected variable before this input arrived.
+      if (imeKeyDown?.selectedReferenceNodeKey) {
+        this.selectedReferenceNodeKey = imeKeyDown.selectedReferenceNodeKey;
+      }
+      const nativeSelection =
+        this.getInputLineSelectionContext(event) ?? imeKeyDown?.nativeSelection;
       const didHandle = this.handleBackspaceDelete({
         nativeSelection,
         nativeLineRangeSelection: this.getNativeLineRangeSelectionContext(
@@ -7319,6 +7355,30 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
+        const lineKey = lineId ? this.lineKeyById.get(lineId) : undefined;
+        const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
+
+        // On Android, Chromium closes the software keyboard when a delete
+        // leaves the caret after a variable, and the tap that opens it again
+        // drops a selected variable. Touch editing therefore removes the
+        // variable before the caret at once, and leaves a selection with
+        // variables in it to be deleted as text.
+        if (lineId && isTouchInputMode()) {
+          const referenceNode =
+            start === end && start > 0
+              ? this.getReferenceNodeBeforeLineOffset(lineNode, start)
+              : undefined;
+          if ($isMentionNode(referenceNode)) {
+            focusTarget = this.removeReferenceNodeFromBackspace(
+              referenceNode,
+              lineId,
+              start,
+            );
+            didHandle = true;
+          }
+          return;
+        }
+
         // A caret at the line start has no chip before it, even when Lexical
         // places it at the start of a chip.
         const isCaretAtLineStart = start === end && start <= 0;
@@ -7332,8 +7392,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
-        const lineKey = this.lineKeyById.get(lineId);
-        const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
         const referenceNode =
           this.getReferenceNodeIntersectingLineRange(lineNode, start, end) ??
           (start === end
